@@ -1,0 +1,12 @@
+[package]
+name = "chalk"
+version = "0.1.0"
+authors = ["Niko Matsakis <niko@alum.mit.edu>"]
+build = "build.rs" # LALRPOP preprocessing
+
+[dependencies]
+lalrpop-util = "0.2"
+lalrpop-intern = "0.2"
+
+[build-dependencies.lalrpop]
+version = "0.2"
