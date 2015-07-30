@@ -33,15 +33,13 @@ macro_rules! term_tt {
         }
     };
 
-    (lambda, $x:ident, $($remainder:tt,)+) => {
+    (fn, $x:ident, $($remainder:tt,)+) => {
         |env: &mut Vec<InternedString>| {
             env.push(intern(stringify!($x)));
-            println!("lambda x={:?} env={:?}", stringify!($x), env);
             let remainder = term_tt!($($remainder,)*);
             let term = remainder(env).unwrap();
             env.pop();
-            println!("lambda pop");
-            Some(Term::new(TermData::Lambda(term)))
+            Some(Term::new(TermData::Fn(term)))
         }
     };
 
@@ -56,7 +54,6 @@ macro_rules! term_tt {
     ($x:ident, $($remainder:tt,)*) => {
         |env: &mut Vec<InternedString>| {
             let x = intern(stringify!($x));
-            println!("x={} env={:?}", x, env);
             let t1 = match env.iter().rev().position(|&y| x == y) {
                 Some(index) => {
                     Term::new(TermData::BoundVariable(DebruijnIndex(index as u32)))
@@ -74,8 +71,8 @@ macro_rules! term_tt {
 #[test]
 fn term_macro_1() {
     // Example from the paper
-    let term = term!(lambda x (lambda y lambda z (y x)) (lambda w x));
+    let term = term!(fn x (fn y fn z (y x)) (fn w x));
     assert_eq!(&format!("{:?}", term),
-               "(lambda ((lambda (lambda (#1 #2))) (lambda #1)))");
+               "(fn ((fn (fn (#1 #2))) (fn #1)))");
 }
 

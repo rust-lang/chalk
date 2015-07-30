@@ -8,7 +8,7 @@ impl Debug for Term {
             TermData::Constant(s) => write!(fmt, "const {}", s),
             TermData::FreeVariable(s) => write!(fmt, "{}", s),
             TermData::BoundVariable(index) => write!(fmt, "{:?}", index),
-            TermData::Lambda(ref term) => write!(fmt, "(lambda {:?})", term),
+            TermData::Lambda(ref term) => write!(fmt, "(fn {:?})", term),
             TermData::Apply(ref term1, ref term2) => write!(fmt, "({:?} {:?})", term1, term2),
             TermData::Suspension(ref suspension) => write!(fmt, "{:?}", suspension),
         }
