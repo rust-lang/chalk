@@ -151,9 +151,36 @@ impl Suspension {
                 TermData::BoundVariable(index)
             }
 
-            TermData::Suspension(_) => {
-                panic!("nested suspensions")
+            TermData::Suspension(data) => {
+                // this isn't in the paper, but it seems like the
+                // logical thing to do --nmatsakis
+                term.replace(data.step());
+                Suspension::data(term, environment, bound, lifts)
             }
         }
     }
 }
+
+//impl TermData {
+//    pub fn desuspend(self) -> TermData {
+//        use TermData::*;
+//
+//        match self {
+//            Constant(..) => self,
+//            FreeVariable(..) => self,
+//            BoundVariable(..) => self,
+//            Lambda(term) => Lambda(term.desuspend()),
+//            Apply(term1, term2) => Apply(term1.desuspend(), term2.desuspend()),
+//            Suspension(suspension) => suspension.step().desuspend(),
+//        }
+//    }
+//}
+
+//impl Term {
+//    pub fn desuspend(mut self) -> Term {
+//        let data = self.take();
+//        let data = data.desuspend();
+//        self.replace(data);
+//        self
+//    }
+//}
