@@ -39,7 +39,7 @@ macro_rules! term_tt {
             let remainder = term_tt!($($remainder,)*);
             let term = remainder(env).unwrap();
             env.pop();
-            Some(Term::new(TermData::Fn(term)))
+            Some(Term::new(TermData::Lambda(term)))
         }
     };
 
