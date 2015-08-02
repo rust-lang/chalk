@@ -84,7 +84,7 @@ impl Suspension {
     }
 
     pub fn step(self) -> TermData {
-        let Suspension { mut term, environment, bound, lifts } = self;
+        let Suspension { term, environment, bound, lifts } = self;
         match term.take() {
             // go from `<λ body_term>` to `λ <body_term>`
             TermData::Lambda(body_term) => {
@@ -122,7 +122,7 @@ impl Suspension {
                 // `try_unwrap` fns, but that would not be stable Rust
                 match *environment.get(index.0) {
                     CellData::Term(ref substituted_term) => {
-                        match *substituted_term.data() {
+                        substituted_term.data(|d| match *d {
                             TermData::Suspension(ref suspension) => {
                                 Suspension::data(suspension.term.clone(),
                                                  suspension.environment.clone(),
@@ -136,7 +136,7 @@ impl Suspension {
                                                  0,
                                                  lifts)
                             }
-                        }
+                        })
                     }
 
                     CellData::Dummy(lifts1) => {

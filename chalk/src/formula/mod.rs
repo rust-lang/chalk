@@ -1,47 +1,54 @@
 #![allow(dead_code)]
 
 use intern::InternedString;
-use std::mem;
 use std::rc::Rc;
 
+mod arena;
 mod debug;
 mod ops;
 
-#[derive(Clone)]
+///////////////////////////////////////////////////////////////////////////
+
+#[derive(Copy, Clone)]
 pub struct Term {
-    data: Box<Option<TermData>>
+    index: u32
 }
 
 impl Term {
+    pub fn from_index(index: usize) -> Term {
+        Term { index: index as u32 }
+    }
+
+    pub fn index(self) -> usize {
+        self.index as usize
+    }
+
     pub fn new(data: TermData) -> Term {
-        Term { data: Box::new(Some(data)) }
+        arena::write(|a| a.push(data))
     }
 
-    pub fn data(&self) -> &TermData {
-        self.data.as_ref().unwrap()
+    pub fn data<FUNC,R>(self, func: FUNC) -> R
+        where FUNC: FnOnce(&TermData) -> R
+    {
+        arena::read(|a| func(a.data(self)))
     }
 
-    pub fn data_mut(&mut self) -> &mut TermData {
-        self.data.as_mut().unwrap()
+    pub fn take(self) -> TermData {
+        arena::write(|a| a.take(self))
     }
 
-    pub fn take(&mut self) -> TermData {
-        self.data.take().unwrap()
+    pub fn replace(self, data: TermData) {
+        arena::write(|a| a.replace(self, data))
     }
 
-    pub fn replace(&mut self, data: TermData) {
-        let r = mem::replace(&mut *self.data, Some(data));
-        assert!(r.is_none());
-    }
-
-    pub fn swap<F>(&mut self, func: F)
+    pub fn swap<F>(self, func: F)
         where F: FnOnce(TermData) -> TermData
     {
-        let data = self.take();
-        let data = func(data);
-        self.replace(data);
+        arena::write(|a| a.swap(self, func))
     }
 }
+
+///////////////////////////////////////////////////////////////////////////
 
 #[derive(Copy, Clone)]
 pub struct DebruijnIndex(pub u32);
