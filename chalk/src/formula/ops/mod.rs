@@ -5,11 +5,85 @@ use std::rc::Rc;
 #[cfg(test)]
 mod test;
 
+impl Term {
+    /// Reduce a term, in place, to head normal form. This means that
+    /// all beta redexs (*) along top-most spine are contracted
+    /// (**). Note that this creates suspensions where possible to
+    /// avoid unnecessary work.
+    ///
+    /// (*) A beta redex is a term of the form `(fn x => t1) t2`.
+    /// (**) A beta contraction is substituting `t2` for `x` in `t1`: `[t2 => x] t1`
+    pub fn head_normal_form(self) {
+        while self.head_normal_form_step() { }
+    }
+
+    fn head_normal_form_step(self) -> bool {
+        let data = self.take();
+        match data {
+            TermData::Constant(_) |
+            TermData::FreeVariable(_) |
+            TermData::Lambda(_) |
+            TermData::BoundVariable(_) => {
+                self.replace(data);
+                true
+            }
+            TermData::Apply(fun, argument) => {
+                fun.head_normal_form_step_applied(self, argument)
+            }
+            TermData::Suspension(suspension) => {
+                self.replace(suspension.step());
+                true
+            }
+        }
+    }
+
+    fn head_normal_form_step_applied(self, app: Term, argument: Term) -> bool {
+        let data = self.take();
+        match data {
+            TermData::Constant(_) |
+            TermData::FreeVariable(_) |
+            TermData::BoundVariable(_) => {
+                app.replace(TermData::Apply(self, argument));
+                self.replace(data);
+                false
+            }
+
+            TermData::Apply(fun, argument) => {
+                app.replace(TermData::Apply(self, argument));
+                fun.head_normal_form_step_applied(self, argument)
+            }
+
+            TermData::Lambda(body) => {
+                let suspension = Suspension {
+                    term: body,
+                    environment: Environment::with_term(argument),
+                    bound: 1,
+                    lifts: 0
+                };
+                let data = suspension.step();
+                app.replace(data);
+                self.free();
+                true
+            }
+
+            TermData::Suspension(suspension) => {
+                app.replace(TermData::Apply(self, argument));
+                self.replace(suspension.step());
+                true
+            }
+        }
+    }
+}
+
 impl Environment {
     fn new() -> Environment {
         Environment {
             first_cell: None
         }
+    }
+
+    fn with_term(term: Term) -> Environment {
+        Environment::new().prepend(CellData::Term(term))
     }
 
     fn with_cell(cell: Cell) -> Environment {

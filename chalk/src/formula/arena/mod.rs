@@ -8,18 +8,24 @@ use std::mem;
 
 #[derive(Clone)]
 pub struct Arena {
-    terms: Vec<Option<TermData>>
+    terms: Vec<Option<TermData>>,
+    free_list: Vec<Term>,
 }
 
 impl Arena {
     pub fn new() -> Arena {
-        Arena { terms: vec![] }
+        Arena { terms: vec![], free_list: vec![] }
     }
 
     pub fn push(&mut self, data: TermData) -> Term {
         let index = self.terms.len();
         self.terms.push(Some(data));
         Term::from_index(index)
+    }
+
+    pub fn free(&mut self, term: Term) {
+        assert!(self.terms[term.index()].is_none());
+        self.free_list.push(term);
     }
 
     pub fn data(&self, term: Term) -> &TermData {

@@ -6,8 +6,8 @@ impl Debug for Term {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         arena::read(|a| {
             match *a.data(*self) {
-                TermData::Constant(s) => write!(fmt, "const {}", s),
-                TermData::FreeVariable(s) => write!(fmt, "{}", s),
+                TermData::Constant(s) => write!(fmt, "{}", s),
+                TermData::FreeVariable(s) => write!(fmt, "ref({})", s),
                 TermData::BoundVariable(index) => write!(fmt, "{:?}", index),
                 TermData::Lambda(ref term) => write!(fmt, "(fn {:?})", term),
                 TermData::Apply(ref term1, ref term2) => write!(fmt, "({:?} {:?})", term1, term2),

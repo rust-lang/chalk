@@ -41,6 +41,10 @@ impl Term {
         arena::write(|a| a.replace(self, data))
     }
 
+    pub fn free(self) {
+        arena::write(|a| a.free(self));
+    }
+
     pub fn swap<F>(self, func: F)
         where F: FnOnce(TermData) -> TermData
     {
@@ -56,7 +60,7 @@ pub struct DebruijnIndex(pub u32);
 #[derive(Clone, Debug)]
 pub enum TermData {
     Constant(InternedString),
-    FreeVariable(InternedString),
+    FreeVariable(usize),
     BoundVariable(DebruijnIndex),
     Lambda(Term),
     Apply(Term, Term),

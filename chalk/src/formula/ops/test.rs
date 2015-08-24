@@ -26,8 +26,8 @@ macro_rules! term_tt {
 
     (($($terms:tt)+), $($remainder:tt,)*) => {
         |env: &mut Vec<InternedString>| {
-            let remainder = term_tt!($($terms,)*);
-            let t1 = remainder(env).unwrap();
+            let terms = term_tt!($($terms,)*);
+            let t1 = terms(env).unwrap();
             let remainder = term_tt!($($remainder,)*);
             maybe_apply(t1, remainder(env))
         }
@@ -43,23 +43,23 @@ macro_rules! term_tt {
         }
     };
 
-    (const, $x:ident, $($remainder:tt,)*) => {
+    (ref, ($n:expr), $($remainder:tt,)+) => {
         |env: &mut Vec<InternedString>| {
-            let t1 = Term::new(TermData::Constant(stringify!($x)));
             let remainder = term_tt!($($remainder,)*);
-            maybe_apply(t1, remainder(env))
+            maybe_apply(Term::new(TermData::FreeVariable($n)), remainder(env))
         }
     };
 
     ($x:ident, $($remainder:tt,)*) => {
         |env: &mut Vec<InternedString>| {
-            let x = intern(stringify!($x));
+            let x_string = stringify!($x);
+            let x = intern(x_string);
             let t1 = match env.iter().rev().position(|&y| x == y) {
                 Some(index) => {
                     Term::new(TermData::BoundVariable(DebruijnIndex(index as u32)))
                 }
                 None => {
-                    Term::new(TermData::FreeVariable(x))
+                    Term::new(TermData::Constant(x))
                 }
             };
             let remainder = term_tt!($($remainder,)*);
@@ -74,5 +74,17 @@ fn term_macro_1() {
     let term = term!(fn x (fn y fn z (y x)) (fn w x));
     assert_eq!(&format!("{:?}", term),
                "(fn ((fn (fn (#1 #2))) (fn #1)))");
+}
+
+#[test]
+fn hnf() {
+    // Example from the paper
+    let term = term!((fn x (x (c x))) ((fn y (ref(0) b)) a));
+
+    term.head_normal_form();
+    assert_eq!(
+        &format!("{:?}", term),
+        "((ref(0) <<b; 1: Dummy(0)::nil; 1>; 1: <a; 0: nil; 0>::nil; 0>) \
+          <<b; 1: Dummy(0)::nil; 1>; 1: <a; 0: nil; 0>::nil; 0>)");
 }
 
