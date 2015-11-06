@@ -3,5 +3,6 @@
 *.rlib
 *.dll
 *.exe
-/chalk/target/
+/chalk-parse/Cargo.lock
+/chalk-parse/target/
 *~

@@ -1,0 +1,61 @@
+use ast::*;
+
+grammar;
+
+Program: Program = {
+    Item+ => Program { items: <> },
+};
+
+Item: Item = {
+    <a:Application> "." => Item::Fact(a),
+    Rule => Item::Rule(<>),
+};
+
+Rule: Rule = {
+    <a:Application> ":-" <f:Fact> "." => Rule {
+        consequence: a,
+        consequence: f
+    },
+};
+
+Fact: Fact = {
+    FactAnd
+};
+
+FactAnd: Fact = {
+    FactOr,
+    <l:FactAnd> ";" <r:FactOr> => Fact { data: FactData::And(l, r) },
+};
+
+FactOr: Fact = {
+    FactFunc,
+    <l:FactOr> "," <r:FactFunc> => Fact { data: FactData::Or(l, r) },
+};
+
+FactFunc: Fact = {
+    <l:FactApply> ":-" <r:FactFunc> => Fact { data: FactData::Rule(l, r) },
+    <l:FactApply> "=>" <r:FactFunc> => Fact { data: FactData::Implication(l, r) },
+    "exists" <v:Variable> "->" <b:FactFunc> => Fact { data: FactData::Exists(v, b) },
+    "forall" <v:Variable> "->" <b:FactFunc> => Fact { data: FactData::ForAll(v, b) },
+    <v:Variable> "->" <b:FactFunc> => Fact { data: FactData::Lambda(v, b) },
+};
+
+FactApply: Fact = {
+    Application => Fact { data: FactData::Apply(<>) }
+};
+
+Application: Application = {
+    Bit+ => Application { bits: <> },
+};
+
+Bit: Bit = {
+    r"[A-Za-z0-9_]+:" => Bit::Operator(Operator { id: intern_str(<>) }),
+    r"[!@#$%^&*-=+/?~\\;,.]+" => Bit::Operator(Operator { id: intern_str(<>) }),
+    r"[a-z_][_A-Za-z0-9]*" => Bit::Atom(Atom { id: intern_str(<>) }),
+    Variable => Bit::Variable(Variable { id: intern_str(<>) }),
+    "(" <Fact> ")" => Bit::Fact(Box::new(<>)),
+};
+
+Variable: &'input str = {
+    r"[A-Z][_A-Za-z0-9]*"
+};
