@@ -1,5 +1,7 @@
+use lalrpop_intern::InternedString;
+
 pub struct Program {
-    items: Vec<Item>,
+    pub items: Vec<Item>,
 }
 
 pub enum Item {
@@ -8,12 +10,12 @@ pub enum Item {
 }
 
 pub struct Rule {
-    consequence: Application,
-    condition: Fact,
+    pub consequence: Application,
+    pub condition: Fact,
 }
 
 pub struct Fact {
-    data: Box<FactData>
+    pub data: Box<FactData>
 }
 
 // A Fact looks something like one of these things:
@@ -33,7 +35,7 @@ pub enum FactData {
 }
 
 pub struct Application {
-    bits: Vec<Bit>
+    pub bits: Vec<Bit>
 }
 
 // Component of a fact
@@ -46,15 +48,15 @@ pub enum Bit {
 
 // `+`, `|-`, or `foo:`
 pub struct Operator {
-    id: u32
+    pub id: InternedString
 }
 
 // `foo` or `bar`
 pub struct Atom {
-    id: u32
+    pub id: InternedString
 }
 
 // `Foo` or `Bar`
 pub struct Variable {
-    id: u32
+    pub id: InternedString
 }

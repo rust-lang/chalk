@@ -1,8 +1,9 @@
 use ast::*;
+use lalrpop_intern::intern;
 
 grammar;
 
-Program: Program = {
+pub Program: Program = {
     Item+ => Program { items: <> },
 };
 
@@ -14,7 +15,7 @@ Item: Item = {
 Rule: Rule = {
     <a:Application> ":-" <f:Fact> "." => Rule {
         consequence: a,
-        consequence: f
+        condition: f
     },
 };
 
@@ -24,24 +25,23 @@ Fact: Fact = {
 
 FactAnd: Fact = {
     FactOr,
-    <l:FactAnd> ";" <r:FactOr> => Fact { data: FactData::And(l, r) },
+    <l:FactAnd> ";" <r:FactOr> => Fact { data: Box::new(FactData::And(l, r)) },
 };
 
 FactOr: Fact = {
     FactFunc,
-    <l:FactOr> "," <r:FactFunc> => Fact { data: FactData::Or(l, r) },
+    <l:FactOr> "," <r:FactFunc> => Fact { data: Box::new(FactData::Or(l, r)) },
 };
 
 FactFunc: Fact = {
-    <l:FactApply> ":-" <r:FactFunc> => Fact { data: FactData::Rule(l, r) },
-    <l:FactApply> "=>" <r:FactFunc> => Fact { data: FactData::Implication(l, r) },
-    "exists" <v:Variable> "->" <b:FactFunc> => Fact { data: FactData::Exists(v, b) },
-    "forall" <v:Variable> "->" <b:FactFunc> => Fact { data: FactData::ForAll(v, b) },
-    <v:Variable> "->" <b:FactFunc> => Fact { data: FactData::Lambda(v, b) },
+    <l:FactApply> "=>" <r:FactFunc> => Fact { data: Box::new(FactData::Implication(l, r)) },
+    "exists" <v:Variable> "->" <b:FactFunc> => Fact { data: Box::new(FactData::Exists(v, b)) },
+    "forall" <v:Variable> "->" <b:FactFunc> => Fact { data: Box::new(FactData::ForAll(v, b)) },
+    <v:Variable> "->" <b:FactFunc> => Fact { data: Box::new(FactData::Lambda(v, b)) },
 };
 
 FactApply: Fact = {
-    Application => Fact { data: FactData::Apply(<>) }
+    Application => Fact { data: Box::new(FactData::Apply(<>)) }
 };
 
 Application: Application = {
@@ -49,13 +49,13 @@ Application: Application = {
 };
 
 Bit: Bit = {
-    r"[A-Za-z0-9_]+:" => Bit::Operator(Operator { id: intern_str(<>) }),
-    r"[!@#$%^&*-=+/?~\\;,.]+" => Bit::Operator(Operator { id: intern_str(<>) }),
-    r"[a-z_][_A-Za-z0-9]*" => Bit::Atom(Atom { id: intern_str(<>) }),
-    Variable => Bit::Variable(Variable { id: intern_str(<>) }),
-    "(" <Fact> ")" => Bit::Fact(Box::new(<>)),
+    r"[A-Za-z0-9_]+:" => Bit::Operator(Operator { id: intern(<>) }),
+    r"[-!@#$%^&*=+/?~\\;,.]+" => Bit::Operator(Operator { id: intern(<>) }),
+    r"[a-z_][_A-Za-z0-9]*" => Bit::Atom(Atom { id: intern(<>) }),
+    Variable => Bit::Variable(<>),
+    "[" <Fact> "]" => Bit::Paren(Box::new(<>)),
 };
 
-Variable: &'input str = {
-    r"[A-Z][_A-Za-z0-9]*"
+Variable: Variable = {
+    r"[A-Z][_A-Za-z0-9]*" => Variable { id: intern(<>) },
 };
