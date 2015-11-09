@@ -34,6 +34,7 @@ FactOr: Fact = {
 };
 
 FactFunc: Fact = {
+    FactApply,
     <l:FactApply> "=>" <r:FactFunc> => Fact { data: Box::new(FactData::Implication(l, r)) },
     "exists" <v:Variable> "->" <b:FactFunc> => Fact { data: Box::new(FactData::Exists(v, b)) },
     "forall" <v:Variable> "->" <b:FactFunc> => Fact { data: Box::new(FactData::ForAll(v, b)) },
@@ -50,7 +51,8 @@ Application: Application = {
 
 Bit: Bit = {
     r"[A-Za-z0-9_]+:" => Bit::Operator(Operator { id: intern(<>) }),
-    r"[-!@#$%^&*=+/?~\\;,.]+" => Bit::Operator(Operator { id: intern(<>) }),
+    r"[-|!@#$%^&*=+/?~\\():;,.]+" => Bit::Operator(Operator { id: intern(<>) }),
+    <s:r"'[^']+'"> => Bit::Operator(Operator { id: intern(&s[1..s.len() - 1]) }),
     r"[a-z_][_A-Za-z0-9]*" => Bit::Atom(Atom { id: intern(<>) }),
     Variable => Bit::Variable(<>),
     "[" <Fact> "]" => Bit::Paren(Box::new(<>)),
