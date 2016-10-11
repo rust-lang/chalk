@@ -41,22 +41,29 @@ pub enum FactData {
 
 #[derive(Debug)]
 pub struct Application {
-    pub bits: Vec<Bit>
+    pub bits: Vec<Bit>,
+}
+
+#[derive(Debug)]
+pub enum Bit {
+    Value(Value),
+    Operator(Operator),
 }
 
 // Component of a fact
 #[derive(Debug)]
-pub enum Bit {
-    Operator(Operator),
+pub enum Value {
     Atom(Atom),
     Variable(Variable),
-    Paren(Box<Fact>),
+    Application(Application),
 }
 
 // `+`, `|-`, or `foo:`
 #[derive(Debug)]
-pub struct Operator {
-    pub id: InternedString
+pub enum Operator {
+    Colon(InternedString),
+    Parens(InternedString),
+    Symbols(InternedString),
 }
 
 // `foo` or `bar`
@@ -70,3 +77,4 @@ pub struct Atom {
 pub struct Variable {
     pub id: InternedString
 }
+

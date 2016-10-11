@@ -15,10 +15,11 @@ pub fn parse_program(input: &str)
 #[test]
 fn test_program() {
     let ast = parse_program("
-Env |- [E '.' F] : Type :-
+Env |- X : Type :-
     !,
-    Env |- E : [struct: S],
-    struct: S has_field: F with_type: Type.
+    Env |- E : (struct: S),
+    struct: S has_field: F with_type: Type,
+    foo(Bar, Baz).
 ").unwrap();
     println!("{:#?}", ast);
 }

@@ -1,5 +1,6 @@
 use ast::*;
-use lalrpop_intern::intern;
+use lalrpop_intern::{intern, InternedString};
+use std::iter::once;
 
 grammar;
 
@@ -46,18 +47,68 @@ FactApply: Fact = {
 };
 
 Application: Application = {
-    Bit+ => Application { bits: <> },
+    <head:Value> => {
+        Application {
+            bits: vec![Bit::Value(head)]
+        }
+    },
+    <tail:Operator> => {
+        Application {
+            bits: vec![Bit::Operator(tail)]
+        }
+    },
+    <head:Value?> <body:(Operator Value)+> <tail:Operator?> => {
+        Application {
+            bits: head.into_iter().map(Bit::Value)
+                                  .chain(body.into_iter().flat_map(|(o, v)| {
+                                      once(Bit::Operator(o)).chain(once(Bit::Value(v)))
+                                  }))
+                                  .chain(tail.into_iter().map(Bit::Operator))
+                                  .collect()
+        }
+    },
+    <id:Identifier> "(" <appls:Applications> ")" => {
+        let oper_bit = Bit::Operator(Operator::Parens(id));
+        let appl_bits = appls.into_iter().map(Value::Application).map(Bit::Value);
+        Application {
+            bits: Some(oper_bit).into_iter().chain(appl_bits).collect()
+        }
+    },
 };
 
-Bit: Bit = {
-    r"[A-Za-z0-9_]+:" => Bit::Operator(Operator { id: intern(<>) }),
-    r"[-|!@#$%^&*=+/?~\\():;,.]+" => Bit::Operator(Operator { id: intern(<>) }),
-    <s:r"'[^']+'"> => Bit::Operator(Operator { id: intern(&s[1..s.len() - 1]) }),
-    r"[a-z_][_A-Za-z0-9]*" => Bit::Atom(Atom { id: intern(<>) }),
-    Variable => Bit::Variable(<>),
-    "[" <Fact> "]" => Bit::Paren(Box::new(<>)),
+Applications: Vec<Application> = {
+    Application => vec![<>],
+    <appls:Applications> "," <appl:Application> => {
+        let mut appls = appls;
+        appls.push(appl);
+        appls
+    },
+    <appls:Applications> "," => appls,
+};
+
+OperatorValue: (Operator, Value) = {
+    Operator Value => (<>),
+};
+
+Operator: Operator = {
+    r"[A-Za-z][A-Za-z0-9_]*:" => Operator::Colon(intern(<>)),
+    r"[-|!@#$%^&*=+/:?~<>]+" => Operator::Symbols(intern(<>)),
+};
+
+Value: Value = {
+    Atom => Value::Atom(<>),
+    Variable => Value::Variable(<>),
+    "(" <Application> ")" => Value::Application(<>),
+};
+
+Atom: Atom = {
+    <s:r"'[^']+'"> => Atom { id: intern(&s[1..s.len() - 1]) },
 };
 
 Variable: Variable = {
-    r"[A-Z][_A-Za-z0-9]*" => Variable { id: intern(<>) },
+    Identifier => Variable { id: <> },
+};
+
+Identifier: InternedString = {
+    r"[A-Za-z][A-Za-z0-9_]*" => intern(<>),
 };
