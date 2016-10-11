@@ -32,8 +32,8 @@ pub enum FactData {
     Or(Fact, Fact),
 
     Implication(Fact, Fact), // A => B
-    Exists(Variable, Fact), // exists x -> A
-    ForAll(Variable, Fact), // forall x -> A
+    Exists(Variable, Fact), // exists(x: A)
+    ForAll(Variable, Fact), // forall(x: A)
 
     Apply(Application),
 }
