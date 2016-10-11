@@ -20,6 +20,7 @@ mod __parse__Program {
         Term_22_3a_2d_22(&'input str),
         Term_22_3b_22(&'input str),
         Term_22_3d_3e_22(&'input str),
+        Term_22___22(&'input str),
         Term_22exists_22(&'input str),
         Term_22forall_22(&'input str),
         Termr_23_22_5c_27_5b_5e_5c_27_5d_2b_5c_27_22_23(&'input str),
@@ -59,12 +60,13 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        14, // on "_", goto 13
         0, // on "exists", error
         0, // on "forall", error
-        14, // on r#"\'[^\']+\'"#, goto 13
-        15, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 14
-        16, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 15
-        17, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 16
+        15, // on r#"\'[^\']+\'"#, goto 14
+        16, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 15
+        17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 16
+        18, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 17
         // State 1
         0, // on "(", error
         0, // on ")", error
@@ -74,21 +76,23 @@ mod __parse__Program {
         -9, // on ":-", reduce `Application = (Operator Value)+ => ActionFn(48);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        15, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 14
+        16, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 15
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        17, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 16
+        18, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 17
         // State 2
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        19, // on ".", goto 18
-        20, // on ":-", goto 19
+        20, // on ".", goto 19
+        21, // on ":-", goto 20
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -100,18 +104,19 @@ mod __parse__Program {
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -38, // on ".", reduce `Value = Atom => ActionFn(26);`
-        -38, // on ":-", reduce `Value = Atom => ActionFn(26);`
+        -37, // on ".", reduce `Value = Atom => ActionFn(25);`
+        -37, // on ":-", reduce `Value = Atom => ActionFn(25);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Atom => ActionFn(26);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Atom => ActionFn(25);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Atom => ActionFn(26);`
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Atom => ActionFn(25);`
         // State 4
-        21, // on "(", goto 20
+        22, // on "(", goto 21
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -119,6 +124,7 @@ mod __parse__Program {
         -43, // on ":-", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -126,7 +132,7 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(30);`
         // State 5
-        -29, // on "(", reduce `Item+ = Item => ActionFn(39);`
+        -28, // on "(", reduce `Item+ = Item => ActionFn(39);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -134,12 +140,13 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        -28, // on "_", reduce `Item+ = Item => ActionFn(39);`
         0, // on "exists", error
         0, // on "forall", error
-        -29, // on r#"\'[^\']+\'"#, reduce `Item+ = Item => ActionFn(39);`
-        -29, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item+ = Item => ActionFn(39);`
-        -29, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item+ = Item => ActionFn(39);`
-        -29, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item+ = Item => ActionFn(39);`
+        -28, // on r#"\'[^\']+\'"#, reduce `Item+ = Item => ActionFn(39);`
+        -28, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item+ = Item => ActionFn(39);`
+        -28, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item+ = Item => ActionFn(39);`
+        -28, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item+ = Item => ActionFn(39);`
         // State 6
         13, // on "(", goto 12
         0, // on ")", error
@@ -149,26 +156,28 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        14, // on "_", goto 13
         0, // on "exists", error
         0, // on "forall", error
-        14, // on r#"\'[^\']+\'"#, goto 13
-        15, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 14
-        16, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 15
-        17, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 16
+        15, // on r#"\'[^\']+\'"#, goto 14
+        16, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 15
+        17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 16
+        18, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 17
         // State 7
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -5, // on ".", reduce `Application = Operator => ActionFn(17);`
-        -5, // on ":-", reduce `Application = Operator => ActionFn(17);`
+        -5, // on ".", reduce `Application = Operator => ActionFn(16);`
+        -5, // on ":-", reduce `Application = Operator => ActionFn(16);`
         0, // on ";", error
         0, // on "=>", error
+        14, // on "_", goto 13
         0, // on "exists", error
         0, // on "forall", error
-        14, // on r#"\'[^\']+\'"#, goto 13
+        15, // on r#"\'[^\']+\'"#, goto 14
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        25, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 24
+        26, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 25
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 8
         0, // on "(", error
@@ -179,6 +188,7 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -186,7 +196,7 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 9
-        -28, // on "(", reduce `Item = Rule => ActionFn(3);`
+        -27, // on "(", reduce `Item = Rule => ActionFn(3);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -194,44 +204,47 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        -27, // on "_", reduce `Item = Rule => ActionFn(3);`
         0, // on "exists", error
         0, // on "forall", error
-        -28, // on r#"\'[^\']+\'"#, reduce `Item = Rule => ActionFn(3);`
-        -28, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item = Rule => ActionFn(3);`
-        -28, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item = Rule => ActionFn(3);`
-        -28, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item = Rule => ActionFn(3);`
+        -27, // on r#"\'[^\']+\'"#, reduce `Item = Rule => ActionFn(3);`
+        -27, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item = Rule => ActionFn(3);`
+        -27, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item = Rule => ActionFn(3);`
+        -27, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item = Rule => ActionFn(3);`
         // State 10
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -4, // on ".", reduce `Application = Value => ActionFn(16);`
-        -4, // on ":-", reduce `Application = Value => ActionFn(16);`
+        -4, // on ".", reduce `Application = Value => ActionFn(15);`
+        -4, // on ":-", reduce `Application = Value => ActionFn(15);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        28, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 27
+        29, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 28
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        29, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 28
+        30, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 29
         // State 11
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -39, // on ".", reduce `Value = Variable => ActionFn(27);`
-        -39, // on ":-", reduce `Value = Variable => ActionFn(27);`
+        -38, // on ".", reduce `Value = Variable => ActionFn(26);`
+        -38, // on ":-", reduce `Value = Variable => ActionFn(26);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Variable => ActionFn(27);`
+        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Variable => ActionFn(26);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Variable => ActionFn(27);`
+        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Variable => ActionFn(26);`
         // State 12
-        37, // on "(", goto 36
+        38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -239,13 +252,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        39, // on "_", goto 38
         0, // on "exists", error
         0, // on "forall", error
-        38, // on r#"\'[^\']+\'"#, goto 37
-        39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 38
-        40, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 39
-        41, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 40
+        40, // on r#"\'[^\']+\'"#, goto 39
+        41, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 40
+        42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 41
+        43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 42
         // State 13
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        -40, // on ".", reduce `Value = "_" => ActionFn(28);`
+        -40, // on ":-", reduce `Value = "_" => ActionFn(28);`
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "_" => ActionFn(28);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "_" => ActionFn(28);`
+        // State 14
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
@@ -254,58 +284,62 @@ mod __parse__Program {
         -14, // on ":-", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
-        // State 14
-        -32, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        // State 15
+        -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -32, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -32, // on ":-", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
+        -31, // on ":-", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ";", error
         0, // on "=>", error
+        -31, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -32, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -32, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 15
-        -26, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 16
+        -25, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -26, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -26, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -26, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        // State 16
-        -31, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -25, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 17
+        -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -31, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -31, // on ":-", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        -30, // on ":-", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ";", error
         0, // on "=>", error
+        -30, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on "exists", error
         0, // on "forall", error
-        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 17
+        // State 18
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
@@ -314,29 +348,15 @@ mod __parse__Program {
         -7, // on ":-", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         0, // on ";", error
         0, // on "=>", error
+        14, // on "_", goto 13
         0, // on "exists", error
         0, // on "forall", error
-        14, // on r#"\'[^\']+\'"#, goto 13
+        15, // on r#"\'[^\']+\'"#, goto 14
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        25, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 24
+        26, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 25
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 18
-        -27, // on "(", reduce `Item = Application, "." => ActionFn(2);`
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        -27, // on r#"\'[^\']+\'"#, reduce `Item = Application, "." => ActionFn(2);`
-        -27, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item = Application, "." => ActionFn(2);`
-        -27, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item = Application, "." => ActionFn(2);`
-        -27, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item = Application, "." => ActionFn(2);`
         // State 19
-        55, // on "(", goto 54
+        -26, // on "(", reduce `Item = Application, "." => ActionFn(2);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -344,14 +364,15 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        56, // on "exists", goto 55
-        57, // on "forall", goto 56
-        58, // on r#"\'[^\']+\'"#, goto 57
-        59, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 58
-        60, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 59
-        61, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 60
+        -26, // on "_", reduce `Item = Application, "." => ActionFn(2);`
+        0, // on "exists", error
+        0, // on "forall", error
+        -26, // on r#"\'[^\']+\'"#, reduce `Item = Application, "." => ActionFn(2);`
+        -26, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item = Application, "." => ActionFn(2);`
+        -26, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item = Application, "." => ActionFn(2);`
+        -26, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item = Application, "." => ActionFn(2);`
         // State 20
-        70, // on "(", goto 69
+        57, // on "(", goto 56
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -359,14 +380,15 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        71, // on r#"\'[^\']+\'"#, goto 70
-        72, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 71
-        73, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 72
-        74, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 73
+        58, // on "_", goto 57
+        59, // on "exists", goto 58
+        60, // on "forall", goto 59
+        61, // on r#"\'[^\']+\'"#, goto 60
+        62, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 61
+        63, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 62
+        64, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 63
         // State 21
-        -30, // on "(", reduce `Item+ = Item+, Item => ActionFn(40);`
+        73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -374,13 +396,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
-        -30, // on r#"\'[^\']+\'"#, reduce `Item+ = Item+, Item => ActionFn(40);`
-        -30, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item+ = Item+, Item => ActionFn(40);`
-        -30, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item+ = Item+, Item => ActionFn(40);`
-        -30, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item+ = Item+, Item => ActionFn(40);`
+        75, // on r#"\'[^\']+\'"#, goto 74
+        76, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 75
+        77, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 76
+        78, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 77
         // State 22
+        -29, // on "(", reduce `Item+ = Item+, Item => ActionFn(40);`
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        -29, // on "_", reduce `Item+ = Item+, Item => ActionFn(40);`
+        0, // on "exists", error
+        0, // on "forall", error
+        -29, // on r#"\'[^\']+\'"#, reduce `Item+ = Item+, Item => ActionFn(40);`
+        -29, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item+ = Item+, Item => ActionFn(40);`
+        -29, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item+ = Item+, Item => ActionFn(40);`
+        -29, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item+ = Item+, Item => ActionFn(40);`
+        // State 23
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
@@ -389,13 +428,14 @@ mod __parse__Program {
         -43, // on ":-", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -43, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(30);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(30);`
-        // State 23
+        // State 24
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
@@ -404,28 +444,30 @@ mod __parse__Program {
         -2, // on ":-", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
-        // State 24
+        // State 25
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -26, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -26, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -26, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        // State 25
+        -25, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 26
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
@@ -434,13 +476,14 @@ mod __parse__Program {
         -8, // on ":-", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        15, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 14
+        16, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 15
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        17, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 16
-        // State 26
+        18, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 17
+        // State 27
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
@@ -449,29 +492,15 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        14, // on "_", goto 13
         0, // on "exists", error
         0, // on "forall", error
-        14, // on r#"\'[^\']+\'"#, goto 13
+        15, // on r#"\'[^\']+\'"#, goto 14
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        25, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 24
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 27
-        -32, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        -32, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -32, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        26, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 25
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 28
-        -31, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -479,13 +508,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        -31, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 29
+        -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        -30, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        0, // on "exists", error
+        0, // on "forall", error
+        -30, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -30, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 30
         0, // on "(", error
         -9, // on ")", reduce `Application = (Operator Value)+ => ActionFn(48);`
         0, // on ",", error
@@ -494,44 +540,47 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 38
+        41, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 40
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        41, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 40
-        // State 30
+        43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 42
+        // State 31
         0, // on "(", error
-        77, // on ")", goto 76
+        81, // on ")", goto 80
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 31
+        // State 32
         0, // on "(", error
-        -38, // on ")", reduce `Value = Atom => ActionFn(26);`
+        -37, // on ")", reduce `Value = Atom => ActionFn(25);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Atom => ActionFn(26);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Atom => ActionFn(25);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Atom => ActionFn(26);`
-        // State 32
-        78, // on "(", goto 77
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Atom => ActionFn(25);`
+        // State 33
+        82, // on "(", goto 81
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ",", error
         0, // on "->", error
@@ -539,59 +588,63 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -43, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(30);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(30);`
-        // State 33
-        37, // on "(", goto 36
-        -5, // on ")", reduce `Application = Operator => ActionFn(17);`
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        38, // on r#"\'[^\']+\'"#, goto 37
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        81, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 80
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 34
-        0, // on "(", error
-        -4, // on ")", reduce `Application = Value => ActionFn(16);`
+        38, // on "(", goto 37
+        -5, // on ")", reduce `Application = Operator => ActionFn(16);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        39, // on "_", goto 38
         0, // on "exists", error
         0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        28, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 27
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        29, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 28
+        40, // on r#"\'[^\']+\'"#, goto 39
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        85, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 84
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 35
         0, // on "(", error
-        -39, // on ")", reduce `Value = Variable => ActionFn(27);`
+        -4, // on ")", reduce `Application = Value => ActionFn(15);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Variable => ActionFn(27);`
+        29, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 28
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Variable => ActionFn(27);`
+        30, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 29
         // State 36
-        37, // on "(", goto 36
+        0, // on "(", error
+        -38, // on ")", reduce `Value = Variable => ActionFn(26);`
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Variable => ActionFn(26);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Variable => ActionFn(26);`
+        // State 37
+        38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -599,13 +652,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        39, // on "_", goto 38
         0, // on "exists", error
         0, // on "forall", error
-        38, // on r#"\'[^\']+\'"#, goto 37
-        39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 38
-        40, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 39
-        41, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 40
-        // State 37
+        40, // on r#"\'[^\']+\'"#, goto 39
+        41, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 40
+        42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 41
+        43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 42
+        // State 38
+        0, // on "(", error
+        -40, // on ")", reduce `Value = "_" => ActionFn(28);`
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "_" => ActionFn(28);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "_" => ActionFn(28);`
+        // State 39
         0, // on "(", error
         -14, // on ")", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         0, // on ",", error
@@ -614,58 +684,62 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
-        // State 38
-        -32, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -32, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        // State 40
+        -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
+        -31, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        -31, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -32, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -32, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 39
-        -26, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 41
+        -25, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -26, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -26, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        // State 40
-        -31, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -31, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -25, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 42
+        -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        -30, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        -30, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on "exists", error
         0, // on "forall", error
-        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 41
+        // State 43
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
@@ -674,13 +748,14 @@ mod __parse__Program {
         -3, // on ":-", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
-        // State 42
+        // State 44
         0, // on "(", error
         0, // on ")", error
         -9, // on ",", reduce `Application = (Operator Value)+ => ActionFn(48);`
@@ -689,51 +764,23 @@ mod __parse__Program {
         0, // on ":-", error
         -9, // on ";", reduce `Application = (Operator Value)+ => ActionFn(48);`
         -9, // on "=>", reduce `Application = (Operator Value)+ => ActionFn(48);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        59, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 58
+        62, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 61
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        61, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 60
-        // State 43
-        0, // on "(", error
-        0, // on ")", error
-        -18, // on ",", reduce `FactApply = Application => ActionFn(15);`
-        0, // on "->", error
-        -18, // on ".", reduce `FactApply = Application => ActionFn(15);`
-        0, // on ":-", error
-        -18, // on ";", reduce `FactApply = Application => ActionFn(15);`
-        -18, // on "=>", reduce `FactApply = Application => ActionFn(15);`
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 44
-        0, // on "(", error
-        0, // on ")", error
-        -38, // on ",", reduce `Value = Atom => ActionFn(26);`
-        0, // on "->", error
-        -38, // on ".", reduce `Value = Atom => ActionFn(26);`
-        0, // on ":-", error
-        -38, // on ";", reduce `Value = Atom => ActionFn(26);`
-        -38, // on "=>", reduce `Value = Atom => ActionFn(26);`
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Atom => ActionFn(26);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Atom => ActionFn(26);`
+        64, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 63
         // State 45
         0, // on "(", error
         0, // on ")", error
-        0, // on ",", error
+        -18, // on ",", reduce `FactApply = Application => ActionFn(14);`
         0, // on "->", error
-        86, // on ".", goto 85
+        -18, // on ".", reduce `FactApply = Application => ActionFn(14);`
         0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
+        -18, // on ";", reduce `FactApply = Application => ActionFn(14);`
+        -18, // on "=>", reduce `FactApply = Application => ActionFn(14);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -743,27 +790,29 @@ mod __parse__Program {
         // State 46
         0, // on "(", error
         0, // on ")", error
-        0, // on ",", error
+        -37, // on ",", reduce `Value = Atom => ActionFn(25);`
         0, // on "->", error
-        -15, // on ".", reduce `Fact = FactAnd => ActionFn(5);`
+        -37, // on ".", reduce `Value = Atom => ActionFn(25);`
         0, // on ":-", error
-        87, // on ";", goto 86
-        0, // on "=>", error
+        -37, // on ";", reduce `Value = Atom => ActionFn(25);`
+        -37, // on "=>", reduce `Value = Atom => ActionFn(25);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Atom => ActionFn(25);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Atom => ActionFn(25);`
         // State 47
         0, // on "(", error
         0, // on ")", error
-        -19, // on ",", reduce `FactFunc = FactApply => ActionFn(10);`
+        0, // on ",", error
         0, // on "->", error
-        -19, // on ".", reduce `FactFunc = FactApply => ActionFn(10);`
+        90, // on ".", goto 89
         0, // on ":-", error
-        -19, // on ";", reduce `FactFunc = FactApply => ActionFn(10);`
-        88, // on "=>", goto 87
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -773,12 +822,13 @@ mod __parse__Program {
         // State 48
         0, // on "(", error
         0, // on ")", error
-        -24, // on ",", reduce `FactOr = FactFunc => ActionFn(8);`
+        0, // on ",", error
         0, // on "->", error
-        -24, // on ".", reduce `FactOr = FactFunc => ActionFn(8);`
+        -15, // on ".", reduce `Fact = FactAnd => ActionFn(5);`
         0, // on ":-", error
-        -24, // on ";", reduce `FactOr = FactFunc => ActionFn(8);`
+        91, // on ";", goto 90
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -788,12 +838,13 @@ mod __parse__Program {
         // State 49
         0, // on "(", error
         0, // on ")", error
-        89, // on ",", goto 88
+        -19, // on ",", reduce `FactFunc = FactApply => ActionFn(10);`
         0, // on "->", error
-        -16, // on ".", reduce `FactAnd = FactOr => ActionFn(6);`
+        -19, // on ".", reduce `FactFunc = FactApply => ActionFn(10);`
         0, // on ":-", error
-        -16, // on ";", reduce `FactAnd = FactOr => ActionFn(6);`
-        0, // on "=>", error
+        -19, // on ";", reduce `FactFunc = FactApply => ActionFn(10);`
+        92, // on "=>", goto 91
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -801,96 +852,134 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 50
-        90, // on "(", goto 89
+        0, // on "(", error
+        0, // on ")", error
+        -23, // on ",", reduce `FactOr = FactFunc => ActionFn(8);`
+        0, // on "->", error
+        -23, // on ".", reduce `FactOr = FactFunc => ActionFn(8);`
+        0, // on ":-", error
+        -23, // on ";", reduce `FactOr = FactFunc => ActionFn(8);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 51
+        0, // on "(", error
+        0, // on ")", error
+        93, // on ",", goto 92
+        0, // on "->", error
+        -16, // on ".", reduce `FactAnd = FactOr => ActionFn(6);`
+        0, // on ":-", error
+        -16, // on ";", reduce `FactAnd = FactOr => ActionFn(6);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 52
+        94, // on "(", goto 93
         0, // on ")", error
         -43, // on ",", reduce `Variable = Identifier => ActionFn(30);`
-        -43, // on "->", reduce `Variable = Identifier => ActionFn(30);`
+        0, // on "->", error
         -43, // on ".", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ":-", error
         -43, // on ";", reduce `Variable = Identifier => ActionFn(30);`
         -43, // on "=>", reduce `Variable = Identifier => ActionFn(30);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -43, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(30);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(30);`
-        // State 51
-        55, // on "(", goto 54
-        0, // on ")", error
-        -5, // on ",", reduce `Application = Operator => ActionFn(17);`
-        0, // on "->", error
-        -5, // on ".", reduce `Application = Operator => ActionFn(17);`
-        0, // on ":-", error
-        -5, // on ";", reduce `Application = Operator => ActionFn(17);`
-        -5, // on "=>", reduce `Application = Operator => ActionFn(17);`
-        0, // on "exists", error
-        0, // on "forall", error
-        58, // on r#"\'[^\']+\'"#, goto 57
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        94, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 93
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 52
-        0, // on "(", error
-        0, // on ")", error
-        -4, // on ",", reduce `Application = Value => ActionFn(16);`
-        0, // on "->", error
-        -4, // on ".", reduce `Application = Value => ActionFn(16);`
-        0, // on ":-", error
-        -4, // on ";", reduce `Application = Value => ActionFn(16);`
-        -4, // on "=>", reduce `Application = Value => ActionFn(16);`
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        28, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 27
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        29, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 28
         // State 53
+        57, // on "(", goto 56
+        0, // on ")", error
+        -5, // on ",", reduce `Application = Operator => ActionFn(16);`
+        0, // on "->", error
+        -5, // on ".", reduce `Application = Operator => ActionFn(16);`
+        0, // on ":-", error
+        -5, // on ";", reduce `Application = Operator => ActionFn(16);`
+        -5, // on "=>", reduce `Application = Operator => ActionFn(16);`
+        58, // on "_", goto 57
+        0, // on "exists", error
+        0, // on "forall", error
+        61, // on r#"\'[^\']+\'"#, goto 60
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        97, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 96
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 54
         0, // on "(", error
         0, // on ")", error
-        -39, // on ",", reduce `Value = Variable => ActionFn(27);`
-        97, // on "->", goto 96
-        -39, // on ".", reduce `Value = Variable => ActionFn(27);`
+        -4, // on ",", reduce `Application = Value => ActionFn(15);`
+        0, // on "->", error
+        -4, // on ".", reduce `Application = Value => ActionFn(15);`
         0, // on ":-", error
-        -39, // on ";", reduce `Value = Variable => ActionFn(27);`
-        -39, // on "=>", reduce `Value = Variable => ActionFn(27);`
+        -4, // on ";", reduce `Application = Value => ActionFn(15);`
+        -4, // on "=>", reduce `Application = Value => ActionFn(15);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Variable => ActionFn(27);`
+        29, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 28
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Variable => ActionFn(27);`
-        // State 54
-        37, // on "(", goto 36
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        38, // on r#"\'[^\']+\'"#, goto 37
-        39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 38
-        40, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 39
-        41, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 40
+        30, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 29
         // State 55
         0, // on "(", error
         0, // on ")", error
+        -38, // on ",", reduce `Value = Variable => ActionFn(26);`
+        0, // on "->", error
+        -38, // on ".", reduce `Value = Variable => ActionFn(26);`
+        0, // on ":-", error
+        -38, // on ";", reduce `Value = Variable => ActionFn(26);`
+        -38, // on "=>", reduce `Value = Variable => ActionFn(26);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Variable => ActionFn(26);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Variable => ActionFn(26);`
+        // State 56
+        38, // on "(", goto 37
+        0, // on ")", error
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        39, // on "_", goto 38
+        0, // on "exists", error
+        0, // on "forall", error
+        40, // on r#"\'[^\']+\'"#, goto 39
+        41, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 40
+        42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 41
+        43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 42
+        // State 57
+        0, // on "(", error
+        0, // on ")", error
+        -40, // on ",", reduce `Value = "_" => ActionFn(28);`
+        0, // on "->", error
+        -40, // on ".", reduce `Value = "_" => ActionFn(28);`
+        0, // on ":-", error
+        -40, // on ";", reduce `Value = "_" => ActionFn(28);`
+        -40, // on "=>", reduce `Value = "_" => ActionFn(28);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        101, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 100
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 56
+        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "_" => ActionFn(28);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "_" => ActionFn(28);`
+        // State 58
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
@@ -899,13 +988,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        101, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 100
+        103, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 102
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 57
+        // State 59
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        103, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 102
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 60
         0, // on "(", error
         0, // on ")", error
         -14, // on ",", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
@@ -914,58 +1020,62 @@ mod __parse__Program {
         0, // on ":-", error
         -14, // on ";", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         -14, // on "=>", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
-        // State 58
-        -32, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        // State 61
+        -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ")", error
-        -32, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on "->", error
-        -32, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ":-", error
-        -32, // on ";", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -32, // on "=>", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on ";", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
+        -31, // on "=>", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
+        -31, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -32, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -32, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 59
-        -26, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 62
+        -25, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ")", error
-        -26, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on "->", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        0, // on "->", error
+        -25, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ":-", error
-        -26, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -26, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -26, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        // State 60
-        -31, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -25, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 63
+        -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ")", error
-        -31, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on "->", error
-        -31, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ":-", error
-        -31, // on ";", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -31, // on "=>", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on ";", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        -30, // on "=>", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        -30, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on "exists", error
         0, // on "forall", error
-        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 61
+        // State 64
         0, // on "(", error
         -9, // on ")", reduce `Application = (Operator Value)+ => ActionFn(48);`
         -9, // on ",", reduce `Application = (Operator Value)+ => ActionFn(48);`
@@ -974,59 +1084,63 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        72, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 71
+        76, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 75
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        74, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 73
-        // State 62
-        0, // on "(", error
-        -11, // on ")", reduce `Applications = Application => ActionFn(20);`
-        -11, // on ",", reduce `Applications = Application => ActionFn(20);`
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 63
-        0, // on "(", error
-        104, // on ")", goto 103
-        105, // on ",", goto 104
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 64
-        0, // on "(", error
-        -38, // on ")", reduce `Value = Atom => ActionFn(26);`
-        -38, // on ",", reduce `Value = Atom => ActionFn(26);`
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Atom => ActionFn(26);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Atom => ActionFn(26);`
+        78, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 77
         // State 65
-        106, // on "(", goto 105
+        0, // on "(", error
+        -11, // on ")", reduce `Applications = Application => ActionFn(19);`
+        -11, // on ",", reduce `Applications = Application => ActionFn(19);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 66
+        0, // on "(", error
+        106, // on ")", goto 105
+        107, // on ",", goto 106
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 67
+        0, // on "(", error
+        -37, // on ")", reduce `Value = Atom => ActionFn(25);`
+        -37, // on ",", reduce `Value = Atom => ActionFn(25);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Atom => ActionFn(25);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Atom => ActionFn(25);`
+        // State 68
+        108, // on "(", goto 107
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         -43, // on ",", reduce `Variable = Identifier => ActionFn(30);`
         0, // on "->", error
@@ -1034,59 +1148,63 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -43, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(30);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(30);`
-        // State 66
-        70, // on "(", goto 69
-        -5, // on ")", reduce `Application = Operator => ActionFn(17);`
-        -5, // on ",", reduce `Application = Operator => ActionFn(17);`
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        71, // on r#"\'[^\']+\'"#, goto 70
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        109, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 108
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 67
-        0, // on "(", error
-        -4, // on ")", reduce `Application = Value => ActionFn(16);`
-        -4, // on ",", reduce `Application = Value => ActionFn(16);`
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        28, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 27
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        29, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 28
-        // State 68
-        0, // on "(", error
-        -39, // on ")", reduce `Value = Variable => ActionFn(27);`
-        -39, // on ",", reduce `Value = Variable => ActionFn(27);`
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Variable => ActionFn(27);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Variable => ActionFn(27);`
         // State 69
-        37, // on "(", goto 36
+        73, // on "(", goto 72
+        -5, // on ")", reduce `Application = Operator => ActionFn(16);`
+        -5, // on ",", reduce `Application = Operator => ActionFn(16);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        74, // on "_", goto 73
+        0, // on "exists", error
+        0, // on "forall", error
+        75, // on r#"\'[^\']+\'"#, goto 74
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        111, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 110
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 70
+        0, // on "(", error
+        -4, // on ")", reduce `Application = Value => ActionFn(15);`
+        -4, // on ",", reduce `Application = Value => ActionFn(15);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        29, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 28
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        30, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 29
+        // State 71
+        0, // on "(", error
+        -38, // on ")", reduce `Value = Variable => ActionFn(26);`
+        -38, // on ",", reduce `Value = Variable => ActionFn(26);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Variable => ActionFn(26);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Variable => ActionFn(26);`
+        // State 72
+        38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1094,13 +1212,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        39, // on "_", goto 38
         0, // on "exists", error
         0, // on "forall", error
-        38, // on r#"\'[^\']+\'"#, goto 37
-        39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 38
-        40, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 39
-        41, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 40
-        // State 70
+        40, // on r#"\'[^\']+\'"#, goto 39
+        41, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 40
+        42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 41
+        43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 42
+        // State 73
+        0, // on "(", error
+        -40, // on ")", reduce `Value = "_" => ActionFn(28);`
+        -40, // on ",", reduce `Value = "_" => ActionFn(28);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "_" => ActionFn(28);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "_" => ActionFn(28);`
+        // State 74
         0, // on "(", error
         -14, // on ")", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         -14, // on ",", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
@@ -1109,58 +1244,62 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
-        // State 71
-        -32, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -32, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -32, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        // State 75
+        -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
+        -31, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
+        -31, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        -31, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -32, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -32, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 72
-        -26, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 76
+        -25, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -26, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -26, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        // State 73
-        -31, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -31, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -31, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -25, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 77
+        -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        -30, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        -30, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        -30, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on "exists", error
         0, // on "forall", error
-        -31, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -31, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -30, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 74
+        // State 78
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
@@ -1169,14 +1308,15 @@ mod __parse__Program {
         -6, // on ":-", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
         0, // on ";", error
         0, // on "=>", error
+        14, // on "_", goto 13
         0, // on "exists", error
         0, // on "forall", error
-        14, // on r#"\'[^\']+\'"#, goto 13
+        15, // on r#"\'[^\']+\'"#, goto 14
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        25, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 24
+        26, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 25
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 75
-        37, // on "(", goto 36
+        // State 79
+        38, // on "(", goto 37
         -7, // on ")", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         0, // on ",", error
         0, // on "->", error
@@ -1184,29 +1324,31 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        39, // on "_", goto 38
         0, // on "exists", error
         0, // on "forall", error
-        38, // on r#"\'[^\']+\'"#, goto 37
+        40, // on r#"\'[^\']+\'"#, goto 39
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        81, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 80
+        85, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 84
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 76
+        // State 80
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -40, // on ".", reduce `Value = "(", Application, ")" => ActionFn(28);`
-        -40, // on ":-", reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on ".", reduce `Value = "(", Application, ")" => ActionFn(27);`
+        -39, // on ":-", reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "(", Application, ")" => ActionFn(28);`
-        // State 77
-        70, // on "(", goto 69
+        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "(", Application, ")" => ActionFn(27);`
+        // State 81
+        73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1214,13 +1356,14 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
-        71, // on r#"\'[^\']+\'"#, goto 70
-        72, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 71
-        73, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 72
-        74, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 73
-        // State 78
+        75, // on r#"\'[^\']+\'"#, goto 74
+        76, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 75
+        77, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 76
+        78, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 77
+        // State 82
         0, // on "(", error
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ",", error
@@ -1229,13 +1372,14 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -43, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(30);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(30);`
-        // State 79
+        // State 83
         0, // on "(", error
         -2, // on ")", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         0, // on ",", error
@@ -1244,28 +1388,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
-        // State 80
+        // State 84
         0, // on "(", error
-        -26, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -26, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -26, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        // State 81
+        -25, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 85
         0, // on "(", error
         -8, // on ")", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
         0, // on ",", error
@@ -1274,14 +1420,15 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 38
+        41, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 40
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        41, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 40
-        // State 82
-        37, // on "(", goto 36
+        43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 42
+        // State 86
+        38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1289,29 +1436,31 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        39, // on "_", goto 38
         0, // on "exists", error
         0, // on "forall", error
-        38, // on r#"\'[^\']+\'"#, goto 37
+        40, // on r#"\'[^\']+\'"#, goto 39
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        81, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 80
+        85, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 84
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 83
+        // State 87
         0, // on "(", error
-        116, // on ")", goto 115
+        118, // on ")", goto 117
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 84
-        55, // on "(", goto 54
+        // State 88
+        57, // on "(", goto 56
         0, // on ")", error
         -7, // on ",", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         0, // on "->", error
@@ -1319,74 +1468,15 @@ mod __parse__Program {
         0, // on ":-", error
         -7, // on ";", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         -7, // on "=>", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
+        58, // on "_", goto 57
         0, // on "exists", error
         0, // on "forall", error
-        58, // on r#"\'[^\']+\'"#, goto 57
+        61, // on r#"\'[^\']+\'"#, goto 60
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        94, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 93
+        97, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 96
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 85
-        -37, // on "(", reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        -37, // on r#"\'[^\']+\'"#, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
-        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
-        -37, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
-        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
-        // State 86
-        55, // on "(", goto 54
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        56, // on "exists", goto 55
-        57, // on "forall", goto 56
-        58, // on r#"\'[^\']+\'"#, goto 57
-        59, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 58
-        60, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 59
-        61, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 60
-        // State 87
-        55, // on "(", goto 54
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        56, // on "exists", goto 55
-        57, // on "forall", goto 56
-        58, // on r#"\'[^\']+\'"#, goto 57
-        59, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 58
-        60, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 59
-        61, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 60
-        // State 88
-        55, // on "(", goto 54
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        56, // on "exists", goto 55
-        57, // on "forall", goto 56
-        58, // on r#"\'[^\']+\'"#, goto 57
-        59, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 58
-        60, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 59
-        61, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 60
         // State 89
-        70, // on "(", goto 69
+        -36, // on "(", reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1394,13 +1484,78 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        -36, // on "_", reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
         0, // on "exists", error
         0, // on "forall", error
-        71, // on r#"\'[^\']+\'"#, goto 70
-        72, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 71
-        73, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 72
-        74, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 73
+        -36, // on r#"\'[^\']+\'"#, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
+        -36, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
+        -36, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
+        -36, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
         // State 90
+        57, // on "(", goto 56
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        58, // on "_", goto 57
+        59, // on "exists", goto 58
+        60, // on "forall", goto 59
+        61, // on r#"\'[^\']+\'"#, goto 60
+        62, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 61
+        63, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 62
+        64, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 63
+        // State 91
+        57, // on "(", goto 56
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        58, // on "_", goto 57
+        59, // on "exists", goto 58
+        60, // on "forall", goto 59
+        61, // on r#"\'[^\']+\'"#, goto 60
+        62, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 61
+        63, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 62
+        64, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 63
+        // State 92
+        57, // on "(", goto 56
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        58, // on "_", goto 57
+        59, // on "exists", goto 58
+        60, // on "forall", goto 59
+        61, // on r#"\'[^\']+\'"#, goto 60
+        62, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 61
+        63, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 62
+        64, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 63
+        // State 93
+        73, // on "(", goto 72
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        74, // on "_", goto 73
+        0, // on "exists", error
+        0, // on "forall", error
+        75, // on r#"\'[^\']+\'"#, goto 74
+        76, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 75
+        77, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 76
+        78, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 77
+        // State 94
         0, // on "(", error
         0, // on ")", error
         -43, // on ",", reduce `Variable = Identifier => ActionFn(30);`
@@ -1409,13 +1564,14 @@ mod __parse__Program {
         0, // on ":-", error
         -43, // on ";", reduce `Variable = Identifier => ActionFn(30);`
         -43, // on "=>", reduce `Variable = Identifier => ActionFn(30);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -43, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(30);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(30);`
-        // State 91
+        // State 95
         0, // on "(", error
         0, // on ")", error
         -2, // on ",", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
@@ -1424,43 +1580,30 @@ mod __parse__Program {
         0, // on ":-", error
         -2, // on ";", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         -2, // on "=>", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
-        // State 92
+        // State 96
         0, // on "(", error
         0, // on ")", error
-        -39, // on ",", reduce `Value = Variable => ActionFn(27);`
+        -25, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on "->", error
-        -39, // on ".", reduce `Value = Variable => ActionFn(27);`
+        -25, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ":-", error
-        -39, // on ";", reduce `Value = Variable => ActionFn(27);`
-        -39, // on "=>", reduce `Value = Variable => ActionFn(27);`
+        -25, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = Variable => ActionFn(27);`
+        -25, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = Variable => ActionFn(27);`
-        // State 93
-        0, // on "(", error
-        0, // on ")", error
-        -26, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        0, // on "->", error
-        -26, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        0, // on ":-", error
-        -26, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -26, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -26, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        // State 94
+        -25, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 97
         0, // on "(", error
         0, // on ")", error
         -8, // on ",", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
@@ -1469,81 +1612,39 @@ mod __parse__Program {
         0, // on ":-", error
         -8, // on ";", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
         -8, // on "=>", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        59, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 58
+        62, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 61
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        61, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 60
-        // State 95
-        55, // on "(", goto 54
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        58, // on r#"\'[^\']+\'"#, goto 57
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        94, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 93
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 96
-        55, // on "(", goto 54
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        56, // on "exists", goto 55
-        57, // on "forall", goto 56
-        58, // on r#"\'[^\']+\'"#, goto 57
-        59, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 58
-        60, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 59
-        61, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 60
-        // State 97
-        0, // on "(", error
-        124, // on ")", goto 123
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        64, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 63
         // State 98
-        0, // on "(", error
+        57, // on "(", goto 56
         0, // on ")", error
         0, // on ",", error
-        -43, // on "->", reduce `Variable = Identifier => ActionFn(30);`
+        0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        58, // on "_", goto 57
         0, // on "exists", error
         0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
+        61, // on r#"\'[^\']+\'"#, goto 60
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        97, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 96
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 99
         0, // on "(", error
-        0, // on ")", error
+        125, // on ")", goto 124
         0, // on ",", error
-        125, // on "->", goto 124
+        0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -1554,11 +1655,12 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
-        -26, // on "->", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -43, // on "->", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -1574,6 +1676,7 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -1581,29 +1684,31 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 102
-        70, // on "(", goto 69
-        -7, // on ")", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
-        -7, // on ",", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
-        0, // on "->", error
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        -25, // on "->", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
-        71, // on r#"\'[^\']+\'"#, goto 70
+        0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        109, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 108
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 103
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
-        0, // on "->", error
-        -10, // on ".", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(19);`
-        -10, // on ":-", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(19);`
+        127, // on "->", goto 126
+        0, // on ".", error
+        0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -1611,22 +1716,55 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 104
-        70, // on "(", goto 69
-        -13, // on ")", reduce `Applications = Applications, "," => ActionFn(22);`
-        -13, // on ",", reduce `Applications = Applications, "," => ActionFn(22);`
+        73, // on "(", goto 72
+        -7, // on ")", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
+        -7, // on ",", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
-        71, // on r#"\'[^\']+\'"#, goto 70
-        72, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 71
-        73, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 72
-        74, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 73
+        75, // on r#"\'[^\']+\'"#, goto 74
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        111, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 110
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 105
-        70, // on "(", goto 69
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        -10, // on ".", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
+        -10, // on ":-", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 106
+        73, // on "(", goto 72
+        -13, // on ")", reduce `Applications = Applications, "," => ActionFn(21);`
+        -13, // on ",", reduce `Applications = Applications, "," => ActionFn(21);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        74, // on "_", goto 73
+        0, // on "exists", error
+        0, // on "forall", error
+        75, // on r#"\'[^\']+\'"#, goto 74
+        76, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 75
+        77, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 76
+        78, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 77
+        // State 107
+        73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1634,13 +1772,14 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
-        71, // on r#"\'[^\']+\'"#, goto 70
-        72, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 71
-        73, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 72
-        74, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 73
-        // State 106
+        75, // on r#"\'[^\']+\'"#, goto 74
+        76, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 75
+        77, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 76
+        78, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 77
+        // State 108
         0, // on "(", error
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         -43, // on ",", reduce `Variable = Identifier => ActionFn(30);`
@@ -1649,13 +1788,14 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -43, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(30);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -43, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(30);`
-        // State 107
+        // State 109
         0, // on "(", error
         -2, // on ")", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         -2, // on ",", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
@@ -1664,28 +1804,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
-        // State 108
+        // State 110
         0, // on "(", error
-        -26, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        -26, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -26, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        -25, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -26, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        // State 109
+        -25, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        // State 111
         0, // on "(", error
         -8, // on ")", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
         -8, // on ",", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
@@ -1694,14 +1836,15 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        72, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 71
+        76, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 75
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        74, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 73
-        // State 110
-        70, // on "(", goto 69
+        78, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 77
+        // State 112
+        73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1709,28 +1852,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
-        71, // on r#"\'[^\']+\'"#, goto 70
+        75, // on r#"\'[^\']+\'"#, goto 74
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        109, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 108
+        111, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 110
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 111
+        // State 113
         0, // on "(", error
-        131, // on ")", goto 130
+        132, // on ")", goto 131
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 112
+        // State 114
         0, // on "(", error
         -3, // on ")", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         0, // on ",", error
@@ -1739,29 +1884,31 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
-        // State 113
+        // State 115
         0, // on "(", error
-        132, // on ")", goto 131
-        105, // on ",", goto 104
+        133, // on ")", goto 132
+        107, // on ",", goto 106
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 114
-        37, // on "(", goto 36
+        // State 116
+        38, // on "(", goto 37
         -6, // on ")", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
         0, // on ",", error
         0, // on "->", error
@@ -1769,28 +1916,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        39, // on "_", goto 38
         0, // on "exists", error
         0, // on "forall", error
-        38, // on r#"\'[^\']+\'"#, goto 37
+        40, // on r#"\'[^\']+\'"#, goto 39
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        81, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 80
+        85, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 84
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 115
+        // State 117
         0, // on "(", error
-        -40, // on ")", reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on ")", reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "(", Application, ")" => ActionFn(28);`
-        // State 116
+        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "(", Application, ")" => ActionFn(27);`
+        // State 118
         0, // on "(", error
         0, // on ")", error
         -3, // on ",", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
@@ -1799,51 +1948,23 @@ mod __parse__Program {
         0, // on ":-", error
         -3, // on ";", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         -3, // on "=>", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
-        // State 117
+        // State 119
         0, // on "(", error
         0, // on ")", error
-        89, // on ",", goto 88
+        93, // on ",", goto 92
         0, // on "->", error
         -17, // on ".", reduce `FactAnd = FactAnd, ";", FactOr => ActionFn(7);`
         0, // on ":-", error
         -17, // on ";", reduce `FactAnd = FactAnd, ";", FactOr => ActionFn(7);`
         0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 118
-        0, // on "(", error
-        0, // on ")", error
-        -20, // on ",", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
-        0, // on "->", error
-        -20, // on ".", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
-        0, // on ":-", error
-        -20, // on ";", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 119
-        0, // on "(", error
-        0, // on ")", error
-        -25, // on ",", reduce `FactOr = FactOr, ",", FactFunc => ActionFn(9);`
-        0, // on "->", error
-        -25, // on ".", reduce `FactOr = FactOr, ",", FactFunc => ActionFn(9);`
-        0, // on ":-", error
-        -25, // on ";", reduce `FactOr = FactOr, ",", FactFunc => ActionFn(9);`
-        0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -1852,13 +1973,14 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 120
         0, // on "(", error
-        133, // on ")", goto 132
-        105, // on ",", goto 104
+        0, // on ")", error
+        -20, // on ",", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
         0, // on "->", error
-        0, // on ".", error
+        -20, // on ".", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
         0, // on ":-", error
-        0, // on ";", error
+        -20, // on ";", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -1866,29 +1988,31 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 121
-        55, // on "(", goto 54
+        0, // on "(", error
         0, // on ")", error
-        -6, // on ",", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
+        -24, // on ",", reduce `FactOr = FactOr, ",", FactFunc => ActionFn(9);`
         0, // on "->", error
-        -6, // on ".", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
+        -24, // on ".", reduce `FactOr = FactOr, ",", FactFunc => ActionFn(9);`
         0, // on ":-", error
-        -6, // on ";", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
-        -6, // on "=>", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
+        -24, // on ";", reduce `FactOr = FactOr, ",", FactFunc => ActionFn(9);`
+        0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
-        58, // on r#"\'[^\']+\'"#, goto 57
+        0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        94, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 93
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 122
         0, // on "(", error
-        0, // on ")", error
-        -23, // on ",", reduce `FactFunc = Variable, "->", FactFunc => ActionFn(14);`
+        134, // on ")", goto 133
+        107, // on ",", goto 106
         0, // on "->", error
-        -23, // on ".", reduce `FactFunc = Variable, "->", FactFunc => ActionFn(14);`
+        0, // on ".", error
         0, // on ":-", error
-        -23, // on ";", reduce `FactFunc = Variable, "->", FactFunc => ActionFn(14);`
+        0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -1896,37 +2020,39 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 123
+        57, // on "(", goto 56
+        0, // on ")", error
+        -6, // on ",", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
+        0, // on "->", error
+        -6, // on ".", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
+        0, // on ":-", error
+        -6, // on ";", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
+        -6, // on "=>", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
+        58, // on "_", goto 57
+        0, // on "exists", error
+        0, // on "forall", error
+        61, // on r#"\'[^\']+\'"#, goto 60
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        97, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 96
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 124
         0, // on "(", error
         0, // on ")", error
-        -40, // on ",", reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on ",", reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on "->", error
-        -40, // on ".", reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on ".", reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on ":-", error
-        -40, // on ";", reduce `Value = "(", Application, ")" => ActionFn(28);`
-        -40, // on "=>", reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on ";", reduce `Value = "(", Application, ")" => ActionFn(27);`
+        -39, // on "=>", reduce `Value = "(", Application, ")" => ActionFn(27);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "(", Application, ")" => ActionFn(28);`
-        // State 124
-        55, // on "(", goto 54
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        56, // on "exists", goto 55
-        57, // on "forall", goto 56
-        58, // on r#"\'[^\']+\'"#, goto 57
-        59, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 58
-        60, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 59
-        61, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 60
+        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "(", Application, ")" => ActionFn(27);`
         // State 125
-        55, // on "(", goto 54
+        57, // on "(", goto 56
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1934,13 +2060,30 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        56, // on "exists", goto 55
-        57, // on "forall", goto 56
-        58, // on r#"\'[^\']+\'"#, goto 57
-        59, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 58
-        60, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 59
-        61, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 60
+        58, // on "_", goto 57
+        59, // on "exists", goto 58
+        60, // on "forall", goto 59
+        61, // on r#"\'[^\']+\'"#, goto 60
+        62, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 61
+        63, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 62
+        64, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 63
         // State 126
+        57, // on "(", goto 56
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        58, // on "_", goto 57
+        59, // on "exists", goto 58
+        60, // on "forall", goto 59
+        61, // on r#"\'[^\']+\'"#, goto 60
+        62, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 61
+        63, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 62
+        64, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 63
+        // State 127
         0, // on "(", error
         -3, // on ")", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         -3, // on ",", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
@@ -1949,36 +2092,23 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
         -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
-        // State 127
-        0, // on "(", error
-        -12, // on ")", reduce `Applications = Applications, ",", Application => ActionFn(21);`
-        -12, // on ",", reduce `Applications = Applications, ",", Application => ActionFn(21);`
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 128
         0, // on "(", error
-        136, // on ")", goto 135
-        105, // on ",", goto 104
+        -12, // on ")", reduce `Applications = Applications, ",", Application => ActionFn(20);`
+        -12, // on ",", reduce `Applications = Applications, ",", Application => ActionFn(20);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -1986,7 +2116,23 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 129
-        70, // on "(", goto 69
+        0, // on "(", error
+        137, // on ")", goto 136
+        107, // on ",", goto 106
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 130
+        73, // on "(", goto 72
         -6, // on ")", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
         -6, // on ",", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
         0, // on "->", error
@@ -1994,51 +2140,39 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
-        71, // on r#"\'[^\']+\'"#, goto 70
+        75, // on r#"\'[^\']+\'"#, goto 74
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        109, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 108
+        111, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 110
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 130
+        // State 131
         0, // on "(", error
-        -40, // on ")", reduce `Value = "(", Application, ")" => ActionFn(28);`
-        -40, // on ",", reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on ")", reduce `Value = "(", Application, ")" => ActionFn(27);`
+        -39, // on ",", reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
-        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "(", Application, ")" => ActionFn(28);`
+        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "(", Application, ")" => ActionFn(28);`
-        // State 131
+        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = "(", Application, ")" => ActionFn(27);`
+        // State 132
         0, // on "(", error
-        -10, // on ")", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(19);`
+        -10, // on ")", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 132
-        0, // on "(", error
-        0, // on ")", error
-        -10, // on ",", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(19);`
-        0, // on "->", error
-        -10, // on ".", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(19);`
-        0, // on ":-", error
-        -10, // on ";", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(19);`
-        -10, // on "=>", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(19);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -2048,12 +2182,13 @@ mod __parse__Program {
         // State 133
         0, // on "(", error
         0, // on ")", error
-        -21, // on ",", reduce `FactFunc = "exists", Variable, "->", FactFunc => ActionFn(12);`
+        -10, // on ",", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
         0, // on "->", error
-        -21, // on ".", reduce `FactFunc = "exists", Variable, "->", FactFunc => ActionFn(12);`
+        -10, // on ".", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
         0, // on ":-", error
-        -21, // on ";", reduce `FactFunc = "exists", Variable, "->", FactFunc => ActionFn(12);`
-        0, // on "=>", error
+        -10, // on ";", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
+        -10, // on "=>", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -2063,12 +2198,13 @@ mod __parse__Program {
         // State 134
         0, // on "(", error
         0, // on ")", error
-        -22, // on ",", reduce `FactFunc = "forall", Variable, "->", FactFunc => ActionFn(13);`
+        -21, // on ",", reduce `FactFunc = "exists", Variable, "->", FactFunc => ActionFn(12);`
         0, // on "->", error
-        -22, // on ".", reduce `FactFunc = "forall", Variable, "->", FactFunc => ActionFn(13);`
+        -21, // on ".", reduce `FactFunc = "exists", Variable, "->", FactFunc => ActionFn(12);`
         0, // on ":-", error
-        -22, // on ";", reduce `FactFunc = "forall", Variable, "->", FactFunc => ActionFn(13);`
+        -21, // on ";", reduce `FactFunc = "exists", Variable, "->", FactFunc => ActionFn(12);`
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -2077,13 +2213,30 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 135
         0, // on "(", error
-        -10, // on ")", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(19);`
-        -10, // on ",", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(19);`
+        0, // on ")", error
+        -22, // on ",", reduce `FactFunc = "forall", Variable, "->", FactFunc => ActionFn(13);`
+        0, // on "->", error
+        -22, // on ".", reduce `FactFunc = "forall", Variable, "->", FactFunc => ActionFn(13);`
+        0, // on ":-", error
+        -22, // on ";", reduce `FactFunc = "forall", Variable, "->", FactFunc => ActionFn(13);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 136
+        0, // on "(", error
+        -10, // on ")", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
+        -10, // on ",", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
         0, // on r#"\'[^\']+\'"#, error
@@ -2097,11 +2250,11 @@ mod __parse__Program {
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
-        -29, // on EOF, reduce `Item+ = Item => ActionFn(39);`
-        -36, // on EOF, reduce `Program = Item+ => ActionFn(1);`
+        -28, // on EOF, reduce `Item+ = Item => ActionFn(39);`
+        -35, // on EOF, reduce `Program = Item+ => ActionFn(1);`
         0, // on EOF, error
         -44, // on EOF, reduce `__Program = Program => ActionFn(0);`
-        -28, // on EOF, reduce `Item = Rule => ActionFn(3);`
+        -27, // on EOF, reduce `Item = Rule => ActionFn(3);`
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
@@ -2110,11 +2263,11 @@ mod __parse__Program {
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
-        -27, // on EOF, reduce `Item = Application, "." => ActionFn(2);`
         0, // on EOF, error
+        -26, // on EOF, reduce `Item = Application, "." => ActionFn(2);`
         0, // on EOF, error
-        -30, // on EOF, reduce `Item+ = Item+, Item => ActionFn(40);`
         0, // on EOF, error
+        -29, // on EOF, reduce `Item+ = Item+, Item => ActionFn(40);`
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
@@ -2177,10 +2330,11 @@ mod __parse__Program {
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
-        -37, // on EOF, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
+        0, // on EOF, error
+        -36, // on EOF, reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
@@ -2267,7 +2421,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        18, // on Operator, goto 17
+        19, // on Operator, goto 18
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -2380,7 +2534,7 @@ mod __parse__Program {
         0, // on FactFunc, error
         0, // on FactOr, error
         5, // on Identifier, goto 4
-        22, // on Item, goto 21
+        23, // on Item, goto 22
         0, // on Item+, error
         8, // on Operator, goto 7
         0, // on Operator?, error
@@ -2402,7 +2556,7 @@ mod __parse__Program {
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        23, // on Identifier, goto 22
+        24, // on Identifier, goto 23
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -2410,7 +2564,7 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        24, // on Value, goto 23
+        25, // on Value, goto 24
         0, // on Value?, error
         12, // on Variable, goto 11
         0, // on __Program, error
@@ -2462,7 +2616,7 @@ mod __parse__Program {
         0, // on __Program, error
         // State 10
         0, // on (Operator Value), error
-        26, // on (Operator Value)+, goto 25
+        27, // on (Operator Value)+, goto 26
         0, // on Application, error
         0, // on Applications, error
         0, // on Atom, error
@@ -2474,7 +2628,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        27, // on Operator, goto 26
+        28, // on Operator, goto 27
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -2508,26 +2662,26 @@ mod __parse__Program {
         0, // on __Program, error
         // State 12
         0, // on (Operator Value), error
-        30, // on (Operator Value)+, goto 29
-        31, // on Application, goto 30
+        31, // on (Operator Value)+, goto 30
+        32, // on Application, goto 31
         0, // on Applications, error
-        32, // on Atom, goto 31
+        33, // on Atom, goto 32
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        33, // on Identifier, goto 32
+        34, // on Identifier, goto 33
         0, // on Item, error
         0, // on Item+, error
-        34, // on Operator, goto 33
+        35, // on Operator, goto 34
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        35, // on Value, goto 34
+        36, // on Value, goto 35
         0, // on Value?, error
-        36, // on Variable, goto 35
+        37, // on Variable, goto 36
         0, // on __Program, error
         // State 13
         0, // on (Operator Value), error
@@ -2626,13 +2780,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        4, // on Atom, goto 3
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        23, // on Identifier, goto 22
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -2640,22 +2794,22 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        42, // on Value, goto 41
+        0, // on Value, error
         0, // on Value?, error
-        12, // on Variable, goto 11
+        0, // on Variable, error
         0, // on __Program, error
         // State 18
         0, // on (Operator Value), error
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        0, // on Atom, error
+        4, // on Atom, goto 3
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        24, // on Identifier, goto 23
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -2663,57 +2817,11 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        44, // on Value, goto 43
         0, // on Value?, error
-        0, // on Variable, error
+        12, // on Variable, goto 11
         0, // on __Program, error
         // State 19
-        0, // on (Operator Value), error
-        43, // on (Operator Value)+, goto 42
-        44, // on Application, goto 43
-        0, // on Applications, error
-        45, // on Atom, goto 44
-        46, // on Fact, goto 45
-        47, // on FactAnd, goto 46
-        48, // on FactApply, goto 47
-        49, // on FactFunc, goto 48
-        50, // on FactOr, goto 49
-        51, // on Identifier, goto 50
-        0, // on Item, error
-        0, // on Item+, error
-        52, // on Operator, goto 51
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        53, // on Value, goto 52
-        0, // on Value?, error
-        54, // on Variable, goto 53
-        0, // on __Program, error
-        // State 20
-        0, // on (Operator Value), error
-        62, // on (Operator Value)+, goto 61
-        63, // on Application, goto 62
-        64, // on Applications, goto 63
-        65, // on Atom, goto 64
-        0, // on Fact, error
-        0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
-        0, // on FactOr, error
-        66, // on Identifier, goto 65
-        0, // on Item, error
-        0, // on Item+, error
-        67, // on Operator, goto 66
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        68, // on Value, goto 67
-        0, // on Value?, error
-        69, // on Variable, goto 68
-        0, // on __Program, error
-        // State 21
         0, // on (Operator Value), error
         0, // on (Operator Value)+, error
         0, // on Application, error
@@ -2735,6 +2843,52 @@ mod __parse__Program {
         0, // on Value, error
         0, // on Value?, error
         0, // on Variable, error
+        0, // on __Program, error
+        // State 20
+        0, // on (Operator Value), error
+        45, // on (Operator Value)+, goto 44
+        46, // on Application, goto 45
+        0, // on Applications, error
+        47, // on Atom, goto 46
+        48, // on Fact, goto 47
+        49, // on FactAnd, goto 48
+        50, // on FactApply, goto 49
+        51, // on FactFunc, goto 50
+        52, // on FactOr, goto 51
+        53, // on Identifier, goto 52
+        0, // on Item, error
+        0, // on Item+, error
+        54, // on Operator, goto 53
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        55, // on Value, goto 54
+        0, // on Value?, error
+        56, // on Variable, goto 55
+        0, // on __Program, error
+        // State 21
+        0, // on (Operator Value), error
+        65, // on (Operator Value)+, goto 64
+        66, // on Application, goto 65
+        67, // on Applications, goto 66
+        68, // on Atom, goto 67
+        0, // on Fact, error
+        0, // on FactAnd, error
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        69, // on Identifier, goto 68
+        0, // on Item, error
+        0, // on Item+, error
+        70, // on Operator, goto 69
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        71, // on Value, goto 70
+        0, // on Value?, error
+        72, // on Variable, goto 71
         0, // on __Program, error
         // State 22
         0, // on (Operator Value), error
@@ -2819,7 +2973,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        75, // on Operator, goto 74
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -2833,29 +2987,6 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        4, // on Atom, goto 3
-        0, // on Fact, error
-        0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
-        0, // on FactOr, error
-        23, // on Identifier, goto 22
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        24, // on Value, goto 23
-        0, // on Value?, error
-        12, // on Variable, goto 11
-        0, // on __Program, error
-        // State 27
-        0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
-        0, // on Applications, error
         0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
@@ -2865,7 +2996,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        79, // on Operator, goto 78
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -2873,6 +3004,29 @@ mod __parse__Program {
         0, // on Value, error
         0, // on Value?, error
         0, // on Variable, error
+        0, // on __Program, error
+        // State 27
+        0, // on (Operator Value), error
+        0, // on (Operator Value)+, error
+        0, // on Application, error
+        0, // on Applications, error
+        4, // on Atom, goto 3
+        0, // on Fact, error
+        0, // on FactAnd, error
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        24, // on Identifier, goto 23
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        25, // on Value, goto 24
+        0, // on Value?, error
+        12, // on Variable, goto 11
         0, // on __Program, error
         // State 28
         0, // on (Operator Value), error
@@ -2911,7 +3065,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        76, // on Operator, goto 75
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -2934,7 +3088,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        80, // on Operator, goto 79
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -2994,29 +3148,6 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        32, // on Atom, goto 31
-        0, // on Fact, error
-        0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
-        0, // on FactOr, error
-        79, // on Identifier, goto 78
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        80, // on Value, goto 79
-        0, // on Value?, error
-        36, // on Variable, goto 35
-        0, // on __Program, error
-        // State 34
-        0, // on (Operator Value), error
-        82, // on (Operator Value)+, goto 81
-        0, // on Application, error
-        0, // on Applications, error
         0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
@@ -3026,7 +3157,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        83, // on Operator, goto 82
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -3035,9 +3166,32 @@ mod __parse__Program {
         0, // on Value?, error
         0, // on Variable, error
         0, // on __Program, error
-        // State 35
+        // State 34
         0, // on (Operator Value), error
         0, // on (Operator Value)+, error
+        0, // on Application, error
+        0, // on Applications, error
+        33, // on Atom, goto 32
+        0, // on Fact, error
+        0, // on FactAnd, error
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        83, // on Identifier, goto 82
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        84, // on Value, goto 83
+        0, // on Value?, error
+        37, // on Variable, goto 36
+        0, // on __Program, error
+        // State 35
+        0, // on (Operator Value), error
+        86, // on (Operator Value)+, goto 85
         0, // on Application, error
         0, // on Applications, error
         0, // on Atom, error
@@ -3049,7 +3203,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        87, // on Operator, goto 86
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -3060,29 +3214,6 @@ mod __parse__Program {
         0, // on __Program, error
         // State 36
         0, // on (Operator Value), error
-        30, // on (Operator Value)+, goto 29
-        84, // on Application, goto 83
-        0, // on Applications, error
-        32, // on Atom, goto 31
-        0, // on Fact, error
-        0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
-        0, // on FactOr, error
-        33, // on Identifier, goto 32
-        0, // on Item, error
-        0, // on Item+, error
-        34, // on Operator, goto 33
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        35, // on Value, goto 34
-        0, // on Value?, error
-        36, // on Variable, goto 35
-        0, // on __Program, error
-        // State 37
-        0, // on (Operator Value), error
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
@@ -3103,6 +3234,29 @@ mod __parse__Program {
         0, // on Value, error
         0, // on Value?, error
         0, // on Variable, error
+        0, // on __Program, error
+        // State 37
+        0, // on (Operator Value), error
+        31, // on (Operator Value)+, goto 30
+        88, // on Application, goto 87
+        0, // on Applications, error
+        33, // on Atom, goto 32
+        0, // on Fact, error
+        0, // on FactAnd, error
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        34, // on Identifier, goto 33
+        0, // on Item, error
+        0, // on Item+, error
+        35, // on Operator, goto 34
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        36, // on Value, goto 35
+        0, // on Value?, error
+        37, // on Variable, goto 36
         0, // on __Program, error
         // State 38
         0, // on (Operator Value), error
@@ -3210,7 +3364,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        85, // on Operator, goto 84
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -3256,7 +3410,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        89, // on Operator, goto 88
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -3408,13 +3562,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        45, // on Atom, goto 44
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        91, // on Identifier, goto 90
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -3422,13 +3576,13 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        92, // on Value, goto 91
+        0, // on Value, error
         0, // on Value?, error
-        93, // on Variable, goto 92
+        0, // on Variable, error
         0, // on __Program, error
         // State 52
         0, // on (Operator Value), error
-        95, // on (Operator Value)+, goto 94
+        0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
         0, // on Atom, error
@@ -3440,7 +3594,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        96, // on Operator, goto 95
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -3454,6 +3608,52 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
+        47, // on Atom, goto 46
+        0, // on Fact, error
+        0, // on FactAnd, error
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        95, // on Identifier, goto 94
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        96, // on Value, goto 95
+        0, // on Value?, error
+        56, // on Variable, goto 55
+        0, // on __Program, error
+        // State 54
+        0, // on (Operator Value), error
+        98, // on (Operator Value)+, goto 97
+        0, // on Application, error
+        0, // on Applications, error
+        0, // on Atom, error
+        0, // on Fact, error
+        0, // on FactAnd, error
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        99, // on Operator, goto 98
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on Value?, error
+        0, // on Variable, error
+        0, // on __Program, error
+        // State 55
+        0, // on (Operator Value), error
+        0, // on (Operator Value)+, error
+        0, // on Application, error
+        0, // on Applications, error
         0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
@@ -3472,74 +3672,28 @@ mod __parse__Program {
         0, // on Value?, error
         0, // on Variable, error
         0, // on __Program, error
-        // State 54
-        0, // on (Operator Value), error
-        30, // on (Operator Value)+, goto 29
-        98, // on Application, goto 97
-        0, // on Applications, error
-        32, // on Atom, goto 31
-        0, // on Fact, error
-        0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
-        0, // on FactOr, error
-        33, // on Identifier, goto 32
-        0, // on Item, error
-        0, // on Item+, error
-        34, // on Operator, goto 33
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        35, // on Value, goto 34
-        0, // on Value?, error
-        36, // on Variable, goto 35
-        0, // on __Program, error
-        // State 55
-        0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
-        0, // on Applications, error
-        0, // on Atom, error
-        0, // on Fact, error
-        0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
-        0, // on FactOr, error
-        99, // on Identifier, goto 98
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        0, // on Value, error
-        0, // on Value?, error
-        100, // on Variable, goto 99
-        0, // on __Program, error
         // State 56
         0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
+        31, // on (Operator Value)+, goto 30
+        100, // on Application, goto 99
         0, // on Applications, error
-        0, // on Atom, error
+        33, // on Atom, goto 32
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        99, // on Identifier, goto 98
+        34, // on Identifier, goto 33
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        35, // on Operator, goto 34
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        36, // on Value, goto 35
         0, // on Value?, error
-        102, // on Variable, goto 101
+        37, // on Variable, goto 36
         0, // on __Program, error
         // State 57
         0, // on (Operator Value), error
@@ -3575,7 +3729,7 @@ mod __parse__Program {
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        101, // on Identifier, goto 100
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -3585,7 +3739,7 @@ mod __parse__Program {
         0, // on Rule, error
         0, // on Value, error
         0, // on Value?, error
-        0, // on Variable, error
+        102, // on Variable, goto 101
         0, // on __Program, error
         // State 59
         0, // on (Operator Value), error
@@ -3598,7 +3752,7 @@ mod __parse__Program {
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        101, // on Identifier, goto 100
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -3608,7 +3762,7 @@ mod __parse__Program {
         0, // on Rule, error
         0, // on Value, error
         0, // on Value?, error
-        0, // on Variable, error
+        104, // on Variable, goto 103
         0, // on __Program, error
         // State 60
         0, // on (Operator Value), error
@@ -3647,7 +3801,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        103, // on Operator, goto 102
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -3716,7 +3870,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        105, // on Operator, goto 104
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -3753,13 +3907,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        65, // on Atom, goto 64
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        107, // on Identifier, goto 106
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -3767,13 +3921,13 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        108, // on Value, goto 107
+        0, // on Value, error
         0, // on Value?, error
-        69, // on Variable, goto 68
+        0, // on Variable, error
         0, // on __Program, error
         // State 67
         0, // on (Operator Value), error
-        110, // on (Operator Value)+, goto 109
+        0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
         0, // on Atom, error
@@ -3785,7 +3939,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        111, // on Operator, goto 110
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -3819,30 +3973,30 @@ mod __parse__Program {
         0, // on __Program, error
         // State 69
         0, // on (Operator Value), error
-        30, // on (Operator Value)+, goto 29
-        112, // on Application, goto 111
+        0, // on (Operator Value)+, error
+        0, // on Application, error
         0, // on Applications, error
-        32, // on Atom, goto 31
+        68, // on Atom, goto 67
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        33, // on Identifier, goto 32
+        109, // on Identifier, goto 108
         0, // on Item, error
         0, // on Item+, error
-        34, // on Operator, goto 33
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        35, // on Value, goto 34
+        110, // on Value, goto 109
         0, // on Value?, error
-        36, // on Variable, goto 35
+        72, // on Variable, goto 71
         0, // on __Program, error
         // State 70
         0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
+        112, // on (Operator Value)+, goto 111
         0, // on Application, error
         0, // on Applications, error
         0, // on Atom, error
@@ -3854,7 +4008,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        113, // on Operator, goto 112
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -3888,26 +4042,26 @@ mod __parse__Program {
         0, // on __Program, error
         // State 72
         0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
+        31, // on (Operator Value)+, goto 30
+        114, // on Application, goto 113
         0, // on Applications, error
-        0, // on Atom, error
+        33, // on Atom, goto 32
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        34, // on Identifier, goto 33
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        35, // on Operator, goto 34
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        36, // on Value, goto 35
         0, // on Value?, error
-        0, // on Variable, error
+        37, // on Variable, goto 36
         0, // on __Program, error
         // State 73
         0, // on (Operator Value), error
@@ -3937,13 +4091,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        4, // on Atom, goto 3
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        23, // on Identifier, goto 22
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -3951,22 +4105,22 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        42, // on Value, goto 41
+        0, // on Value, error
         0, // on Value?, error
-        12, // on Variable, goto 11
+        0, // on Variable, error
         0, // on __Program, error
         // State 75
         0, // on (Operator Value), error
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        32, // on Atom, goto 31
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        79, // on Identifier, goto 78
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -3974,9 +4128,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        113, // on Value, goto 112
+        0, // on Value, error
         0, // on Value?, error
-        36, // on Variable, goto 35
+        0, // on Variable, error
         0, // on __Program, error
         // State 76
         0, // on (Operator Value), error
@@ -4003,39 +4157,39 @@ mod __parse__Program {
         0, // on __Program, error
         // State 77
         0, // on (Operator Value), error
-        62, // on (Operator Value)+, goto 61
-        63, // on Application, goto 62
-        114, // on Applications, goto 113
-        65, // on Atom, goto 64
+        0, // on (Operator Value)+, error
+        0, // on Application, error
+        0, // on Applications, error
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        66, // on Identifier, goto 65
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        67, // on Operator, goto 66
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        68, // on Value, goto 67
+        0, // on Value, error
         0, // on Value?, error
-        69, // on Variable, goto 68
+        0, // on Variable, error
         0, // on __Program, error
         // State 78
         0, // on (Operator Value), error
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        0, // on Atom, error
+        4, // on Atom, goto 3
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        24, // on Identifier, goto 23
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4043,22 +4197,22 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        44, // on Value, goto 43
         0, // on Value?, error
-        0, // on Variable, error
+        12, // on Variable, goto 11
         0, // on __Program, error
         // State 79
         0, // on (Operator Value), error
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        0, // on Atom, error
+        33, // on Atom, goto 32
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        83, // on Identifier, goto 82
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4066,9 +4220,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        115, // on Value, goto 114
         0, // on Value?, error
-        0, // on Variable, error
+        37, // on Variable, goto 36
         0, // on __Program, error
         // State 80
         0, // on (Operator Value), error
@@ -4095,6 +4249,29 @@ mod __parse__Program {
         0, // on __Program, error
         // State 81
         0, // on (Operator Value), error
+        65, // on (Operator Value)+, goto 64
+        66, // on Application, goto 65
+        116, // on Applications, goto 115
+        68, // on Atom, goto 67
+        0, // on Fact, error
+        0, // on FactAnd, error
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        69, // on Identifier, goto 68
+        0, // on Item, error
+        0, // on Item+, error
+        70, // on Operator, goto 69
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        71, // on Value, goto 70
+        0, // on Value?, error
+        72, // on Variable, goto 71
+        0, // on __Program, error
+        // State 82
+        0, // on (Operator Value), error
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
@@ -4107,7 +4284,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        115, // on Operator, goto 114
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -4115,29 +4292,6 @@ mod __parse__Program {
         0, // on Value, error
         0, // on Value?, error
         0, // on Variable, error
-        0, // on __Program, error
-        // State 82
-        0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
-        0, // on Applications, error
-        32, // on Atom, goto 31
-        0, // on Fact, error
-        0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
-        0, // on FactOr, error
-        79, // on Identifier, goto 78
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        80, // on Value, goto 79
-        0, // on Value?, error
-        36, // on Variable, goto 35
         0, // on __Program, error
         // State 83
         0, // on (Operator Value), error
@@ -4167,13 +4321,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        45, // on Atom, goto 44
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        91, // on Identifier, goto 90
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4181,9 +4335,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        117, // on Value, goto 116
+        0, // on Value, error
         0, // on Value?, error
-        93, // on Variable, goto 92
+        0, // on Variable, error
         0, // on __Program, error
         // State 85
         0, // on (Operator Value), error
@@ -4199,7 +4353,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        117, // on Operator, goto 116
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -4210,187 +4364,187 @@ mod __parse__Program {
         0, // on __Program, error
         // State 86
         0, // on (Operator Value), error
-        43, // on (Operator Value)+, goto 42
-        44, // on Application, goto 43
+        0, // on (Operator Value)+, error
+        0, // on Application, error
         0, // on Applications, error
-        45, // on Atom, goto 44
+        33, // on Atom, goto 32
         0, // on Fact, error
         0, // on FactAnd, error
-        48, // on FactApply, goto 47
-        49, // on FactFunc, goto 48
-        118, // on FactOr, goto 117
-        51, // on Identifier, goto 50
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        83, // on Identifier, goto 82
         0, // on Item, error
         0, // on Item+, error
-        52, // on Operator, goto 51
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        53, // on Value, goto 52
+        84, // on Value, goto 83
         0, // on Value?, error
-        54, // on Variable, goto 53
+        37, // on Variable, goto 36
         0, // on __Program, error
         // State 87
         0, // on (Operator Value), error
-        43, // on (Operator Value)+, goto 42
-        44, // on Application, goto 43
+        0, // on (Operator Value)+, error
+        0, // on Application, error
         0, // on Applications, error
-        45, // on Atom, goto 44
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
-        48, // on FactApply, goto 47
-        119, // on FactFunc, goto 118
+        0, // on FactApply, error
+        0, // on FactFunc, error
         0, // on FactOr, error
-        51, // on Identifier, goto 50
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        52, // on Operator, goto 51
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        53, // on Value, goto 52
+        0, // on Value, error
         0, // on Value?, error
-        54, // on Variable, goto 53
+        0, // on Variable, error
         0, // on __Program, error
         // State 88
         0, // on (Operator Value), error
-        43, // on (Operator Value)+, goto 42
-        44, // on Application, goto 43
+        0, // on (Operator Value)+, error
+        0, // on Application, error
         0, // on Applications, error
-        45, // on Atom, goto 44
+        47, // on Atom, goto 46
         0, // on Fact, error
         0, // on FactAnd, error
-        48, // on FactApply, goto 47
-        120, // on FactFunc, goto 119
+        0, // on FactApply, error
+        0, // on FactFunc, error
         0, // on FactOr, error
-        51, // on Identifier, goto 50
+        95, // on Identifier, goto 94
         0, // on Item, error
         0, // on Item+, error
-        52, // on Operator, goto 51
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        53, // on Value, goto 52
+        119, // on Value, goto 118
         0, // on Value?, error
-        54, // on Variable, goto 53
+        56, // on Variable, goto 55
         0, // on __Program, error
         // State 89
         0, // on (Operator Value), error
-        62, // on (Operator Value)+, goto 61
-        63, // on Application, goto 62
-        121, // on Applications, goto 120
-        65, // on Atom, goto 64
+        0, // on (Operator Value)+, error
+        0, // on Application, error
+        0, // on Applications, error
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        66, // on Identifier, goto 65
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        67, // on Operator, goto 66
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        68, // on Value, goto 67
+        0, // on Value, error
         0, // on Value?, error
-        69, // on Variable, goto 68
+        0, // on Variable, error
         0, // on __Program, error
         // State 90
         0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
+        45, // on (Operator Value)+, goto 44
+        46, // on Application, goto 45
         0, // on Applications, error
-        0, // on Atom, error
+        47, // on Atom, goto 46
         0, // on Fact, error
         0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
-        0, // on FactOr, error
-        0, // on Identifier, error
+        50, // on FactApply, goto 49
+        51, // on FactFunc, goto 50
+        120, // on FactOr, goto 119
+        53, // on Identifier, goto 52
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        54, // on Operator, goto 53
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        55, // on Value, goto 54
         0, // on Value?, error
-        0, // on Variable, error
+        56, // on Variable, goto 55
         0, // on __Program, error
         // State 91
         0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
+        45, // on (Operator Value)+, goto 44
+        46, // on Application, goto 45
         0, // on Applications, error
-        0, // on Atom, error
+        47, // on Atom, goto 46
         0, // on Fact, error
         0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
+        50, // on FactApply, goto 49
+        121, // on FactFunc, goto 120
         0, // on FactOr, error
-        0, // on Identifier, error
+        53, // on Identifier, goto 52
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        54, // on Operator, goto 53
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        55, // on Value, goto 54
         0, // on Value?, error
-        0, // on Variable, error
+        56, // on Variable, goto 55
         0, // on __Program, error
         // State 92
         0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
+        45, // on (Operator Value)+, goto 44
+        46, // on Application, goto 45
         0, // on Applications, error
-        0, // on Atom, error
+        47, // on Atom, goto 46
         0, // on Fact, error
         0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
+        50, // on FactApply, goto 49
+        122, // on FactFunc, goto 121
         0, // on FactOr, error
-        0, // on Identifier, error
+        53, // on Identifier, goto 52
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        54, // on Operator, goto 53
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        55, // on Value, goto 54
         0, // on Value?, error
-        0, // on Variable, error
+        56, // on Variable, goto 55
         0, // on __Program, error
         // State 93
         0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
-        0, // on Applications, error
-        0, // on Atom, error
+        65, // on (Operator Value)+, goto 64
+        66, // on Application, goto 65
+        123, // on Applications, goto 122
+        68, // on Atom, goto 67
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        69, // on Identifier, goto 68
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        70, // on Operator, goto 69
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        71, // on Value, goto 70
         0, // on Value?, error
-        0, // on Variable, error
+        72, // on Variable, goto 71
         0, // on __Program, error
         // State 94
         0, // on (Operator Value), error
@@ -4406,7 +4560,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        122, // on Operator, goto 121
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -4420,13 +4574,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        45, // on Atom, goto 44
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        91, // on Identifier, goto 90
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4434,32 +4588,32 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        92, // on Value, goto 91
+        0, // on Value, error
         0, // on Value?, error
-        93, // on Variable, goto 92
+        0, // on Variable, error
         0, // on __Program, error
         // State 96
         0, // on (Operator Value), error
-        43, // on (Operator Value)+, goto 42
-        44, // on Application, goto 43
+        0, // on (Operator Value)+, error
+        0, // on Application, error
         0, // on Applications, error
-        45, // on Atom, goto 44
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
-        48, // on FactApply, goto 47
-        123, // on FactFunc, goto 122
+        0, // on FactApply, error
+        0, // on FactFunc, error
         0, // on FactOr, error
-        51, // on Identifier, goto 50
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        52, // on Operator, goto 51
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        53, // on Value, goto 52
+        0, // on Value, error
         0, // on Value?, error
-        54, // on Variable, goto 53
+        0, // on Variable, error
         0, // on __Program, error
         // State 97
         0, // on (Operator Value), error
@@ -4475,7 +4629,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        124, // on Operator, goto 123
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -4489,13 +4643,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        0, // on Atom, error
+        47, // on Atom, goto 46
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        95, // on Identifier, goto 94
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4503,9 +4657,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        96, // on Value, goto 95
         0, // on Value?, error
-        0, // on Variable, error
+        56, // on Variable, goto 55
         0, // on __Program, error
         // State 99
         0, // on (Operator Value), error
@@ -4581,13 +4735,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        65, // on Atom, goto 64
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        107, // on Identifier, goto 106
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4595,9 +4749,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        127, // on Value, goto 126
+        0, // on Value, error
         0, // on Value?, error
-        69, // on Variable, goto 68
+        0, // on Variable, error
         0, // on __Program, error
         // State 103
         0, // on (Operator Value), error
@@ -4624,95 +4778,95 @@ mod __parse__Program {
         0, // on __Program, error
         // State 104
         0, // on (Operator Value), error
-        62, // on (Operator Value)+, goto 61
-        128, // on Application, goto 127
+        0, // on (Operator Value)+, error
+        0, // on Application, error
         0, // on Applications, error
-        65, // on Atom, goto 64
+        68, // on Atom, goto 67
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        66, // on Identifier, goto 65
+        109, // on Identifier, goto 108
         0, // on Item, error
         0, // on Item+, error
-        67, // on Operator, goto 66
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        68, // on Value, goto 67
+        128, // on Value, goto 127
         0, // on Value?, error
-        69, // on Variable, goto 68
+        72, // on Variable, goto 71
         0, // on __Program, error
         // State 105
         0, // on (Operator Value), error
-        62, // on (Operator Value)+, goto 61
-        63, // on Application, goto 62
-        129, // on Applications, goto 128
-        65, // on Atom, goto 64
+        0, // on (Operator Value)+, error
+        0, // on Application, error
+        0, // on Applications, error
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        66, // on Identifier, goto 65
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        67, // on Operator, goto 66
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        68, // on Value, goto 67
+        0, // on Value, error
         0, // on Value?, error
-        69, // on Variable, goto 68
+        0, // on Variable, error
         0, // on __Program, error
         // State 106
         0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
+        65, // on (Operator Value)+, goto 64
+        129, // on Application, goto 128
         0, // on Applications, error
-        0, // on Atom, error
+        68, // on Atom, goto 67
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        69, // on Identifier, goto 68
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        70, // on Operator, goto 69
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        71, // on Value, goto 70
         0, // on Value?, error
-        0, // on Variable, error
+        72, // on Variable, goto 71
         0, // on __Program, error
         // State 107
         0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
-        0, // on Applications, error
-        0, // on Atom, error
+        65, // on (Operator Value)+, goto 64
+        66, // on Application, goto 65
+        130, // on Applications, goto 129
+        68, // on Atom, goto 67
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        69, // on Identifier, goto 68
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        70, // on Operator, goto 69
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        71, // on Value, goto 70
         0, // on Value?, error
-        0, // on Variable, error
+        72, // on Variable, goto 71
         0, // on __Program, error
         // State 108
         0, // on (Operator Value), error
@@ -4751,7 +4905,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        130, // on Operator, goto 129
+        0, // on Operator, error
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -4765,13 +4919,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        65, // on Atom, goto 64
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        107, // on Identifier, goto 106
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4779,9 +4933,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        108, // on Value, goto 107
+        0, // on Value, error
         0, // on Value?, error
-        69, // on Variable, goto 68
+        0, // on Variable, error
         0, // on __Program, error
         // State 111
         0, // on (Operator Value), error
@@ -4797,7 +4951,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        131, // on Operator, goto 130
         0, // on Operator?, error
         0, // on OperatorValue, error
         0, // on Program, error
@@ -4811,13 +4965,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        0, // on Atom, error
+        68, // on Atom, goto 67
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        109, // on Identifier, goto 108
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4825,9 +4979,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        110, // on Value, goto 109
         0, // on Value?, error
-        0, // on Variable, error
+        72, // on Variable, goto 71
         0, // on __Program, error
         // State 113
         0, // on (Operator Value), error
@@ -4857,13 +5011,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        32, // on Atom, goto 31
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        79, // on Identifier, goto 78
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4871,9 +5025,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        113, // on Value, goto 112
+        0, // on Value, error
         0, // on Value?, error
-        36, // on Variable, goto 35
+        0, // on Variable, error
         0, // on __Program, error
         // State 115
         0, // on (Operator Value), error
@@ -4903,13 +5057,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        0, // on Atom, error
+        33, // on Atom, goto 32
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        83, // on Identifier, goto 82
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -4917,9 +5071,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        115, // on Value, goto 114
         0, // on Value?, error
-        0, // on Variable, error
+        37, // on Variable, goto 36
         0, // on __Program, error
         // State 117
         0, // on (Operator Value), error
@@ -5018,13 +5172,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        45, // on Atom, goto 44
+        0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        91, // on Identifier, goto 90
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -5032,9 +5186,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        117, // on Value, goto 116
+        0, // on Value, error
         0, // on Value?, error
-        93, // on Variable, goto 92
+        0, // on Variable, error
         0, // on __Program, error
         // State 122
         0, // on (Operator Value), error
@@ -5064,13 +5218,13 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        0, // on Atom, error
+        47, // on Atom, goto 46
         0, // on Fact, error
         0, // on FactAnd, error
         0, // on FactApply, error
         0, // on FactFunc, error
         0, // on FactOr, error
-        0, // on Identifier, error
+        95, // on Identifier, goto 94
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -5078,57 +5232,11 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
+        119, // on Value, goto 118
         0, // on Value?, error
-        0, // on Variable, error
+        56, // on Variable, goto 55
         0, // on __Program, error
         // State 124
-        0, // on (Operator Value), error
-        43, // on (Operator Value)+, goto 42
-        44, // on Application, goto 43
-        0, // on Applications, error
-        45, // on Atom, goto 44
-        0, // on Fact, error
-        0, // on FactAnd, error
-        48, // on FactApply, goto 47
-        134, // on FactFunc, goto 133
-        0, // on FactOr, error
-        51, // on Identifier, goto 50
-        0, // on Item, error
-        0, // on Item+, error
-        52, // on Operator, goto 51
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        53, // on Value, goto 52
-        0, // on Value?, error
-        54, // on Variable, goto 53
-        0, // on __Program, error
-        // State 125
-        0, // on (Operator Value), error
-        43, // on (Operator Value)+, goto 42
-        44, // on Application, goto 43
-        0, // on Applications, error
-        45, // on Atom, goto 44
-        0, // on Fact, error
-        0, // on FactAnd, error
-        48, // on FactApply, goto 47
-        135, // on FactFunc, goto 134
-        0, // on FactOr, error
-        51, // on Identifier, goto 50
-        0, // on Item, error
-        0, // on Item+, error
-        52, // on Operator, goto 51
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        53, // on Value, goto 52
-        0, // on Value?, error
-        54, // on Variable, goto 53
-        0, // on __Program, error
-        // State 126
         0, // on (Operator Value), error
         0, // on (Operator Value)+, error
         0, // on Application, error
@@ -5150,6 +5258,52 @@ mod __parse__Program {
         0, // on Value, error
         0, // on Value?, error
         0, // on Variable, error
+        0, // on __Program, error
+        // State 125
+        0, // on (Operator Value), error
+        45, // on (Operator Value)+, goto 44
+        46, // on Application, goto 45
+        0, // on Applications, error
+        47, // on Atom, goto 46
+        0, // on Fact, error
+        0, // on FactAnd, error
+        50, // on FactApply, goto 49
+        135, // on FactFunc, goto 134
+        0, // on FactOr, error
+        53, // on Identifier, goto 52
+        0, // on Item, error
+        0, // on Item+, error
+        54, // on Operator, goto 53
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        55, // on Value, goto 54
+        0, // on Value?, error
+        56, // on Variable, goto 55
+        0, // on __Program, error
+        // State 126
+        0, // on (Operator Value), error
+        45, // on (Operator Value)+, goto 44
+        46, // on Application, goto 45
+        0, // on Applications, error
+        47, // on Atom, goto 46
+        0, // on Fact, error
+        0, // on FactAnd, error
+        50, // on FactApply, goto 49
+        136, // on FactFunc, goto 135
+        0, // on FactOr, error
+        53, // on Identifier, goto 52
+        0, // on Item, error
+        0, // on Item+, error
+        54, // on Operator, goto 53
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        55, // on Value, goto 54
+        0, // on Value?, error
+        56, // on Variable, goto 55
         0, // on __Program, error
         // State 127
         0, // on (Operator Value), error
@@ -5202,29 +5356,6 @@ mod __parse__Program {
         0, // on (Operator Value)+, error
         0, // on Application, error
         0, // on Applications, error
-        65, // on Atom, goto 64
-        0, // on Fact, error
-        0, // on FactAnd, error
-        0, // on FactApply, error
-        0, // on FactFunc, error
-        0, // on FactOr, error
-        107, // on Identifier, goto 106
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on Operator?, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        127, // on Value, goto 126
-        0, // on Value?, error
-        69, // on Variable, goto 68
-        0, // on __Program, error
-        // State 130
-        0, // on (Operator Value), error
-        0, // on (Operator Value)+, error
-        0, // on Application, error
-        0, // on Applications, error
         0, // on Atom, error
         0, // on Fact, error
         0, // on FactAnd, error
@@ -5242,6 +5373,29 @@ mod __parse__Program {
         0, // on Value, error
         0, // on Value?, error
         0, // on Variable, error
+        0, // on __Program, error
+        // State 130
+        0, // on (Operator Value), error
+        0, // on (Operator Value)+, error
+        0, // on Application, error
+        0, // on Applications, error
+        68, // on Atom, goto 67
+        0, // on Fact, error
+        0, // on FactAnd, error
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        109, // on Identifier, goto 108
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        128, // on Value, goto 127
+        0, // on Value?, error
+        72, // on Variable, goto 71
         0, // on __Program, error
         // State 131
         0, // on (Operator Value), error
@@ -5358,6 +5512,29 @@ mod __parse__Program {
         0, // on Value?, error
         0, // on Variable, error
         0, // on __Program, error
+        // State 136
+        0, // on (Operator Value), error
+        0, // on (Operator Value)+, error
+        0, // on Application, error
+        0, // on Applications, error
+        0, // on Atom, error
+        0, // on Fact, error
+        0, // on FactAnd, error
+        0, // on FactApply, error
+        0, // on FactFunc, error
+        0, // on FactOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on Operator?, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on Value?, error
+        0, // on Variable, error
+        0, // on __Program, error
     ];
     pub fn parse_Program<
         'input,
@@ -5389,6 +5566,7 @@ mod __parse__Program {
                 (_, (11, _), _) if true => 11,
                 (_, (12, _), _) if true => 12,
                 (_, (13, _), _) if true => 13,
+                (_, (14, _), _) if true => 14,
                 _ => {
                     return Err(__lalrpop_util::ParseError::UnrecognizedToken {
                         token: Some(__lookahead),
@@ -5398,7 +5576,7 @@ mod __parse__Program {
             };
             loop {
                 let __state = *__states.last().unwrap() as usize;
-                let __action = __ACTION[__state * 14 + __integer];
+                let __action = __ACTION[__state * 15 + __integer];
                 if __action > 0 {
                     let __symbol = match __integer {
                         0 => match __lookahead.1 {
@@ -5434,27 +5612,31 @@ mod __parse__Program {
                             _ => unreachable!(),
                         },
                         8 => match __lookahead.1 {
-                            (8, __tok0) => __Symbol::Term_22exists_22(__tok0),
+                            (8, __tok0) => __Symbol::Term_22___22(__tok0),
                             _ => unreachable!(),
                         },
                         9 => match __lookahead.1 {
-                            (9, __tok0) => __Symbol::Term_22forall_22(__tok0),
+                            (9, __tok0) => __Symbol::Term_22exists_22(__tok0),
                             _ => unreachable!(),
                         },
                         10 => match __lookahead.1 {
-                            (10, __tok0) => __Symbol::Termr_23_22_5c_27_5b_5e_5c_27_5d_2b_5c_27_22_23(__tok0),
+                            (10, __tok0) => __Symbol::Term_22forall_22(__tok0),
                             _ => unreachable!(),
                         },
                         11 => match __lookahead.1 {
-                            (11, __tok0) => __Symbol::Termr_23_22_5b_2d_7c_21_40_23_24_25_5e_26_2a_3d_2b_2f_3a_3f_7e_3c_3e_5d_2b_22_23(__tok0),
+                            (11, __tok0) => __Symbol::Termr_23_22_5c_27_5b_5e_5c_27_5d_2b_5c_27_22_23(__tok0),
                             _ => unreachable!(),
                         },
                         12 => match __lookahead.1 {
-                            (12, __tok0) => __Symbol::Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_22_23(__tok0),
+                            (12, __tok0) => __Symbol::Termr_23_22_5b_2d_7c_21_40_23_24_25_5e_26_2a_3d_2b_2f_3a_3f_7e_3c_3e_5d_2b_22_23(__tok0),
                             _ => unreachable!(),
                         },
                         13 => match __lookahead.1 {
-                            (13, __tok0) => __Symbol::Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_3a_22_23(__tok0),
+                            (13, __tok0) => __Symbol::Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_22_23(__tok0),
+                            _ => unreachable!(),
+                        },
+                        14 => match __lookahead.1 {
+                            (14, __tok0) => __Symbol::Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_3a_22_23(__tok0),
                             _ => unreachable!(),
                         },
                         _ => unreachable!(),
@@ -5539,22 +5721,22 @@ mod __parse__Program {
                 1
             }
             4 => {
-                // Application = Value => ActionFn(16);
+                // Application = Value => ActionFn(15);
                 let __sym0 = __pop_NtValue(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action16::<>(input, __sym0);
+                let __nt = super::__action15::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtApplication(__nt), __end));
                 2
             }
             5 => {
-                // Application = Operator => ActionFn(17);
+                // Application = Operator => ActionFn(16);
                 let __sym0 = __pop_NtOperator(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action17::<>(input, __sym0);
+                let __nt = super::__action16::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtApplication(__nt), __end));
@@ -5609,50 +5791,50 @@ mod __parse__Program {
                 2
             }
             10 => {
-                // Application = Identifier, "(", Applications, ")" => ActionFn(19);
+                // Application = Identifier, "(", Applications, ")" => ActionFn(18);
                 let __sym3 = __pop_Term_22_29_22(__symbols);
                 let __sym2 = __pop_NtApplications(__symbols);
                 let __sym1 = __pop_Term_22_28_22(__symbols);
                 let __sym0 = __pop_NtIdentifier(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym3.2.clone();
-                let __nt = super::__action19::<>(input, __sym0, __sym1, __sym2, __sym3);
+                let __nt = super::__action18::<>(input, __sym0, __sym1, __sym2, __sym3);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 4);
                 __symbols.push((__start, __Symbol::NtApplication(__nt), __end));
                 2
             }
             11 => {
-                // Applications = Application => ActionFn(20);
+                // Applications = Application => ActionFn(19);
                 let __sym0 = __pop_NtApplication(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action20::<>(input, __sym0);
+                let __nt = super::__action19::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtApplications(__nt), __end));
                 3
             }
             12 => {
-                // Applications = Applications, ",", Application => ActionFn(21);
+                // Applications = Applications, ",", Application => ActionFn(20);
                 let __sym2 = __pop_NtApplication(__symbols);
                 let __sym1 = __pop_Term_22_2c_22(__symbols);
                 let __sym0 = __pop_NtApplications(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym2.2.clone();
-                let __nt = super::__action21::<>(input, __sym0, __sym1, __sym2);
+                let __nt = super::__action20::<>(input, __sym0, __sym1, __sym2);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
                 __symbols.push((__start, __Symbol::NtApplications(__nt), __end));
                 3
             }
             13 => {
-                // Applications = Applications, "," => ActionFn(22);
+                // Applications = Applications, "," => ActionFn(21);
                 let __sym1 = __pop_Term_22_2c_22(__symbols);
                 let __sym0 = __pop_NtApplications(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym1.2.clone();
-                let __nt = super::__action22::<>(input, __sym0, __sym1);
+                let __nt = super::__action21::<>(input, __sym0, __sym1);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
                 __symbols.push((__start, __Symbol::NtApplications(__nt), __end));
@@ -5705,11 +5887,11 @@ mod __parse__Program {
                 6
             }
             18 => {
-                // FactApply = Application => ActionFn(15);
+                // FactApply = Application => ActionFn(14);
                 let __sym0 = __pop_NtApplication(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action15::<>(input, __sym0);
+                let __nt = super::__action14::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFactApply(__nt), __end));
@@ -5768,19 +5950,6 @@ mod __parse__Program {
                 8
             }
             23 => {
-                // FactFunc = Variable, "->", FactFunc => ActionFn(14);
-                let __sym2 = __pop_NtFactFunc(__symbols);
-                let __sym1 = __pop_Term_22_2d_3e_22(__symbols);
-                let __sym0 = __pop_NtVariable(__symbols);
-                let __start = __sym0.0.clone();
-                let __end = __sym2.2.clone();
-                let __nt = super::__action14::<>(input, __sym0, __sym1, __sym2);
-                let __states_len = __states.len();
-                __states.truncate(__states_len - 3);
-                __symbols.push((__start, __Symbol::NtFactFunc(__nt), __end));
-                8
-            }
-            24 => {
                 // FactOr = FactFunc => ActionFn(8);
                 let __sym0 = __pop_NtFactFunc(__symbols);
                 let __start = __sym0.0.clone();
@@ -5791,7 +5960,7 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtFactOr(__nt), __end));
                 9
             }
-            25 => {
+            24 => {
                 // FactOr = FactOr, ",", FactFunc => ActionFn(9);
                 let __sym2 = __pop_NtFactFunc(__symbols);
                 let __sym1 = __pop_Term_22_2c_22(__symbols);
@@ -5804,7 +5973,7 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtFactOr(__nt), __end));
                 9
             }
-            26 => {
+            25 => {
                 // Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);
                 let __sym0 = __pop_Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_22_23(__symbols);
                 let __start = __sym0.0.clone();
@@ -5815,7 +5984,7 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtIdentifier(__nt), __end));
                 10
             }
-            27 => {
+            26 => {
                 // Item = Application, "." => ActionFn(2);
                 let __sym1 = __pop_Term_22_2e_22(__symbols);
                 let __sym0 = __pop_NtApplication(__symbols);
@@ -5827,7 +5996,7 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtItem(__nt), __end));
                 11
             }
-            28 => {
+            27 => {
                 // Item = Rule => ActionFn(3);
                 let __sym0 = __pop_NtRule(__symbols);
                 let __start = __sym0.0.clone();
@@ -5838,7 +6007,7 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtItem(__nt), __end));
                 11
             }
-            29 => {
+            28 => {
                 // Item+ = Item => ActionFn(39);
                 let __sym0 = __pop_NtItem(__symbols);
                 let __start = __sym0.0.clone();
@@ -5849,7 +6018,7 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtItem_2b(__nt), __end));
                 12
             }
-            30 => {
+            29 => {
                 // Item+ = Item+, Item => ActionFn(40);
                 let __sym1 = __pop_NtItem(__symbols);
                 let __sym0 = __pop_NtItem_2b(__symbols);
@@ -5861,9 +6030,20 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtItem_2b(__nt), __end));
                 12
             }
-            31 => {
-                // Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);
+            30 => {
+                // Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);
                 let __sym0 = __pop_Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_3a_22_23(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym0.2.clone();
+                let __nt = super::__action23::<>(input, __sym0);
+                let __states_len = __states.len();
+                __states.truncate(__states_len - 1);
+                __symbols.push((__start, __Symbol::NtOperator(__nt), __end));
+                13
+            }
+            31 => {
+                // Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);
+                let __sym0 = __pop_Termr_23_22_5b_2d_7c_21_40_23_24_25_5e_26_2a_3d_2b_2f_3a_3f_7e_3c_3e_5d_2b_22_23(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
                 let __nt = super::__action24::<>(input, __sym0);
@@ -5873,17 +6053,6 @@ mod __parse__Program {
                 13
             }
             32 => {
-                // Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);
-                let __sym0 = __pop_Termr_23_22_5b_2d_7c_21_40_23_24_25_5e_26_2a_3d_2b_2f_3a_3f_7e_3c_3e_5d_2b_22_23(__symbols);
-                let __start = __sym0.0.clone();
-                let __end = __sym0.2.clone();
-                let __nt = super::__action25::<>(input, __sym0);
-                let __states_len = __states.len();
-                __states.truncate(__states_len - 1);
-                __symbols.push((__start, __Symbol::NtOperator(__nt), __end));
-                13
-            }
-            33 => {
                 // Operator? = Operator => ActionFn(32);
                 let __sym0 = __pop_NtOperator(__symbols);
                 let __start = __sym0.0.clone();
@@ -5894,7 +6063,7 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtOperator_3f(__nt), __end));
                 14
             }
-            34 => {
+            33 => {
                 // Operator? =  => ActionFn(33);
                 let __start = __symbols.last().map(|s| s.2.clone()).unwrap_or_default();
                 let __end = __lookahead_start.cloned().unwrap_or_else(|| __start.clone());
@@ -5904,19 +6073,19 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtOperator_3f(__nt), __end));
                 14
             }
-            35 => {
-                // OperatorValue = Operator, Value => ActionFn(23);
+            34 => {
+                // OperatorValue = Operator, Value => ActionFn(22);
                 let __sym1 = __pop_NtValue(__symbols);
                 let __sym0 = __pop_NtOperator(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym1.2.clone();
-                let __nt = super::__action23::<>(input, __sym0, __sym1);
+                let __nt = super::__action22::<>(input, __sym0, __sym1);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
                 __symbols.push((__start, __Symbol::NtOperatorValue(__nt), __end));
                 15
             }
-            36 => {
+            35 => {
                 // Program = Item+ => ActionFn(1);
                 let __sym0 = __pop_NtItem_2b(__symbols);
                 let __start = __sym0.0.clone();
@@ -5927,7 +6096,7 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtProgram(__nt), __end));
                 16
             }
-            37 => {
+            36 => {
                 // Rule = Application, ":-", Fact, "." => ActionFn(4);
                 let __sym3 = __pop_Term_22_2e_22(__symbols);
                 let __sym2 = __pop_NtFact(__symbols);
@@ -5941,9 +6110,20 @@ mod __parse__Program {
                 __symbols.push((__start, __Symbol::NtRule(__nt), __end));
                 17
             }
-            38 => {
-                // Value = Atom => ActionFn(26);
+            37 => {
+                // Value = Atom => ActionFn(25);
                 let __sym0 = __pop_NtAtom(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym0.2.clone();
+                let __nt = super::__action25::<>(input, __sym0);
+                let __states_len = __states.len();
+                __states.truncate(__states_len - 1);
+                __symbols.push((__start, __Symbol::NtValue(__nt), __end));
+                18
+            }
+            38 => {
+                // Value = Variable => ActionFn(26);
+                let __sym0 = __pop_NtVariable(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
                 let __nt = super::__action26::<>(input, __sym0);
@@ -5953,26 +6133,26 @@ mod __parse__Program {
                 18
             }
             39 => {
-                // Value = Variable => ActionFn(27);
-                let __sym0 = __pop_NtVariable(__symbols);
-                let __start = __sym0.0.clone();
-                let __end = __sym0.2.clone();
-                let __nt = super::__action27::<>(input, __sym0);
-                let __states_len = __states.len();
-                __states.truncate(__states_len - 1);
-                __symbols.push((__start, __Symbol::NtValue(__nt), __end));
-                18
-            }
-            40 => {
-                // Value = "(", Application, ")" => ActionFn(28);
+                // Value = "(", Application, ")" => ActionFn(27);
                 let __sym2 = __pop_Term_22_29_22(__symbols);
                 let __sym1 = __pop_NtApplication(__symbols);
                 let __sym0 = __pop_Term_22_28_22(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym2.2.clone();
-                let __nt = super::__action28::<>(input, __sym0, __sym1, __sym2);
+                let __nt = super::__action27::<>(input, __sym0, __sym1, __sym2);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
+                __symbols.push((__start, __Symbol::NtValue(__nt), __end));
+                18
+            }
+            40 => {
+                // Value = "_" => ActionFn(28);
+                let __sym0 = __pop_Term_22___22(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym0.2.clone();
+                let __nt = super::__action28::<>(input, __sym0);
+                let __states_len = __states.len();
+                __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtValue(__nt), __end));
                 18
             }
@@ -6100,6 +6280,16 @@ mod __parse__Program {
     ) -> (usize, &'input str, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Term_22_3d_3e_22(__v), __r) => (__l, __v, __r),
+            _ => panic!("symbol type mismatch")
+        }
+    }
+    fn __pop_Term_22___22<
+      'input,
+    >(
+        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, &'input str, usize) {
+        match __symbols.pop().unwrap() {
+            (__l, __Symbol::Term_22___22(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -6402,12 +6592,12 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((11, __index + 1));
+                            __current_match = Some((12, __index + 1));
                             __current_state = 1;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
+                            __current_match = Some((12, __index + __ch.len_utf8()));
                             __current_state = 1;
                             continue;
                         }
@@ -6426,7 +6616,7 @@ mod __intern_token {
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
+                            __current_match = Some((12, __index + __ch.len_utf8()));
                             __current_state = 1;
                             continue;
                         }
@@ -6436,7 +6626,7 @@ mod __intern_token {
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((11, __index + 1));
+                            __current_match = Some((12, __index + 1));
                             __current_state = 6;
                             continue;
                         }
@@ -6446,12 +6636,12 @@ mod __intern_token {
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((11, __index + 1));
+                            __current_match = Some((12, __index + 1));
                             __current_state = 1;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((11, __index + 1));
+                            __current_match = Some((12, __index + 1));
                             __current_state = 8;
                             continue;
                         }
@@ -6461,57 +6651,62 @@ mod __intern_token {
                             continue;
                         }
                         60 => /* '<' */ {
-                            __current_match = Some((11, __index + 1));
+                            __current_match = Some((12, __index + 1));
                             __current_state = 1;
                             continue;
                         }
                         61 => /* '=' */ {
-                            __current_match = Some((11, __index + 1));
+                            __current_match = Some((12, __index + 1));
                             __current_state = 10;
                             continue;
                         }
                         62 ... 64 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
+                            __current_match = Some((12, __index + __ch.len_utf8()));
                             __current_state = 1;
                             continue;
                         }
                         65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_match = Some((13, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((11, __index + 1));
+                            __current_match = Some((12, __index + 1));
                             __current_state = 1;
                             continue;
                         }
+                        95 => /* '_' */ {
+                            __current_match = Some((8, __index + 1));
+                            __current_state = 12;
+                            continue;
+                        }
                         97 ... 100 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_match = Some((13, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
                         101 => /* 'e' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 12;
-                            continue;
-                        }
-                        102 => /* 'f' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 13;
                             continue;
                         }
+                        102 => /* 'f' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 14;
+                            continue;
+                        }
                         103 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_match = Some((13, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((11, __index + 1));
+                            __current_match = Some((12, __index + 1));
                             __current_state = 1;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((11, __index + 1));
+                            __current_match = Some((12, __index + 1));
                             __current_state = 1;
                             continue;
                         }
@@ -6524,53 +6719,53 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         60 ... 64 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -6582,11 +6777,11 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         0 ... 38 => {
-                            __current_state = 16;
+                            __current_state = 17;
                             continue;
                         }
                         40 ... 1114111 => {
-                            __current_state = 16;
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -6622,63 +6817,63 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         60 ... 61 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         62 => /* '>' */ {
                             __current_match = Some((3, __index + 1));
-                            __current_state = 17;
+                            __current_state = 18;
                             continue;
                         }
                         63 ... 64 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -6698,53 +6893,53 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         45 => /* '-' */ {
                             __current_match = Some((5, __index + 1));
-                            __current_state = 18;
+                            __current_state = 19;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         60 ... 64 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -6764,63 +6959,63 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         60 ... 61 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         62 => /* '>' */ {
                             __current_match = Some((7, __index + 1));
-                            __current_state = 19;
+                            __current_state = 20;
                             continue;
                         }
                         63 ... 64 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -6832,28 +7027,28 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
                         97 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -6864,41 +7059,6 @@ mod __intern_token {
                 12 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 ... 119 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        120 => /* 'x' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 22;
-                            continue;
-                        }
-                        121 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -6908,38 +7068,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        97 ... 119 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 ... 110 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        111 => /* 'o' */ {
-                            __current_match = Some((12, __index + 1));
+                        120 => /* 'x' */ {
+                            __current_match = Some((13, __index + 1));
                             __current_state = 23;
                             continue;
                         }
-                        112 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        121 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -6950,6 +7110,41 @@ mod __intern_token {
                 14 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
+                            continue;
+                        }
+                        97 ... 110 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        111 => /* 'o' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 24;
+                            continue;
+                        }
+                        112 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -6958,56 +7153,6 @@ mod __intern_token {
                 15 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        33 => /* '!' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        35 ... 38 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        42 ... 43 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        45 => /* '-' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        47 => /* '/' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        60 ... 64 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        94 => /* '^' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        124 => /* '|' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        126 => /* '~' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -7016,17 +7161,54 @@ mod __intern_token {
                 16 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        0 ... 38 => {
-                            __current_state = 24;
+                        33 => /* '!' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
-                        39 => /* '\'' */ {
-                            __current_match = Some((10, __index + 1));
-                            __current_state = 25;
+                        35 ... 38 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
-                        40 ... 1114111 => {
-                            __current_state = 24;
+                        42 ... 43 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        60 ... 64 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        94 => /* '^' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        124 => /* '|' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -7037,54 +7219,17 @@ mod __intern_token {
                 17 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        33 => /* '!' */ {
+                        0 ... 38 => {
+                            __current_state = 25;
+                            continue;
+                        }
+                        39 => /* '\'' */ {
                             __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_state = 26;
                             continue;
                         }
-                        35 ... 38 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        42 ... 43 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        45 => /* '-' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        47 => /* '/' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        60 ... 64 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        94 => /* '^' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        124 => /* '|' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        126 => /* '~' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                        40 ... 1114111 => {
+                            __current_state = 25;
                             continue;
                         }
                         _ => {
@@ -7096,53 +7241,53 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         60 ... 64 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -7154,53 +7299,53 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         60 ... 64 => {
-                            __current_match = Some((11, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 15;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -7211,29 +7356,54 @@ mod __intern_token {
                 20 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
+                        33 => /* '!' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        35 ... 38 => {
                             __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_state = 16;
+                            continue;
+                        }
+                        42 ... 43 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        95 => /* '_' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 20;
+                            __current_state = 16;
                             continue;
                         }
-                        97 ... 122 => {
+                        60 ... 64 => {
                             __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_state = 16;
+                            continue;
+                        }
+                        94 => /* '^' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        124 => /* '|' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -7244,6 +7414,31 @@ mod __intern_token {
                 21 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -7252,41 +7447,6 @@ mod __intern_token {
                 22 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 ... 104 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        105 => /* 'i' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 26;
-                            continue;
-                        }
-                        106 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -7296,38 +7456,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        97 ... 104 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 ... 113 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        114 => /* 'r' */ {
-                            __current_match = Some((12, __index + 1));
+                        105 => /* 'i' */ {
+                            __current_match = Some((13, __index + 1));
                             __current_state = 27;
                             continue;
                         }
-                        115 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        106 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -7338,17 +7498,39 @@ mod __intern_token {
                 24 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        0 ... 38 => {
-                            __current_state = 24;
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
-                        39 => /* '\'' */ {
-                            __current_match = Some((10, __index + 1));
-                            __current_state = 25;
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
                             continue;
                         }
-                        40 ... 1114111 => {
-                            __current_state = 24;
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
+                            continue;
+                        }
+                        97 ... 113 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        114 => /* 'r' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 28;
+                            continue;
+                        }
+                        115 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -7359,6 +7541,19 @@ mod __intern_token {
                 25 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        0 ... 38 => {
+                            __current_state = 25;
+                            continue;
+                        }
+                        39 => /* '\'' */ {
+                            __current_match = Some((11, __index + 1));
+                            __current_state = 26;
+                            continue;
+                        }
+                        40 ... 1114111 => {
+                            __current_state = 25;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -7367,41 +7562,6 @@ mod __intern_token {
                 26 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 ... 114 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        115 => /* 's' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 28;
-                            continue;
-                        }
-                        116 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -7411,33 +7571,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        97 ... 114 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 => /* 'a' */ {
-                            __current_match = Some((12, __index + 1));
+                        115 => /* 's' */ {
+                            __current_match = Some((13, __index + 1));
                             __current_state = 29;
                             continue;
                         }
-                        98 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        116 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -7449,38 +7614,33 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 ... 115 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        116 => /* 't' */ {
-                            __current_match = Some((12, __index + 1));
+                        97 => /* 'a' */ {
+                            __current_match = Some((13, __index + 1));
                             __current_state = 30;
                             continue;
                         }
-                        117 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        98 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -7492,38 +7652,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        97 ... 115 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 ... 107 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        108 => /* 'l' */ {
-                            __current_match = Some((12, __index + 1));
+                        116 => /* 't' */ {
+                            __current_match = Some((13, __index + 1));
                             __current_state = 31;
                             continue;
                         }
-                        109 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        117 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -7535,38 +7695,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        97 ... 107 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 ... 114 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        115 => /* 's' */ {
-                            __current_match = Some((8, __index + 1));
+                        108 => /* 'l' */ {
+                            __current_match = Some((13, __index + 1));
                             __current_state = 32;
                             continue;
                         }
-                        116 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        109 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -7578,38 +7738,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        97 ... 114 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        97 ... 107 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
-                            continue;
-                        }
-                        108 => /* 'l' */ {
+                        115 => /* 's' */ {
                             __current_match = Some((9, __index + 1));
                             __current_state = 33;
                             continue;
                         }
-                        109 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        116 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -7621,28 +7781,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        97 ... 107 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
+                        108 => /* 'l' */ {
+                            __current_match = Some((10, __index + 1));
+                            __current_state = 34;
                             continue;
                         }
-                        97 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                        109 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -7654,28 +7824,61 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 21;
                             continue;
                         }
+                        97 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                34 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
                         65 ... 90 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         95 => /* '_' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
                             continue;
                         }
                         97 ... 122 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 20;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -7902,19 +8105,6 @@ pub fn __action14<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, Variable, usize),
-    (_, _, _): (usize, &'input str, usize),
-    (_, b, _): (usize, Fact, usize),
-) -> Fact
-{
-    Fact { data: Box::new(FactData::Lambda(v, b)) }
-}
-
-#[allow(unused_variables)]
-pub fn __action15<
-    'input,
->(
-    input: &'input str,
     (_, __0, _): (usize, Application, usize),
 ) -> Fact
 {
@@ -7922,7 +8112,7 @@ pub fn __action15<
 }
 
 #[allow(unused_variables)]
-pub fn __action16<
+pub fn __action15<
     'input,
 >(
     input: &'input str,
@@ -7937,7 +8127,7 @@ pub fn __action16<
 }
 
 #[allow(unused_variables)]
-pub fn __action17<
+pub fn __action16<
     'input,
 >(
     input: &'input str,
@@ -7952,7 +8142,7 @@ pub fn __action17<
 }
 
 #[allow(unused_variables)]
-pub fn __action18<
+pub fn __action17<
     'input,
 >(
     input: &'input str,
@@ -7974,7 +8164,7 @@ pub fn __action18<
 }
 
 #[allow(unused_variables)]
-pub fn __action19<
+pub fn __action18<
     'input,
 >(
     input: &'input str,
@@ -7994,7 +8184,7 @@ pub fn __action19<
 }
 
 #[allow(unused_variables)]
-pub fn __action20<
+pub fn __action19<
     'input,
 >(
     input: &'input str,
@@ -8005,7 +8195,7 @@ pub fn __action20<
 }
 
 #[allow(unused_variables)]
-pub fn __action21<
+pub fn __action20<
     'input,
 >(
     input: &'input str,
@@ -8022,7 +8212,7 @@ pub fn __action21<
 }
 
 #[allow(unused_variables)]
-pub fn __action22<
+pub fn __action21<
     'input,
 >(
     input: &'input str,
@@ -8034,7 +8224,7 @@ pub fn __action22<
 }
 
 #[allow(unused_variables)]
-pub fn __action23<
+pub fn __action22<
     'input,
 >(
     input: &'input str,
@@ -8046,7 +8236,7 @@ pub fn __action23<
 }
 
 #[allow(unused_variables)]
-pub fn __action24<
+pub fn __action23<
     'input,
 >(
     input: &'input str,
@@ -8057,7 +8247,7 @@ pub fn __action24<
 }
 
 #[allow(unused_variables)]
-pub fn __action25<
+pub fn __action24<
     'input,
 >(
     input: &'input str,
@@ -8068,7 +8258,7 @@ pub fn __action25<
 }
 
 #[allow(unused_variables)]
-pub fn __action26<
+pub fn __action25<
     'input,
 >(
     input: &'input str,
@@ -8079,7 +8269,7 @@ pub fn __action26<
 }
 
 #[allow(unused_variables)]
-pub fn __action27<
+pub fn __action26<
     'input,
 >(
     input: &'input str,
@@ -8090,7 +8280,7 @@ pub fn __action27<
 }
 
 #[allow(unused_variables)]
-pub fn __action28<
+pub fn __action27<
     'input,
 >(
     input: &'input str,
@@ -8100,6 +8290,17 @@ pub fn __action28<
 ) -> Value
 {
     Value::Application(__0)
+}
+
+#[allow(unused_variables)]
+pub fn __action28<
+    'input,
+>(
+    input: &'input str,
+    (_, __0, _): (usize, &'input str, usize),
+) -> Value
+{
+    Value::Wildcard
 }
 
 #[allow(unused_variables)]
@@ -8304,7 +8505,7 @@ pub fn __action43<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action18(
+    __action17(
         input,
         __0,
         __1,
@@ -8329,7 +8530,7 @@ pub fn __action44<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action18(
+    __action17(
         input,
         __0,
         __1,

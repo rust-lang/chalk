@@ -1,0 +1,10 @@
+[package]
+name = "chalk"
+version = "0.1.0"
+authors = ["Niko Matsakis <niko@alum.mit.edu>"]
+
+[workspace]
+
+[dependencies]
+lalrpop-intern = "0.12.1"
+chalk-parse = { path = "../chalk-parse" }

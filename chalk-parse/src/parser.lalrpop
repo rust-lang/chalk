@@ -39,7 +39,6 @@ FactFunc: Fact = {
     <l:FactApply> "=>" <r:FactFunc> => Fact { data: Box::new(FactData::Implication(l, r)) },
     "exists" <v:Variable> "->" <b:FactFunc> => Fact { data: Box::new(FactData::Exists(v, b)) },
     "forall" <v:Variable> "->" <b:FactFunc> => Fact { data: Box::new(FactData::ForAll(v, b)) },
-    <v:Variable> "->" <b:FactFunc> => Fact { data: Box::new(FactData::Lambda(v, b)) },
 };
 
 FactApply: Fact = {
@@ -99,6 +98,7 @@ Value: Value = {
     Atom => Value::Atom(<>),
     Variable => Value::Variable(<>),
     "(" <Application> ")" => Value::Application(<>),
+    "_" => Value::Wildcard,
 };
 
 Atom: Atom = {
@@ -112,3 +112,4 @@ Variable: Variable = {
 Identifier: InternedString = {
     r"[A-Za-z][A-Za-z0-9_]*" => intern(<>),
 };
+

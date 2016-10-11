@@ -32,9 +32,8 @@ pub enum FactData {
     Or(Fact, Fact),
 
     Implication(Fact, Fact), // A => B
-    Lambda(Variable, Fact),
-    Exists(Variable, Fact),
-    ForAll(Variable, Fact),
+    Exists(Variable, Fact), // exists x -> A
+    ForAll(Variable, Fact), // forall x -> A
 
     Apply(Application),
 }
@@ -56,6 +55,7 @@ pub enum Value {
     Atom(Atom),
     Variable(Variable),
     Application(Application),
+    Wildcard,
 }
 
 // `+`, `|-`, or `foo:`
