@@ -8,7 +8,7 @@ use std::sync::Arc;
 ///
 /// This corresponds to an environmental fact like:
 ///
-///     forall(X: bar(X) => foo(X))
+///     forall(X -> bar(X) => foo(X))
 ///
 /// Environments can be extended dynamically, if we encounter a goal
 /// like `X => Y` (that would cause us to push `X` into the

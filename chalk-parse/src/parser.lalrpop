@@ -38,9 +38,9 @@ FactFunc: Fact = {
     FactApply,
     <l:FactApply> "=>" <r:FactFunc> =>
         Fact { data: Box::new(FactData::Implication(l, r)) },
-    "exists" "(" <v:Variable> ":" <b:FactFunc> ")" =>
+    "exists" "(" <v:Variable> "->" <b:FactFunc> ")" =>
         Fact { data: Box::new(FactData::Exists(v, b)) },
-    "forall" "(" <v:Variable> ":" <b:FactFunc> ")" =>
+    "forall" "(" <v:Variable> "->" <b:FactFunc> ")" =>
         Fact { data: Box::new(FactData::ForAll(v, b)) },
 };
 
