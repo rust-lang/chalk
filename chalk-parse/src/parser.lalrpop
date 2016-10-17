@@ -14,87 +14,105 @@ Item: Item = {
 };
 
 Rule: Rule = {
-    <a:Application> ":-" <f:Fact> "." => Rule {
+    <s0:@L> <a:Application> ":-" <f:Fact<FactData>> "." <s1:@R> => Rule {
+        span: Span::new(s0, s1),
         consequence: a,
         condition: f
     },
 };
 
-Fact: Fact = {
-    FactAnd
+Fact<D>: Fact = {
+    <s0:@L> <d:D> <s1:@R> =>
+        Fact {
+            span: Span::new(s0, s1),
+            data: d
+        }
 };
 
-FactAnd: Fact = {
-    FactOr,
-    <l:FactAnd> ";" <r:FactOr> => Fact { data: Box::new(FactData::And(l, r)) },
+FactData: Box<FactData> = {
+    FactDataAnd
 };
 
-FactOr: Fact = {
-    FactFunc,
-    <l:FactOr> "," <r:FactFunc> => Fact { data: Box::new(FactData::Or(l, r)) },
+FactDataAnd: Box<FactData> = {
+    FactDataOr,
+    <l:Fact<FactDataAnd>> ";" <r:Fact<FactDataOr>> => Box::new(FactData::And(l, r)),
 };
 
-FactFunc: Fact = {
-    FactApply,
-    <l:FactApply> "=>" <r:FactFunc> =>
-        Fact { data: Box::new(FactData::Implication(l, r)) },
-    "exists" "(" <v:Variable> "->" <b:FactFunc> ")" =>
-        Fact { data: Box::new(FactData::Exists(v, b)) },
-    "forall" "(" <v:Variable> "->" <b:FactFunc> ")" =>
-        Fact { data: Box::new(FactData::ForAll(v, b)) },
+FactDataOr: Box<FactData> = {
+    FactDataFunc,
+    <l:Fact<FactDataOr>> "," <r:Fact<FactDataFunc>> => Box::new(FactData::Or(l, r)),
 };
 
-FactApply: Fact = {
-    Application => Fact { data: Box::new(FactData::Apply(<>)) }
+FactDataFunc: Box<FactData> = {
+    FactDataApply,
+    <l:Fact<FactDataApply>> "=>" <r:Fact<FactDataFunc>> =>
+        Box::new(FactData::Implication(l, r)),
+    "exists" "(" <v:Variable> "->" <b:Fact<FactDataFunc>> ")" =>
+        Box::new(FactData::Exists(v, b)),
+    "forall" "(" <v:Variable> "->" <b:Fact<FactDataFunc>> ")" =>
+        Box::new(FactData::ForAll(v, b)),
+};
+
+FactDataApply: Box<FactData> = {
+    Application => Box::new(FactData::Apply(<>)),
 };
 
 Application: Application = {
-    <head:Value> => {
+    <s0:@L> <bits:ApplicationBits> <s1:@R> => {
         Application {
-            bits: vec![Bit::Value(head)]
+            span: Span::new(s0, s1),
+            bits: bits
         }
-    },
-    <tail:Operator> => {
-        Application {
-            bits: vec![Bit::Operator(tail)]
-        }
-    },
-    <head:Value?> <body:(Operator Value)+> <tail:Operator?> => {
-        Application {
-            bits: head.into_iter().map(Bit::Value)
-                                  .chain(body.into_iter().flat_map(|(o, v)| {
-                                      once(Bit::Operator(o)).chain(once(Bit::Value(v)))
-                                  }))
-                                  .chain(tail.into_iter().map(Bit::Operator))
-                                  .collect()
-        }
-    },
-    <id:Identifier> "(" <appls:Applications> ")" => {
-        let oper_bit = Bit::Operator(Operator::Parens(id));
-        let appl_bits = appls.into_iter().map(Value::Application).map(Bit::Value);
-        Application {
-            bits: Some(oper_bit).into_iter().chain(appl_bits).collect()
-        }
+    }
+};
+
+ApplicationBits: Vec<Bit> = {
+    <head:BitValue> => vec![head],
+    <head:BitOperator> => vec![head],
+    <head:BitValue?> <body:(BitOperator BitValue)+> <tail:BitOperator?> =>
+        head.into_iter()
+            .chain(body.into_iter().flat_map(|(o, v)| once(o).chain(once(v))))
+            .chain(tail)
+            .collect(),
+    <s0:@L> <id:Identifier> "(" <appls:BitApplications> ")" <s1:@R> => {
+        let oper_bit = Bit {
+            span: Span::new(s0, s1),
+            kind: BitKind::Operator(Operator::Parens(id))
+        };
+        Some(oper_bit).into_iter().chain(appls).collect()
     },
 };
 
-Applications: Vec<Application> = {
-    Application => vec![<>],
-    <appls:Applications> "," <appl:Application> => {
-        let mut appls = appls;
-        appls.push(appl);
-        appls
-    },
-    <appls:Applications> "," => appls,
+BitApplications: Vec<Bit> = {
+    Vec1<BitApplication>
+};
+
+BitApplication: Bit = {
+    <s0:@L> <a:Application> <s1:@R> => {
+        Bit {
+            span: Span::new(s0, s1),
+            kind: BitKind::Value(Value::Application(a)),
+        }
+    }
 };
 
 OperatorValue: (Operator, Value) = {
     Operator Value => (<>),
 };
 
+BitOperator: Bit = {
+    <s0:@L> <head:Operator> <s1:@R> =>
+        Bit { span: Span::new(s0, s1), kind: BitKind::Operator(head) },
+};
+
 Operator: Operator = {
     r"[A-Za-z][A-Za-z0-9_]*:" => Operator::Colon(intern(<>)),
     r"[-|!@#$%^&*=+/:?~<>]+" => Operator::Symbols(intern(<>)),
+};
+
+BitValue: Bit = {
+    <s0:@L> <head:Value> <s1:@R> =>
+        Bit { span: Span::new(s0, s1), kind: BitKind::Value(head) },
 };
 
 Value: Value = {
@@ -116,3 +134,12 @@ Identifier: InternedString = {
     r"[A-Za-z][A-Za-z0-9_]*" => intern(<>),
 };
 
+Vec1<V>: Vec<V> = {
+    <v:V> => vec![v],
+    <vs:Vec1<V>> "," => vs,
+    <vs:Vec1<V>> "," <v:V> => {
+        let mut vs = vs;
+        vs.push(v);
+        vs
+    },
+};

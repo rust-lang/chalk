@@ -1,6 +1,18 @@
 use lalrpop_intern::InternedString;
 
 #[derive(Debug)]
+pub struct Span {
+    pub lo: usize,
+    pub hi: usize,
+}
+
+impl Span {
+    pub fn new(lo: usize, hi: usize) -> Self {
+        Span { lo: lo, hi: hi }
+    }
+}
+
+#[derive(Debug)]
 pub struct Program {
     pub items: Vec<Item>,
 }
@@ -13,12 +25,14 @@ pub enum Item {
 
 #[derive(Debug)]
 pub struct Rule {
+    pub span: Span,
     pub consequence: Application,
     pub condition: Fact,
 }
 
 #[derive(Debug)]
 pub struct Fact {
+    pub span: Span,
     pub data: Box<FactData>
 }
 
@@ -40,11 +54,18 @@ pub enum FactData {
 
 #[derive(Debug)]
 pub struct Application {
+    pub span: Span,
     pub bits: Vec<Bit>,
 }
 
 #[derive(Debug)]
-pub enum Bit {
+pub struct Bit {
+    pub span: Span,
+    pub kind: BitKind
+}
+
+#[derive(Debug)]
+pub enum BitKind {
     Value(Value),
     Operator(Operator),
 }

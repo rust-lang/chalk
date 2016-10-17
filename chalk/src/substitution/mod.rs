@@ -52,6 +52,10 @@ impl<C> SubstitutionData<C> {
     }
 }
 
+pub trait Substitute<C> {
+    fn substitute(self, substitution: &Substitution<C>) -> Self;
+}
+
 pub struct Substituted<C,V> {
     substitution: Substitution<C>,
     value: V,
