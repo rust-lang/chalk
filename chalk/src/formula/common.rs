@@ -1,35 +1,18 @@
-//! Compiled formulas. These are based on the user syntax given in
-//! `chalk_parse::ast`, but normalized and converted to use debruijn
-//! indices.
+use std::sync::Arc;
 
-pub use lalrpop_intern::InternedString;
-use std::rc::Rc;
-
+/// Something like `forall(x, y, z -> F)`.
 #[derive(Clone, Debug)]
-pub struct Formula<C> {
-    data: Rc<FormulaData<C>>,
-}
+pub struct Quantification<F> {
+    /// Number of bound variables introduced. (3 in the above example.)
+    pub num_binders: usize,
 
-deref_to!(Formula<C>.data => FormulaData<C>);
-
-#[derive(Clone, Debug)]
-pub struct FormulaData<C> {
-    pub kind: FormulaKind<C>,
-}
-
-#[derive(Clone, Debug)]
-pub enum FormulaKind<C> {
-    Leaf(Leaf<C>),
-    Implication(Leaf<C>, Formula<C>),
-    Exists(Formula<C>),
-    ForAll(Formula<C>),
-    And(Vec<Formula<C>>),
-    Or(Vec<Formula<C>>),
+    /// The quantified formula (`F` in the above example.)
+    pub formula: F,
 }
 
 #[derive(Clone, Debug)]
 pub struct Leaf<C> {
-    data: Rc<LeafData<C>>,
+    data: Arc<LeafData<C>>,
 }
 
 deref_to!(Leaf<C>.data => LeafData<C>);
@@ -68,3 +51,4 @@ impl BoundVariable {
         self.depth
     }
 }
+

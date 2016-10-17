@@ -7,7 +7,7 @@ pub struct Obligation<C> {
     quantification_depth: usize,
 
     /// formula we are trying to prove
-    formula: Formula<C>,
+    goal: Goal<C>,
 
     /// facts we can use to prove `formula`
     environment: Environment<C>,

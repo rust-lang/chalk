@@ -15,8 +15,8 @@ mod __parse__Program {
         Term_22_28_22(&'input str),
         Term_22_29_22(&'input str),
         Term_22_2c_22(&'input str),
+        Term_22_2d_3e_22(&'input str),
         Term_22_2e_22(&'input str),
-        Term_22_3a_22(&'input str),
         Term_22_3a_2d_22(&'input str),
         Term_22_3b_22(&'input str),
         Term_22_3d_3e_22(&'input str),
@@ -55,8 +55,8 @@ mod __parse__Program {
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -71,8 +71,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -9, // on ".", reduce `Application = (Operator Value)+ => ActionFn(48);`
-        0, // on ":", error
         -9, // on ":-", reduce `Application = (Operator Value)+ => ActionFn(48);`
         0, // on ";", error
         0, // on "=>", error
@@ -87,8 +87,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         20, // on ".", goto 19
-        0, // on ":", error
         21, // on ":-", goto 20
         0, // on ";", error
         0, // on "=>", error
@@ -103,8 +103,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -37, // on ".", reduce `Value = Atom => ActionFn(25);`
-        0, // on ":", error
         -37, // on ":-", reduce `Value = Atom => ActionFn(25);`
         0, // on ";", error
         0, // on "=>", error
@@ -119,8 +119,8 @@ mod __parse__Program {
         22, // on "(", goto 21
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -43, // on ".", reduce `Variable = Identifier => ActionFn(30);`
-        0, // on ":", error
         -43, // on ":-", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ";", error
         0, // on "=>", error
@@ -135,8 +135,8 @@ mod __parse__Program {
         -28, // on "(", reduce `Item+ = Item => ActionFn(39);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -151,8 +151,8 @@ mod __parse__Program {
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -167,8 +167,8 @@ mod __parse__Program {
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -5, // on ".", reduce `Application = Operator => ActionFn(16);`
-        0, // on ":", error
         -5, // on ":-", reduce `Application = Operator => ActionFn(16);`
         0, // on ";", error
         0, // on "=>", error
@@ -183,8 +183,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -199,8 +199,8 @@ mod __parse__Program {
         -27, // on "(", reduce `Item = Rule => ActionFn(3);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -215,8 +215,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -4, // on ".", reduce `Application = Value => ActionFn(15);`
-        0, // on ":", error
         -4, // on ":-", reduce `Application = Value => ActionFn(15);`
         0, // on ";", error
         0, // on "=>", error
@@ -231,8 +231,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -38, // on ".", reduce `Value = Variable => ActionFn(26);`
-        0, // on ":", error
         -38, // on ":-", reduce `Value = Variable => ActionFn(26);`
         0, // on ";", error
         0, // on "=>", error
@@ -247,8 +247,8 @@ mod __parse__Program {
         38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -263,8 +263,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -40, // on ".", reduce `Value = "_" => ActionFn(28);`
-        0, // on ":", error
         -40, // on ":-", reduce `Value = "_" => ActionFn(28);`
         0, // on ";", error
         0, // on "=>", error
@@ -279,8 +279,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -14, // on ".", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
-        0, // on ":", error
         -14, // on ":-", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         0, // on ";", error
         0, // on "=>", error
@@ -295,8 +295,8 @@ mod __parse__Program {
         -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -31, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
-        0, // on ":", error
         -31, // on ":-", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ";", error
         0, // on "=>", error
@@ -311,8 +311,8 @@ mod __parse__Program {
         -25, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -25, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        0, // on ":", error
         -25, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ";", error
         0, // on "=>", error
@@ -327,8 +327,8 @@ mod __parse__Program {
         -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -30, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
-        0, // on ":", error
         -30, // on ":-", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ";", error
         0, // on "=>", error
@@ -343,8 +343,8 @@ mod __parse__Program {
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -7, // on ".", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
-        0, // on ":", error
         -7, // on ":-", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         0, // on ";", error
         0, // on "=>", error
@@ -359,8 +359,8 @@ mod __parse__Program {
         -26, // on "(", reduce `Item = Application, "." => ActionFn(2);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -375,8 +375,8 @@ mod __parse__Program {
         57, // on "(", goto 56
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -391,8 +391,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -407,8 +407,8 @@ mod __parse__Program {
         -29, // on "(", reduce `Item+ = Item+, Item => ActionFn(40);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -423,8 +423,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -43, // on ".", reduce `Variable = Identifier => ActionFn(30);`
-        0, // on ":", error
         -43, // on ":-", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ";", error
         0, // on "=>", error
@@ -439,8 +439,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -2, // on ".", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
-        0, // on ":", error
         -2, // on ":-", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         0, // on ";", error
         0, // on "=>", error
@@ -455,8 +455,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -25, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        0, // on ":", error
         -25, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ";", error
         0, // on "=>", error
@@ -471,8 +471,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -8, // on ".", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
-        0, // on ":", error
         -8, // on ":-", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
         0, // on ";", error
         0, // on "=>", error
@@ -487,8 +487,8 @@ mod __parse__Program {
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -503,8 +503,8 @@ mod __parse__Program {
         -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -519,8 +519,8 @@ mod __parse__Program {
         -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -535,8 +535,8 @@ mod __parse__Program {
         0, // on "(", error
         -9, // on ")", reduce `Application = (Operator Value)+ => ActionFn(48);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -551,8 +551,8 @@ mod __parse__Program {
         0, // on "(", error
         81, // on ")", goto 80
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -567,8 +567,8 @@ mod __parse__Program {
         0, // on "(", error
         -37, // on ")", reduce `Value = Atom => ActionFn(25);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -583,8 +583,8 @@ mod __parse__Program {
         82, // on "(", goto 81
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -599,8 +599,8 @@ mod __parse__Program {
         38, // on "(", goto 37
         -5, // on ")", reduce `Application = Operator => ActionFn(16);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -615,8 +615,8 @@ mod __parse__Program {
         0, // on "(", error
         -4, // on ")", reduce `Application = Value => ActionFn(15);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -631,8 +631,8 @@ mod __parse__Program {
         0, // on "(", error
         -38, // on ")", reduce `Value = Variable => ActionFn(26);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -647,8 +647,8 @@ mod __parse__Program {
         38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -663,8 +663,8 @@ mod __parse__Program {
         0, // on "(", error
         -40, // on ")", reduce `Value = "_" => ActionFn(28);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -679,8 +679,8 @@ mod __parse__Program {
         0, // on "(", error
         -14, // on ")", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -695,8 +695,8 @@ mod __parse__Program {
         -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         -31, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -711,8 +711,8 @@ mod __parse__Program {
         -25, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -727,8 +727,8 @@ mod __parse__Program {
         -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         -30, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -743,8 +743,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -3, // on ".", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
-        0, // on ":", error
         -3, // on ":-", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         0, // on ";", error
         0, // on "=>", error
@@ -759,8 +759,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -9, // on ",", reduce `Application = (Operator Value)+ => ActionFn(48);`
+        0, // on "->", error
         -9, // on ".", reduce `Application = (Operator Value)+ => ActionFn(48);`
-        0, // on ":", error
         0, // on ":-", error
         -9, // on ";", reduce `Application = (Operator Value)+ => ActionFn(48);`
         -9, // on "=>", reduce `Application = (Operator Value)+ => ActionFn(48);`
@@ -775,8 +775,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -18, // on ",", reduce `FactApply = Application => ActionFn(14);`
+        0, // on "->", error
         -18, // on ".", reduce `FactApply = Application => ActionFn(14);`
-        0, // on ":", error
         0, // on ":-", error
         -18, // on ";", reduce `FactApply = Application => ActionFn(14);`
         -18, // on "=>", reduce `FactApply = Application => ActionFn(14);`
@@ -791,8 +791,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -37, // on ",", reduce `Value = Atom => ActionFn(25);`
+        0, // on "->", error
         -37, // on ".", reduce `Value = Atom => ActionFn(25);`
-        0, // on ":", error
         0, // on ":-", error
         -37, // on ";", reduce `Value = Atom => ActionFn(25);`
         -37, // on "=>", reduce `Value = Atom => ActionFn(25);`
@@ -807,8 +807,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         90, // on ".", goto 89
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -823,8 +823,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -15, // on ".", reduce `Fact = FactAnd => ActionFn(5);`
-        0, // on ":", error
         0, // on ":-", error
         91, // on ";", goto 90
         0, // on "=>", error
@@ -839,8 +839,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -19, // on ",", reduce `FactFunc = FactApply => ActionFn(10);`
+        0, // on "->", error
         -19, // on ".", reduce `FactFunc = FactApply => ActionFn(10);`
-        0, // on ":", error
         0, // on ":-", error
         -19, // on ";", reduce `FactFunc = FactApply => ActionFn(10);`
         92, // on "=>", goto 91
@@ -855,8 +855,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -23, // on ",", reduce `FactOr = FactFunc => ActionFn(8);`
+        0, // on "->", error
         -23, // on ".", reduce `FactOr = FactFunc => ActionFn(8);`
-        0, // on ":", error
         0, // on ":-", error
         -23, // on ";", reduce `FactOr = FactFunc => ActionFn(8);`
         0, // on "=>", error
@@ -871,8 +871,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         93, // on ",", goto 92
+        0, // on "->", error
         -16, // on ".", reduce `FactAnd = FactOr => ActionFn(6);`
-        0, // on ":", error
         0, // on ":-", error
         -16, // on ";", reduce `FactAnd = FactOr => ActionFn(6);`
         0, // on "=>", error
@@ -887,8 +887,8 @@ mod __parse__Program {
         94, // on "(", goto 93
         0, // on ")", error
         -43, // on ",", reduce `Variable = Identifier => ActionFn(30);`
+        0, // on "->", error
         -43, // on ".", reduce `Variable = Identifier => ActionFn(30);`
-        0, // on ":", error
         0, // on ":-", error
         -43, // on ";", reduce `Variable = Identifier => ActionFn(30);`
         -43, // on "=>", reduce `Variable = Identifier => ActionFn(30);`
@@ -903,8 +903,8 @@ mod __parse__Program {
         57, // on "(", goto 56
         0, // on ")", error
         -5, // on ",", reduce `Application = Operator => ActionFn(16);`
+        0, // on "->", error
         -5, // on ".", reduce `Application = Operator => ActionFn(16);`
-        0, // on ":", error
         0, // on ":-", error
         -5, // on ";", reduce `Application = Operator => ActionFn(16);`
         -5, // on "=>", reduce `Application = Operator => ActionFn(16);`
@@ -919,8 +919,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -4, // on ",", reduce `Application = Value => ActionFn(15);`
+        0, // on "->", error
         -4, // on ".", reduce `Application = Value => ActionFn(15);`
-        0, // on ":", error
         0, // on ":-", error
         -4, // on ";", reduce `Application = Value => ActionFn(15);`
         -4, // on "=>", reduce `Application = Value => ActionFn(15);`
@@ -935,8 +935,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -38, // on ",", reduce `Value = Variable => ActionFn(26);`
+        0, // on "->", error
         -38, // on ".", reduce `Value = Variable => ActionFn(26);`
-        0, // on ":", error
         0, // on ":-", error
         -38, // on ";", reduce `Value = Variable => ActionFn(26);`
         -38, // on "=>", reduce `Value = Variable => ActionFn(26);`
@@ -951,8 +951,8 @@ mod __parse__Program {
         38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -967,8 +967,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -40, // on ",", reduce `Value = "_" => ActionFn(28);`
+        0, // on "->", error
         -40, // on ".", reduce `Value = "_" => ActionFn(28);`
-        0, // on ":", error
         0, // on ":-", error
         -40, // on ";", reduce `Value = "_" => ActionFn(28);`
         -40, // on "=>", reduce `Value = "_" => ActionFn(28);`
@@ -983,8 +983,8 @@ mod __parse__Program {
         101, // on "(", goto 100
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -999,8 +999,8 @@ mod __parse__Program {
         102, // on "(", goto 101
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1015,8 +1015,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -14, // on ",", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
+        0, // on "->", error
         -14, // on ".", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
-        0, // on ":", error
         0, // on ":-", error
         -14, // on ";", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         -14, // on "=>", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
@@ -1031,8 +1031,8 @@ mod __parse__Program {
         -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ")", error
         -31, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
+        0, // on "->", error
         -31, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
-        0, // on ":", error
         0, // on ":-", error
         -31, // on ";", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         -31, // on "=>", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
@@ -1047,8 +1047,8 @@ mod __parse__Program {
         -25, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ")", error
         -25, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        0, // on "->", error
         -25, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        0, // on ":", error
         0, // on ":-", error
         -25, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         -25, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
@@ -1063,8 +1063,8 @@ mod __parse__Program {
         -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ")", error
         -30, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        0, // on "->", error
         -30, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
-        0, // on ":", error
         0, // on ":-", error
         -30, // on ";", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         -30, // on "=>", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
@@ -1079,8 +1079,8 @@ mod __parse__Program {
         0, // on "(", error
         -9, // on ")", reduce `Application = (Operator Value)+ => ActionFn(48);`
         -9, // on ",", reduce `Application = (Operator Value)+ => ActionFn(48);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1095,8 +1095,8 @@ mod __parse__Program {
         0, // on "(", error
         -11, // on ")", reduce `Applications = Application => ActionFn(19);`
         -11, // on ",", reduce `Applications = Application => ActionFn(19);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1111,8 +1111,8 @@ mod __parse__Program {
         0, // on "(", error
         104, // on ")", goto 103
         105, // on ",", goto 104
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1127,8 +1127,8 @@ mod __parse__Program {
         0, // on "(", error
         -37, // on ")", reduce `Value = Atom => ActionFn(25);`
         -37, // on ",", reduce `Value = Atom => ActionFn(25);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1143,8 +1143,8 @@ mod __parse__Program {
         106, // on "(", goto 105
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         -43, // on ",", reduce `Variable = Identifier => ActionFn(30);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1159,8 +1159,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         -5, // on ")", reduce `Application = Operator => ActionFn(16);`
         -5, // on ",", reduce `Application = Operator => ActionFn(16);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1175,8 +1175,8 @@ mod __parse__Program {
         0, // on "(", error
         -4, // on ")", reduce `Application = Value => ActionFn(15);`
         -4, // on ",", reduce `Application = Value => ActionFn(15);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1191,8 +1191,8 @@ mod __parse__Program {
         0, // on "(", error
         -38, // on ")", reduce `Value = Variable => ActionFn(26);`
         -38, // on ",", reduce `Value = Variable => ActionFn(26);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1207,8 +1207,8 @@ mod __parse__Program {
         38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1223,8 +1223,8 @@ mod __parse__Program {
         0, // on "(", error
         -40, // on ")", reduce `Value = "_" => ActionFn(28);`
         -40, // on ",", reduce `Value = "_" => ActionFn(28);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1239,8 +1239,8 @@ mod __parse__Program {
         0, // on "(", error
         -14, // on ")", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         -14, // on ",", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1255,8 +1255,8 @@ mod __parse__Program {
         -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         -31, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         -31, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1271,8 +1271,8 @@ mod __parse__Program {
         -25, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         -25, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1287,8 +1287,8 @@ mod __parse__Program {
         -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         -30, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         -30, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1303,8 +1303,8 @@ mod __parse__Program {
         13, // on "(", goto 12
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -6, // on ".", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
-        0, // on ":", error
         -6, // on ":-", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
         0, // on ";", error
         0, // on "=>", error
@@ -1319,8 +1319,8 @@ mod __parse__Program {
         38, // on "(", goto 37
         -7, // on ")", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1335,8 +1335,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -39, // on ".", reduce `Value = "(", Application, ")" => ActionFn(27);`
-        0, // on ":", error
         -39, // on ":-", reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on ";", error
         0, // on "=>", error
@@ -1351,8 +1351,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1367,8 +1367,8 @@ mod __parse__Program {
         0, // on "(", error
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1383,8 +1383,8 @@ mod __parse__Program {
         0, // on "(", error
         -2, // on ")", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1399,8 +1399,8 @@ mod __parse__Program {
         0, // on "(", error
         -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1415,8 +1415,8 @@ mod __parse__Program {
         0, // on "(", error
         -8, // on ")", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1431,8 +1431,8 @@ mod __parse__Program {
         38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1447,8 +1447,8 @@ mod __parse__Program {
         0, // on "(", error
         116, // on ")", goto 115
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1463,8 +1463,8 @@ mod __parse__Program {
         57, // on "(", goto 56
         0, // on ")", error
         -7, // on ",", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
+        0, // on "->", error
         -7, // on ".", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
-        0, // on ":", error
         0, // on ":-", error
         -7, // on ";", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         -7, // on "=>", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
@@ -1479,8 +1479,8 @@ mod __parse__Program {
         -36, // on "(", reduce `Rule = Application, ":-", Fact, "." => ActionFn(4);`
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1495,8 +1495,8 @@ mod __parse__Program {
         57, // on "(", goto 56
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1511,8 +1511,8 @@ mod __parse__Program {
         57, // on "(", goto 56
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1527,8 +1527,8 @@ mod __parse__Program {
         57, // on "(", goto 56
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1543,8 +1543,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1559,8 +1559,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -43, // on ",", reduce `Variable = Identifier => ActionFn(30);`
+        0, // on "->", error
         -43, // on ".", reduce `Variable = Identifier => ActionFn(30);`
-        0, // on ":", error
         0, // on ":-", error
         -43, // on ";", reduce `Variable = Identifier => ActionFn(30);`
         -43, // on "=>", reduce `Variable = Identifier => ActionFn(30);`
@@ -1575,8 +1575,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -2, // on ",", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
+        0, // on "->", error
         -2, // on ".", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
-        0, // on ":", error
         0, // on ":-", error
         -2, // on ";", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         -2, // on "=>", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
@@ -1591,8 +1591,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -25, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        0, // on "->", error
         -25, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
-        0, // on ":", error
         0, // on ":-", error
         -25, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         -25, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
@@ -1607,8 +1607,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -8, // on ",", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
+        0, // on "->", error
         -8, // on ".", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
-        0, // on ":", error
         0, // on ":-", error
         -8, // on ";", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
         -8, // on "=>", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
@@ -1623,8 +1623,8 @@ mod __parse__Program {
         57, // on "(", goto 56
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1639,8 +1639,8 @@ mod __parse__Program {
         0, // on "(", error
         123, // on ")", goto 122
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1655,8 +1655,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1671,8 +1671,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1687,8 +1687,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         -7, // on ")", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         -7, // on ",", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1703,8 +1703,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         -10, // on ".", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
-        0, // on ":", error
         -10, // on ":-", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
         0, // on ";", error
         0, // on "=>", error
@@ -1719,8 +1719,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         -13, // on ")", reduce `Applications = Applications, "," => ActionFn(21);`
         -13, // on ",", reduce `Applications = Applications, "," => ActionFn(21);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1735,8 +1735,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1751,8 +1751,8 @@ mod __parse__Program {
         0, // on "(", error
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         -43, // on ",", reduce `Variable = Identifier => ActionFn(30);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1767,8 +1767,8 @@ mod __parse__Program {
         0, // on "(", error
         -2, // on ")", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         -2, // on ",", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1783,8 +1783,8 @@ mod __parse__Program {
         0, // on "(", error
         -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         -25, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1799,8 +1799,8 @@ mod __parse__Program {
         0, // on "(", error
         -8, // on ")", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
         -8, // on ",", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1815,8 +1815,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1831,8 +1831,8 @@ mod __parse__Program {
         0, // on "(", error
         132, // on ")", goto 131
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1847,8 +1847,8 @@ mod __parse__Program {
         0, // on "(", error
         -3, // on ")", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1863,8 +1863,8 @@ mod __parse__Program {
         0, // on "(", error
         133, // on ")", goto 132
         105, // on ",", goto 104
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1879,8 +1879,8 @@ mod __parse__Program {
         38, // on "(", goto 37
         -6, // on ")", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1895,8 +1895,8 @@ mod __parse__Program {
         0, // on "(", error
         -39, // on ")", reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1911,8 +1911,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -3, // on ",", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
+        0, // on "->", error
         -3, // on ".", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
-        0, // on ":", error
         0, // on ":-", error
         -3, // on ";", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         -3, // on "=>", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
@@ -1927,8 +1927,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         93, // on ",", goto 92
+        0, // on "->", error
         -17, // on ".", reduce `FactAnd = FactAnd, ";", FactOr => ActionFn(7);`
-        0, // on ":", error
         0, // on ":-", error
         -17, // on ";", reduce `FactAnd = FactAnd, ";", FactOr => ActionFn(7);`
         0, // on "=>", error
@@ -1943,8 +1943,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -20, // on ",", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
+        0, // on "->", error
         -20, // on ".", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
-        0, // on ":", error
         0, // on ":-", error
         -20, // on ";", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
         0, // on "=>", error
@@ -1959,8 +1959,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -24, // on ",", reduce `FactOr = FactOr, ",", FactFunc => ActionFn(9);`
+        0, // on "->", error
         -24, // on ".", reduce `FactOr = FactOr, ",", FactFunc => ActionFn(9);`
-        0, // on ":", error
         0, // on ":-", error
         -24, // on ";", reduce `FactOr = FactOr, ",", FactFunc => ActionFn(9);`
         0, // on "=>", error
@@ -1975,8 +1975,8 @@ mod __parse__Program {
         0, // on "(", error
         134, // on ")", goto 133
         105, // on ",", goto 104
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -1991,8 +1991,8 @@ mod __parse__Program {
         57, // on "(", goto 56
         0, // on ")", error
         -6, // on ",", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
+        0, // on "->", error
         -6, // on ".", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
-        0, // on ":", error
         0, // on ":-", error
         -6, // on ";", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
         -6, // on "=>", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
@@ -2007,8 +2007,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -39, // on ",", reduce `Value = "(", Application, ")" => ActionFn(27);`
+        0, // on "->", error
         -39, // on ".", reduce `Value = "(", Application, ")" => ActionFn(27);`
-        0, // on ":", error
         0, // on ":-", error
         -39, // on ";", reduce `Value = "(", Application, ")" => ActionFn(27);`
         -39, // on "=>", reduce `Value = "(", Application, ")" => ActionFn(27);`
@@ -2023,8 +2023,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        -43, // on "->", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ".", error
-        -43, // on ":", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2039,8 +2039,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        135, // on "->", goto 134
         0, // on ".", error
-        135, // on ":", goto 134
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2055,8 +2055,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        -25, // on "->", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ".", error
-        -25, // on ":", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2071,8 +2071,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        136, // on "->", goto 135
         0, // on ".", error
-        136, // on ":", goto 135
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2087,8 +2087,8 @@ mod __parse__Program {
         0, // on "(", error
         -3, // on ")", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         -3, // on ",", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2103,8 +2103,8 @@ mod __parse__Program {
         0, // on "(", error
         -12, // on ")", reduce `Applications = Applications, ",", Application => ActionFn(20);`
         -12, // on ",", reduce `Applications = Applications, ",", Application => ActionFn(20);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2119,8 +2119,8 @@ mod __parse__Program {
         0, // on "(", error
         137, // on ")", goto 136
         105, // on ",", goto 104
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2135,8 +2135,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         -6, // on ")", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
         -6, // on ",", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2151,8 +2151,8 @@ mod __parse__Program {
         0, // on "(", error
         -39, // on ")", reduce `Value = "(", Application, ")" => ActionFn(27);`
         -39, // on ",", reduce `Value = "(", Application, ")" => ActionFn(27);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2167,8 +2167,8 @@ mod __parse__Program {
         0, // on "(", error
         -10, // on ")", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2183,8 +2183,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         -10, // on ",", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
+        0, // on "->", error
         -10, // on ".", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
-        0, // on ":", error
         0, // on ":-", error
         -10, // on ";", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
         -10, // on "=>", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
@@ -2199,8 +2199,8 @@ mod __parse__Program {
         147, // on "(", goto 146
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2215,8 +2215,8 @@ mod __parse__Program {
         147, // on "(", goto 146
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2231,8 +2231,8 @@ mod __parse__Program {
         0, // on "(", error
         -10, // on ")", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
         -10, // on ",", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2247,8 +2247,8 @@ mod __parse__Program {
         0, // on "(", error
         -9, // on ")", reduce `Application = (Operator Value)+ => ActionFn(48);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -9, // on "=>", reduce `Application = (Operator Value)+ => ActionFn(48);`
@@ -2263,8 +2263,8 @@ mod __parse__Program {
         0, // on "(", error
         -18, // on ")", reduce `FactApply = Application => ActionFn(14);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -18, // on "=>", reduce `FactApply = Application => ActionFn(14);`
@@ -2279,8 +2279,8 @@ mod __parse__Program {
         0, // on "(", error
         -37, // on ")", reduce `Value = Atom => ActionFn(25);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -37, // on "=>", reduce `Value = Atom => ActionFn(25);`
@@ -2295,8 +2295,8 @@ mod __parse__Program {
         0, // on "(", error
         -19, // on ")", reduce `FactFunc = FactApply => ActionFn(10);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         157, // on "=>", goto 156
@@ -2311,8 +2311,8 @@ mod __parse__Program {
         0, // on "(", error
         158, // on ")", goto 157
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2327,8 +2327,8 @@ mod __parse__Program {
         159, // on "(", goto 158
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -43, // on "=>", reduce `Variable = Identifier => ActionFn(30);`
@@ -2343,8 +2343,8 @@ mod __parse__Program {
         147, // on "(", goto 146
         -5, // on ")", reduce `Application = Operator => ActionFn(16);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -5, // on "=>", reduce `Application = Operator => ActionFn(16);`
@@ -2359,8 +2359,8 @@ mod __parse__Program {
         0, // on "(", error
         -4, // on ")", reduce `Application = Value => ActionFn(15);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -4, // on "=>", reduce `Application = Value => ActionFn(15);`
@@ -2375,8 +2375,8 @@ mod __parse__Program {
         0, // on "(", error
         -38, // on ")", reduce `Value = Variable => ActionFn(26);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -38, // on "=>", reduce `Value = Variable => ActionFn(26);`
@@ -2391,8 +2391,8 @@ mod __parse__Program {
         38, // on "(", goto 37
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2407,8 +2407,8 @@ mod __parse__Program {
         0, // on "(", error
         -40, // on ")", reduce `Value = "_" => ActionFn(28);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -40, // on "=>", reduce `Value = "_" => ActionFn(28);`
@@ -2423,8 +2423,8 @@ mod __parse__Program {
         166, // on "(", goto 165
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2439,8 +2439,8 @@ mod __parse__Program {
         167, // on "(", goto 166
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2455,8 +2455,8 @@ mod __parse__Program {
         0, // on "(", error
         -14, // on ")", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -14, // on "=>", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(29);`
@@ -2471,8 +2471,8 @@ mod __parse__Program {
         -31, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         -31, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -31, // on "=>", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(24);`
@@ -2487,8 +2487,8 @@ mod __parse__Program {
         -25, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -25, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
@@ -2503,8 +2503,8 @@ mod __parse__Program {
         -30, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         -30, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -30, // on "=>", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(23);`
@@ -2519,8 +2519,8 @@ mod __parse__Program {
         0, // on "(", error
         168, // on ")", goto 167
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2535,8 +2535,8 @@ mod __parse__Program {
         147, // on "(", goto 146
         -7, // on ")", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -7, // on "=>", reduce `Application = (Operator Value)+, Operator => ActionFn(46);`
@@ -2551,8 +2551,8 @@ mod __parse__Program {
         147, // on "(", goto 146
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2566,11 +2566,11 @@ mod __parse__Program {
         // State 157
         0, // on "(", error
         0, // on ")", error
-        -21, // on ",", reduce `FactFunc = "exists", "(", Variable, ":", FactFunc, ")" => ActionFn(12);`
-        -21, // on ".", reduce `FactFunc = "exists", "(", Variable, ":", FactFunc, ")" => ActionFn(12);`
-        0, // on ":", error
+        -21, // on ",", reduce `FactFunc = "exists", "(", Variable, "->", FactFunc, ")" => ActionFn(12);`
+        0, // on "->", error
+        -21, // on ".", reduce `FactFunc = "exists", "(", Variable, "->", FactFunc, ")" => ActionFn(12);`
         0, // on ":-", error
-        -21, // on ";", reduce `FactFunc = "exists", "(", Variable, ":", FactFunc, ")" => ActionFn(12);`
+        -21, // on ";", reduce `FactFunc = "exists", "(", Variable, "->", FactFunc, ")" => ActionFn(12);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
@@ -2583,8 +2583,8 @@ mod __parse__Program {
         73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2599,8 +2599,8 @@ mod __parse__Program {
         0, // on "(", error
         -43, // on ")", reduce `Variable = Identifier => ActionFn(30);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -43, // on "=>", reduce `Variable = Identifier => ActionFn(30);`
@@ -2615,8 +2615,8 @@ mod __parse__Program {
         0, // on "(", error
         -2, // on ")", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -2, // on "=>", reduce `(Operator Value)+ = Operator, Value => ActionFn(41);`
@@ -2631,8 +2631,8 @@ mod __parse__Program {
         0, // on "(", error
         -25, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -25, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(31);`
@@ -2647,8 +2647,8 @@ mod __parse__Program {
         0, // on "(", error
         -8, // on ")", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -8, // on "=>", reduce `Application = Value, (Operator Value)+ => ActionFn(47);`
@@ -2663,8 +2663,8 @@ mod __parse__Program {
         147, // on "(", goto 146
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2679,8 +2679,8 @@ mod __parse__Program {
         0, // on "(", error
         173, // on ")", goto 172
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2695,8 +2695,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2711,8 +2711,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2726,11 +2726,11 @@ mod __parse__Program {
         // State 167
         0, // on "(", error
         0, // on ")", error
-        -22, // on ",", reduce `FactFunc = "forall", "(", Variable, ":", FactFunc, ")" => ActionFn(13);`
-        -22, // on ".", reduce `FactFunc = "forall", "(", Variable, ":", FactFunc, ")" => ActionFn(13);`
-        0, // on ":", error
+        -22, // on ",", reduce `FactFunc = "forall", "(", Variable, "->", FactFunc, ")" => ActionFn(13);`
+        0, // on "->", error
+        -22, // on ".", reduce `FactFunc = "forall", "(", Variable, "->", FactFunc, ")" => ActionFn(13);`
         0, // on ":-", error
-        -22, // on ";", reduce `FactFunc = "forall", "(", Variable, ":", FactFunc, ")" => ActionFn(13);`
+        -22, // on ";", reduce `FactFunc = "forall", "(", Variable, "->", FactFunc, ")" => ActionFn(13);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
@@ -2743,8 +2743,8 @@ mod __parse__Program {
         0, // on "(", error
         -3, // on ")", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -3, // on "=>", reduce `(Operator Value)+ = (Operator Value)+, Operator, Value => ActionFn(42);`
@@ -2759,8 +2759,8 @@ mod __parse__Program {
         0, // on "(", error
         -20, // on ")", reduce `FactFunc = FactApply, "=>", FactFunc => ActionFn(11);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2775,8 +2775,8 @@ mod __parse__Program {
         0, // on "(", error
         176, // on ")", goto 175
         105, // on ",", goto 104
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2791,8 +2791,8 @@ mod __parse__Program {
         147, // on "(", goto 146
         -6, // on ")", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -6, // on "=>", reduce `Application = Value, (Operator Value)+, Operator => ActionFn(45);`
@@ -2807,8 +2807,8 @@ mod __parse__Program {
         0, // on "(", error
         -39, // on ")", reduce `Value = "(", Application, ")" => ActionFn(27);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -39, // on "=>", reduce `Value = "(", Application, ")" => ActionFn(27);`
@@ -2823,8 +2823,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        177, // on "->", goto 176
         0, // on ".", error
-        177, // on ":", goto 176
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2839,8 +2839,8 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
+        178, // on "->", goto 177
         0, // on ".", error
-        178, // on ":", goto 177
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2855,8 +2855,8 @@ mod __parse__Program {
         0, // on "(", error
         -10, // on ")", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         -10, // on "=>", reduce `Application = Identifier, "(", Applications, ")" => ActionFn(18);`
@@ -2871,8 +2871,8 @@ mod __parse__Program {
         147, // on "(", goto 146
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2887,8 +2887,8 @@ mod __parse__Program {
         147, // on "(", goto 146
         0, // on ")", error
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2903,8 +2903,8 @@ mod __parse__Program {
         0, // on "(", error
         181, // on ")", goto 180
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2919,8 +2919,8 @@ mod __parse__Program {
         0, // on "(", error
         182, // on ")", goto 181
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2933,10 +2933,10 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 180
         0, // on "(", error
-        -21, // on ")", reduce `FactFunc = "exists", "(", Variable, ":", FactFunc, ")" => ActionFn(12);`
+        -21, // on ")", reduce `FactFunc = "exists", "(", Variable, "->", FactFunc, ")" => ActionFn(12);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -2949,10 +2949,10 @@ mod __parse__Program {
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 181
         0, // on "(", error
-        -22, // on ")", reduce `FactFunc = "forall", "(", Variable, ":", FactFunc, ")" => ActionFn(13);`
+        -22, // on ")", reduce `FactFunc = "forall", "(", Variable, "->", FactFunc, ")" => ActionFn(13);`
         0, // on ",", error
+        0, // on "->", error
         0, // on ".", error
-        0, // on ":", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
@@ -7392,11 +7392,11 @@ mod __parse__Program {
                             _ => unreachable!(),
                         },
                         3 => match __lookahead.1 {
-                            (3, __tok0) => __Symbol::Term_22_2e_22(__tok0),
+                            (3, __tok0) => __Symbol::Term_22_2d_3e_22(__tok0),
                             _ => unreachable!(),
                         },
                         4 => match __lookahead.1 {
-                            (4, __tok0) => __Symbol::Term_22_3a_22(__tok0),
+                            (4, __tok0) => __Symbol::Term_22_2e_22(__tok0),
                             _ => unreachable!(),
                         },
                         5 => match __lookahead.1 {
@@ -7722,10 +7722,10 @@ mod __parse__Program {
                 8
             }
             21 => {
-                // FactFunc = "exists", "(", Variable, ":", FactFunc, ")" => ActionFn(12);
+                // FactFunc = "exists", "(", Variable, "->", FactFunc, ")" => ActionFn(12);
                 let __sym5 = __pop_Term_22_29_22(__symbols);
                 let __sym4 = __pop_NtFactFunc(__symbols);
-                let __sym3 = __pop_Term_22_3a_22(__symbols);
+                let __sym3 = __pop_Term_22_2d_3e_22(__symbols);
                 let __sym2 = __pop_NtVariable(__symbols);
                 let __sym1 = __pop_Term_22_28_22(__symbols);
                 let __sym0 = __pop_Term_22exists_22(__symbols);
@@ -7738,10 +7738,10 @@ mod __parse__Program {
                 8
             }
             22 => {
-                // FactFunc = "forall", "(", Variable, ":", FactFunc, ")" => ActionFn(13);
+                // FactFunc = "forall", "(", Variable, "->", FactFunc, ")" => ActionFn(13);
                 let __sym5 = __pop_Term_22_29_22(__symbols);
                 let __sym4 = __pop_NtFactFunc(__symbols);
-                let __sym3 = __pop_Term_22_3a_22(__symbols);
+                let __sym3 = __pop_Term_22_2d_3e_22(__symbols);
                 let __sym2 = __pop_NtVariable(__symbols);
                 let __sym1 = __pop_Term_22_28_22(__symbols);
                 let __sym0 = __pop_Term_22forall_22(__symbols);
@@ -8037,6 +8037,16 @@ mod __parse__Program {
             _ => panic!("symbol type mismatch")
         }
     }
+    fn __pop_Term_22_2d_3e_22<
+      'input,
+    >(
+        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, &'input str, usize) {
+        match __symbols.pop().unwrap() {
+            (__l, __Symbol::Term_22_2d_3e_22(__v), __r) => (__l, __v, __r),
+            _ => panic!("symbol type mismatch")
+        }
+    }
     fn __pop_Term_22_2e_22<
       'input,
     >(
@@ -8044,16 +8054,6 @@ mod __parse__Program {
     ) -> (usize, &'input str, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Term_22_2e_22(__v), __r) => (__l, __v, __r),
-            _ => panic!("symbol type mismatch")
-        }
-    }
-    fn __pop_Term_22_3a_22<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, &'input str, usize) {
-        match __symbols.pop().unwrap() {
-            (__l, __Symbol::Term_22_3a_22(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -8431,12 +8431,12 @@ mod __intern_token {
                         }
                         45 => /* '-' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 1;
+                            __current_state = 6;
                             continue;
                         }
                         46 => /* '.' */ {
-                            __current_match = Some((3, __index + 1));
-                            __current_state = 6;
+                            __current_match = Some((4, __index + 1));
+                            __current_state = 7;
                             continue;
                         }
                         47 => /* '/' */ {
@@ -8445,13 +8445,13 @@ mod __intern_token {
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((4, __index + 1));
-                            __current_state = 7;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 8;
                             continue;
                         }
                         59 => /* ';' */ {
                             __current_match = Some((6, __index + 1));
-                            __current_state = 8;
+                            __current_state = 9;
                             continue;
                         }
                         60 => /* '<' */ {
@@ -8461,7 +8461,7 @@ mod __intern_token {
                         }
                         61 => /* '=' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 9;
+                            __current_state = 10;
                             continue;
                         }
                         62 ... 64 => {
@@ -8471,7 +8471,7 @@ mod __intern_token {
                         }
                         65 ... 90 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 10;
+                            __current_state = 11;
                             continue;
                         }
                         94 => /* '^' */ {
@@ -8481,27 +8481,27 @@ mod __intern_token {
                         }
                         95 => /* '_' */ {
                             __current_match = Some((8, __index + 1));
-                            __current_state = 11;
+                            __current_state = 12;
                             continue;
                         }
                         97 ... 100 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 10;
+                            __current_state = 11;
                             continue;
                         }
                         101 => /* 'e' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 12;
+                            __current_state = 13;
                             continue;
                         }
                         102 => /* 'f' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 13;
+                            __current_state = 14;
                             continue;
                         }
                         103 ... 122 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 10;
+                            __current_state = 11;
                             continue;
                         }
                         124 => /* '|' */ {
@@ -8524,52 +8524,52 @@ mod __intern_token {
                     match __ch as u32 {
                         33 => /* '!' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         35 ... 38 => {
                             __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         42 ... 43 => {
                             __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         45 => /* '-' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         47 => /* '/' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         60 ... 64 => {
                             __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         94 => /* '^' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         124 => /* '|' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         126 => /* '~' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -8581,11 +8581,11 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         0 ... 38 => {
-                            __current_state = 16;
+                            __current_state = 17;
                             continue;
                         }
                         40 ... 1114111 => {
-                            __current_state = 16;
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -8620,6 +8620,66 @@ mod __intern_token {
                 6 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        33 => /* '!' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        35 ... 38 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        42 ... 43 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        60 ... 61 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        62 => /* '>' */ {
+                            __current_match = Some((3, __index + 1));
+                            __current_state = 18;
+                            continue;
+                        }
+                        63 ... 64 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        94 => /* '^' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        124 => /* '|' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -8628,56 +8688,6 @@ mod __intern_token {
                 7 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        45 => /* '-' */ {
-                            __current_match = Some((5, __index + 1));
-                            __current_state = 17;
-                            continue;
-                        }
-                        47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        60 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -8686,6 +8696,56 @@ mod __intern_token {
                 8 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        33 => /* '!' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        35 ... 38 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        42 ... 43 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((5, __index + 1));
+                            __current_state = 19;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        60 ... 64 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        94 => /* '^' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        124 => /* '|' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -8694,66 +8754,6 @@ mod __intern_token {
                 9 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        60 ... 61 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        62 => /* '>' */ {
-                            __current_match = Some((7, __index + 1));
-                            __current_state = 18;
-                            continue;
-                        }
-                        63 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -8762,29 +8762,64 @@ mod __intern_token {
                 10 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                        33 => /* '!' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        35 ... 38 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        42 ... 43 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        60 ... 61 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        62 => /* '>' */ {
+                            __current_match = Some((7, __index + 1));
                             __current_state = 20;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                        63 ... 64 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                        94 => /* '^' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
-                        97 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                        124 => /* '|' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -8795,6 +8830,31 @@ mod __intern_token {
                 11 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -8803,41 +8863,6 @@ mod __intern_token {
                 12 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 19;
-                            continue;
-                        }
-                        97 ... 119 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        120 => /* 'x' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
-                        121 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -8848,37 +8873,37 @@ mod __intern_token {
                     match __ch as u32 {
                         48 ... 57 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                            __current_state = 22;
                             continue;
                         }
                         65 ... 90 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
-                        97 ... 110 => {
+                        97 ... 119 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
-                        111 => /* 'o' */ {
+                        120 => /* 'x' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 22;
+                            __current_state = 23;
                             continue;
                         }
-                        112 ... 122 => {
+                        121 ... 122 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -8889,6 +8914,41 @@ mod __intern_token {
                 14 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
+                            continue;
+                        }
+                        97 ... 110 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        111 => /* 'o' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 24;
+                            continue;
+                        }
+                        112 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -8897,56 +8957,6 @@ mod __intern_token {
                 15 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        60 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -8955,17 +8965,54 @@ mod __intern_token {
                 16 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        0 ... 38 => {
-                            __current_state = 23;
+                        33 => /* '!' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
-                        39 => /* '\'' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 24;
+                        35 ... 38 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
-                        40 ... 1114111 => {
-                            __current_state = 23;
+                        42 ... 43 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        60 ... 64 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        94 => /* '^' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        124 => /* '|' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -8976,54 +9023,17 @@ mod __intern_token {
                 17 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                        0 ... 38 => {
+                            __current_state = 25;
                             continue;
                         }
-                        35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                        39 => /* '\'' */ {
+                            __current_match = Some((11, __index + 1));
+                            __current_state = 26;
                             continue;
                         }
-                        42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        60 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
-                            continue;
-                        }
-                        94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
-                            continue;
-                        }
-                        126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                        40 ... 1114111 => {
+                            __current_state = 25;
                             continue;
                         }
                         _ => {
@@ -9036,52 +9046,52 @@ mod __intern_token {
                     match __ch as u32 {
                         33 => /* '!' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         35 ... 38 => {
                             __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         42 ... 43 => {
                             __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         45 => /* '-' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         47 => /* '/' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         60 ... 64 => {
                             __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         94 => /* '^' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         124 => /* '|' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         126 => /* '~' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 15;
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -9092,29 +9102,54 @@ mod __intern_token {
                 19 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                        33 => /* '!' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        35 ... 38 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        42 ... 43 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                        60 ... 64 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                        94 => /* '^' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
-                        97 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                        124 => /* '|' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
                             continue;
                         }
                         _ => {
@@ -9125,6 +9160,56 @@ mod __intern_token {
                 20 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        33 => /* '!' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        35 ... 38 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        42 ... 43 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        60 ... 64 => {
+                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_state = 16;
+                            continue;
+                        }
+                        94 => /* '^' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        124 => /* '|' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 16;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -9135,37 +9220,27 @@ mod __intern_token {
                     match __ch as u32 {
                         48 ... 57 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                            __current_state = 22;
                             continue;
                         }
                         65 ... 90 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
-                        97 ... 104 => {
+                        97 ... 122 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        105 => /* 'i' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 25;
-                            continue;
-                        }
-                        106 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -9176,41 +9251,6 @@ mod __intern_token {
                 22 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 19;
-                            continue;
-                        }
-                        97 ... 113 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        114 => /* 'r' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 26;
-                            continue;
-                        }
-                        115 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -9219,17 +9259,39 @@ mod __intern_token {
                 23 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        0 ... 38 => {
-                            __current_state = 23;
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
-                        39 => /* '\'' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 24;
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
                             continue;
                         }
-                        40 ... 1114111 => {
-                            __current_state = 23;
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
+                            continue;
+                        }
+                        97 ... 104 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        105 => /* 'i' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 27;
+                            continue;
+                        }
+                        106 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -9240,6 +9302,41 @@ mod __intern_token {
                 24 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
+                            continue;
+                        }
+                        97 ... 113 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        114 => /* 'r' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 28;
+                            continue;
+                        }
+                        115 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -9248,39 +9345,17 @@ mod __intern_token {
                 25 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                        0 ... 38 => {
+                            __current_state = 25;
                             continue;
                         }
-                        58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                        39 => /* '\'' */ {
+                            __current_match = Some((11, __index + 1));
+                            __current_state = 26;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 19;
-                            continue;
-                        }
-                        97 ... 114 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        115 => /* 's' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 27;
-                            continue;
-                        }
-                        116 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                        40 ... 1114111 => {
+                            __current_state = 25;
                             continue;
                         }
                         _ => {
@@ -9291,36 +9366,6 @@ mod __intern_token {
                 26 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 20;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 19;
-                            continue;
-                        }
-                        97 => /* 'a' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 28;
-                            continue;
-                        }
-                        98 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -9331,37 +9376,37 @@ mod __intern_token {
                     match __ch as u32 {
                         48 ... 57 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                            __current_state = 22;
                             continue;
                         }
                         65 ... 90 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
-                        97 ... 115 => {
+                        97 ... 114 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
-                        116 => /* 't' */ {
+                        115 => /* 's' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 29;
                             continue;
                         }
-                        117 ... 122 => {
+                        116 ... 122 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -9374,37 +9419,32 @@ mod __intern_token {
                     match __ch as u32 {
                         48 ... 57 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                            __current_state = 22;
                             continue;
                         }
                         65 ... 90 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
-                        97 ... 107 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
-                            continue;
-                        }
-                        108 => /* 'l' */ {
+                        97 => /* 'a' */ {
                             __current_match = Some((13, __index + 1));
                             __current_state = 30;
                             continue;
                         }
-                        109 ... 122 => {
+                        98 ... 122 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -9417,37 +9457,37 @@ mod __intern_token {
                     match __ch as u32 {
                         48 ... 57 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                            __current_state = 22;
                             continue;
                         }
                         65 ... 90 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
-                        97 ... 114 => {
+                        97 ... 115 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
-                        115 => /* 's' */ {
-                            __current_match = Some((9, __index + 1));
+                        116 => /* 't' */ {
+                            __current_match = Some((13, __index + 1));
                             __current_state = 31;
                             continue;
                         }
-                        116 ... 122 => {
+                        117 ... 122 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -9460,37 +9500,37 @@ mod __intern_token {
                     match __ch as u32 {
                         48 ... 57 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                            __current_state = 22;
                             continue;
                         }
                         65 ... 90 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         97 ... 107 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         108 => /* 'l' */ {
-                            __current_match = Some((10, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 32;
                             continue;
                         }
                         109 ... 122 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -9503,27 +9543,37 @@ mod __intern_token {
                     match __ch as u32 {
                         48 ... 57 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                            __current_state = 22;
                             continue;
                         }
                         65 ... 90 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
-                        97 ... 122 => {
+                        97 ... 114 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
+                            continue;
+                        }
+                        115 => /* 's' */ {
+                            __current_match = Some((9, __index + 1));
+                            __current_state = 33;
+                            continue;
+                        }
+                        116 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {
@@ -9536,27 +9586,103 @@ mod __intern_token {
                     match __ch as u32 {
                         48 ... 57 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         58 => /* ':' */ {
                             __current_match = Some((14, __index + 1));
-                            __current_state = 20;
+                            __current_state = 22;
                             continue;
                         }
                         65 ... 90 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
                             continue;
                         }
                         95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 19;
+                            __current_state = 21;
+                            continue;
+                        }
+                        97 ... 107 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        108 => /* 'l' */ {
+                            __current_match = Some((10, __index + 1));
+                            __current_state = 34;
+                            continue;
+                        }
+                        109 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                33 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
                             continue;
                         }
                         97 ... 122 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 19;
+                            __current_state = 21;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                34 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 21;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 21;
                             continue;
                         }
                         _ => {

@@ -1,7 +1,11 @@
 #![allow(dead_code)] // temporary
 
-extern crate lalrpop_intern;
 extern crate chalk_parse;
+
+extern crate lalrpop_intern;
+
+#[macro_use]
+extern crate lazy_static;
 
 /// Create a deref impl. We do this a lot.
 macro_rules! deref_to {
