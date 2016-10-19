@@ -89,9 +89,13 @@ BitApplications: Vec<Bit> = {
 
 BitApplication: Bit = {
     <s0:@L> <a:Application> <s1:@R> => {
+        let span = Span::new(s0, s1);
         Bit {
-            span: Span::new(s0, s1),
-            kind: BitKind::Value(Value::Application(a)),
+            span: span,
+            kind: BitKind::Value(Value {
+                span: span,
+                kind: ValueKind::Application(a)
+            }),
         }
     }
 };
@@ -116,10 +120,15 @@ BitValue: Bit = {
 };
 
 Value: Value = {
-    Atom => Value::Atom(<>),
-    Variable => Value::Variable(<>),
-    "(" <Application> ")" => Value::Application(<>),
-    "_" => Value::Wildcard,
+    <s0:@L> <k:ValueKind> <s1:@R> =>
+        Value { span: Span::new(s0, s1), kind: k },
+};
+
+ValueKind: ValueKind = {
+    Atom => ValueKind::Atom(<>),
+    Variable => ValueKind::Variable(<>),
+    "(" <Application> ")" => ValueKind::Application(<>),
+    "_" => ValueKind::Wildcard,
 };
 
 Atom: Atom = {

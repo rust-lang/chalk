@@ -2,7 +2,7 @@ use lalrpop_intern::InternedString;
 
 mod impls;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
@@ -74,7 +74,13 @@ pub enum BitKind {
 
 // Component of a fact
 #[derive(Debug)]
-pub enum Value {
+pub struct Value {
+    pub span: Span,
+    pub kind: ValueKind,
+}
+
+#[derive(Debug)]
+pub enum ValueKind {
     Atom(Atom),
     Variable(Variable),
     Application(Application),
@@ -90,13 +96,13 @@ pub enum Operator {
 }
 
 // `foo` or `bar`
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Atom {
     pub id: InternedString
 }
 
 // `Foo` or `Bar`
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Variable {
     pub id: InternedString
 }

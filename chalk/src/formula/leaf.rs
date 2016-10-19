@@ -36,7 +36,7 @@ pub struct Constant {
 // X -- encoded using deBruijn indices
 #[derive(Clone, Debug)]
 pub struct BoundVariable {
-    depth: usize,
+    pub depth: usize,
 }
 
 impl BoundVariable {
