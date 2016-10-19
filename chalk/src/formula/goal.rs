@@ -1,35 +1,35 @@
-use super::common::*;
+use super::quant::Quantification;
 use super::clause::Clause;
 use std::sync::Arc;
 
 /// G-formula, see page 75 of Programming with Higher-Order Logic.
 #[derive(Clone, Debug)]
-pub struct Goal<C> {
-    data: Arc<GoalData<C>>,
+pub struct Goal<L> {
+    data: Arc<GoalData<L>>,
 }
 
-deref_to!(Goal<C>.data => GoalData<C>);
+deref_to!(Goal<L>.data => GoalData<L>);
 
-impl<C> Goal<C> {
-    pub fn new(data: GoalData<C>) -> Self {
+impl<L> Goal<L> {
+    pub fn new(data: GoalData<L>) -> Self {
         Goal { data: Arc::new(data) }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct GoalData<C> {
-    pub kind: GoalKind<C>,
+pub struct GoalData<L> {
+    pub kind: GoalKind<L>,
 }
 
 #[derive(Clone, Debug)]
-pub enum GoalKind<C> {
+pub enum GoalKind<L> {
     True,
-    Leaf(Leaf<C>),
-    And(Vec<Goal<C>>),
-    Or(Vec<Goal<C>>),
-    Exists(Quantification<Goal<C>>),
-    Implication(Clause<C>, Goal<C>),
-    ForAll(Quantification<Goal<C>>),
+    Leaf(L),
+    And(Vec<Goal<L>>),
+    Or(Vec<Goal<L>>),
+    Exists(Quantification<Goal<L>>),
+    Implication(Clause<L>, Goal<L>),
+    ForAll(Quantification<Goal<L>>),
 }
 
 macro_rules! goal {

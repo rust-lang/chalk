@@ -17,7 +17,17 @@ macro_rules! deref_to {
                 &self.$field
             }
         }
-    }
+    };
+
+    ($source:ident.$field:ident => $target:ty) => {
+        impl ::std::ops::Deref for $source {
+            type Target = $target;
+
+            fn deref(&self) -> &$target {
+                &self.$field
+            }
+        }
+    };
 }
 
 mod formula;

@@ -12,6 +12,10 @@ pub use self::goal::*;
 mod clause;
 pub use self::clause::*;
 
-mod common;
-pub use self::common::*;
+mod leaf;
+pub use self::leaf::*;
 
+mod quant;
+pub use self::quant::*;
+
+mod lower;

@@ -1,5 +1,7 @@
 use lalrpop_intern::InternedString;
 
+mod impls;
+
 #[derive(Debug)]
 pub struct Span {
     pub lo: usize,
@@ -88,13 +90,13 @@ pub enum Operator {
 }
 
 // `foo` or `bar`
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Atom {
     pub id: InternedString
 }
 
 // `Foo` or `Bar`
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Variable {
     pub id: InternedString
 }
