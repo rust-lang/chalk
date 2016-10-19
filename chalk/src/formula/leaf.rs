@@ -21,7 +21,6 @@ pub struct LeafData {
 
 #[derive(Clone, Debug)]
 pub enum LeafKind {
-    Wildcard, // _
     BoundVariable(BoundVariable), // X
     Constant(Constant), // C(...)
 }
