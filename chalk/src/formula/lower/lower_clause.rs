@@ -43,7 +43,7 @@ impl LowerClause<Leaf> for ast::Item {
             ast::Item::Rule(ref rule) => rule.lower_clause(env),
         }?;
 
-        for _ in 0 .. count {
+        for _ in 0..count {
             env.pop_bound_name();
         }
 
@@ -74,6 +74,45 @@ impl LowerClause<Leaf> for ast::Rule {
 
 impl LowerClause<Leaf> for ast::Fact {
     fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<Leaf>> {
-        panic!()
+        match *self.data {
+            ast::FactData::And(ref f1, ref f2) => {
+                let c1 = f1.lower_clause(env)?;
+                let c2 = f2.lower_clause(env)?;
+                Ok(Clause::new(ClauseData { kind: ClauseKind::And(vec![c1, c2]) }))
+            }
+
+            ast::FactData::Implication(ref f1, ref f2) => {
+                let condition = f1.lower_goal(env)?;
+                let consequence = f2.lower_clause(env)?;
+                Ok(Clause::new(ClauseData {
+                    kind: ClauseKind::Implication(condition, consequence),
+                }))
+            }
+
+            ast::FactData::ForAll(v, ref f1) => {
+                env.push_bound_name(v);
+                let c = f1.lower_clause(env)?;
+                env.pop_bound_name();
+                Ok(c.in_foralls(1))
+            }
+
+            ast::FactData::Exists(..) => {
+                Err(Error {
+                    span: self.span,
+                    kind: ErrorKind::ExistsInClause,
+                })
+            }
+
+            ast::FactData::Apply(ref appl) => {
+                appl.lower_clause(env)
+            }
+
+            ast::FactData::Or(..) => {
+                Err(Error {
+                    span: self.span,
+                    kind: ErrorKind::OrInClause,
+                })
+            }
+        }
     }
 }

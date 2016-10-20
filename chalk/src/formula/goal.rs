@@ -14,6 +14,32 @@ impl<L> Goal<L> {
     pub fn new(data: GoalData<L>) -> Self {
         Goal { data: Arc::new(data) }
     }
+
+    pub fn in_foralls(self, num_binders: usize) -> Goal<L> {
+        if num_binders == 0 {
+            self
+        } else {
+            Goal::new(GoalData {
+                kind: GoalKind::ForAll(Quantification {
+                    num_binders: num_binders,
+                    formula: self
+                })
+            })
+        }
+    }
+
+    pub fn in_exists(self, num_binders: usize) -> Goal<L> {
+        if num_binders == 0 {
+            self
+        } else {
+            Goal::new(GoalData {
+                kind: GoalKind::Exists(Quantification {
+                    num_binders: num_binders,
+                    formula: self
+                })
+            })
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

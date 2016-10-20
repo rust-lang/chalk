@@ -1,5 +1,4 @@
 use chalk_parse::ast::{self, Span};
-use super::goal::Goal;
 
 pub struct Error {
     pub span: Span,
@@ -8,6 +7,8 @@ pub struct Error {
 
 pub enum ErrorKind {
     UnknownVariable(ast::Variable),
+    OrInClause,
+    ExistsInClause,
 }
 
 pub type LowerResult<L> = Result<L, Error>;
