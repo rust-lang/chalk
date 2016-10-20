@@ -1,3 +1,5 @@
+#![feature(conservative_impl_trait)]
+
 extern crate lalrpop_intern;
 extern crate lalrpop_util;
 

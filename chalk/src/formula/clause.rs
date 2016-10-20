@@ -14,6 +14,19 @@ impl<L> Clause<L> {
     pub fn new(data: ClauseData<L>) -> Self {
         Clause { data: Arc::new(data) }
     }
+
+    pub fn in_foralls(self, num_binders: usize) -> Clause<L> {
+        if num_binders == 0 {
+            self
+        } else {
+            Clause::new(ClauseData {
+                kind: ClauseKind::ForAll(Quantification {
+                    num_binders: num_binders,
+                    formula: self
+                })
+            })
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

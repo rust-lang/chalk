@@ -1,5 +1,6 @@
 use lalrpop_intern::InternedString;
 
+mod free_variables;
 mod impls;
 
 #[derive(Copy, Clone, Debug)]

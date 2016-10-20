@@ -6,11 +6,11 @@ use super::environment::Environment;
 use super::Error;
 use super::ErrorKind;
 
-pub trait LowerLeaf {
-    fn lower_leaf(&self, env: &mut Environment) -> LowerResult<Leaf>;
+pub trait LowerLeaf<L> {
+    fn lower_leaf(&self, env: &mut Environment) -> LowerResult<L>;
 }
 
-impl LowerLeaf for ast::Application {
+impl LowerLeaf<Leaf> for ast::Application {
     fn lower_leaf(&self, env: &mut Environment) -> LowerResult<Leaf> {
         let operator_name = self.intern_operator_name();
         let args: Vec<Leaf> = try!(self.bits
@@ -30,7 +30,7 @@ impl LowerLeaf for ast::Application {
     }
 }
 
-impl LowerLeaf for ast::Value {
+impl LowerLeaf<Leaf> for ast::Value {
     fn lower_leaf(&self, env: &mut Environment) -> LowerResult<Leaf> {
         match self.kind {
             ast::ValueKind::Atom(atom) => {
