@@ -21,6 +21,7 @@ impl Environment {
     /// Brings N wildcards into scope. These will occupy the next N
     /// bound DeBruijn indices.
     pub fn push_wildcards(&mut self, count: usize) {
+        println!("push_wildcards({})", count);
         assert!(self.next_wildcard.is_none(), "nested wildcard scopes");
         let len = self.bound_names.len();
         self.bound_names.extend((0..count).map(|_| None));
@@ -28,10 +29,11 @@ impl Environment {
     }
 
     pub fn pop_wildcards(&mut self, count: usize) {
+        println!("pop_wildcards({})", count);
         let len = self.bound_names.len();
         assert_eq!(self.next_wildcard, Some(len - count), "some wildcards unused");
         for _ in 0 .. count {
-            assert_eq!(self.bound_names.pop(), None);
+            assert_eq!(self.bound_names.pop(), Some(None));
         }
         self.next_wildcard = None;
     }

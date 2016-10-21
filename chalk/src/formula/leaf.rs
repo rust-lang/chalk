@@ -1,7 +1,7 @@
 use lalrpop_intern::InternedString;
 use std::sync::Arc;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Leaf {
     data: Arc<LeafData>,
 }
@@ -19,7 +19,7 @@ pub struct LeafData {
     pub kind: LeafKind,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum LeafKind {
     BoundVariable(BoundVariable), // X
     Constant(Constant), // C(...)
@@ -33,7 +33,7 @@ pub struct Constant {
 }
 
 // X -- encoded using deBruijn indices
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct BoundVariable {
     pub depth: usize,
 }

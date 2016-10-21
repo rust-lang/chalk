@@ -3,7 +3,7 @@ use super::clause::Clause;
 use std::sync::Arc;
 
 /// G-formula, see page 75 of Programming with Higher-Order Logic.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Goal<L> {
     data: Arc<GoalData<L>>,
 }
@@ -42,12 +42,12 @@ impl<L> Goal<L> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct GoalData<L> {
     pub kind: GoalKind<L>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum GoalKind<L> {
     True,
     Leaf(L),

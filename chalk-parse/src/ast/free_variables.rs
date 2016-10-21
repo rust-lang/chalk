@@ -1,8 +1,7 @@
 use super::*;
 
 impl Item {
-    pub fn for_each_free_variable<F>(&self, func: &mut F)
-        where F: FnMut(Span, Variable)
+    pub fn for_each_free_variable(&self, func: &mut FnMut(Span, Variable))
     {
         match *self {
             Item::Fact(ref appl) => appl.for_each_free_variable(func),
@@ -12,8 +11,7 @@ impl Item {
 }
 
 impl Rule {
-    pub fn for_each_free_variable<F>(&self, func: &mut F)
-        where F: FnMut(Span, Variable)
+    pub fn for_each_free_variable(&self, func: &mut FnMut(Span, Variable))
     {
         self.consequence.for_each_free_variable(func);
         self.condition.for_each_free_variable(func);
@@ -41,8 +39,7 @@ impl Application {
             .sum()
     }
 
-    pub fn for_each_free_variable<F>(&self, func: &mut F)
-        where F: FnMut(Span, Variable)
+    pub fn for_each_free_variable(&self, func: &mut FnMut(Span, Variable))
     {
         for value in self.values() {
             match value.kind {
@@ -56,8 +53,7 @@ impl Application {
 }
 
 impl Fact {
-    pub fn for_each_free_variable<F>(&self, func: &mut F)
-        where F: FnMut(Span, Variable)
+    pub fn for_each_free_variable(&self, func: &mut FnMut(Span, Variable))
     {
         match *self.data {
             FactData::And(ref f1, ref f2) |

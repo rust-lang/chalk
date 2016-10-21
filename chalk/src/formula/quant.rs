@@ -1,5 +1,5 @@
 /// Something like `forall(x, y, z -> F)`.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Quantification<F> {
     /// Number of bound variables introduced. (3 in the above example.)
     pub num_binders: usize,
