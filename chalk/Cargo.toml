@@ -5,6 +5,9 @@ authors = ["Niko Matsakis <niko@alum.mit.edu>"]
 
 [workspace]
 
+[lib]
+doctest = false
+
 [dependencies]
 lalrpop-intern = "0.12.1"
 chalk-parse = { path = "../chalk-parse" }

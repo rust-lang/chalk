@@ -56,11 +56,11 @@ impl<L: Debug> Debug for GoalKind<L> {
             GoalKind::Leaf(ref l) => l.fmt(fmt)?,
             GoalKind::And(ref ls) => {
                 write!(fmt, "and")?;
-                ls[..].fmt(fmt)?;
+                fmt_parens(fmt, ls)?;
             }
             GoalKind::Or(ref ls) => {
                 write!(fmt, "or")?;
-                ls[..].fmt(fmt)?;
+                fmt_parens(fmt, ls)?;
             }
             GoalKind::Implication(ref g, ref l) => {
                 write!(fmt, "(")?;
@@ -112,9 +112,20 @@ impl Debug for LeafKind {
             }
             LeafKind::Constant(ref c) => {
                 write!(fmt, "{:?}", c.operator)?;
-                write!(fmt, "{:?}", &c.args[..])?;
+                if c.args.len() > 0 {
+                    fmt_parens(fmt, &c.args)?;
+                }
             }
         }
         Ok(())
     }
+}
+
+fn fmt_parens<D: Debug>(fmt: &mut Formatter, vs: &[D]) -> Result<(), Error> {
+    write!(fmt, "(")?;
+    for (i, v) in vs.iter().enumerate() {
+        if i > 0 { write!(fmt, ", ")?; }
+        write!(fmt, "{:?}", v)?;
+    }
+    write!(fmt, ")")
 }
