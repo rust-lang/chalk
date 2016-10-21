@@ -1,6 +1,7 @@
 use chalk_parse::ast;
 use formula::clause::*;
 use formula::leaf::Leaf;
+use std::collections::HashSet;
 
 use super::LowerResult;
 use super::lower_leaf::LowerLeaf;
@@ -15,11 +16,16 @@ pub trait LowerClause<L> {
 
 impl LowerClause<Leaf> for ast::Item {
     fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<Leaf>> {
+        println!("Item lower_clause");
+
         // bring all free variables into scope but ignore wildcards:
         let mut count = 0;
+        let mut set = HashSet::new();
         self.for_each_free_variable(&mut |_span, v| {
-            count += 1;
-            env.push_bound_name(v);
+            if set.insert(v.id) {
+                count += 1;
+                env.push_bound_name(v);
+            }
         });
 
         // this is because we want to transform something like
@@ -53,6 +59,8 @@ impl LowerClause<Leaf> for ast::Item {
 
 impl LowerClause<Leaf> for ast::Application {
     fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<Leaf>> {
+        println!("Application lower_clause");
+
         // collect the wildcards and bring them into scope
         let wildcards = self.count_wildcards();
         env.push_wildcards(wildcards);

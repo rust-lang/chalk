@@ -10,5 +10,5 @@ fn test(text: &str) {
 
 #[test]
 fn lower_one() {
-    test("Foo(A, _, B) :- Bar(A, _, B, C).");
+    test("Foo(X, _, Y) :- Bar(X, _, Y, Z).");
 }

@@ -12,21 +12,36 @@ pub trait LowerLeaf<L> {
 
 impl LowerLeaf<Leaf> for ast::Application {
     fn lower_leaf(&self, env: &mut Environment) -> LowerResult<Leaf> {
-        let operator_name = self.intern_operator_name();
-        let args: Vec<Leaf> = try!(self.bits
-            .iter()
-            .filter_map(|bit| match bit.kind {
-                ast::BitKind::Value(ref v) => Some(v),
-                ast::BitKind::Operator(_) => None,
-            })
-            .map(|v| v.lower_leaf(env))
-            .collect());
-        Ok(Leaf::new(LeafData {
-            kind: LeafKind::Constant(Constant {
-                operator: operator_name,
-                args: args,
-            }),
-        }))
+        let any_opers = self.bits.iter().any(|bit| match bit.kind {
+            ast::BitKind::Operator(_) => true,
+            ast::BitKind::Value(_) => false,
+        });
+
+        if any_opers {
+            let operator_name = self.intern_operator_name();
+            let args: Vec<Leaf> = try!(self.bits
+                                       .iter()
+                                       .filter_map(|bit| match bit.kind {
+                                           ast::BitKind::Value(ref v) => Some(v),
+                                           ast::BitKind::Operator(_) => None,
+                                       })
+                                       .map(|v| v.lower_leaf(env))
+                                       .collect());
+            Ok(Leaf::new(LeafData {
+                kind: LeafKind::Constant(Constant {
+                    operator: operator_name,
+                    args: args,
+                }),
+            }))
+        } else {
+            // if no operators, must just be a value
+            assert!(self.bits.len() == 1);
+            let value = match self.bits[0].kind {
+                ast::BitKind::Value(ref v) => v,
+                ast::BitKind::Operator(_) => panic!("no operators"),
+            };
+            value.lower_leaf(env)
+        }
     }
 }
 
