@@ -23,6 +23,7 @@ mod __parse__Program {
         Term_22___22(&'input str),
         Term_22exists_22(&'input str),
         Term_22forall_22(&'input str),
+        Term_22implies_22(&'input str),
         Termr_23_22_5c_27_5b_5e_5c_27_5d_2b_5c_27_22_23(&'input str),
         Termr_23_22_5b_2d_7c_21_40_23_24_25_5e_26_2a_3d_2b_2f_3a_3f_7e_3c_3e_5d_2b_22_23(&'input str),
         Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_22_23(&'input str),
@@ -42,7 +43,6 @@ mod __parse__Program {
         NtBitValue_3f(::std::option::Option<Bit>),
         NtFact_3cFactData_3e(Fact),
         NtFact_3cFactDataAnd_3e(Fact),
-        NtFact_3cFactDataApply_3e(Fact),
         NtFact_3cFactDataFunc_3e(Fact),
         NtFact_3cFactDataOr_3e(Fact),
         NtFactData(Box<FactData>),
@@ -76,6 +76,7 @@ mod __parse__Program {
         18, // on "_", goto 17
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         19, // on r#"\'[^\']+\'"#, goto 18
         20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 19
         21, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 20
@@ -85,13 +86,14 @@ mod __parse__Program {
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -12, // on ".", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
-        -12, // on ":-", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
+        -12, // on ".", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
+        -12, // on ":-", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 19
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -108,6 +110,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -117,13 +120,14 @@ mod __parse__Program {
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -6, // on ".", reduce `Application = ApplicationBits => ActionFn(68);`
-        -6, // on ":-", reduce `Application = ApplicationBits => ActionFn(68);`
+        -6, // on ".", reduce `Application = ApplicationBits => ActionFn(66);`
+        -6, // on ":-", reduce `Application = ApplicationBits => ActionFn(66);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -133,17 +137,18 @@ mod __parse__Program {
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -49, // on ".", reduce `ValueKind = Atom => ActionFn(28);`
-        -49, // on ":-", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on ".", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on ":-", reduce `ValueKind = Atom => ActionFn(28);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
         // State 5
         17, // on "(", goto 16
         0, // on ")", error
@@ -156,6 +161,7 @@ mod __parse__Program {
         18, // on "_", goto 17
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         19, // on r#"\'[^\']+\'"#, goto 18
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         28, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 27
@@ -172,6 +178,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         32, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 31
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -181,19 +188,20 @@ mod __parse__Program {
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -53, // on ".", reduce `Variable = Identifier => ActionFn(33);`
-        -53, // on ":-", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ".", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ":-", reduce `Variable = Identifier => ActionFn(33);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 8
-        -41, // on "(", reduce `Item+ = Item => ActionFn(52);`
+        -40, // on "(", reduce `Item+ = Item => ActionFn(51);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -201,13 +209,14 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -41, // on "_", reduce `Item+ = Item => ActionFn(52);`
+        -40, // on "_", reduce `Item+ = Item => ActionFn(51);`
         0, // on "exists", error
         0, // on "forall", error
-        -41, // on r#"\'[^\']+\'"#, reduce `Item+ = Item => ActionFn(52);`
-        -41, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item+ = Item => ActionFn(52);`
-        -41, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item+ = Item => ActionFn(52);`
-        -41, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item+ = Item => ActionFn(52);`
+        0, // on "implies", error
+        -40, // on r#"\'[^\']+\'"#, reduce `Item+ = Item => ActionFn(51);`
+        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item+ = Item => ActionFn(51);`
+        -40, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item+ = Item => ActionFn(51);`
+        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item+ = Item => ActionFn(51);`
         // State 9
         17, // on "(", goto 16
         0, // on ")", error
@@ -220,25 +229,27 @@ mod __parse__Program {
         18, // on "_", goto 17
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         19, // on r#"\'[^\']+\'"#, goto 18
         20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 19
         21, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 20
         22, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 21
         // State 10
-        -17, // on "(", reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on "(", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -17, // on ".", reduce `BitOperator = Operator => ActionFn(71);`
-        -17, // on ":-", reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on ".", reduce `BitOperator = Operator => ActionFn(69);`
+        -17, // on ":-", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on ";", error
         0, // on "=>", error
-        -17, // on "_", reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on "_", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on "exists", error
         0, // on "forall", error
-        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(71);`
+        0, // on "implies", error
+        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 11
         0, // on "(", error
@@ -252,12 +263,13 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 12
-        -40, // on "(", reduce `Item = Rule => ActionFn(3);`
+        -39, // on "(", reduce `Item = Rule => ActionFn(3);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -265,61 +277,65 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -40, // on "_", reduce `Item = Rule => ActionFn(3);`
+        -39, // on "_", reduce `Item = Rule => ActionFn(3);`
         0, // on "exists", error
         0, // on "forall", error
-        -40, // on r#"\'[^\']+\'"#, reduce `Item = Rule => ActionFn(3);`
-        -40, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item = Rule => ActionFn(3);`
-        -40, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item = Rule => ActionFn(3);`
-        -40, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item = Rule => ActionFn(3);`
+        0, // on "implies", error
+        -39, // on r#"\'[^\']+\'"#, reduce `Item = Rule => ActionFn(3);`
+        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item = Rule => ActionFn(3);`
+        -39, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item = Rule => ActionFn(3);`
+        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item = Rule => ActionFn(3);`
         // State 13
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -20, // on ".", reduce `BitValue = Value => ActionFn(72);`
-        -20, // on ":-", reduce `BitValue = Value => ActionFn(72);`
+        -20, // on ".", reduce `BitValue = Value => ActionFn(70);`
+        -20, // on ":-", reduce `BitValue = Value => ActionFn(70);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(72);`
+        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(70);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(72);`
+        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(70);`
         // State 14
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -48, // on ".", reduce `Value = ValueKind => ActionFn(79);`
-        -48, // on ":-", reduce `Value = ValueKind => ActionFn(79);`
+        -47, // on ".", reduce `Value = ValueKind => ActionFn(76);`
+        -47, // on ":-", reduce `Value = ValueKind => ActionFn(76);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(79);`
+        -47, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(76);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(79);`
+        -47, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(76);`
         // State 15
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -50, // on ".", reduce `ValueKind = Variable => ActionFn(29);`
-        -50, // on ":-", reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on ".", reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on ":-", reduce `ValueKind = Variable => ActionFn(29);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
         // State 16
         47, // on "(", goto 46
         0, // on ")", error
@@ -332,6 +348,7 @@ mod __parse__Program {
         48, // on "_", goto 47
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         49, // on r#"\'[^\']+\'"#, goto 48
         50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 49
         51, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 50
@@ -341,17 +358,18 @@ mod __parse__Program {
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -52, // on ".", reduce `ValueKind = "_" => ActionFn(31);`
-        -52, // on ":-", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ".", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ":-", reduce `ValueKind = "_" => ActionFn(31);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
         // State 18
         0, // on "(", error
         0, // on ")", error
@@ -364,76 +382,81 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         // State 19
-        -44, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -44, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -44, // on ":-", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ":-", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on ";", error
         0, // on "=>", error
-        -44, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on "exists", error
         0, // on "forall", error
-        -44, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "implies", error
+        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -44, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 20
-        -38, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -38, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        -38, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         // State 21
-        -43, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -43, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -43, // on ":-", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ":-", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on ";", error
         0, // on "=>", error
-        -43, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "implies", error
+        -42, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 22
         17, // on "(", goto 16
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -10, // on ".", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
-        -10, // on ":-", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
+        -10, // on ".", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
+        -10, // on ":-", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
         0, // on ";", error
         0, // on "=>", error
         18, // on "_", goto 17
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         19, // on r#"\'[^\']+\'"#, goto 18
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         28, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 27
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 23
-        -39, // on "(", reduce `Item = Application, "." => ActionFn(2);`
+        -38, // on "(", reduce `Item = Application, "." => ActionFn(2);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -441,15 +464,16 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -39, // on "_", reduce `Item = Application, "." => ActionFn(2);`
+        -38, // on "_", reduce `Item = Application, "." => ActionFn(2);`
         0, // on "exists", error
         0, // on "forall", error
-        -39, // on r#"\'[^\']+\'"#, reduce `Item = Application, "." => ActionFn(2);`
-        -39, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item = Application, "." => ActionFn(2);`
-        -39, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item = Application, "." => ActionFn(2);`
-        -39, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item = Application, "." => ActionFn(2);`
+        0, // on "implies", error
+        -38, // on r#"\'[^\']+\'"#, reduce `Item = Application, "." => ActionFn(2);`
+        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item = Application, "." => ActionFn(2);`
+        -38, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item = Application, "." => ActionFn(2);`
+        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item = Application, "." => ActionFn(2);`
         // State 24
-        74, // on "(", goto 73
+        73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -457,9 +481,10 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        75, // on "_", goto 74
-        76, // on "exists", goto 75
-        77, // on "forall", goto 76
+        74, // on "_", goto 73
+        75, // on "exists", goto 74
+        76, // on "forall", goto 75
+        77, // on "implies", goto 76
         78, // on r#"\'[^\']+\'"#, goto 77
         79, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 78
         80, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 79
@@ -469,61 +494,65 @@ mod __parse__Program {
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -2, // on ".", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
-        -2, // on ":-", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on ".", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
+        -2, // on ":-", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         // State 26
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -53, // on ".", reduce `Variable = Identifier => ActionFn(33);`
-        -53, // on ":-", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ".", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ":-", reduce `Variable = Identifier => ActionFn(33);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 27
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -38, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        -38, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ":-", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         // State 28
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -11, // on ".", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
-        -11, // on ":-", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
+        -11, // on ".", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
+        -11, // on ":-", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 19
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -540,12 +569,13 @@ mod __parse__Program {
         18, // on "_", goto 17
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         19, // on r#"\'[^\']+\'"#, goto 18
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         28, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 27
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 30
-        -17, // on "(", reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on "(", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -553,15 +583,16 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -17, // on "_", reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on "_", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on "exists", error
         0, // on "forall", error
-        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(71);`
+        0, // on "implies", error
+        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 31
-        -44, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -569,15 +600,16 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -44, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on "exists", error
         0, // on "forall", error
-        -44, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "implies", error
+        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -44, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 32
-        -43, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -585,12 +617,13 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -43, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "implies", error
+        -42, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 33
         97, // on "(", goto 96
@@ -604,12 +637,13 @@ mod __parse__Program {
         98, // on "_", goto 97
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         99, // on r#"\'[^\']+\'"#, goto 98
         100, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 99
         101, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 100
         102, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 101
         // State 34
-        -42, // on "(", reduce `Item+ = Item+, Item => ActionFn(53);`
+        -41, // on "(", reduce `Item+ = Item+, Item => ActionFn(52);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -617,16 +651,17 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -42, // on "_", reduce `Item+ = Item+, Item => ActionFn(53);`
+        -41, // on "_", reduce `Item+ = Item+, Item => ActionFn(52);`
         0, // on "exists", error
         0, // on "forall", error
-        -42, // on r#"\'[^\']+\'"#, reduce `Item+ = Item+, Item => ActionFn(53);`
-        -42, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item+ = Item+, Item => ActionFn(53);`
-        -42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item+ = Item+, Item => ActionFn(53);`
-        -42, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item+ = Item+, Item => ActionFn(53);`
+        0, // on "implies", error
+        -41, // on r#"\'[^\']+\'"#, reduce `Item+ = Item+, Item => ActionFn(52);`
+        -41, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Item+ = Item+, Item => ActionFn(52);`
+        -41, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Item+ = Item+, Item => ActionFn(52);`
+        -41, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Item+ = Item+, Item => ActionFn(52);`
         // State 35
         0, // on "(", error
-        -12, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
+        -12, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -636,6 +671,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 49
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -652,13 +688,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 37
         0, // on "(", error
-        -6, // on ")", reduce `Application = ApplicationBits => ActionFn(68);`
+        -6, // on ")", reduce `Application = ApplicationBits => ActionFn(66);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -668,13 +705,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 38
         0, // on "(", error
-        -49, // on ")", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on ")", reduce `ValueKind = Atom => ActionFn(28);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -684,10 +722,11 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
         // State 39
         47, // on "(", goto 46
         -8, // on ")", reduce `ApplicationBits = BitOperator => ActionFn(17);`
@@ -700,6 +739,7 @@ mod __parse__Program {
         48, // on "_", goto 47
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         49, // on r#"\'[^\']+\'"#, goto 48
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         107, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 106
@@ -716,13 +756,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         32, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 31
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         33, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 32
         // State 41
         110, // on "(", goto 109
-        -53, // on ")", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ")", reduce `Variable = Identifier => ActionFn(33);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -732,29 +773,31 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 42
-        -17, // on "(", reduce `BitOperator = Operator => ActionFn(71);`
-        -17, // on ")", reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on "(", reduce `BitOperator = Operator => ActionFn(69);`
+        -17, // on ")", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -17, // on "_", reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on "_", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on "exists", error
         0, // on "forall", error
-        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(71);`
+        0, // on "implies", error
+        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 43
         0, // on "(", error
-        -20, // on ")", reduce `BitValue = Value => ActionFn(72);`
+        -20, // on ")", reduce `BitValue = Value => ActionFn(70);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -764,13 +807,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(72);`
+        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(70);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(72);`
+        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(70);`
         // State 44
         0, // on "(", error
-        -48, // on ")", reduce `Value = ValueKind => ActionFn(79);`
+        -47, // on ")", reduce `Value = ValueKind => ActionFn(76);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -780,13 +824,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(79);`
+        -47, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(76);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(79);`
+        -47, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(76);`
         // State 45
         0, // on "(", error
-        -50, // on ")", reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on ")", reduce `ValueKind = Variable => ActionFn(29);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -796,10 +841,11 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
         // State 46
         47, // on "(", goto 46
         0, // on ")", error
@@ -812,13 +858,14 @@ mod __parse__Program {
         48, // on "_", goto 47
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         49, // on r#"\'[^\']+\'"#, goto 48
         50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 49
         51, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 50
         52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 51
         // State 47
         0, // on "(", error
-        -52, // on ")", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ")", reduce `ValueKind = "_" => ActionFn(31);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -828,10 +875,11 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
         // State 48
         0, // on "(", error
         -14, // on ")", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
@@ -844,29 +892,31 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         // State 49
-        -44, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -44, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -44, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on "exists", error
         0, // on "forall", error
-        -44, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "implies", error
+        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -44, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 50
-        -38, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        -38, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -876,54 +926,58 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         // State 51
-        -43, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -43, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -43, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "implies", error
+        -42, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 52
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -3, // on ".", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
-        -3, // on ":-", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on ".", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        -3, // on ":-", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         // State 53
         0, // on "(", error
         0, // on ")", error
-        -12, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
+        -12, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
         0, // on "->", error
-        -12, // on ".", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
+        -12, // on ".", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
         0, // on ":-", error
-        -12, // on ";", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
-        -12, // on "=>", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
+        -12, // on ";", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         79, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 78
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -931,15 +985,16 @@ mod __parse__Program {
         // State 54
         0, // on "(", error
         0, // on ")", error
-        -31, // on ",", reduce `FactDataApply = Application => ActionFn(14);`
+        -30, // on ",", reduce `FactDataApply = Application => ActionFn(14);`
         0, // on "->", error
-        -31, // on ".", reduce `FactDataApply = Application => ActionFn(14);`
+        -30, // on ".", reduce `FactDataApply = Application => ActionFn(14);`
         0, // on ":-", error
-        -31, // on ";", reduce `FactDataApply = Application => ActionFn(14);`
-        -31, // on "=>", reduce `FactDataApply = Application => ActionFn(14);`
+        -30, // on ";", reduce `FactDataApply = Application => ActionFn(14);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -947,15 +1002,16 @@ mod __parse__Program {
         // State 55
         0, // on "(", error
         0, // on ")", error
-        -6, // on ",", reduce `Application = ApplicationBits => ActionFn(68);`
+        -6, // on ",", reduce `Application = ApplicationBits => ActionFn(66);`
         0, // on "->", error
-        -6, // on ".", reduce `Application = ApplicationBits => ActionFn(68);`
+        -6, // on ".", reduce `Application = ApplicationBits => ActionFn(66);`
         0, // on ":-", error
-        -6, // on ";", reduce `Application = ApplicationBits => ActionFn(68);`
-        -6, // on "=>", reduce `Application = ApplicationBits => ActionFn(68);`
+        -6, // on ";", reduce `Application = ApplicationBits => ActionFn(66);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -963,31 +1019,33 @@ mod __parse__Program {
         // State 56
         0, // on "(", error
         0, // on ")", error
-        -49, // on ",", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on ",", reduce `ValueKind = Atom => ActionFn(28);`
         0, // on "->", error
-        -49, // on ".", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on ".", reduce `ValueKind = Atom => ActionFn(28);`
         0, // on ":-", error
-        -49, // on ";", reduce `ValueKind = Atom => ActionFn(28);`
-        -49, // on "=>", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on ";", reduce `ValueKind = Atom => ActionFn(28);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
         // State 57
-        74, // on "(", goto 73
+        73, // on "(", goto 72
         0, // on ")", error
         -8, // on ",", reduce `ApplicationBits = BitOperator => ActionFn(17);`
         0, // on "->", error
         -8, // on ".", reduce `ApplicationBits = BitOperator => ActionFn(17);`
         0, // on ":-", error
         -8, // on ";", reduce `ApplicationBits = BitOperator => ActionFn(17);`
-        -8, // on "=>", reduce `ApplicationBits = BitOperator => ActionFn(17);`
-        75, // on "_", goto 74
+        0, // on "=>", error
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         78, // on r#"\'[^\']+\'"#, goto 77
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         115, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 114
@@ -1000,10 +1058,11 @@ mod __parse__Program {
         -7, // on ".", reduce `ApplicationBits = BitValue => ActionFn(16);`
         0, // on ":-", error
         -7, // on ";", reduce `ApplicationBits = BitValue => ActionFn(16);`
-        -7, // on "=>", reduce `ApplicationBits = BitValue => ActionFn(16);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         32, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 31
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1020,6 +1079,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1027,15 +1087,16 @@ mod __parse__Program {
         // State 60
         0, // on "(", error
         0, // on ")", error
-        0, // on ",", error
+        119, // on ",", goto 118
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        119, // on ";", goto 118
+        0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1047,11 +1108,12 @@ mod __parse__Program {
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        120, // on "=>", goto 119
+        120, // on ";", goto 119
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1059,15 +1121,16 @@ mod __parse__Program {
         // State 62
         0, // on "(", error
         0, // on ")", error
-        121, // on ",", goto 120
+        0, // on ",", error
         0, // on "->", error
-        0, // on ".", error
+        -23, // on ".", reduce `Fact<FactData> = FactData => ActionFn(71);`
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1075,15 +1138,16 @@ mod __parse__Program {
         // State 63
         0, // on "(", error
         0, // on ")", error
-        0, // on ",", error
+        -24, // on ",", reduce `Fact<FactDataAnd> = FactDataAnd => ActionFn(72);`
         0, // on "->", error
-        -23, // on ".", reduce `Fact<FactData> = FactData => ActionFn(73);`
+        -27, // on ".", reduce `FactData = FactDataAnd => ActionFn(5);`
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1091,15 +1155,16 @@ mod __parse__Program {
         // State 64
         0, // on "(", error
         0, // on ")", error
-        0, // on ",", error
+        -31, // on ",", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
         0, // on "->", error
-        -28, // on ".", reduce `FactData = FactDataAnd => ActionFn(5);`
+        -31, // on ".", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
         0, // on ":-", error
-        -24, // on ";", reduce `Fact<FactDataAnd> = FactDataAnd => ActionFn(74);`
+        -31, // on ";", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1107,15 +1172,16 @@ mod __parse__Program {
         // State 65
         0, // on "(", error
         0, // on ")", error
-        -32, // on ",", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
+        -35, // on ",", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
         0, // on "->", error
-        -32, // on ".", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
+        -35, // on ".", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
         0, // on ":-", error
-        -32, // on ";", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
-        -25, // on "=>", reduce `Fact<FactDataApply> = FactDataApply => ActionFn(75);`
+        -35, // on ";", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1123,116 +1189,106 @@ mod __parse__Program {
         // State 66
         0, // on "(", error
         0, // on ")", error
-        -36, // on ",", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
+        -28, // on ",", reduce `FactDataAnd = FactDataOr => ActionFn(6);`
         0, // on "->", error
-        -36, // on ".", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
+        -28, // on ".", reduce `FactDataAnd = FactDataOr => ActionFn(6);`
         0, // on ":-", error
-        -36, // on ";", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
+        -26, // on ";", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 67
-        0, // on "(", error
+        121, // on "(", goto 120
         0, // on ")", error
-        -27, // on ",", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(77);`
+        -52, // on ",", reduce `Variable = Identifier => ActionFn(33);`
         0, // on "->", error
-        -29, // on ".", reduce `FactDataAnd = FactDataOr => ActionFn(6);`
+        -52, // on ".", reduce `Variable = Identifier => ActionFn(33);`
         0, // on ":-", error
-        -29, // on ";", reduce `FactDataAnd = FactDataOr => ActionFn(6);`
+        -52, // on ";", reduce `Variable = Identifier => ActionFn(33);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 68
-        122, // on "(", goto 121
+        -17, // on "(", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on ")", error
-        -53, // on ",", reduce `Variable = Identifier => ActionFn(33);`
+        -17, // on ",", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on "->", error
-        -53, // on ".", reduce `Variable = Identifier => ActionFn(33);`
+        -17, // on ".", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on ":-", error
-        -53, // on ";", reduce `Variable = Identifier => ActionFn(33);`
-        -53, // on "=>", reduce `Variable = Identifier => ActionFn(33);`
+        -17, // on ";", reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on "=>", error
+        -17, // on "_", reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 69
+        0, // on "(", error
+        0, // on ")", error
+        -20, // on ",", reduce `BitValue = Value => ActionFn(70);`
+        0, // on "->", error
+        -20, // on ".", reduce `BitValue = Value => ActionFn(70);`
+        0, // on ":-", error
+        -20, // on ";", reduce `BitValue = Value => ActionFn(70);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(70);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
-        // State 69
-        -17, // on "(", reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on ")", error
-        -17, // on ",", reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on "->", error
-        -17, // on ".", reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on ":-", error
-        -17, // on ";", reduce `BitOperator = Operator => ActionFn(71);`
-        -17, // on "=>", reduce `BitOperator = Operator => ActionFn(71);`
-        -17, // on "_", reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on "exists", error
-        0, // on "forall", error
-        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(70);`
         // State 70
         0, // on "(", error
         0, // on ")", error
-        -20, // on ",", reduce `BitValue = Value => ActionFn(72);`
+        -47, // on ",", reduce `Value = ValueKind => ActionFn(76);`
         0, // on "->", error
-        -20, // on ".", reduce `BitValue = Value => ActionFn(72);`
+        -47, // on ".", reduce `Value = ValueKind => ActionFn(76);`
         0, // on ":-", error
-        -20, // on ";", reduce `BitValue = Value => ActionFn(72);`
-        -20, // on "=>", reduce `BitValue = Value => ActionFn(72);`
+        -47, // on ";", reduce `Value = ValueKind => ActionFn(76);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(72);`
+        -47, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(76);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(72);`
+        -47, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(76);`
         // State 71
         0, // on "(", error
         0, // on ")", error
-        -48, // on ",", reduce `Value = ValueKind => ActionFn(79);`
+        -49, // on ",", reduce `ValueKind = Variable => ActionFn(29);`
         0, // on "->", error
-        -48, // on ".", reduce `Value = ValueKind => ActionFn(79);`
+        -49, // on ".", reduce `ValueKind = Variable => ActionFn(29);`
         0, // on ":-", error
-        -48, // on ";", reduce `Value = ValueKind => ActionFn(79);`
-        -48, // on "=>", reduce `Value = ValueKind => ActionFn(79);`
+        -49, // on ";", reduce `ValueKind = Variable => ActionFn(29);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(79);`
+        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(79);`
+        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
         // State 72
-        0, // on "(", error
-        0, // on ")", error
-        -50, // on ",", reduce `ValueKind = Variable => ActionFn(29);`
-        0, // on "->", error
-        -50, // on ".", reduce `ValueKind = Variable => ActionFn(29);`
-        0, // on ":-", error
-        -50, // on ";", reduce `ValueKind = Variable => ActionFn(29);`
-        -50, // on "=>", reduce `ValueKind = Variable => ActionFn(29);`
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
-        // State 73
         47, // on "(", goto 46
         0, // on ")", error
         0, // on ",", error
@@ -1244,26 +1300,45 @@ mod __parse__Program {
         48, // on "_", goto 47
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         49, // on r#"\'[^\']+\'"#, goto 48
         50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 49
         51, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 50
         52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 51
-        // State 74
+        // State 73
         0, // on "(", error
         0, // on ")", error
-        -52, // on ",", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ",", reduce `ValueKind = "_" => ActionFn(31);`
         0, // on "->", error
-        -52, // on ".", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ".", reduce `ValueKind = "_" => ActionFn(31);`
         0, // on ":-", error
-        -52, // on ";", reduce `ValueKind = "_" => ActionFn(31);`
-        -52, // on "=>", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ";", reduce `ValueKind = "_" => ActionFn(31);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
+        // State 74
+        123, // on "(", goto 122
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 75
         124, // on "(", goto 123
         0, // on ")", error
@@ -1276,6 +1351,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1292,6 +1368,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1304,82 +1381,87 @@ mod __parse__Program {
         -14, // on ".", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         0, // on ":-", error
         -14, // on ";", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
-        -14, // on "=>", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         // State 78
-        -44, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on ")", error
-        -44, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on "->", error
-        -44, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ".", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on ":-", error
-        -44, // on ";", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -44, // on "=>", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -44, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ";", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "=>", error
+        -43, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on "exists", error
         0, // on "forall", error
-        -44, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "implies", error
+        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -44, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 79
-        -38, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on ")", error
-        -38, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on "->", error
-        -38, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on ":-", error
-        -38, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        -38, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         // State 80
-        -43, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on ")", error
-        -43, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on "->", error
-        -43, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ".", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on ":-", error
-        -43, // on ";", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -43, // on "=>", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -43, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ";", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "=>", error
+        -42, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "implies", error
+        -42, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 81
         17, // on "(", goto 16
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -9, // on ".", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
-        -9, // on ":-", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
+        -9, // on ".", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        -9, // on ":-", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
         0, // on ";", error
         0, // on "=>", error
         18, // on "_", goto 17
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         19, // on r#"\'[^\']+\'"#, goto 18
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         28, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 27
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 82
         0, // on "(", error
-        -12, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
-        -12, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
+        -12, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
+        -12, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1388,14 +1470,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         100, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 99
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         102, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 101
         // State 83
         0, // on "(", error
-        -15, // on ")", reduce `BitApplication = Application => ActionFn(70);`
-        -15, // on ",", reduce `BitApplication = Application => ActionFn(70);`
+        -15, // on ")", reduce `BitApplication = Application => ActionFn(68);`
+        -15, // on ",", reduce `BitApplication = Application => ActionFn(68);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1404,14 +1487,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 84
         0, // on "(", error
-        -6, // on ")", reduce `Application = ApplicationBits => ActionFn(68);`
-        -6, // on ",", reduce `Application = ApplicationBits => ActionFn(68);`
+        -6, // on ")", reduce `Application = ApplicationBits => ActionFn(66);`
+        -6, // on ",", reduce `Application = ApplicationBits => ActionFn(66);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1420,14 +1504,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 85
         0, // on "(", error
-        -49, // on ")", reduce `ValueKind = Atom => ActionFn(28);`
-        -49, // on ",", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on ")", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on ",", reduce `ValueKind = Atom => ActionFn(28);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1436,14 +1521,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
         // State 86
         0, // on "(", error
-        -54, // on ")", reduce `Vec1<BitApplication> = BitApplication => ActionFn(35);`
-        -54, // on ",", reduce `Vec1<BitApplication> = BitApplication => ActionFn(35);`
+        -53, // on ")", reduce `Vec1<BitApplication> = BitApplication => ActionFn(35);`
+        -53, // on ",", reduce `Vec1<BitApplication> = BitApplication => ActionFn(35);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1452,6 +1538,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1468,6 +1555,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1484,6 +1572,7 @@ mod __parse__Program {
         98, // on "_", goto 97
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         99, // on r#"\'[^\']+\'"#, goto 98
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         130, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 129
@@ -1500,14 +1589,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         32, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 31
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         33, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 32
         // State 90
         133, // on "(", goto 132
-        -53, // on ")", reduce `Variable = Identifier => ActionFn(33);`
-        -53, // on ",", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ")", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ",", reduce `Variable = Identifier => ActionFn(33);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1516,30 +1606,32 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 91
-        -17, // on "(", reduce `BitOperator = Operator => ActionFn(71);`
-        -17, // on ")", reduce `BitOperator = Operator => ActionFn(71);`
-        -17, // on ",", reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on "(", reduce `BitOperator = Operator => ActionFn(69);`
+        -17, // on ")", reduce `BitOperator = Operator => ActionFn(69);`
+        -17, // on ",", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -17, // on "_", reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on "_", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on "exists", error
         0, // on "forall", error
-        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(71);`
+        0, // on "implies", error
+        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(71);`
+        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 92
         0, // on "(", error
-        -20, // on ")", reduce `BitValue = Value => ActionFn(72);`
-        -20, // on ",", reduce `BitValue = Value => ActionFn(72);`
+        -20, // on ")", reduce `BitValue = Value => ActionFn(70);`
+        -20, // on ",", reduce `BitValue = Value => ActionFn(70);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1548,14 +1640,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(72);`
+        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(70);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(72);`
+        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(70);`
         // State 93
         0, // on "(", error
-        -48, // on ")", reduce `Value = ValueKind => ActionFn(79);`
-        -48, // on ",", reduce `Value = ValueKind => ActionFn(79);`
+        -47, // on ")", reduce `Value = ValueKind => ActionFn(76);`
+        -47, // on ",", reduce `Value = ValueKind => ActionFn(76);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1564,14 +1657,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(79);`
+        -47, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(76);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(79);`
+        -47, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(76);`
         // State 94
         0, // on "(", error
-        -50, // on ")", reduce `ValueKind = Variable => ActionFn(29);`
-        -50, // on ",", reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on ")", reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on ",", reduce `ValueKind = Variable => ActionFn(29);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1580,10 +1674,11 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
         // State 95
         0, // on "(", error
         -16, // on ")", reduce `BitApplications = Vec1<BitApplication> => ActionFn(20);`
@@ -1596,6 +1691,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1612,14 +1708,15 @@ mod __parse__Program {
         48, // on "_", goto 47
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         49, // on r#"\'[^\']+\'"#, goto 48
         50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 49
         51, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 50
         52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 51
         // State 97
         0, // on "(", error
-        -52, // on ")", reduce `ValueKind = "_" => ActionFn(31);`
-        -52, // on ",", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ")", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ",", reduce `ValueKind = "_" => ActionFn(31);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1628,10 +1725,11 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
         // State 98
         0, // on "(", error
         -14, // on ")", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
@@ -1644,30 +1742,32 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         // State 99
-        -44, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -44, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -44, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -44, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on "exists", error
         0, // on "forall", error
-        -44, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "implies", error
+        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -44, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 100
-        -38, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        -38, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        -38, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -1676,29 +1776,31 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         // State 101
-        -43, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -43, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -43, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -43, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on "exists", error
         0, // on "forall", error
-        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "implies", error
+        -42, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 102
         47, // on "(", goto 46
-        -10, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
+        -10, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -1708,6 +1810,7 @@ mod __parse__Program {
         48, // on "_", goto 47
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         49, // on r#"\'[^\']+\'"#, goto 48
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         107, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 106
@@ -1717,20 +1820,21 @@ mod __parse__Program {
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -51, // on ".", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        -51, // on ":-", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on ".", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on ":-", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
         // State 104
         0, // on "(", error
-        -2, // on ")", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on ")", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -1740,13 +1844,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         // State 105
         0, // on "(", error
-        -53, // on ")", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ")", reduce `Variable = Identifier => ActionFn(33);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -1756,13 +1861,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 106
         0, // on "(", error
-        -38, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -1772,13 +1878,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         // State 107
         0, // on "(", error
-        -11, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
+        -11, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -1788,6 +1895,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 49
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -1804,6 +1912,7 @@ mod __parse__Program {
         48, // on "_", goto 47
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         49, // on r#"\'[^\']+\'"#, goto 48
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         107, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 106
@@ -1820,6 +1929,7 @@ mod __parse__Program {
         98, // on "_", goto 97
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         99, // on r#"\'[^\']+\'"#, goto 98
         100, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 99
         101, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 100
@@ -1836,22 +1946,24 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 111
-        74, // on "(", goto 73
+        73, // on "(", goto 72
         0, // on ")", error
-        -10, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
+        -10, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
         0, // on "->", error
-        -10, // on ".", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
+        -10, // on ".", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
         0, // on ":-", error
-        -10, // on ";", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
-        -10, // on "=>", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
-        75, // on "_", goto 74
+        -10, // on ";", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
+        0, // on "=>", error
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         78, // on r#"\'[^\']+\'"#, goto 77
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         115, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 114
@@ -1859,69 +1971,73 @@ mod __parse__Program {
         // State 112
         0, // on "(", error
         0, // on ")", error
-        -2, // on ",", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on ",", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on "->", error
-        -2, // on ".", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on ".", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on ":-", error
-        -2, // on ";", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
-        -2, // on "=>", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on ";", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         // State 113
         0, // on "(", error
         0, // on ")", error
-        -53, // on ",", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ",", reduce `Variable = Identifier => ActionFn(33);`
         0, // on "->", error
-        -53, // on ".", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ".", reduce `Variable = Identifier => ActionFn(33);`
         0, // on ":-", error
-        -53, // on ";", reduce `Variable = Identifier => ActionFn(33);`
-        -53, // on "=>", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ";", reduce `Variable = Identifier => ActionFn(33);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 114
         0, // on "(", error
         0, // on ")", error
-        -38, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on "->", error
-        -38, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ".", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on ":-", error
-        -38, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        -38, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         // State 115
         0, // on "(", error
         0, // on ")", error
-        -11, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
+        -11, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
         0, // on "->", error
-        -11, // on ".", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
+        -11, // on ".", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
         0, // on ":-", error
-        -11, // on ";", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
-        -11, // on "=>", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
+        -11, // on ";", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         79, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 78
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         81, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 80
         // State 116
-        74, // on "(", goto 73
+        73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1929,15 +2045,16 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        75, // on "_", goto 74
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         78, // on r#"\'[^\']+\'"#, goto 77
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         115, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 114
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 117
-        -47, // on "(", reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(78);`
+        -46, // on "(", reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(75);`
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1945,15 +2062,16 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        -47, // on "_", reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(78);`
+        -46, // on "_", reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(75);`
         0, // on "exists", error
         0, // on "forall", error
-        -47, // on r#"\'[^\']+\'"#, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(78);`
-        -47, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(78);`
-        -47, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(78);`
-        -47, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(78);`
+        0, // on "implies", error
+        -46, // on r#"\'[^\']+\'"#, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(75);`
+        -46, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(75);`
+        -46, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(75);`
+        -46, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(75);`
         // State 118
-        74, // on "(", goto 73
+        73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1961,15 +2079,16 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        75, // on "_", goto 74
-        76, // on "exists", goto 75
-        77, // on "forall", goto 76
+        74, // on "_", goto 73
+        75, // on "exists", goto 74
+        76, // on "forall", goto 75
+        77, // on "implies", goto 76
         78, // on r#"\'[^\']+\'"#, goto 77
         79, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 78
         80, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 79
         81, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 80
         // State 119
-        74, // on "(", goto 73
+        73, // on "(", goto 72
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -1977,30 +2096,15 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        75, // on "_", goto 74
-        76, // on "exists", goto 75
-        77, // on "forall", goto 76
+        74, // on "_", goto 73
+        75, // on "exists", goto 74
+        76, // on "forall", goto 75
+        77, // on "implies", goto 76
         78, // on r#"\'[^\']+\'"#, goto 77
         79, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 78
         80, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 79
         81, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 80
         // State 120
-        74, // on "(", goto 73
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        75, // on "_", goto 74
-        76, // on "exists", goto 75
-        77, // on "forall", goto 76
-        78, // on r#"\'[^\']+\'"#, goto 77
-        79, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 78
-        80, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 79
-        81, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 80
-        // State 121
         97, // on "(", goto 96
         0, // on ")", error
         0, // on ",", error
@@ -2012,13 +2116,14 @@ mod __parse__Program {
         98, // on "_", goto 97
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         99, // on r#"\'[^\']+\'"#, goto 98
         100, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 99
         101, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 100
         102, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 101
-        // State 122
+        // State 121
         0, // on "(", error
-        148, // on ")", goto 147
+        147, // on ")", goto 146
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -2028,9 +2133,27 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 122
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        150, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 149
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 123
         0, // on "(", error
@@ -2044,12 +2167,13 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        151, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 150
+        150, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 149
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 124
-        0, // on "(", error
+        171, // on "(", goto 170
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -2057,17 +2181,18 @@ mod __parse__Program {
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        151, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 150
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        172, // on "_", goto 171
+        173, // on "exists", goto 172
+        174, // on "forall", goto 173
+        175, // on "implies", goto 174
+        176, // on r#"\'[^\']+\'"#, goto 175
+        177, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 176
+        178, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 177
+        179, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 178
         // State 125
         97, // on "(", goto 96
-        -10, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
-        -10, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
+        -10, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
+        -10, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -2076,6 +2201,7 @@ mod __parse__Program {
         98, // on "_", goto 97
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         99, // on r#"\'[^\']+\'"#, goto 98
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         130, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 129
@@ -2085,21 +2211,22 @@ mod __parse__Program {
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
-        -13, // on ".", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
-        -13, // on ":-", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
+        -13, // on ".", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        -13, // on ":-", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
         0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 127
         0, // on "(", error
-        -2, // on ")", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
-        -2, // on ",", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on ")", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
+        -2, // on ",", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -2108,14 +2235,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         // State 128
         0, // on "(", error
-        -53, // on ")", reduce `Variable = Identifier => ActionFn(33);`
-        -53, // on ",", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ")", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ",", reduce `Variable = Identifier => ActionFn(33);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -2124,14 +2252,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 129
         0, // on "(", error
-        -38, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        -38, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -2140,14 +2269,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         // State 130
         0, // on "(", error
-        -11, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
-        -11, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
+        -11, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
+        -11, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -2156,6 +2286,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         100, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 99
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -2172,6 +2303,7 @@ mod __parse__Program {
         98, // on "_", goto 97
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         99, // on r#"\'[^\']+\'"#, goto 98
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         130, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 129
@@ -2188,14 +2320,15 @@ mod __parse__Program {
         98, // on "_", goto 97
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         99, // on r#"\'[^\']+\'"#, goto 98
         100, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 99
         101, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 100
         102, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 101
         // State 133
         97, // on "(", goto 96
-        -55, // on ")", reduce `Vec1<BitApplication> = Vec1<BitApplication>, "," => ActionFn(36);`
-        -55, // on ",", reduce `Vec1<BitApplication> = Vec1<BitApplication>, "," => ActionFn(36);`
+        -54, // on ")", reduce `Vec1<BitApplication> = Vec1<BitApplication>, "," => ActionFn(36);`
+        -54, // on ",", reduce `Vec1<BitApplication> = Vec1<BitApplication>, "," => ActionFn(36);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -2204,13 +2337,14 @@ mod __parse__Program {
         98, // on "_", goto 97
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         99, // on r#"\'[^\']+\'"#, goto 98
         100, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 99
         101, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 100
         102, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 101
         // State 134
         0, // on "(", error
-        157, // on ")", goto 156
+        184, // on ")", goto 183
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -2220,13 +2354,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 135
         0, // on "(", error
-        -3, // on ")", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on ")", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -2236,13 +2371,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         // State 136
         47, // on "(", goto 46
-        -9, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
+        -9, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -2252,13 +2388,14 @@ mod __parse__Program {
         48, // on "_", goto 47
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         49, // on r#"\'[^\']+\'"#, goto 48
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         107, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 106
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 137
         0, // on "(", error
-        158, // on ")", goto 157
+        185, // on ")", goto 184
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -2268,13 +2405,14 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 138
         0, // on "(", error
-        -51, // on ")", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on ")", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -2284,38 +2422,41 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
         // State 139
         0, // on "(", error
         0, // on ")", error
-        -3, // on ",", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on ",", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         0, // on "->", error
-        -3, // on ".", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on ".", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         0, // on ":-", error
-        -3, // on ";", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
-        -3, // on "=>", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on ";", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         // State 140
-        74, // on "(", goto 73
+        73, // on "(", goto 72
         0, // on ")", error
-        -9, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
+        -9, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
         0, // on "->", error
-        -9, // on ".", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
+        -9, // on ".", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
         0, // on ":-", error
-        -9, // on ";", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
-        -9, // on "=>", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
-        75, // on "_", goto 74
+        -9, // on ";", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        0, // on "=>", error
+        74, // on "_", goto 73
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         78, // on r#"\'[^\']+\'"#, goto 77
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         115, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 114
@@ -2323,15 +2464,16 @@ mod __parse__Program {
         // State 141
         0, // on "(", error
         0, // on ")", error
-        121, // on ",", goto 120
+        -29, // on ",", reduce `FactDataAnd = Fact<FactDataAnd>, ",", Fact<FactDataOr> => ActionFn(7);`
         0, // on "->", error
-        -30, // on ".", reduce `FactDataAnd = Fact<FactDataAnd>, ";", Fact<FactDataOr> => ActionFn(7);`
+        -29, // on ".", reduce `FactDataAnd = Fact<FactDataAnd>, ",", Fact<FactDataOr> => ActionFn(7);`
         0, // on ":-", error
-        -30, // on ";", reduce `FactDataAnd = Fact<FactDataAnd>, ";", Fact<FactDataOr> => ActionFn(7);`
+        120, // on ";", goto 119
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -2339,15 +2481,16 @@ mod __parse__Program {
         // State 142
         0, // on "(", error
         0, // on ")", error
-        -27, // on ",", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(77);`
+        -26, // on ",", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
         0, // on "->", error
-        -27, // on ".", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(77);`
+        -26, // on ".", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
         0, // on ":-", error
-        -27, // on ";", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(77);`
+        -26, // on ";", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -2355,15 +2498,16 @@ mod __parse__Program {
         // State 143
         0, // on "(", error
         0, // on ")", error
-        -33, // on ",", reduce `FactDataFunc = Fact<FactDataApply>, "=>", Fact<FactDataFunc> => ActionFn(11);`
+        -36, // on ",", reduce `FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);`
         0, // on "->", error
-        -33, // on ".", reduce `FactDataFunc = Fact<FactDataApply>, "=>", Fact<FactDataFunc> => ActionFn(11);`
+        -36, // on ".", reduce `FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);`
         0, // on ":-", error
-        -33, // on ";", reduce `FactDataFunc = Fact<FactDataApply>, "=>", Fact<FactDataFunc> => ActionFn(11);`
+        -36, // on ";", reduce `FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -2371,40 +2515,59 @@ mod __parse__Program {
         // State 144
         0, // on "(", error
         0, // on ")", error
-        -26, // on ",", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(76);`
+        -25, // on ",", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(73);`
         0, // on "->", error
-        -26, // on ".", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(76);`
+        -25, // on ".", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(73);`
         0, // on ":-", error
-        -26, // on ";", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(76);`
+        -25, // on ";", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(73);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 145
         0, // on "(", error
-        0, // on ")", error
-        -37, // on ",", reduce `FactDataOr = Fact<FactDataOr>, ",", Fact<FactDataFunc> => ActionFn(9);`
+        186, // on ")", goto 185
+        0, // on ",", error
         0, // on "->", error
-        -37, // on ".", reduce `FactDataOr = Fact<FactDataOr>, ",", Fact<FactDataFunc> => ActionFn(9);`
+        0, // on ".", error
         0, // on ":-", error
-        -37, // on ";", reduce `FactDataOr = Fact<FactDataOr>, ",", Fact<FactDataFunc> => ActionFn(9);`
+        0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 146
         0, // on "(", error
-        159, // on ")", goto 158
-        0, // on ",", error
+        0, // on ")", error
+        -50, // on ",", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
         0, // on "->", error
+        -50, // on ".", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on ":-", error
+        -50, // on ";", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        // State 147
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        -52, // on "->", reduce `Variable = Identifier => ActionFn(33);`
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
@@ -2412,31 +2575,16 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 147
-        0, // on "(", error
-        0, // on ")", error
-        -51, // on ",", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        0, // on "->", error
-        -51, // on ".", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        0, // on ":-", error
-        -51, // on ";", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        -51, // on "=>", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
         // State 148
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
-        -53, // on "->", reduce `Variable = Identifier => ActionFn(33);`
+        187, // on "->", goto 186
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
@@ -2444,6 +2592,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -2452,7 +2601,7 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
-        160, // on "->", goto 159
+        -37, // on "->", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
@@ -2460,6 +2609,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -2468,7 +2618,7 @@ mod __parse__Program {
         0, // on "(", error
         0, // on ")", error
         0, // on ",", error
-        -38, // on "->", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        188, // on "->", goto 187
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
@@ -2476,6 +2626,7 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -2483,111 +2634,118 @@ mod __parse__Program {
         // State 151
         0, // on "(", error
         0, // on ")", error
-        0, // on ",", error
-        161, // on "->", goto 160
+        -12, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
+        0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
+        -12, // on ";", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
+        -12, // on "=>", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        177, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 176
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        179, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 178
+        // State 152
+        0, // on "(", error
+        0, // on ")", error
+        -30, // on ",", reduce `FactDataApply = Application => ActionFn(14);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -30, // on ";", reduce `FactDataApply = Application => ActionFn(14);`
+        -30, // on "=>", reduce `FactDataApply = Application => ActionFn(14);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 152
+        // State 153
         0, // on "(", error
-        -3, // on ")", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
-        -3, // on ",", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        0, // on ")", error
+        -6, // on ",", reduce `Application = ApplicationBits => ActionFn(66);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
+        -6, // on ";", reduce `Application = ApplicationBits => ActionFn(66);`
+        -6, // on "=>", reduce `Application = ApplicationBits => ActionFn(66);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
-        // State 153
-        97, // on "(", goto 96
-        -9, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
-        -9, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        98, // on "_", goto 97
-        0, // on "exists", error
-        0, // on "forall", error
-        99, // on r#"\'[^\']+\'"#, goto 98
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        130, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 129
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 154
         0, // on "(", error
-        162, // on ")", goto 161
-        0, // on ",", error
+        0, // on ")", error
+        -48, // on ",", reduce `ValueKind = Atom => ActionFn(28);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
+        -48, // on ";", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on "=>", reduce `ValueKind = Atom => ActionFn(28);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
         // State 155
-        0, // on "(", error
-        -56, // on ")", reduce `Vec1<BitApplication> = Vec1<BitApplication>, ",", BitApplication => ActionFn(37);`
-        -56, // on ",", reduce `Vec1<BitApplication> = Vec1<BitApplication>, ",", BitApplication => ActionFn(37);`
+        171, // on "(", goto 170
+        0, // on ")", error
+        -8, // on ",", reduce `ApplicationBits = BitOperator => ActionFn(17);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "_", error
+        -8, // on ";", reduce `ApplicationBits = BitOperator => ActionFn(17);`
+        -8, // on "=>", reduce `ApplicationBits = BitOperator => ActionFn(17);`
+        172, // on "_", goto 171
         0, // on "exists", error
         0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
+        0, // on "implies", error
+        176, // on r#"\'[^\']+\'"#, goto 175
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        192, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 191
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 156
         0, // on "(", error
-        -51, // on ")", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        -51, // on ",", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on ")", error
+        -7, // on ",", reduce `ApplicationBits = BitValue => ActionFn(16);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
+        -7, // on ";", reduce `ApplicationBits = BitValue => ActionFn(16);`
+        -7, // on "=>", reduce `ApplicationBits = BitValue => ActionFn(16);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        32, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 31
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        33, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 32
         // State 157
         0, // on "(", error
-        -13, // on ")", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
+        0, // on ")", error
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
-        0, // on "=>", error
+        195, // on "=>", goto 194
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -2595,308 +2753,208 @@ mod __parse__Program {
         // State 158
         0, // on "(", error
         0, // on ")", error
-        -13, // on ",", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
+        196, // on ",", goto 195
         0, // on "->", error
-        -13, // on ".", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
+        0, // on ".", error
         0, // on ":-", error
-        -13, // on ";", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
-        -13, // on "=>", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
+        0, // on ";", error
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 159
-        178, // on "(", goto 177
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        179, // on "_", goto 178
-        180, // on "exists", goto 179
-        181, // on "forall", goto 180
-        182, // on r#"\'[^\']+\'"#, goto 181
-        183, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 182
-        184, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 183
-        185, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 184
-        // State 160
-        178, // on "(", goto 177
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        179, // on "_", goto 178
-        180, // on "exists", goto 179
-        181, // on "forall", goto 180
-        182, // on r#"\'[^\']+\'"#, goto 181
-        183, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 182
-        184, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 183
-        185, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 184
-        // State 161
         0, // on "(", error
-        -13, // on ")", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
-        -13, // on ",", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
+        0, // on ")", error
+        0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
+        197, // on ";", goto 196
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 160
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        -23, // on "=>", reduce `Fact<FactData> = FactData => ActionFn(71);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 161
+        0, // on "(", error
+        0, // on ")", error
+        -24, // on ",", reduce `Fact<FactDataAnd> = FactDataAnd => ActionFn(72);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        -27, // on "=>", reduce `FactData = FactDataAnd => ActionFn(5);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 162
         0, // on "(", error
-        -12, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
-        0, // on ",", error
+        0, // on ")", error
+        -31, // on ",", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -12, // on "=>", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);`
+        -31, // on ";", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
+        -31, // on "=>", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        183, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 182
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        185, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 184
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 163
         0, // on "(", error
-        -31, // on ")", reduce `FactDataApply = Application => ActionFn(14);`
-        0, // on ",", error
+        0, // on ")", error
+        -35, // on ",", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -31, // on "=>", reduce `FactDataApply = Application => ActionFn(14);`
+        -35, // on ";", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
+        -35, // on "=>", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 164
         0, // on "(", error
-        -6, // on ")", reduce `Application = ApplicationBits => ActionFn(68);`
-        0, // on ",", error
+        0, // on ")", error
+        -28, // on ",", reduce `FactDataAnd = FactDataOr => ActionFn(6);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -6, // on "=>", reduce `Application = ApplicationBits => ActionFn(68);`
+        -26, // on ";", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
+        -28, // on "=>", reduce `FactDataAnd = FactDataOr => ActionFn(6);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 165
-        0, // on "(", error
-        -49, // on ")", reduce `ValueKind = Atom => ActionFn(28);`
-        0, // on ",", error
+        198, // on "(", goto 197
+        0, // on ")", error
+        -52, // on ",", reduce `Variable = Identifier => ActionFn(33);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -49, // on "=>", reduce `ValueKind = Atom => ActionFn(28);`
+        -52, // on ";", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on "=>", reduce `Variable = Identifier => ActionFn(33);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 166
-        178, // on "(", goto 177
-        -8, // on ")", reduce `ApplicationBits = BitOperator => ActionFn(17);`
-        0, // on ",", error
+        -17, // on "(", reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on ")", error
+        -17, // on ",", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -8, // on "=>", reduce `ApplicationBits = BitOperator => ActionFn(17);`
-        179, // on "_", goto 178
+        -17, // on ";", reduce `BitOperator = Operator => ActionFn(69);`
+        -17, // on "=>", reduce `BitOperator = Operator => ActionFn(69);`
+        -17, // on "_", reduce `BitOperator = Operator => ActionFn(69);`
         0, // on "exists", error
         0, // on "forall", error
-        182, // on r#"\'[^\']+\'"#, goto 181
+        0, // on "implies", error
+        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        190, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 189
+        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(69);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 167
         0, // on "(", error
-        -7, // on ")", reduce `ApplicationBits = BitValue => ActionFn(16);`
-        0, // on ",", error
+        0, // on ")", error
+        -20, // on ",", reduce `BitValue = Value => ActionFn(70);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -7, // on "=>", reduce `ApplicationBits = BitValue => ActionFn(16);`
+        -20, // on ";", reduce `BitValue = Value => ActionFn(70);`
+        -20, // on "=>", reduce `BitValue = Value => ActionFn(70);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        32, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 31
+        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(70);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        33, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 32
+        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(70);`
         // State 168
         0, // on "(", error
         0, // on ")", error
-        0, // on ",", error
+        -47, // on ",", reduce `Value = ValueKind => ActionFn(76);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        193, // on "=>", goto 192
+        -47, // on ";", reduce `Value = ValueKind => ActionFn(76);`
+        -47, // on "=>", reduce `Value = ValueKind => ActionFn(76);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -47, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(76);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        -47, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(76);`
         // State 169
         0, // on "(", error
-        194, // on ")", goto 193
-        0, // on ",", error
+        0, // on ")", error
+        -49, // on ",", reduce `ValueKind = Variable => ActionFn(29);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
+        -49, // on ";", reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on "=>", reduce `ValueKind = Variable => ActionFn(29);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
         // State 170
-        0, // on "(", error
-        -32, // on ")", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        -25, // on "=>", reduce `Fact<FactDataApply> = FactDataApply => ActionFn(75);`
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 171
-        0, // on "(", error
-        -26, // on ")", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(76);`
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 172
-        195, // on "(", goto 194
-        -53, // on ")", reduce `Variable = Identifier => ActionFn(33);`
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        -53, // on "=>", reduce `Variable = Identifier => ActionFn(33);`
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
-        // State 173
-        -17, // on "(", reduce `BitOperator = Operator => ActionFn(71);`
-        -17, // on ")", reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        -17, // on "=>", reduce `BitOperator = Operator => ActionFn(71);`
-        -17, // on "_", reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on "exists", error
-        0, // on "forall", error
-        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(71);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 174
-        0, // on "(", error
-        -20, // on ")", reduce `BitValue = Value => ActionFn(72);`
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        -20, // on "=>", reduce `BitValue = Value => ActionFn(72);`
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(72);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(72);`
-        // State 175
-        0, // on "(", error
-        -48, // on ")", reduce `Value = ValueKind => ActionFn(79);`
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        -48, // on "=>", reduce `Value = ValueKind => ActionFn(79);`
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(79);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(79);`
-        // State 176
-        0, // on "(", error
-        -50, // on ")", reduce `ValueKind = Variable => ActionFn(29);`
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        -50, // on "=>", reduce `ValueKind = Variable => ActionFn(29);`
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
-        // State 177
         47, // on "(", goto 46
         0, // on ")", error
         0, // on ",", error
@@ -2908,28 +2966,30 @@ mod __parse__Program {
         48, // on "_", goto 47
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         49, // on r#"\'[^\']+\'"#, goto 48
         50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 49
         51, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 50
         52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 51
-        // State 178
+        // State 171
         0, // on "(", error
-        -52, // on ")", reduce `ValueKind = "_" => ActionFn(31);`
-        0, // on ",", error
+        0, // on ")", error
+        -51, // on ",", reduce `ValueKind = "_" => ActionFn(31);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -52, // on "=>", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ";", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on "=>", reduce `ValueKind = "_" => ActionFn(31);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
-        // State 179
-        197, // on "(", goto 196
+        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
+        // State 172
+        200, // on "(", goto 199
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -2940,12 +3000,13 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 180
-        198, // on "(", goto 197
+        // State 173
+        201, // on "(", goto 200
         0, // on ")", error
         0, // on ",", error
         0, // on "->", error
@@ -2956,77 +3017,133 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 181
-        0, // on "(", error
-        -14, // on ")", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
+        // State 174
+        202, // on "(", goto 201
+        0, // on ")", error
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 175
+        0, // on "(", error
+        0, // on ")", error
+        -14, // on ",", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -14, // on ";", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         -14, // on "=>", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
-        // State 182
-        -44, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -44, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        0, // on ",", error
+        // State 176
+        -43, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on ")", error
+        -43, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -44, // on "=>", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
-        -44, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ";", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "=>", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on "exists", error
         0, // on "forall", error
-        -44, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "implies", error
+        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -44, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 183
-        -38, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        -38, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        0, // on ",", error
+        // State 177
+        -37, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        0, // on ")", error
+        -37, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -38, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        // State 184
-        -43, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -43, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        0, // on ",", error
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        // State 178
+        -42, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on ")", error
+        -42, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -42, // on ";", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "=>", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        -42, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 179
+        0, // on "(", error
+        -3, // on ")", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        -3, // on ",", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
-        -43, // on "=>", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
-        -43, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
-        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        // State 180
+        97, // on "(", goto 96
+        -9, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        -9, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        98, // on "_", goto 97
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        99, // on r#"\'[^\']+\'"#, goto 98
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        130, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 129
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 185
+        // State 181
         0, // on "(", error
-        199, // on ")", goto 198
+        203, // on ")", goto 202
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -3036,139 +3153,267 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 182
+        0, // on "(", error
+        -55, // on ")", reduce `Vec1<BitApplication> = Vec1<BitApplication>, ",", BitApplication => ActionFn(37);`
+        -55, // on ",", reduce `Vec1<BitApplication> = Vec1<BitApplication>, ",", BitApplication => ActionFn(37);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 183
+        0, // on "(", error
+        -50, // on ")", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on ",", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        // State 184
+        0, // on "(", error
+        -13, // on ")", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 185
+        0, // on "(", error
+        0, // on ")", error
+        -13, // on ",", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        0, // on "->", error
+        -13, // on ".", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        0, // on ":-", error
+        -13, // on ";", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 186
-        178, // on "(", goto 177
-        -10, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
+        223, // on "(", goto 222
+        0, // on ")", error
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
-        -10, // on "=>", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);`
-        179, // on "_", goto 178
-        0, // on "exists", error
-        0, // on "forall", error
-        182, // on r#"\'[^\']+\'"#, goto 181
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        190, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 189
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
         // State 187
-        0, // on "(", error
-        -2, // on ")", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        223, // on "(", goto 222
+        0, // on ")", error
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
-        -2, // on "=>", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);`
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
         // State 188
-        0, // on "(", error
-        -53, // on ")", reduce `Variable = Identifier => ActionFn(33);`
-        0, // on ",", error
+        171, // on "(", goto 170
+        0, // on ")", error
+        -10, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -53, // on "=>", reduce `Variable = Identifier => ActionFn(33);`
-        0, // on "_", error
+        -10, // on ";", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
+        -10, // on "=>", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
+        172, // on "_", goto 171
         0, // on "exists", error
         0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -53, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -53, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        0, // on "implies", error
+        176, // on r#"\'[^\']+\'"#, goto 175
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        192, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 191
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 189
         0, // on "(", error
-        -38, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
-        0, // on ",", error
+        0, // on ")", error
+        -2, // on ",", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -38, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -2, // on ";", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
+        -2, // on "=>", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -38, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -38, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
         // State 190
         0, // on "(", error
-        -11, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
-        0, // on ",", error
+        0, // on ")", error
+        -52, // on ",", reduce `Variable = Identifier => ActionFn(33);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -11, // on "=>", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);`
+        -52, // on ";", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on "=>", reduce `Variable = Identifier => ActionFn(33);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        183, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 182
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        185, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 184
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
         // State 191
-        178, // on "(", goto 177
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        179, // on "_", goto 178
-        0, // on "exists", error
-        0, // on "forall", error
-        182, // on r#"\'[^\']+\'"#, goto 181
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        190, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 189
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 192
-        178, // on "(", goto 177
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        179, // on "_", goto 178
-        180, // on "exists", goto 179
-        181, // on "forall", goto 180
-        182, // on r#"\'[^\']+\'"#, goto 181
-        183, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 182
-        184, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 183
-        185, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 184
-        // State 193
         0, // on "(", error
         0, // on ")", error
-        -34, // on ",", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(12);`
+        -37, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on "->", error
-        -34, // on ".", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(12);`
+        0, // on ".", error
         0, // on ":-", error
-        -34, // on ";", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(12);`
-        0, // on "=>", error
+        -37, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on "=>", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        // State 192
+        0, // on "(", error
+        0, // on ")", error
+        -11, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -11, // on ";", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
+        -11, // on "=>", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        177, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 176
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        179, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 178
+        // State 193
+        171, // on "(", goto 170
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        172, // on "_", goto 171
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        176, // on r#"\'[^\']+\'"#, goto 175
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        192, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 191
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 194
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 195
+        171, // on "(", goto 170
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        172, // on "_", goto 171
+        173, // on "exists", goto 172
+        174, // on "forall", goto 173
+        175, // on "implies", goto 174
+        176, // on r#"\'[^\']+\'"#, goto 175
+        177, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 176
+        178, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 177
+        179, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 178
+        // State 196
+        171, // on "(", goto 170
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        172, // on "_", goto 171
+        173, // on "exists", goto 172
+        174, // on "forall", goto 173
+        175, // on "implies", goto 174
+        176, // on r#"\'[^\']+\'"#, goto 175
+        177, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 176
+        178, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 177
+        179, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 178
+        // State 197
         97, // on "(", goto 96
         0, // on ")", error
         0, // on ",", error
@@ -3180,126 +3425,83 @@ mod __parse__Program {
         98, // on "_", goto 97
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         99, // on r#"\'[^\']+\'"#, goto 98
         100, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 99
         101, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 100
         102, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 101
-        // State 195
-        0, // on "(", error
-        204, // on ")", goto 203
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 196
-        0, // on "(", error
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        151, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 150
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
-        // State 197
-        0, // on "(", error
-        0, // on ")", error
-        0, // on ",", error
-        0, // on "->", error
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
-        0, // on "=>", error
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        151, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 150
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 198
         0, // on "(", error
-        0, // on ")", error
-        -35, // on ",", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(13);`
+        241, // on ")", goto 240
+        0, // on ",", error
         0, // on "->", error
-        -35, // on ".", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(13);`
+        0, // on ".", error
         0, // on ":-", error
-        -35, // on ";", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(13);`
+        0, // on ";", error
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 199
         0, // on "(", error
-        -3, // on ")", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        0, // on ")", error
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
-        -3, // on "=>", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);`
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        150, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 149
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 200
-        178, // on "(", goto 177
-        -9, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
+        0, // on "(", error
+        0, // on ")", error
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
-        -9, // on "=>", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);`
-        179, // on "_", goto 178
+        0, // on "=>", error
+        0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
-        182, // on r#"\'[^\']+\'"#, goto 181
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        190, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 189
+        150, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 149
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 201
-        0, // on "(", error
-        -33, // on ")", reduce `FactDataFunc = Fact<FactDataApply>, "=>", Fact<FactDataFunc> => ActionFn(11);`
+        171, // on "(", goto 170
+        0, // on ")", error
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
         0, // on ";", error
         0, // on "=>", error
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        172, // on "_", goto 171
+        173, // on "exists", goto 172
+        174, // on "forall", goto 173
+        175, // on "implies", goto 174
+        176, // on r#"\'[^\']+\'"#, goto 175
+        177, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 176
+        178, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 177
+        179, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 178
         // State 202
         0, // on "(", error
-        207, // on ")", goto 206
-        0, // on ",", error
+        -13, // on ")", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        -13, // on ",", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -3308,109 +3510,116 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 203
         0, // on "(", error
-        -51, // on ")", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        0, // on ",", error
+        -12, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
+        -12, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -51, // on "=>", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        0, // on "_", error
-        0, // on "exists", error
-        0, // on "forall", error
-        0, // on r#"\'[^\']+\'"#, error
-        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
-        // State 204
-        0, // on "(", error
-        0, // on ")", error
-        0, // on ",", error
-        208, // on "->", goto 207
-        0, // on ".", error
-        0, // on ":-", error
-        0, // on ";", error
+        -12, // on ";", reduce `ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 204
+        0, // on "(", error
+        -30, // on ")", reduce `FactDataApply = Application => ActionFn(14);`
+        -30, // on ",", reduce `FactDataApply = Application => ActionFn(14);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -30, // on ";", reduce `FactDataApply = Application => ActionFn(14);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 205
         0, // on "(", error
-        0, // on ")", error
-        0, // on ",", error
-        209, // on "->", goto 208
+        -6, // on ")", reduce `Application = ApplicationBits => ActionFn(66);`
+        -6, // on ",", reduce `Application = ApplicationBits => ActionFn(66);`
+        0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
+        -6, // on ";", reduce `Application = ApplicationBits => ActionFn(66);`
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 206
         0, // on "(", error
-        -13, // on ")", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
-        0, // on ",", error
+        -48, // on ")", reduce `ValueKind = Atom => ActionFn(28);`
+        -48, // on ",", reduce `ValueKind = Atom => ActionFn(28);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
-        -13, // on "=>", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);`
+        -48, // on ";", reduce `ValueKind = Atom => ActionFn(28);`
+        0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
-        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -48, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Atom => ActionFn(28);`
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
-        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        -48, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Atom => ActionFn(28);`
         // State 207
-        178, // on "(", goto 177
-        0, // on ")", error
-        0, // on ",", error
+        223, // on "(", goto 222
+        -8, // on ")", reduce `ApplicationBits = BitOperator => ActionFn(17);`
+        -8, // on ",", reduce `ApplicationBits = BitOperator => ActionFn(17);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
+        -8, // on ";", reduce `ApplicationBits = BitOperator => ActionFn(17);`
         0, // on "=>", error
-        179, // on "_", goto 178
-        180, // on "exists", goto 179
-        181, // on "forall", goto 180
-        182, // on r#"\'[^\']+\'"#, goto 181
-        183, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 182
-        184, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 183
-        185, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 184
+        224, // on "_", goto 223
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        228, // on r#"\'[^\']+\'"#, goto 227
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        248, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 247
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 208
-        178, // on "(", goto 177
-        0, // on ")", error
-        0, // on ",", error
+        0, // on "(", error
+        -7, // on ")", reduce `ApplicationBits = BitValue => ActionFn(16);`
+        -7, // on ",", reduce `ApplicationBits = BitValue => ActionFn(16);`
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
+        -7, // on ";", reduce `ApplicationBits = BitValue => ActionFn(16);`
         0, // on "=>", error
-        179, // on "_", goto 178
-        180, // on "exists", goto 179
-        181, // on "forall", goto 180
-        182, // on r#"\'[^\']+\'"#, goto 181
-        183, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 182
-        184, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 183
-        185, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 184
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        32, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 31
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        33, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 32
         // State 209
         0, // on "(", error
-        212, // on ")", goto 211
+        251, // on ")", goto 250
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -3420,14 +3629,15 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 210
         0, // on "(", error
-        213, // on ")", goto 212
-        0, // on ",", error
+        0, // on ")", error
+        252, // on ",", goto 251
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
@@ -3436,29 +3646,31 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 211
         0, // on "(", error
-        -34, // on ")", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(12);`
+        0, // on ")", error
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
         0, // on ":-", error
-        0, // on ";", error
+        253, // on ";", goto 252
         0, // on "=>", error
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
         // State 212
         0, // on "(", error
-        -35, // on ")", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(13);`
+        -23, // on ")", reduce `Fact<FactData> = FactData => ActionFn(71);`
         0, // on ",", error
         0, // on "->", error
         0, // on ".", error
@@ -3468,6 +3680,1333 @@ mod __parse__Program {
         0, // on "_", error
         0, // on "exists", error
         0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 213
+        0, // on "(", error
+        -27, // on ")", reduce `FactData = FactDataAnd => ActionFn(5);`
+        -24, // on ",", reduce `Fact<FactDataAnd> = FactDataAnd => ActionFn(72);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 214
+        0, // on "(", error
+        -31, // on ")", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
+        -31, // on ",", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -31, // on ";", reduce `FactDataFunc = FactDataApply => ActionFn(10);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 215
+        0, // on "(", error
+        -35, // on ")", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
+        -35, // on ",", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -35, // on ";", reduce `FactDataOr = FactDataFunc => ActionFn(8);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 216
+        0, // on "(", error
+        -28, // on ")", reduce `FactDataAnd = FactDataOr => ActionFn(6);`
+        -28, // on ",", reduce `FactDataAnd = FactDataOr => ActionFn(6);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -26, // on ";", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 217
+        254, // on "(", goto 253
+        -52, // on ")", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ",", reduce `Variable = Identifier => ActionFn(33);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -52, // on ";", reduce `Variable = Identifier => ActionFn(33);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        // State 218
+        -17, // on "(", reduce `BitOperator = Operator => ActionFn(69);`
+        -17, // on ")", reduce `BitOperator = Operator => ActionFn(69);`
+        -17, // on ",", reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -17, // on ";", reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on "=>", error
+        -17, // on "_", reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        -17, // on r#"\'[^\']+\'"#, reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -17, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `BitOperator = Operator => ActionFn(69);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 219
+        0, // on "(", error
+        -20, // on ")", reduce `BitValue = Value => ActionFn(70);`
+        -20, // on ",", reduce `BitValue = Value => ActionFn(70);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -20, // on ";", reduce `BitValue = Value => ActionFn(70);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -20, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `BitValue = Value => ActionFn(70);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -20, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `BitValue = Value => ActionFn(70);`
+        // State 220
+        0, // on "(", error
+        -47, // on ")", reduce `Value = ValueKind => ActionFn(76);`
+        -47, // on ",", reduce `Value = ValueKind => ActionFn(76);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -47, // on ";", reduce `Value = ValueKind => ActionFn(76);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -47, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Value = ValueKind => ActionFn(76);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -47, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Value = ValueKind => ActionFn(76);`
+        // State 221
+        0, // on "(", error
+        -49, // on ")", reduce `ValueKind = Variable => ActionFn(29);`
+        -49, // on ",", reduce `ValueKind = Variable => ActionFn(29);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -49, // on ";", reduce `ValueKind = Variable => ActionFn(29);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -49, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = Variable => ActionFn(29);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -49, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = Variable => ActionFn(29);`
+        // State 222
+        47, // on "(", goto 46
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        48, // on "_", goto 47
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        49, // on r#"\'[^\']+\'"#, goto 48
+        50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 49
+        51, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 50
+        52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 51
+        // State 223
+        0, // on "(", error
+        -51, // on ")", reduce `ValueKind = "_" => ActionFn(31);`
+        -51, // on ",", reduce `ValueKind = "_" => ActionFn(31);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -51, // on ";", reduce `ValueKind = "_" => ActionFn(31);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -51, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "_" => ActionFn(31);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -51, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "_" => ActionFn(31);`
+        // State 224
+        256, // on "(", goto 255
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 225
+        257, // on "(", goto 256
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 226
+        258, // on "(", goto 257
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 227
+        0, // on "(", error
+        -14, // on ")", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
+        -14, // on ",", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -14, // on ";", reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -14, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -14, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Atom = r#"\'[^\']+\'"# => ActionFn(32);`
+        // State 228
+        -43, // on "(", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ")", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        -43, // on ",", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -43, // on ";", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "=>", error
+        -43, // on "_", reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        -43, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -43, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 229
+        -37, // on "(", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -37, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        // State 230
+        -42, // on "(", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ")", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        -42, // on ",", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -42, // on ";", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "=>", error
+        -42, // on "_", reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        -42, // on r#"\'[^\']+\'"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        -42, // on r#"[A-Za-z][A-Za-z0-9_]*"#, reduce `Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 231
+        0, // on "(", error
+        259, // on ")", goto 258
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 232
+        0, // on "(", error
+        0, // on ")", error
+        -3, // on ",", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -3, // on ";", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        -3, // on "=>", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        // State 233
+        171, // on "(", goto 170
+        0, // on ")", error
+        -9, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -9, // on ";", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        -9, // on "=>", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        172, // on "_", goto 171
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        176, // on r#"\'[^\']+\'"#, goto 175
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        192, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 191
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 234
+        0, // on "(", error
+        260, // on ")", goto 259
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 235
+        0, // on "(", error
+        0, // on ")", error
+        -29, // on ",", reduce `FactDataAnd = Fact<FactDataAnd>, ",", Fact<FactDataOr> => ActionFn(7);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        197, // on ";", goto 196
+        -29, // on "=>", reduce `FactDataAnd = Fact<FactDataAnd>, ",", Fact<FactDataOr> => ActionFn(7);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 236
+        0, // on "(", error
+        0, // on ")", error
+        -26, // on ",", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -26, // on ";", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
+        -26, // on "=>", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 237
+        0, // on "(", error
+        0, // on ")", error
+        -36, // on ",", reduce `FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -36, // on ";", reduce `FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);`
+        -36, // on "=>", reduce `FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 238
+        0, // on "(", error
+        0, // on ")", error
+        -25, // on ",", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(73);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -25, // on ";", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(73);`
+        -25, // on "=>", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(73);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 239
+        0, // on "(", error
+        261, // on ")", goto 260
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 240
+        0, // on "(", error
+        0, // on ")", error
+        -50, // on ",", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -50, // on ";", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on "=>", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        // State 241
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        262, // on "->", goto 261
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 242
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        263, // on "->", goto 262
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 243
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        264, // on "=>", goto 263
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 244
+        223, // on "(", goto 222
+        -10, // on ")", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
+        -10, // on ",", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -10, // on ";", reduce `ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);`
+        0, // on "=>", error
+        224, // on "_", goto 223
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        228, // on r#"\'[^\']+\'"#, goto 227
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        248, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 247
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 245
+        0, // on "(", error
+        -2, // on ")", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
+        -2, // on ",", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -2, // on ";", reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -2, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -2, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);`
+        // State 246
+        0, // on "(", error
+        -52, // on ")", reduce `Variable = Identifier => ActionFn(33);`
+        -52, // on ",", reduce `Variable = Identifier => ActionFn(33);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -52, // on ";", reduce `Variable = Identifier => ActionFn(33);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -52, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Variable = Identifier => ActionFn(33);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -52, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Variable = Identifier => ActionFn(33);`
+        // State 247
+        0, // on "(", error
+        -37, // on ")", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        -37, // on ",", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -37, // on ";", reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -37, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -37, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);`
+        // State 248
+        0, // on "(", error
+        -11, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
+        -11, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -11, // on ";", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 249
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        228, // on r#"\'[^\']+\'"#, goto 227
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        248, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 247
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 250
+        0, // on "(", error
+        0, // on ")", error
+        -33, // on ",", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);`
+        0, // on "->", error
+        -33, // on ".", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);`
+        0, // on ":-", error
+        -33, // on ";", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 251
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 252
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 253
+        97, // on "(", goto 96
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        98, // on "_", goto 97
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        99, // on r#"\'[^\']+\'"#, goto 98
+        100, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 99
+        101, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 100
+        102, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 101
+        // State 254
+        0, // on "(", error
+        272, // on ")", goto 271
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 255
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        150, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 149
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 256
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        150, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 149
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 257
+        171, // on "(", goto 170
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        172, // on "_", goto 171
+        173, // on "exists", goto 172
+        174, // on "forall", goto 173
+        175, // on "implies", goto 174
+        176, // on r#"\'[^\']+\'"#, goto 175
+        177, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 176
+        178, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 177
+        179, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 178
+        // State 258
+        0, // on "(", error
+        0, // on ")", error
+        -34, // on ",", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);`
+        0, // on "->", error
+        -34, // on ".", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);`
+        0, // on ":-", error
+        -34, // on ";", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 259
+        0, // on "(", error
+        0, // on ")", error
+        -32, // on ",", reduce `FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);`
+        0, // on "->", error
+        -32, // on ".", reduce `FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);`
+        0, // on ":-", error
+        -32, // on ";", reduce `FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 260
+        0, // on "(", error
+        0, // on ")", error
+        -13, // on ",", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -13, // on ";", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        -13, // on "=>", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 261
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 262
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 263
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 264
+        0, // on "(", error
+        -3, // on ")", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        -3, // on ",", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -3, // on ";", reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -3, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -3, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `(BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);`
+        // State 265
+        223, // on "(", goto 222
+        -9, // on ")", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        -9, // on ",", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -9, // on ";", reduce `ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);`
+        0, // on "=>", error
+        224, // on "_", goto 223
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        228, // on r#"\'[^\']+\'"#, goto 227
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        248, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 247
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 266
+        0, // on "(", error
+        -29, // on ")", reduce `FactDataAnd = Fact<FactDataAnd>, ",", Fact<FactDataOr> => ActionFn(7);`
+        -29, // on ",", reduce `FactDataAnd = Fact<FactDataAnd>, ",", Fact<FactDataOr> => ActionFn(7);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        253, // on ";", goto 252
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 267
+        0, // on "(", error
+        -26, // on ")", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
+        -26, // on ",", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -26, // on ";", reduce `Fact<FactDataOr> = FactDataOr => ActionFn(74);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 268
+        0, // on "(", error
+        -36, // on ")", reduce `FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);`
+        -36, // on ",", reduce `FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -36, // on ";", reduce `FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 269
+        0, // on "(", error
+        -25, // on ")", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(73);`
+        -25, // on ",", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(73);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -25, // on ";", reduce `Fact<FactDataFunc> = FactDataFunc => ActionFn(73);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 270
+        0, // on "(", error
+        279, // on ")", goto 278
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 271
+        0, // on "(", error
+        -50, // on ")", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        -50, // on ",", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -50, // on ";", reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        -50, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        -50, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, reduce `ValueKind = "(", Application, ")" => ActionFn(30);`
+        // State 272
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        280, // on "->", goto 279
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 273
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        281, // on "->", goto 280
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 274
+        0, // on "(", error
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        282, // on "=>", goto 281
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 275
+        0, // on "(", error
+        283, // on ")", goto 282
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 276
+        0, // on "(", error
+        284, // on ")", goto 283
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 277
+        0, // on "(", error
+        285, // on ")", goto 284
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 278
+        0, // on "(", error
+        -13, // on ")", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        -13, // on ",", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -13, // on ";", reduce `ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 279
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 280
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 281
+        223, // on "(", goto 222
+        0, // on ")", error
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        224, // on "_", goto 223
+        225, // on "exists", goto 224
+        226, // on "forall", goto 225
+        227, // on "implies", goto 226
+        228, // on r#"\'[^\']+\'"#, goto 227
+        229, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, goto 228
+        230, // on r#"[A-Za-z][A-Za-z0-9_]*"#, goto 229
+        231, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, goto 230
+        // State 282
+        0, // on "(", error
+        0, // on ")", error
+        -33, // on ",", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -33, // on ";", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);`
+        -33, // on "=>", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 283
+        0, // on "(", error
+        0, // on ")", error
+        -34, // on ",", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -34, // on ";", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);`
+        -34, // on "=>", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 284
+        0, // on "(", error
+        0, // on ")", error
+        -32, // on ",", reduce `FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -32, // on ";", reduce `FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);`
+        -32, // on "=>", reduce `FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);`
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 285
+        0, // on "(", error
+        289, // on ")", goto 288
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 286
+        0, // on "(", error
+        290, // on ")", goto 289
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 287
+        0, // on "(", error
+        291, // on ")", goto 290
+        0, // on ",", error
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        0, // on ";", error
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 288
+        0, // on "(", error
+        -33, // on ")", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);`
+        -33, // on ",", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -33, // on ";", reduce `FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 289
+        0, // on "(", error
+        -34, // on ")", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);`
+        -34, // on ",", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -34, // on ";", reduce `FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
+        0, // on r#"\'[^\']+\'"#, error
+        0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
+        0, // on r#"[A-Za-z][A-Za-z0-9_]*:"#, error
+        // State 290
+        0, // on "(", error
+        -32, // on ")", reduce `FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);`
+        -32, // on ",", reduce `FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);`
+        0, // on "->", error
+        0, // on ".", error
+        0, // on ":-", error
+        -32, // on ";", reduce `FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);`
+        0, // on "=>", error
+        0, // on "_", error
+        0, // on "exists", error
+        0, // on "forall", error
+        0, // on "implies", error
         0, // on r#"\'[^\']+\'"#, error
         0, // on r#"[-|!@#$%^&*=+/:?~<>]+"#, error
         0, // on r#"[A-Za-z][A-Za-z0-9_]*"#, error
@@ -3482,11 +5021,11 @@ mod __parse__Program {
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
-        -41, // on EOF, reduce `Item+ = Item => ActionFn(52);`
-        -46, // on EOF, reduce `Program = Item+ => ActionFn(1);`
+        -40, // on EOF, reduce `Item+ = Item => ActionFn(51);`
+        -45, // on EOF, reduce `Program = Item+ => ActionFn(1);`
         0, // on EOF, error
-        -57, // on EOF, reduce `__Program = Program => ActionFn(0);`
-        -40, // on EOF, reduce `Item = Rule => ActionFn(3);`
+        -56, // on EOF, reduce `__Program = Program => ActionFn(0);`
+        -39, // on EOF, reduce `Item = Rule => ActionFn(3);`
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
@@ -3497,7 +5036,7 @@ mod __parse__Program {
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
-        -39, // on EOF, reduce `Item = Application, "." => ActionFn(2);`
+        -38, // on EOF, reduce `Item = Application, "." => ActionFn(2);`
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
@@ -3508,7 +5047,7 @@ mod __parse__Program {
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
-        -42, // on EOF, reduce `Item+ = Item+, Item => ActionFn(53);`
+        -41, // on EOF, reduce `Item+ = Item+, Item => ActionFn(52);`
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
@@ -3591,7 +5130,85 @@ mod __parse__Program {
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
-        -47, // on EOF, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(78);`
+        -46, // on EOF, reduce `Rule = Application, ":-", Fact<FactData>, "." => ActionFn(75);`
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
+        0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
         0, // on EOF, error
@@ -3705,7 +5322,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -3741,7 +5357,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -3777,7 +5392,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -3813,7 +5427,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -3849,7 +5462,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -3885,7 +5497,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -3921,7 +5532,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -3957,7 +5567,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -3993,7 +5602,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4029,7 +5637,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4065,7 +5672,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4101,7 +5707,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4137,7 +5742,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4173,7 +5777,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4209,7 +5812,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4245,7 +5847,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4281,7 +5882,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4317,7 +5917,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4353,7 +5952,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4389,7 +5987,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4425,7 +6022,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4461,7 +6057,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4497,7 +6092,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4533,7 +6127,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4569,24 +6162,23 @@ mod __parse__Program {
         0, // on BitValue?, error
         60, // on Fact<FactData>, goto 59
         61, // on Fact<FactDataAnd>, goto 60
-        62, // on Fact<FactDataApply>, goto 61
         0, // on Fact<FactDataFunc>, error
-        63, // on Fact<FactDataOr>, goto 62
-        64, // on FactData, goto 63
-        65, // on FactDataAnd, goto 64
-        66, // on FactDataApply, goto 65
-        67, // on FactDataFunc, goto 66
-        68, // on FactDataOr, goto 67
-        69, // on Identifier, goto 68
+        62, // on Fact<FactDataOr>, goto 61
+        63, // on FactData, goto 62
+        64, // on FactDataAnd, goto 63
+        65, // on FactDataApply, goto 64
+        66, // on FactDataFunc, goto 65
+        67, // on FactDataOr, goto 66
+        68, // on Identifier, goto 67
         0, // on Item, error
         0, // on Item+, error
-        70, // on Operator, goto 69
+        69, // on Operator, goto 68
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        71, // on Value, goto 70
-        72, // on ValueKind, goto 71
-        73, // on Variable, goto 72
+        70, // on Value, goto 69
+        71, // on ValueKind, goto 70
+        72, // on Variable, goto 71
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 25
@@ -4605,7 +6197,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4641,7 +6232,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4677,7 +6267,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4713,7 +6302,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4749,7 +6337,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4785,7 +6372,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4821,7 +6407,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4857,7 +6442,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4893,7 +6477,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4929,7 +6512,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -4965,7 +6547,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5001,7 +6582,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5037,7 +6617,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5073,7 +6652,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5109,7 +6687,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5145,7 +6722,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5181,7 +6757,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5217,7 +6792,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5253,7 +6827,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5289,7 +6862,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5325,7 +6897,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5361,7 +6932,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5397,7 +6967,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5433,7 +7002,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5469,7 +7037,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5505,7 +7072,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5541,7 +7107,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5577,7 +7142,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5613,7 +7177,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5624,7 +7187,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        70, // on Operator, goto 69
+        69, // on Operator, goto 68
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
@@ -5649,7 +7212,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5685,7 +7247,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5721,7 +7282,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5757,7 +7317,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5772,9 +7331,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        71, // on Value, goto 70
-        72, // on ValueKind, goto 71
-        73, // on Variable, goto 72
+        70, // on Value, goto 69
+        71, // on ValueKind, goto 70
+        72, // on Variable, goto 71
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 58
@@ -5793,7 +7352,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5829,7 +7387,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5865,7 +7422,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5901,7 +7457,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5937,7 +7492,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -5973,7 +7527,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6009,7 +7562,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6045,7 +7597,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6081,7 +7632,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6117,7 +7667,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6153,7 +7702,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6189,7 +7737,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6225,7 +7772,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6261,7 +7807,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6283,46 +7828,10 @@ mod __parse__Program {
         0, // on __Program, error
         // State 72
         0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
-        0, // on @L, error
-        0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
-        0, // on Atom, error
-        0, // on BitApplication, error
-        0, // on BitApplications, error
-        0, // on BitOperator, error
-        0, // on BitOperator?, error
-        0, // on BitValue, error
-        0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
-        0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        0, // on Identifier, error
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        0, // on Variable, error
-        0, // on Vec1<BitApplication>, error
-        0, // on __Program, error
-        // State 73
-        0, // on (BitOperator BitValue), error
         36, // on (BitOperator BitValue)+, goto 35
         0, // on @L, error
         0, // on @R, error
-        123, // on Application, goto 122
+        122, // on Application, goto 121
         38, // on ApplicationBits, goto 37
         39, // on Atom, goto 38
         0, // on BitApplication, error
@@ -6333,7 +7842,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6353,6 +7861,41 @@ mod __parse__Program {
         46, // on Variable, goto 45
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
+        // State 73
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
         // State 74
         0, // on (BitOperator BitValue), error
         0, // on (BitOperator BitValue)+, error
@@ -6369,7 +7912,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6405,7 +7947,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6441,7 +7982,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6477,7 +8017,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6513,7 +8052,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6549,7 +8087,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6585,7 +8122,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6621,7 +8157,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6657,7 +8192,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6693,7 +8227,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6729,7 +8262,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6765,7 +8297,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6801,7 +8332,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6837,7 +8367,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6873,7 +8402,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6909,7 +8437,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6945,7 +8472,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -6981,7 +8507,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7017,7 +8542,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7053,7 +8577,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7089,7 +8612,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7125,7 +8647,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7161,7 +8682,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7197,7 +8717,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7233,7 +8752,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7269,7 +8787,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7305,7 +8822,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7341,7 +8857,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7377,7 +8892,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7413,7 +8927,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7449,7 +8962,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7485,7 +8997,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7521,7 +9032,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7557,7 +9067,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7593,7 +9102,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7629,7 +9137,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7665,7 +9172,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7701,7 +9207,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7716,9 +9221,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        71, // on Value, goto 70
-        72, // on ValueKind, goto 71
-        73, // on Variable, goto 72
+        70, // on Value, goto 69
+        71, // on ValueKind, goto 70
+        72, // on Variable, goto 71
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 112
@@ -7737,7 +9242,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7773,7 +9277,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7809,7 +9312,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7845,7 +9347,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7856,7 +9357,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        70, // on Operator, goto 69
+        69, // on Operator, goto 68
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
@@ -7881,7 +9382,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7896,9 +9396,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        71, // on Value, goto 70
-        72, // on ValueKind, goto 71
-        73, // on Variable, goto 72
+        70, // on Value, goto 69
+        71, // on ValueKind, goto 70
+        72, // on Variable, goto 71
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 117
@@ -7917,7 +9417,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -7953,24 +9452,23 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        62, // on Fact<FactDataApply>, goto 61
         0, // on Fact<FactDataFunc>, error
         142, // on Fact<FactDataOr>, goto 141
         0, // on FactData, error
         0, // on FactDataAnd, error
-        66, // on FactDataApply, goto 65
-        67, // on FactDataFunc, goto 66
+        65, // on FactDataApply, goto 64
+        66, // on FactDataFunc, goto 65
         143, // on FactDataOr, goto 142
-        69, // on Identifier, goto 68
+        68, // on Identifier, goto 67
         0, // on Item, error
         0, // on Item+, error
-        70, // on Operator, goto 69
+        69, // on Operator, goto 68
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        71, // on Value, goto 70
-        72, // on ValueKind, goto 71
-        73, // on Variable, goto 72
+        70, // on Value, goto 69
+        71, // on ValueKind, goto 70
+        72, // on Variable, goto 71
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 119
@@ -7989,63 +9487,26 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        62, // on Fact<FactDataApply>, goto 61
         144, // on Fact<FactDataFunc>, goto 143
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
         0, // on FactDataAnd, error
-        66, // on FactDataApply, goto 65
+        65, // on FactDataApply, goto 64
         145, // on FactDataFunc, goto 144
         0, // on FactDataOr, error
-        69, // on Identifier, goto 68
+        68, // on Identifier, goto 67
         0, // on Item, error
         0, // on Item+, error
-        70, // on Operator, goto 69
+        69, // on Operator, goto 68
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        71, // on Value, goto 70
-        72, // on ValueKind, goto 71
-        73, // on Variable, goto 72
+        70, // on Value, goto 69
+        71, // on ValueKind, goto 70
+        72, // on Variable, goto 71
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 120
-        0, // on (BitOperator BitValue), error
-        54, // on (BitOperator BitValue)+, goto 53
-        0, // on @L, error
-        0, // on @R, error
-        55, // on Application, goto 54
-        56, // on ApplicationBits, goto 55
-        57, // on Atom, goto 56
-        0, // on BitApplication, error
-        0, // on BitApplications, error
-        58, // on BitOperator, goto 57
-        0, // on BitOperator?, error
-        59, // on BitValue, goto 58
-        0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        62, // on Fact<FactDataApply>, goto 61
-        146, // on Fact<FactDataFunc>, goto 145
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        66, // on FactDataApply, goto 65
-        145, // on FactDataFunc, goto 144
-        0, // on FactDataOr, error
-        69, // on Identifier, goto 68
-        0, // on Item, error
-        0, // on Item+, error
-        70, // on Operator, goto 69
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        71, // on Value, goto 70
-        72, // on ValueKind, goto 71
-        73, // on Variable, goto 72
-        0, // on Vec1<BitApplication>, error
-        0, // on __Program, error
-        // State 121
         0, // on (BitOperator BitValue), error
         83, // on (BitOperator BitValue)+, goto 82
         0, // on @L, error
@@ -8054,14 +9515,13 @@ mod __parse__Program {
         85, // on ApplicationBits, goto 84
         86, // on Atom, goto 85
         87, // on BitApplication, goto 86
-        147, // on BitApplications, goto 146
+        146, // on BitApplications, goto 145
         89, // on BitOperator, goto 88
         0, // on BitOperator?, error
         90, // on BitValue, goto 89
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8081,7 +9541,7 @@ mod __parse__Program {
         95, // on Variable, goto 94
         96, // on Vec1<BitApplication>, goto 95
         0, // on __Program, error
-        // State 122
+        // State 121
         0, // on (BitOperator BitValue), error
         0, // on (BitOperator BitValue)+, error
         0, // on @L, error
@@ -8097,7 +9557,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8117,6 +9576,41 @@ mod __parse__Program {
         0, // on Variable, error
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
+        // State 122
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        148, // on Identifier, goto 147
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        149, // on Variable, goto 148
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
         // State 123
         0, // on (BitOperator BitValue), error
         0, // on (BitOperator BitValue)+, error
@@ -8133,7 +9627,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8141,7 +9634,7 @@ mod __parse__Program {
         0, // on FactDataApply, error
         0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        149, // on Identifier, goto 148
+        148, // on Identifier, goto 147
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -8150,43 +9643,42 @@ mod __parse__Program {
         0, // on Rule, error
         0, // on Value, error
         0, // on ValueKind, error
-        150, // on Variable, goto 149
+        151, // on Variable, goto 150
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 124
         0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
+        152, // on (BitOperator BitValue)+, goto 151
         0, // on @L, error
         0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
-        0, // on Atom, error
+        153, // on Application, goto 152
+        154, // on ApplicationBits, goto 153
+        155, // on Atom, goto 154
         0, // on BitApplication, error
         0, // on BitApplications, error
-        0, // on BitOperator, error
+        156, // on BitOperator, goto 155
         0, // on BitOperator?, error
-        0, // on BitValue, error
+        157, // on BitValue, goto 156
         0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
+        158, // on Fact<FactData>, goto 157
+        159, // on Fact<FactDataAnd>, goto 158
         0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        149, // on Identifier, goto 148
+        160, // on Fact<FactDataOr>, goto 159
+        161, // on FactData, goto 160
+        162, // on FactDataAnd, goto 161
+        163, // on FactDataApply, goto 162
+        164, // on FactDataFunc, goto 163
+        165, // on FactDataOr, goto 164
+        166, // on Identifier, goto 165
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        167, // on Operator, goto 166
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        152, // on Variable, goto 151
+        168, // on Value, goto 167
+        169, // on ValueKind, goto 168
+        170, // on Variable, goto 169
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 125
@@ -8201,11 +9693,10 @@ mod __parse__Program {
         0, // on BitApplications, error
         0, // on BitOperator, error
         0, // on BitOperator?, error
-        153, // on BitValue, goto 152
+        180, // on BitValue, goto 179
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8241,7 +9732,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8277,7 +9767,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8313,7 +9802,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8349,7 +9837,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8379,13 +9866,12 @@ mod __parse__Program {
         0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        154, // on BitOperator, goto 153
+        181, // on BitOperator, goto 180
         0, // on BitOperator?, error
         0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8421,7 +9907,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8450,14 +9935,13 @@ mod __parse__Program {
         85, // on ApplicationBits, goto 84
         86, // on Atom, goto 85
         87, // on BitApplication, goto 86
-        155, // on BitApplications, goto 154
+        182, // on BitApplications, goto 181
         89, // on BitOperator, goto 88
         0, // on BitOperator?, error
         90, // on BitValue, goto 89
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8485,7 +9969,7 @@ mod __parse__Program {
         84, // on Application, goto 83
         85, // on ApplicationBits, goto 84
         86, // on Atom, goto 85
-        156, // on BitApplication, goto 155
+        183, // on BitApplication, goto 182
         0, // on BitApplications, error
         89, // on BitOperator, goto 88
         0, // on BitOperator?, error
@@ -8493,7 +9977,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8529,7 +10012,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8565,7 +10047,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8601,7 +10082,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8637,7 +10117,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8673,7 +10152,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8709,7 +10187,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8745,7 +10222,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8760,9 +10236,9 @@ mod __parse__Program {
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        71, // on Value, goto 70
-        72, // on ValueKind, goto 71
-        73, // on Variable, goto 72
+        70, // on Value, goto 69
+        71, // on ValueKind, goto 70
+        72, // on Variable, goto 71
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 141
@@ -8781,7 +10257,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8817,7 +10292,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8853,7 +10327,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8889,7 +10362,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8925,7 +10397,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8961,7 +10432,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -8997,7 +10467,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9033,7 +10502,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9069,7 +10537,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9105,7 +10572,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9135,13 +10601,12 @@ mod __parse__Program {
         0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        0, // on BitOperator, error
+        189, // on BitOperator, goto 188
         0, // on BitOperator?, error
         0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9152,7 +10617,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        167, // on Operator, goto 166
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
@@ -9177,7 +10642,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9204,16 +10668,15 @@ mod __parse__Program {
         0, // on @R, error
         0, // on Application, error
         0, // on ApplicationBits, error
-        86, // on Atom, goto 85
+        0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
         0, // on BitOperator, error
         0, // on BitOperator?, error
-        153, // on BitValue, goto 152
+        0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9221,16 +10684,16 @@ mod __parse__Program {
         0, // on FactDataApply, error
         0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        129, // on Identifier, goto 128
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        93, // on Value, goto 92
-        94, // on ValueKind, goto 93
-        95, // on Variable, goto 94
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 154
@@ -9249,7 +10712,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9276,16 +10738,15 @@ mod __parse__Program {
         0, // on @R, error
         0, // on Application, error
         0, // on ApplicationBits, error
-        0, // on Atom, error
+        155, // on Atom, goto 154
         0, // on BitApplication, error
         0, // on BitApplications, error
         0, // on BitOperator, error
         0, // on BitOperator?, error
-        0, // on BitValue, error
+        190, // on BitValue, goto 189
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9293,21 +10754,21 @@ mod __parse__Program {
         0, // on FactDataApply, error
         0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        0, // on Identifier, error
+        191, // on Identifier, goto 190
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        0, // on Variable, error
+        168, // on Value, goto 167
+        169, // on ValueKind, goto 168
+        170, // on Variable, goto 169
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 156
         0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
+        193, // on (BitOperator BitValue)+, goto 192
         0, // on @L, error
         0, // on @R, error
         0, // on Application, error
@@ -9315,13 +10776,12 @@ mod __parse__Program {
         0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        0, // on BitOperator, error
+        194, // on BitOperator, goto 193
         0, // on BitOperator?, error
         0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9332,7 +10792,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        31, // on Operator, goto 30
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
@@ -9357,7 +10817,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9393,7 +10852,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9415,74 +10873,72 @@ mod __parse__Program {
         0, // on __Program, error
         // State 159
         0, // on (BitOperator BitValue), error
-        163, // on (BitOperator BitValue)+, goto 162
+        0, // on (BitOperator BitValue)+, error
         0, // on @L, error
         0, // on @R, error
-        164, // on Application, goto 163
-        165, // on ApplicationBits, goto 164
-        166, // on Atom, goto 165
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        167, // on BitOperator, goto 166
+        0, // on BitOperator, error
         0, // on BitOperator?, error
-        168, // on BitValue, goto 167
+        0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        169, // on Fact<FactDataApply>, goto 168
-        170, // on Fact<FactDataFunc>, goto 169
+        0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
         0, // on FactDataAnd, error
-        171, // on FactDataApply, goto 170
-        172, // on FactDataFunc, goto 171
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        173, // on Identifier, goto 172
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        174, // on Operator, goto 173
+        0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        175, // on Value, goto 174
-        176, // on ValueKind, goto 175
-        177, // on Variable, goto 176
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 160
         0, // on (BitOperator BitValue), error
-        163, // on (BitOperator BitValue)+, goto 162
+        0, // on (BitOperator BitValue)+, error
         0, // on @L, error
         0, // on @R, error
-        164, // on Application, goto 163
-        165, // on ApplicationBits, goto 164
-        166, // on Atom, goto 165
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        167, // on BitOperator, goto 166
+        0, // on BitOperator, error
         0, // on BitOperator?, error
-        168, // on BitValue, goto 167
+        0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        169, // on Fact<FactDataApply>, goto 168
-        186, // on Fact<FactDataFunc>, goto 185
+        0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
         0, // on FactDataAnd, error
-        171, // on FactDataApply, goto 170
-        172, // on FactDataFunc, goto 171
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        173, // on Identifier, goto 172
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        174, // on Operator, goto 173
+        0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        175, // on Value, goto 174
-        176, // on ValueKind, goto 175
-        177, // on Variable, goto 176
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 161
@@ -9501,7 +10957,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9531,13 +10986,12 @@ mod __parse__Program {
         0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        187, // on BitOperator, goto 186
+        0, // on BitOperator, error
         0, // on BitOperator?, error
         0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9548,7 +11002,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        174, // on Operator, goto 173
+        0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
@@ -9573,7 +11027,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9609,7 +11062,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9645,7 +11097,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9672,52 +11123,15 @@ mod __parse__Program {
         0, // on @R, error
         0, // on Application, error
         0, // on ApplicationBits, error
-        166, // on Atom, goto 165
-        0, // on BitApplication, error
-        0, // on BitApplications, error
-        0, // on BitOperator, error
-        0, // on BitOperator?, error
-        188, // on BitValue, goto 187
-        0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
-        0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        189, // on Identifier, goto 188
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        175, // on Value, goto 174
-        176, // on ValueKind, goto 175
-        177, // on Variable, goto 176
-        0, // on Vec1<BitApplication>, error
-        0, // on __Program, error
-        // State 167
-        0, // on (BitOperator BitValue), error
-        191, // on (BitOperator BitValue)+, goto 190
-        0, // on @L, error
-        0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
         0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        192, // on BitOperator, goto 191
+        0, // on BitOperator, error
         0, // on BitOperator?, error
         0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9728,7 +11142,42 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        31, // on Operator, goto 30
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 167
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
@@ -9753,7 +11202,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9789,7 +11237,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9811,21 +11258,20 @@ mod __parse__Program {
         0, // on __Program, error
         // State 170
         0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
+        36, // on (BitOperator BitValue)+, goto 35
         0, // on @L, error
         0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
-        0, // on Atom, error
+        199, // on Application, goto 198
+        38, // on ApplicationBits, goto 37
+        39, // on Atom, goto 38
         0, // on BitApplication, error
         0, // on BitApplications, error
-        0, // on BitOperator, error
+        40, // on BitOperator, goto 39
         0, // on BitOperator?, error
-        0, // on BitValue, error
+        41, // on BitValue, goto 40
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9833,16 +11279,16 @@ mod __parse__Program {
         0, // on FactDataApply, error
         0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        0, // on Identifier, error
+        42, // on Identifier, goto 41
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        43, // on Operator, goto 42
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        0, // on Variable, error
+        44, // on Value, goto 43
+        45, // on ValueKind, goto 44
+        46, // on Variable, goto 45
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 171
@@ -9861,7 +11307,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9897,7 +11342,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9933,7 +11377,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -9969,7 +11412,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10005,7 +11447,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10041,7 +11482,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10063,21 +11503,20 @@ mod __parse__Program {
         0, // on __Program, error
         // State 177
         0, // on (BitOperator BitValue), error
-        36, // on (BitOperator BitValue)+, goto 35
+        0, // on (BitOperator BitValue)+, error
         0, // on @L, error
         0, // on @R, error
-        196, // on Application, goto 195
-        38, // on ApplicationBits, goto 37
-        39, // on Atom, goto 38
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        40, // on BitOperator, goto 39
+        0, // on BitOperator, error
         0, // on BitOperator?, error
-        41, // on BitValue, goto 40
+        0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10085,16 +11524,16 @@ mod __parse__Program {
         0, // on FactDataApply, error
         0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        42, // on Identifier, goto 41
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        43, // on Operator, goto 42
+        0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        44, // on Value, goto 43
-        45, // on ValueKind, goto 44
-        46, // on Variable, goto 45
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 178
@@ -10113,7 +11552,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10149,7 +11587,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10176,16 +11613,15 @@ mod __parse__Program {
         0, // on @R, error
         0, // on Application, error
         0, // on ApplicationBits, error
-        0, // on Atom, error
+        86, // on Atom, goto 85
         0, // on BitApplication, error
         0, // on BitApplications, error
         0, // on BitOperator, error
         0, // on BitOperator?, error
-        0, // on BitValue, error
+        180, // on BitValue, goto 179
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10193,16 +11629,16 @@ mod __parse__Program {
         0, // on FactDataApply, error
         0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        0, // on Identifier, error
+        129, // on Identifier, goto 128
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        0, // on Variable, error
+        93, // on Value, goto 92
+        94, // on ValueKind, goto 93
+        95, // on Variable, goto 94
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 181
@@ -10221,7 +11657,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10257,7 +11692,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10293,7 +11727,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10329,7 +11762,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10365,7 +11797,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10387,74 +11818,72 @@ mod __parse__Program {
         0, // on __Program, error
         // State 186
         0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
+        204, // on (BitOperator BitValue)+, goto 203
         0, // on @L, error
         0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
-        166, // on Atom, goto 165
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
         0, // on BitApplication, error
         0, // on BitApplications, error
-        0, // on BitOperator, error
+        208, // on BitOperator, goto 207
         0, // on BitOperator?, error
-        200, // on BitValue, goto 199
+        209, // on BitValue, goto 208
         0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
+        210, // on Fact<FactData>, goto 209
+        211, // on Fact<FactDataAnd>, goto 210
         0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        189, // on Identifier, goto 188
+        212, // on Fact<FactDataOr>, goto 211
+        213, // on FactData, goto 212
+        214, // on FactDataAnd, goto 213
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        217, // on FactDataOr, goto 216
+        218, // on Identifier, goto 217
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        219, // on Operator, goto 218
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        175, // on Value, goto 174
-        176, // on ValueKind, goto 175
-        177, // on Variable, goto 176
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 187
         0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
+        204, // on (BitOperator BitValue)+, goto 203
         0, // on @L, error
         0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
-        0, // on Atom, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
         0, // on BitApplication, error
         0, // on BitApplications, error
-        0, // on BitOperator, error
+        208, // on BitOperator, goto 207
         0, // on BitOperator?, error
-        0, // on BitValue, error
+        209, // on BitValue, goto 208
         0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
+        232, // on Fact<FactData>, goto 231
+        211, // on Fact<FactDataAnd>, goto 210
         0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        0, // on Identifier, error
+        212, // on Fact<FactDataOr>, goto 211
+        213, // on FactData, goto 212
+        214, // on FactDataAnd, goto 213
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        217, // on FactDataOr, goto 216
+        218, // on Identifier, goto 217
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        219, // on Operator, goto 218
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        0, // on Variable, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 188
@@ -10464,16 +11893,15 @@ mod __parse__Program {
         0, // on @R, error
         0, // on Application, error
         0, // on ApplicationBits, error
-        0, // on Atom, error
+        155, // on Atom, goto 154
         0, // on BitApplication, error
         0, // on BitApplications, error
         0, // on BitOperator, error
         0, // on BitOperator?, error
-        0, // on BitValue, error
+        233, // on BitValue, goto 232
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10481,16 +11909,16 @@ mod __parse__Program {
         0, // on FactDataApply, error
         0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        0, // on Identifier, error
+        191, // on Identifier, goto 190
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        0, // on Variable, error
+        168, // on Value, goto 167
+        169, // on ValueKind, goto 168
+        170, // on Variable, goto 169
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 189
@@ -10509,7 +11937,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10539,13 +11966,12 @@ mod __parse__Program {
         0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        201, // on BitOperator, goto 200
+        0, // on BitOperator, error
         0, // on BitOperator?, error
         0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10556,7 +11982,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        174, // on Operator, goto 173
+        0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
@@ -10572,78 +11998,6 @@ mod __parse__Program {
         0, // on @R, error
         0, // on Application, error
         0, // on ApplicationBits, error
-        166, // on Atom, goto 165
-        0, // on BitApplication, error
-        0, // on BitApplications, error
-        0, // on BitOperator, error
-        0, // on BitOperator?, error
-        188, // on BitValue, goto 187
-        0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
-        0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        189, // on Identifier, goto 188
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        175, // on Value, goto 174
-        176, // on ValueKind, goto 175
-        177, // on Variable, goto 176
-        0, // on Vec1<BitApplication>, error
-        0, // on __Program, error
-        // State 192
-        0, // on (BitOperator BitValue), error
-        163, // on (BitOperator BitValue)+, goto 162
-        0, // on @L, error
-        0, // on @R, error
-        164, // on Application, goto 163
-        165, // on ApplicationBits, goto 164
-        166, // on Atom, goto 165
-        0, // on BitApplication, error
-        0, // on BitApplications, error
-        167, // on BitOperator, goto 166
-        0, // on BitOperator?, error
-        168, // on BitValue, goto 167
-        0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        169, // on Fact<FactDataApply>, goto 168
-        202, // on Fact<FactDataFunc>, goto 201
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        171, // on FactDataApply, goto 170
-        172, // on FactDataFunc, goto 171
-        0, // on FactDataOr, error
-        173, // on Identifier, goto 172
-        0, // on Item, error
-        0, // on Item+, error
-        174, // on Operator, goto 173
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        175, // on Value, goto 174
-        176, // on ValueKind, goto 175
-        177, // on Variable, goto 176
-        0, // on Vec1<BitApplication>, error
-        0, // on __Program, error
-        // State 193
-        0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
-        0, // on @L, error
-        0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
         0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
@@ -10653,7 +12007,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10673,7 +12026,182 @@ mod __parse__Program {
         0, // on Variable, error
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
+        // State 192
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        234, // on BitOperator, goto 233
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        167, // on Operator, goto 166
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 193
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        155, // on Atom, goto 154
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        190, // on BitValue, goto 189
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        191, // on Identifier, goto 190
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        168, // on Value, goto 167
+        169, // on ValueKind, goto 168
+        170, // on Variable, goto 169
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
         // State 194
+        0, // on (BitOperator BitValue), error
+        204, // on (BitOperator BitValue)+, goto 203
+        0, // on @L, error
+        0, // on @R, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        208, // on BitOperator, goto 207
+        0, // on BitOperator?, error
+        209, // on BitValue, goto 208
+        0, // on BitValue?, error
+        235, // on Fact<FactData>, goto 234
+        211, // on Fact<FactDataAnd>, goto 210
+        0, // on Fact<FactDataFunc>, error
+        212, // on Fact<FactDataOr>, goto 211
+        213, // on FactData, goto 212
+        214, // on FactDataAnd, goto 213
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        217, // on FactDataOr, goto 216
+        218, // on Identifier, goto 217
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 195
+        0, // on (BitOperator BitValue), error
+        152, // on (BitOperator BitValue)+, goto 151
+        0, // on @L, error
+        0, // on @R, error
+        153, // on Application, goto 152
+        154, // on ApplicationBits, goto 153
+        155, // on Atom, goto 154
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        156, // on BitOperator, goto 155
+        0, // on BitOperator?, error
+        157, // on BitValue, goto 156
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        236, // on Fact<FactDataOr>, goto 235
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        163, // on FactDataApply, goto 162
+        164, // on FactDataFunc, goto 163
+        237, // on FactDataOr, goto 236
+        166, // on Identifier, goto 165
+        0, // on Item, error
+        0, // on Item+, error
+        167, // on Operator, goto 166
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        168, // on Value, goto 167
+        169, // on ValueKind, goto 168
+        170, // on Variable, goto 169
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 196
+        0, // on (BitOperator BitValue), error
+        152, // on (BitOperator BitValue)+, goto 151
+        0, // on @L, error
+        0, // on @R, error
+        153, // on Application, goto 152
+        154, // on ApplicationBits, goto 153
+        155, // on Atom, goto 154
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        156, // on BitOperator, goto 155
+        0, // on BitOperator?, error
+        157, // on BitValue, goto 156
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        238, // on Fact<FactDataFunc>, goto 237
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        163, // on FactDataApply, goto 162
+        239, // on FactDataFunc, goto 238
+        0, // on FactDataOr, error
+        166, // on Identifier, goto 165
+        0, // on Item, error
+        0, // on Item+, error
+        167, // on Operator, goto 166
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        168, // on Value, goto 167
+        169, // on ValueKind, goto 168
+        170, // on Variable, goto 169
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 197
         0, // on (BitOperator BitValue), error
         83, // on (BitOperator BitValue)+, goto 82
         0, // on @L, error
@@ -10682,14 +12210,13 @@ mod __parse__Program {
         85, // on ApplicationBits, goto 84
         86, // on Atom, goto 85
         87, // on BitApplication, goto 86
-        203, // on BitApplications, goto 202
+        240, // on BitApplications, goto 239
         89, // on BitOperator, goto 88
         0, // on BitOperator?, error
         90, // on BitValue, goto 89
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10709,114 +12236,6 @@ mod __parse__Program {
         95, // on Variable, goto 94
         96, // on Vec1<BitApplication>, goto 95
         0, // on __Program, error
-        // State 195
-        0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
-        0, // on @L, error
-        0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
-        0, // on Atom, error
-        0, // on BitApplication, error
-        0, // on BitApplications, error
-        0, // on BitOperator, error
-        0, // on BitOperator?, error
-        0, // on BitValue, error
-        0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
-        0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        0, // on Identifier, error
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        0, // on Variable, error
-        0, // on Vec1<BitApplication>, error
-        0, // on __Program, error
-        // State 196
-        0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
-        0, // on @L, error
-        0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
-        0, // on Atom, error
-        0, // on BitApplication, error
-        0, // on BitApplications, error
-        0, // on BitOperator, error
-        0, // on BitOperator?, error
-        0, // on BitValue, error
-        0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
-        0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        149, // on Identifier, goto 148
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        205, // on Variable, goto 204
-        0, // on Vec1<BitApplication>, error
-        0, // on __Program, error
-        // State 197
-        0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
-        0, // on @L, error
-        0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
-        0, // on Atom, error
-        0, // on BitApplication, error
-        0, // on BitApplications, error
-        0, // on BitOperator, error
-        0, // on BitOperator?, error
-        0, // on BitValue, error
-        0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
-        0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        149, // on Identifier, goto 148
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        0, // on Value, error
-        0, // on ValueKind, error
-        206, // on Variable, goto 205
-        0, // on Vec1<BitApplication>, error
-        0, // on __Program, error
         // State 198
         0, // on (BitOperator BitValue), error
         0, // on (BitOperator BitValue)+, error
@@ -10833,7 +12252,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10869,7 +12287,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10877,7 +12294,7 @@ mod __parse__Program {
         0, // on FactDataApply, error
         0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        0, // on Identifier, error
+        148, // on Identifier, goto 147
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -10886,46 +12303,10 @@ mod __parse__Program {
         0, // on Rule, error
         0, // on Value, error
         0, // on ValueKind, error
-        0, // on Variable, error
+        242, // on Variable, goto 241
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 200
-        0, // on (BitOperator BitValue), error
-        0, // on (BitOperator BitValue)+, error
-        0, // on @L, error
-        0, // on @R, error
-        0, // on Application, error
-        0, // on ApplicationBits, error
-        166, // on Atom, goto 165
-        0, // on BitApplication, error
-        0, // on BitApplications, error
-        0, // on BitOperator, error
-        0, // on BitOperator?, error
-        200, // on BitValue, goto 199
-        0, // on BitValue?, error
-        0, // on Fact<FactData>, error
-        0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
-        0, // on Fact<FactDataFunc>, error
-        0, // on Fact<FactDataOr>, error
-        0, // on FactData, error
-        0, // on FactDataAnd, error
-        0, // on FactDataApply, error
-        0, // on FactDataFunc, error
-        0, // on FactDataOr, error
-        189, // on Identifier, goto 188
-        0, // on Item, error
-        0, // on Item+, error
-        0, // on Operator, error
-        0, // on OperatorValue, error
-        0, // on Program, error
-        0, // on Rule, error
-        175, // on Value, goto 174
-        176, // on ValueKind, goto 175
-        177, // on Variable, goto 176
-        0, // on Vec1<BitApplication>, error
-        0, // on __Program, error
-        // State 201
         0, // on (BitOperator BitValue), error
         0, // on (BitOperator BitValue)+, error
         0, // on @L, error
@@ -10941,7 +12322,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -10949,7 +12329,7 @@ mod __parse__Program {
         0, // on FactDataApply, error
         0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        0, // on Identifier, error
+        148, // on Identifier, goto 147
         0, // on Item, error
         0, // on Item+, error
         0, // on Operator, error
@@ -10958,7 +12338,42 @@ mod __parse__Program {
         0, // on Rule, error
         0, // on Value, error
         0, // on ValueKind, error
-        0, // on Variable, error
+        243, // on Variable, goto 242
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 201
+        0, // on (BitOperator BitValue), error
+        152, // on (BitOperator BitValue)+, goto 151
+        0, // on @L, error
+        0, // on @R, error
+        153, // on Application, goto 152
+        154, // on ApplicationBits, goto 153
+        155, // on Atom, goto 154
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        156, // on BitOperator, goto 155
+        0, // on BitOperator?, error
+        157, // on BitValue, goto 156
+        0, // on BitValue?, error
+        244, // on Fact<FactData>, goto 243
+        159, // on Fact<FactDataAnd>, goto 158
+        0, // on Fact<FactDataFunc>, error
+        160, // on Fact<FactDataOr>, goto 159
+        161, // on FactData, goto 160
+        162, // on FactDataAnd, goto 161
+        163, // on FactDataApply, goto 162
+        164, // on FactDataFunc, goto 163
+        165, // on FactDataOr, goto 164
+        166, // on Identifier, goto 165
+        0, // on Item, error
+        0, // on Item+, error
+        167, // on Operator, goto 166
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        168, // on Value, goto 167
+        169, // on ValueKind, goto 168
+        170, // on Variable, goto 169
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 202
@@ -10977,7 +12392,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -11007,13 +12421,12 @@ mod __parse__Program {
         0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        0, // on BitOperator, error
+        245, // on BitOperator, goto 244
         0, // on BitOperator?, error
         0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -11024,7 +12437,7 @@ mod __parse__Program {
         0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        0, // on Operator, error
+        219, // on Operator, goto 218
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
@@ -11049,7 +12462,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -11085,7 +12497,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -11121,7 +12532,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -11143,74 +12553,72 @@ mod __parse__Program {
         0, // on __Program, error
         // State 207
         0, // on (BitOperator BitValue), error
-        163, // on (BitOperator BitValue)+, goto 162
+        0, // on (BitOperator BitValue)+, error
         0, // on @L, error
         0, // on @R, error
-        164, // on Application, goto 163
-        165, // on ApplicationBits, goto 164
-        166, // on Atom, goto 165
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        207, // on Atom, goto 206
         0, // on BitApplication, error
         0, // on BitApplications, error
-        167, // on BitOperator, goto 166
+        0, // on BitOperator, error
         0, // on BitOperator?, error
-        168, // on BitValue, goto 167
+        246, // on BitValue, goto 245
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        169, // on Fact<FactDataApply>, goto 168
-        210, // on Fact<FactDataFunc>, goto 209
+        0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
         0, // on FactDataAnd, error
-        171, // on FactDataApply, goto 170
-        172, // on FactDataFunc, goto 171
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        173, // on Identifier, goto 172
+        247, // on Identifier, goto 246
         0, // on Item, error
         0, // on Item+, error
-        174, // on Operator, goto 173
+        0, // on Operator, error
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        175, // on Value, goto 174
-        176, // on ValueKind, goto 175
-        177, // on Variable, goto 176
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 208
         0, // on (BitOperator BitValue), error
-        163, // on (BitOperator BitValue)+, goto 162
+        249, // on (BitOperator BitValue)+, goto 248
         0, // on @L, error
         0, // on @R, error
-        164, // on Application, goto 163
-        165, // on ApplicationBits, goto 164
-        166, // on Atom, goto 165
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
         0, // on BitApplication, error
         0, // on BitApplications, error
-        167, // on BitOperator, goto 166
+        250, // on BitOperator, goto 249
         0, // on BitOperator?, error
-        168, // on BitValue, goto 167
+        0, // on BitValue, error
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        169, // on Fact<FactDataApply>, goto 168
-        211, // on Fact<FactDataFunc>, goto 210
+        0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
         0, // on FactDataAnd, error
-        171, // on FactDataApply, goto 170
-        172, // on FactDataFunc, goto 171
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
         0, // on FactDataOr, error
-        173, // on Identifier, goto 172
+        0, // on Identifier, error
         0, // on Item, error
         0, // on Item+, error
-        174, // on Operator, goto 173
+        31, // on Operator, goto 30
         0, // on OperatorValue, error
         0, // on Program, error
         0, // on Rule, error
-        175, // on Value, goto 174
-        176, // on ValueKind, goto 175
-        177, // on Variable, goto 176
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
         0, // on Vec1<BitApplication>, error
         0, // on __Program, error
         // State 209
@@ -11229,7 +12637,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -11265,7 +12672,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -11301,7 +12707,6 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -11337,7 +12742,2736 @@ mod __parse__Program {
         0, // on BitValue?, error
         0, // on Fact<FactData>, error
         0, // on Fact<FactDataAnd>, error
-        0, // on Fact<FactDataApply>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 213
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 214
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 215
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 216
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 217
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 218
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 219
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 220
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 221
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 222
+        0, // on (BitOperator BitValue), error
+        36, // on (BitOperator BitValue)+, goto 35
+        0, // on @L, error
+        0, // on @R, error
+        255, // on Application, goto 254
+        38, // on ApplicationBits, goto 37
+        39, // on Atom, goto 38
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        40, // on BitOperator, goto 39
+        0, // on BitOperator?, error
+        41, // on BitValue, goto 40
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        42, // on Identifier, goto 41
+        0, // on Item, error
+        0, // on Item+, error
+        43, // on Operator, goto 42
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        44, // on Value, goto 43
+        45, // on ValueKind, goto 44
+        46, // on Variable, goto 45
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 223
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 224
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 225
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 226
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 227
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 228
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 229
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 230
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 231
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 232
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 233
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        155, // on Atom, goto 154
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        233, // on BitValue, goto 232
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        191, // on Identifier, goto 190
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        168, // on Value, goto 167
+        169, // on ValueKind, goto 168
+        170, // on Variable, goto 169
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 234
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 235
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 236
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 237
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 238
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 239
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 240
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 241
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 242
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 243
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 244
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        265, // on BitValue, goto 264
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        247, // on Identifier, goto 246
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 245
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 246
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 247
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 248
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        266, // on BitOperator, goto 265
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 249
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        246, // on BitValue, goto 245
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        247, // on Identifier, goto 246
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 250
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 251
+        0, // on (BitOperator BitValue), error
+        204, // on (BitOperator BitValue)+, goto 203
+        0, // on @L, error
+        0, // on @R, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        208, // on BitOperator, goto 207
+        0, // on BitOperator?, error
+        209, // on BitValue, goto 208
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        267, // on Fact<FactDataOr>, goto 266
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        268, // on FactDataOr, goto 267
+        218, // on Identifier, goto 217
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 252
+        0, // on (BitOperator BitValue), error
+        204, // on (BitOperator BitValue)+, goto 203
+        0, // on @L, error
+        0, // on @R, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        208, // on BitOperator, goto 207
+        0, // on BitOperator?, error
+        209, // on BitValue, goto 208
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        269, // on Fact<FactDataFunc>, goto 268
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        215, // on FactDataApply, goto 214
+        270, // on FactDataFunc, goto 269
+        0, // on FactDataOr, error
+        218, // on Identifier, goto 217
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 253
+        0, // on (BitOperator BitValue), error
+        83, // on (BitOperator BitValue)+, goto 82
+        0, // on @L, error
+        0, // on @R, error
+        84, // on Application, goto 83
+        85, // on ApplicationBits, goto 84
+        86, // on Atom, goto 85
+        87, // on BitApplication, goto 86
+        271, // on BitApplications, goto 270
+        89, // on BitOperator, goto 88
+        0, // on BitOperator?, error
+        90, // on BitValue, goto 89
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        91, // on Identifier, goto 90
+        0, // on Item, error
+        0, // on Item+, error
+        92, // on Operator, goto 91
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        93, // on Value, goto 92
+        94, // on ValueKind, goto 93
+        95, // on Variable, goto 94
+        96, // on Vec1<BitApplication>, goto 95
+        0, // on __Program, error
+        // State 254
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 255
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        148, // on Identifier, goto 147
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        273, // on Variable, goto 272
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 256
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        148, // on Identifier, goto 147
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        274, // on Variable, goto 273
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 257
+        0, // on (BitOperator BitValue), error
+        152, // on (BitOperator BitValue)+, goto 151
+        0, // on @L, error
+        0, // on @R, error
+        153, // on Application, goto 152
+        154, // on ApplicationBits, goto 153
+        155, // on Atom, goto 154
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        156, // on BitOperator, goto 155
+        0, // on BitOperator?, error
+        157, // on BitValue, goto 156
+        0, // on BitValue?, error
+        275, // on Fact<FactData>, goto 274
+        159, // on Fact<FactDataAnd>, goto 158
+        0, // on Fact<FactDataFunc>, error
+        160, // on Fact<FactDataOr>, goto 159
+        161, // on FactData, goto 160
+        162, // on FactDataAnd, goto 161
+        163, // on FactDataApply, goto 162
+        164, // on FactDataFunc, goto 163
+        165, // on FactDataOr, goto 164
+        166, // on Identifier, goto 165
+        0, // on Item, error
+        0, // on Item+, error
+        167, // on Operator, goto 166
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        168, // on Value, goto 167
+        169, // on ValueKind, goto 168
+        170, // on Variable, goto 169
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 258
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 259
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 260
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 261
+        0, // on (BitOperator BitValue), error
+        204, // on (BitOperator BitValue)+, goto 203
+        0, // on @L, error
+        0, // on @R, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        208, // on BitOperator, goto 207
+        0, // on BitOperator?, error
+        209, // on BitValue, goto 208
+        0, // on BitValue?, error
+        276, // on Fact<FactData>, goto 275
+        211, // on Fact<FactDataAnd>, goto 210
+        0, // on Fact<FactDataFunc>, error
+        212, // on Fact<FactDataOr>, goto 211
+        213, // on FactData, goto 212
+        214, // on FactDataAnd, goto 213
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        217, // on FactDataOr, goto 216
+        218, // on Identifier, goto 217
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 262
+        0, // on (BitOperator BitValue), error
+        204, // on (BitOperator BitValue)+, goto 203
+        0, // on @L, error
+        0, // on @R, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        208, // on BitOperator, goto 207
+        0, // on BitOperator?, error
+        209, // on BitValue, goto 208
+        0, // on BitValue?, error
+        277, // on Fact<FactData>, goto 276
+        211, // on Fact<FactDataAnd>, goto 210
+        0, // on Fact<FactDataFunc>, error
+        212, // on Fact<FactDataOr>, goto 211
+        213, // on FactData, goto 212
+        214, // on FactDataAnd, goto 213
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        217, // on FactDataOr, goto 216
+        218, // on Identifier, goto 217
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 263
+        0, // on (BitOperator BitValue), error
+        204, // on (BitOperator BitValue)+, goto 203
+        0, // on @L, error
+        0, // on @R, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        208, // on BitOperator, goto 207
+        0, // on BitOperator?, error
+        209, // on BitValue, goto 208
+        0, // on BitValue?, error
+        278, // on Fact<FactData>, goto 277
+        211, // on Fact<FactDataAnd>, goto 210
+        0, // on Fact<FactDataFunc>, error
+        212, // on Fact<FactDataOr>, goto 211
+        213, // on FactData, goto 212
+        214, // on FactDataAnd, goto 213
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        217, // on FactDataOr, goto 216
+        218, // on Identifier, goto 217
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 264
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 265
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        265, // on BitValue, goto 264
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        247, // on Identifier, goto 246
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 266
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 267
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 268
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 269
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 270
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 271
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 272
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 273
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 274
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 275
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 276
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 277
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 278
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 279
+        0, // on (BitOperator BitValue), error
+        204, // on (BitOperator BitValue)+, goto 203
+        0, // on @L, error
+        0, // on @R, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        208, // on BitOperator, goto 207
+        0, // on BitOperator?, error
+        209, // on BitValue, goto 208
+        0, // on BitValue?, error
+        286, // on Fact<FactData>, goto 285
+        211, // on Fact<FactDataAnd>, goto 210
+        0, // on Fact<FactDataFunc>, error
+        212, // on Fact<FactDataOr>, goto 211
+        213, // on FactData, goto 212
+        214, // on FactDataAnd, goto 213
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        217, // on FactDataOr, goto 216
+        218, // on Identifier, goto 217
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 280
+        0, // on (BitOperator BitValue), error
+        204, // on (BitOperator BitValue)+, goto 203
+        0, // on @L, error
+        0, // on @R, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        208, // on BitOperator, goto 207
+        0, // on BitOperator?, error
+        209, // on BitValue, goto 208
+        0, // on BitValue?, error
+        287, // on Fact<FactData>, goto 286
+        211, // on Fact<FactDataAnd>, goto 210
+        0, // on Fact<FactDataFunc>, error
+        212, // on Fact<FactDataOr>, goto 211
+        213, // on FactData, goto 212
+        214, // on FactDataAnd, goto 213
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        217, // on FactDataOr, goto 216
+        218, // on Identifier, goto 217
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 281
+        0, // on (BitOperator BitValue), error
+        204, // on (BitOperator BitValue)+, goto 203
+        0, // on @L, error
+        0, // on @R, error
+        205, // on Application, goto 204
+        206, // on ApplicationBits, goto 205
+        207, // on Atom, goto 206
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        208, // on BitOperator, goto 207
+        0, // on BitOperator?, error
+        209, // on BitValue, goto 208
+        0, // on BitValue?, error
+        288, // on Fact<FactData>, goto 287
+        211, // on Fact<FactDataAnd>, goto 210
+        0, // on Fact<FactDataFunc>, error
+        212, // on Fact<FactDataOr>, goto 211
+        213, // on FactData, goto 212
+        214, // on FactDataAnd, goto 213
+        215, // on FactDataApply, goto 214
+        216, // on FactDataFunc, goto 215
+        217, // on FactDataOr, goto 216
+        218, // on Identifier, goto 217
+        0, // on Item, error
+        0, // on Item+, error
+        219, // on Operator, goto 218
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        220, // on Value, goto 219
+        221, // on ValueKind, goto 220
+        222, // on Variable, goto 221
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 282
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 283
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 284
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 285
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 286
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 287
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 288
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 289
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
+        0, // on Fact<FactDataFunc>, error
+        0, // on Fact<FactDataOr>, error
+        0, // on FactData, error
+        0, // on FactDataAnd, error
+        0, // on FactDataApply, error
+        0, // on FactDataFunc, error
+        0, // on FactDataOr, error
+        0, // on Identifier, error
+        0, // on Item, error
+        0, // on Item+, error
+        0, // on Operator, error
+        0, // on OperatorValue, error
+        0, // on Program, error
+        0, // on Rule, error
+        0, // on Value, error
+        0, // on ValueKind, error
+        0, // on Variable, error
+        0, // on Vec1<BitApplication>, error
+        0, // on __Program, error
+        // State 290
+        0, // on (BitOperator BitValue), error
+        0, // on (BitOperator BitValue)+, error
+        0, // on @L, error
+        0, // on @R, error
+        0, // on Application, error
+        0, // on ApplicationBits, error
+        0, // on Atom, error
+        0, // on BitApplication, error
+        0, // on BitApplications, error
+        0, // on BitOperator, error
+        0, // on BitOperator?, error
+        0, // on BitValue, error
+        0, // on BitValue?, error
+        0, // on Fact<FactData>, error
+        0, // on Fact<FactDataAnd>, error
         0, // on Fact<FactDataFunc>, error
         0, // on Fact<FactDataOr>, error
         0, // on FactData, error
@@ -11389,6 +15523,7 @@ mod __parse__Program {
                 (_, (12, _), _) if true => 12,
                 (_, (13, _), _) if true => 13,
                 (_, (14, _), _) if true => 14,
+                (_, (15, _), _) if true => 15,
                 _ => {
                     return Err(__lalrpop_util::ParseError::UnrecognizedToken {
                         token: Some(__lookahead),
@@ -11398,7 +15533,7 @@ mod __parse__Program {
             };
             loop {
                 let __state = *__states.last().unwrap() as usize;
-                let __action = __ACTION[__state * 15 + __integer];
+                let __action = __ACTION[__state * 16 + __integer];
                 if __action > 0 {
                     let __symbol = match __integer {
                         0 => match __lookahead.1 {
@@ -11446,19 +15581,23 @@ mod __parse__Program {
                             _ => unreachable!(),
                         },
                         11 => match __lookahead.1 {
-                            (11, __tok0) => __Symbol::Termr_23_22_5c_27_5b_5e_5c_27_5d_2b_5c_27_22_23(__tok0),
+                            (11, __tok0) => __Symbol::Term_22implies_22(__tok0),
                             _ => unreachable!(),
                         },
                         12 => match __lookahead.1 {
-                            (12, __tok0) => __Symbol::Termr_23_22_5b_2d_7c_21_40_23_24_25_5e_26_2a_3d_2b_2f_3a_3f_7e_3c_3e_5d_2b_22_23(__tok0),
+                            (12, __tok0) => __Symbol::Termr_23_22_5c_27_5b_5e_5c_27_5d_2b_5c_27_22_23(__tok0),
                             _ => unreachable!(),
                         },
                         13 => match __lookahead.1 {
-                            (13, __tok0) => __Symbol::Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_22_23(__tok0),
+                            (13, __tok0) => __Symbol::Termr_23_22_5b_2d_7c_21_40_23_24_25_5e_26_2a_3d_2b_2f_3a_3f_7e_3c_3e_5d_2b_22_23(__tok0),
                             _ => unreachable!(),
                         },
                         14 => match __lookahead.1 {
-                            (14, __tok0) => __Symbol::Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_3a_22_23(__tok0),
+                            (14, __tok0) => __Symbol::Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_22_23(__tok0),
+                            _ => unreachable!(),
+                        },
+                        15 => match __lookahead.1 {
+                            (15, __tok0) => __Symbol::Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_3a_22_23(__tok0),
                             _ => unreachable!(),
                         },
                         _ => unreachable!(),
@@ -11518,56 +15657,56 @@ mod __parse__Program {
                 0
             }
             2 => {
-                // (BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(54);
+                // (BitOperator BitValue)+ = BitOperator, BitValue => ActionFn(53);
                 let __sym1 = __pop_NtBitValue(__symbols);
                 let __sym0 = __pop_NtBitOperator(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym1.2.clone();
-                let __nt = super::__action54::<>(input, __sym0, __sym1);
+                let __nt = super::__action53::<>(input, __sym0, __sym1);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
                 __symbols.push((__start, __Symbol::Nt_28BitOperator_20BitValue_29_2b(__nt), __end));
                 1
             }
             3 => {
-                // (BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(55);
+                // (BitOperator BitValue)+ = (BitOperator BitValue)+, BitOperator, BitValue => ActionFn(54);
                 let __sym2 = __pop_NtBitValue(__symbols);
                 let __sym1 = __pop_NtBitOperator(__symbols);
                 let __sym0 = __pop_Nt_28BitOperator_20BitValue_29_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym2.2.clone();
-                let __nt = super::__action55::<>(input, __sym0, __sym1, __sym2);
+                let __nt = super::__action54::<>(input, __sym0, __sym1, __sym2);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
                 __symbols.push((__start, __Symbol::Nt_28BitOperator_20BitValue_29_2b(__nt), __end));
                 1
             }
             4 => {
-                // @L =  => ActionFn(51);
+                // @L =  => ActionFn(50);
                 let __start = __symbols.last().map(|s| s.2.clone()).unwrap_or_default();
                 let __end = __lookahead_start.cloned().unwrap_or_else(|| __start.clone());
-                let __nt = super::__action51::<>(input, &__start, &__end);
+                let __nt = super::__action50::<>(input, &__start, &__end);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 0);
                 __symbols.push((__start, __Symbol::Nt_40L(__nt), __end));
                 2
             }
             5 => {
-                // @R =  => ActionFn(49);
+                // @R =  => ActionFn(48);
                 let __start = __symbols.last().map(|s| s.2.clone()).unwrap_or_default();
                 let __end = __lookahead_start.cloned().unwrap_or_else(|| __start.clone());
-                let __nt = super::__action49::<>(input, &__start, &__end);
+                let __nt = super::__action48::<>(input, &__start, &__end);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 0);
                 __symbols.push((__start, __Symbol::Nt_40R(__nt), __end));
                 3
             }
             6 => {
-                // Application = ApplicationBits => ActionFn(68);
+                // Application = ApplicationBits => ActionFn(66);
                 let __sym0 = __pop_NtApplicationBits(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action68::<>(input, __sym0);
+                let __nt = super::__action66::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtApplication(__nt), __end));
@@ -11596,62 +15735,62 @@ mod __parse__Program {
                 5
             }
             9 => {
-                // ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(82);
+                // ApplicationBits = BitValue, (BitOperator BitValue)+, BitOperator => ActionFn(79);
                 let __sym2 = __pop_NtBitOperator(__symbols);
                 let __sym1 = __pop_Nt_28BitOperator_20BitValue_29_2b(__symbols);
                 let __sym0 = __pop_NtBitValue(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym2.2.clone();
-                let __nt = super::__action82::<>(input, __sym0, __sym1, __sym2);
+                let __nt = super::__action79::<>(input, __sym0, __sym1, __sym2);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
                 __symbols.push((__start, __Symbol::NtApplicationBits(__nt), __end));
                 5
             }
             10 => {
-                // ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(83);
+                // ApplicationBits = (BitOperator BitValue)+, BitOperator => ActionFn(80);
                 let __sym1 = __pop_NtBitOperator(__symbols);
                 let __sym0 = __pop_Nt_28BitOperator_20BitValue_29_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym1.2.clone();
-                let __nt = super::__action83::<>(input, __sym0, __sym1);
+                let __nt = super::__action80::<>(input, __sym0, __sym1);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
                 __symbols.push((__start, __Symbol::NtApplicationBits(__nt), __end));
                 5
             }
             11 => {
-                // ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(84);
+                // ApplicationBits = BitValue, (BitOperator BitValue)+ => ActionFn(81);
                 let __sym1 = __pop_Nt_28BitOperator_20BitValue_29_2b(__symbols);
                 let __sym0 = __pop_NtBitValue(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym1.2.clone();
-                let __nt = super::__action84::<>(input, __sym0, __sym1);
+                let __nt = super::__action81::<>(input, __sym0, __sym1);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
                 __symbols.push((__start, __Symbol::NtApplicationBits(__nt), __end));
                 5
             }
             12 => {
-                // ApplicationBits = (BitOperator BitValue)+ => ActionFn(85);
+                // ApplicationBits = (BitOperator BitValue)+ => ActionFn(82);
                 let __sym0 = __pop_Nt_28BitOperator_20BitValue_29_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action85::<>(input, __sym0);
+                let __nt = super::__action82::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtApplicationBits(__nt), __end));
                 5
             }
             13 => {
-                // ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(69);
+                // ApplicationBits = Identifier, "(", BitApplications, ")" => ActionFn(67);
                 let __sym3 = __pop_Term_22_29_22(__symbols);
                 let __sym2 = __pop_NtBitApplications(__symbols);
                 let __sym1 = __pop_Term_22_28_22(__symbols);
                 let __sym0 = __pop_NtIdentifier(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym3.2.clone();
-                let __nt = super::__action69::<>(input, __sym0, __sym1, __sym2, __sym3);
+                let __nt = super::__action67::<>(input, __sym0, __sym1, __sym2, __sym3);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 4);
                 __symbols.push((__start, __Symbol::NtApplicationBits(__nt), __end));
@@ -11669,11 +15808,11 @@ mod __parse__Program {
                 6
             }
             15 => {
-                // BitApplication = Application => ActionFn(70);
+                // BitApplication = Application => ActionFn(68);
                 let __sym0 = __pop_NtApplication(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action70::<>(input, __sym0);
+                let __nt = super::__action68::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtBitApplication(__nt), __end));
@@ -11691,11 +15830,11 @@ mod __parse__Program {
                 8
             }
             17 => {
-                // BitOperator = Operator => ActionFn(71);
+                // BitOperator = Operator => ActionFn(69);
                 let __sym0 = __pop_NtOperator(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action71::<>(input, __sym0);
+                let __nt = super::__action69::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtBitOperator(__nt), __end));
@@ -11723,11 +15862,11 @@ mod __parse__Program {
                 10
             }
             20 => {
-                // BitValue = Value => ActionFn(72);
+                // BitValue = Value => ActionFn(70);
                 let __sym0 = __pop_NtValue(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action72::<>(input, __sym0);
+                let __nt = super::__action70::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtBitValue(__nt), __end));
@@ -11755,61 +15894,50 @@ mod __parse__Program {
                 12
             }
             23 => {
-                // Fact<FactData> = FactData => ActionFn(73);
+                // Fact<FactData> = FactData => ActionFn(71);
                 let __sym0 = __pop_NtFactData(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action73::<>(input, __sym0);
+                let __nt = super::__action71::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFact_3cFactData_3e(__nt), __end));
                 13
             }
             24 => {
-                // Fact<FactDataAnd> = FactDataAnd => ActionFn(74);
+                // Fact<FactDataAnd> = FactDataAnd => ActionFn(72);
                 let __sym0 = __pop_NtFactDataAnd(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action74::<>(input, __sym0);
+                let __nt = super::__action72::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFact_3cFactDataAnd_3e(__nt), __end));
                 14
             }
             25 => {
-                // Fact<FactDataApply> = FactDataApply => ActionFn(75);
-                let __sym0 = __pop_NtFactDataApply(__symbols);
-                let __start = __sym0.0.clone();
-                let __end = __sym0.2.clone();
-                let __nt = super::__action75::<>(input, __sym0);
-                let __states_len = __states.len();
-                __states.truncate(__states_len - 1);
-                __symbols.push((__start, __Symbol::NtFact_3cFactDataApply_3e(__nt), __end));
-                15
-            }
-            26 => {
-                // Fact<FactDataFunc> = FactDataFunc => ActionFn(76);
+                // Fact<FactDataFunc> = FactDataFunc => ActionFn(73);
                 let __sym0 = __pop_NtFactDataFunc(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action76::<>(input, __sym0);
+                let __nt = super::__action73::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFact_3cFactDataFunc_3e(__nt), __end));
-                16
+                15
             }
-            27 => {
-                // Fact<FactDataOr> = FactDataOr => ActionFn(77);
+            26 => {
+                // Fact<FactDataOr> = FactDataOr => ActionFn(74);
                 let __sym0 = __pop_NtFactDataOr(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action77::<>(input, __sym0);
+                let __nt = super::__action74::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFact_3cFactDataOr_3e(__nt), __end));
-                17
+                16
             }
-            28 => {
+            27 => {
                 // FactData = FactDataAnd => ActionFn(5);
                 let __sym0 = __pop_NtFactDataAnd(__symbols);
                 let __start = __sym0.0.clone();
@@ -11818,9 +15946,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFactData(__nt), __end));
-                18
+                17
             }
-            29 => {
+            28 => {
                 // FactDataAnd = FactDataOr => ActionFn(6);
                 let __sym0 = __pop_NtFactDataOr(__symbols);
                 let __start = __sym0.0.clone();
@@ -11829,12 +15957,12 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFactDataAnd(__nt), __end));
-                19
+                18
             }
-            30 => {
-                // FactDataAnd = Fact<FactDataAnd>, ";", Fact<FactDataOr> => ActionFn(7);
+            29 => {
+                // FactDataAnd = Fact<FactDataAnd>, ",", Fact<FactDataOr> => ActionFn(7);
                 let __sym2 = __pop_NtFact_3cFactDataOr_3e(__symbols);
-                let __sym1 = __pop_Term_22_3b_22(__symbols);
+                let __sym1 = __pop_Term_22_2c_22(__symbols);
                 let __sym0 = __pop_NtFact_3cFactDataAnd_3e(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym2.2.clone();
@@ -11842,9 +15970,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
                 __symbols.push((__start, __Symbol::NtFactDataAnd(__nt), __end));
-                19
+                18
             }
-            31 => {
+            30 => {
                 // FactDataApply = Application => ActionFn(14);
                 let __sym0 = __pop_NtApplication(__symbols);
                 let __start = __sym0.0.clone();
@@ -11853,9 +15981,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFactDataApply(__nt), __end));
-                20
+                19
             }
-            32 => {
+            31 => {
                 // FactDataFunc = FactDataApply => ActionFn(10);
                 let __sym0 = __pop_NtFactDataApply(__symbols);
                 let __start = __sym0.0.clone();
@@ -11864,25 +15992,28 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFactDataFunc(__nt), __end));
-                21
+                20
+            }
+            32 => {
+                // FactDataFunc = "implies", "(", Fact<FactData>, "=>", Fact<FactData>, ")" => ActionFn(11);
+                let __sym5 = __pop_Term_22_29_22(__symbols);
+                let __sym4 = __pop_NtFact_3cFactData_3e(__symbols);
+                let __sym3 = __pop_Term_22_3d_3e_22(__symbols);
+                let __sym2 = __pop_NtFact_3cFactData_3e(__symbols);
+                let __sym1 = __pop_Term_22_28_22(__symbols);
+                let __sym0 = __pop_Term_22implies_22(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym5.2.clone();
+                let __nt = super::__action11::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+                let __states_len = __states.len();
+                __states.truncate(__states_len - 6);
+                __symbols.push((__start, __Symbol::NtFactDataFunc(__nt), __end));
+                20
             }
             33 => {
-                // FactDataFunc = Fact<FactDataApply>, "=>", Fact<FactDataFunc> => ActionFn(11);
-                let __sym2 = __pop_NtFact_3cFactDataFunc_3e(__symbols);
-                let __sym1 = __pop_Term_22_3d_3e_22(__symbols);
-                let __sym0 = __pop_NtFact_3cFactDataApply_3e(__symbols);
-                let __start = __sym0.0.clone();
-                let __end = __sym2.2.clone();
-                let __nt = super::__action11::<>(input, __sym0, __sym1, __sym2);
-                let __states_len = __states.len();
-                __states.truncate(__states_len - 3);
-                __symbols.push((__start, __Symbol::NtFactDataFunc(__nt), __end));
-                21
-            }
-            34 => {
-                // FactDataFunc = "exists", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(12);
+                // FactDataFunc = "exists", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(12);
                 let __sym5 = __pop_Term_22_29_22(__symbols);
-                let __sym4 = __pop_NtFact_3cFactDataFunc_3e(__symbols);
+                let __sym4 = __pop_NtFact_3cFactData_3e(__symbols);
                 let __sym3 = __pop_Term_22_2d_3e_22(__symbols);
                 let __sym2 = __pop_NtVariable(__symbols);
                 let __sym1 = __pop_Term_22_28_22(__symbols);
@@ -11893,12 +16024,12 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 6);
                 __symbols.push((__start, __Symbol::NtFactDataFunc(__nt), __end));
-                21
+                20
             }
-            35 => {
-                // FactDataFunc = "forall", "(", Variable, "->", Fact<FactDataFunc>, ")" => ActionFn(13);
+            34 => {
+                // FactDataFunc = "forall", "(", Variable, "->", Fact<FactData>, ")" => ActionFn(13);
                 let __sym5 = __pop_Term_22_29_22(__symbols);
-                let __sym4 = __pop_NtFact_3cFactDataFunc_3e(__symbols);
+                let __sym4 = __pop_NtFact_3cFactData_3e(__symbols);
                 let __sym3 = __pop_Term_22_2d_3e_22(__symbols);
                 let __sym2 = __pop_NtVariable(__symbols);
                 let __sym1 = __pop_Term_22_28_22(__symbols);
@@ -11909,9 +16040,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 6);
                 __symbols.push((__start, __Symbol::NtFactDataFunc(__nt), __end));
-                21
+                20
             }
-            36 => {
+            35 => {
                 // FactDataOr = FactDataFunc => ActionFn(8);
                 let __sym0 = __pop_NtFactDataFunc(__symbols);
                 let __start = __sym0.0.clone();
@@ -11920,12 +16051,12 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtFactDataOr(__nt), __end));
-                22
+                21
             }
-            37 => {
-                // FactDataOr = Fact<FactDataOr>, ",", Fact<FactDataFunc> => ActionFn(9);
+            36 => {
+                // FactDataOr = Fact<FactDataOr>, ";", Fact<FactDataFunc> => ActionFn(9);
                 let __sym2 = __pop_NtFact_3cFactDataFunc_3e(__symbols);
-                let __sym1 = __pop_Term_22_2c_22(__symbols);
+                let __sym1 = __pop_Term_22_3b_22(__symbols);
                 let __sym0 = __pop_NtFact_3cFactDataOr_3e(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym2.2.clone();
@@ -11933,9 +16064,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
                 __symbols.push((__start, __Symbol::NtFactDataOr(__nt), __end));
-                22
+                21
             }
-            38 => {
+            37 => {
                 // Identifier = r#"[A-Za-z][A-Za-z0-9_]*"# => ActionFn(34);
                 let __sym0 = __pop_Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_22_23(__symbols);
                 let __start = __sym0.0.clone();
@@ -11944,9 +16075,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtIdentifier(__nt), __end));
-                23
+                22
             }
-            39 => {
+            38 => {
                 // Item = Application, "." => ActionFn(2);
                 let __sym1 = __pop_Term_22_2e_22(__symbols);
                 let __sym0 = __pop_NtApplication(__symbols);
@@ -11956,9 +16087,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
                 __symbols.push((__start, __Symbol::NtItem(__nt), __end));
-                24
+                23
             }
-            40 => {
+            39 => {
                 // Item = Rule => ActionFn(3);
                 let __sym0 = __pop_NtRule(__symbols);
                 let __start = __sym0.0.clone();
@@ -11967,32 +16098,32 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtItem(__nt), __end));
-                24
+                23
             }
-            41 => {
-                // Item+ = Item => ActionFn(52);
+            40 => {
+                // Item+ = Item => ActionFn(51);
                 let __sym0 = __pop_NtItem(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action52::<>(input, __sym0);
+                let __nt = super::__action51::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtItem_2b(__nt), __end));
-                25
+                24
             }
-            42 => {
-                // Item+ = Item+, Item => ActionFn(53);
+            41 => {
+                // Item+ = Item+, Item => ActionFn(52);
                 let __sym1 = __pop_NtItem(__symbols);
                 let __sym0 = __pop_NtItem_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym1.2.clone();
-                let __nt = super::__action53::<>(input, __sym0, __sym1);
+                let __nt = super::__action52::<>(input, __sym0, __sym1);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
                 __symbols.push((__start, __Symbol::NtItem_2b(__nt), __end));
-                25
+                24
             }
-            43 => {
+            42 => {
                 // Operator = r#"[A-Za-z][A-Za-z0-9_]*:"# => ActionFn(24);
                 let __sym0 = __pop_Termr_23_22_5bA_2dZa_2dz_5d_5bA_2dZa_2dz0_2d9___5d_2a_3a_22_23(__symbols);
                 let __start = __sym0.0.clone();
@@ -12001,9 +16132,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtOperator(__nt), __end));
-                26
+                25
             }
-            44 => {
+            43 => {
                 // Operator = r#"[-|!@#$%^&*=+/:?~<>]+"# => ActionFn(25);
                 let __sym0 = __pop_Termr_23_22_5b_2d_7c_21_40_23_24_25_5e_26_2a_3d_2b_2f_3a_3f_7e_3c_3e_5d_2b_22_23(__symbols);
                 let __start = __sym0.0.clone();
@@ -12012,9 +16143,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtOperator(__nt), __end));
-                26
+                25
             }
-            45 => {
+            44 => {
                 // OperatorValue = Operator, Value => ActionFn(22);
                 let __sym1 = __pop_NtValue(__symbols);
                 let __sym0 = __pop_NtOperator(__symbols);
@@ -12024,9 +16155,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
                 __symbols.push((__start, __Symbol::NtOperatorValue(__nt), __end));
-                27
+                26
             }
-            46 => {
+            45 => {
                 // Program = Item+ => ActionFn(1);
                 let __sym0 = __pop_NtItem_2b(__symbols);
                 let __start = __sym0.0.clone();
@@ -12035,34 +16166,34 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtProgram(__nt), __end));
-                28
+                27
             }
-            47 => {
-                // Rule = Application, ":-", Fact<FactData>, "." => ActionFn(78);
+            46 => {
+                // Rule = Application, ":-", Fact<FactData>, "." => ActionFn(75);
                 let __sym3 = __pop_Term_22_2e_22(__symbols);
                 let __sym2 = __pop_NtFact_3cFactData_3e(__symbols);
                 let __sym1 = __pop_Term_22_3a_2d_22(__symbols);
                 let __sym0 = __pop_NtApplication(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym3.2.clone();
-                let __nt = super::__action78::<>(input, __sym0, __sym1, __sym2, __sym3);
+                let __nt = super::__action75::<>(input, __sym0, __sym1, __sym2, __sym3);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 4);
                 __symbols.push((__start, __Symbol::NtRule(__nt), __end));
-                29
+                28
             }
-            48 => {
-                // Value = ValueKind => ActionFn(79);
+            47 => {
+                // Value = ValueKind => ActionFn(76);
                 let __sym0 = __pop_NtValueKind(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action79::<>(input, __sym0);
+                let __nt = super::__action76::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtValue(__nt), __end));
-                30
+                29
             }
-            49 => {
+            48 => {
                 // ValueKind = Atom => ActionFn(28);
                 let __sym0 = __pop_NtAtom(__symbols);
                 let __start = __sym0.0.clone();
@@ -12071,9 +16202,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtValueKind(__nt), __end));
-                31
+                30
             }
-            50 => {
+            49 => {
                 // ValueKind = Variable => ActionFn(29);
                 let __sym0 = __pop_NtVariable(__symbols);
                 let __start = __sym0.0.clone();
@@ -12082,9 +16213,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtValueKind(__nt), __end));
-                31
+                30
             }
-            51 => {
+            50 => {
                 // ValueKind = "(", Application, ")" => ActionFn(30);
                 let __sym2 = __pop_Term_22_29_22(__symbols);
                 let __sym1 = __pop_NtApplication(__symbols);
@@ -12095,9 +16226,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
                 __symbols.push((__start, __Symbol::NtValueKind(__nt), __end));
-                31
+                30
             }
-            52 => {
+            51 => {
                 // ValueKind = "_" => ActionFn(31);
                 let __sym0 = __pop_Term_22___22(__symbols);
                 let __start = __sym0.0.clone();
@@ -12106,9 +16237,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtValueKind(__nt), __end));
-                31
+                30
             }
-            53 => {
+            52 => {
                 // Variable = Identifier => ActionFn(33);
                 let __sym0 = __pop_NtIdentifier(__symbols);
                 let __start = __sym0.0.clone();
@@ -12117,9 +16248,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtVariable(__nt), __end));
-                32
+                31
             }
-            54 => {
+            53 => {
                 // Vec1<BitApplication> = BitApplication => ActionFn(35);
                 let __sym0 = __pop_NtBitApplication(__symbols);
                 let __start = __sym0.0.clone();
@@ -12128,9 +16259,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
                 __symbols.push((__start, __Symbol::NtVec1_3cBitApplication_3e(__nt), __end));
-                33
+                32
             }
-            55 => {
+            54 => {
                 // Vec1<BitApplication> = Vec1<BitApplication>, "," => ActionFn(36);
                 let __sym1 = __pop_Term_22_2c_22(__symbols);
                 let __sym0 = __pop_NtVec1_3cBitApplication_3e(__symbols);
@@ -12140,9 +16271,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
                 __symbols.push((__start, __Symbol::NtVec1_3cBitApplication_3e(__nt), __end));
-                33
+                32
             }
-            56 => {
+            55 => {
                 // Vec1<BitApplication> = Vec1<BitApplication>, ",", BitApplication => ActionFn(37);
                 let __sym2 = __pop_NtBitApplication(__symbols);
                 let __sym1 = __pop_Term_22_2c_22(__symbols);
@@ -12153,9 +16284,9 @@ mod __parse__Program {
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
                 __symbols.push((__start, __Symbol::NtVec1_3cBitApplication_3e(__nt), __end));
-                33
+                32
             }
-            57 => {
+            56 => {
                 // __Program = Program => ActionFn(0);
                 let __sym0 = __pop_NtProgram(__symbols);
                 let __start = __sym0.0.clone();
@@ -12166,7 +16297,7 @@ mod __parse__Program {
             _ => panic!("invalid action code {}", __action)
         };
         let __state = *__states.last().unwrap() as usize;
-        let __next_state = __GOTO[__state * 35 + __nonterminal] - 1;
+        let __next_state = __GOTO[__state * 34 + __nonterminal] - 1;
         __states.push(__next_state);
         None
     }
@@ -12277,6 +16408,16 @@ mod __parse__Program {
     ) -> (usize, &'input str, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Term_22forall_22(__v), __r) => (__l, __v, __r),
+            _ => panic!("symbol type mismatch")
+        }
+    }
+    fn __pop_Term_22implies_22<
+      'input,
+    >(
+        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, &'input str, usize) {
+        match __symbols.pop().unwrap() {
+            (__l, __Symbol::Term_22implies_22(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -12467,16 +16608,6 @@ mod __parse__Program {
     ) -> (usize, Fact, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtFact_3cFactDataAnd_3e(__v), __r) => (__l, __v, __r),
-            _ => panic!("symbol type mismatch")
-        }
-    }
-    fn __pop_NtFact_3cFactDataApply_3e<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Fact, usize) {
-        match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtFact_3cFactDataApply_3e(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -12689,12 +16820,12 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 1;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_match = Some((13, __index + __ch.len_utf8()));
                             __current_state = 1;
                             continue;
                         }
@@ -12713,7 +16844,7 @@ mod __intern_token {
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_match = Some((13, __index + __ch.len_utf8()));
                             __current_state = 1;
                             continue;
                         }
@@ -12723,7 +16854,7 @@ mod __intern_token {
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 6;
                             continue;
                         }
@@ -12733,12 +16864,12 @@ mod __intern_token {
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 1;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 8;
                             continue;
                         }
@@ -12748,27 +16879,27 @@ mod __intern_token {
                             continue;
                         }
                         60 => /* '<' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 1;
                             continue;
                         }
                         61 => /* '=' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 10;
                             continue;
                         }
                         62 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
+                            __current_match = Some((13, __index + __ch.len_utf8()));
                             __current_state = 1;
                             continue;
                         }
                         65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_match = Some((14, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 1;
                             continue;
                         }
@@ -12778,32 +16909,42 @@ mod __intern_token {
                             continue;
                         }
                         97 ... 100 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_match = Some((14, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
                         101 => /* 'e' */ {
-                            __current_match = Some((13, __index + 1));
+                            __current_match = Some((14, __index + 1));
                             __current_state = 13;
                             continue;
                         }
                         102 => /* 'f' */ {
-                            __current_match = Some((13, __index + 1));
+                            __current_match = Some((14, __index + 1));
                             __current_state = 14;
                             continue;
                         }
-                        103 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
+                        103 ... 104 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        105 => /* 'i' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 15;
+                            continue;
+                        }
+                        106 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 1;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
+                            __current_match = Some((13, __index + 1));
                             __current_state = 1;
                             continue;
                         }
@@ -12816,53 +16957,53 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         60 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -12874,11 +17015,11 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         0 ... 38 => {
-                            __current_state = 17;
+                            __current_state = 18;
                             continue;
                         }
                         40 ... 1114111 => {
-                            __current_state = 17;
+                            __current_state = 18;
                             continue;
                         }
                         _ => {
@@ -12914,63 +17055,63 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         60 ... 61 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         62 => /* '>' */ {
                             __current_match = Some((3, __index + 1));
-                            __current_state = 18;
+                            __current_state = 19;
                             continue;
                         }
                         63 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -12990,53 +17131,53 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         45 => /* '-' */ {
                             __current_match = Some((5, __index + 1));
-                            __current_state = 19;
+                            __current_state = 20;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         60 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -13056,63 +17197,63 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         60 ... 61 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         62 => /* '>' */ {
                             __current_match = Some((7, __index + 1));
-                            __current_state = 20;
+                            __current_state = 21;
                             continue;
                         }
                         63 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -13124,28 +17265,28 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
                         97 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13165,38 +17306,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
                         97 ... 119 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         120 => /* 'x' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 23;
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 24;
                             continue;
                         }
                         121 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13208,38 +17349,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
                         97 ... 110 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         111 => /* 'o' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 24;
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 25;
                             continue;
                         }
                         112 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13250,6 +17391,41 @@ mod __intern_token {
                 15 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 108 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        109 => /* 'm' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 26;
+                            continue;
+                        }
+                        110 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -13258,56 +17434,6 @@ mod __intern_token {
                 16 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
-                            continue;
-                        }
-                        42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
-                            continue;
-                        }
-                        45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        60 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
-                            continue;
-                        }
-                        94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -13316,17 +17442,54 @@ mod __intern_token {
                 17 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        0 ... 38 => {
-                            __current_state = 25;
+                        33 => /* '!' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
-                        39 => /* '\'' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 26;
+                        35 ... 38 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
-                        40 ... 1114111 => {
-                            __current_state = 25;
+                        42 ... 43 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
+                            continue;
+                        }
+                        60 ... 64 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
+                            continue;
+                        }
+                        94 => /* '^' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
+                            continue;
+                        }
+                        124 => /* '|' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -13337,54 +17500,17 @@ mod __intern_token {
                 18 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        33 => /* '!' */ {
+                        0 ... 38 => {
+                            __current_state = 27;
+                            continue;
+                        }
+                        39 => /* '\'' */ {
                             __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_state = 28;
                             continue;
                         }
-                        35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
-                            continue;
-                        }
-                        42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
-                            continue;
-                        }
-                        45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        60 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
-                            continue;
-                        }
-                        94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
-                            continue;
-                        }
-                        126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                        40 ... 1114111 => {
+                            __current_state = 27;
                             continue;
                         }
                         _ => {
@@ -13396,53 +17522,53 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         60 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -13454,53 +17580,53 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         33 => /* '!' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         35 ... 38 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         42 ... 43 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         45 => /* '-' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         47 => /* '/' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         60 ... 64 => {
-                            __current_match = Some((12, __index + __ch.len_utf8()));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
                             continue;
                         }
                         94 => /* '^' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         124 => /* '|' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         126 => /* '~' */ {
-                            __current_match = Some((12, __index + 1));
-                            __current_state = 16;
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -13511,29 +17637,54 @@ mod __intern_token {
                 21 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
+                        33 => /* '!' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
+                            continue;
+                        }
+                        35 ... 38 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_state = 17;
+                            continue;
+                        }
+                        42 ... 43 => {
+                            __current_match = Some((13, __index + __ch.len_utf8()));
+                            __current_state = 17;
+                            continue;
+                        }
+                        45 => /* '-' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
+                            continue;
+                        }
+                        47 => /* '/' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 22;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        95 => /* '_' */ {
                             __current_match = Some((13, __index + 1));
-                            __current_state = 21;
+                            __current_state = 17;
                             continue;
                         }
-                        97 ... 122 => {
+                        60 ... 64 => {
                             __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_state = 17;
+                            continue;
+                        }
+                        94 => /* '^' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
+                            continue;
+                        }
+                        124 => /* '|' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
+                            continue;
+                        }
+                        126 => /* '~' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 17;
                             continue;
                         }
                         _ => {
@@ -13544,6 +17695,31 @@ mod __intern_token {
                 22 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -13552,41 +17728,6 @@ mod __intern_token {
                 23 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 22;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
-                        97 ... 104 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        105 => /* 'i' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 27;
-                            continue;
-                        }
-                        106 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -13596,38 +17737,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        97 ... 104 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
+                        105 => /* 'i' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 29;
                             continue;
                         }
-                        97 ... 113 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        114 => /* 'r' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 28;
-                            continue;
-                        }
-                        115 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        106 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13638,17 +17779,39 @@ mod __intern_token {
                 25 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        0 ... 38 => {
-                            __current_state = 25;
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
-                        39 => /* '\'' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 26;
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
                             continue;
                         }
-                        40 ... 1114111 => {
-                            __current_state = 25;
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 113 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        114 => /* 'r' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 30;
+                            continue;
+                        }
+                        115 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13659,6 +17822,41 @@ mod __intern_token {
                 26 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 111 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        112 => /* 'p' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 31;
+                            continue;
+                        }
+                        113 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
                         _ => {
                             return __current_match;
                         }
@@ -13667,39 +17865,17 @@ mod __intern_token {
                 27 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        0 ... 38 => {
+                            __current_state = 27;
                             continue;
                         }
-                        58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 22;
+                        39 => /* '\'' */ {
+                            __current_match = Some((12, __index + 1));
+                            __current_state = 28;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
-                        97 ... 114 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        115 => /* 's' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 29;
-                            continue;
-                        }
-                        116 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        40 ... 1114111 => {
+                            __current_state = 27;
                             continue;
                         }
                         _ => {
@@ -13710,36 +17886,6 @@ mod __intern_token {
                 28 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
-                        48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        58 => /* ':' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 22;
-                            continue;
-                        }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
-                        97 => /* 'a' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 30;
-                            continue;
-                        }
-                        98 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
                         _ => {
                             return __current_match;
                         }
@@ -13749,38 +17895,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        97 ... 114 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
+                        115 => /* 's' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 32;
                             continue;
                         }
-                        97 ... 115 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        116 => /* 't' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 31;
-                            continue;
-                        }
-                        117 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        116 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13792,38 +17938,33 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        97 => /* 'a' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 33;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
-                            continue;
-                        }
-                        97 ... 107 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        108 => /* 'l' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 32;
-                            continue;
-                        }
-                        109 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        98 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13835,38 +17976,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        97 ... 107 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
+                        108 => /* 'l' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 34;
                             continue;
                         }
-                        97 ... 114 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        115 => /* 's' */ {
-                            __current_match = Some((9, __index + 1));
-                            __current_state = 33;
-                            continue;
-                        }
-                        116 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        109 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13878,38 +18019,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        97 ... 115 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
+                        116 => /* 't' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 35;
                             continue;
                         }
-                        97 ... 107 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
-                            continue;
-                        }
-                        108 => /* 'l' */ {
-                            __current_match = Some((10, __index + 1));
-                            __current_state = 34;
-                            continue;
-                        }
-                        109 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        117 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13921,28 +18062,38 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
-                        65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        97 ... 107 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
-                        95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
+                        108 => /* 'l' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 36;
                             continue;
                         }
-                        97 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                        109 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -13954,28 +18105,309 @@ mod __intern_token {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
                             __current_match = Some((14, __index + 1));
                             __current_state = 22;
                             continue;
                         }
+                        97 ... 104 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        105 => /* 'i' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 37;
+                            continue;
+                        }
+                        106 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                35 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
                         65 ... 90 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         95 => /* '_' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 114 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        115 => /* 's' */ {
+                            __current_match = Some((9, __index + 1));
+                            __current_state = 38;
+                            continue;
+                        }
+                        116 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                36 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 107 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        108 => /* 'l' */ {
+                            __current_match = Some((10, __index + 1));
+                            __current_state = 39;
+                            continue;
+                        }
+                        109 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                37 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 100 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        101 => /* 'e' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 40;
+                            continue;
+                        }
+                        102 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                38 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
                             continue;
                         }
                         97 ... 122 => {
-                            __current_match = Some((13, __index + __ch.len_utf8()));
-                            __current_state = 21;
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                39 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                40 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 114 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        115 => /* 's' */ {
+                            __current_match = Some((11, __index + 1));
+                            __current_state = 41;
+                            continue;
+                        }
+                        116 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                41 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        58 => /* ':' */ {
+                            __current_match = Some((15, __index + 1));
+                            __current_state = 23;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 22;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((14, __index + __ch.len_utf8()));
+                            __current_state = 22;
                             continue;
                         }
                         _ => {
@@ -14164,9 +18596,12 @@ pub fn __action11<
     'input,
 >(
     input: &'input str,
+    (_, _, _): (usize, &'input str, usize),
+    (_, _, _): (usize, &'input str, usize),
     (_, l, _): (usize, Fact, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, Fact, usize),
+    (_, _, _): (usize, &'input str, usize),
 ) -> Box<FactData>
 {
     Box::new(FactData::Implication(l, r))
@@ -14652,22 +19087,6 @@ pub fn __action48<
     'input,
 >(
     input: &'input str,
-    (_, s0, _): (usize, usize, usize),
-    (_, d, _): (usize, Box<FactData>, usize),
-    (_, s1, _): (usize, usize, usize),
-) -> Fact
-{
-    Fact {
-            span: Span::new(s0, s1),
-            data: d
-        }
-}
-
-#[allow(unused_variables)]
-pub fn __action49<
-    'input,
->(
-    input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> usize
@@ -14676,7 +19095,7 @@ pub fn __action49<
 }
 
 #[allow(unused_variables)]
-pub fn __action50<
+pub fn __action49<
     'input,
 >(
     input: &'input str,
@@ -14692,7 +19111,7 @@ pub fn __action50<
 }
 
 #[allow(unused_variables)]
-pub fn __action51<
+pub fn __action50<
     'input,
 >(
     input: &'input str,
@@ -14704,7 +19123,7 @@ pub fn __action51<
 }
 
 #[allow(unused_variables)]
-pub fn __action52<
+pub fn __action51<
     'input,
 >(
     input: &'input str,
@@ -14715,7 +19134,7 @@ pub fn __action52<
 }
 
 #[allow(unused_variables)]
-pub fn __action53<
+pub fn __action52<
     'input,
 >(
     input: &'input str,
@@ -14727,7 +19146,7 @@ pub fn __action53<
 }
 
 #[allow(unused_variables)]
-pub fn __action54<
+pub fn __action53<
     'input,
 >(
     input: &'input str,
@@ -14750,7 +19169,7 @@ pub fn __action54<
 }
 
 #[allow(unused_variables)]
-pub fn __action55<
+pub fn __action54<
     'input,
 >(
     input: &'input str,
@@ -14775,7 +19194,7 @@ pub fn __action55<
 }
 
 #[allow(unused_variables)]
-pub fn __action56<
+pub fn __action55<
     'input,
 >(
     input: &'input str,
@@ -14785,7 +19204,7 @@ pub fn __action56<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
@@ -14800,7 +19219,7 @@ pub fn __action56<
 }
 
 #[allow(unused_variables)]
-pub fn __action57<
+pub fn __action56<
     'input,
 >(
     input: &'input str,
@@ -14813,7 +19232,7 @@ pub fn __action57<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
@@ -14831,7 +19250,7 @@ pub fn __action57<
 }
 
 #[allow(unused_variables)]
-pub fn __action58<
+pub fn __action57<
     'input,
 >(
     input: &'input str,
@@ -14841,7 +19260,7 @@ pub fn __action58<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
@@ -14856,7 +19275,7 @@ pub fn __action58<
 }
 
 #[allow(unused_variables)]
-pub fn __action59<
+pub fn __action58<
     'input,
 >(
     input: &'input str,
@@ -14866,7 +19285,7 @@ pub fn __action59<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
@@ -14881,7 +19300,7 @@ pub fn __action59<
 }
 
 #[allow(unused_variables)]
-pub fn __action60<
+pub fn __action59<
     'input,
 >(
     input: &'input str,
@@ -14891,13 +19310,38 @@ pub fn __action60<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action26(
+        input,
+        __temp0,
+        __0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+pub fn __action60<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Box<FactData>, usize),
+    __1: (usize, usize, usize),
+) -> Fact
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action50(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action49(
         input,
         __temp0,
         __0,
@@ -14916,13 +19360,13 @@ pub fn __action61<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action50(
+    __action47(
         input,
         __temp0,
         __0,
@@ -14941,13 +19385,13 @@ pub fn __action62<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action48(
+    __action45(
         input,
         __temp0,
         __0,
@@ -14966,32 +19410,7 @@ pub fn __action63<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action45(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-pub fn __action64<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Box<FactData>, usize),
-    __1: (usize, usize, usize),
-) -> Fact
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
@@ -15006,32 +19425,7 @@ pub fn __action64<
 }
 
 #[allow(unused_variables)]
-pub fn __action65<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Box<FactData>, usize),
-    __1: (usize, usize, usize),
-) -> Fact
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action51(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action47(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-pub fn __action66<
+pub fn __action64<
     'input,
 >(
     input: &'input str,
@@ -15044,7 +19438,7 @@ pub fn __action66<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
@@ -15062,7 +19456,7 @@ pub fn __action66<
 }
 
 #[allow(unused_variables)]
-pub fn __action67<
+pub fn __action65<
     'input,
 >(
     input: &'input str,
@@ -15072,7 +19466,7 @@ pub fn __action67<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action51(
+    let __temp0 = __action50(
         input,
         &__start0,
         &__end0,
@@ -15087,7 +19481,7 @@ pub fn __action67<
 }
 
 #[allow(unused_variables)]
-pub fn __action68<
+pub fn __action66<
     'input,
 >(
     input: &'input str,
@@ -15096,13 +19490,13 @@ pub fn __action68<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action49(
+    let __temp0 = __action48(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action56(
+    __action55(
         input,
         __0,
         __temp0,
@@ -15110,7 +19504,7 @@ pub fn __action68<
 }
 
 #[allow(unused_variables)]
-pub fn __action69<
+pub fn __action67<
     'input,
 >(
     input: &'input str,
@@ -15122,13 +19516,13 @@ pub fn __action69<
 {
     let __start0 = __3.2.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action49(
+    let __temp0 = __action48(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action57(
+    __action56(
         input,
         __0,
         __1,
@@ -15139,7 +19533,7 @@ pub fn __action69<
 }
 
 #[allow(unused_variables)]
-pub fn __action70<
+pub fn __action68<
     'input,
 >(
     input: &'input str,
@@ -15148,7 +19542,30 @@ pub fn __action70<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action49(
+    let __temp0 = __action48(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action57(
+        input,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+pub fn __action69<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Operator, usize),
+) -> Bit
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action48(
         input,
         &__start0,
         &__end0,
@@ -15162,16 +19579,16 @@ pub fn __action70<
 }
 
 #[allow(unused_variables)]
-pub fn __action71<
+pub fn __action70<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Operator, usize),
+    __0: (usize, Value, usize),
 ) -> Bit
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action49(
+    let __temp0 = __action48(
         input,
         &__start0,
         &__end0,
@@ -15185,22 +19602,45 @@ pub fn __action71<
 }
 
 #[allow(unused_variables)]
-pub fn __action72<
+pub fn __action71<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Value, usize),
-) -> Bit
+    __0: (usize, Box<FactData>, usize),
+) -> Fact
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action49(
+    let __temp0 = __action48(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action60(
+        input,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+pub fn __action72<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Box<FactData>, usize),
+) -> Fact
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action48(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action61(
         input,
         __0,
         __temp0,
@@ -15217,13 +19657,13 @@ pub fn __action73<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action49(
+    let __temp0 = __action48(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action61(
+    __action62(
         input,
         __0,
         __temp0,
@@ -15240,30 +19680,7 @@ pub fn __action74<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action49(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action62(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-pub fn __action75<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Box<FactData>, usize),
-) -> Fact
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action49(
+    let __temp0 = __action48(
         input,
         &__start0,
         &__end0,
@@ -15277,16 +19694,19 @@ pub fn __action75<
 }
 
 #[allow(unused_variables)]
-pub fn __action76<
+pub fn __action75<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Box<FactData>, usize),
-) -> Fact
+    __0: (usize, Application, usize),
+    __1: (usize, &'input str, usize),
+    __2: (usize, Fact, usize),
+    __3: (usize, &'input str, usize),
+) -> Rule
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action49(
+    let __start0 = __3.2.clone();
+    let __end0 = __3.2.clone();
+    let __temp0 = __action48(
         input,
         &__start0,
         &__end0,
@@ -15295,21 +19715,24 @@ pub fn __action76<
     __action64(
         input,
         __0,
+        __1,
+        __2,
+        __3,
         __temp0,
     )
 }
 
 #[allow(unused_variables)]
-pub fn __action77<
+pub fn __action76<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Box<FactData>, usize),
-) -> Fact
+    __0: (usize, ValueKind, usize),
+) -> Value
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action49(
+    let __temp0 = __action48(
         input,
         &__start0,
         &__end0,
@@ -15323,59 +19746,7 @@ pub fn __action77<
 }
 
 #[allow(unused_variables)]
-pub fn __action78<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Application, usize),
-    __1: (usize, &'input str, usize),
-    __2: (usize, Fact, usize),
-    __3: (usize, &'input str, usize),
-) -> Rule
-{
-    let __start0 = __3.2.clone();
-    let __end0 = __3.2.clone();
-    let __temp0 = __action49(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action66(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-pub fn __action79<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, ValueKind, usize),
-) -> Value
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action49(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action67(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-pub fn __action80<
+pub fn __action77<
     'input,
 >(
     input: &'input str,
@@ -15400,7 +19771,7 @@ pub fn __action80<
 }
 
 #[allow(unused_variables)]
-pub fn __action81<
+pub fn __action78<
     'input,
 >(
     input: &'input str,
@@ -15425,7 +19796,7 @@ pub fn __action81<
 }
 
 #[allow(unused_variables)]
-pub fn __action82<
+pub fn __action79<
     'input,
 >(
     input: &'input str,
@@ -15441,7 +19812,7 @@ pub fn __action82<
         __0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action80(
+    __action77(
         input,
         __temp0,
         __1,
@@ -15450,7 +19821,7 @@ pub fn __action82<
 }
 
 #[allow(unused_variables)]
-pub fn __action83<
+pub fn __action80<
     'input,
 >(
     input: &'input str,
@@ -15466,7 +19837,7 @@ pub fn __action83<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action80(
+    __action77(
         input,
         __temp0,
         __0,
@@ -15475,7 +19846,7 @@ pub fn __action83<
 }
 
 #[allow(unused_variables)]
-pub fn __action84<
+pub fn __action81<
     'input,
 >(
     input: &'input str,
@@ -15490,7 +19861,7 @@ pub fn __action84<
         __0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action81(
+    __action78(
         input,
         __temp0,
         __1,
@@ -15498,7 +19869,7 @@ pub fn __action84<
 }
 
 #[allow(unused_variables)]
-pub fn __action85<
+pub fn __action82<
     'input,
 >(
     input: &'input str,
@@ -15513,7 +19884,7 @@ pub fn __action85<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action81(
+    __action78(
         input,
         __temp0,
         __0,

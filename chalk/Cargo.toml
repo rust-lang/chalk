@@ -11,4 +11,4 @@ doctest = false
 [dependencies]
 lalrpop-intern = "0.12.1"
 chalk-parse = { path = "../chalk-parse" }
-lazy_static = "0.2.1"
+ena = "0.1"

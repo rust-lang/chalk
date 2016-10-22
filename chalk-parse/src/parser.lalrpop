@@ -35,21 +35,21 @@ FactData: Box<FactData> = {
 
 FactDataAnd: Box<FactData> = {
     FactDataOr,
-    <l:Fact<FactDataAnd>> ";" <r:Fact<FactDataOr>> => Box::new(FactData::And(l, r)),
+    <l:Fact<FactDataAnd>> "," <r:Fact<FactDataOr>> => Box::new(FactData::And(l, r)),
 };
 
 FactDataOr: Box<FactData> = {
     FactDataFunc,
-    <l:Fact<FactDataOr>> "," <r:Fact<FactDataFunc>> => Box::new(FactData::Or(l, r)),
+    <l:Fact<FactDataOr>> ";" <r:Fact<FactDataFunc>> => Box::new(FactData::Or(l, r)),
 };
 
 FactDataFunc: Box<FactData> = {
     FactDataApply,
-    <l:Fact<FactDataApply>> "=>" <r:Fact<FactDataFunc>> =>
+    "implies" "(" <l:Fact<FactData>> "=>" <r:Fact<FactData>> ")" =>
         Box::new(FactData::Implication(l, r)),
-    "exists" "(" <v:Variable> "->" <b:Fact<FactDataFunc>> ")" =>
+    "exists" "(" <v:Variable> "->" <b:Fact<FactData>> ")" =>
         Box::new(FactData::Exists(v, b)),
-    "forall" "(" <v:Variable> "->" <b:Fact<FactDataFunc>> ")" =>
+    "forall" "(" <v:Variable> "->" <b:Fact<FactData>> ")" =>
         Box::new(FactData::ForAll(v, b)),
 };
 

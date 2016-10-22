@@ -28,7 +28,7 @@ impl<L: Debug> Debug for ClauseKind<L> {
                 write!(fmt, ")")?;
             }
             ClauseKind::Implication(ref g, ref l) => {
-                write!(fmt, "(")?;
+                write!(fmt, "implies(")?;
                 g.fmt(fmt)?;
                 write!(fmt, " => ")?;
                 l.fmt(fmt)?;
@@ -63,7 +63,7 @@ impl<L: Debug> Debug for GoalKind<L> {
                 fmt_parens(fmt, ls)?;
             }
             GoalKind::Implication(ref g, ref l) => {
-                write!(fmt, "(")?;
+                write!(fmt, "implies(")?;
                 g.fmt(fmt)?;
                 write!(fmt, " => ")?;
                 l.fmt(fmt)?;

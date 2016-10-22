@@ -2,6 +2,11 @@ use chalk_parse::ast;
 
 pub struct Environment {
     bound_names: Vec<Option<ast::Variable>>,
+
+    /// always points to an *index* in the list of bound-names (which
+    /// should be `None`) to be used for the next wildcard. While
+    /// wildcards are being assigned, these indices will be at the end
+    /// of the list of bound names.
     next_wildcard: Option<usize>,
 }
 
@@ -20,7 +25,11 @@ impl Environment {
     }
 
     /// Brings N wildcards into scope. These will occupy the next N
-    /// bound DeBruijn indices.
+    /// bound DeBruijn indices. The pattern we expect is that you push
+    /// bound names, then push wildcards, claim wildcards, pop
+    /// wildcards, and continue. In other words, all wildcards are
+    /// pushed/claimed/poppped before any new bound names are pushed.
+    /// This matches the way that wildcards are local to a clause.
     pub fn push_wildcards(&mut self, count: usize) {
         println!("push_wildcards({})", count);
         assert!(self.next_wildcard.is_none(), "nested wildcard scopes");
@@ -55,6 +64,9 @@ impl Environment {
                 let v = *n;
                 *n += 1;
                 assert_eq!(self.bound_names[v], None, "wildcard maps to bound name");
+
+                // convert to a debruijn index, which counts from the
+                // end of the list (i.e., last item has index 0).
                 self.bound_names.len() - v - 1
             }
             None => {

@@ -11,7 +11,7 @@ pub struct Error {
     pub kind: ErrorKind,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ErrorKind {
     UnknownVariable(ast::Variable),
     OrInClause,

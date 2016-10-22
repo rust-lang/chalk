@@ -3,11 +3,8 @@
 #![feature(static_in_const)]
 
 extern crate chalk_parse;
-
 extern crate lalrpop_intern;
-
-#[macro_use]
-extern crate lazy_static;
+extern crate ena;
 
 /// Create a deref impl. We do this a lot.
 macro_rules! deref_to {

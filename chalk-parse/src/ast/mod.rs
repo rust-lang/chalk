@@ -3,7 +3,7 @@ use lalrpop_intern::InternedString;
 mod free_variables;
 mod impls;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
