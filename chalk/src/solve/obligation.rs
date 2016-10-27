@@ -5,6 +5,15 @@ use std::sync::Arc;
 pub struct Obligation {
     pub environment: Arc<Environment>,
     pub goal: Goal<Leaf>,
-    pub universe_index: UniverseIndex,
 }
 
+impl Obligation {
+    pub fn new(environment: Arc<Environment>,
+               goal: Goal<Leaf>)
+               -> Self {
+        Obligation {
+            environment: environment,
+            goal: goal,
+        }
+    }
+}

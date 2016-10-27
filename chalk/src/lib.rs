@@ -31,7 +31,6 @@ macro_rules! deref_to {
 }
 
 mod formula;
-mod program;
 mod solve;
 
 #[cfg(test)]
