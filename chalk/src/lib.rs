@@ -1,4 +1,5 @@
 #![allow(dead_code)] // temporary
+#![feature(conservative_impl_trait)]
 #![feature(question_mark)]
 #![feature(static_in_const)]
 
@@ -31,6 +32,7 @@ macro_rules! deref_to {
 
 mod formula;
 mod program;
+mod solve;
 
 #[cfg(test)]
 mod tests {
