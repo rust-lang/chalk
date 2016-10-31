@@ -32,10 +32,3 @@ macro_rules! deref_to {
 
 mod formula;
 mod solve;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-    }
-}
