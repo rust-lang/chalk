@@ -2,6 +2,7 @@ use formula::*;
 use solve::*;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Obligation {
     pub environment: Arc<Environment>,
     pub goal: Goal<Leaf>,

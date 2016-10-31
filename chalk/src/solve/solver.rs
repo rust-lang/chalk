@@ -1,31 +1,27 @@
+#![allow(unused_variables)]
+
 use ena::unify::UnificationTable;
 use formula::*;
 use solve::*;
-use std::mem;
 use std::sync::Arc;
 
 pub struct Solver {
     unify: UnificationTable<InferenceVariable>,
-    root_environment: Arc<Environment>,
+    root_goal: Goal<Leaf>,
     solutions: Vec<Goal<Leaf>>,
     obligations: Vec<Obligation>,
 }
 
 impl Solver {
-    pub fn new(clauses: Vec<Clause<Leaf>>) -> Self {
+    pub fn new(root_environment: Arc<Environment>,
+               root_goal: Goal<Leaf>)
+               -> Self {
         Solver {
             unify: UnificationTable::new(),
-            root_environment: Arc::new(Environment::new(None, clauses)),
+            root_goal: root_goal.clone(),
             solutions: vec![],
-            obligations: vec![],
+            obligations: vec![Obligation::new(root_environment, root_goal)],
         }
-    }
-
-    pub fn solve_goal(&mut self, goal: Goal<Leaf>) -> Result<Vec<Goal<Leaf>>, ()> {
-        assert!(self.solutions.is_empty());
-        self.obligations.push(Obligation::new(self.root_environment.clone(), goal));
-        self.run()?;
-        Ok(mem::replace(&mut self.solutions, vec![]))
     }
 
     fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
@@ -36,20 +32,32 @@ impl Solver {
         self.unify.probe_value(v)
     }
 
+    fn canonicalize(&mut self, goal: &Goal<Leaf>) -> Goal<Leaf> {
+        unimplemented!()
+    }
+
     fn probe<F, R>(&mut self, op: F) -> R
         where F: FnOnce(&mut Self) -> R
     {
         let snapshot = self.unify.snapshot();
+        let obligations = self.obligations.clone();
         let result = op(self);
         self.unify.rollback_to(snapshot);
+        self.obligations = obligations;
         result
     }
 
-    fn run(&mut self) -> Result<(), ()> {
+    fn run(&mut self) {
         while let Some(obligation) = self.obligations.pop() {
-            self.solve_obligation(obligation)?;
+            match self.solve_obligation(obligation) {
+                Ok(()) => { }
+                Err(()) => { return; }
+            }
         }
-        Ok(())
+
+        let goal = self.root_goal.clone();
+        let goal = self.canonicalize(&goal);
+        self.solutions.push(goal);
     }
 
     fn solve_obligation(&mut self, obligation: Obligation) -> Result<(), ()> {
@@ -68,7 +76,16 @@ impl Solver {
                 Ok(())
             }
             GoalKind::Or(ref goals) => {
-                unimplemented!()
+                for goal in goals {
+                    self.probe(|this| {
+                        this.obligations.push(Obligation {
+                            environment: environment.clone(),
+                            goal: goal.clone(),
+                        });
+                        this.run();
+                    });
+                }
+                Err(()) // signal to the surrounding `run()` task that we took over =)
             }
             GoalKind::Exists(ref quant) => unimplemented!(),
             GoalKind::Implication(ref quant, ref goal) => unimplemented!(),
