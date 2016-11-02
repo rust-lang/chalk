@@ -1,5 +1,5 @@
 use ena::unify::{UnifyKey, UnifyValue};
-use std::cmp::max;
+use std::cmp::min;
 
 use super::leaf::*;
 use super::universe::UniverseIndex;
@@ -48,7 +48,7 @@ impl UnifyValue for InferenceValue {
                     -> Result<InferenceValue, (InferenceValue, InferenceValue)> {
         match (*a, *b) {
             (InferenceValue::Unbound(ui_a), InferenceValue::Unbound(ui_b)) => {
-                Ok(InferenceValue::Unbound(max(ui_a, ui_b)))
+                Ok(InferenceValue::Unbound(min(ui_a, ui_b)))
             }
             (bound @ InferenceValue::Bound(_), InferenceValue::Unbound(_)) |
             (InferenceValue::Unbound(_), bound @ InferenceValue::Bound(_)) => {

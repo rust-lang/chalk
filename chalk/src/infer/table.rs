@@ -195,6 +195,7 @@ impl InferenceTable {
             InferenceValue::Bound(_) => panic!("`unify_var_application` invoked on bound var"),
         };
 
+        self.universe_check(universe_index, application.constant.universe_index)?;
         self.occurs_check(var, universe_index, application)?;
 
         let value_index = ValueIndex::new(self.values.len());
