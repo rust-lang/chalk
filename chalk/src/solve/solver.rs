@@ -1,12 +1,11 @@
 #![allow(unused_variables)]
 
-use ena::unify::UnificationTable;
 use formula::*;
 use solve::*;
 use std::sync::Arc;
 
 pub struct Solver {
-    unify: UnificationTable<InferenceVariable>,
+    infer: InferenceTable,
     root_goal: Goal<Leaf>,
     solutions: Vec<Goal<Leaf>>,
     obligations: Vec<Obligation>,
@@ -17,7 +16,7 @@ impl Solver {
                root_goal: Goal<Leaf>)
                -> Self {
         Solver {
-            unify: UnificationTable::new(),
+            infer: InferenceTable::new(),
             root_goal: root_goal.clone(),
             solutions: vec![],
             obligations: vec![Obligation::new(root_environment, root_goal)],
@@ -25,11 +24,7 @@ impl Solver {
     }
 
     fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
-        self.unify.new_key(ui)
-    }
-
-    fn universe_index(&mut self, v: InferenceVariable) -> UniverseIndex {
-        self.unify.probe_value(v)
+        self.infer.new_variable(ui)
     }
 
     fn canonicalize(&mut self, goal: &Goal<Leaf>) -> Goal<Leaf> {
@@ -39,10 +34,10 @@ impl Solver {
     fn probe<F, R>(&mut self, op: F) -> R
         where F: FnOnce(&mut Self) -> R
     {
-        let snapshot = self.unify.snapshot();
+        let snapshot = self.infer.snapshot();
         let obligations = self.obligations.clone();
         let result = op(self);
-        self.unify.rollback_to(snapshot);
+        self.infer.rollback_to(snapshot);
         self.obligations = obligations;
         result
     }
