@@ -36,7 +36,19 @@ pub struct InferenceApplication {
 
 // C(...)
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct InferenceConstant {
-    pub operator: InternedString,
-    pub universe_index: UniverseIndex,
+pub enum InferenceConstant {
+    // Things appearing in the program; always at universe 0
+    Program(InternedString),
+
+    // Constants introduced by a forall; always at universe >0
+    Skolemized(UniverseIndex),
+}
+
+impl InferenceConstant {
+    pub fn universe_index(&self) -> UniverseIndex {
+        match *self {
+            InferenceConstant::Program(_) => UniverseIndex { counter: 0 },
+            InferenceConstant::Skolemized(universe_index) => universe_index,
+        }
+    }
 }

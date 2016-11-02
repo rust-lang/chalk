@@ -7,13 +7,10 @@ macro_rules! leaf {
     (expr $expr:expr) => {
         $expr.clone()
     };
-    (apply $name:tt/$universe:tt $($exprs:tt)*) => {
+    (apply $name:tt $($exprs:tt)*) => {
         InferenceLeaf::new(InferenceLeafData {
             kind: InferenceLeafKind::Application(InferenceApplication {
-                constant: InferenceConstant {
-                    operator: intern($name),
-                    universe_index: UniverseIndex { counter: $universe },
-                },
+                constant: constant!($name),
                 args: vec![$(leaf!($exprs)),*],
             })
         })
@@ -23,16 +20,29 @@ macro_rules! leaf {
     }
 }
 
+macro_rules! constant {
+    (skol $n:tt) => {
+        InferenceConstant::Skolemized(UniverseIndex { counter: $n })
+    };
+    (($($a:tt)*)) => {
+        constant!($($a)*)
+    };
+    ($n:expr) => {
+        InferenceConstant::Program(intern($n))
+    }
+}
+
+
 #[test]
 fn infer() {
     let mut table = InferenceTable::new();
     let universe0 = UniverseIndex { counter: 0 };
     let a = table.new_variable(universe0).to_leaf();
     let b = table.new_variable(universe0).to_leaf();
-    table.unify(&a, &leaf!(apply "foo"/0 (expr b))).unwrap();
-    table.unify(&b, &leaf!(apply "bar"/0)).unwrap();
+    table.unify(&a, &leaf!(apply "foo" (expr b))).unwrap();
+    table.unify(&b, &leaf!(apply "bar")).unwrap();
     let c = table.normalize_deep(&a);
-    assert_eq!(c, leaf!(apply "foo"/0 (apply "bar"/0)));
+    assert_eq!(c, leaf!(apply "foo" (apply "bar")));
 }
 
 #[test]
@@ -41,7 +51,7 @@ fn universe_error() {
     let mut table = InferenceTable::new();
     let universe0 = UniverseIndex { counter: 0 };
     let a = table.new_variable(universe0).to_leaf();
-    table.unify(&a, &leaf!(apply "foo"/1)).unwrap_err();
+    table.unify(&a, &leaf!(apply (skol 1))).unwrap_err();
 }
 
 #[test]
@@ -50,7 +60,7 @@ fn cycle_error() {
     let mut table = InferenceTable::new();
     let universe0 = UniverseIndex { counter: 0 };
     let a = table.new_variable(universe0).to_leaf();
-    table.unify(&a, &leaf!(apply "foo"/1 (expr a))).unwrap_err();
+    table.unify(&a, &leaf!(apply (skol 1) (expr a))).unwrap_err();
 }
 
 #[test]
@@ -60,7 +70,7 @@ fn cycle_indirect() {
     let universe0 = UniverseIndex { counter: 0 };
     let a = table.new_variable(universe0).to_leaf();
     let b = table.new_variable(universe0).to_leaf();
-    table.unify(&a, &leaf!(apply "foo"/0 (expr b))).unwrap();
+    table.unify(&a, &leaf!(apply "foo" (expr b))).unwrap();
     table.unify(&a, &b).unwrap_err();
 }
 
@@ -72,7 +82,7 @@ fn universe_error_indirect_1() {
     let universe1 = UniverseIndex { counter: 1 };
     let a = table.new_variable(universe0).to_leaf();
     let b = table.new_variable(universe1).to_leaf();
-    table.unify(&b, &leaf!(apply "foo"/1)).unwrap();
+    table.unify(&b, &leaf!(apply (skol 1))).unwrap();
     table.unify(&a, &b).unwrap_err();
 }
 
@@ -85,6 +95,6 @@ fn universe_error_indirect_2() {
     let a = table.new_variable(universe0).to_leaf();
     let b = table.new_variable(universe1).to_leaf();
     table.unify(&a, &b).unwrap();
-    table.unify(&b, &leaf!(apply "foo"/1)).unwrap_err();
+    table.unify(&b, &leaf!(apply (skol 1))).unwrap_err();
 }
 

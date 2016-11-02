@@ -195,7 +195,7 @@ impl InferenceTable {
             InferenceValue::Bound(_) => panic!("`unify_var_application` invoked on bound var"),
         };
 
-        self.universe_check(universe_index, application.constant.universe_index)?;
+        self.universe_check(universe_index, application.constant.universe_index())?;
         self.occurs_check(var, universe_index, application)?;
 
         let value_index = ValueIndex::new(self.values.len());
@@ -214,7 +214,7 @@ impl InferenceTable {
             let arg = self.normalize_shallow(arg);
             match arg.kind {
                 InferenceLeafKind::Application(ref c) => {
-                    self.universe_check(universe_index, c.constant.universe_index)?;
+                    self.universe_check(universe_index, c.constant.universe_index())?;
                     self.occurs_check(var, universe_index, c)?;
                 }
 
