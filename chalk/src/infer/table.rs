@@ -1,7 +1,7 @@
 use ena::unify;
 use super::leaf::*;
 use super::universe::UniverseIndex;
-use super::var::{InferenceVariable, InferenceValue};
+use super::var::*;
 
 pub struct InferenceTable {
     unify: unify::UnificationTable<InferenceVariable>,
@@ -15,6 +15,7 @@ pub struct InferenceSnapshot {
 
 pub type UnifyResult<T> = Result<T, UnifyError>;
 
+#[derive(Debug)]
 pub enum UnifyError {
     Cycle,
     IncompatibleConstants(InferenceConstant, InferenceConstant),
@@ -86,6 +87,33 @@ impl InferenceTable {
         }
     }
 
+    pub fn normalize_deep(&mut self, leaf: &InferenceLeaf) -> InferenceLeaf {
+        match leaf.kind {
+            InferenceLeafKind::Variable(var) => {
+                match self.unify.probe_value(var) {
+                    InferenceValue::Unbound(_) => leaf.clone(),
+                    InferenceValue::Bound(val) => {
+                        let application = self.values[val.as_usize()].clone();
+                        let leaf = InferenceLeaf::new(InferenceLeafData {
+                            kind: InferenceLeafKind::Application(application),
+                        });
+                        self.normalize_deep(&leaf)
+                    }
+                }
+            }
+            InferenceLeafKind::Application(ref application) => {
+                InferenceLeaf::new(InferenceLeafData {
+                    kind: InferenceLeafKind::Application(InferenceApplication {
+                        constant: application.constant,
+                        args: application.args.iter()
+                                              .map(|arg| self.normalize_deep(arg))
+                                              .collect(),
+                    })
+                })
+            }
+        }
+    }
+
     pub fn unify(&mut self, leaf1: &InferenceLeaf, leaf2: &InferenceLeaf) -> UnifyResult<()> {
         self.commit_if_ok(|this| this.unify_in_snapshot(leaf1, leaf2))
     }
@@ -94,9 +122,15 @@ impl InferenceTable {
                          leaf1: &InferenceLeaf,
                          leaf2: &InferenceLeaf)
                          -> UnifyResult<()> {
+        println!("unify_in_snapshot, leaf1={:?}", leaf1);
+        println!("unify_in_snapshot, leaf2={:?}", leaf2);
+
         // Remove any immediate inference variables.
         let leaf1 = self.normalize_shallow(leaf1);
         let leaf2 = self.normalize_shallow(leaf2);
+
+        println!("unify_in_snapshot, normalized leaf1={:?}", leaf1);
+        println!("unify_in_snapshot, normalized leaf2={:?}", leaf2);
 
         match (&leaf1.kind, &leaf2.kind) {
             (&InferenceLeafKind::Variable(var1), &InferenceLeafKind::Variable(var2)) => {
@@ -148,6 +182,9 @@ impl InferenceTable {
                              var: InferenceVariable,
                              application: &InferenceApplication)
                              -> UnifyResult<()> {
+        println!("unify_var_application, var={:?}", var);
+        println!("unify_var_application, application={:?}", application);
+
         // Determine the universe index associated with this
         // variable. This is basically a count of the number of
         // `forall` binders that had been introduced at the point
@@ -159,6 +196,10 @@ impl InferenceTable {
         };
 
         self.occurs_check(var, universe_index, application)?;
+
+        let value_index = ValueIndex::new(self.values.len());
+        self.values.push(application.clone());
+        self.unify.unify_var_value(var, InferenceValue::Bound(value_index)).unwrap();
 
         Ok(())
     }

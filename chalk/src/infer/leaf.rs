@@ -4,7 +4,7 @@ use std::sync::Arc;
 use super::universe::UniverseIndex;
 use super::var::InferenceVariable;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InferenceLeaf {
     data: Arc<InferenceLeafData>,
 }
@@ -17,18 +17,18 @@ impl InferenceLeaf {
 
 deref_to!(InferenceLeaf.data => InferenceLeafData);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InferenceLeafData {
     pub kind: InferenceLeafKind,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InferenceLeafKind {
     Variable(InferenceVariable), // X
     Application(InferenceApplication), // C(...)
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InferenceApplication {
     pub constant: InferenceConstant,
     pub args: Vec<InferenceLeaf>,

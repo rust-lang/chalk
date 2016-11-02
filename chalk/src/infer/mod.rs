@@ -7,3 +7,5 @@ pub use self::table::InferenceTable;
 pub use self::universe::UniverseIndex;
 pub use self::var::InferenceVariable;
 
+#[cfg(test)]
+mod test;

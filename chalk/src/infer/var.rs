@@ -50,7 +50,11 @@ impl UnifyValue for InferenceValue {
             (InferenceValue::Unbound(ui_a), InferenceValue::Unbound(ui_b)) => {
                 Ok(InferenceValue::Unbound(max(ui_a, ui_b)))
             }
-            (InferenceValue::Bound(_), _) | (_, InferenceValue::Bound(_)) => {
+            (bound @ InferenceValue::Bound(_), InferenceValue::Unbound(_)) |
+            (InferenceValue::Unbound(_), bound @ InferenceValue::Bound(_)) => {
+                Ok(bound)
+            }
+            (InferenceValue::Bound(_), InferenceValue::Bound(_)) => {
                 // we don't even try to allow unifying things that are
                 // already bound; that is handled at a higher-level by
                 // the `InferenceTable`; this could probably just be a
