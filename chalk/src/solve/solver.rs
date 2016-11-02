@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 
+use infer::*;
 use formula::*;
 use solve::*;
 use std::sync::Arc;

@@ -1,5 +1,5 @@
+use infer::*;
 use formula::*;
-use solve::*;
 use std::iter::once;
 use std::sync::Arc;
 

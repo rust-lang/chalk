@@ -30,5 +30,6 @@ macro_rules! deref_to {
     };
 }
 
+mod infer;
 mod formula;
 mod solve;
