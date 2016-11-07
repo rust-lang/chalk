@@ -32,7 +32,6 @@ macro_rules! constant {
     }
 }
 
-
 #[test]
 fn infer() {
     let mut table = InferenceTable::new();
