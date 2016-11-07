@@ -22,8 +22,8 @@ impl<L> Goal<L> {
             Goal::new(GoalData {
                 kind: GoalKind::ForAll(Quantification {
                     num_binders: num_binders,
-                    formula: self
-                })
+                    formula: self,
+                }),
             })
         }
     }
@@ -35,8 +35,8 @@ impl<L> Goal<L> {
             Goal::new(GoalData {
                 kind: GoalKind::Exists(Quantification {
                     num_binders: num_binders,
-                    formula: self
-                })
+                    formula: self,
+                }),
             })
         }
     }

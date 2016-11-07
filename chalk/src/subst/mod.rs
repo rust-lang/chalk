@@ -11,13 +11,18 @@ pub struct Subst<L: Debug> {
 
 struct SubstLink<L: Debug> {
     value: L,
-    parent: Option<Subst<L>>
+    parent: Option<Subst<L>>,
 }
 
 impl<L: Debug> Subst<L> {
     pub fn new(parent: Option<&Subst<L>>, value: L) -> Subst<L> {
         let parent = parent.cloned();
-        Subst { link: Arc::new(SubstLink { parent: parent, value: value }) }
+        Subst {
+            link: Arc::new(SubstLink {
+                parent: parent,
+                value: value,
+            }),
+        }
     }
 
     pub fn root(value: L) -> Subst<L> {
@@ -52,11 +57,11 @@ impl<L: Debug> Clone for Subst<L> {
 }
 
 pub struct SubstIter<'iter, L: 'iter + Debug> {
-    link: Option<&'iter SubstLink<L>>
+    link: Option<&'iter SubstLink<L>>,
 }
 
 impl<'iter, L: Debug> Iterator for SubstIter<'iter, L> {
-    type Item =  &'iter L;
+    type Item = &'iter L;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.link.map(|link| {
