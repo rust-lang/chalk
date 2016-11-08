@@ -1,5 +1,4 @@
 use formula::*;
-use lalrpop_intern::intern;
 
 use super::*;
 

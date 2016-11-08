@@ -1,6 +1,9 @@
 use formula::*;
 use super::{Subst, OffsetSubst};
 
+#[cfg(test)]
+mod test;
+
 pub trait Substitutable {
     fn subst(&self, subst: &Subst<Leaf>) -> Self;
 }
@@ -43,6 +46,8 @@ impl OffsetSubstitutable for Leaf {
     }
 }
 
+/// Macro to generate boiler-plate for pushing substitutions through
+/// clause/goal-kinds.
 macro_rules! fold {
     ($this:expr, $subst:expr, $Type:ident, $TypeData:ident, $TypeKind:ident {
         nullary { $($NullaryVariantName:ident),* },
