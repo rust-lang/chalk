@@ -1,6 +1,9 @@
+use formula::{Leaf, Fold};
 use std::fmt::{self, Debug};
 use std::sync::Arc;
 use std::ops::Index;
+
+use super::OffsetSubst;
 
 #[cfg(test)]
 mod test;
@@ -47,6 +50,13 @@ impl<L: Debug> Subst<L> {
 
     pub fn iter<'iter>(&'iter self) -> SubstIter<'iter, L> {
         SubstIter { link: Some(&*self.link) }
+    }
+}
+
+impl Subst<Leaf> {
+    pub fn apply<F: Fold>(&self, formula: &F) -> F {
+        let mut subst = OffsetSubst::new(self);
+        formula.fold_with(&mut subst)
     }
 }
 

@@ -17,7 +17,7 @@ fn subst_clause_bound_and() {
         //                             ^^^^^^^^^ should not be substituted
         //                                       ^^^^^^^^^ should be substituted
     };
-    let leaf1 = leaf0.subst(&subst);
+    let leaf1 = subst.apply(&leaf0);
     let leaf_expected = clause! {
         (and
          (leaf (expr var(0).to_leaf())) // <-- was substituted
@@ -39,7 +39,7 @@ fn subst_goal_bound_and() {
         //                             ^^^^^^^^^ should not be substituted
         //                                       ^^^^^^^^^ should be substituted
     };
-    let leaf1 = leaf0.subst(&subst);
+    let leaf1 = subst.apply(&leaf0);
     let leaf_expected = goal! {
         (and
          (leaf (expr var(0).to_leaf())) // <-- was substituted

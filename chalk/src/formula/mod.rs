@@ -10,6 +10,9 @@ pub use self::goal::*;
 mod clause;
 pub use self::clause::*;
 
+mod fold;
+pub use self::fold::*;
+
 mod leaf;
 pub use self::leaf::*;
 

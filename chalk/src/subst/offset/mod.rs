@@ -1,3 +1,5 @@
+use infer::InferenceVariable;
+use formula::{BoundVariable, Leaf, Fold, Folder};
 use std::fmt::Debug;
 
 use super::Subst;
@@ -37,11 +39,35 @@ impl<L: Debug> OffsetSubst<L> {
     }
 }
 
+impl OffsetSubst<Leaf> {
+    pub fn apply<F: Fold>(&self, formula: &F) -> F {
+        let mut tmp = self.clone();
+        formula.fold_with(&mut tmp)
+    }
+}
+
 impl<L: Debug> Clone for OffsetSubst<L> {
     fn clone(&self) -> Self {
         OffsetSubst {
             offset: self.offset,
             subst: self.subst.clone(),
         }
+    }
+}
+
+impl Folder for OffsetSubst<Leaf> {
+    fn push_binders(&mut self, num_binders: usize) -> Self {
+        (0..num_binders).fold(self.clone(), |s, _| s.push_offset())
+    }
+
+    fn replace_bound_variable(&mut self, from_leaf: &Leaf, v: BoundVariable) -> Leaf {
+        match self.get(v.depth) {
+            None => from_leaf.clone(),
+            Some(l) => l.clone(),
+        }
+    }
+
+    fn replace_inference_variable(&mut self, from_leaf: &Leaf, _: InferenceVariable) -> Leaf {
+        from_leaf.clone()
     }
 }
