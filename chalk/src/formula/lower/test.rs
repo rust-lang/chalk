@@ -47,7 +47,7 @@ fn lower_forall() {
 #[test]
 fn lower_many() {
     test("Foo(X, _, Y) :- Bar(X, _, Y, Z), Baz(Z); Bop(Z).",
-         &[r#"forall(A, B, C -> implies(and(exists(D -> "Bar()/4"(A, D, B, C)), or("Baz()/1"(C), "Bop()/1"(C))) => forall(D -> "Foo()/3"(A, D, B))))"#]);
+         &[r#"forall(A, B, C -> implies(and(exists(D -> "Bar()/4"(A, D, B, C)), or("Baz()/1"(C); "Bop()/1"(C))) => forall(D -> "Foo()/3"(A, D, B))))"#]);
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn lower_implies_and() {
 #[test]
 fn lower_implies_or() {
     test("Foo(X, _, Y) :- implies(Bar(X, _, Y, Z) => Baz(Z); Bop(Z)).",
-         &[r#"forall(A, B, C -> implies(implies(forall(D -> "Bar()/4"(A, D, B, C)) => or("Baz()/1"(C), "Bop()/1"(C))) => forall(D -> "Foo()/3"(A, D, B))))"#]);
+         &[r#"forall(A, B, C -> implies(implies(forall(D -> "Bar()/4"(A, D, B, C)) => or("Baz()/1"(C); "Bop()/1"(C))) => forall(D -> "Foo()/3"(A, D, B))))"#]);
 }
 
 #[test]

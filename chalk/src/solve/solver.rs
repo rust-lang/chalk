@@ -61,9 +61,9 @@ impl Solver {
         match goal.kind {
             GoalKind::True => Ok(()),
             GoalKind::Leaf(ref leaf) => unimplemented!(),
-            GoalKind::And(ref goals) => {
-                self.obligations.extend(goals.iter()
-                    .map(|goal| {
+            GoalKind::And(ref g1, ref g2) => {
+                self.obligations.extend([g1, g2].iter()
+                    .map(|&goal| {
                         Obligation {
                             environment: environment.clone(),
                             goal: goal.clone(),
@@ -71,8 +71,8 @@ impl Solver {
                     }));
                 Ok(())
             }
-            GoalKind::Or(ref goals) => {
-                for goal in goals {
+            GoalKind::Or(ref g1, ref g2) => {
+                for &goal in &[g1, g2] {
                     self.probe(|this| {
                         this.obligations.push(Obligation {
                             environment: environment.clone(),

@@ -37,7 +37,7 @@ pub struct ClauseData<L> {
 #[derive(Clone)]
 pub enum ClauseKind<L> {
     Leaf(L),
-    And(Vec<Clause<L>>),
+    And(Clause<L>, Clause<L>),
     Implication(Goal<L>, Clause<L>),
     ForAll(Quantification<Clause<L>>),
 }

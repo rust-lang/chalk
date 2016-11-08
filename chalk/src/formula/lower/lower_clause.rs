@@ -86,7 +86,7 @@ impl LowerClause<Leaf> for ast::Fact {
             ast::FactData::And(ref f1, ref f2) => {
                 let c1 = f1.lower_clause(env)?;
                 let c2 = f2.lower_clause(env)?;
-                Ok(Clause::new(ClauseData { kind: ClauseKind::And(vec![c1, c2]) }))
+                Ok(Clause::new(ClauseData { kind: ClauseKind::And(c1, c2) }))
             }
 
             ast::FactData::Implication(ref f1, ref f2) => {

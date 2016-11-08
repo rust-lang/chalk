@@ -17,16 +17,7 @@ impl<L: Debug> Debug for ClauseKind<L> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             ClauseKind::Leaf(ref l) => l.fmt(fmt)?,
-            ClauseKind::And(ref ls) => {
-                write!(fmt, "and(")?;
-                for (i, l) in ls.iter().enumerate() {
-                    if i > 0 {
-                        write!(fmt, ", ")?;
-                    }
-                    l.fmt(fmt)?;
-                }
-                write!(fmt, ")")?;
-            }
+            ClauseKind::And(ref a, ref b) => write!(fmt, "and({:?}, {:?})", a, b)?,
             ClauseKind::Implication(ref g, ref l) => {
                 write!(fmt, "implies(")?;
                 g.fmt(fmt)?;
@@ -54,14 +45,8 @@ impl<L: Debug> Debug for GoalKind<L> {
         match *self {
             GoalKind::True => write!(fmt, "true")?,
             GoalKind::Leaf(ref l) => l.fmt(fmt)?,
-            GoalKind::And(ref ls) => {
-                write!(fmt, "and")?;
-                fmt_parens(fmt, ls)?;
-            }
-            GoalKind::Or(ref ls) => {
-                write!(fmt, "or")?;
-                fmt_parens(fmt, ls)?;
-            }
+            GoalKind::And(ref a, ref b) => write!(fmt, "and({:?}, {:?})", a, b)?,
+            GoalKind::Or(ref a, ref b) => write!(fmt, "or({:?}; {:?})", a, b)?,
             GoalKind::Implication(ref g, ref l) => {
                 write!(fmt, "implies(")?;
                 g.fmt(fmt)?;
@@ -136,7 +121,9 @@ impl Debug for Constant {
 fn fmt_parens<D: Debug>(fmt: &mut Formatter, vs: &[D]) -> Result<(), Error> {
     write!(fmt, "(")?;
     for (i, v) in vs.iter().enumerate() {
-        if i > 0 { write!(fmt, ", ")?; }
+        if i > 0 {
+            write!(fmt, ", ")?;
+        }
         write!(fmt, "{:?}", v)?;
     }
     write!(fmt, ")")

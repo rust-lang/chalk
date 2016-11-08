@@ -30,13 +30,13 @@ impl LowerGoal<Leaf> for ast::Fact {
             ast::FactData::And(ref f1, ref f2) => {
                 let c1 = f1.lower_goal(env)?;
                 let c2 = f2.lower_goal(env)?;
-                Ok(Goal::new(GoalData { kind: GoalKind::And(vec![c1, c2]) }))
+                Ok(Goal::new(GoalData { kind: GoalKind::And(c1, c2) }))
             }
 
             ast::FactData::Or(ref f1, ref f2) => {
                 let c1 = f1.lower_goal(env)?;
                 let c2 = f2.lower_goal(env)?;
-                Ok(Goal::new(GoalData { kind: GoalKind::Or(vec![c1, c2]) }))
+                Ok(Goal::new(GoalData { kind: GoalKind::Or(c1, c2) }))
             }
 
             ast::FactData::Implication(ref f1, ref f2) => {
