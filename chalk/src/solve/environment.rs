@@ -40,4 +40,8 @@ impl Environment {
     pub fn universe_index(&self) -> UniverseIndex {
         UniverseIndex { counter: self.depth }
     }
+
+    pub fn depth(&self) -> usize {
+        self.depth
+    }
 }

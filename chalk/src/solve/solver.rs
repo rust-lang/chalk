@@ -3,6 +3,7 @@
 use infer::*;
 use formula::*;
 use solve::*;
+use subst::Subst;
 use std::sync::Arc;
 
 pub struct Solver {
@@ -13,9 +14,7 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn new(root_environment: Arc<Environment>,
-               root_goal: Goal<Leaf>)
-               -> Self {
+    pub fn new(root_environment: Arc<Environment>, root_goal: Goal<Leaf>) -> Self {
         Solver {
             infer: InferenceTable::new(),
             root_goal: root_goal.clone(),
@@ -29,6 +28,10 @@ impl Solver {
     }
 
     fn canonicalize(&mut self, goal: &Goal<Leaf>) -> Goal<Leaf> {
+        // FIXME -- this meant to replace unbound variables like ?F
+        // with a `_`, but that is not a variant of leaf (and should
+        // not be). Should be able to fix this without extending leaf
+        // but might need to generalize folder trait.
         self.infer.normalize_deep(goal)
     }
 
@@ -62,7 +65,8 @@ impl Solver {
             GoalKind::True => Ok(()),
             GoalKind::Leaf(ref leaf) => unimplemented!(),
             GoalKind::And(ref g1, ref g2) => {
-                self.obligations.extend([g1, g2].iter()
+                self.obligations.extend([g1, g2]
+                    .iter()
                     .map(|&goal| {
                         Obligation {
                             environment: environment.clone(),
@@ -83,9 +87,39 @@ impl Solver {
                 }
                 Err(()) // signal to the surrounding `run()` task that we took over =)
             }
-            GoalKind::Exists(ref quant) => unimplemented!(),
+            GoalKind::Exists(ref quant) => {
+                assert!(quant.num_binders > 0);
+                let mut subst = None;
+                for _ in 0..quant.num_binders {
+                    let var = self.infer.new_variable(environment.universe_index()).to_leaf();
+                    subst = Some(Subst::new(subst.as_ref(), var));
+                }
+                let subst = subst.unwrap(); // always at least 1 binder
+                let new_goal = subst.apply(&quant.formula);
+                self.obligations.push(Obligation {
+                    environment: environment.clone(),
+                    goal: new_goal,
+                });
+                Ok(())
+            }
+            GoalKind::ForAll(ref quant) => {
+                assert!(quant.num_binders > 0);
+                let mut new_environment = environment;
+                let mut subst = None;
+                for _ in 0..quant.num_binders {
+                    new_environment = Arc::new(Environment::new(Some(new_environment), vec![]));
+                    let depth = new_environment.depth();
+                    subst = Some(Subst::new(subst.as_ref(), leaf!(apply (skol depth))));
+                }
+                let subst = subst.unwrap(); // always at least 1 binder
+                let new_goal = subst.apply(&quant.formula);
+                self.obligations.push(Obligation {
+                    environment: new_environment,
+                    goal: new_goal,
+                });
+                Ok(())
+            }
             GoalKind::Implication(ref quant, ref goal) => unimplemented!(),
-            GoalKind::ForAll(ref quant) => unimplemented!(),
         }
     }
 }
