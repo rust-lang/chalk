@@ -30,8 +30,10 @@ macro_rules! deref_to {
     };
 }
 
-mod infer;
+#[macro_use]
 mod formula;
+
+mod infer;
 mod solve;
 mod subst;
 

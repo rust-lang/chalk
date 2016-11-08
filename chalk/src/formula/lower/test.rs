@@ -25,7 +25,6 @@ fn test_err(text: &str, span: &str, kind: ErrorKind) {
     assert!(err.kind == kind, "expected error kind {:?}, found {:?}", kind, err.kind);
 }
 
-
 #[test]
 fn lower_one() {
     test("Foo(X, _, Y) :- Bar(X, _, Y, Z).",
