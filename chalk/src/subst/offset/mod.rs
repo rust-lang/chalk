@@ -56,8 +56,11 @@ impl<L: Debug> Clone for OffsetSubst<L> {
 }
 
 impl Folder for OffsetSubst<Leaf> {
-    fn push_binders(&mut self, num_binders: usize) -> Self {
-        (0..num_binders).fold(self.clone(), |s, _| s.push_offset())
+    fn in_binders<OP, R>(&mut self, num_binders: usize, op: OP) -> R
+        where OP: FnOnce(&mut Self) -> R
+    {
+        let mut subst = (0..num_binders).fold(self.clone(), |s, _| s.push_offset());
+        op(&mut subst)
     }
 
     fn replace_bound_variable(&mut self, from_leaf: &Leaf, v: BoundVariable) -> Leaf {

@@ -6,7 +6,8 @@ pub trait Fold {
 }
 
 pub trait Folder {
-    fn push_binders(&mut self, num_binders: usize) -> Self;
+    fn in_binders<OP, R>(&mut self, num_binders: usize, op: OP) -> R
+        where OP: FnOnce(&mut Self) -> R;
     fn replace_bound_variable(&mut self, from_leaf: &Leaf, v: BoundVariable) -> Leaf;
     fn replace_inference_variable(&mut self, from_leaf: &Leaf, v: InferenceVariable) -> Leaf;
 }
@@ -88,11 +89,11 @@ impl<L: Fold> Fold for Goal<L> {
 
 impl<Q: Fold> Fold for Quantification<Q> {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
-        // push N offsets
-        let mut folder = folder.push_binders(self.num_binders);
-        Quantification {
-            num_binders: self.num_binders,
-            formula: self.formula.fold_with(&mut folder),
-        }
+        folder.in_binders(self.num_binders, |folder| {
+            Quantification {
+                num_binders: self.num_binders,
+                formula: self.formula.fold_with(folder),
+            }
+        })
     }
 }
