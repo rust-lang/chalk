@@ -9,9 +9,9 @@ fn infer() {
     let a = table.new_variable(universe0).to_leaf();
     let b = table.new_variable(universe0).to_leaf();
     table.unify(&a, &leaf!(apply "foo" (expr b))).unwrap();
+    assert_eq!(table.normalize_deep(&a), leaf!(apply "foo" (expr b)));
     table.unify(&b, &leaf!(apply "bar")).unwrap();
-    let c = table.normalize_deep(&a);
-    assert_eq!(c, leaf!(apply "foo" (apply "bar")));
+    assert_eq!(table.normalize_deep(&a), leaf!(apply "foo" (apply "bar")));
 }
 
 #[test]

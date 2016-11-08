@@ -85,31 +85,8 @@ impl InferenceTable {
         }
     }
 
-    pub fn normalize_deep(&mut self, leaf: &Leaf) -> Leaf {
-        match leaf.kind {
-            LeafKind::BoundVariable(_) => leaf.clone(),
-            LeafKind::InferenceVariable(var) => {
-                match self.unify.probe_value(var) {
-                    InferenceValue::Unbound(_) => leaf.clone(),
-                    InferenceValue::Bound(val) => {
-                        let application = self.values[val.as_usize()].clone();
-                        let leaf = Leaf::new(LeafData { kind: LeafKind::Application(application) });
-                        self.normalize_deep(&leaf)
-                    }
-                }
-            }
-            LeafKind::Application(ref application) => {
-                Leaf::new(LeafData {
-                    kind: LeafKind::Application(Application {
-                        constant: application.constant,
-                        args: application.args
-                            .iter()
-                            .map(|arg| self.normalize_deep(arg))
-                            .collect(),
-                    }),
-                })
-            }
-        }
+    pub fn normalize_deep<F: Fold>(&mut self, leaf: &F) -> F {
+        leaf.fold_with(self)
     }
 
     pub fn unify(&mut self, leaf1: &Leaf, leaf2: &Leaf) -> UnifyResult<()> {
@@ -247,6 +224,31 @@ impl InferenceTable {
             Err(UnifyError::IncompatibleUniverses(universe_index, application_universe_index))
         } else {
             Ok(())
+        }
+    }
+}
+
+/// The inference table, when folding, normalizes bound variables with
+/// their current values.
+impl Folder for InferenceTable {
+    fn in_binders<OP, R>(&mut self, _num_binders: usize, op: OP) -> R
+        where OP: FnOnce(&mut Self) -> R
+    {
+        op(self)
+    }
+
+    fn replace_bound_variable(&mut self, from_leaf: &Leaf, _: BoundVariable) -> Leaf {
+        from_leaf.clone()
+    }
+
+    fn replace_inference_variable(&mut self, from_leaf: &Leaf, var: InferenceVariable) -> Leaf {
+        match self.unify.probe_value(var) {
+            InferenceValue::Unbound(_) => from_leaf.clone(),
+            InferenceValue::Bound(val) => {
+                let application = self.values[val.as_usize()].clone();
+                let leaf = Leaf::new(LeafData { kind: LeafKind::Application(application) });
+                self.normalize_deep(&leaf)
+            }
         }
     }
 }
