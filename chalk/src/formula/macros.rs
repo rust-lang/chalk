@@ -35,6 +35,48 @@ macro_rules! clause {
     }
 }
 
+macro_rules! goal {
+    (leaf $leaf:tt) => {
+        Goal::new(GoalData {
+            kind: GoalKind::Leaf(leaf!($leaf))
+        })
+    };
+    (and $a:tt $b:tt) => {
+        Goal::new(GoalData {
+            kind: GoalKind::And(goal!($a), goal!($b))
+        })
+    };
+    (or $a:tt $b:tt) => {
+        Goal::new(GoalData {
+            kind: GoalKind::Or(goal!($a), goal!($b))
+        })
+    };
+    (implies $g:tt => $c:tt) => {
+        Goal::new(GoalData {
+            kind: GoalKind::Implication(clause!($g), goal!($c))
+        })
+    };
+    (forall ($binders:expr) $c:tt) => {
+        Goal::new(GoalData {
+            kind: GoalKind::ForAll(Quantification {
+                num_binders: $binders,
+                formula: goal!($c)
+            })
+        })
+    };
+    (exists ($binders:expr) $c:tt) => {
+        Goal::new(GoalData {
+            kind: GoalKind::Exists(Quantification {
+                num_binders: $binders,
+                formula: goal!($c)
+            })
+        })
+    };
+    (($($a:tt)*)) => {
+        goal!($($a)*)
+    }
+}
+
 macro_rules! leaf {
     (expr $expr:expr) => {
         $expr.clone()
