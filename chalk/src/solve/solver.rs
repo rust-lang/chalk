@@ -29,7 +29,7 @@ impl Solver {
     }
 
     fn canonicalize(&mut self, goal: &Goal<Leaf>) -> Goal<Leaf> {
-        unimplemented!()
+        self.infer.normalize_deep(goal)
     }
 
     fn probe<F, R>(&mut self, op: F) -> R
