@@ -3,9 +3,14 @@ use super::clause::Clause;
 use std::sync::Arc;
 
 /// G-formula, see page 75 of Programming with Higher-Order Logic.
-#[derive(Clone)]
 pub struct Goal<L> {
     data: Arc<GoalData<L>>,
+}
+
+impl<L> Clone for Goal<L> {
+    fn clone(&self) -> Self {
+        Goal { data: self.data.clone() }
+    }
 }
 
 deref_to!(Goal<L>.data => GoalData<L>);
