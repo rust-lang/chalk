@@ -1,11 +1,11 @@
 use ena::unify;
-use super::leaf::*;
+use formula::*;
 use super::universe::UniverseIndex;
 use super::var::*;
 
 pub struct InferenceTable {
     unify: unify::UnificationTable<InferenceVariable>,
-    values: Vec<InferenceApplication>,
+    values: Vec<Application>,
 }
 
 pub struct InferenceSnapshot {
@@ -18,9 +18,9 @@ pub type UnifyResult<T> = Result<T, UnifyError>;
 #[derive(Debug)]
 pub enum UnifyError {
     Cycle,
-    IncompatibleConstants(InferenceConstant, InferenceConstant),
-    IncompatibleArity(InferenceConstant, usize, usize), // indicates prog is not well-typed
-    IncompatibleArgument(InferenceConstant, usize, Box<UnifyError>),
+    IncompatibleConstants(Constant, Constant),
+    IncompatibleArity(Constant, usize, usize), // indicates prog is not well-typed
+    IncompatibleArgument(Constant, usize, Box<UnifyError>),
     IncompatibleUniverses(UniverseIndex, UniverseIndex),
 }
 
@@ -70,16 +70,14 @@ impl InferenceTable {
         }
     }
 
-    fn normalize_shallow(&mut self, leaf: &InferenceLeaf) -> InferenceLeaf {
+    fn normalize_shallow(&mut self, leaf: &Leaf) -> Leaf {
         match leaf.kind {
-            InferenceLeafKind::Variable(var) => {
+            LeafKind::InferenceVariable(var) => {
                 match self.unify.probe_value(var) {
                     InferenceValue::Unbound(_) => leaf.clone(),
                     InferenceValue::Bound(val) => {
                         let application = self.values[val.as_usize()].clone();
-                        InferenceLeaf::new(InferenceLeafData {
-                            kind: InferenceLeafKind::Application(application),
-                        })
+                        Leaf::new(LeafData { kind: LeafKind::Application(application) })
                     }
                 }
             }
@@ -87,41 +85,38 @@ impl InferenceTable {
         }
     }
 
-    pub fn normalize_deep(&mut self, leaf: &InferenceLeaf) -> InferenceLeaf {
+    pub fn normalize_deep(&mut self, leaf: &Leaf) -> Leaf {
         match leaf.kind {
-            InferenceLeafKind::Variable(var) => {
+            LeafKind::BoundVariable(_) => leaf.clone(),
+            LeafKind::InferenceVariable(var) => {
                 match self.unify.probe_value(var) {
                     InferenceValue::Unbound(_) => leaf.clone(),
                     InferenceValue::Bound(val) => {
                         let application = self.values[val.as_usize()].clone();
-                        let leaf = InferenceLeaf::new(InferenceLeafData {
-                            kind: InferenceLeafKind::Application(application),
-                        });
+                        let leaf = Leaf::new(LeafData { kind: LeafKind::Application(application) });
                         self.normalize_deep(&leaf)
                     }
                 }
             }
-            InferenceLeafKind::Application(ref application) => {
-                InferenceLeaf::new(InferenceLeafData {
-                    kind: InferenceLeafKind::Application(InferenceApplication {
+            LeafKind::Application(ref application) => {
+                Leaf::new(LeafData {
+                    kind: LeafKind::Application(Application {
                         constant: application.constant,
-                        args: application.args.iter()
-                                              .map(|arg| self.normalize_deep(arg))
-                                              .collect(),
-                    })
+                        args: application.args
+                            .iter()
+                            .map(|arg| self.normalize_deep(arg))
+                            .collect(),
+                    }),
                 })
             }
         }
     }
 
-    pub fn unify(&mut self, leaf1: &InferenceLeaf, leaf2: &InferenceLeaf) -> UnifyResult<()> {
+    pub fn unify(&mut self, leaf1: &Leaf, leaf2: &Leaf) -> UnifyResult<()> {
         self.commit_if_ok(|this| this.unify_in_snapshot(leaf1, leaf2))
     }
 
-    fn unify_in_snapshot(&mut self,
-                         leaf1: &InferenceLeaf,
-                         leaf2: &InferenceLeaf)
-                         -> UnifyResult<()> {
+    fn unify_in_snapshot(&mut self, leaf1: &Leaf, leaf2: &Leaf) -> UnifyResult<()> {
         println!("unify_in_snapshot, leaf1={:?}", leaf1);
         println!("unify_in_snapshot, leaf2={:?}", leaf2);
 
@@ -133,21 +128,23 @@ impl InferenceTable {
         println!("unify_in_snapshot, normalized leaf2={:?}", leaf2);
 
         match (&leaf1.kind, &leaf2.kind) {
-            (&InferenceLeafKind::Variable(var1), &InferenceLeafKind::Variable(var2)) => {
+            (&LeafKind::BoundVariable(_), _) |
+            (_, &LeafKind::BoundVariable(_)) => {
+                panic!("asked to unify bound variables: {:?} vs {:?}", leaf1, leaf2);
+            }
+            (&LeafKind::InferenceVariable(var1), &LeafKind::InferenceVariable(var2)) => {
                 Ok(self.unify
                     .unify_var_var(var1, var2)
                     .expect("unification of two unbound variables cannot fail"))
             }
 
-            (&InferenceLeafKind::Application(ref application),
-             &InferenceLeafKind::Variable(var)) |
-            (&InferenceLeafKind::Variable(var),
-             &InferenceLeafKind::Application(ref application)) => {
+            (&LeafKind::Application(ref application), &LeafKind::InferenceVariable(var)) |
+            (&LeafKind::InferenceVariable(var), &LeafKind::Application(ref application)) => {
                 self.unify_var_application(var, application)
             }
 
-            (&InferenceLeafKind::Application(ref application1),
-             &InferenceLeafKind::Application(ref application2)) => {
+            (&LeafKind::Application(ref application1),
+             &LeafKind::Application(ref application2)) => {
                 if application1.constant != application2.constant {
                     return Err(UnifyError::IncompatibleConstants(application1.constant,
                                                                  application2.constant));
@@ -180,7 +177,7 @@ impl InferenceTable {
     /// unbound state already.
     fn unify_var_application(&mut self,
                              var: InferenceVariable,
-                             application: &InferenceApplication)
+                             application: &Application)
                              -> UnifyResult<()> {
         println!("unify_var_application, var={:?}", var);
         println!("unify_var_application, application={:?}", application);
@@ -208,17 +205,21 @@ impl InferenceTable {
     fn occurs_check(&mut self,
                     var: InferenceVariable,
                     universe_index: UniverseIndex,
-                    application: &InferenceApplication)
+                    application: &Application)
                     -> UnifyResult<()> {
         for arg in &application.args {
             let arg = self.normalize_shallow(arg);
             match arg.kind {
-                InferenceLeafKind::Application(ref c) => {
+                LeafKind::BoundVariable(_) => {
+                    panic!("found bound variable in occurs check")
+                }
+
+                LeafKind::Application(ref c) => {
                     self.universe_check(universe_index, c.constant.universe_index())?;
                     self.occurs_check(var, universe_index, c)?;
                 }
 
-                InferenceLeafKind::Variable(v) => {
+                LeafKind::InferenceVariable(v) => {
                     match self.unify.probe_value(v) {
                         InferenceValue::Unbound(ui) => {
                             self.universe_check(universe_index, ui)?;

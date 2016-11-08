@@ -28,8 +28,8 @@ impl LowerLeaf<Leaf> for ast::Application {
                                        .map(|v| v.lower_leaf(env))
                                        .collect());
             Ok(Leaf::new(LeafData {
-                kind: LeafKind::Constant(Constant {
-                    operator: operator_name,
+                kind: LeafKind::Application(Application {
+                    constant: Constant::Program(operator_name),
                     args: args,
                 }),
             }))
@@ -50,8 +50,8 @@ impl LowerLeaf<Leaf> for ast::Value {
         match self.kind {
             ast::ValueKind::Atom(atom) => {
                 Ok(Leaf::new(LeafData {
-                    kind: LeafKind::Constant(Constant {
-                        operator: atom.id,
+                    kind: LeafKind::Application(Application {
+                        constant: Constant::Program(atom.id),
                         args: vec![],
                     }),
                 }))

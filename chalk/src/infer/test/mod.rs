@@ -1,15 +1,15 @@
+use formula::*;
 use lalrpop_intern::intern;
 
 use super::*;
-use super::leaf::*;
 
 macro_rules! leaf {
     (expr $expr:expr) => {
         $expr.clone()
     };
     (apply $name:tt $($exprs:tt)*) => {
-        InferenceLeaf::new(InferenceLeafData {
-            kind: InferenceLeafKind::Application(InferenceApplication {
+        Leaf::new(LeafData {
+            kind: LeafKind::Application(Application {
                 constant: constant!($name),
                 args: vec![$(leaf!($exprs)),*],
             })
@@ -22,13 +22,13 @@ macro_rules! leaf {
 
 macro_rules! constant {
     (skol $n:tt) => {
-        InferenceConstant::Skolemized(UniverseIndex { counter: $n })
+        Constant::Skolemized(UniverseIndex { counter: $n })
     };
     (($($a:tt)*)) => {
         constant!($($a)*)
     };
     ($n:expr) => {
-        InferenceConstant::Program(intern($n))
+        Constant::Program(intern($n))
     }
 }
 

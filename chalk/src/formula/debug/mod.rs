@@ -107,17 +107,29 @@ impl Debug for Leaf {
 impl Debug for LeafKind {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
+            LeafKind::InferenceVariable(iv) => {
+                write!(fmt, "{:?}", iv)?;
+            }
             LeafKind::BoundVariable(bv) => {
                 env::fmt_bound_variable(bv.depth, fmt)?;
             }
-            LeafKind::Constant(ref c) => {
-                write!(fmt, "{:?}", c.operator)?;
-                if c.args.len() > 0 {
-                    fmt_parens(fmt, &c.args)?;
+            LeafKind::Application(ref a) => {
+                write!(fmt, "{:?}", a.constant)?;
+                if a.args.len() > 0 {
+                    fmt_parens(fmt, &a.args)?;
                 }
             }
         }
         Ok(())
+    }
+}
+
+impl Debug for Constant {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            Constant::Program(s) => write!(fmt, "{:?}", s),
+            Constant::Skolemized(ui) => write!(fmt, "?skol{}", ui.counter),
+        }
     }
 }
 

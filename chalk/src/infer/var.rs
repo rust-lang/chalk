@@ -1,18 +1,19 @@
 use ena::unify::{UnifyKey, UnifyValue};
+use formula::*;
 use std::cmp::min;
+use std::fmt;
 
-use super::leaf::*;
 use super::universe::UniverseIndex;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct InferenceVariable {
     index: u32,
 }
 
 impl InferenceVariable {
-    pub fn to_leaf(&self) -> InferenceLeaf {
-        InferenceLeaf::new(InferenceLeafData {
-            kind: InferenceLeafKind::Variable(*self)
+    pub fn to_leaf(&self) -> Leaf {
+        Leaf::new(LeafData {
+            kind: LeafKind::InferenceVariable(*self)
         })
     }
 }
@@ -78,5 +79,11 @@ impl ValueIndex {
 
     pub fn as_usize(&self) -> usize {
         self.index as usize
+    }
+}
+
+impl fmt::Debug for InferenceVariable {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "?{}", self.index)
     }
 }
