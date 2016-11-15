@@ -28,37 +28,37 @@ fn test_err(text: &str, span: &str, kind: ErrorKind) {
 #[test]
 fn lower_one() {
     test("Foo(X, _, Y) :- Bar(X, _, Y, Z).",
-         &[r#"forall(A, B, C -> implies(exists(D -> "Bar()/4"(A, D, B, C)) => forall(D -> "Foo()/3"(A, D, B))))"#]);
+         &[r#"forall(A, B, C -> forall(D -> implies(exists(E -> "Bar()/4"(A, E, B, C)) => "Foo()/3"(A, D, B))))"#]);
 }
 
 #[test]
 fn lower_exists() {
     test("Foo(X, _, Y) :- exists(Z -> Bar(X, _, Y, Z)).",
-         &[r#"forall(A, B -> implies(exists(C -> exists(D -> "Bar()/4"(A, D, B, C))) => forall(C -> "Foo()/3"(A, C, B))))"#]);
+         &[r#"forall(A, B -> forall(C -> implies(exists(D -> exists(E -> "Bar()/4"(A, E, B, D))) => "Foo()/3"(A, C, B))))"#]);
 }
 
 #[test]
 fn lower_forall() {
     test("Foo(X, _, Y) :- forall(Z -> Bar(X, _, Y, Z)).",
-         &[r#"forall(A, B -> implies(forall(C -> exists(D -> "Bar()/4"(A, D, B, C))) => forall(C -> "Foo()/3"(A, C, B))))"#]);
+         &[r#"forall(A, B -> forall(C -> implies(forall(D -> exists(E -> "Bar()/4"(A, E, B, D))) => "Foo()/3"(A, C, B))))"#]);
 }
 
 #[test]
 fn lower_many() {
     test("Foo(X, _, Y) :- Bar(X, _, Y, Z), Baz(Z); Bop(Z).",
-         &[r#"forall(A, B, C -> implies(and(exists(D -> "Bar()/4"(A, D, B, C)), or("Baz()/1"(C); "Bop()/1"(C))) => forall(D -> "Foo()/3"(A, D, B))))"#]);
+         &[r#"forall(A, B, C -> forall(D -> implies(and(exists(E -> "Bar()/4"(A, E, B, C)), or("Baz()/1"(C); "Bop()/1"(C))) => "Foo()/3"(A, D, B))))"#]);
 }
 
 #[test]
 fn lower_implies_and() {
     test("Foo(X, _, Y) :- implies(Bar(X, _, Y, Z) => Baz(Z), Bop(Z)).",
-         &[r#"forall(A, B, C -> implies(implies(forall(D -> "Bar()/4"(A, D, B, C)) => and("Baz()/1"(C), "Bop()/1"(C))) => forall(D -> "Foo()/3"(A, D, B))))"#]);
+         &[r#"forall(A, B, C -> forall(D -> implies(implies(forall(E -> "Bar()/4"(A, E, B, C)) => and("Baz()/1"(C), "Bop()/1"(C))) => "Foo()/3"(A, D, B))))"#]);
 }
 
 #[test]
 fn lower_implies_or() {
     test("Foo(X, _, Y) :- implies(Bar(X, _, Y, Z) => Baz(Z); Bop(Z)).",
-         &[r#"forall(A, B, C -> implies(implies(forall(D -> "Bar()/4"(A, D, B, C)) => or("Baz()/1"(C); "Bop()/1"(C))) => forall(D -> "Foo()/3"(A, D, B))))"#]);
+         &[r#"forall(A, B, C -> forall(D -> implies(implies(forall(E -> "Bar()/4"(A, E, B, C)) => or("Baz()/1"(C); "Bop()/1"(C))) => "Foo()/3"(A, D, B))))"#]);
 }
 
 #[test]

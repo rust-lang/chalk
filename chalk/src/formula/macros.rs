@@ -7,6 +7,9 @@ macro_rules! formula {
 }
 
 macro_rules! clause {
+    (expr $expr:expr) => {
+        $expr.clone()
+    };
     (leaf $leaf:tt) => {
         Clause::new(ClauseData {
             kind: ClauseKind::Leaf(leaf!($leaf))
@@ -19,7 +22,7 @@ macro_rules! clause {
     };
     (implies $g:tt => $c:tt) => {
         Clause::new(ClauseData {
-            kind: ClauseKind::Implication(goal!($g), clause!($c))
+            kind: ClauseKind::Implication(goal!($g), leaf!($c))
         })
     };
     (forall ($binders:expr) $c:tt) => {
@@ -36,6 +39,9 @@ macro_rules! clause {
 }
 
 macro_rules! goal {
+    (expr $expr:expr) => {
+        $expr.clone()
+    };
     (leaf $leaf:tt) => {
         Goal::new(GoalData {
             kind: GoalKind::Leaf(leaf!($leaf))

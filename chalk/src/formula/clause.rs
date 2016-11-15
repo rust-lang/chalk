@@ -38,10 +38,11 @@ pub struct ClauseData<L> {
 pub enum ClauseKind<L> {
     Leaf(L),
     And(Clause<L>, Clause<L>),
-    Implication(Goal<L>, Clause<L>),
+    Implication(Goal<L>, L),
     ForAll(Quantification<Clause<L>>),
 }
 
 macro_rules! clause {
     (true) => { Clause::new(ClauseData { kind: ClauseKind::True }) };
 }
+

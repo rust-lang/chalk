@@ -97,3 +97,48 @@ impl<Q: Fold> Fold for Quantification<Q> {
         })
     }
 }
+
+///////////////////////////////////////////////////////////////////////////
+
+/// Folder to "open up" a gap in the bound variable indices.  This is
+/// useful when you are inserting a term underneath a binder and wish
+/// to avoid accidental capture. For example, if I have some (not
+/// necessarily closed) term X and I wish to transform it to
+/// `forall(1) X` while avoiding capture, I would fold X with
+/// `OpenUp::new(1)`.
+pub struct OpenUp {
+    gap: usize,
+    skip: usize,
+}
+
+impl OpenUp {
+    pub fn new(gap: usize) -> OpenUp {
+        OpenUp {
+            gap: gap,
+            skip: 0,
+        }
+    }
+}
+
+impl Folder for OpenUp {
+    fn in_binders<OP, R>(&mut self, num_binders: usize, op: OP) -> R
+        where OP: FnOnce(&mut Self) -> R
+    {
+        op(&mut OpenUp {
+            gap: self.gap,
+            skip: self.skip + num_binders,
+        })
+    }
+
+    fn replace_bound_variable(&mut self, from_leaf: &Leaf, v: BoundVariable) -> Leaf {
+        if v.depth < self.skip {
+            from_leaf.clone()
+        } else {
+            leaf!((bound self.gap + v.depth))
+        }
+    }
+
+    fn replace_inference_variable(&mut self, from_leaf: &Leaf, _v: InferenceVariable) -> Leaf {
+        from_leaf.clone()
+    }
+}

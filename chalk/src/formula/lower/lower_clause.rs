@@ -1,14 +1,10 @@
 use chalk_parse::ast;
-use formula::clause::*;
-use formula::leaf::Leaf;
+use formula::*;
 use std::collections::HashSet;
 
-use super::LowerResult;
 use super::lower_leaf::LowerLeaf;
 use super::lower_goal::LowerGoal;
 use super::environment::Environment;
-use super::Error;
-use super::ErrorKind;
 
 pub trait LowerClause<L> {
     fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<L>>;
@@ -76,7 +72,7 @@ impl LowerClause<Leaf> for ast::Rule {
     fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<Leaf>> {
         let consequence = self.consequence.lower_clause(env)?;
         let condition = self.condition.lower_goal(env)?;
-        Ok(Clause::new(ClauseData { kind: ClauseKind::Implication(condition, consequence) }))
+        Ok(consequence.flatten_implication(&condition))
     }
 }
 
@@ -92,9 +88,7 @@ impl LowerClause<Leaf> for ast::Fact {
             ast::FactData::Implication(ref f1, ref f2) => {
                 let condition = f1.lower_goal(env)?;
                 let consequence = f2.lower_clause(env)?;
-                Ok(Clause::new(ClauseData {
-                    kind: ClauseKind::Implication(condition, consequence),
-                }))
+                Ok(consequence.flatten_implication(&condition))
             }
 
             ast::FactData::ForAll(v, ref f1) => {
@@ -111,15 +105,34 @@ impl LowerClause<Leaf> for ast::Fact {
                 })
             }
 
-            ast::FactData::Apply(ref appl) => {
-                appl.lower_clause(env)
-            }
+            ast::FactData::Apply(ref appl) => appl.lower_clause(env),
 
             ast::FactData::Or(..) => {
                 Err(Error {
                     span: self.span,
                     kind: ErrorKind::OrInClause,
                 })
+            }
+        }
+    }
+}
+
+impl Clause<Leaf> {
+    pub fn flatten_implication(&self, goal: &Goal<Leaf>) -> Clause<Leaf> {
+        match self.kind {
+            ClauseKind::Leaf(ref leaf) => clause!((implies (expr goal) => (expr leaf))),
+            ClauseKind::And(ref c1, ref c2) => {
+                let c1_flat = c1.flatten_implication(goal);
+                let c2_flat = c2.flatten_implication(goal);
+                clause!((and (expr c1_flat) (expr c2_flat)))
+            }
+            ClauseKind::Implication(ref goal2, ref leaf) => {
+                clause!((implies (and (expr goal) (expr goal2)) => (expr leaf)))
+            }
+            ClauseKind::ForAll(ref quant) => {
+                let goal = goal.fold_with(&mut OpenUp::new(quant.num_binders));
+                let formula = quant.formula.flatten_implication(&goal);
+                clause!(forall(quant.num_binders) (expr formula))
             }
         }
     }

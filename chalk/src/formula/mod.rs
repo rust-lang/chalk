@@ -4,6 +4,9 @@
 
 pub use lalrpop_intern::InternedString;
 
+#[macro_use]
+mod macros;
+
 mod goal;
 pub use self::goal::*;
 
@@ -23,7 +26,3 @@ mod lower;
 pub use self::lower::*;
 
 mod debug;
-
-#[macro_use]
-mod macros;
-
