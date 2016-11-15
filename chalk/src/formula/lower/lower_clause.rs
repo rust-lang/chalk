@@ -7,11 +7,11 @@ use super::lower_goal::LowerGoal;
 use super::environment::Environment;
 
 pub trait LowerClause<L> {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<L>>;
+    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<L>>>;
 }
 
 impl LowerClause<Leaf> for ast::Item {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<Leaf>> {
+    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Leaf>>> {
         println!("Item lower_clause");
 
         // bring all free variables into scope but ignore wildcards:
@@ -40,7 +40,7 @@ impl LowerClause<Leaf> for ast::Item {
         //
         // In particular, we want to translate this so that the `_` can be bound to `X`.
 
-        let clause = match *self {
+        let clauses = match *self {
             ast::Item::Fact(ref appl) => appl.lower_clause(env),
             ast::Item::Rule(ref rule) => rule.lower_clause(env),
         }?;
@@ -49,53 +49,61 @@ impl LowerClause<Leaf> for ast::Item {
             env.pop_bound_name();
         }
 
-        Ok(clause.in_foralls(count))
+        Ok(clauses.into_iter()
+            .map(|clause| clause.in_foralls(count))
+            .collect())
     }
 }
 
 impl LowerClause<Leaf> for ast::Application {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<Leaf>> {
+    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Leaf>>> {
         println!("Application lower_clause");
 
         // collect the wildcards and bring them into scope
         let wildcards = self.count_wildcards();
         env.push_wildcards(wildcards);
         let leaf = self.lower_leaf(env)?;
-        let clause = Clause::new(ClauseData { kind: ClauseKind::Leaf(leaf) });
+        let clause = clause!(leaf (expr leaf));
         let clause = clause.in_foralls(wildcards);
         env.pop_wildcards(wildcards);
-        Ok(clause)
+        Ok(vec![clause])
     }
 }
 
 impl LowerClause<Leaf> for ast::Rule {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<Leaf>> {
-        let consequence = self.consequence.lower_clause(env)?;
+    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Leaf>>> {
+        let consequences = self.consequence.lower_clause(env)?;
         let condition = self.condition.lower_goal(env)?;
-        Ok(consequence.flatten_implication(&condition))
+        Ok(consequences.into_iter()
+            .map(|consequence| consequence.flatten_implication(&condition))
+            .collect())
     }
 }
 
 impl LowerClause<Leaf> for ast::Fact {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Clause<Leaf>> {
+    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Leaf>>> {
         match *self.data {
             ast::FactData::And(ref f1, ref f2) => {
                 let c1 = f1.lower_clause(env)?;
                 let c2 = f2.lower_clause(env)?;
-                Ok(Clause::new(ClauseData { kind: ClauseKind::And(c1, c2) }))
+                Ok(append(c1, c2))
             }
 
             ast::FactData::Implication(ref f1, ref f2) => {
                 let condition = f1.lower_goal(env)?;
-                let consequence = f2.lower_clause(env)?;
-                Ok(consequence.flatten_implication(&condition))
+                let consequences = f2.lower_clause(env)?;
+                Ok(consequences.into_iter()
+                    .map(|consequence| consequence.flatten_implication(&condition))
+                    .collect())
             }
 
             ast::FactData::ForAll(v, ref f1) => {
                 env.push_bound_name(v);
-                let c = f1.lower_clause(env)?;
+                let clauses = f1.lower_clause(env)?;
                 env.pop_bound_name();
-                Ok(c.in_foralls(1))
+                Ok(clauses.into_iter()
+                    .map(|clause| clause.in_foralls(1))
+                    .collect())
             }
 
             ast::FactData::Exists(..) => {
@@ -120,14 +128,9 @@ impl LowerClause<Leaf> for ast::Fact {
 impl Clause<Leaf> {
     pub fn flatten_implication(&self, goal: &Goal<Leaf>) -> Clause<Leaf> {
         match self.kind {
-            ClauseKind::Leaf(ref leaf) => clause!((implies (expr goal) => (expr leaf))),
-            ClauseKind::And(ref c1, ref c2) => {
-                let c1_flat = c1.flatten_implication(goal);
-                let c2_flat = c2.flatten_implication(goal);
-                clause!((and (expr c1_flat) (expr c2_flat)))
-            }
+            ClauseKind::Leaf(ref leaf) => clause!(implies (expr goal) => (expr leaf)),
             ClauseKind::Implication(ref goal2, ref leaf) => {
-                clause!((implies (and (expr goal) (expr goal2)) => (expr leaf)))
+                clause!(implies (and (expr goal) (expr goal2)) => (expr leaf))
             }
             ClauseKind::ForAll(ref quant) => {
                 let goal = goal.fold_with(&mut OpenUp::new(quant.num_binders));
@@ -136,4 +139,9 @@ impl Clause<Leaf> {
             }
         }
     }
+}
+
+pub fn append<T>(mut v: Vec<T>, mut v2: Vec<T>) -> Vec<T> {
+    v.append(&mut v2);
+    v
 }

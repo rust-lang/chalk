@@ -17,7 +17,6 @@ impl<L: Debug> Debug for ClauseKind<L> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             ClauseKind::Leaf(ref l) => l.fmt(fmt)?,
-            ClauseKind::And(ref a, ref b) => write!(fmt, "and({:?}, {:?})", a, b)?,
             ClauseKind::Implication(ref g, ref l) => {
                 write!(fmt, "implies(")?;
                 g.fmt(fmt)?;
@@ -47,9 +46,14 @@ impl<L: Debug> Debug for GoalKind<L> {
             GoalKind::Leaf(ref l) => l.fmt(fmt)?,
             GoalKind::And(ref a, ref b) => write!(fmt, "and({:?}, {:?})", a, b)?,
             GoalKind::Or(ref a, ref b) => write!(fmt, "or({:?}; {:?})", a, b)?,
-            GoalKind::Implication(ref g, ref l) => {
+            GoalKind::Implication(ref clauses, ref l) => {
                 write!(fmt, "implies(")?;
-                g.fmt(fmt)?;
+                for (index, clause) in clauses.iter().enumerate() {
+                    if index > 0 {
+                        write!(fmt, ", ")?;
+                    }
+                    clause.fmt(fmt)?;
+                }
                 write!(fmt, " => ")?;
                 l.fmt(fmt)?;
                 write!(fmt, ")")?;

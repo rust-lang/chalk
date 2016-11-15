@@ -29,8 +29,11 @@ mod test;
 
 pub fn lower_program(program: &ast::Program) -> LowerResult<Vec<Clause<Leaf>>> {
     let mut env = Environment::new();
-    program.items
+    let clausess: Vec<Vec<_>> = try!(program.items
         .iter()
         .map(|item| item.lower_clause(&mut env))
-        .collect()
+        .collect());
+    Ok(clausess.into_iter()
+       .flat_map(|v| v)
+       .collect())
 }

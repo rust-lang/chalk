@@ -15,11 +15,6 @@ macro_rules! clause {
             kind: ClauseKind::Leaf(leaf!($leaf))
         })
     };
-    (and $a:tt $b:tt) => {
-        Clause::new(ClauseData {
-            kind: ClauseKind::And(clause!($a), clause!($b))
-        })
-    };
     (implies $g:tt => $c:tt) => {
         Clause::new(ClauseData {
             kind: ClauseKind::Implication(goal!($g), leaf!($c))
@@ -57,9 +52,9 @@ macro_rules! goal {
             kind: GoalKind::Or(goal!($a), goal!($b))
         })
     };
-    (implies $g:tt => $c:tt) => {
+    (implies $($g:tt),* => $c:tt) => {
         Goal::new(GoalData {
-            kind: GoalKind::Implication(clause!($g), goal!($c))
+            kind: GoalKind::Implication(vec![$(clause!($g)),*], goal!($c))
         })
     };
     (forall ($binders:expr) $c:tt) => {

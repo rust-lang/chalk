@@ -66,7 +66,6 @@ impl<L: Fold> Fold for Clause<L> {
         fold!(self, folder, Clause, ClauseData, ClauseKind {
             nullary { },
             Leaf(l),
-            And(l, r),
             Implication(g, c),
             ForAll(q)
         })

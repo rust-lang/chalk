@@ -60,7 +60,7 @@ pub enum GoalKind<L> {
     And(Goal<L>, Goal<L>),
     Or(Goal<L>, Goal<L>),
     Exists(Quantification<Goal<L>>),
-    Implication(Clause<L>, Goal<L>),
+    Implication(Vec<Clause<L>>, Goal<L>),
     ForAll(Quantification<Goal<L>>),
 }
 

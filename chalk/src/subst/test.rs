@@ -8,21 +8,17 @@ fn var(n: u32) -> InferenceVariable {
 }
 
 #[test]
-fn subst_clause_bound_and() {
+fn subst_clause_bound() {
     let subst: Subst<Leaf> = Subst::root(var(0).to_leaf());
     let leaf0 = clause! {
-        (and
-         (leaf (bound 0))
-         (forall(1) (leaf (apply "foo" (bound 0) (bound 1)))))
-        //                             ^^^^^^^^^ should not be substituted
-        //                                       ^^^^^^^^^ should be substituted
+        (forall(1) (leaf (apply "foo" (bound 0) (bound 1))))
+        //                            ^^^^^^^^^ should not be substituted
+        //                                      ^^^^^^^^^ should be substituted
     };
     let leaf1 = subst.apply(&leaf0);
     let leaf_expected = clause! {
-        (and
-         (leaf (expr var(0).to_leaf())) // <-- was substituted
-         (forall(1) (leaf (apply "foo" (bound 0) (expr var(0).to_leaf())))))
-        //                                       ^^^^^^^^^^^^^^^^^^^^^^^ was substituted
+        (forall(1) (leaf (apply "foo" (bound 0) (expr var(0).to_leaf()))))
+        //                                      ^^^^^^^^^^^^^^^^^^^^^^^ was substituted
     };
     println!("leaf0={:?}", leaf0);
     println!("leaf1={:?}", leaf1);

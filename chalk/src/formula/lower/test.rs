@@ -67,3 +67,9 @@ fn lower_implies_or_in_clause() {
              "                        ^^^^^^^^^^^^^^^^^^^^^^^",
              ErrorKind::OrInClause);
 }
+
+#[test]
+fn lower_and_clause() {
+    test("Foo(X, _, Y) :- implies(Foo(X), Bar(Y) => Baz(X, Y)).",
+         &[r#"forall(A, B -> forall(C -> implies(implies("Foo()/1"(A), "Bar()/1"(B) => "Baz()/2"(A, B)) => "Foo()/3"(A, C, B))))"#]);
+}
