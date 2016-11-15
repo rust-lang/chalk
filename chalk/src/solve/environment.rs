@@ -23,14 +23,12 @@ impl Environment {
         }
     }
 
-    pub fn iter_parents<'a>(&'a self) -> impl Iterator<Item=&'a Environment> {
-        once(self)
-            .chain(
-                self.parent.as_ref()
-                           .iter()
-                           .flat_map(|e| e.iter_parents()))
-            .collect::<Vec<_>>()
-            .into_iter()
+    pub fn iter_parents<'a>(&'a self) -> impl Iterator<Item=&'a Environment>+'a {
+        Box::new(
+            once(self).chain(
+                self.parent.iter()
+                           .flat_map(|e| e.iter_parents())))
+            as Box<Iterator<Item=&'a Environment>>
     }
 
     pub fn clauses(&self) -> &[Clause<Leaf>] {
