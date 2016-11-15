@@ -42,4 +42,10 @@ impl Environment {
     pub fn depth(&self) -> usize {
         self.depth
     }
+
+//    pub fn clauses_relevant_to(&self, appl: &Application) -> Vec<Clause<Application>> {
+//        let mut result = vec![];
+//        for env in self.iter_parents() {
+//        }
+//    }
 }

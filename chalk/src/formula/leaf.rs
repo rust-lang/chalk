@@ -29,7 +29,7 @@ pub enum LeafKind {
 }
 
 // C(...)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Application {
     pub constant: Constant,
     pub args: Vec<Leaf>,

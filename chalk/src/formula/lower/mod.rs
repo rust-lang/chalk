@@ -1,6 +1,5 @@
 use chalk_parse::ast::{self, Span};
-use formula::clause::Clause;
-use formula::leaf::Leaf;
+use formula::*;
 
 use self::environment::Environment;
 use self::lower_clause::LowerClause;
@@ -16,18 +15,20 @@ pub enum ErrorKind {
     UnknownVariable(ast::Variable),
     OrInClause,
     ExistsInClause,
+    NoOperator,
 }
 
 pub type LowerResult<L> = Result<L, Error>;
 
 mod environment;
+mod lower_application;
 mod lower_leaf;
 mod lower_clause;
 mod lower_goal;
 #[cfg(test)]
 mod test;
 
-pub fn lower_program(program: &ast::Program) -> LowerResult<Vec<Clause<Leaf>>> {
+pub fn lower_program(program: &ast::Program) -> LowerResult<Vec<Clause<Application>>> {
     let mut env = Environment::new();
     let clausess: Vec<Vec<_>> = try!(program.items
         .iter()

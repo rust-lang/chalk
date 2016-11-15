@@ -2,7 +2,7 @@ use chalk_parse::ast;
 use formula::*;
 use std::collections::HashSet;
 
-use super::lower_leaf::LowerLeaf;
+use super::lower_application::LowerApplication;
 use super::lower_goal::LowerGoal;
 use super::environment::Environment;
 
@@ -10,8 +10,8 @@ pub trait LowerClause<L> {
     fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<L>>>;
 }
 
-impl LowerClause<Leaf> for ast::Item {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Leaf>>> {
+impl LowerClause<Application> for ast::Item {
+    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Application>>> {
         println!("Item lower_clause");
 
         // bring all free variables into scope but ignore wildcards:
@@ -55,23 +55,23 @@ impl LowerClause<Leaf> for ast::Item {
     }
 }
 
-impl LowerClause<Leaf> for ast::Application {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Leaf>>> {
+impl LowerClause<Application> for ast::Application {
+    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Application>>> {
         println!("Application lower_clause");
 
         // collect the wildcards and bring them into scope
         let wildcards = self.count_wildcards();
         env.push_wildcards(wildcards);
-        let leaf = self.lower_leaf(env)?;
-        let clause = clause!(leaf (expr leaf));
+        let application = self.lower_application(env)?;
+        let clause = clause!(leaf (expr application));
         let clause = clause.in_foralls(wildcards);
         env.pop_wildcards(wildcards);
         Ok(vec![clause])
     }
 }
 
-impl LowerClause<Leaf> for ast::Rule {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Leaf>>> {
+impl LowerClause<Application> for ast::Rule {
+    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Application>>> {
         let consequences = self.consequence.lower_clause(env)?;
         let condition = self.condition.lower_goal(env)?;
         Ok(consequences.into_iter()
@@ -80,8 +80,8 @@ impl LowerClause<Leaf> for ast::Rule {
     }
 }
 
-impl LowerClause<Leaf> for ast::Fact {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Leaf>>> {
+impl LowerClause<Application> for ast::Fact {
+    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Application>>> {
         match *self.data {
             ast::FactData::And(ref f1, ref f2) => {
                 let c1 = f1.lower_clause(env)?;
@@ -125,8 +125,8 @@ impl LowerClause<Leaf> for ast::Fact {
     }
 }
 
-impl Clause<Leaf> {
-    pub fn flatten_implication(&self, goal: &Goal<Leaf>) -> Clause<Leaf> {
+impl Clause<Application> {
+    pub fn flatten_implication(&self, goal: &Goal<Application>) -> Clause<Application> {
         match self.kind {
             ClauseKind::Leaf(ref leaf) => clause!(implies (expr goal) => (expr leaf)),
             ClauseKind::Implication(ref goal2, ref leaf) => {

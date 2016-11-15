@@ -1,31 +1,29 @@
 use chalk_parse::ast;
-use formula::leaf::Leaf;
-use formula::goal::*;
+use formula::*;
 
 use super::environment::Environment;
+use super::lower_application::LowerApplication;
 use super::lower_clause::LowerClause;
-use super::lower_leaf::LowerLeaf;
-use super::LowerResult;
 
 pub trait LowerGoal<L> {
     fn lower_goal(&self, env: &mut Environment) -> LowerResult<Goal<L>>;
 }
 
-impl LowerGoal<Leaf> for ast::Application {
-    fn lower_goal(&self, env: &mut Environment) -> LowerResult<Goal<Leaf>> {
+impl LowerGoal<Application> for ast::Application {
+    fn lower_goal(&self, env: &mut Environment) -> LowerResult<Goal<Application>> {
         // collect the wildcards and bring them into scope
         let wildcards = self.count_wildcards();
         env.push_wildcards(wildcards);
-        let leaf = self.lower_leaf(env)?;
-        let goal = Goal::new(GoalData { kind: GoalKind::Leaf(leaf) });
+        let application = self.lower_application(env)?;
+        let goal = Goal::new(GoalData { kind: GoalKind::Leaf(application) });
         let goal = goal.in_exists(wildcards);
         env.pop_wildcards(wildcards);
         Ok(goal)
     }
 }
 
-impl LowerGoal<Leaf> for ast::Fact {
-    fn lower_goal(&self, env: &mut Environment) -> LowerResult<Goal<Leaf>> {
+impl LowerGoal<Application> for ast::Fact {
+    fn lower_goal(&self, env: &mut Environment) -> LowerResult<Goal<Application>> {
         match *self.data {
             ast::FactData::And(ref f1, ref f2) => {
                 let c1 = f1.lower_goal(env)?;

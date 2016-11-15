@@ -103,11 +103,18 @@ impl Debug for LeafKind {
                 env::fmt_bound_variable(bv.depth, fmt)?;
             }
             LeafKind::Application(ref a) => {
-                write!(fmt, "{:?}", a.constant)?;
-                if a.args.len() > 0 {
-                    fmt_parens(fmt, &a.args)?;
-                }
+                write!(fmt, "{:?}", a)?;
             }
+        }
+        Ok(())
+    }
+}
+
+impl Debug for Application {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{:?}", self.constant)?;
+        if self.args.len() > 0 {
+            fmt_parens(fmt, &self.args)?;
         }
         Ok(())
     }

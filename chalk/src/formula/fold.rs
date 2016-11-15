@@ -18,6 +18,15 @@ impl<T: Fold> Fold for Vec<T> {
     }
 }
 
+impl Fold for Application {
+    fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
+        Application {
+            constant: self.constant,
+            args: self.args.fold_with(folder),
+        }
+    }
+}
+
 impl Fold for Leaf {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
         match self.kind {
@@ -25,10 +34,7 @@ impl Fold for Leaf {
             LeafKind::InferenceVariable(v) => folder.replace_inference_variable(self, v),
             LeafKind::Application(ref appl) => {
                 Leaf::new(LeafData {
-                    kind: LeafKind::Application(Application {
-                        constant: appl.constant,
-                        args: appl.args.fold_with(folder),
-                    }),
+                    kind: LeafKind::Application(appl.fold_with(folder))
                 })
             }
         }
