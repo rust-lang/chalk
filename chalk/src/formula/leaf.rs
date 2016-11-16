@@ -35,6 +35,12 @@ pub struct Application {
     pub args: Vec<Leaf>,
 }
 
+impl Application {
+    pub fn constant_and_arity(&self) -> (Constant, usize) {
+        (self.constant, self.args.len())
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Constant {
     // Things appearing in the program; always at universe 0

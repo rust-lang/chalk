@@ -19,8 +19,7 @@ impl<L> Clause<L> {
 
 impl Clause<Application> {
     pub fn constant_and_arity(&self) -> (Constant, usize) {
-        let data = self.skip_binders();
-        (data.consequence.constant, data.consequence.args.len())
+        self.skip_binders().consequence.constant_and_arity()
     }
 }
 

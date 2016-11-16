@@ -252,3 +252,10 @@ impl Folder for InferenceTable {
         }
     }
 }
+
+/// The inference table, when zipping, unifies two leaves.
+impl Zipper for InferenceTable {
+    fn zip_leaves(&mut self, leaf1: &Leaf, leaf2: &Leaf) -> Result<Leaf, ZipError> {
+        unimplemented!()
+    }
+}

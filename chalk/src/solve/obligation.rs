@@ -5,12 +5,12 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct Obligation {
     pub environment: Arc<Environment>,
-    pub goal: Goal<Leaf>,
+    pub goal: Goal<Application>,
 }
 
 impl Obligation {
     pub fn new(environment: Arc<Environment>,
-               goal: Goal<Leaf>)
+               goal: Goal<Application>)
                -> Self {
         Obligation {
             environment: environment,
