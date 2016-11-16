@@ -2,16 +2,16 @@ use chalk_parse::ast;
 use formula::leaf::*;
 
 use super::LowerResult;
-use super::environment::Environment;
+use super::environment::LowerEnvironment;
 use super::Error;
 use super::ErrorKind;
 
 pub trait LowerLeaf<L> {
-    fn lower_leaf(&self, env: &mut Environment) -> LowerResult<L>;
+    fn lower_leaf(&self, env: &mut LowerEnvironment) -> LowerResult<L>;
 }
 
 impl LowerLeaf<Leaf> for ast::Application {
-    fn lower_leaf(&self, env: &mut Environment) -> LowerResult<Leaf> {
+    fn lower_leaf(&self, env: &mut LowerEnvironment) -> LowerResult<Leaf> {
         let any_opers = self.bits.iter().any(|bit| match bit.kind {
             ast::BitKind::Operator(_) => true,
             ast::BitKind::Value(_) => false,
@@ -46,7 +46,7 @@ impl LowerLeaf<Leaf> for ast::Application {
 }
 
 impl LowerLeaf<Leaf> for ast::Value {
-    fn lower_leaf(&self, env: &mut Environment) -> LowerResult<Leaf> {
+    fn lower_leaf(&self, env: &mut LowerEnvironment) -> LowerResult<Leaf> {
         match self.kind {
             ast::ValueKind::Atom(atom) => {
                 Ok(Leaf::new(LeafData {

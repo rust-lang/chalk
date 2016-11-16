@@ -4,14 +4,14 @@ use std::collections::HashSet;
 
 use super::lower_application::LowerApplication;
 use super::lower_goal::LowerGoal;
-use super::environment::Environment;
+use super::environment::LowerEnvironment;
 
 pub trait LowerClause<L> {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<L>>>;
+    fn lower_clause(&self, env: &mut LowerEnvironment) -> LowerResult<Vec<Clause<L>>>;
 }
 
 impl LowerClause<Application> for ast::Item {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Application>>> {
+    fn lower_clause(&self, env: &mut LowerEnvironment) -> LowerResult<Vec<Clause<Application>>> {
         println!("Item lower_clause");
 
         // bring all free variables into scope but ignore wildcards:
@@ -64,7 +64,7 @@ impl LowerClause<Application> for ast::Item {
 }
 
 impl LowerClause<Application> for ast::Application {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Application>>> {
+    fn lower_clause(&self, env: &mut LowerEnvironment) -> LowerResult<Vec<Clause<Application>>> {
         println!("Application lower_clause");
 
         // collect the wildcards and bring them into scope
@@ -79,7 +79,7 @@ impl LowerClause<Application> for ast::Application {
 }
 
 impl LowerClause<Application> for ast::Rule {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Application>>> {
+    fn lower_clause(&self, env: &mut LowerEnvironment) -> LowerResult<Vec<Clause<Application>>> {
         let consequences = self.consequence.lower_clause(env)?;
         let condition = self.condition.lower_goal(env)?;
         Ok(consequences.into_iter()
@@ -89,7 +89,7 @@ impl LowerClause<Application> for ast::Rule {
 }
 
 impl LowerClause<Application> for ast::Fact {
-    fn lower_clause(&self, env: &mut Environment) -> LowerResult<Vec<Clause<Application>>> {
+    fn lower_clause(&self, env: &mut LowerEnvironment) -> LowerResult<Vec<Clause<Application>>> {
         match *self.data {
             ast::FactData::And(ref f1, ref f2) => {
                 let c1 = f1.lower_clause(env)?;

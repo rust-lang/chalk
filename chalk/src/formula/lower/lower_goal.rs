@@ -1,16 +1,16 @@
 use chalk_parse::ast;
 use formula::*;
 
-use super::environment::Environment;
+use super::environment::LowerEnvironment;
 use super::lower_application::LowerApplication;
 use super::lower_clause::LowerClause;
 
 pub trait LowerGoal<L> {
-    fn lower_goal(&self, env: &mut Environment) -> LowerResult<Goal<L>>;
+    fn lower_goal(&self, env: &mut LowerEnvironment) -> LowerResult<Goal<L>>;
 }
 
 impl LowerGoal<Application> for ast::Application {
-    fn lower_goal(&self, env: &mut Environment) -> LowerResult<Goal<Application>> {
+    fn lower_goal(&self, env: &mut LowerEnvironment) -> LowerResult<Goal<Application>> {
         // collect the wildcards and bring them into scope
         let wildcards = self.count_wildcards();
         env.push_wildcards(wildcards);
@@ -23,7 +23,7 @@ impl LowerGoal<Application> for ast::Application {
 }
 
 impl LowerGoal<Application> for ast::Fact {
-    fn lower_goal(&self, env: &mut Environment) -> LowerResult<Goal<Application>> {
+    fn lower_goal(&self, env: &mut LowerEnvironment) -> LowerResult<Goal<Application>> {
         match *self.data {
             ast::FactData::And(ref f1, ref f2) => {
                 let c1 = f1.lower_goal(env)?;

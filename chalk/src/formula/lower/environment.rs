@@ -1,6 +1,6 @@
 use chalk_parse::ast;
 
-pub struct Environment {
+pub struct LowerEnvironment {
     bound_names: Vec<Option<ast::Variable>>,
 
     /// always points to an *index* in the list of bound-names (which
@@ -10,9 +10,9 @@ pub struct Environment {
     next_wildcard: Option<usize>,
 }
 
-impl Environment {
+impl LowerEnvironment {
     pub fn new() -> Self {
-        Environment { bound_names: vec![], next_wildcard: None }
+        LowerEnvironment { bound_names: vec![], next_wildcard: None }
     }
 
     pub fn push_bound_name(&mut self, v: ast::Variable) {

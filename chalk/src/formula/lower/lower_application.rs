@@ -2,17 +2,17 @@ use chalk_parse::ast;
 use formula::leaf::*;
 
 use super::LowerResult;
-use super::environment::Environment;
+use super::environment::LowerEnvironment;
 use super::Error;
 use super::ErrorKind;
 use super::lower_leaf::LowerLeaf;
 
 pub trait LowerApplication {
-    fn lower_application(&self, env: &mut Environment) -> LowerResult<Application>;
+    fn lower_application(&self, env: &mut LowerEnvironment) -> LowerResult<Application>;
 }
 
 impl LowerApplication for ast::Application {
-    fn lower_application(&self, env: &mut Environment) -> LowerResult<Application> {
+    fn lower_application(&self, env: &mut LowerEnvironment) -> LowerResult<Application> {
         let any_opers = self.bits.iter().any(|bit| match bit.kind {
             ast::BitKind::Operator(_) => true,
             ast::BitKind::Value(_) => false,

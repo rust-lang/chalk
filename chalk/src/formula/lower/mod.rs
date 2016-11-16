@@ -1,7 +1,7 @@
 use chalk_parse::ast::{self, Span};
 use formula::*;
 
-use self::environment::Environment;
+use self::environment::LowerEnvironment;
 use self::lower_clause::LowerClause;
 
 #[derive(Clone, Debug)]
@@ -29,7 +29,7 @@ mod lower_goal;
 mod test;
 
 pub fn lower_program(program: &ast::Program) -> LowerResult<Vec<Clause<Application>>> {
-    let mut env = Environment::new();
+    let mut env = LowerEnvironment::new();
     let clausess: Vec<Vec<_>> = try!(program.items
         .iter()
         .map(|item| item.lower_clause(&mut env))
