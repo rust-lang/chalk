@@ -9,25 +9,25 @@ mod env;
 
 impl<L: Debug> Debug for Clause<L> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?}", self.kind)
+        if self.num_binders > 0 {
+            write!(fmt, "forall{:?}", **self)
+        } else {
+            write!(fmt, "{:?}", self.formula)
+        }
     }
 }
 
-impl<L: Debug> Debug for ClauseKind<L> {
+impl<L: Debug> Debug for ClauseImplication<L> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
-            ClauseKind::Leaf(ref l) => l.fmt(fmt)?,
-            ClauseKind::Implication(ref g, ref l) => {
-                write!(fmt, "implies(")?;
-                g.fmt(fmt)?;
-                write!(fmt, " => ")?;
-                l.fmt(fmt)?;
-                write!(fmt, ")")?;
-            }
-            ClauseKind::ForAll(ref q) => {
-                write!(fmt, "forall")?;
-                q.fmt(fmt)?;
-            }
+        let ClauseImplication { ref condition, ref consequence } = *self;
+        if let &Some(ref goal) = condition {
+            write!(fmt, "implies(")?;
+            goal.fmt(fmt)?;
+            write!(fmt, " => ")?;
+            consequence.fmt(fmt)?;
+            write!(fmt, ")")?;
+        } else {
+            consequence.fmt(fmt)?;
         }
         Ok(())
     }

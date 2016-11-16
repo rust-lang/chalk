@@ -7,30 +7,42 @@ macro_rules! formula {
 }
 
 macro_rules! clause {
-    (expr $expr:expr) => {
-        $expr.clone()
-    };
-    (leaf $leaf:tt) => {
-        Clause::new(ClauseData {
-            kind: ClauseKind::Leaf(leaf!($leaf))
-        })
-    };
-    (implies $g:tt => $c:tt) => {
-        Clause::new(ClauseData {
-            kind: ClauseKind::Implication(goal!($g), leaf!($c))
-        })
-    };
-    (forall ($binders:expr) $c:tt) => {
-        Clause::new(ClauseData {
-            kind: ClauseKind::ForAll(Quantification {
+    (forall ($binders:expr) $($c:tt)*) => {
+        Clause::new(Quantification {
                 num_binders: $binders,
-                formula: clause!($c)
-            })
+                formula: clause_formula!($($c)*)
         })
     };
     (($($a:tt)*)) => {
         clause!($($a)*)
-    }
+    };
+    ($($a:tt)*) => {
+        clause!(forall(0) $($a)*)
+    };
+}
+
+macro_rules! clause_formula {
+    (expr $leaf:expr) => {
+        ClauseImplication {
+            condition: None,
+            consequence: $leaf
+        }
+    };
+    (leaf $leaf:tt) => {
+        ClauseImplication {
+            condition: None,
+            consequence: leaf!($leaf)
+        }
+    };
+    (implies $g:tt => $c:tt) => {
+        ClauseImplication {
+            condition: Some(goal!($g)),
+            consequence: leaf!($c)
+        }
+    };
+    (($($a:tt)*)) => {
+        clause_formula!($($a)*)
+    };
 }
 
 macro_rules! goal {
@@ -40,6 +52,11 @@ macro_rules! goal {
     (leaf $leaf:tt) => {
         Goal::new(GoalData {
             kind: GoalKind::Leaf(leaf!($leaf))
+        })
+    };
+    (true) => {
+        Goal::new(GoalData {
+            kind: GoalKind::True
         })
     };
     (and $a:tt $b:tt) => {

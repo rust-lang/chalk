@@ -18,6 +18,12 @@ impl<T: Fold> Fold for Vec<T> {
     }
 }
 
+impl<T: Fold> Fold for Option<T> {
+    fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
+        self.as_ref().map(|e| e.fold_with(folder))
+    }
+}
+
 impl Fold for Application {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
         Application {
@@ -69,12 +75,16 @@ macro_rules! fold {
 
 impl<L: Fold> Fold for Clause<L> {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
-        fold!(self, folder, Clause, ClauseData, ClauseKind {
-            nullary { },
-            Leaf(l),
-            Implication(g, c),
-            ForAll(q)
-        })
+        Clause::new((**self).fold_with(folder))
+    }
+}
+
+impl<L: Fold> Fold for ClauseImplication<L> {
+    fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
+        ClauseImplication {
+            condition: self.condition.fold_with(folder),
+            consequence: self.consequence.fold_with(folder),
+        }
     }
 }
 

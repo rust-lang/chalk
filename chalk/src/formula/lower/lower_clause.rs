@@ -50,7 +50,7 @@ impl LowerClause<Application> for ast::Item {
         }
 
         Ok(clauses.into_iter()
-            .map(|clause| clause.in_foralls(count))
+            .map(|clause| in_foralls(clause, count))
             .collect())
     }
 }
@@ -64,7 +64,7 @@ impl LowerClause<Application> for ast::Application {
         env.push_wildcards(wildcards);
         let application = self.lower_application(env)?;
         let clause = clause!(leaf (expr application));
-        let clause = clause.in_foralls(wildcards);
+        let clause = in_foralls(clause, wildcards);
         env.pop_wildcards(wildcards);
         Ok(vec![clause])
     }
@@ -102,7 +102,7 @@ impl LowerClause<Application> for ast::Fact {
                 let clauses = f1.lower_clause(env)?;
                 env.pop_bound_name();
                 Ok(clauses.into_iter()
-                    .map(|clause| clause.in_foralls(1))
+                    .map(|clause| in_foralls(clause, 1))
                     .collect())
             }
 
@@ -127,16 +127,13 @@ impl LowerClause<Application> for ast::Fact {
 
 impl Clause<Application> {
     pub fn flatten_implication(&self, goal: &Goal<Application>) -> Clause<Application> {
-        match self.kind {
-            ClauseKind::Leaf(ref leaf) => clause!(implies (expr goal) => (expr leaf)),
-            ClauseKind::Implication(ref goal2, ref leaf) => {
-                clause!(implies (and (expr goal) (expr goal2)) => (expr leaf))
-            }
-            ClauseKind::ForAll(ref quant) => {
-                let goal = goal.fold_with(&mut OpenUp::new(quant.num_binders));
-                let formula = quant.formula.flatten_implication(&goal);
-                clause!(forall(quant.num_binders) (expr formula))
-            }
+        let goal = goal.fold_with(&mut OpenUp::new(self.num_binders));
+        if let Some(ref goal2) = self.formula.condition {
+            clause!(forall(self.num_binders) implies (and (expr goal) (expr goal2))
+                    => (expr self.formula.consequence))
+        } else {
+            clause!(forall(self.num_binders) implies (expr goal)
+                    => (expr self.formula.consequence))
         }
     }
 }
@@ -144,4 +141,11 @@ impl Clause<Application> {
 pub fn append<T>(mut v: Vec<T>, mut v2: Vec<T>) -> Vec<T> {
     v.append(&mut v2);
     v
+}
+
+fn in_foralls<L: Clone>(clause: Clause<L>, binders: usize) -> Clause<L> {
+    Clause::new(Quantification {
+        num_binders: clause.num_binders + binders,
+        formula: clause.formula.clone()
+    })
 }

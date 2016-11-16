@@ -8,40 +8,19 @@ pub struct Clause<L> {
     data: Arc<ClauseData<L>>,
 }
 
+pub type ClauseData<L> = Quantification<ClauseImplication<L>>;
+
 deref_to!(Clause<L>.data => ClauseData<L>);
 
 impl<L> Clause<L> {
     pub fn new(data: ClauseData<L>) -> Self {
         Clause { data: Arc::new(data) }
     }
-
-    pub fn in_foralls(self, num_binders: usize) -> Clause<L> {
-        if num_binders == 0 {
-            self
-        } else {
-            Clause::new(ClauseData {
-                kind: ClauseKind::ForAll(Quantification {
-                    num_binders: num_binders,
-                    formula: self
-                })
-            })
-        }
-    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct ClauseData<L> {
-    pub kind: ClauseKind<L>,
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub enum ClauseKind<L> {
-    Leaf(L),
-    Implication(Goal<L>, L),
-    ForAll(Quantification<Clause<L>>),
-}
-
-macro_rules! clause {
-    (true) => { Clause::new(ClauseData { kind: ClauseKind::True }) };
+pub struct ClauseImplication<L> {
+    pub condition: Option<Goal<L>>, // if None, implies True
+    pub consequence: L,
 }
 
