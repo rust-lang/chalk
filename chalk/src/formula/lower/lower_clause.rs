@@ -32,13 +32,21 @@ impl LowerClause<Application> for ast::Item {
         //
         //     forall(A, B, C -> exists(WC1 -> Bar(A, WC1, B, C)) => forall(WC2 -> Foo(A, WC2, B)))
         //
+        // which then gets normalized to
+        //
+        //     forall(A, B, C, WC2 -> exists(WC1 -> Bar(A, WC1, B, C)) => Foo(A, WC2, B))
+        //
         // note that A, B, and C all appear at the top-level, but WC1
-        // and WC2 are bound lower. This matters if you have nested
+        // and WC2 are distinct variables. This matters if you have nested
         // forall binders, like this:
         //
         //      Foo(A, B) :- forall(X -> Bar(A, B, X, _)).
         //
         // In particular, we want to translate this so that the `_` can be bound to `X`.
+        // See the test `lower_nested_wildcard`; lowering the above yields
+        //
+        //      forall(A, B -> forall(C -> exists(D -> Bar(A, B, C, D))) => Foo(A, B))
+        //      //                                ^ the wildcard
 
         let clauses = match *self {
             ast::Item::Fact(ref appl) => appl.lower_clause(env),

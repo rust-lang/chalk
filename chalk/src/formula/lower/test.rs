@@ -44,6 +44,13 @@ fn lower_forall() {
 }
 
 #[test]
+fn lower_nested_wildcard() {
+    // Test that the `_` in `Bar` could be bound to `Z`.
+    test("Foo(X, Y) :- forall(Z -> Bar(X, Y, Z, _)).",
+         &[r#"forall(A, B -> implies(forall(C -> exists(D -> "Bar()/4"(A, B, C, D))) => "Foo()/2"(A, B)))"#]);
+}
+
+#[test]
 fn lower_many() {
     test("Foo(X, _, Y) :- Bar(X, _, Y, Z), Baz(Z); Bop(Z).",
          &[r#"forall(A, B, C, D -> implies(and(exists(E -> "Bar()/4"(A, E, B, C)), or("Baz()/1"(C); "Bop()/1"(C))) => "Foo()/3"(A, D, B)))"#]);
