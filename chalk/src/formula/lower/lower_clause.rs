@@ -136,12 +136,12 @@ impl LowerClause<Application> for ast::Fact {
 impl Clause<Application> {
     pub fn flatten_implication(&self, goal: &Goal<Application>) -> Clause<Application> {
         let goal = goal.fold_with(&mut OpenUp::new(self.num_binders));
-        if let Some(ref goal2) = self.formula.condition {
+        if let Some(ref goal2) = self.skip_binders().condition {
             clause!(forall(self.num_binders) implies (and (expr goal) (expr goal2))
-                    => (expr self.formula.consequence))
+                    => (expr self.skip_binders().consequence))
         } else {
             clause!(forall(self.num_binders) implies (expr goal)
-                    => (expr self.formula.consequence))
+                    => (expr self.skip_binders().consequence))
         }
     }
 }
@@ -152,8 +152,6 @@ pub fn append<T>(mut v: Vec<T>, mut v2: Vec<T>) -> Vec<T> {
 }
 
 fn in_foralls<L: Clone>(clause: Clause<L>, binders: usize) -> Clause<L> {
-    Clause::new(Quantification {
-        num_binders: clause.num_binders + binders,
-        formula: clause.formula.clone()
-    })
+    Clause::new(Quantification::new(clause.num_binders + binders,
+                                    clause.skip_binders().clone()))
 }

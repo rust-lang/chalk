@@ -12,7 +12,7 @@ impl<L: Debug> Debug for Clause<L> {
         if self.num_binders > 0 {
             write!(fmt, "forall{:?}", **self)
         } else {
-            write!(fmt, "{:?}", self.formula)
+            write!(fmt, "{:?}", self.skip_binders())
         }
     }
 }
@@ -81,7 +81,7 @@ impl<F: Debug> Debug for Quantification<F> {
             env::bind_name(fmt)?;
         }
         write!(fmt, " -> ")?;
-        self.formula.fmt(fmt)?;
+        self.skip_binders().fmt(fmt)?;
         env::unbind_names(self.num_binders); // Nit: not exn-safe
         write!(fmt, ")")
     }

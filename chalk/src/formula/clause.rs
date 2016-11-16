@@ -1,5 +1,4 @@
-use super::quant::Quantification;
-use super::Goal;
+use super::*;
 use std::sync::Arc;
 
 /// D-formula, see page 75 of Programming with Higher-Order Logic.
@@ -15,6 +14,13 @@ deref_to!(Clause<L>.data => ClauseData<L>);
 impl<L> Clause<L> {
     pub fn new(data: ClauseData<L>) -> Self {
         Clause { data: Arc::new(data) }
+    }
+}
+
+impl Clause<Application> {
+    pub fn constant_and_arity(&self) -> (Constant, usize) {
+        let data = self.skip_binders();
+        (data.consequence.constant, data.consequence.args.len())
     }
 }
 

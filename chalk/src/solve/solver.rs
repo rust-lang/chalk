@@ -95,7 +95,7 @@ impl Solver {
                     subst = Some(Subst::new(subst.as_ref(), var));
                 }
                 let subst = subst.unwrap(); // always at least 1 binder
-                let new_goal = subst.apply(&quant.formula);
+                let new_goal = subst.apply(quant.skip_binders());
                 self.obligations.push(Obligation {
                     environment: environment.clone(),
                     goal: new_goal,
@@ -112,7 +112,7 @@ impl Solver {
                     subst = Some(Subst::new(subst.as_ref(), leaf!(apply (skol depth))));
                 }
                 let subst = subst.unwrap(); // always at least 1 binder
-                let new_goal = subst.apply(&quant.formula);
+                let new_goal = subst.apply(quant.skip_binders());
                 self.obligations.push(Obligation {
                     environment: new_environment,
                     goal: new_goal,

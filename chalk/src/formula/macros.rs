@@ -8,10 +8,7 @@ macro_rules! formula {
 
 macro_rules! clause {
     (forall ($binders:expr) $($c:tt)*) => {
-        Clause::new(Quantification {
-                num_binders: $binders,
-                formula: clause_formula!($($c)*)
-        })
+        Clause::new(Quantification::new($binders,clause_formula!($($c)*)))
     };
     (($($a:tt)*)) => {
         clause!($($a)*)
@@ -76,18 +73,12 @@ macro_rules! goal {
     };
     (forall ($binders:expr) $c:tt) => {
         Goal::new(GoalData {
-            kind: GoalKind::ForAll(Quantification {
-                num_binders: $binders,
-                formula: goal!($c)
-            })
+            kind: GoalKind::ForAll(Quantification::new($binders, goal!($c)))
         })
     };
     (exists ($binders:expr) $c:tt) => {
         Goal::new(GoalData {
-            kind: GoalKind::Exists(Quantification {
-                num_binders: $binders,
-                formula: goal!($c)
-            })
+            kind: GoalKind::Exists(Quantification::new($binders, goal!($c)))
         })
     };
     (($($a:tt)*)) => {

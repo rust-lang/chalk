@@ -26,10 +26,7 @@ impl<L> Goal<L> {
             self
         } else {
             Goal::new(GoalData {
-                kind: GoalKind::ForAll(Quantification {
-                    num_binders: num_binders,
-                    formula: self,
-                }),
+                kind: GoalKind::ForAll(Quantification::new(num_binders, self))
             })
         }
     }
@@ -39,10 +36,7 @@ impl<L> Goal<L> {
             self
         } else {
             Goal::new(GoalData {
-                kind: GoalKind::Exists(Quantification {
-                    num_binders: num_binders,
-                    formula: self,
-                }),
+                kind: GoalKind::Exists(Quantification::new(num_binders, self))
             })
         }
     }

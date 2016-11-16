@@ -44,8 +44,10 @@ impl Environment {
     }
 
 //    pub fn clauses_relevant_to(&self, appl: &Application) -> Vec<Clause<Application>> {
-//        let mut result = vec![];
-//        for env in self.iter_parents() {
-//        }
+//        self.iter_parents()
+//            .flat_map(|parent| parent.clauses())
+//            .filter(|clause| {
+//                clause.formula.
+//            })
 //    }
 }

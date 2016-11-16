@@ -105,10 +105,7 @@ impl<L: Fold> Fold for Goal<L> {
 impl<Q: Fold> Fold for Quantification<Q> {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
         folder.in_binders(self.num_binders, |folder| {
-            Quantification {
-                num_binders: self.num_binders,
-                formula: self.formula.fold_with(folder),
-            }
+            Quantification::new(self.num_binders, self.skip_binders().fold_with(folder))
         })
     }
 }
