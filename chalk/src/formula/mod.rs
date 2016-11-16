@@ -25,7 +25,4 @@ pub use self::quant::*;
 mod lower;
 pub use self::lower::*;
 
-mod zip;
-pub use self::zip::*;
-
 mod debug;

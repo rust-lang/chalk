@@ -35,10 +35,6 @@ impl Solver {
         self.infer.normalize_deep(goal)
     }
 
-    fn unify<T: Zip>(&mut self, a: &T, b: &T) -> Result<T, ZipError> {
-        a.zip_with(b, &mut self.infer)
-    }
-
     fn probe<F, R>(&mut self, op: F) -> R
         where F: FnOnce(&mut Self) -> R
     {
@@ -73,8 +69,13 @@ impl Solver {
                         let ClauseImplication { condition, consequence } =
                             this.instantiate_existential(&environment, clause);
 
-                        if this.unify(application, &consequence).is_err() {
-                            return;
+                        assert_eq!(application.constant_and_arity(),
+                                   consequence.constant_and_arity());
+                        for (leaf1, leaf2) in application.args.iter().zip(&consequence.args) {
+                            if let Err(e) = this.infer.unify(leaf1, leaf2) {
+                                println!("Unification error: {:?}", e);
+                                return;
+                            }
                         }
 
                         if let Some(goal) = condition {
