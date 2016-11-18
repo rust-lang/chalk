@@ -34,13 +34,13 @@ macro_rules! clause_formula {
     (apply $($leaf:tt)*) => {
         ClauseImplication {
             condition: None,
-            consequence: apply!($($leaf)*)
+            consequence: apply!(apply $($leaf)*)
         }
     };
     (implies $g:tt => $c:tt) => {
         ClauseImplication {
             condition: Some(goal!($g)),
-            consequence: leaf!($c)
+            consequence: apply!($c)
         }
     };
     (($($a:tt)*)) => {
@@ -59,7 +59,7 @@ macro_rules! goal {
     };
     (apply $($apply:tt)*) => {
         Goal::new(GoalData {
-            kind: GoalKind::Leaf(apply!($($apply)*))
+            kind: GoalKind::Leaf(apply!(apply $($apply)*))
         })
     };
     (true) => {
@@ -113,7 +113,7 @@ macro_rules! leaf {
     };
     (apply $name:tt $($exprs:tt)*) => {
         Leaf::new(LeafData {
-            kind: LeafKind::Application(apply!($name $($exprs)*))
+            kind: LeafKind::Application(apply!(apply $name $($exprs)*))
         })
     };
     (($($a:tt)*)) => {
@@ -122,10 +122,13 @@ macro_rules! leaf {
 }
 
 macro_rules! apply {
-    ($name:tt $($exprs:tt)*) => {
+    (expr $expr:expr) => {
+        $expr.clone()
+    };
+    (apply $name:tt $($exprs:tt)*) => {
         Application {
-                constant: constant!($name),
-                args: vec![$(leaf!($exprs)),*],
+            constant: constant!($name),
+            args: vec![$(leaf!($exprs)),*],
         }
     };
     (($($a:tt)*)) => {

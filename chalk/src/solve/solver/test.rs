@@ -5,27 +5,18 @@ use std::sync::Arc;
 
 use super::Solver;
 
-fn root_environment() -> Arc<Environment> {
-    Arc::new(Environment::new(None, vec![]))
-}
+fn solve(clauses: Vec<Clause<Application>>,
+         goal: Goal<Application>,
+         expected_solutions: Vec<&str>) {
+    let root_environment = Arc::new(Environment::new(None, clauses));
+    let solutions = Solver::solve(root_environment, goal);
 
-fn solve(goal: Goal<Application>,
-         expected_solutions: Vec<&str>)
-{
-    let solutions = Solver::solve(root_environment(), goal);
-
-    let is_match: Vec<bool> =
-        expected_solutions.iter()
-                          .zip(&solutions)
-                          .map(|(e, a)| e == a)
-                          .collect();
-    let is_match = || {
-        is_match.iter().cloned().chain(repeat(false)).map(|b| if b {
-            'x'
-        } else {
-            ' '
-        })
-    };
+    let is_match: Vec<bool> = expected_solutions.iter()
+        .zip(&solutions)
+        .map(|(e, a)| e == a)
+        .collect();
+    let is_match =
+        || is_match.iter().cloned().chain(repeat(false)).map(|b| if b { 'x' } else { ' ' });
 
     println!("expected_solutions:");
     for (solution, m) in expected_solutions.iter().zip(is_match()) {
@@ -42,19 +33,49 @@ fn solve(goal: Goal<Application>,
 
 #[test]
 fn simple_fail() {
-    solve(goal!(exists(1) (apply "foo" (bound 0))), vec![]);
+    solve(vec![], goal!(exists(1) (apply "foo" (bound 0))), vec![]);
 }
 
 #[test]
 fn forall_in_clause() {
-    solve(goal!(exists(1) (implies (forall(1) (apply "foo" (bound 0))) =>
+    solve(vec![],
+          goal!(exists(1) (implies (forall(1) (apply "foo" (bound 0))) =>
                            (apply "foo" (bound 0)))),
           vec![r#"implies(forall(A -> "foo"(A)) => "foo"(?0))"#]);
 }
 
 #[test]
 fn one_clause() {
-    solve(goal!(exists(1) (implies (apply "foo" (apply "bar")) =>
+    solve(vec![],
+          goal!(exists(1) (implies (apply "foo" (apply "bar")) =>
                            (apply "foo" (bound 0)))),
           vec![r#"implies("foo"("bar") => "foo"("bar"))"#]);
+}
+
+#[test]
+fn two_clause_in_env() {
+    solve(vec![clause!(apply "foo" (apply "bar")),
+               clause!(apply "foo" (apply "baz"))],
+          goal!(exists(1) (apply "foo" (bound 0))),
+          vec![r#""foo"("bar")"#,
+               r#""foo"("baz")"#]);
+}
+
+#[test]
+fn enumerate_ancestors() {
+    solve(vec![clause!(apply "parent" (apply "n") (apply "d")),
+               clause!(apply "parent" (apply "c") (apply "n")),
+               // ancestor(A, B) :- parent(A, B).
+               clause!(forall(2) (implies (apply "parent" (bound 0) (bound 1)) =>
+                                  (apply "ancestor" (bound 0) (bound 1)))),
+               // ancestor(A, C) :- parent(A, B), ancestor(B, C).
+               clause!(forall(3) (implies
+                                  (and
+                                   (apply "parent" (bound 0) (bound 1))
+                                   (apply "ancestor" (bound 1) (bound 2))) =>
+                                  (apply "ancestor" (bound 0) (bound 2)))),
+               ],
+          goal!(exists(1) (apply "ancestor" (bound 0) (apply "d"))),
+          vec![r#""ancestor"("n", "d")"#,
+               r#""ancestor"("c", "d")"#]);
 }

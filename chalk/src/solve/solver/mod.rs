@@ -11,6 +11,7 @@ pub struct Solver {
     root_goal: Goal<Application>,
     solutions: Vec<String>,
     obligations: Vec<Obligation>,
+    depth: usize,
 }
 
 impl Solver {
@@ -28,7 +29,8 @@ impl Solver {
             infer: infer,
             root_goal: root_goal.clone(),
             solutions: vec![],
-            obligations: vec![Obligation::new(root_environment.clone(), root_goal)]
+            obligations: vec![Obligation::new(root_environment.clone(), root_goal)],
+            depth: 0,
         }
     }
 
@@ -56,25 +58,37 @@ impl Solver {
     }
 
     fn run(&mut self) {
+        self.depth += 1;
+        if self.depth > 10 {
+            panic!("too deep");
+        }
+
         while let Some(obligation) = self.obligations.pop() {
             match self.solve_obligation(obligation) {
                 Ok(()) => { }
-                Err(()) => { return; }
+                Err(()) => {
+                    self.depth -= 1;
+                    return;
+                }
             }
         }
 
         let goal = self.root_goal.clone();
         let goal = self.canonicalize(&goal);
         self.solutions.push(format!("{:?}", goal));
+
+        self.depth -= 1;
     }
 
     fn solve_obligation(&mut self, obligation: Obligation) -> Result<(), ()> {
-        println!("solve_obligation: {:?}", obligation);
+        println!("solve_obligation(obligation={:#?})", obligation);
+        println!("solve_obligation: goal={:?}", self.canonicalize(&obligation.goal));
         let Obligation { environment, goal } = obligation;
         match goal.kind {
             GoalKind::True => Ok(()),
             GoalKind::Leaf(ref application) => {
                 for clause in environment.clauses_relevant_to(application) {
+                    println!("solve_obligation: considering clause {:?}", clause);
                     self.probe(|this| {
                         let ClauseImplication { condition, consequence } =
                             this.infer.instantiate_existential(&environment, clause);
@@ -101,7 +115,8 @@ impl Solver {
                 Err(())
             }
             GoalKind::And(ref g1, ref g2) => {
-                self.obligations.extend([g1, g2]
+                // NB: Important that we consider g1 first
+                self.obligations.extend([g2, g1]
                     .iter()
                     .map(|&goal| {
                         Obligation {
