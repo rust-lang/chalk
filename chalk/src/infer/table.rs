@@ -156,8 +156,7 @@ impl InferenceTable {
                              var: InferenceVariable,
                              application: &Application)
                              -> UnifyResult<()> {
-        println!("unify_var_application, var={:?}", var);
-        println!("unify_var_application, application={:?}", application);
+        println!("unify_var_application(var={:?}, application={:?})", var, application);
 
         // Determine the universe index associated with this
         // variable. This is basically a count of the number of
@@ -175,6 +174,8 @@ impl InferenceTable {
         let value_index = ValueIndex::new(self.values.len());
         self.values.push(application.clone());
         self.unify.unify_var_value(var, InferenceValue::Bound(value_index)).unwrap();
+
+        println!("unify_var_application: OK");
 
         Ok(())
     }
@@ -242,7 +243,10 @@ impl Folder for InferenceTable {
     }
 
     fn replace_inference_variable(&mut self, from_leaf: &Leaf, var: InferenceVariable) -> Leaf {
-        match self.unify.probe_value(var) {
+        println!("replace_inference_variable(from_leaf={:?}, var={:?})", from_leaf, var);
+        let value = self.unify.probe_value(var);
+        println!("replace_inference_variable: value={:?}", value);
+        match value {
             InferenceValue::Unbound(_) => from_leaf.clone(),
             InferenceValue::Bound(val) => {
                 let application = self.values[val.as_usize()].clone();

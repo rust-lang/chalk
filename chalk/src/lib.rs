@@ -1,6 +1,5 @@
 #![allow(dead_code)] // temporary
 #![feature(conservative_impl_trait)]
-#![feature(question_mark)]
 #![feature(static_in_const)]
 
 extern crate chalk_parse;

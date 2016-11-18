@@ -25,10 +25,16 @@ macro_rules! clause_formula {
             consequence: $leaf
         }
     };
-    (leaf $leaf:tt) => {
+    (leaf $($leaf:tt)*) => {
         ClauseImplication {
             condition: None,
-            consequence: leaf!($leaf)
+            consequence: leaf!($($leaf)*)
+        }
+    };
+    (apply $($leaf:tt)*) => {
+        ClauseImplication {
+            condition: None,
+            consequence: apply!($($leaf)*)
         }
     };
     (implies $g:tt => $c:tt) => {
@@ -49,6 +55,11 @@ macro_rules! goal {
     (leaf $leaf:tt) => {
         Goal::new(GoalData {
             kind: GoalKind::Leaf(leaf!($leaf))
+        })
+    };
+    (apply $($apply:tt)*) => {
+        Goal::new(GoalData {
+            kind: GoalKind::Leaf(apply!($($apply)*))
         })
     };
     (true) => {
@@ -102,15 +113,24 @@ macro_rules! leaf {
     };
     (apply $name:tt $($exprs:tt)*) => {
         Leaf::new(LeafData {
-            kind: LeafKind::Application(Application {
-                constant: constant!($name),
-                args: vec![$(leaf!($exprs)),*],
-            })
+            kind: LeafKind::Application(apply!($name $($exprs)*))
         })
     };
     (($($a:tt)*)) => {
         leaf!($($a)*)
     }
+}
+
+macro_rules! apply {
+    ($name:tt $($exprs:tt)*) => {
+        Application {
+                constant: constant!($name),
+                args: vec![$(leaf!($exprs)),*],
+        }
+    };
+    (($($a:tt)*)) => {
+        apply!($($a)*)
+    };
 }
 
 macro_rules! constant {

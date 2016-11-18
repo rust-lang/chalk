@@ -3,6 +3,7 @@ use formula::*;
 use std::iter::once;
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct Environment {
     parent: Option<Arc<Environment>>,
     depth: usize,

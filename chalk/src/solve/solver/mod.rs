@@ -9,17 +9,26 @@ use std::sync::Arc;
 pub struct Solver {
     infer: InferenceTable,
     root_goal: Goal<Application>,
-    solutions: Vec<Goal<Application>>,
+    solutions: Vec<String>,
     obligations: Vec<Obligation>,
 }
 
 impl Solver {
-    pub fn new(root_environment: Arc<Environment>, root_goal: Goal<Application>) -> Self {
+    pub fn solve(root_environment: Arc<Environment>, root_goal: Goal<Application>) -> Vec<String> {
+        // Peel off any our "exists" goals and instantiate them with inference variables.
+        let mut solver = Solver::new(&root_environment, &root_goal);
+        solver.run();
+        solver.solutions
+    }
+
+    fn new(root_environment: &Arc<Environment>, root_goal: &Goal<Application>) -> Self {
+        let mut infer = InferenceTable::new();
+        let root_goal = infer.peel_goal(root_environment, root_goal);
         Solver {
-            infer: InferenceTable::new(),
+            infer: infer,
             root_goal: root_goal.clone(),
             solutions: vec![],
-            obligations: vec![Obligation::new(root_environment, root_goal)],
+            obligations: vec![Obligation::new(root_environment.clone(), root_goal)]
         }
     }
 
@@ -56,10 +65,11 @@ impl Solver {
 
         let goal = self.root_goal.clone();
         let goal = self.canonicalize(&goal);
-        self.solutions.push(goal);
+        self.solutions.push(format!("{:?}", goal));
     }
 
     fn solve_obligation(&mut self, obligation: Obligation) -> Result<(), ()> {
+        println!("solve_obligation: {:?}", obligation);
         let Obligation { environment, goal } = obligation;
         match goal.kind {
             GoalKind::True => Ok(()),
@@ -67,7 +77,7 @@ impl Solver {
                 for clause in environment.clauses_relevant_to(application) {
                     self.probe(|this| {
                         let ClauseImplication { condition, consequence } =
-                            this.instantiate_existential(&environment, clause);
+                            this.infer.instantiate_existential(&environment, clause);
 
                         assert_eq!(application.constant_and_arity(),
                                    consequence.constant_and_arity());
@@ -88,7 +98,7 @@ impl Solver {
                         this.run();
                     });
                 }
-                Ok(())
+                Err(())
             }
             GoalKind::And(ref g1, ref g2) => {
                 self.obligations.extend([g1, g2]
@@ -114,7 +124,7 @@ impl Solver {
                 Err(()) // signal to the surrounding `run()` task that we took over =)
             }
             GoalKind::Exists(ref quant) => {
-                let new_goal = self.instantiate_existential(&environment, quant);
+                let new_goal = self.infer.instantiate_existential(&environment, quant);
                 self.obligations.push(Obligation {
                     environment: environment.clone(),
                     goal: new_goal,
@@ -138,10 +148,20 @@ impl Solver {
                 });
                 Ok(())
             }
-            GoalKind::Implication(ref quant, ref goal) => unimplemented!(),
+            GoalKind::Implication(ref clauses, ref goal) => {
+                let new_environment = Arc::new(Environment::new(Some(environment),
+                                                                clauses.clone()));
+                self.obligations.push(Obligation {
+                    environment: new_environment,
+                    goal: goal.clone()
+                });
+                Ok(())
+            }
         }
     }
+}
 
+impl InferenceTable {
     fn instantiate_existential<F>(&mut self,
                                   environment: &Environment,
                                   quant: &Quantification<F>)
@@ -150,10 +170,36 @@ impl Solver {
     {
         let mut subst = None;
         for _ in 0..quant.num_binders {
-            let var = self.infer.new_variable(environment.universe_index()).to_leaf();
+            let var = self.new_variable(environment.universe_index()).to_leaf();
             subst = Some(Subst::new(subst.as_ref(), var));
         }
         subst.map(|subst| subst.apply(quant.skip_binders()))
              .unwrap_or(quant.skip_binders().clone())
     }
+
+    fn peel_goal(&mut self, root_environment: &Arc<Environment>, goal: &Goal<Application>)
+                 -> Goal<Application>
+    {
+        let mut goal = goal.clone();
+
+        // If the goal is `(exists X -> ...)`, then we instantiate `X`
+        // with an inference variable and set `...` as our new "root
+        // goal". This way, when we find solutions, we will print out
+        // the value of `X` that made it true, and not just `exists X
+        // -> ...`.
+        loop {
+            match goal.clone().kind {
+                GoalKind::Exists(ref quant) => {
+                    let formula = self.instantiate_existential(root_environment, quant);
+                    goal = formula;
+                }
+                _ => break,
+            }
+        }
+        goal
+    }
+
 }
+
+#[cfg(test)]
+mod test;
