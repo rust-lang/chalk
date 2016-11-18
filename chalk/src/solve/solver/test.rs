@@ -79,3 +79,11 @@ fn enumerate_ancestors() {
           vec![r#""ancestor"("n", "d")"#,
                r#""ancestor"("c", "d")"#]);
 }
+
+#[test]
+fn forall_fails() {
+    solve(vec![clause!(apply "foo" (apply "bar")),
+               clause!(apply "foo" (apply "baz"))],
+          goal!(forall(1) (apply "foo" (bound 0))),
+          vec![]);
+}
