@@ -87,3 +87,10 @@ fn forall_fails() {
           goal!(forall(1) (apply "foo" (bound 0))),
           vec![]);
 }
+
+#[test]
+fn for_all_clause_for_all_goal() {
+    solve(vec![clause!(forall(1) (apply "foo" (bound 0)))],
+          goal!(forall(1) (apply "foo" (bound 0))),
+          vec![r#"forall(A -> "foo"(A))"#]);
+}

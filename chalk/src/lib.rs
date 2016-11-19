@@ -36,3 +36,13 @@ mod infer;
 mod solve;
 mod subst;
 
+pub use self::formula::*;
+
+pub fn solve(clauses: Vec<Clause<Application>>, root_goal: Goal<Application>) -> Vec<String> {
+    use solve::Environment;
+    use solve::Solver;
+    use std::sync::Arc;
+
+    let root_environment = Arc::new(Environment::new(None, clauses));
+    Solver::solve(root_environment, root_goal)
+}

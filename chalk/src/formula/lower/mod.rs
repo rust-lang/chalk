@@ -3,6 +3,7 @@ use formula::*;
 
 use self::environment::LowerEnvironment;
 use self::lower_clause::LowerClause;
+use self::lower_goal::LowerGoal;
 
 #[derive(Clone, Debug)]
 pub struct Error {
@@ -37,4 +38,9 @@ pub fn lower_program(program: &ast::Program) -> LowerResult<Vec<Clause<Applicati
     Ok(clausess.into_iter()
        .flat_map(|v| v)
        .collect())
+}
+
+pub fn lower_goal(fact: &ast::Fact) -> LowerResult<Goal<Application>> {
+    let mut env = LowerEnvironment::new();
+    fact.lower_goal(&mut env)
 }

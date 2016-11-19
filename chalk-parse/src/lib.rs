@@ -14,6 +14,12 @@ pub fn parse_program(input: &str)
     parser::parse_Program(input)
 }
 
+pub fn parse_goal(input: &str)
+                  -> Result<ast::Fact,
+                            ParseError<usize,(usize, &str),()>> {
+    parser::parse_Goal(input)
+}
+
 #[test]
 fn test_program() {
     let ast = parse_program("

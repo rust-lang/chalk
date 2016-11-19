@@ -21,6 +21,8 @@ Rule: Rule = {
     },
 };
 
+pub Goal: Fact = Fact<FactData>;
+
 Fact<D>: Fact = {
     <s0:@L> <d:D> <s1:@R> =>
         Fact {
