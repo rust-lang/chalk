@@ -1,5 +1,5 @@
 use infer::InferenceVariable;
-use formula::{BoundVariable, Leaf, Fold, Folder};
+use formula::{BoundVariable, Leaf, Folder};
 use std::fmt::Debug;
 
 use super::Subst;
@@ -36,13 +36,6 @@ impl<L: Debug> OffsetSubst<L> {
         } else {
             Some(&self.subst[index - self.offset])
         }
-    }
-}
-
-impl OffsetSubst<Leaf> {
-    pub fn apply<F: Fold>(&self, formula: &F) -> F {
-        let mut tmp = self.clone();
-        formula.fold_with(&mut tmp)
     }
 }
 

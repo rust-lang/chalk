@@ -34,10 +34,6 @@ impl Solver {
         }
     }
 
-    fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
-        self.infer.new_variable(ui)
-    }
-
     fn canonicalize(&mut self, goal: &Goal<Application>) -> Goal<Application> {
         // FIXME -- this meant to replace unbound variables like ?F
         // with a `_`, but that is not a variant of leaf (and should

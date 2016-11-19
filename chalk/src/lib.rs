@@ -1,4 +1,3 @@
-#![allow(dead_code)] // temporary
 #![feature(conservative_impl_trait)]
 #![feature(static_in_const)]
 
