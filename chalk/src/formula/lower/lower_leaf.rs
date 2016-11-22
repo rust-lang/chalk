@@ -1,10 +1,8 @@
 use chalk_parse::ast;
 use formula::leaf::*;
 
-use super::LowerResult;
+use super::error::{LowerResult, Error, ErrorKind};
 use super::environment::LowerEnvironment;
-use super::Error;
-use super::ErrorKind;
 
 pub trait LowerLeaf<L> {
     fn lower_leaf(&self, env: &mut LowerEnvironment) -> LowerResult<L>;
@@ -68,6 +66,7 @@ impl LowerLeaf<Leaf> for ast::Value {
                     }
                     None => {
                         Err(Error {
+                            path: env.path(),
                             span: self.span,
                             kind: ErrorKind::UnknownVariable(name),
                         })

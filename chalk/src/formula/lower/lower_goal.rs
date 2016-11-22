@@ -1,6 +1,7 @@
 use chalk_parse::ast;
 use formula::*;
 
+use super::error::LowerResult;
 use super::environment::LowerEnvironment;
 use super::lower_application::LowerApplication;
 use super::lower_clause::LowerClause;

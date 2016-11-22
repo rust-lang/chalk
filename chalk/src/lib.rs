@@ -2,8 +2,11 @@
 #![feature(static_in_const)]
 
 extern crate chalk_parse;
+extern crate docopt;
 extern crate lalrpop_intern;
+extern crate lalrpop_util;
 extern crate ena;
+extern crate rustc_serialize;
 
 /// Create a deref impl. We do this a lot.
 macro_rules! deref_to {
@@ -31,6 +34,7 @@ macro_rules! deref_to {
 #[macro_use]
 mod formula;
 
+mod cli;
 mod infer;
 mod solve;
 mod subst;
@@ -45,3 +49,5 @@ pub fn solve(clauses: Vec<Clause<Application>>, root_goal: Goal<Application>) ->
     let root_environment = Arc::new(Environment::new(None, clauses));
     Solver::solve(root_environment, root_goal)
 }
+
+pub use self::cli::main;

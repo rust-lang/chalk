@@ -1,10 +1,8 @@
 use chalk_parse::ast;
 use formula::leaf::*;
 
-use super::LowerResult;
+use super::error::{Error, ErrorKind, LowerResult};
 use super::environment::LowerEnvironment;
-use super::Error;
-use super::ErrorKind;
 use super::lower_leaf::LowerLeaf;
 
 pub trait LowerApplication {
@@ -19,18 +17,22 @@ impl LowerApplication for ast::Application {
         });
 
         if !any_opers {
-            return Err(Error { span: self.span, kind: ErrorKind::NoOperator });
+            return Err(Error {
+                path: env.path(),
+                span: self.span,
+                kind: ErrorKind::NoOperator,
+            });
         }
 
         let operator_name = self.intern_operator_name();
         let args: Vec<Leaf> = try!(self.bits
-                                   .iter()
-                                   .filter_map(|bit| match bit.kind {
-                                       ast::BitKind::Value(ref v) => Some(v),
-                                       ast::BitKind::Operator(_) => None,
-                                   })
-                                   .map(|v| v.lower_leaf(env))
-                                   .collect());
+            .iter()
+            .filter_map(|bit| match bit.kind {
+                ast::BitKind::Value(ref v) => Some(v),
+                ast::BitKind::Operator(_) => None,
+            })
+            .map(|v| v.lower_leaf(env))
+            .collect());
         Ok(Application {
             constant: Constant::Program(operator_name),
             args: args,

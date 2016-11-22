@@ -1,11 +1,11 @@
 use chalk_parse::parse_program;
 use chalk_parse::ast::Span;
 use super::lower_program;
-use super::ErrorKind;
+use super::error::ErrorKind;
 
 fn test(text: &str, expected: &[&str]) {
     let program = parse_program(text).unwrap();
-    let clauses = lower_program(&program).unwrap();
+    let clauses = lower_program("test", &program).unwrap();
     for (i, (clause, &expected_str)) in clauses.iter().zip(expected).enumerate() {
         let clause_str = format!("{:?}", clause);
         println!("clause with index {}", i);
@@ -18,7 +18,7 @@ fn test(text: &str, expected: &[&str]) {
 
 fn test_err(text: &str, span: &str, kind: ErrorKind) {
     let program = parse_program(text).unwrap();
-    let err = lower_program(&program).unwrap_err();
+    let err = lower_program("test", &program).unwrap_err();
     let span_start = span.find(|c: char| !c.is_whitespace()).unwrap();
     let span = Span::new(span_start, span.len());
     assert!(err.span == span, "expected error span {:?}, found {:?}", span, err.span);

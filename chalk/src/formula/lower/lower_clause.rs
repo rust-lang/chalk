@@ -2,6 +2,7 @@ use chalk_parse::ast;
 use formula::*;
 use std::collections::HashSet;
 
+use super::error::{LowerResult, Error, ErrorKind};
 use super::lower_application::LowerApplication;
 use super::lower_goal::LowerGoal;
 use super::environment::LowerEnvironment;
@@ -116,6 +117,7 @@ impl LowerClause<Application> for ast::Fact {
 
             ast::FactData::Exists(..) => {
                 Err(Error {
+                    path: env.path(),
                     span: self.span,
                     kind: ErrorKind::ExistsInClause,
                 })
@@ -125,6 +127,7 @@ impl LowerClause<Application> for ast::Fact {
 
             ast::FactData::Or(..) => {
                 Err(Error {
+                    path: env.path(),
                     span: self.span,
                     kind: ErrorKind::OrInClause,
                 })
@@ -152,6 +155,5 @@ pub fn append<T>(mut v: Vec<T>, mut v2: Vec<T>) -> Vec<T> {
 }
 
 fn in_foralls<L: Clone>(clause: Clause<L>, binders: usize) -> Clause<L> {
-    Clause::new(Quantification::new(clause.num_binders + binders,
-                                    clause.skip_binders().clone()))
+    Clause::new(Quantification::new(clause.num_binders + binders, clause.skip_binders().clone()))
 }
