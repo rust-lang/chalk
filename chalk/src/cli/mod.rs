@@ -3,36 +3,38 @@
 
 use docopt::Docopt;
 use formula;
+use solve;
 use std::error::Error;
 use std::env;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use std::process;
+use std::time::Instant;
 
 mod parse;
 
 const USAGE: &'static str = "
-Usage: chalk [options] <goal>
+Usage: chalk [options]
        chalk --help
 
-Tries to parse and solve the given goal.
+Loads a chalk program and tries to solve the given goal.
 
 Options:
-    -p <file>, --program <file> Specifies that we should load program clauses from `file`.
+    -p <file>, --program <file>     Specifies that we should load program clauses from `file`.
+    -g <goal>, --goal <goal>        Specifies the goal to try to solve.
 ";
 
 #[derive(Debug, RustcDecodable)]
 pub struct Args {
     flag_program: Vec<String>,
-    arg_goal: String,
+    flag_goal: String,
 }
 
 pub fn main() {
     let mut stderr = io::stderr();
 
-    let args: Args =
-        Docopt::new(USAGE)
+    let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.argv(env::args()).decode())
         .unwrap_or_else(|e| e.exit());
 
@@ -46,11 +48,28 @@ pub fn main() {
 }
 
 pub fn fallible_main(args: &Args) -> Result<(), Box<Error>> {
+    let mut clauses = Vec::new();
     for path in &args.flag_program {
         let text = file_text(path)?;
         let ast = parse::parse_program(path, &text)?;
-        let clauses = formula::lower_program(path, &ast)?;
+        clauses.extend(formula::lower_program(path, &ast)?);
     }
+
+    let ast = parse::parse_goal("<goal>", &args.flag_goal)?;
+    let goal = formula::lower_goal("<goal>", &ast)?;
+
+    let now = Instant::now();
+    let solutions = solve(clauses, goal);
+    let time = now.elapsed();
+
+    println!("found {} solutions in {:0.3}s",
+             solutions.len(),
+             time.as_secs() as f64 + (time.subsec_nanos() as f64) * 0.000000001);
+
+    for solution in solutions {
+        println!("  - {}", solution);
+    }
+
     Ok(())
 }
 
@@ -60,4 +79,3 @@ fn file_text(path: &str) -> Result<String, Box<Error>> {
     file.read_to_string(&mut text)?;
     Ok(text)
 }
-

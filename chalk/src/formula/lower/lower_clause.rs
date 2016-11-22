@@ -13,7 +13,7 @@ pub trait LowerClause<L> {
 
 impl LowerClause<Application> for ast::Item {
     fn lower_clause(&self, env: &mut LowerEnvironment) -> LowerResult<Vec<Clause<Application>>> {
-        println!("Item lower_clause");
+        debug!("Item lower_clause");
 
         // bring all free variables into scope but ignore wildcards:
         let mut count = 0;
@@ -66,7 +66,7 @@ impl LowerClause<Application> for ast::Item {
 
 impl LowerClause<Application> for ast::Application {
     fn lower_clause(&self, env: &mut LowerEnvironment) -> LowerResult<Vec<Clause<Application>>> {
-        println!("Application lower_clause");
+        debug!("Application lower_clause");
 
         // collect the wildcards and bring them into scope
         let wildcards = self.count_wildcards();

@@ -31,6 +31,12 @@ macro_rules! deref_to {
     };
 }
 
+macro_rules! debug {
+    ($($t:tt)*) => {
+        // println!($($t)*);
+    }
+}
+
 #[macro_use]
 mod formula;
 

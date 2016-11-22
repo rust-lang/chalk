@@ -27,6 +27,21 @@ pub fn lower_program(path: &str, program: &ast::Program) -> LowerResult<Vec<Clau
 }
 
 pub fn lower_goal(path: &str, fact: &ast::Fact) -> LowerResult<Goal<Application>> {
+    use std::collections::HashSet;
+
     let mut env = LowerEnvironment::new(path.to_string());
-    fact.lower_goal(&mut env)
+
+    // Bring all free variables into scope. We will wrap them in
+    // existentials.  (i.e., foo(X) is short for exists(X -> foo(X))).
+    let mut count = 0;
+    let mut set = HashSet::new();
+    fact.for_each_free_variable(&mut |_span, v| {
+        if set.insert(v.id) {
+            count += 1;
+            env.push_bound_name(v);
+        }
+    });
+
+    let goal = fact.lower_goal(&mut env)?;
+    Ok(goal.in_exists(count))
 }

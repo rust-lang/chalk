@@ -94,15 +94,15 @@ impl InferenceTable {
     }
 
     fn unify_in_snapshot(&mut self, leaf1: &Leaf, leaf2: &Leaf) -> UnifyResult<()> {
-        println!("unify_in_snapshot, leaf1={:?}", leaf1);
-        println!("unify_in_snapshot, leaf2={:?}", leaf2);
+        debug!("unify_in_snapshot, leaf1={:?}", leaf1);
+        debug!("unify_in_snapshot, leaf2={:?}", leaf2);
 
         // Remove any immediate inference variables.
         let leaf1 = self.normalize_shallow(leaf1);
         let leaf2 = self.normalize_shallow(leaf2);
 
-        println!("unify_in_snapshot, normalized leaf1={:?}", leaf1);
-        println!("unify_in_snapshot, normalized leaf2={:?}", leaf2);
+        debug!("unify_in_snapshot, normalized leaf1={:?}", leaf1);
+        debug!("unify_in_snapshot, normalized leaf2={:?}", leaf2);
 
         match (&leaf1.kind, &leaf2.kind) {
             (&LeafKind::BoundVariable(_), _) |
@@ -156,7 +156,7 @@ impl InferenceTable {
                              var: InferenceVariable,
                              application: &Application)
                              -> UnifyResult<()> {
-        println!("unify_var_application(var={:?}, application={:?})", var, application);
+        debug!("unify_var_application(var={:?}, application={:?})", var, application);
 
         // Determine the universe index associated with this
         // variable. This is basically a count of the number of
@@ -175,7 +175,7 @@ impl InferenceTable {
         self.values.push(application.clone());
         self.unify.unify_var_value(var, InferenceValue::Bound(value_index)).unwrap();
 
-        println!("unify_var_application: OK");
+        debug!("unify_var_application: OK");
 
         Ok(())
     }
@@ -243,9 +243,9 @@ impl Folder for InferenceTable {
     }
 
     fn replace_inference_variable(&mut self, from_leaf: &Leaf, var: InferenceVariable) -> Leaf {
-        println!("replace_inference_variable(from_leaf={:?}, var={:?})", from_leaf, var);
+        debug!("replace_inference_variable(from_leaf={:?}, var={:?})", from_leaf, var);
         let value = self.unify.probe_value(var);
-        println!("replace_inference_variable: value={:?}", value);
+        debug!("replace_inference_variable: value={:?}", value);
         match value {
             InferenceValue::Unbound(_) => from_leaf.clone(),
             InferenceValue::Bound(val) => {

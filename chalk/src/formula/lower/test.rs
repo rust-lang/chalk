@@ -8,9 +8,9 @@ fn test(text: &str, expected: &[&str]) {
     let clauses = lower_program("test", &program).unwrap();
     for (i, (clause, &expected_str)) in clauses.iter().zip(expected).enumerate() {
         let clause_str = format!("{:?}", clause);
-        println!("clause with index {}", i);
-        println!("actual str   = {}", clause_str);
-        println!("expected str = {}", expected_str);
+        debug!("clause with index {}", i);
+        debug!("actual str   = {}", clause_str);
+        debug!("expected str = {}", expected_str);
         assert!(clause_str == expected_str, "expected and actual do not match");
     }
     assert_eq!(clauses.len(), expected.len());

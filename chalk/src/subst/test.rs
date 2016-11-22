@@ -20,8 +20,8 @@ fn subst_clause_bound() {
         (forall(1) (leaf (apply "foo" (bound 0) (expr var(0).to_leaf()))))
         //                                      ^^^^^^^^^^^^^^^^^^^^^^^ was substituted
     };
-    println!("leaf0={:?}", leaf0);
-    println!("leaf1={:?}", leaf1);
+    debug!("leaf0={:?}", leaf0);
+    debug!("leaf1={:?}", leaf1);
     assert_eq!(leaf1, leaf_expected);
 }
 
@@ -42,7 +42,7 @@ fn subst_goal_bound_and() {
          (forall(1) (leaf (apply "foo" (bound 0) (expr var(0).to_leaf())))))
         //                                       ^^^^^^^^^^^^^^^^^^^^^^^ was substituted
     };
-    println!("leaf0={:?}", leaf0);
-    println!("leaf1={:?}", leaf1);
+    debug!("leaf0={:?}", leaf0);
+    debug!("leaf1={:?}", leaf1);
     assert_eq!(leaf1, leaf_expected);
 }

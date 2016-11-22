@@ -77,14 +77,14 @@ impl Solver {
     }
 
     fn solve_obligation(&mut self, obligation: Obligation) -> Result<(), ()> {
-        println!("solve_obligation(obligation={:#?})", obligation);
-        println!("solve_obligation: goal={:?}", self.canonicalize(&obligation.goal));
+        debug!("solve_obligation(obligation={:#?})", obligation);
+        debug!("solve_obligation: goal={:?}", self.canonicalize(&obligation.goal));
         let Obligation { environment, goal } = obligation;
         match goal.kind {
             GoalKind::True => Ok(()),
             GoalKind::Leaf(ref application) => {
                 for clause in environment.clauses_relevant_to(application) {
-                    println!("solve_obligation: considering clause {:?}", clause);
+                    debug!("solve_obligation: considering clause {:?}", clause);
                     self.probe(|this| {
                         let ClauseImplication { condition, consequence } =
                             this.infer.instantiate_existential(&environment, clause);
@@ -93,7 +93,7 @@ impl Solver {
                                    consequence.constant_and_arity());
                         for (leaf1, leaf2) in application.args.iter().zip(&consequence.args) {
                             if let Err(e) = this.infer.unify(leaf1, leaf2) {
-                                println!("Unification error: {:?}", e);
+                                debug!("Unification error: {:?}", e);
                                 return;
                             }
                         }

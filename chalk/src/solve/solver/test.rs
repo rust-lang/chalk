@@ -18,14 +18,14 @@ fn solve(clauses: Vec<Clause<Application>>,
     let is_match =
         || is_match.iter().cloned().chain(repeat(false)).map(|b| if b { 'x' } else { ' ' });
 
-    println!("expected_solutions:");
+    debug!("expected_solutions:");
     for (solution, m) in expected_solutions.iter().zip(is_match()) {
-        println!("- [{}] {}", m, solution);
+        debug!("- [{}] {}", m, solution);
     }
 
-    println!("actual_solutions:");
+    debug!("actual_solutions:");
     for (solution, m) in solutions.iter().zip(is_match()) {
-        println!("- [{}] {}", m, solution);
+        debug!("- [{}] {}", m, solution);
     }
 
     assert_eq!(expected_solutions, solutions);

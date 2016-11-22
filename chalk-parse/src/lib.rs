@@ -29,5 +29,5 @@ Env |- X : Type :-
     struct: S has_field: F with_type: Type,
     foo(Bar, Baz).
 ").unwrap();
-    println!("{:#?}", ast);
+    debug!("{:#?}", ast);
 }
