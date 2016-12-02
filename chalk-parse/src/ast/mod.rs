@@ -93,6 +93,7 @@ pub enum ValueKind {
 pub enum Operator {
     Colon(InternedString),
     Parens(InternedString),
+    SquareBrackets(InternedString),
     Symbols(InternedString),
 }
 

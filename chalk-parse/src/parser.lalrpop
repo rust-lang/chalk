@@ -83,6 +83,13 @@ ApplicationBits: Vec<Bit> = {
         };
         Some(oper_bit).into_iter().chain(appls).collect()
     },
+    <s0:@L> <id:Identifier> "[" <appls:BitApplications> "]" <s1:@R> => {
+        let oper_bit = Bit {
+            span: Span::new(s0, s1),
+            kind: BitKind::Operator(Operator::SquareBrackets(id))
+        };
+        Some(oper_bit).into_iter().chain(appls).collect()
+    },
 };
 
 BitApplications: Vec<Bit> = {
