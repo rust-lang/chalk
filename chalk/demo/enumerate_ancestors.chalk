@@ -18,3 +18,5 @@
 
 A ancestorOf: B :- A parentOf: B.
 A ancestorOf: C :- A parentOf: B, B ancestorOf: C.
+
+goal(two(X,Y)) :- X ancestorOf: Y.
