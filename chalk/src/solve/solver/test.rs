@@ -94,3 +94,14 @@ fn for_all_clause_for_all_goal() {
           goal!(forall(1) (apply "foo" (bound 0))),
           vec![r#"forall(A -> "foo"(A))"#]);
 }
+
+#[test]
+#[should_panic]
+fn recursive() {
+    // foo X :- foo X.
+    //
+    // Fails to prove `foo A`
+    solve(vec![clause!(forall(1) (implies (apply "foo" (bound 0)) => (apply "foo" (bound 0))))],
+          goal!(forall(1) (apply "foo" (bound 0))),
+          vec![])
+}
