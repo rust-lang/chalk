@@ -6,15 +6,18 @@ use std::sync::Arc;
 pub struct Obligation {
     pub environment: Arc<Environment>,
     pub goal: Goal<Application>,
+    pub depth: usize,
 }
 
 impl Obligation {
     pub fn new(environment: Arc<Environment>,
-               goal: Goal<Application>)
+               goal: Goal<Application>,
+               depth: usize)
                -> Self {
         Obligation {
             environment: environment,
             goal: goal,
+            depth: depth,
         }
     }
 }

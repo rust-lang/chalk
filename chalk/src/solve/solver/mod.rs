@@ -11,7 +11,6 @@ pub struct Solver {
     root_goal: Goal<Application>,
     solutions: Vec<String>,
     obligations: Vec<Obligation>,
-    depth: usize,
 }
 
 impl Solver {
@@ -29,8 +28,7 @@ impl Solver {
             infer: infer,
             root_goal: root_goal.clone(),
             solutions: vec![],
-            obligations: vec![Obligation::new(root_environment.clone(), root_goal)],
-            depth: 0,
+            obligations: vec![Obligation::new(root_environment.clone(), root_goal, 0)],
         }
     }
 
@@ -54,16 +52,10 @@ impl Solver {
     }
 
     fn run(&mut self) {
-        self.depth += 1;
-        if self.depth > 10 {
-            panic!("too deep");
-        }
-
         while let Some(obligation) = self.obligations.pop() {
             match self.solve_obligation(obligation) {
                 Ok(()) => { }
                 Err(()) => {
-                    self.depth -= 1;
                     return;
                 }
             }
@@ -72,14 +64,15 @@ impl Solver {
         let goal = self.root_goal.clone();
         let goal = self.canonicalize(&goal);
         self.solutions.push(format!("{:?}", goal));
-
-        self.depth -= 1;
     }
 
     fn solve_obligation(&mut self, obligation: Obligation) -> Result<(), ()> {
         debug!("solve_obligation(obligation={:#?})", obligation);
         debug!("solve_obligation: goal={:?}", self.canonicalize(&obligation.goal));
-        let Obligation { environment, goal } = obligation;
+        let Obligation { environment, goal, depth } = obligation;
+        if depth > 10 {
+            panic!("too deep");
+        }
         match goal.kind {
             GoalKind::True => Ok(()),
             GoalKind::Leaf(ref application) => {
@@ -102,6 +95,7 @@ impl Solver {
                             this.obligations.push(Obligation {
                                 environment: environment.clone(),
                                 goal: goal,
+                                depth: depth + 1,
                             });
                         }
 
@@ -118,6 +112,7 @@ impl Solver {
                         Obligation {
                             environment: environment.clone(),
                             goal: goal.clone(),
+                            depth: depth,
                         }
                     }));
                 Ok(())
@@ -128,6 +123,7 @@ impl Solver {
                         this.obligations.push(Obligation {
                             environment: environment.clone(),
                             goal: goal.clone(),
+                            depth: depth + 1,
                         });
                         this.run();
                     });
@@ -139,6 +135,7 @@ impl Solver {
                 self.obligations.push(Obligation {
                     environment: environment.clone(),
                     goal: new_goal,
+                    depth: depth,
                 });
                 Ok(())
             }
@@ -156,6 +153,7 @@ impl Solver {
                 self.obligations.push(Obligation {
                     environment: new_environment,
                     goal: new_goal,
+                    depth: depth,
                 });
                 Ok(())
             }
@@ -164,7 +162,8 @@ impl Solver {
                                                                 clauses.clone()));
                 self.obligations.push(Obligation {
                     environment: new_environment,
-                    goal: goal.clone()
+                    goal: goal.clone(),
+                    depth: depth,
                 });
                 Ok(())
             }
