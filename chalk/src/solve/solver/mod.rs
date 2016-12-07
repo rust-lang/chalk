@@ -4,6 +4,7 @@ use infer::*;
 use formula::*;
 use solve::*;
 use subst::Subst;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 pub struct Solver {
@@ -11,6 +12,29 @@ pub struct Solver {
     root_goal: Goal<Application>,
     solutions: Vec<String>,
     obligations: Vec<Obligation>,
+    choice_points: Vec<ChoicePoint>,
+}
+
+struct ChoicePoint {
+    obligations: Vec<Obligation>,
+    infer_snapshot: InferenceSnapshot,
+    kind: ChoicePointKind,
+}
+
+enum ChoicePointKind {
+    Clauses(ChoicePointClauses),
+    Disjunction(ChoicePointDisjunction),
+}
+
+struct ChoicePointClauses {
+    clauses: VecDeque<Clause<Application>>,
+    environment: Arc<Environment>,
+    application: Application,
+    depth: usize,
+}
+
+struct ChoicePointDisjunction {
+    goals: VecDeque<Obligation>,
 }
 
 impl Solver {
@@ -29,6 +53,7 @@ impl Solver {
             root_goal: root_goal.clone(),
             solutions: vec![],
             obligations: vec![Obligation::new(root_environment.clone(), root_goal, 0)],
+            choice_points: vec![],
         }
     }
 
@@ -40,31 +65,109 @@ impl Solver {
         self.infer.normalize_deep(goal)
     }
 
-    fn probe<F, R>(&mut self, op: F) -> R
-        where F: FnOnce(&mut Self) -> R
-    {
-        let snapshot = self.infer.snapshot();
-        let obligations = self.obligations.clone();
-        let result = op(self);
-        self.infer.rollback_to(snapshot);
-        self.obligations = obligations;
-        result
+    fn run(&mut self) {
+        loop {
+            if let Ok(solution) = self.find_next_solution() {
+                self.solutions.push(solution);
+            }
+
+            if self.unroll().is_err() {
+                return;
+            }
+        }
     }
 
-    fn run(&mut self) {
+    fn find_next_solution(&mut self) -> Result<String, ()> {
         while let Some(obligation) = self.obligations.pop() {
-            match self.solve_obligation(obligation) {
-                Ok(()) => { }
-                Err(()) => {
-                    return;
-                }
-            }
+            self.solve_obligation(obligation)?;
         }
 
         let goal = self.root_goal.clone();
         let goal = self.canonicalize(&goal);
-        self.solutions.push(format!("{:?}", goal));
+        Ok(format!("{:?}", goal))
     }
+
+    fn unroll(&mut self) -> Result<(), ()> {
+        if let Some(top_choice_point) = self.choice_points.pop() {
+            let ChoicePoint { obligations, infer_snapshot, kind } = top_choice_point;
+            self.obligations = obligations;
+            self.infer.rollback_to(infer_snapshot);
+            match kind {
+                ChoicePointKind::Clauses(clauses) => {
+                    self.start_next_clause(clauses)
+                }
+                ChoicePointKind::Disjunction(disjunction) => {
+                    self.start_next_disjunction(disjunction)
+                }
+            }
+        } else {
+            Err(())
+        }
+    }
+
+    fn start_next_clause(&mut self, clauses: ChoicePointClauses) -> Result<(), ()> {
+        let ChoicePointClauses { mut clauses, application, environment, depth } = clauses;
+
+        'next_clause: while let Some(clause) = clauses.pop_front() {
+            let snapshot = self.infer.snapshot();
+
+            let ClauseImplication { condition, consequence } =
+                self.infer.instantiate_existential(&environment, &clause);
+
+            assert_eq!(application.constant_and_arity(),
+                       consequence.constant_and_arity());
+            for (leaf1, leaf2) in application.args.iter().zip(&consequence.args) {
+                if let Err(e) = self.infer.unify(leaf1, leaf2) {
+                    self.infer.rollback_to(snapshot);
+                    continue 'next_clause;
+                }
+            }
+
+            self.choice_points.push(ChoicePoint {
+                obligations: self.obligations.clone(),
+                infer_snapshot: snapshot,
+                kind: ChoicePointKind::Clauses(ChoicePointClauses {
+                    environment: environment.clone(),
+                    clauses: clauses,
+                    application: application,
+                    depth: depth,
+                })
+            });
+
+            if let Some(goal) = condition {
+                self.obligations.push(Obligation {
+                    environment: environment.clone(),
+                    goal: goal,
+                    depth: depth,
+                });
+            }
+
+            return Ok(());
+        }
+
+        self.unroll()
+    }
+
+    fn start_next_disjunction(&mut self, disjunction: ChoicePointDisjunction) -> Result<(), ()> {
+        let ChoicePointDisjunction { mut goals } = disjunction;
+
+        while let Some(goal) = goals.pop_front() {
+            let snapshot = self.infer.snapshot();
+
+            self.choice_points.push(ChoicePoint {
+                obligations: self.obligations.clone(),
+                infer_snapshot: snapshot,
+                kind: ChoicePointKind::Disjunction(ChoicePointDisjunction { goals: goals }),
+            });
+
+            self.obligations.push(goal);
+
+            return Ok(());
+        }
+
+        Ok(())
+    }
+
 
     fn solve_obligation(&mut self, obligation: Obligation) -> Result<(), ()> {
         debug!("solve_obligation(obligation={:#?})", obligation);
@@ -76,33 +179,14 @@ impl Solver {
         match goal.kind {
             GoalKind::True => Ok(()),
             GoalKind::Leaf(ref application) => {
-                for clause in environment.clauses_relevant_to(application) {
-                    debug!("solve_obligation: considering clause {:?}", clause);
-                    self.probe(|this| {
-                        let ClauseImplication { condition, consequence } =
-                            this.infer.instantiate_existential(&environment, clause);
-
-                        assert_eq!(application.constant_and_arity(),
-                                   consequence.constant_and_arity());
-                        for (leaf1, leaf2) in application.args.iter().zip(&consequence.args) {
-                            if let Err(e) = this.infer.unify(leaf1, leaf2) {
-                                debug!("Unification error: {:?}", e);
-                                return;
-                            }
-                        }
-
-                        if let Some(goal) = condition {
-                            this.obligations.push(Obligation {
-                                environment: environment.clone(),
-                                goal: goal,
-                                depth: depth + 1,
-                            });
-                        }
-
-                        this.run();
-                    });
-                }
-                Err(())
+                let clauses: VecDeque<_> = environment.clauses_relevant_to(application).cloned().collect();
+                let clauses = ChoicePointClauses {
+                    clauses: clauses,
+                    environment: environment,
+                    application: application.clone(),
+                    depth: depth + 1,
+                };
+                self.start_next_clause(clauses)
             }
             GoalKind::And(ref g1, ref g2) => {
                 // NB: Important that we consider g1 first
@@ -118,17 +202,21 @@ impl Solver {
                 Ok(())
             }
             GoalKind::Or(ref g1, ref g2) => {
-                for &goal in &[g1, g2] {
-                    self.probe(|this| {
-                        this.obligations.push(Obligation {
-                            environment: environment.clone(),
-                            goal: goal.clone(),
-                            depth: depth + 1,
-                        });
-                        this.run();
-                    });
-                }
-                Err(()) // signal to the surrounding `run()` task that we took over =)
+                let mut deque = VecDeque::new();
+                deque.push_back(Obligation {
+                    environment: environment.clone(),
+                    goal: g1.clone(),
+                    depth: depth + 1,
+                });
+                deque.push_back(Obligation {
+                    environment: environment.clone(),
+                    goal: g2.clone(),
+                    depth: depth + 1,
+                });
+                let disjunction = ChoicePointDisjunction {
+                    goals: deque,
+                };
+                self.start_next_disjunction(disjunction)
             }
             GoalKind::Exists(ref quant) => {
                 let new_goal = self.infer.instantiate_existential(&environment, quant);
