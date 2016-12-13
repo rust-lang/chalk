@@ -37,6 +37,14 @@ struct ChoicePointDisjunction {
     goals: VecDeque<Obligation>,
 }
 
+enum ProveError {
+    NotProvable,
+    Overflow,
+}
+
+// Indicates that there are no more choicepoints
+struct UnrollError;
+
 impl Solver {
     pub fn solve(root_environment: Arc<Environment>, root_goal: Goal<Application>) -> Vec<String> {
         // Peel off any our "exists" goals and instantiate them with inference variables.
@@ -67,17 +75,29 @@ impl Solver {
 
     fn run(&mut self) {
         loop {
-            if let Ok(solution) = self.find_next_solution() {
-                self.solutions.push(solution);
+            match self.find_next_solution() {
+                Ok(solution) => {
+                    self.solutions.push(solution);
+                }
+                Err(ProveError::NotProvable) => {
+                }
+                Err(ProveError::Overflow) => {
+                    if !self.solutions.iter().any(|s| s == "<<overflow>>") {
+                        self.solutions.push("<<overflow>>".to_string());
+                    }
+                }
             }
 
-            if self.unroll().is_err() {
-                return;
+            match self.unroll() {
+                Ok(()) => { }
+                Err(UnrollError) => {
+                    return;
+                }
             }
         }
     }
 
-    fn find_next_solution(&mut self) -> Result<String, ()> {
+    fn find_next_solution(&mut self) -> Result<String, ProveError> {
         while let Some(obligation) = self.obligations.pop() {
             self.solve_obligation(obligation)?;
         }
@@ -87,7 +107,7 @@ impl Solver {
         Ok(format!("{:?}", goal))
     }
 
-    fn unroll(&mut self) -> Result<(), ()> {
+    fn unroll(&mut self) -> Result<(), UnrollError> {
         if let Some(top_choice_point) = self.choice_points.pop() {
             let ChoicePoint { obligations, infer_snapshot, kind } = top_choice_point;
             self.obligations = obligations;
@@ -101,11 +121,11 @@ impl Solver {
                 }
             }
         } else {
-            Err(())
+            Err(UnrollError)
         }
     }
 
-    fn start_next_clause(&mut self, clauses: ChoicePointClauses) -> Result<(), ()> {
+    fn start_next_clause(&mut self, clauses: ChoicePointClauses) -> Result<(), UnrollError> {
         let ChoicePointClauses { mut clauses, application, environment, depth } = clauses;
 
         'next_clause: while let Some(clause) = clauses.pop_front() {
@@ -148,7 +168,7 @@ impl Solver {
         self.unroll()
     }
 
-    fn start_next_disjunction(&mut self, disjunction: ChoicePointDisjunction) -> Result<(), ()> {
+    fn start_next_disjunction(&mut self, disjunction: ChoicePointDisjunction) -> Result<(), UnrollError> {
         let ChoicePointDisjunction { mut goals } = disjunction;
 
         while let Some(goal) = goals.pop_front() {
@@ -165,16 +185,15 @@ impl Solver {
             return Ok(());
         }
 
-        Ok(())
+        self.unroll()
     }
 
-
-    fn solve_obligation(&mut self, obligation: Obligation) -> Result<(), ()> {
+    fn solve_obligation(&mut self, obligation: Obligation) -> Result<(), ProveError> {
         debug!("solve_obligation(obligation={:#?})", obligation);
         debug!("solve_obligation: goal={:?}", self.canonicalize(&obligation.goal));
         let Obligation { environment, goal, depth } = obligation;
         if depth > 10 {
-            panic!("too deep");
+            return Err(ProveError::Overflow);
         }
         match goal.kind {
             GoalKind::True => Ok(()),
@@ -186,7 +205,11 @@ impl Solver {
                     application: application.clone(),
                     depth: depth + 1,
                 };
-                self.start_next_clause(clauses)
+
+                match self.start_next_clause(clauses) {
+                    Ok(()) => Ok(()),
+                    Err(UnrollError) => Err(ProveError::NotProvable),
+                }
             }
             GoalKind::And(ref g1, ref g2) => {
                 // NB: Important that we consider g1 first
@@ -216,7 +239,10 @@ impl Solver {
                 let disjunction = ChoicePointDisjunction {
                     goals: deque,
                 };
-                self.start_next_disjunction(disjunction)
+                match self.start_next_disjunction(disjunction) {
+                    Ok(()) => Ok(()),
+                    Err(UnrollError) => Err(ProveError::NotProvable),
+                }
             }
             GoalKind::Exists(ref quant) => {
                 let new_goal = self.infer.instantiate_existential(&environment, quant);
