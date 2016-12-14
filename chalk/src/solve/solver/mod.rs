@@ -11,12 +11,12 @@ pub struct Solver {
     infer: InferenceTable,
     root_goal: Goal<Application>,
     solutions: Vec<String>,
-    obligations: Vec<Obligation>,
+    obligations: VecDeque<Obligation>,
     choice_points: Vec<ChoicePoint>,
 }
 
 struct ChoicePoint {
-    obligations: Vec<Obligation>,
+    obligations: VecDeque<Obligation>,
     infer_snapshot: InferenceSnapshot,
     kind: ChoicePointKind,
 }
@@ -60,7 +60,7 @@ impl Solver {
             infer: infer,
             root_goal: root_goal.clone(),
             solutions: vec![],
-            obligations: vec![Obligation::new(root_environment.clone(), root_goal, 0)],
+            obligations: vec![Obligation::new(root_environment.clone(), root_goal, 0)].into(),
             choice_points: vec![],
         }
     }
@@ -98,7 +98,7 @@ impl Solver {
     }
 
     fn find_next_solution(&mut self) -> Result<String, ProveError> {
-        while let Some(obligation) = self.obligations.pop() {
+        while let Some(obligation) = self.obligations.pop_back() {
             self.solve_obligation(obligation)?;
         }
 
@@ -155,7 +155,7 @@ impl Solver {
             });
 
             if let Some(goal) = condition {
-                self.obligations.push(Obligation {
+                self.obligations.push_back(Obligation {
                     environment: environment.clone(),
                     goal: goal,
                     depth: depth,
@@ -180,7 +180,7 @@ impl Solver {
                 kind: ChoicePointKind::Disjunction(ChoicePointDisjunction { goals: goals }),
             });
 
-            self.obligations.push(goal);
+            self.obligations.push_back(goal);
 
             return Ok(());
         }
@@ -246,7 +246,7 @@ impl Solver {
             }
             GoalKind::Exists(ref quant) => {
                 let new_goal = self.infer.instantiate_existential(&environment, quant);
-                self.obligations.push(Obligation {
+                self.obligations.push_back(Obligation {
                     environment: environment.clone(),
                     goal: new_goal,
                     depth: depth,
@@ -264,7 +264,7 @@ impl Solver {
                 }
                 let subst = subst.unwrap(); // always at least 1 binder
                 let new_goal = subst.apply(quant.skip_binders());
-                self.obligations.push(Obligation {
+                self.obligations.push_back(Obligation {
                     environment: new_environment,
                     goal: new_goal,
                     depth: depth,
@@ -274,7 +274,7 @@ impl Solver {
             GoalKind::Implication(ref clauses, ref goal) => {
                 let new_environment = Arc::new(Environment::new(Some(environment),
                                                                 clauses.clone()));
-                self.obligations.push(Obligation {
+                self.obligations.push_back(Obligation {
                     environment: new_environment,
                     goal: goal.clone(),
                     depth: depth,
