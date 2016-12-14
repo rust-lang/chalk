@@ -156,3 +156,21 @@ fn recursive() {
               goal!(forall(1) (apply "foo" (bound 0))),
               vec!["<<overflow>>"])
 }
+
+#[test]
+fn simple_impl() {
+    solve_all(vec![
+        // Copy implementedFor: i32
+        clause!(apply "implementedFor" (apply "Copy") (apply "i32")),
+
+        // Copy implementedFor: u32
+        clause!(apply "implementedFor" (apply "Copy") (apply "u32")),
+
+        // Copy implementedFor: Vec[?T] :- Copy implementedFor: ?T.
+        clause!(forall(1) (implies
+                           (apply "implementedFor" (apply "Copy") (bound 0)) =>
+                           (apply "implementedFor" (apply "Copy") (apply "Vec" (bound 0)))))
+    ],
+              goal!(apply "implementedFor" (apply "Copy") (apply "Vec" (apply "i32"))),
+              vec![r#""implementedFor"("Copy", "Vec"("i32"))"#]);
+}
