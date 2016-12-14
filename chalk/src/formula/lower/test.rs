@@ -27,56 +27,56 @@ fn test_err(text: &str, span: &str, kind: ErrorKind) {
 
 #[test]
 fn lower_one() {
-    test("Foo(X, _, Y) :- Bar(X, _, Y, Z).",
+    test("Foo(?X, _, ?Y) :- Bar(?X, _, ?Y, ?Z).",
          &[r#"forall(A, B, C, D -> implies(exists(E -> "Bar()/4"(A, E, B, C)) => "Foo()/3"(A, D, B)))"#]);
 }
 
 #[test]
 fn lower_exists() {
-    test("Foo(X, _, Y) :- exists(Z -> Bar(X, _, Y, Z)).",
+    test("Foo(?X, _, ?Y) :- exists(?Z -> Bar(?X, _, ?Y, ?Z)).",
          &[r#"forall(A, B, C -> implies(exists(D -> exists(E -> "Bar()/4"(A, E, B, D))) => "Foo()/3"(A, C, B)))"#]);
 }
 
 #[test]
 fn lower_forall() {
-    test("Foo(X, _, Y) :- forall(Z -> Bar(X, _, Y, Z)).",
+    test("Foo(?X, _, ?Y) :- forall(?Z -> Bar(?X, _, ?Y, ?Z)).",
          &[r#"forall(A, B, C -> implies(forall(D -> exists(E -> "Bar()/4"(A, E, B, D))) => "Foo()/3"(A, C, B)))"#]);
 }
 
 #[test]
 fn lower_nested_wildcard() {
-    // Test that the `_` in `Bar` could be bound to `Z`.
-    test("Foo(X, Y) :- forall(Z -> Bar(X, Y, Z, _)).",
+    // Test that the `_` in `Bar` could be bound to `?Z`.
+    test("Foo(?X, ?Y) :- forall(?Z -> Bar(?X, ?Y, ?Z, _)).",
          &[r#"forall(A, B -> implies(forall(C -> exists(D -> "Bar()/4"(A, B, C, D))) => "Foo()/2"(A, B)))"#]);
 }
 
 #[test]
 fn lower_many() {
-    test("Foo(X, _, Y) :- Bar(X, _, Y, Z), Baz(Z); Bop(Z).",
+    test("Foo(?X, _, ?Y) :- Bar(?X, _, ?Y, ?Z), Baz(?Z); Bop(?Z).",
          &[r#"forall(A, B, C, D -> implies(and(exists(E -> "Bar()/4"(A, E, B, C)), or("Baz()/1"(C); "Bop()/1"(C))) => "Foo()/3"(A, D, B)))"#]);
 }
 
 #[test]
 fn lower_implies_and() {
-    test("Foo(X, _, Y) :- implies(Bar(X, _, Y, Z) => Baz(Z), Bop(Z)).",
+    test("Foo(?X, _, ?Y) :- implies(Bar(?X, _, ?Y, ?Z) => Baz(?Z), Bop(?Z)).",
          &[r#"forall(A, B, C, D -> implies(implies(forall(E -> "Bar()/4"(A, E, B, C)) => and("Baz()/1"(C), "Bop()/1"(C))) => "Foo()/3"(A, D, B)))"#]);
 }
 
 #[test]
 fn lower_implies_or() {
-    test("Foo(X, _, Y) :- implies(Bar(X, _, Y, Z) => Baz(Z); Bop(Z)).",
+    test("Foo(?X, _, ?Y) :- implies(Bar(?X, _, ?Y, ?Z) => Baz(?Z); Bop(?Z)).",
          &[r#"forall(A, B, C, D -> implies(implies(forall(E -> "Bar()/4"(A, E, B, C)) => or("Baz()/1"(C); "Bop()/1"(C))) => "Foo()/3"(A, D, B)))"#]);
 }
 
 #[test]
 fn lower_implies_or_in_clause() {
-    test_err("Foo(X, _, Y) :- implies(Bar(X, _, Y, Z); Bop(Z) => Baz(Z)).",
-             "                        ^^^^^^^^^^^^^^^^^^^^^^^",
+    test_err("Foo(?X, _, ?Y) :- implies(Bar(?X, _, ?Y, ?Z); Bop(?Z) => Baz(?Z)).",
+             "                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^",
              ErrorKind::OrInClause);
 }
 
 #[test]
 fn lower_and_clause() {
-    test("Foo(X, _, Y) :- implies(Foo(X), Bar(Y) => Baz(X, Y)).",
+    test("Foo(?X, _, ?Y) :- implies(Foo(?X), Bar(?Y) => Baz(?X, ?Y)).",
          &[r#"forall(A, B, C -> implies(implies("Foo()/1"(A), "Bar()/1"(B) => "Baz()/2"(A, B)) => "Foo()/3"(A, C, B)))"#]);
 }

@@ -142,14 +142,15 @@ ValueKind: ValueKind = {
 
 Atom: Atom = {
     <s:r"'[^']+'"> => Atom { id: intern(&s[1..s.len() - 1]) },
+    Identifier => Atom { id: <> },
 };
 
 Variable: Variable = {
-    Identifier => Variable { id: <> },
+    r"\?[:alpha:][:alnum:]*" => Variable { id: intern(<>) },
 };
 
 Identifier: InternedString = {
-    r"[A-Za-z][A-Za-z0-9_]*" => intern(<>),
+    r"[:alpha:][:alnum:]*" => intern(<>),
 };
 
 Vec1<V>: Vec<V> = {

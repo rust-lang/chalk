@@ -1,9 +1,9 @@
-'Copy' implementedFor: 'i32'.
-'Copy' implementedFor: 'u32'.
-'Copy' implementedFor: 'f32'.
-'Copy' implementedFor: 'i64'.
-'Copy' implementedFor: 'u64'.
-'Copy' implementedFor: 'f64'.
+Copy implementedFor: i32.
+Copy implementedFor: u32.
+Copy implementedFor: f32.
+Copy implementedFor: i64.
+Copy implementedFor: u64.
+Copy implementedFor: f64.
 
-'Copy' implementedFor: (Vec[T]) :-
-    'Copy' implementedFor: T.
+Copy implementedFor: (Vec[?T]) :-
+    Copy implementedFor: ?T.
