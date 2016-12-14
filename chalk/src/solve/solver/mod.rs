@@ -13,6 +13,15 @@ pub struct Solver {
     solutions: Vec<String>,
     obligations: VecDeque<Obligation>,
     choice_points: Vec<ChoicePoint>,
+    strategy: Strategy,
+}
+
+pub enum Strategy {
+    // Prolog-style search
+    DepthFirstSearch,
+
+    // Rust-style search, proceed only when unambiguous
+    Rust,
 }
 
 struct ChoicePoint {
@@ -40,20 +49,27 @@ struct ChoicePointDisjunction {
 enum ProveError {
     NotProvable,
     Overflow,
+    Ambiguous,
 }
 
 // Indicates that there are no more choicepoints
 struct UnrollError;
 
 impl Solver {
-    pub fn solve(root_environment: Arc<Environment>, root_goal: Goal<Application>) -> Vec<String> {
+    pub fn solve(root_environment: Arc<Environment>,
+                 root_goal: Goal<Application>,
+                 strategy: Strategy)
+                 -> Vec<String> {
         // Peel off any our "exists" goals and instantiate them with inference variables.
-        let mut solver = Solver::new(&root_environment, &root_goal);
+        let mut solver = Solver::new(&root_environment, &root_goal, strategy);
         solver.run();
         solver.solutions
     }
 
-    fn new(root_environment: &Arc<Environment>, root_goal: &Goal<Application>) -> Self {
+    fn new(root_environment: &Arc<Environment>,
+           root_goal: &Goal<Application>,
+           strategy: Strategy)
+           -> Self {
         let mut infer = InferenceTable::new();
         let root_goal = infer.peel_goal(root_environment, root_goal);
         Solver {
@@ -62,6 +78,7 @@ impl Solver {
             solutions: vec![],
             obligations: vec![Obligation::new(root_environment.clone(), root_goal, 0)].into(),
             choice_points: vec![],
+            strategy: strategy,
         }
     }
 
@@ -79,7 +96,11 @@ impl Solver {
                 Ok(solution) => {
                     self.solutions.push(solution);
                 }
-                Err(ProveError::NotProvable) => {
+                Err(ProveError::NotProvable) => {}
+                Err(ProveError::Ambiguous) => {
+                    if !self.solutions.iter().any(|s| s == "<<ambiguous>>") {
+                        self.solutions.push("<<ambiguous>>".to_string());
+                    }
                 }
                 Err(ProveError::Overflow) => {
                     if !self.solutions.iter().any(|s| s == "<<overflow>>") {
@@ -98,8 +119,26 @@ impl Solver {
     }
 
     fn find_next_solution(&mut self) -> Result<String, ProveError> {
-        while let Some(obligation) = self.obligations.pop_back() {
-            self.solve_obligation(obligation)?;
+        let mut stalled_obligations = VecDeque::new();
+        loop {
+            let mut progress = false;
+            while let Some(obligation) = self.obligations.pop_back() {
+                match self.solve_obligation(obligation)? {
+                    Some(stalled_obligation) => stalled_obligations.push_back(stalled_obligation),
+                    None => progress = true,
+                }
+            }
+
+            if stalled_obligations.is_empty() {
+                break;
+            }
+
+            if !progress {
+                return Err(ProveError::Ambiguous);
+            }
+
+            self.obligations.append(&mut stalled_obligations);
+            assert!(stalled_obligations.is_empty());
         }
 
         let goal = self.root_goal.clone();
@@ -113,9 +152,7 @@ impl Solver {
             self.obligations = obligations;
             self.infer.rollback_to(infer_snapshot);
             match kind {
-                ChoicePointKind::Clauses(clauses) => {
-                    self.start_next_clause(clauses)
-                }
+                ChoicePointKind::Clauses(clauses) => self.start_next_clause(clauses),
                 ChoicePointKind::Disjunction(disjunction) => {
                     self.start_next_disjunction(disjunction)
                 }
@@ -131,8 +168,8 @@ impl Solver {
         'next_clause: while let Some(clause) = clauses.pop_front() {
             let snapshot = self.infer.snapshot();
 
-            let ClauseImplication { condition, consequence } =
-                self.infer.instantiate_existential(&environment, &clause);
+            let ClauseImplication { condition, consequence } = self.infer
+                .instantiate_existential(&environment, &clause);
 
             assert_eq!(application.constant_and_arity(),
                        consequence.constant_and_arity());
@@ -151,7 +188,7 @@ impl Solver {
                     clauses: clauses,
                     application: application,
                     depth: depth,
-                })
+                }),
             });
 
             if let Some(goal) = condition {
@@ -168,7 +205,9 @@ impl Solver {
         self.unroll()
     }
 
-    fn start_next_disjunction(&mut self, disjunction: ChoicePointDisjunction) -> Result<(), UnrollError> {
+    fn start_next_disjunction(&mut self,
+                              disjunction: ChoicePointDisjunction)
+                              -> Result<(), UnrollError> {
         let ChoicePointDisjunction { mut goals } = disjunction;
 
         while let Some(goal) = goals.pop_front() {
@@ -188,27 +227,28 @@ impl Solver {
         self.unroll()
     }
 
-    fn solve_obligation(&mut self, obligation: Obligation) -> Result<(), ProveError> {
+    /// Returns:
+    /// - Ok(Some(obligation)) => stalled, come back to obligation later
+    /// - Ok(None) => solved, pushed more work on self.obligations
+    /// - Err(_) => cannot solve
+    fn solve_obligation(&mut self,
+                        obligation: Obligation)
+                        -> Result<Option<Obligation>, ProveError> {
         debug!("solve_obligation(obligation={:#?})", obligation);
-        debug!("solve_obligation: goal={:?}", self.canonicalize(&obligation.goal));
+        debug!("solve_obligation: goal={:?}",
+               self.canonicalize(&obligation.goal));
         let Obligation { environment, goal, depth } = obligation;
         if depth > 10 {
             return Err(ProveError::Overflow);
         }
         match goal.kind {
-            GoalKind::True => Ok(()),
+            GoalKind::True => Ok(None),
             GoalKind::Leaf(ref application) => {
-                let clauses: VecDeque<_> = environment.clauses_relevant_to(application).cloned().collect();
-                let clauses = ChoicePointClauses {
-                    clauses: clauses,
-                    environment: environment,
-                    application: application.clone(),
-                    depth: depth + 1,
-                };
-
-                match self.start_next_clause(clauses) {
-                    Ok(()) => Ok(()),
-                    Err(UnrollError) => Err(ProveError::NotProvable),
+                match self.strategy {
+                    Strategy::Rust => self.solve_leaf_rust(environment, &goal, application, depth),
+                    Strategy::DepthFirstSearch => {
+                        self.solve_leaf_depth_first(environment, application, depth)
+                    }
                 }
             }
             GoalKind::And(ref g1, ref g2) => {
@@ -222,7 +262,7 @@ impl Solver {
                             depth: depth,
                         }
                     }));
-                Ok(())
+                Ok(None)
             }
             GoalKind::Or(ref g1, ref g2) => {
                 let mut deque = VecDeque::new();
@@ -236,11 +276,9 @@ impl Solver {
                     goal: g2.clone(),
                     depth: depth + 1,
                 });
-                let disjunction = ChoicePointDisjunction {
-                    goals: deque,
-                };
+                let disjunction = ChoicePointDisjunction { goals: deque };
                 match self.start_next_disjunction(disjunction) {
-                    Ok(()) => Ok(()),
+                    Ok(()) => Ok(None),
                     Err(UnrollError) => Err(ProveError::NotProvable),
                 }
             }
@@ -251,7 +289,7 @@ impl Solver {
                     goal: new_goal,
                     depth: depth,
                 });
-                Ok(())
+                Ok(None)
             }
             GoalKind::ForAll(ref quant) => {
                 assert!(quant.num_binders > 0);
@@ -269,7 +307,7 @@ impl Solver {
                     goal: new_goal,
                     depth: depth,
                 });
-                Ok(())
+                Ok(None)
             }
             GoalKind::Implication(ref clauses, ref goal) => {
                 let new_environment = Arc::new(Environment::new(Some(environment),
@@ -279,9 +317,88 @@ impl Solver {
                     goal: goal.clone(),
                     depth: depth,
                 });
-                Ok(())
+                Ok(None)
             }
         }
+    }
+
+    fn solve_leaf_rust(&mut self,
+                       environment: Arc<Environment>,
+                       goal: &Goal<Application>,
+                       application: &Application,
+                       depth: usize)
+                       -> Result<Option<Obligation>, ProveError> {
+        let mut choices: Vec<_> = environment.clauses_relevant_to(application)
+            .filter(|clause| {
+                let snapshot = self.infer.snapshot();
+                let result = match self.unify_clause(&environment, clause, application) {
+                    Ok(_condition) => true,
+                    Err(_unify_error) => false,
+                };
+                self.infer.rollback_to(snapshot);
+                result
+            })
+            .collect();
+
+        if choices.len() == 0 {
+            return Err(ProveError::NotProvable);
+        }
+
+        // put it at the back of the line
+        if choices.len() > 1 {
+            return Ok(Some(Obligation {
+                environment: environment.clone(),
+                goal: goal.clone(),
+                depth: depth,
+            }));
+        }
+
+        // if we have only one choice that succeeds, use it
+        let clause = choices.pop().unwrap();
+        let condition = self.unify_clause(&environment, clause, application).unwrap();
+        if let Some(condition) = condition {
+            let obligation = Obligation {
+                environment: environment.clone(),
+                goal: condition.clone(),
+                depth: depth + 1,
+            };
+            self.obligations.push_back(obligation);
+        }
+        Ok(None)
+    }
+
+    fn solve_leaf_depth_first(&mut self,
+                              environment: Arc<Environment>,
+                              application: &Application,
+                              depth: usize)
+                              -> Result<Option<Obligation>, ProveError> {
+        let clauses: VecDeque<_> = environment.clauses_relevant_to(application).cloned().collect();
+        let clauses = ChoicePointClauses {
+            clauses: clauses,
+            environment: environment,
+            application: application.clone(),
+            depth: depth + 1,
+        };
+
+        match self.start_next_clause(clauses) {
+            Ok(()) => Ok(None),
+            Err(UnrollError) => Err(ProveError::NotProvable),
+        }
+    }
+
+    fn unify_clause(&mut self,
+                    environment: &Environment,
+                    clause: &Clause<Application>,
+                    application: &Application)
+                    -> UnifyResult<Option<Goal<Application>>> {
+        let ClauseImplication { condition, consequence } = self.infer
+            .instantiate_existential(&environment, clause);
+        assert_eq!(application.constant_and_arity(),
+                   consequence.constant_and_arity());
+        for (leaf1, leaf2) in application.args.iter().zip(&consequence.args) {
+            self.infer.unify(leaf1, leaf2)?;
+        }
+        Ok(condition)
     }
 }
 
@@ -298,12 +415,13 @@ impl InferenceTable {
             subst = Some(Subst::new(subst.as_ref(), var));
         }
         subst.map(|subst| subst.apply(quant.skip_binders()))
-             .unwrap_or(quant.skip_binders().clone())
+            .unwrap_or(quant.skip_binders().clone())
     }
 
-    fn peel_goal(&mut self, root_environment: &Arc<Environment>, goal: &Goal<Application>)
-                 -> Goal<Application>
-    {
+    fn peel_goal(&mut self,
+                 root_environment: &Arc<Environment>,
+                 goal: &Goal<Application>)
+                 -> Goal<Application> {
         let mut goal = goal.clone();
 
         // If the goal is `(exists X -> ...)`, then we instantiate `X`
@@ -322,7 +440,6 @@ impl InferenceTable {
         }
         goal
     }
-
 }
 
 #[cfg(test)]

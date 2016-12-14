@@ -4,12 +4,36 @@ use std::iter::repeat;
 use std::sync::Arc;
 
 use super::Solver;
+use super::Strategy;
 
-fn solve(clauses: Vec<Clause<Application>>,
+fn solve_all(clauses: Vec<Clause<Application>>,
+             goal: Goal<Application>,
+             expected_solutions: Vec<&str>) {
+    solve_dfs(clauses.clone(), goal.clone(), expected_solutions.clone());
+    solve_rust(clauses, goal, expected_solutions);
+}
+
+fn solve_dfs(clauses: Vec<Clause<Application>>,
+             goal: Goal<Application>,
+             expected_solutions: Vec<&str>) {
+    solve(Strategy::DepthFirstSearch,
+          clauses,
+          goal,
+          expected_solutions)
+}
+
+fn solve_rust(clauses: Vec<Clause<Application>>,
+              goal: Goal<Application>,
+              expected_solutions: Vec<&str>) {
+    solve(Strategy::Rust, clauses, goal, expected_solutions)
+}
+
+fn solve(strategy: Strategy,
+         clauses: Vec<Clause<Application>>,
          goal: Goal<Application>,
          expected_solutions: Vec<&str>) {
     let root_environment = Arc::new(Environment::new(None, clauses));
-    let solutions = Solver::solve(root_environment, goal);
+    let solutions = Solver::solve(root_environment, goal, strategy);
 
     let is_match: Vec<bool> = expected_solutions.iter()
         .zip(&solutions)
@@ -33,37 +57,47 @@ fn solve(clauses: Vec<Clause<Application>>,
 
 #[test]
 fn simple_fail() {
-    solve(vec![], goal!(exists(1) (apply "foo" (bound 0))), vec![]);
+    solve_all(vec![], goal!(exists(1) (apply "foo" (bound 0))), vec![]);
 }
 
 #[test]
 fn forall_in_clause() {
-    solve(vec![],
-          goal!(exists(1) (implies (forall(1) (apply "foo" (bound 0))) =>
+    solve_all(vec![],
+              goal!(exists(1) (implies (forall(1) (apply "foo" (bound 0))) =>
                            (apply "foo" (bound 0)))),
-          vec![r#"implies(forall(A -> "foo"(A)) => "foo"(?0))"#]);
+              vec![r#"implies(forall(A -> "foo"(A)) => "foo"(?0))"#]);
 }
 
 #[test]
 fn one_clause() {
-    solve(vec![],
-          goal!(exists(1) (implies (apply "foo" (apply "bar")) =>
+    solve_all(vec![],
+              goal!(exists(1) (implies (apply "foo" (apply "bar")) =>
                            (apply "foo" (bound 0)))),
-          vec![r#"implies("foo"("bar") => "foo"("bar"))"#]);
+              vec![r#"implies("foo"("bar") => "foo"("bar"))"#]);
 }
 
 #[test]
 fn two_clause_in_env() {
-    solve(vec![clause!(apply "foo" (apply "bar")),
+    solve_dfs(vec![clause!(apply "foo" (apply "bar")),
                clause!(apply "foo" (apply "baz"))],
-          goal!(exists(1) (apply "foo" (bound 0))),
-          vec![r#""foo"("bar")"#,
+              goal!(exists(1) (apply "foo" (bound 0))),
+              vec![r#""foo"("bar")"#,
                r#""foo"("baz")"#]);
+
+    solve_rust(vec![clause!(apply "foo" (apply "bar")),
+               clause!(apply "foo" (apply "baz"))],
+               goal!(exists(1) (apply "foo" (bound 0))),
+               vec![r#"<<ambiguous>>"#]);
+
+    solve_rust(vec![clause!(apply "foo" (apply "bar")),
+               clause!(apply "foo" (apply "baz"))],
+               goal!((apply "foo" (apply "bar"))),
+               vec![r#""foo"("bar")"#]);
 }
 
 #[test]
 fn enumerate_ancestors() {
-    solve(vec![clause!(apply "parent" (apply "n") (apply "d")),
+    solve_dfs(vec![clause!(apply "parent" (apply "n") (apply "d")),
                clause!(apply "parent" (apply "c") (apply "n")),
                // ancestor(A, B) :- parent(A, B).
                clause!(forall(2) (implies (apply "parent" (bound 0) (bound 1)) =>
@@ -75,24 +109,42 @@ fn enumerate_ancestors() {
                                    (apply "ancestor" (bound 1) (bound 2))) =>
                                   (apply "ancestor" (bound 0) (bound 2)))),
                ],
-          goal!(exists(1) (apply "ancestor" (bound 0) (apply "d"))),
-          vec![r#""ancestor"("n", "d")"#,
+              goal!(exists(1) (apply "ancestor" (bound 0) (apply "d"))),
+              vec![r#""ancestor"("n", "d")"#,
                r#""ancestor"("c", "d")"#]);
 }
 
 #[test]
+fn enumerate_ancestors_rust() {
+    solve_rust(vec![clause!(apply "parent" (apply "n") (apply "d")),
+                    clause!(apply "parent" (apply "c") (apply "n")),
+                    // ancestor(A, B) :- parent(A, B).
+               clause!(forall(2) (implies (apply "parent" (bound 0) (bound 1)) =>
+                                  (apply "ancestor" (bound 0) (bound 1)))),
+               // ancestor(A, C) :- parent(A, B), ancestor(B, C).
+               clause!(forall(3) (implies
+                                  (and
+                                   (apply "parent" (bound 0) (bound 1))
+                                   (apply "ancestor" (bound 1) (bound 2))) =>
+                                  (apply "ancestor" (bound 0) (bound 2)))),
+               ],
+               goal!(exists(1) (apply "ancestor" (bound 0) (apply "d"))),
+               vec![r#"<<ambiguous>>"#]);
+}
+
+#[test]
 fn forall_fails() {
-    solve(vec![clause!(apply "foo" (apply "bar")),
-               clause!(apply "foo" (apply "baz"))],
-          goal!(forall(1) (apply "foo" (bound 0))),
-          vec![]);
+    solve_all(vec![clause!(apply "foo" (apply "bar")),
+                   clause!(apply "foo" (apply "baz"))],
+              goal!(forall(1) (apply "foo" (bound 0))),
+              vec![]);
 }
 
 #[test]
 fn for_all_clause_for_all_goal() {
-    solve(vec![clause!(forall(1) (apply "foo" (bound 0)))],
-          goal!(forall(1) (apply "foo" (bound 0))),
-          vec![r#"forall(A -> "foo"(A))"#]);
+    solve_all(vec![clause!(forall(1) (apply "foo" (bound 0)))],
+              goal!(forall(1) (apply "foo" (bound 0))),
+              vec![r#"forall(A -> "foo"(A))"#]);
 }
 
 #[test]
@@ -100,7 +152,7 @@ fn recursive() {
     // foo X :- foo X.
     //
     // Fails to prove `foo A`
-    solve(vec![clause!(forall(1) (implies (apply "foo" (bound 0)) => (apply "foo" (bound 0))))],
-          goal!(forall(1) (apply "foo" (bound 0))),
-          vec!["<<overflow>>"])
+    solve_all(vec![clause!(forall(1) (implies (apply "foo" (bound 0)) => (apply "foo" (bound 0))))],
+              goal!(forall(1) (apply "foo" (bound 0))),
+              vec!["<<overflow>>"])
 }

@@ -3,7 +3,7 @@
 
 use docopt::Docopt;
 use formula;
-use solve;
+use {solve_dfs, solve_rust};
 use std::error::Error;
 use std::env;
 use std::fs::File;
@@ -23,12 +23,14 @@ Loads a chalk program and tries to solve the given goal.
 Options:
     -p <file>, --program <file>     Specifies that we should load program clauses from `file`.
     -g <goal>, --goal <goal>        Specifies the goal to try to solve. [default: goal(X)]
+    --prolog                        Use the Prolog strategy, rather than Rust
 ";
 
 #[derive(Debug, RustcDecodable)]
 pub struct Args {
     flag_program: Vec<String>,
     flag_goal: String,
+    flag_prolog: bool,
 }
 
 pub fn main() {
@@ -59,7 +61,11 @@ pub fn fallible_main(args: &Args) -> Result<(), Box<Error>> {
     let goal = formula::lower_goal("<goal>", &ast)?;
 
     let now = Instant::now();
-    let solutions = solve(clauses, goal);
+    let solutions = if args.flag_prolog {
+        solve_dfs(clauses, goal)
+    } else {
+        solve_rust(clauses, goal)
+    };
     let time = now.elapsed();
 
     println!("found {} solutions in {:0.3}s",
