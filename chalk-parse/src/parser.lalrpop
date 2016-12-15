@@ -5,12 +5,13 @@ use std::iter::once;
 grammar;
 
 pub Program: Program = {
-    Item+ => Program { items: <> },
+    Item+ => Program { items: <>.into_iter().filter_map(|x| x).collect() },
 };
 
-Item: Item = {
-    <a:Application> "." => Item::Fact(a),
-    Rule => Item::Rule(<>),
+Item: Option<Item> = {
+    Comment => None,
+    <a:Application> "." => Some(Item::Fact(a)),
+    Rule => Some(Item::Rule(<>)),
 };
 
 Rule: Rule = {
@@ -120,7 +121,7 @@ BitOperator: Bit = {
 
 Operator: Operator = {
     r"[A-Za-z][A-Za-z0-9_]*:" => Operator::Colon(intern(<>)),
-    r"[-|!@#$%^&*=+/:?~<>]+" => Operator::Symbols(intern(<>)),
+    r"[-|!@#$%^&*=+:?~<>][-|!@#$%^&*=+/:?~<>]*|/[-|!@#$%^&*=+:?~<>]*" => Operator::Symbols(intern(<>)),
 };
 
 BitValue: Bit = {
@@ -169,4 +170,8 @@ Vec0<V>: Vec<V> = {
         v0.extend(v1);
         v0
     }
+};
+
+Comment = {
+    r"//.*",
 };
