@@ -194,6 +194,9 @@ fn conditional_impl() {
         //
         // Key point: `String: Copy` does not hold.
         clause!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "String"))),
+
+        // equate(A, A).
+        clause!(forall(1) (apply "equate" (bound 0) (bound 0))),
     ]
     };
 
@@ -201,7 +204,25 @@ fn conditional_impl() {
               goal!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "i32"))),
               vec![r#""implementedFor"("Trait", "Vec"("i32"))"#]);
 
-    solve_rust(clauses(),
+    solve_all(clauses(),
         goal!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "String"))),
         vec![r#""implementedFor"("Trait", "Vec"("String"))"#]);
+
+    // if asked to solve `Trait implementedFor: Vec[?A]`, we fail to infer what `?A` is.
+    solve_rust(clauses(),
+        goal!(exists(1) (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0)))),
+        vec![r#"<<ambiguous>>"#]);
+
+    // In these two variations, the second rule, `equate(?0, i32)`,
+    // allows us to eventually solve the first
+    solve_all(clauses(),
+        goal!(exists(1) (and
+                         (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0)))
+                         (apply "equate" (bound 0) (apply "i32")))),
+        vec![r#"and("implementedFor"("Trait", "Vec"("i32")), "equate"("i32", "i32"))"#]);
+    solve_all(clauses(),
+        goal!(exists(1) (and
+                         (apply "equate" (bound 0) (apply "i32"))
+                         (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0))))),
+        vec![r#"and("equate"("i32", "i32"), "implementedFor"("Trait", "Vec"("i32")))"#]);
 }
