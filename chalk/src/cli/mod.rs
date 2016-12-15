@@ -1,6 +1,3 @@
-#![feature(conservative_impl_trait)]
-#![feature(static_in_const)]
-
 use docopt::Docopt;
 use formula;
 use {solve_dfs, solve_rust};
