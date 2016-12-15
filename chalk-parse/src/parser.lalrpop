@@ -61,7 +61,35 @@ FactDataApply: Box<FactData> = {
 };
 
 Application: Application = {
-    <s0:@L> <bits:ApplicationBits> <s1:@R> => {
+    KeywordApplication,
+    IndexedApplication,
+};
+
+IndexedApplication: Application = {
+    <s0:@L> <id:Identifier> "(" <appls:BitArguments> ")" <s1:@R> => {
+        let oper_bit = Bit {
+            span: Span::new(s0, s1),
+            kind: BitKind::Operator(Operator::Parens(id))
+        };
+        Application {
+            span: Span::new(s0, s0),
+            bits: Some(oper_bit).into_iter().chain(appls).collect(),
+        }
+    },
+    <s0:@L> <id:Identifier> "[" <appls:BitArguments> "]" <s1:@R> => {
+        let oper_bit = Bit {
+            span: Span::new(s0, s1),
+            kind: BitKind::Operator(Operator::SquareBrackets(id))
+        };
+        Application {
+            span: Span::new(s0, s0),
+            bits: Some(oper_bit).into_iter().chain(appls).collect()
+        }
+    },
+};
+
+KeywordApplication: Application = {
+    <s0:@L> <bits:KeywordApplicationBits> <s1:@R> => {
         Application {
             span: Span::new(s0, s1),
             bits: bits
@@ -69,36 +97,21 @@ Application: Application = {
     }
 };
 
-ApplicationBits: Vec<Bit> = {
-    <head:BitValue> => vec![head],
+KeywordApplicationBits: Vec<Bit> = {
     <head:BitOperator> => vec![head],
     <head:BitValue?> <body:(BitOperator BitValue)+> <tail:BitOperator?> =>
         head.into_iter()
             .chain(body.into_iter().flat_map(|(o, v)| once(o).chain(once(v))))
             .chain(tail)
             .collect(),
-    <s0:@L> <id:Identifier> "(" <appls:BitApplications> ")" <s1:@R> => {
-        let oper_bit = Bit {
-            span: Span::new(s0, s1),
-            kind: BitKind::Operator(Operator::Parens(id))
-        };
-        Some(oper_bit).into_iter().chain(appls).collect()
-    },
-    <s0:@L> <id:Identifier> "[" <appls:BitApplications> "]" <s1:@R> => {
-        let oper_bit = Bit {
-            span: Span::new(s0, s1),
-            kind: BitKind::Operator(Operator::SquareBrackets(id))
-        };
-        Some(oper_bit).into_iter().chain(appls).collect()
-    },
 };
 
-BitApplications: Vec<Bit> = {
-    Vec0<BitApplication>
+BitArguments: Vec<Bit> = {
+    Vec0<BitArgument>
 };
 
-BitApplication: Bit = {
-    <s0:@L> <a:Application> <s1:@R> => {
+BitArgument: Bit = {
+    <s0:@L> <a:KeywordApplication> <s1:@R> => {
         let span = Span::new(s0, s1);
         Bit {
             span: span,
@@ -107,7 +120,8 @@ BitApplication: Bit = {
                 kind: ValueKind::Application(a)
             }),
         }
-    }
+    },
+    BitValue,
 };
 
 OperatorValue: (Operator, Value) = {
@@ -137,8 +151,10 @@ Value: Value = {
 ValueKind: ValueKind = {
     Atom => ValueKind::Atom(<>),
     Variable => ValueKind::Variable(<>),
-    "(" <Application> ")" => ValueKind::Application(<>),
+    "(" <KeywordApplication> ")" => ValueKind::Application(<>),
+    "(" <ValueKind> ")",
     "_" => ValueKind::Wildcard,
+    IndexedApplication => ValueKind::Application(<>),
 };
 
 Atom: Atom = {
