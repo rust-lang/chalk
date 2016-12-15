@@ -16,6 +16,7 @@ pub struct Solver {
     strategy: Strategy,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Strategy {
     // Prolog-style search
     DepthFirstSearch,
@@ -82,6 +83,17 @@ impl Solver {
         }
     }
 
+    fn fork(&self, goal: &Goal<Application>) -> Self {
+        Solver {
+            infer: self.infer.clone(),
+            root_goal: goal.clone(),
+            solutions: vec![],
+            obligations: VecDeque::new(),
+            choice_points: vec![],
+            strategy: self.strategy,
+        }
+    }
+
     fn canonicalize(&mut self, goal: &Goal<Application>) -> Goal<Application> {
         // FIXME -- this meant to replace unbound variables like ?F
         // with a `_`, but that is not a variant of leaf (and should
@@ -119,13 +131,21 @@ impl Solver {
     }
 
     fn find_next_solution(&mut self) -> Result<String, ProveError> {
+        debug!("find_next_solution: {} obligations", self.obligations.len());
         let mut stalled_obligations = VecDeque::new();
         loop {
             let mut progress = false;
             while let Some(obligation) = self.obligations.pop_back() {
+                debug!("find_next_solution: obligation={:?}", obligation);
                 match self.solve_obligation(obligation)? {
-                    Some(stalled_obligation) => stalled_obligations.push_back(stalled_obligation),
-                    None => progress = true,
+                    Some(stalled_obligation) => {
+                        debug!("find_next_solution: stalled");
+                        stalled_obligations.push_back(stalled_obligation)
+                    }
+                    None => {
+                        debug!("find_next_solution: progress");
+                        progress = true;
+                    }
                 }
             }
 
@@ -136,6 +156,9 @@ impl Solver {
             if !progress {
                 return Err(ProveError::Ambiguous);
             }
+
+            // the DFS strategy has no concept of a stalled obligation
+            assert!(self.strategy == Strategy::Rust);
 
             self.obligations.append(&mut stalled_obligations);
             assert!(stalled_obligations.is_empty());
@@ -245,7 +268,7 @@ impl Solver {
             GoalKind::True => Ok(None),
             GoalKind::Leaf(ref application) => {
                 match self.strategy {
-                    Strategy::Rust => self.solve_leaf_rust(environment, &goal, application, depth),
+                    Strategy::Rust => self.solve_leaf_rust(&environment, &goal, application, depth),
                     Strategy::DepthFirstSearch => {
                         self.solve_leaf_depth_first(environment, application, depth)
                     }
@@ -323,7 +346,7 @@ impl Solver {
     }
 
     fn solve_leaf_rust(&mut self,
-                       environment: Arc<Environment>,
+                       environment: &Arc<Environment>,
                        goal: &Goal<Application>,
                        application: &Application,
                        depth: usize)
@@ -331,7 +354,7 @@ impl Solver {
         let mut choices: Vec<_> = environment.clauses_relevant_to(application)
             .filter(|clause| {
                 let snapshot = self.infer.snapshot();
-                let result = match self.unify_clause(&environment, clause, application) {
+                let result = match self.unify_clause(environment, clause, application) {
                     Ok(_condition) => true,
                     Err(_unify_error) => false,
                 };
@@ -339,6 +362,12 @@ impl Solver {
                 result
             })
             .collect();
+
+        // try to winnow down our choices
+        if choices.len() > 1 {
+            self.winnow(environment, goal, application, depth, &mut choices);
+            debug!("after winnowing, {} choices remain", choices.len());
+        }
 
         if choices.len() == 0 {
             return Err(ProveError::NotProvable);
@@ -355,7 +384,17 @@ impl Solver {
 
         // if we have only one choice that succeeds, use it
         let clause = choices.pop().unwrap();
-        let condition = self.unify_clause(&environment, clause, application).unwrap();
+        self.push_clause_obligation(environment, clause, application, depth).unwrap();
+        Ok(None)
+    }
+
+    fn push_clause_obligation(&mut self,
+                              environment: &Arc<Environment>,
+                              clause: &Clause<Application>,
+                              application: &Application,
+                              depth: usize)
+                              -> UnifyResult<()> {
+        let condition = self.unify_clause(environment, clause, application).unwrap();
         if let Some(condition) = condition {
             let obligation = Obligation {
                 environment: environment.clone(),
@@ -364,7 +403,27 @@ impl Solver {
             };
             self.obligations.push_back(obligation);
         }
-        Ok(None)
+        Ok(())
+    }
+
+    fn winnow(&mut self,
+              environment: &Arc<Environment>,
+              goal: &Goal<Application>,
+              application: &Application,
+              depth: usize,
+              choices: &mut Vec<&Clause<Application>>) {
+        choices.retain(|clause| {
+            let mut solver = self.fork(goal);
+            solver.push_clause_obligation(environment, clause, application, depth).unwrap();
+            let result = match solver.find_next_solution() {
+                Ok(_) => true,
+                Err(ProveError::NotProvable) => false,
+                Err(ProveError::Ambiguous) => true,
+                Err(ProveError::Overflow) => true,
+            };
+            debug!("winnow: clause={:?} result={:?}", clause, result);
+            result
+        });
     }
 
     fn solve_leaf_depth_first(&mut self,

@@ -3,6 +3,7 @@ use formula::*;
 use super::universe::UniverseIndex;
 use super::var::*;
 
+#[derive(Clone)]
 pub struct InferenceTable {
     unify: unify::UnificationTable<InferenceVariable>,
     values: Vec<Application>,

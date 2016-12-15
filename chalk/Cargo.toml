@@ -11,7 +11,7 @@ doctest = false
 [dependencies]
 chalk-parse = { path = "../chalk-parse" }
 docopt = "0.6"
-ena = "0.3"
+ena = "0.4"
 lalrpop-intern = "0.12.1"
 lalrpop-util = "0.12.1"
 rustc-serialize = "0.3.21"

@@ -174,3 +174,34 @@ fn simple_impl() {
               goal!(apply "implementedFor" (apply "Copy") (apply "Vec" (apply "i32"))),
               vec![r#""implementedFor"("Copy", "Vec"("i32"))"#]);
 }
+
+#[test]
+fn conditional_impl() {
+    let clauses = || {
+        vec![
+        // Copy implementedFor: i32
+        clause!(apply "implementedFor" (apply "Copy") (apply "i32")),
+
+        // Copy implementedFor: u32
+        clause!(apply "implementedFor" (apply "Copy") (apply "u32")),
+
+        // Trait implementedFor: Vec[?T] :- Copy implementedFor: ?T.
+        clause!(forall(1) (implies
+                           (apply "implementedFor" (apply "Copy") (bound 0)) =>
+                           (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0))))),
+
+        // Trait implementedFor: Vec[String].
+        //
+        // Key point: `String: Copy` does not hold.
+        clause!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "String"))),
+    ]
+    };
+
+    solve_all(clauses(),
+              goal!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "i32"))),
+              vec![r#""implementedFor"("Trait", "Vec"("i32"))"#]);
+
+    solve_rust(clauses(),
+        goal!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "String"))),
+        vec![r#""implementedFor"("Trait", "Vec"("String"))"#]);
+}
