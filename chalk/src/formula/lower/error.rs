@@ -14,6 +14,7 @@ pub enum ErrorKind {
     UnknownVariable(ast::Variable),
     OrInClause,
     ExistsInClause,
+    NotInClause,
     NoOperator,
 }
 

@@ -56,6 +56,9 @@ impl Fact {
     pub fn for_each_free_variable(&self, func: &mut FnMut(Span, Variable))
     {
         match *self.data {
+            FactData::Not(ref f1) => {
+                f1.for_each_free_variable(func);
+            }
             FactData::And(ref f1, ref f2) |
             FactData::Or(ref f1, ref f2) |
             FactData::Implication(ref f1, ref f2) => {

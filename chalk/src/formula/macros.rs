@@ -62,6 +62,11 @@ macro_rules! goal {
             kind: GoalKind::Leaf(apply!(apply $($apply)*))
         })
     };
+    (not $goal:tt) => {
+        Goal::new(GoalData {
+            kind: GoalKind::Not(goal!($goal))
+        })
+    };
     (true) => {
         Goal::new(GoalData {
             kind: GoalKind::True

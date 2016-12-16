@@ -42,14 +42,14 @@ fn solve(strategy: Strategy,
     let is_match =
         || is_match.iter().cloned().chain(repeat(false)).map(|b| if b { 'x' } else { ' ' });
 
-    debug!("expected_solutions:");
+    println!("expected_solutions:");
     for (solution, m) in expected_solutions.iter().zip(is_match()) {
-        debug!("- [{}] {}", m, solution);
+        println!("- [{}] {}", m, solution);
     }
 
-    debug!("actual_solutions:");
+    println!("actual_solutions:");
     for (solution, m) in solutions.iter().zip(is_match()) {
-        debug!("- [{}] {}", m, solution);
+        println!("- [{}] {}", m, solution);
     }
 
     assert_eq!(expected_solutions, solutions);
@@ -205,24 +205,58 @@ fn conditional_impl() {
               vec![r#""implementedFor"("Trait", "Vec"("i32"))"#]);
 
     solve_all(clauses(),
-        goal!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "String"))),
-        vec![r#""implementedFor"("Trait", "Vec"("String"))"#]);
+              goal!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "String"))),
+              vec![r#""implementedFor"("Trait", "Vec"("String"))"#]);
 
     // if asked to solve `Trait implementedFor: Vec[?A]`, we fail to infer what `?A` is.
     solve_rust(clauses(),
-        goal!(exists(1) (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0)))),
-        vec![r#"<<ambiguous>>"#]);
+               goal!(exists(1) (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0)))),
+               vec![r#"<<ambiguous>>"#]);
 
     // In these two variations, the second rule, `equate(?0, i32)`,
     // allows us to eventually solve the first
     solve_all(clauses(),
-        goal!(exists(1) (and
+              goal!(exists(1) (and
                          (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0)))
                          (apply "equate" (bound 0) (apply "i32")))),
-        vec![r#"and("implementedFor"("Trait", "Vec"("i32")), "equate"("i32", "i32"))"#]);
+              vec![r#"and("implementedFor"("Trait", "Vec"("i32")), "equate"("i32", "i32"))"#]);
     solve_all(clauses(),
-        goal!(exists(1) (and
+              goal!(exists(1) (and
                          (apply "equate" (bound 0) (apply "i32"))
                          (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0))))),
-        vec![r#"and("equate"("i32", "i32"), "implementedFor"("Trait", "Vec"("i32")))"#]);
+              vec![r#"and("equate"("i32", "i32"), "implementedFor"("Trait", "Vec"("i32")))"#]);
+}
+
+#[test]
+fn negative_one() {
+    let clauses = || {
+        vec![
+            clause!(forall(1) (apply "=" (bound 0) (bound 0))),
+
+            clause!(forall(2) (implies
+                    (not (apply "=" (bound 0) (bound 1))) =>
+                    (apply "!=" (bound 0) (bound 1)))),
+        ]
+    };
+
+    solve_rust(clauses(),
+               goal!(not (apply "=" (apply "X") (apply "Y"))),
+               vec![r#"not("="("X", "Y"))"#]);
+
+    solve_rust(clauses(),
+               goal!(apply "!=" (apply "X") (apply "Y")),
+               vec![r#""!="("X", "Y")"#]);
+
+    solve_rust(clauses(),
+               goal!(not (apply "=" (apply "X") (apply "X"))),
+               vec![]);
+
+    solve_rust(clauses(),
+               goal!(exists(1) (not (apply "=" (bound 0) (apply "X")))),
+               vec![r#"<<ambiguous>>"#]);
+
+    // FIXME? Dubious.
+    solve_rust(clauses(),
+               goal!(forall(1) (not (apply "=" (bound 0) (apply "X")))),
+               vec![r#"forall(A -> not("="(A, "X")))"#]);
 }

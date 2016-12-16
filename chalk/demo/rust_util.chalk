@@ -21,3 +21,7 @@
 // entry for the same key.
 map: ?M contains_key: ?K with_value: ?V :-
     (?K = ?V) in_list: ?M.
+
+// Unification.
+?A = ?A.
+?A != ?B :- !(?A = ?B).

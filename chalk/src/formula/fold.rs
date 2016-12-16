@@ -3,6 +3,7 @@ use infer::InferenceVariable;
 
 pub trait Fold {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self;
+    fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result>;
 }
 
 pub trait Folder {
@@ -12,15 +13,34 @@ pub trait Folder {
     fn replace_inference_variable(&mut self, from_leaf: &Leaf, v: InferenceVariable) -> Leaf;
 }
 
+pub trait Finder {
+    type Result;
+    fn in_binders<OP, R>(&mut self, num_binders: usize, op: OP) -> R
+        where OP: FnOnce(&mut Self) -> R;
+    fn find_bound_variable(&mut self, from_leaf: &Leaf, v: BoundVariable) -> Option<Self::Result>;
+    fn find_inference_variable(&mut self,
+                               from_leaf: &Leaf,
+                               v: InferenceVariable)
+                               -> Option<Self::Result>;
+}
+
 impl<T: Fold> Fold for Vec<T> {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
         self.iter().map(|e| e.fold_with(folder)).collect()
+    }
+
+    fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result> {
+        self.iter().filter_map(|e| e.find_with(finder)).next()
     }
 }
 
 impl<T: Fold> Fold for Option<T> {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
         self.as_ref().map(|e| e.fold_with(folder))
+    }
+
+    fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result> {
+        self.iter().filter_map(|e| e.find_with(finder)).next()
     }
 }
 
@@ -31,6 +51,10 @@ impl Fold for Application {
             args: self.args.fold_with(folder),
         }
     }
+
+    fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result> {
+        self.args.find_with(finder)
+    }
 }
 
 impl Fold for Leaf {
@@ -39,10 +63,16 @@ impl Fold for Leaf {
             LeafKind::BoundVariable(v) => folder.replace_bound_variable(self, v),
             LeafKind::InferenceVariable(v) => folder.replace_inference_variable(self, v),
             LeafKind::Application(ref appl) => {
-                Leaf::new(LeafData {
-                    kind: LeafKind::Application(appl.fold_with(folder))
-                })
+                Leaf::new(LeafData { kind: LeafKind::Application(appl.fold_with(folder)) })
             }
+        }
+    }
+
+    fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result> {
+        match self.kind {
+            LeafKind::BoundVariable(v) => finder.find_bound_variable(self, v),
+            LeafKind::InferenceVariable(v) => finder.find_inference_variable(self, v),
+            LeafKind::Application(ref appl) => appl.find_with(finder),
         }
     }
 }
@@ -73,9 +103,38 @@ macro_rules! fold {
     }
 }
 
+macro_rules! find {
+    ($this:expr, $folder:expr, $Type:ident, $TypeData:ident, $TypeKind:ident {
+        nullary { $($NullaryVariantName:ident),* },
+        $($VariantName:ident($($arg_name:ident),*)),*
+    }) => {
+        match $this.kind {
+            $(
+                $TypeKind::$NullaryVariantName => None,
+            )*
+            $(
+                $TypeKind::$VariantName(
+                    $(ref $arg_name),*
+                ) => {
+                    $(
+                        if let Some(r) = $arg_name.find_with($folder) {
+                            return Some(r);
+                        }
+                    )*
+                        None
+                }
+            )*
+        }
+    }
+}
+
 impl<L: Fold> Fold for Clause<L> {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
         Clause::new((**self).fold_with(folder))
+    }
+
+    fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result> {
+        (**self).find_with(finder)
     }
 }
 
@@ -86,6 +145,10 @@ impl<L: Fold> Fold for ClauseImplication<L> {
             consequence: self.consequence.fold_with(folder),
         }
     }
+
+    fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result> {
+        self.condition.find_with(finder).or_else(|| self.consequence.find_with(finder))
+    }
 }
 
 impl<L: Fold> Fold for Goal<L> {
@@ -93,6 +156,20 @@ impl<L: Fold> Fold for Goal<L> {
         fold!(self, folder, Goal, GoalData, GoalKind {
             nullary { True },
             Leaf(l),
+            Not(l),
+            And(l, r),
+            Or(l, r),
+            Exists(q),
+            Implication(c, g),
+            ForAll(q)
+        })
+    }
+
+    fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result> {
+        find!(self, finder, Goal, GoalData, GoalKind {
+            nullary { True },
+            Leaf(l),
+            Not(l),
             And(l, r),
             Or(l, r),
             Exists(q),
@@ -108,9 +185,14 @@ impl<Q: Fold> Fold for Quantification<Q> {
             Quantification::new(self.num_binders, self.skip_binders().fold_with(folder))
         })
     }
+
+    fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result> {
+        finder.in_binders(self.num_binders,
+                          |finder| self.skip_binders().find_with(finder))
+    }
 }
 
-///////////////////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////////////////
 
 /// Folder to "open up" a gap in the bound variable indices.  This is
 /// useful when you are inserting a term underneath a binder and wish
@@ -152,5 +234,34 @@ impl Folder for OpenUp {
 
     fn replace_inference_variable(&mut self, from_leaf: &Leaf, _v: InferenceVariable) -> Leaf {
         from_leaf.clone()
+    }
+}
+
+/// ////////////////////////////////////////////////////////////////////////
+
+/// Finder to see if there are any inference variables.
+pub struct ContainsInferenceVars;
+
+impl ContainsInferenceVars {
+    pub fn test<F: Fold>(f: &F) -> bool {
+        f.find_with(&mut ContainsInferenceVars).is_some()
+    }
+}
+
+impl Finder for ContainsInferenceVars {
+    type Result = ();
+
+    fn in_binders<OP, R>(&mut self, _num_binders: usize, op: OP) -> R
+        where OP: FnOnce(&mut Self) -> R
+    {
+        op(&mut ContainsInferenceVars)
+    }
+
+    fn find_bound_variable(&mut self, _from_leaf: &Leaf, _v: BoundVariable) -> Option<()> {
+        None
+    }
+
+    fn find_inference_variable(&mut self, _from_leaf: &Leaf, _v: InferenceVariable) -> Option<()> {
+        Some(())
     }
 }

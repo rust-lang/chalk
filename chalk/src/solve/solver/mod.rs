@@ -270,7 +270,17 @@ impl Solver {
                 match self.strategy {
                     Strategy::Rust => self.solve_leaf_rust(&environment, &goal, application, depth),
                     Strategy::DepthFirstSearch => {
-                        self.solve_leaf_depth_first(environment, application, depth)
+                        self.solve_leaf_dfs(environment, application, depth)
+                    }
+                }
+            }
+            GoalKind::Not(ref inverted_goal) => {
+                match self.strategy {
+                    Strategy::Rust => {
+                        self.solve_not_rust(&environment, &goal, inverted_goal, depth)
+                    }
+                    Strategy::DepthFirstSearch => {
+                        self.solve_not_dfs(&environment, &goal, inverted_goal, depth)
                     }
                 }
             }
@@ -288,21 +298,37 @@ impl Solver {
                 Ok(None)
             }
             GoalKind::Or(ref g1, ref g2) => {
-                let mut deque = VecDeque::new();
-                deque.push_back(Obligation {
-                    environment: environment.clone(),
-                    goal: g1.clone(),
-                    depth: depth + 1,
-                });
-                deque.push_back(Obligation {
-                    environment: environment.clone(),
-                    goal: g2.clone(),
-                    depth: depth + 1,
-                });
-                let disjunction = ChoicePointDisjunction { goals: deque };
-                match self.start_next_disjunction(disjunction) {
-                    Ok(()) => Ok(None),
-                    Err(UnrollError) => Err(ProveError::NotProvable),
+                match self.strategy {
+                    Strategy::Rust => {
+                        // FIXME -- this is overly conservative. For
+                        // example, if And(g1, g2) is provable, then
+                        // Or(g1, g2) is clearly satisfied. Or, if g1
+                        // or g2 contains no inference variables, and
+                        // we can prove one of them, then again Or is
+                        // satisfied. The danger is that we prove
+                        // (say) g1 and then this influences inference
+                        // in some way that proving g2 would not have
+                        // done, and this affects later computation.
+                        Err(ProveError::Ambiguous)
+                    }
+                    Strategy::DepthFirstSearch => {
+                        let mut deque = VecDeque::new();
+                        deque.push_back(Obligation {
+                            environment: environment.clone(),
+                            goal: g1.clone(),
+                            depth: depth + 1,
+                        });
+                        deque.push_back(Obligation {
+                            environment: environment.clone(),
+                            goal: g2.clone(),
+                            depth: depth + 1,
+                        });
+                        let disjunction = ChoicePointDisjunction { goals: deque };
+                        match self.start_next_disjunction(disjunction) {
+                            Ok(()) => Ok(None),
+                            Err(UnrollError) => Err(ProveError::NotProvable),
+                        }
+                    }
                 }
             }
             GoalKind::Exists(ref quant) => {
@@ -426,11 +452,11 @@ impl Solver {
         });
     }
 
-    fn solve_leaf_depth_first(&mut self,
-                              environment: Arc<Environment>,
-                              application: &Application,
-                              depth: usize)
-                              -> Result<Option<Obligation>, ProveError> {
+    fn solve_leaf_dfs(&mut self,
+                      environment: Arc<Environment>,
+                      application: &Application,
+                      depth: usize)
+                      -> Result<Option<Obligation>, ProveError> {
         let clauses: VecDeque<_> = environment.clauses_relevant_to(application).cloned().collect();
         let clauses = ChoicePointClauses {
             clauses: clauses,
@@ -458,6 +484,41 @@ impl Solver {
             self.infer.unify(leaf1, leaf2)?;
         }
         Ok(condition)
+    }
+
+    fn solve_not_rust(&mut self,
+                      environment: &Arc<Environment>,
+                      goal: &Goal<Application>, // G = !G1
+                      inverted_goal: &Goal<Application>, // G1
+                      depth: usize)
+                      -> Result<Option<Obligation>, ProveError> {
+        let inverted_goal = self.canonicalize(&inverted_goal);
+        debug!("solve_not_rust(inverted_goal = {:?})", inverted_goal);
+        if ContainsInferenceVars::test(&inverted_goal) {
+            return Ok(Some(Obligation {
+                    environment: environment.clone(),
+                    goal: goal.clone(),
+                    depth: depth,
+            }));
+        }
+        let mut solver = self.fork(&inverted_goal);
+        solver.obligations
+            .push_back(Obligation::new(environment.clone(), inverted_goal.clone(), depth));
+        match solver.find_next_solution() {
+            Ok(_) => Err(ProveError::NotProvable),
+            Err(ProveError::Ambiguous) => Err(ProveError::Ambiguous),
+            Err(ProveError::NotProvable) => Ok(None),
+            Err(ProveError::Overflow) => Err(ProveError::Overflow),
+        }
+    }
+
+    fn solve_not_dfs(&mut self,
+                     environment: &Arc<Environment>,
+                     goal: &Goal<Application>,
+                     inverted_goal: &Goal<Application>,
+                     depth: usize)
+                     -> Result<Option<Obligation>, ProveError> {
+        unimplemented!()
     }
 }
 

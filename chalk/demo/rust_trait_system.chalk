@@ -66,9 +66,9 @@ type: str with_lifetime: (?L1 = ?L2) is_type: str.
 type: array[?T] with_lifetime: (?L1 = ?L2) is_type: array[?U] :-
     type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.
 type: ref[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L2, T].
-type: ref[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L2, T].
+type: ref[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L3, T] :- ?L1 != ?L3.
 type: ref_mut[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: ref_mut[?L2, T].
-type: ref_mut[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L2, T].
+type: ref_mut[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L3, T] :- ?L1 != ?L3.
 type: fn[?A1, ?R1] with_lifetime: (?L1 = ?L2) is_type: fn[?A2, ?R2] :-
     type: ?A1 with_lifetime: (?L1 = ?L2) is_type: ?A2,
     type: ?R1 with_lifetime: (?L1 = ?L2) is_type: ?R2.
@@ -77,4 +77,5 @@ type: tup[?A1, ?R1] with_lifetime: (?L1 = ?L2) is_type: tup[?A2, ?R2] :-
     type: ?R1 with_lifetime: (?L1 = ?L2) is_type: ?R2.
 type: for[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: for[?L1, ?T].
 type: for[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: for[?L3, ?U] :-
+    ?L3 != L1,
     type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.

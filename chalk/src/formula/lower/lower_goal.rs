@@ -32,6 +32,11 @@ impl LowerGoal<Application> for ast::Fact {
                 Ok(Goal::new(GoalData { kind: GoalKind::And(c1, c2) }))
             }
 
+            ast::FactData::Not(ref f1) => {
+                let c1 = f1.lower_goal(env)?;
+                Ok(Goal::new(GoalData { kind: GoalKind::Not(c1) }))
+            }
+
             ast::FactData::Or(ref f1, ref f2) => {
                 let c1 = f1.lower_goal(env)?;
                 let c2 = f2.lower_goal(env)?;

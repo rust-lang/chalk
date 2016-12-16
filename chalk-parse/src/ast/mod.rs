@@ -48,6 +48,8 @@ pub enum FactData {
     And(Fact, Fact),
     Or(Fact, Fact),
 
+    Not(Fact),
+
     Implication(Fact, Fact), // A => B
     Exists(Variable, Fact), // exists(x: A)
     ForAll(Variable, Fact), // forall(x: A)

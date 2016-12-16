@@ -51,6 +51,7 @@ pub struct GoalData<L> {
 pub enum GoalKind<L> {
     True,
     Leaf(L),
+    Not(Goal<L>),
     And(Goal<L>, Goal<L>),
     Or(Goal<L>, Goal<L>),
     Exists(Quantification<Goal<L>>),
