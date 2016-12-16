@@ -1,24 +1,12 @@
 // An experiment to be sure.
-
+//
+// Relies on other rust_*chalk files, so run like:
+//
+//     cargo run -- -p demo/rust*chalk -g "<your goal here>"
+//
 // Sample goals:
 //
-// type: ref[X, i32] equals_type: ?T if: ?O, is_obligation_list: ?O
-
-// ?F in_list: ?L
-//
-// Lists are actually trees and have the form:
-//
-// ```
-// L<M> = M
-//      | [L, L]
-//      | Nil
-// ```
-//
-// Here we search for members. This only works well if the list is
-// not being inferred, of course.
-?A in_list: [?A, ?L].
-?A in_list: [?B, ?L] :- ?A in_list: ?L.
-?A in_list: [?L, ?B] :- ?A in_list: ?L.
+//     type: ref[X, i32] equals_type: ?T if: ?O, is_obligation_list: ?O
 
 // Types:
 is_type: i32.
