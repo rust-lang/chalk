@@ -76,7 +76,7 @@ IndexedApplication: Application = {
             bits: Some(oper_bit).into_iter().chain(appls).collect(),
         }
     },
-    <s0:@L> <id:Identifier> "[" <appls:BitArguments> "]" <s1:@R> => {
+    <s0:@L> <id:Identifier?> "[" <appls:BitArguments> "]" <s1:@R> => {
         let oper_bit = Bit {
             span: Span::new(s0, s1),
             kind: BitKind::Operator(Operator::SquareBrackets(id))
@@ -134,7 +134,7 @@ BitOperator: Bit = {
 };
 
 Operator: Operator = {
-    r"[A-Za-z][A-Za-z0-9_]*:" => Operator::Colon(intern(<>)),
+    r"([:alpha:]|_)([:alnum:]|_)*:" => Operator::Colon(intern(<>)),
     r"[-|!@#$%^&*=+:?~<>][-|!@#$%^&*=+/:?~<>]*|/[-|!@#$%^&*=+:?~<>]*" => Operator::Symbols(intern(<>)),
 };
 
@@ -163,11 +163,11 @@ Atom: Atom = {
 };
 
 Variable: Variable = {
-    r"\?[:alpha:][:alnum:]*" => Variable { id: intern(<>) },
+    r"\?([:alpha:]|_)([:alnum:]|_)*" => Variable { id: intern(<>) },
 };
 
 Identifier: InternedString = {
-    r"[:alpha:][:alnum:]*" => intern(<>),
+    r"([:alpha:]|_)([:alnum:]|_)*" => intern(<>),
 };
 
 Vec1<V>: Vec<V> = {

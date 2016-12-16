@@ -91,10 +91,10 @@ pub enum ValueKind {
 // `+`, `|-`, or `foo:`
 #[derive(Debug)]
 pub enum Operator {
-    Colon(InternedString),
-    Parens(InternedString),
-    SquareBrackets(InternedString),
-    Symbols(InternedString),
+    Colon(InternedString), // Foo:...
+    Parens(InternedString), // Foo(...)
+    SquareBrackets(Option<InternedString>), // Foo[...] or [...]
+    Symbols(InternedString), // arbitrary stuff, like +
 }
 
 // `foo` or `bar`

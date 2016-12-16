@@ -15,8 +15,11 @@ impl ast::Application {
                 ast::BitKind::Operator(ast::Operator::Parens(name)) => {
                     write!(&mut operator_name, "{}()", name).unwrap()
                 }
-                ast::BitKind::Operator(ast::Operator::SquareBrackets(name)) => {
+                ast::BitKind::Operator(ast::Operator::SquareBrackets(Some(name))) => {
                     write!(&mut operator_name, "{}[]", name).unwrap()
+                }
+                ast::BitKind::Operator(ast::Operator::SquareBrackets(None)) => {
+                    write!(&mut operator_name, "[]").unwrap()
                 }
                 ast::BitKind::Operator(ast::Operator::Symbols(name)) => {
                     write!(&mut operator_name, "{}", name).unwrap()
