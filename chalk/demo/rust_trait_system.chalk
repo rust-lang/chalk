@@ -1,0 +1,57 @@
+// An experiment to be sure.
+
+// Sample goals:
+//
+// type: ref[X, i32] equals_type: ?T if: ?O, is_obligation_list: ?O
+
+// ?F in_list: ?L
+//
+// Lists are actually trees and have the form:
+//
+// ```
+// L<M> = M
+//      | [L, L]
+//      | Nil
+// ```
+//
+// Here we search for members. This only works well if the list is
+// not being inferred, of course.
+?A in_list: [?A, ?L].
+?A in_list: [?B, ?L] :- ?A in_list: ?L.
+?A in_list: [?L, ?B] :- ?A in_list: ?L.
+
+// Types:
+is_type: i32.
+is_type: u32.
+is_type: str.
+is_type: array[?T] :- is_type: ?T.
+is_type: ref[?LT, ?T] :- is_lifetime: ?LT, is_type: ?T.
+is_type: ref_mut[?LT, ?T] :- is_lifetime: ?LT, is_type: ?T.
+is_type: fn[?A, ?R] :- is_type: ?A, is_type: ?R.
+is_type: tup[?A, ?B] :- is_type: ?A, is_type: ?B.
+is_type: for[?LT, ?T] :- implies(is_lifetime: ?LT => is_type: ?T).
+
+// Lifetimes: any identifier. Lifetimes scoping is controlled by implications above.
+// is_lifetime: ?T.
+
+// Obligations list:
+is_obligation_list: Nil.
+is_obligation_list: (?A = ?B).
+is_obligation_list: [?O1, ?O2] :- is_obligation_list: ?O1, is_obligation_list: ?O2.
+
+// type: ?T equals_type: ?U if: ?O.
+type: i32 equals_type: i32 if: Nil.
+type: u32 equals_type: u32 if: Nil.
+type: str equals_type: str if: Nil.
+type: array[?T] equals_type: array[?U] if: ?O :-
+    type: ?T equals_type: ?U if: ?O.
+type: ref[?LT, ?T] equals_type: ref[?LU, ?U] if: [?LT = ?LU, ?O] :-
+    type: ?T equals_type: ?U if: ?O.    
+type: ref_mut[?LT, ?T] equals_type: ref_mut[?LU, ?U] if: [?LT = ?LU, ?O] :-
+    type: ?T equals_type: ?U if: ?O.
+type: fn[?AT, ?RT] equals_type: fn[?AU, ?RU] if: [?OA, ?OR] :-
+    type: ?AT equals_type: ?AU if: ?OA,
+    type: ?RT equals_type: ?RU if: ?OR.
+type: tup[?AT, ?RT] equals_type: tup[?AU, ?RU] if: [?OA, ?OR] :-
+    type: ?AT equals_type: ?AU if: ?OA,
+    type: ?RT equals_type: ?RU if: ?OR.
