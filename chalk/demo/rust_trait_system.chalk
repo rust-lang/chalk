@@ -8,6 +8,18 @@
 //
 //     type: ref[X, i32] equals_type: ?T if: ?O, is_obligation_list: ?O
 
+// Environment:
+//
+//     (lifetimes: [...])
+//
+// Stores names of regions and type parameters that are in scope.
+
+empty_environment: (lifetimes: Nil).
+environment: (lifetimes: ?Ls) contains_lifetimes: ?Ls.
+environment: (lifetimes: ?Ls) with_lifetime: ?L is: (lifetimes: [?L, ?LS]).
+environment: (lifetimes: ?Ls) contains_lifetime: ?L :-
+    ?L in_list: ?Ls.
+
 // Types:
 is_type: i32.
 is_type: u32.
@@ -27,19 +39,42 @@ is_obligation_list: Nil.
 is_obligation_list: (?A = ?B).
 is_obligation_list: [?O1, ?O2] :- is_obligation_list: ?O1, is_obligation_list: ?O2.
 
-// type: ?T equals_type: ?U if: ?O.
-type: i32 equals_type: i32 if: Nil.
-type: u32 equals_type: u32 if: Nil.
-type: str equals_type: str if: Nil.
-type: array[?T] equals_type: array[?U] if: ?O :-
-    type: ?T equals_type: ?U if: ?O.
-type: ref[?LT, ?T] equals_type: ref[?LU, ?U] if: [?LT = ?LU, ?O] :-
-    type: ?T equals_type: ?U if: ?O.    
-type: ref_mut[?LT, ?T] equals_type: ref_mut[?LU, ?U] if: [?LT = ?LU, ?O] :-
-    type: ?T equals_type: ?U if: ?O.
-type: fn[?AT, ?RT] equals_type: fn[?AU, ?RU] if: [?OA, ?OR] :-
-    type: ?AT equals_type: ?AU if: ?OA,
-    type: ?RT equals_type: ?RU if: ?OR.
-type: tup[?AT, ?RT] equals_type: tup[?AU, ?RU] if: [?OA, ?OR] :-
-    type: ?AT equals_type: ?AU if: ?OA,
-    type: ?RT equals_type: ?RU if: ?OR.
+// type: ?T equals_type: ?U in: ?E if: ?O.
+type: i32 equals_type: i32 in: ?E if: Nil.
+type: u32 equals_type: u32 in: ?E if: Nil.
+type: str equals_type: str in: ?E if: Nil.
+type: array[?T] equals_type: array[?U] in: ?E if: ?O :-
+    type: ?T equals_type: ?U in: ?E if: ?O.
+type: ref[?LT, ?T] equals_type: ref[?LU, ?U] in: ?E if: [?LT = ?LU, ?O] :-
+    type: ?T equals_type: ?U in: ?E if: ?O.    
+type: ref_mut[?LT, ?T] equals_type: ref_mut[?LU, ?U] in: ?E if: [?LT = ?LU, ?O] :-
+    type: ?T equals_type: ?U in: ?E if: ?O.
+type: fn[?AT, ?RT] equals_type: fn[?AU, ?RU] in: ?E if: [?OA, ?OR] :-
+    type: ?AT equals_type: ?AU in: ?E if: ?OA,
+    type: ?RT equals_type: ?RU in: ?E if: ?OR.
+type: tup[?AT, ?RT] equals_type: tup[?AU, ?RU] in: ?E if: [?OA, ?OR] :-
+    type: ?AT equals_type: ?AU in: ?E if: ?OA,
+    type: ?RT equals_type: ?RU in: ?E if: ?OR.
+// type: for[?LT, ?T] equals_type: for[?LU, ?U] in: ?E if: ?O :-
+
+// type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.
+//
+// Assumption: ?L1 not defined in the environment ?E.
+type: i32 with_lifetime: (?L1 = ?L2) is_type: i32.
+type: u32 with_lifetime: (?L1 = ?L2) is_type: u32.
+type: str with_lifetime: (?L1 = ?L2) is_type: str.
+type: array[?T] with_lifetime: (?L1 = ?L2) is_type: array[?U] :-
+    type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.
+type: ref[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L2, T].
+type: ref[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L2, T].
+type: ref_mut[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: ref_mut[?L2, T].
+type: ref_mut[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L2, T].
+type: fn[?A1, ?R1] with_lifetime: (?L1 = ?L2) is_type: fn[?A2, ?R2] :-
+    type: ?A1 with_lifetime: (?L1 = ?L2) is_type: ?A2,
+    type: ?R1 with_lifetime: (?L1 = ?L2) is_type: ?R2.
+type: tup[?A1, ?R1] with_lifetime: (?L1 = ?L2) is_type: tup[?A2, ?R2] :-
+    type: ?A1 with_lifetime: (?L1 = ?L2) is_type: ?A2,
+    type: ?R1 with_lifetime: (?L1 = ?L2) is_type: ?R2.
+type: for[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: for[?L1, ?T].
+type: for[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: for[?L3, ?U] :-
+    type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.
