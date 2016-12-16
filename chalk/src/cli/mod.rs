@@ -18,9 +18,9 @@ Usage: chalk [options]
 Loads a chalk program and tries to solve the given goal.
 
 Options:
-    -p <file>, --program <file>     Specifies that we should load program clauses from `file`.
-    -g <goal>, --goal <goal>        Specifies the goal to try to solve. [default: goal(?X)]
-    --prolog                        Use the Prolog strategy, rather than Rust
+    -p <file>, --program <file> ...     Specifies that we should load program clauses from `file`.
+    -g <goal>, --goal <goal>            Specifies the goal to try to solve. [default: goal(?X)]
+    --prolog                            Use the Prolog strategy, rather than Rust
 ";
 
 #[derive(Debug, RustcDecodable)]
