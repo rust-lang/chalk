@@ -246,7 +246,10 @@ impl Folder for InferenceTable {
         let value = self.unify.probe_value(var);
         debug!("replace_inference_variable: value={:?}", value);
         match value {
-            InferenceValue::Unbound(_) => from_leaf.clone(),
+            InferenceValue::Unbound(_) => {
+                let root_var = self.unify.find(var);
+                Leaf::new(LeafData { kind: LeafKind::InferenceVariable(root_var) })
+            }
             InferenceValue::Bound(val) => {
                 let application = self.values[val.as_usize()].clone();
                 let leaf = Leaf::new(LeafData { kind: LeafKind::Application(application) });
