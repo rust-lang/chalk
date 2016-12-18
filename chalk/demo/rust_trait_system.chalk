@@ -39,23 +39,35 @@ is_obligation_list: Nil.
 is_obligation_list: (?A = ?B).
 is_obligation_list: [?O1, ?O2] :- is_obligation_list: ?O1, is_obligation_list: ?O2.
 
-// type: ?T equals_type: ?U in: ?E if: ?O.
-type: i32 equals_type: i32 in: ?E if: Nil.
-type: u32 equals_type: u32 in: ?E if: Nil.
-type: str equals_type: str in: ?E if: Nil.
-type: array[?T] equals_type: array[?U] in: ?E if: ?O :-
-    type: ?T equals_type: ?U in: ?E if: ?O.
-type: ref[?LT, ?T] equals_type: ref[?LU, ?U] in: ?E if: [?LT = ?LU, ?O] :-
-    type: ?T equals_type: ?U in: ?E if: ?O.    
-type: ref_mut[?LT, ?T] equals_type: ref_mut[?LU, ?U] in: ?E if: [?LT = ?LU, ?O] :-
-    type: ?T equals_type: ?U in: ?E if: ?O.
-type: fn[?AT, ?RT] equals_type: fn[?AU, ?RU] in: ?E if: [?OA, ?OR] :-
-    type: ?AT equals_type: ?AU in: ?E if: ?OA,
-    type: ?RT equals_type: ?RU in: ?E if: ?OR.
-type: tup[?AT, ?RT] equals_type: tup[?AU, ?RU] in: ?E if: [?OA, ?OR] :-
-    type: ?AT equals_type: ?AU in: ?E if: ?OA,
-    type: ?RT equals_type: ?RU in: ?E if: ?OR.
-// type: for[?LT, ?T] equals_type: for[?LU, ?U] in: ?E if: ?O :-
+// type: ?T equals_type: ?U if: ?O.
+type: i32 equals_type: i32 if: Nil.
+type: u32 equals_type: u32 if: Nil.
+type: str equals_type: str if: Nil.
+type: array[?T] equals_type: array[?U] if: ?O :-
+    type: ?T equals_type: ?U if: ?O.
+type: ref[?LT, ?T] equals_type: ref[?LU, ?U] if: [?LT = ?LU, ?O] :-
+    type: ?T equals_type: ?U if: ?O.    
+type: ref_mut[?LT, ?T] equals_type: ref_mut[?LU, ?U] if: [?LT = ?LU, ?O] :-
+    type: ?T equals_type: ?U if: ?O.
+type: fn[?AT, ?RT] equals_type: fn[?AU, ?RU] if: [?OA, ?OR] :-
+    type: ?AT equals_type: ?AU if: ?OA,
+    type: ?RT equals_type: ?RU if: ?OR.
+type: tup[?AT, ?RT] equals_type: tup[?AU, ?RU] if: [?OA, ?OR] :-
+    type: ?AT equals_type: ?AU if: ?OA,
+    type: ?RT equals_type: ?RU if: ?OR.
+
+type: Project[?TraitRef, ?Item] equals_type: ?U if: ?O :-
+    project: ?Item from: ?TraitRef to: ?U if: ?O.
+type: ?U equals_type: Project[?TraitRef, ?Item] if: ?O :-
+    project: ?Item from: ?TraitRef to: ?U if: ?O.
+
+// Doesn't work: obligations relating to ?LT1 and ?LU1 cannot escape
+// into ?O. Need to bundle them back up.
+type: for[?LT, ?T] equals_type: for[?LU, ?U] if: ?O :-
+    forall(?LT1 -> forall(?LU1 ->
+        type: ?T with_lifetime: (?LT = ?LT1) is: ?T1,
+        type: ?U with_lifetime: (?LU = ?LU1) is: ?U1,
+        type: ?T1 equals_type: ?U1 if: ?O)).
 
 // type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.
 //
