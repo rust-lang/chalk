@@ -65,7 +65,7 @@ fn forall_in_clause() {
     solve_all(vec![],
               goal!(exists(1) (implies (forall(1) (apply "foo" (bound 0))) =>
                            (apply "foo" (bound 0)))),
-              vec![r#"implies(forall(A -> "foo"(A)) => "foo"(?0))"#]);
+              vec![r#"implies(forall(A -> "foo"(A)) => "foo"(?1))"#]);
 }
 
 #[test]
