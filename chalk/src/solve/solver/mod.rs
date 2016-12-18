@@ -136,7 +136,6 @@ impl Solver {
         loop {
             let mut progress = false;
             while let Some(obligation) = self.obligations.pop_back() {
-                debug!("find_next_solution: obligation={:?}", obligation);
                 match self.solve_obligation(obligation)? {
                     Some(stalled_obligation) => {
                         debug!("find_next_solution: stalled");
@@ -257,9 +256,7 @@ impl Solver {
     fn solve_obligation(&mut self,
                         obligation: Obligation)
                         -> Result<Option<Obligation>, ProveError> {
-        debug!("solve_obligation(obligation={:#?})", obligation);
-        debug!("solve_obligation: goal={:?}",
-               self.canonicalize(&obligation.goal));
+        debug!("solve_obligation: goal={:?}", self.canonicalize(&obligation.goal));
         let Obligation { environment, goal, depth } = obligation;
         if depth > 10 {
             return Err(ProveError::Overflow);

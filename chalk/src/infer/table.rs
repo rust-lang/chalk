@@ -95,9 +95,6 @@ impl InferenceTable {
     }
 
     fn unify_in_snapshot(&mut self, leaf1: &Leaf, leaf2: &Leaf) -> UnifyResult<()> {
-        debug!("unify_in_snapshot, leaf1={:?}", leaf1);
-        debug!("unify_in_snapshot, leaf2={:?}", leaf2);
-
         // Remove any immediate inference variables.
         let leaf1 = self.normalize_shallow(leaf1);
         let leaf2 = self.normalize_shallow(leaf2);
@@ -111,6 +108,7 @@ impl InferenceTable {
                 panic!("asked to unify bound variables: {:?} vs {:?}", leaf1, leaf2);
             }
             (&LeafKind::InferenceVariable(var1), &LeafKind::InferenceVariable(var2)) => {
+                debug!("unify_in_snapshot: unify_var_var({:?}, {:?})", var1, var2);
                 Ok(self.unify
                     .unify_var_var(var1, var2)
                     .expect("unification of two unbound variables cannot fail"))
