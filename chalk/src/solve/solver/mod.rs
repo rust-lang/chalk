@@ -380,12 +380,17 @@ impl Solver {
                 let snapshot = self.infer.snapshot();
                 let result = match self.unify_clause(environment, clause, application) {
                     Ok(_condition) => true,
-                    Err(_unify_error) => false,
+                    Err(unify_error) => {
+                        debug!("solve_leaf_rust: failed to unify because {:?}", unify_error);
+                        false
+                    }
                 };
                 self.infer.rollback_to(snapshot);
                 result
             })
             .collect();
+
+        debug!("found {} potential choices", choices.len());
 
         // try to winnow down our choices
         if choices.len() > 1 {
