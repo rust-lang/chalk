@@ -199,10 +199,18 @@ impl InferenceTable {
                 LeafKind::InferenceVariable(v) => {
                     match self.unify.probe_value(v) {
                         InferenceValue::Unbound(ui) => {
-                            self.universe_check(universe_index, ui)?;
-
                             if self.unify.unioned(v, var) {
                                 return Err(UnifyError::Cycle);
+                            }
+
+                            if universe_index < ui {
+                                // Scenario is like:
+                                //
+                                // ?A = foo(?B)
+                                //
+                                // where ?A is in universe 0 and ?B is in universe 1.
+                                // This is OK, if ?B is promoted to universe 0.
+                                self.unify.unify_var_value(v, InferenceValue::Unbound(universe_index)).unwrap();
                             }
                         }
 
@@ -220,6 +228,7 @@ impl InferenceTable {
                       universe_index: UniverseIndex,
                       application_universe_index: UniverseIndex)
                       -> UnifyResult<()> {
+        debug!("universe_check({:?}, {:?})", universe_index, application_universe_index);
         if universe_index < application_universe_index {
             Err(UnifyError::IncompatibleUniverses(universe_index, application_universe_index))
         } else {
