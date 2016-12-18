@@ -56,12 +56,10 @@ type: tup[?AT, ?RT] equals_type: tup[?AU, ?RU] if: [?OA, ?OR] :-
     type: ?AT equals_type: ?AU if: ?OA,
     type: ?RT equals_type: ?RU if: ?OR.
 
-type: Project[?TraitRef, ?Item] equals_type: ?V if: ?O :-
-    project: ?Item from: ?TraitRef to: ?U if: ?O,
-    type: ?U equals_type: ?V if: ?O.
-type: ?V equals_type: Project[?TraitRef, ?Item] if: ?O :-
-    project: ?Item from: ?TraitRef to: ?U if: ?O,
-    type: ?U equals_type: ?V if: ?O.
+type: Project[?TraitRef, ?Item] equals_type: ?U if: ?O :-
+    project: ?Item from: ?TraitRef to: ?U if: ?O.
+type: ?U equals_type: Project[?TraitRef, ?Item] if: ?O :-
+    project: ?Item from: ?TraitRef to: ?U if: ?O.
 type: Project[?TraitRef1, ?Item] equals_type: Project[?TraitRef2, ?Item] if: ?O :-
     trait_ref: ?TraitRef1 equals_trait_ref: ?TraitRef2 if: ?O.
 
@@ -95,3 +93,25 @@ type: for[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: for[?L1, ?T].
 type: for[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: for[?L3, ?U] :-
     ?L3 != L1,
     type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.
+
+normalize_type: i32 to_type: i32 if: Nil.
+normalize_type: u32 to_type: u32 if: Nil.
+normalize_type: str to_type: str if: Nil.
+normalize_type: array[?T] to_type: array[?U] if: ?O :-
+    normalize_type: ?T to_type: ?U if: ?O.
+normalize_type: ref[?LT, ?T] to_type: ref[?LT, ?U] if: ?O :-
+    normalize_type: ?T to_type: ?U if: ?O.    
+normalize_type: ref_mut[?LT, ?T] to_type: ref_mut[?LT, ?U] if: ?O :-
+    normalize_type: ?T to_type: ?U if: ?O.
+normalize_type: fn[?AT, ?RT] to_type: fn[?AU, ?RU] if: [?OA, ?OR] :-
+    normalize_type: ?AT to_type: ?AU if: ?OA,
+    normalize_type: ?RT to_type: ?RU if: ?OR.
+normalize_type: tup[?AT, ?RT] to_type: tup[?AU, ?RU] if: [?OA, ?OR] :-
+    normalize_type: ?AT to_type: ?AU if: ?OA,
+    normalize_type: ?RT to_type: ?RU if: ?OR.
+normalize_type: Project[?TraitRef1, ?Item] to_type: Project[?TraitRef2, ?Item] if: ?O :-
+    normalize_trait_ref: ?TraitRef1 to_trait_ref: ?TraitRef2 if: ?O.
+normalize_type: Project[?TraitRef, ?Item] to_type: ?U if: [?O1, ?O2] :-
+    project: ?Item from: ?TraitRef to: ?T if: ?O1,
+    normalize_type: ?T to_type: ?U if: ?O2.
+

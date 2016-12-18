@@ -33,8 +33,8 @@ implemented: Clone[?T] if: [?O1, ?O2] :-
     implemented: Clone[?U] if: ?O2.
 
 // trait Iterator { type Item; }
-trait_ref: Iterator[?T] equals_trait_ref: Iterator[?U] if: ?O :-
-    type: ?T equals_type: ?U if: ?O.
+normalize_trait_ref: Iterator[?T] to_trait_ref: Iterator[?U] if: ?O :-
+    normalize_type: ?T to_type: ?U if: ?O.
 
 implemented: Iterator[?T] if: ?O :-
     type: vec_Iter[?LT, ?U] equals_type: ?T if: ?O.
