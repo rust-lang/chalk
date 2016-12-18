@@ -32,6 +32,10 @@ implemented: Clone[?T] if: [?O1, ?O2] :-
     type: Option[?U] equals_type: ?T if: ?O1,
     implemented: Clone[?U] if: ?O2.
 
+// trait Iterator { type Item; }
+trait_ref: Iterator[?T] equals_trait_ref: Iterator[?U] if: ?O :-
+    type: ?T equals_type: ?U if: ?O.
+
 implemented: Iterator[?T] if: ?O :-
     type: vec_Iter[?LT, ?U] equals_type: ?T if: ?O.
 
@@ -40,3 +44,4 @@ project: Item from: Iterator[?T] to: ref[?LT, ?U] if: ?O :-
 
 type: vec_Iter[?L1, ?T] equals_type: vec_Iter[?L2, ?U] if: [?L1 = ?L2, ?O] :-
     type: ?T equals_type: ?U if: ?O.
+

@@ -60,6 +60,8 @@ type: Project[?TraitRef, ?Item] equals_type: ?U if: ?O :-
     project: ?Item from: ?TraitRef to: ?U if: ?O.
 type: ?U equals_type: Project[?TraitRef, ?Item] if: ?O :-
     project: ?Item from: ?TraitRef to: ?U if: ?O.
+type: Project[?TraitRef1, ?Item] equals_type: Project[?TraitRef2, ?Item] if: ?O :-
+    trait_ref: ?TraitRef1 equals_trait_ref: ?TraitRef2 if: ?O.
 
 // Doesn't work: obligations relating to ?LT1 and ?LU1 cannot escape
 // into ?O. Need to bundle them back up.
