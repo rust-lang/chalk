@@ -257,6 +257,7 @@ impl Solver {
                         obligation: Obligation)
                         -> Result<Option<Obligation>, ProveError> {
         debug!("solve_obligation: goal={:?}", self.canonicalize(&obligation.goal));
+        debug!("solve_obligation: depth={:?}", obligation.depth);
         let Obligation { environment, goal, depth } = obligation;
         if depth > 10 {
             return Err(ProveError::Overflow);

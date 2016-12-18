@@ -56,10 +56,12 @@ type: tup[?AT, ?RT] equals_type: tup[?AU, ?RU] if: [?OA, ?OR] :-
     type: ?AT equals_type: ?AU if: ?OA,
     type: ?RT equals_type: ?RU if: ?OR.
 
-type: Project[?TraitRef, ?Item] equals_type: ?U if: ?O :-
-    project: ?Item from: ?TraitRef to: ?U if: ?O.
-type: ?U equals_type: Project[?TraitRef, ?Item] if: ?O :-
-    project: ?Item from: ?TraitRef to: ?U if: ?O.
+type: Project[?TraitRef, ?Item] equals_type: ?V if: ?O :-
+    project: ?Item from: ?TraitRef to: ?U if: ?O,
+    type: ?U equals_type: ?V if: ?O.
+type: ?V equals_type: Project[?TraitRef, ?Item] if: ?O :-
+    project: ?Item from: ?TraitRef to: ?U if: ?O,
+    type: ?U equals_type: ?V if: ?O.
 type: Project[?TraitRef1, ?Item] equals_type: Project[?TraitRef2, ?Item] if: ?O :-
     trait_ref: ?TraitRef1 equals_trait_ref: ?TraitRef2 if: ?O.
 
