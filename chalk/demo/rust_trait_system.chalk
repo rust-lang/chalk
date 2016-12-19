@@ -14,12 +14,6 @@
 //
 // Stores names of regions and type parameters that are in scope.
 
-empty_environment: (lifetimes: Nil).
-environment: (lifetimes: ?Ls) contains_lifetimes: ?Ls.
-environment: (lifetimes: ?Ls) with_lifetime: ?L is: (lifetimes: [?L, ?LS]).
-environment: (lifetimes: ?Ls) contains_lifetime: ?L :-
-    ?L in_list: ?Ls.
-
 // Types:
 is_type: i32.
 is_type: u32.
