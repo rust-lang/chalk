@@ -41,9 +41,9 @@ impl Env {
                                       "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X",
                                       "Y", "Z"];
         let name = if self.names.len() < NICE_NAMES.len() {
-            format!("{}", NICE_NAMES[self.names.len()])
+            format!("?{}", NICE_NAMES[self.names.len()])
         } else {
-            format!("_{}", self.names.len())
+            format!("?_{}", self.names.len())
         };
 
         self.names.push(name);

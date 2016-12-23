@@ -65,7 +65,7 @@ fn forall_in_clause() {
     solve_all(vec![],
               goal!(exists(1) (implies (forall(1) (apply "foo" (bound 0))) =>
                            (apply "foo" (bound 0)))),
-              vec![r#"implies(forall(A -> "foo"(A)) => "foo"(?1))"#]);
+              vec![r#"implies(forall(?A -> "foo"(?A)) => "foo"(?1))"#]);
 }
 
 #[test]
@@ -144,7 +144,7 @@ fn forall_fails() {
 fn for_all_clause_for_all_goal() {
     solve_all(vec![clause!(forall(1) (apply "foo" (bound 0)))],
               goal!(forall(1) (apply "foo" (bound 0))),
-              vec![r#"forall(A -> "foo"(A))"#]);
+              vec![r#"forall(?A -> "foo"(?A))"#]);
 }
 
 #[test]
@@ -258,5 +258,5 @@ fn negative_one() {
     // FIXME? Dubious.
     solve_rust(clauses(),
                goal!(forall(1) (not (apply "=" (bound 0) (apply "X")))),
-               vec![r#"forall(A -> not("="(A, "X")))"#]);
+               vec![r#"forall(?A -> not("="(?A, "X")))"#]);
 }
