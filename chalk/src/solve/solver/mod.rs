@@ -153,6 +153,12 @@ impl Solver {
             }
 
             if !progress {
+                debug!("find_next_solution: ambiguous result {:?}", {
+                    for obligation in &self.obligations.clone() {
+                        debug!("find_next_solution: {:?} stalled",
+                               self.canonicalize(&obligation.goal));
+                    }
+                });
                 return Err(ProveError::Ambiguous);
             }
 
@@ -256,7 +262,8 @@ impl Solver {
     fn solve_obligation(&mut self,
                         obligation: Obligation)
                         -> Result<Option<Obligation>, ProveError> {
-        debug!("solve_obligation: goal={:?}", self.canonicalize(&obligation.goal));
+        debug!("solve_obligation: goal={:?}",
+               self.canonicalize(&obligation.goal));
         debug!("solve_obligation: depth={:?}", obligation.depth);
         let Obligation { environment, goal, depth } = obligation;
         if depth > 10 {
@@ -499,9 +506,9 @@ impl Solver {
         debug!("solve_not_rust(inverted_goal = {:?})", inverted_goal);
         if ContainsInferenceVars::test(&inverted_goal) {
             return Ok(Some(Obligation {
-                    environment: environment.clone(),
-                    goal: goal.clone(),
-                    depth: depth,
+                environment: environment.clone(),
+                goal: goal.clone(),
+                depth: depth,
             }));
         }
         let mut solver = self.fork(&inverted_goal);
