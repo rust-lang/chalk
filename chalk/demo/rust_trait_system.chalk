@@ -34,78 +34,47 @@ is_obligation_list: (?A = ?B).
 is_obligation_list: [?O1, ?O2] :- is_obligation_list: ?O1, is_obligation_list: ?O2.
 
 // type: ?T equals_type: ?U if: ?O.
-type: i32 equals_type: i32 if: Nil.
-type: u32 equals_type: u32 if: Nil.
-type: str equals_type: str if: Nil.
-type: array[?T] equals_type: array[?U] if: ?O :-
+    // normalize_type: ?U to_type: ?U1 if: ?OB,
+type: ?T equals_type: ?U if: [?OA, [?OB, ?OC]] :-
+    normalize_type: ?T to_type: ?T1 if: ?OA,
+    ?U1 = ?U, ?OB = Nil,
+    normalized_type: ?T1 equals_type: ?U1 if: ?OC.
+    
+normalized_type: i32 equals_type: i32 if: Nil.
+normalized_type: u32 equals_type: u32 if: Nil.
+normalized_type: str equals_type: str if: Nil.
+normalized_type: array[?T] equals_type: array[?U] if: ?O :-
     type: ?T equals_type: ?U if: ?O.
-type: ref[?LT, ?T] equals_type: ref[?LU, ?U] if: [?LT = ?LU, ?O] :-
+normalized_type: ref[?LT, ?T] equals_type: ref[?LU, ?U] if: [?LT = ?LU, ?O] :-
     type: ?T equals_type: ?U if: ?O.    
-type: ref_mut[?LT, ?T] equals_type: ref_mut[?LU, ?U] if: [?LT = ?LU, ?O] :-
+normalized_type: ref_mut[?LT, ?T] equals_type: ref_mut[?LU, ?U] if: [?LT = ?LU, ?O] :-
     type: ?T equals_type: ?U if: ?O.
-type: fn[?AT, ?RT] equals_type: fn[?AU, ?RU] if: [?OA, ?OR] :-
+normalized_type: fn[?AT, ?RT] equals_type: fn[?AU, ?RU] if: [?OA, ?OR] :-
     type: ?AT equals_type: ?AU if: ?OA,
     type: ?RT equals_type: ?RU if: ?OR.
-type: tup[?AT, ?RT] equals_type: tup[?AU, ?RU] if: [?OA, ?OR] :-
+normalized_type: tup[?AT, ?RT] equals_type: tup[?AU, ?RU] if: [?OA, ?OR] :-
     type: ?AT equals_type: ?AU if: ?OA,
     type: ?RT equals_type: ?RU if: ?OR.
-
-type: Project[?TraitRef, ?Item] equals_type: ?U if: ?O :-
-    project: ?Item from: ?TraitRef to: ?U if: ?O.
-type: ?U equals_type: Project[?TraitRef, ?Item] if: ?O :-
-    project: ?Item from: ?TraitRef to: ?U if: ?O.
-type: Project[?TraitRef1, ?Item] equals_type: Project[?TraitRef2, ?Item] if: ?O :-
+normalized_type: Project[?TraitRef1, ?Item] equals_type: Project[?TraitRef2, ?Item] if: ?O :-
     trait_ref: ?TraitRef1 equals_trait_ref: ?TraitRef2 if: ?O.
-
-// Doesn't work: obligations relating to ?LT1 and ?LU1 cannot escape
-// into ?O. Need to bundle them back up.
-type: for[?LT, ?T] equals_type: for[?LU, ?U] if: ?O :-
-    forall(?LT1 -> forall(?LU1 ->
-        type: ?T with_lifetime: (?LT = ?LT1) is: ?T1,
-        type: ?U with_lifetime: (?LU = ?LU1) is: ?U1,
-        type: ?T1 equals_type: ?U1 if: ?O)).
-
-// type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.
-//
-// Assumption: ?L1 not defined in the environment ?E.
-type: i32 with_lifetime: (?L1 = ?L2) is_type: i32.
-type: u32 with_lifetime: (?L1 = ?L2) is_type: u32.
-type: str with_lifetime: (?L1 = ?L2) is_type: str.
-type: array[?T] with_lifetime: (?L1 = ?L2) is_type: array[?U] :-
-    type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.
-type: ref[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L2, T].
-type: ref[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L3, T] :- ?L1 != ?L3.
-type: ref_mut[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: ref_mut[?L2, T].
-type: ref_mut[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: ref[?L3, T] :- ?L1 != ?L3.
-type: fn[?A1, ?R1] with_lifetime: (?L1 = ?L2) is_type: fn[?A2, ?R2] :-
-    type: ?A1 with_lifetime: (?L1 = ?L2) is_type: ?A2,
-    type: ?R1 with_lifetime: (?L1 = ?L2) is_type: ?R2.
-type: tup[?A1, ?R1] with_lifetime: (?L1 = ?L2) is_type: tup[?A2, ?R2] :-
-    type: ?A1 with_lifetime: (?L1 = ?L2) is_type: ?A2,
-    type: ?R1 with_lifetime: (?L1 = ?L2) is_type: ?R2.
-type: for[?L1, ?T] with_lifetime: (?L1 = ?L2) is_type: for[?L1, ?T].
-type: for[?L3, ?T] with_lifetime: (?L1 = ?L2) is_type: for[?L3, ?U] :-
-    ?L3 != L1,
-    type: ?T with_lifetime: (?L1 = ?L2) is_type: ?U.
 
 normalize_type: i32 to_type: i32 if: Nil.
 normalize_type: u32 to_type: u32 if: Nil.
 normalize_type: str to_type: str if: Nil.
-normalize_type: array[?T] to_type: array[?U] if: ?O :-
-    normalize_type: ?T to_type: ?U if: ?O.
-normalize_type: ref[?LT, ?T] to_type: ref[?LT, ?U] if: ?O :-
-    normalize_type: ?T to_type: ?U if: ?O.    
-normalize_type: ref_mut[?LT, ?T] to_type: ref_mut[?LT, ?U] if: ?O :-
-    normalize_type: ?T to_type: ?U if: ?O.
-normalize_type: fn[?AT, ?RT] to_type: fn[?AU, ?RU] if: [?OA, ?OR] :-
-    normalize_type: ?AT to_type: ?AU if: ?OA,
-    normalize_type: ?RT to_type: ?RU if: ?OR.
-normalize_type: tup[?AT, ?RT] to_type: tup[?AU, ?RU] if: [?OA, ?OR] :-
-    normalize_type: ?AT to_type: ?AU if: ?OA,
-    normalize_type: ?RT to_type: ?RU if: ?OR.
-normalize_type: Project[?TraitRef1, ?Item] to_type: Project[?TraitRef2, ?Item] if: ?O :-
-    normalize_trait_ref: ?TraitRef1 to_trait_ref: ?TraitRef2 if: ?O.
+normalize_type: array[?T] to_type: array[?T] if: Nil.
+normalize_type: ref[?LT, ?T] to_type: ref[?LT, ?T] if: Nil.
+normalize_type: ref_mut[?LT, ?T] to_type: ref_mut[?LT, ?T] if: Nil.
+normalize_type: fn[?A, ?R] to_type: fn[?A, ?R] if: Nil.
+normalize_type: tup[?A, ?B] to_type: tup[?A, ?B] if: Nil.
+normalize_type: Project[?TraitRef, ?Item] to_type: Project[?TraitRef, ?Item] if: Nil :-
+    !(exists(?T -> exists(?O -> project: ?Item from: ?TraitRef to: ?T if: ?O))).
 normalize_type: Project[?TraitRef, ?Item] to_type: ?U if: [?O1, ?O2] :-
     project: ?Item from: ?TraitRef to: ?T if: ?O1,
     normalize_type: ?T to_type: ?U if: ?O2.
+
+// Example struct:
+normalize_type: Option[?T] to_type: Option[?T] if: Nil.
+normalized_type: Option[?T] equals_type: Option[?U] if: ?O :-
+    type: ?T equals_type: ?U if: ?O.
+
 
