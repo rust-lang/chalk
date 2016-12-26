@@ -7,6 +7,9 @@ use subst::Subst;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
+mod instantiate;
+use self::instantiate::InstantiateError;
+
 pub struct Solver {
     infer: InferenceTable,
     root_goal: Goal<Application>,
@@ -23,6 +26,10 @@ pub enum Strategy {
 
     // Rust-style search, proceed only when unambiguous
     Rust,
+
+    // "Input output" style, in which the clause implications guide
+    // us in deciding what to do.
+    InOut,
 }
 
 struct ChoicePoint {
@@ -163,7 +170,7 @@ impl Solver {
             }
 
             // the DFS strategy has no concept of a stalled obligation
-            assert!(self.strategy == Strategy::Rust);
+            assert!(self.strategy != Strategy::DepthFirstSearch);
 
             while let Some(o) = stalled_obligations.pop_back() {
                 self.obligations.push_front(o);
@@ -277,6 +284,9 @@ impl Solver {
             GoalKind::Leaf(ref application) => {
                 match self.strategy {
                     Strategy::Rust => self.solve_leaf_rust(&environment, &goal, application, depth),
+                    Strategy::InOut => {
+                        self.solve_leaf_in_out(&environment, &goal, application, depth)
+                    }
                     Strategy::DepthFirstSearch => {
                         self.solve_leaf_dfs(environment, application, depth)
                     }
@@ -300,7 +310,7 @@ impl Solver {
             }
             GoalKind::Or(ref g1, ref g2) => {
                 match self.strategy {
-                    Strategy::Rust => {
+                    Strategy::InOut | Strategy::Rust => {
                         // FIXME -- this is overly conservative. For
                         // example, if And(g1, g2) is provable, then
                         // Or(g1, g2) is clearly satisfied. Or, if g1
@@ -370,6 +380,51 @@ impl Solver {
                 Ok(None)
             }
         }
+    }
+
+    fn solve_leaf_in_out(&mut self,
+                         environment: &Arc<Environment>,
+                         goal: &Goal<Application>,
+                         application: &Application,
+                         depth: usize)
+                         -> Result<Option<Obligation>, ProveError> {
+        let choices: Result<Vec<_>, ()> = environment.clauses_relevant_to(application)
+            .filter_map(|clause| {
+                match self.infer.instantiate_clause(environment, application, clause) {
+                    Ok(condition) => Some(Ok(condition)),
+                    Err(InstantiateError::Ambiguous) => Some(Err(())),
+                    Err(InstantiateError::Incompatible) => None,
+                }
+            })
+            .collect();
+
+        if choices.is_err() || choices.as_ref().unwrap().len() > 1 {
+            debug!("encountered ambiguity: {:?}", choices);
+
+            return Ok(Some(Obligation {
+                environment: environment.clone(),
+                goal: goal.clone(),
+                depth: depth,
+            }));
+        }
+
+        let mut choices = choices.unwrap();
+
+        if choices.len() == 0 {
+            return Err(ProveError::NotProvable);
+        }
+
+        if let Some(condition) = choices.pop().unwrap() {
+            debug!("condition to be proven: {:?}", condition);
+            let obligation = Obligation {
+                environment: environment.clone(),
+                goal: condition.clone(),
+                depth: depth + 1,
+            };
+            self.obligations.push_back(obligation);
+        }
+
+        Ok(None)
     }
 
     fn solve_leaf_rust(&mut self,
@@ -501,11 +556,15 @@ impl Solver {
                           depth: usize)
                           -> Result<Option<Obligation>, ProveError> {
         match self.strategy {
-            Strategy::Rust =>
-                self.solve_if_then_else_rust(environment, goal, cond_goal,
-                                             then_goal, else_goal, depth),
-            Strategy::DepthFirstSearch =>
-                unimplemented!(),
+            Strategy::Rust | Strategy::InOut => {
+                self.solve_if_then_else_rust(environment,
+                                             goal,
+                                             cond_goal,
+                                             then_goal,
+                                             else_goal,
+                                             depth)
+            }
+            Strategy::DepthFirstSearch => unimplemented!(),
         }
     }
 
@@ -539,7 +598,7 @@ impl Solver {
                 self.obligations.push_back(Obligation {
                     environment: environment.clone(),
                     goal: then_goal.clone(),
-                    depth: depth
+                    depth: depth,
                 });
                 Ok(None)
             }
@@ -547,7 +606,7 @@ impl Solver {
                 self.obligations.push_back(Obligation {
                     environment: environment.clone(),
                     goal: else_goal.clone(),
-                    depth: depth
+                    depth: depth,
                 });
                 Ok(None)
             }

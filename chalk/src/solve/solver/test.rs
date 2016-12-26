@@ -5,18 +5,33 @@ use std::sync::Arc;
 
 use super::Solver;
 use super::Strategy;
+use super::Strategy::*;
+
+fn solve(strategies: &[Strategy],
+         clauses: Vec<Clause<Application>>,
+         goal: Goal<Application>,
+         expected_solutions: Vec<&str>) {
+    for &strategy in strategies {
+        solve_with_strategy(strategy,
+                            clauses.clone(),
+                            goal.clone(),
+                            expected_solutions.clone())
+    }
+}
 
 fn solve_all(clauses: Vec<Clause<Application>>,
              goal: Goal<Application>,
              expected_solutions: Vec<&str>) {
-    solve_dfs(clauses.clone(), goal.clone(), expected_solutions.clone());
-    solve_rust(clauses, goal, expected_solutions);
+    solve(&[DepthFirstSearch, Rust, InOut],
+          clauses,
+          goal,
+          expected_solutions);
 }
 
 fn solve_dfs(clauses: Vec<Clause<Application>>,
              goal: Goal<Application>,
              expected_solutions: Vec<&str>) {
-    solve(Strategy::DepthFirstSearch,
+    solve(&[Strategy::DepthFirstSearch],
           clauses,
           goal,
           expected_solutions)
@@ -25,13 +40,13 @@ fn solve_dfs(clauses: Vec<Clause<Application>>,
 fn solve_rust(clauses: Vec<Clause<Application>>,
               goal: Goal<Application>,
               expected_solutions: Vec<&str>) {
-    solve(Strategy::Rust, clauses, goal, expected_solutions)
+    solve(&[Strategy::Rust], clauses, goal, expected_solutions)
 }
 
-fn solve(strategy: Strategy,
-         clauses: Vec<Clause<Application>>,
-         goal: Goal<Application>,
-         expected_solutions: Vec<&str>) {
+fn solve_with_strategy(strategy: Strategy,
+                       clauses: Vec<Clause<Application>>,
+                       goal: Goal<Application>,
+                       expected_solutions: Vec<&str>) {
     let root_environment = Arc::new(Environment::new(None, clauses));
     let solutions = Solver::solve(root_environment, goal, strategy);
 
@@ -62,18 +77,32 @@ fn simple_fail() {
 
 #[test]
 fn forall_in_clause() {
-    solve_all(vec![],
-              goal!(exists(1) (implies (forall(1) (apply "foo" (bound 0))) =>
+    solve(&[DepthFirstSearch, Rust],
+          vec![],
+          goal!(exists(1) (implies (forall(1) (apply "foo" (bound 0))) =>
                            (apply "foo" (bound 0)))),
-              vec![r#"(forall{?A -> "foo"(?A)} => "foo"(?1))"#])
+          vec![r#"(forall{?A -> "foo"(?A)} => "foo"(?1))"#]);
+
+    solve(&[InOut],
+          vec![],
+          goal!(exists(1) (implies (forall(1) (apply "foo" (bound 0))) =>
+                           (apply "foo" (bound 0)))),
+          vec![r#"(forall{?A -> "foo"(?A)} => "foo"(?0))"#])
 }
 
 #[test]
 fn one_clause() {
-    solve_all(vec![],
-              goal!(exists(1) (implies (apply "foo" (apply "bar")) =>
+    solve(&[Rust, DepthFirstSearch],
+          vec![],
+          goal!(exists(1) (implies (apply "foo" (apply "bar")) =>
                            (apply "foo" (bound 0)))),
-              vec![r#"("foo"("bar") => "foo"("bar"))"#]);
+          vec![r#"("foo"("bar") => "foo"("bar"))"#]);
+
+    solve(&[InOut],
+          vec![],
+          goal!(exists(1) (implies (apply "foo" (apply "bar")) =>
+                           (apply "foo" (bound 0)))),
+          vec![r#"<<ambiguous>>"#]);
 }
 
 #[test]
@@ -204,9 +233,10 @@ fn conditional_impl() {
               goal!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "i32"))),
               vec![r#""implementedFor"("Trait", "Vec"("i32"))"#]);
 
-    solve_all(clauses(),
-              goal!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "String"))),
-              vec![r#""implementedFor"("Trait", "Vec"("String"))"#]);
+    solve(&[DepthFirstSearch, Rust],
+          clauses(),
+          goal!(apply "implementedFor" (apply "Trait") (apply "Vec" (apply "String"))),
+          vec![r#""implementedFor"("Trait", "Vec"("String"))"#]);
 
     // if asked to solve `Trait implementedFor: Vec[?A]`, we fail to infer what `?A` is.
     solve_rust(clauses(),
@@ -215,16 +245,18 @@ fn conditional_impl() {
 
     // In these two variations, the second rule, `equate(?0, i32)`,
     // allows us to eventually solve the first
-    solve_all(clauses(),
-              goal!(exists(1) (and
-                         (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0)))
-                         (apply "equate" (bound 0) (apply "i32")))),
-              vec![r#"and("implementedFor"("Trait", "Vec"("i32")), "equate"("i32", "i32"))"#]);
-    solve_all(clauses(),
-              goal!(exists(1) (and
+    solve(&[DepthFirstSearch, Rust],
+          clauses(),
+          goal!(exists(1) (and
+                           (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0)))
+                           (apply "equate" (bound 0) (apply "i32")))),
+          vec![r#"and("implementedFor"("Trait", "Vec"("i32")), "equate"("i32", "i32"))"#]);
+    solve(&[DepthFirstSearch, Rust],
+          clauses(),
+          goal!(exists(1) (and
                          (apply "equate" (bound 0) (apply "i32"))
                          (apply "implementedFor" (apply "Trait") (apply "Vec" (bound 0))))),
-              vec![r#"and("equate"("i32", "i32"), "implementedFor"("Trait", "Vec"("i32")))"#]);
+          vec![r#"and("equate"("i32", "i32"), "implementedFor"("Trait", "Vec"("i32")))"#]);
 }
 
 #[test]
