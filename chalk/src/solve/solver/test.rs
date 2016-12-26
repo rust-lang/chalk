@@ -228,40 +228,6 @@ fn conditional_impl() {
 }
 
 #[test]
-fn negative_one() {
-    let clauses = || {
-        vec![
-            clause!(forall(1) (apply "=" (bound 0) (bound 0))),
-
-            clause!(forall(2) (implies
-                    (not (apply "=" (bound 0) (bound 1))) =>
-                    (apply "!=" (bound 0) (bound 1)))),
-        ]
-    };
-
-    solve_rust(clauses(),
-               goal!(not (apply "=" (apply "X") (apply "Y"))),
-               vec![r#"not("="("X", "Y"))"#]);
-
-    solve_rust(clauses(),
-               goal!(apply "!=" (apply "X") (apply "Y")),
-               vec![r#""!="("X", "Y")"#]);
-
-    solve_rust(clauses(),
-               goal!(not (apply "=" (apply "X") (apply "X"))),
-               vec![]);
-
-    solve_rust(clauses(),
-               goal!(exists(1) (not (apply "=" (bound 0) (apply "X")))),
-               vec![r#"<<ambiguous>>"#]);
-
-    // FIXME? Dubious.
-    solve_rust(clauses(),
-               goal!(forall(1) (not (apply "=" (bound 0) (apply "X")))),
-               vec![r#"forall{?A -> not("="(?A, "X"))}"#]);
-}
-
-#[test]
 fn if_then_else_one() {
     let clauses = || {
         vec![
@@ -285,15 +251,16 @@ fn if_then_else_one() {
                vec![r#""!="("X", "Y")"#]);
 
     solve_rust(clauses(),
-               goal!(not (apply "=" (apply "X") (apply "X"))),
-               vec![]);
-
-    solve_rust(clauses(),
-               goal!(exists(1) (not (apply "=" (bound 0) (apply "X")))),
+               goal!(exists(1) (apply "!=" (bound 0) (apply "X"))),
                vec![r#"<<ambiguous>>"#]);
 
-    // FIXME? Dubious.
+    // FIXME? It's somewhat surprising that this is provable. But it
+    // is true that there will never be a way to unify `?A` and `X`,
+    // even though the underlying semantic predicate is clearly
+    // false. So we have to be careful about understanding what `if {}
+    // then {} else {}` means -- that is, "not provable" does not
+    // imply "not true".
     solve_rust(clauses(),
-               goal!(forall(1) (not (apply "=" (bound 0) (apply "X")))),
-               vec![r#"forall{?A -> not("="(?A, "X"))}"#]);
+               goal!(forall(1) (apply "!=" (bound 0) (apply "X"))),
+               vec![r#"forall{?A -> "!="(?A, "X")}"#]);
 }

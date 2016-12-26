@@ -285,16 +285,6 @@ impl Solver {
             GoalKind::IfThenElse(ref cond_goal, ref then_goal, ref else_goal) => {
                 self.solve_if_then_else(&environment, &goal, cond_goal, then_goal, else_goal, depth)
             }
-            GoalKind::Not(ref inverted_goal) => {
-                match self.strategy {
-                    Strategy::Rust => {
-                        self.solve_not_rust(&environment, &goal, inverted_goal, depth)
-                    }
-                    Strategy::DepthFirstSearch => {
-                        self.solve_not_dfs(&environment, &goal, inverted_goal, depth)
-                    }
-                }
-            }
             GoalKind::And(ref g1, ref g2) => {
                 // NB: Important that we consider g1 first
                 self.obligations.extend([g2, g1]
@@ -564,41 +554,6 @@ impl Solver {
             Err(ProveError::Ambiguous) => Err(ProveError::Ambiguous),
             Err(ProveError::Overflow) => Err(ProveError::Overflow),
         }
-    }
-
-    fn solve_not_rust(&mut self,
-                      environment: &Arc<Environment>,
-                      goal: &Goal<Application>, // G = !G1
-                      inverted_goal: &Goal<Application>, // G1
-                      depth: usize)
-                      -> Result<Option<Obligation>, ProveError> {
-        let inverted_goal = self.canonicalize(&inverted_goal);
-        debug!("solve_not_rust(inverted_goal = {:?})", inverted_goal);
-        if ContainsInferenceVars::test(&inverted_goal) {
-            return Ok(Some(Obligation {
-                environment: environment.clone(),
-                goal: goal.clone(),
-                depth: depth,
-            }));
-        }
-        let mut solver = self.fork(&inverted_goal);
-        solver.obligations
-            .push_back(Obligation::new(environment.clone(), inverted_goal.clone(), depth));
-        match solver.find_next_solution() {
-            Ok(_) => Err(ProveError::NotProvable),
-            Err(ProveError::Ambiguous) => Err(ProveError::Ambiguous),
-            Err(ProveError::NotProvable) => Ok(None),
-            Err(ProveError::Overflow) => Err(ProveError::Overflow),
-        }
-    }
-
-    fn solve_not_dfs(&mut self,
-                     environment: &Arc<Environment>,
-                     goal: &Goal<Application>,
-                     inverted_goal: &Goal<Application>,
-                     depth: usize)
-                     -> Result<Option<Obligation>, ProveError> {
-        unimplemented!()
     }
 }
 

@@ -52,7 +52,6 @@ pub enum GoalKind<L> {
     True,
     False,
     Leaf(L),
-    Not(Goal<L>),
     IfThenElse(Goal<L>, Goal<L>, Goal<L>),
     And(Goal<L>, Goal<L>),
     Or(Goal<L>, Goal<L>),

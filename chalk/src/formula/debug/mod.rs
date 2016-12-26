@@ -45,7 +45,6 @@ impl<L: Debug> Debug for GoalKind<L> {
             GoalKind::True => write!(fmt, "true")?,
             GoalKind::False => write!(fmt, "false")?,
             GoalKind::Leaf(ref l) => l.fmt(fmt)?,
-            GoalKind::Not(ref a) => write!(fmt, "not({:?})", a)?,
             GoalKind::And(ref a, ref b) => write!(fmt, "and({:?}, {:?})", a, b)?,
             GoalKind::Or(ref a, ref b) => write!(fmt, "or({:?}; {:?})", a, b)?,
             GoalKind::Implication(ref clauses, ref l) => {

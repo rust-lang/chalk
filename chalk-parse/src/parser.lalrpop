@@ -48,8 +48,6 @@ FactDataOr: Box<FactData> = {
 
 FactDataFunc: Box<FactData> = {
     FactDataApply,
-    "!" "{" <l:Goal> "}" =>
-        Box::new(FactData::Not(l)),
     "(" <l:Goal> "=>" <r:Goal> ")" =>
         Box::new(FactData::Implication(l, r)),
     "exists" "{" <v:Variable> "->" <b:Goal> "}" =>

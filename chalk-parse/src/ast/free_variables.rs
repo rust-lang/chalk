@@ -57,9 +57,6 @@ impl Fact {
     {
         match *self.data {
             FactData::True | FactData::False => { }
-            FactData::Not(ref f1) => {
-                f1.for_each_free_variable(func);
-            }
             FactData::And(ref f1, ref f2) |
             FactData::Or(ref f1, ref f2) |
             FactData::Implication(ref f1, ref f2) => {

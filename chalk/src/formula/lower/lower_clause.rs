@@ -121,7 +121,6 @@ impl LowerClause<Application> for ast::Fact {
             ast::FactData::Or(..) |
             ast::FactData::True |
             ast::FactData::False |
-            ast::FactData::Not(..) |
             ast::FactData::IfThenElse(..) => {
                 Err(Error {
                     path: env.path(),

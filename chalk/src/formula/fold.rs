@@ -156,7 +156,6 @@ impl<L: Fold> Fold for Goal<L> {
         fold!(self, folder, Goal, GoalData, GoalKind {
             nullary { True, False },
             Leaf(l),
-            Not(l),
             And(l, r),
             Or(l, r),
             Exists(q),
@@ -170,7 +169,6 @@ impl<L: Fold> Fold for Goal<L> {
         find!(self, finder, Goal, GoalData, GoalKind {
             nullary { True, False },
             Leaf(l),
-            Not(l),
             And(l, r),
             Or(l, r),
             Exists(q),
