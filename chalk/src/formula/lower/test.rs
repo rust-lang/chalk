@@ -72,7 +72,7 @@ fn lower_implies_or() {
 fn lower_implies_or_in_clause() {
     test_err("Foo(?X, _, ?Y) :- (Bar(?X, _, ?Y, ?Z); Bop(?Z) => Baz(?Z)).",
              "                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^",
-             ErrorKind::OrInClause);
+             ErrorKind::IllegalClause);
 }
 
 #[test]

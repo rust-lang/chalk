@@ -12,11 +12,8 @@ pub struct Error {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ErrorKind {
     UnknownVariable(ast::Variable),
-    OrInClause,
-    ExistsInClause,
-    NotInClause,
+    IllegalClause,
     NoOperator,
-    IfThenElseInClause,
 }
 
 pub type LowerResult<L> = Result<L, Error>;

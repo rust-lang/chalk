@@ -260,3 +260,40 @@ fn negative_one() {
                goal!(forall(1) (not (apply "=" (bound 0) (apply "X")))),
                vec![r#"forall{?A -> not("="(?A, "X"))}"#]);
 }
+
+#[test]
+fn if_then_else_one() {
+    let clauses = || {
+        vec![
+            clause!(forall(1) (apply "=" (bound 0) (bound 0))),
+
+            clause!(forall(2) (implies
+                               (if (apply "=" (bound 0) (bound 1))
+                                then false
+                                else true)
+                               =>
+                               (apply "!=" (bound 0) (bound 1)))),
+        ]
+    };
+
+    solve_rust(clauses(),
+               goal!(if (apply "=" (apply "X") (apply "Y")) then false else true),
+               vec![r#"if {"="("X", "Y")} then {false} else {true}"#]);
+
+    solve_rust(clauses(),
+               goal!(apply "!=" (apply "X") (apply "Y")),
+               vec![r#""!="("X", "Y")"#]);
+
+    solve_rust(clauses(),
+               goal!(not (apply "=" (apply "X") (apply "X"))),
+               vec![]);
+
+    solve_rust(clauses(),
+               goal!(exists(1) (not (apply "=" (bound 0) (apply "X")))),
+               vec![r#"<<ambiguous>>"#]);
+
+    // FIXME? Dubious.
+    solve_rust(clauses(),
+               goal!(forall(1) (not (apply "=" (bound 0) (apply "X")))),
+               vec![r#"forall{?A -> not("="(?A, "X"))}"#]);
+}

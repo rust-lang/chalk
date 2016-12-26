@@ -67,9 +67,19 @@ macro_rules! goal {
             kind: GoalKind::Not(goal!($goal))
         })
     };
+    (if $goal:tt then $then:tt else $els:tt) => {
+        Goal::new(GoalData {
+            kind: GoalKind::IfThenElse(goal!($goal), goal!($then), goal!($els))
+        })
+    };
     (true) => {
         Goal::new(GoalData {
             kind: GoalKind::True
+        })
+    };
+    (false) => {
+        Goal::new(GoalData {
+            kind: GoalKind::False
         })
     };
     (and $a:tt $b:tt) => {

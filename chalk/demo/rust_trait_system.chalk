@@ -66,11 +66,15 @@ normalize_type: ref[?LT, ?T] to_type: ref[?LT, ?T] if: Nil.
 normalize_type: ref_mut[?LT, ?T] to_type: ref_mut[?LT, ?T] if: Nil.
 normalize_type: fn[?A, ?R] to_type: fn[?A, ?R] if: Nil.
 normalize_type: tup[?A, ?B] to_type: tup[?A, ?B] if: Nil.
-normalize_type: Project[?TraitRef, ?Item] to_type: Project[?TraitRef, ?Item] if: Nil :-
-    !{exists{?T -> exists{?O -> project: ?Item from: ?TraitRef to: ?T if: ?O}}}.
 normalize_type: Project[?TraitRef, ?Item] to_type: ?U if: [?O1, ?O2] :-
-    project: ?Item from: ?TraitRef to: ?T if: ?O1,
-    normalize_type: ?T to_type: ?U if: ?O2.
+    if {
+      exists{?T -> exists{?O -> project: ?Item from: ?TraitRef to: ?T if: ?O}}
+    } then {
+      project: ?Item from: ?TraitRef to: ?T if: ?O1,
+      normalize_type: ?T to_type: ?U if: ?O2
+    } else {
+      ?U = Project[?TraitRef, ?Item]
+    }.
 
 // Example struct:
 normalize_type: Option[?T] to_type: Option[?T] if: Nil.

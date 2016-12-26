@@ -58,6 +58,10 @@ FactDataFunc: Box<FactData> = {
         Box::new(FactData::ForAll(v, b)),
     "if" "{" <a:Goal> "}" "then" "{" <b:Goal> "}" "else" "{" <c:Goal> "}" =>
         Box::new(FactData::IfThenElse(a, b, c)),
+    "true" =>
+        Box::new(FactData::True),
+    "false" =>
+        Box::new(FactData::False),
 };
 
 FactDataApply: Box<FactData> = {

@@ -50,6 +50,7 @@ pub struct GoalData<L> {
 #[derive(Clone, PartialEq, Eq)]
 pub enum GoalKind<L> {
     True,
+    False,
     Leaf(L),
     Not(Goal<L>),
     IfThenElse(Goal<L>, Goal<L>, Goal<L>),

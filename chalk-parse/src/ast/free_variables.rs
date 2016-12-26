@@ -56,6 +56,7 @@ impl Fact {
     pub fn for_each_free_variable(&self, func: &mut FnMut(Span, Variable))
     {
         match *self.data {
+            FactData::True | FactData::False => { }
             FactData::Not(ref f1) => {
                 f1.for_each_free_variable(func);
             }

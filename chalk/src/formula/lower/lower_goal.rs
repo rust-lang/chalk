@@ -26,6 +26,14 @@ impl LowerGoal<Application> for ast::Application {
 impl LowerGoal<Application> for ast::Fact {
     fn lower_goal(&self, env: &mut LowerEnvironment) -> LowerResult<Goal<Application>> {
         match *self.data {
+            ast::FactData::True => {
+                Ok(Goal::new(GoalData { kind: GoalKind::True }))
+            }
+
+            ast::FactData::False => {
+                Ok(Goal::new(GoalData { kind: GoalKind::False }))
+            }
+
             ast::FactData::And(ref f1, ref f2) => {
                 let c1 = f1.lower_goal(env)?;
                 let c2 = f2.lower_goal(env)?;

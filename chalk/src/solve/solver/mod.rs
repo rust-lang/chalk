@@ -165,7 +165,9 @@ impl Solver {
             // the DFS strategy has no concept of a stalled obligation
             assert!(self.strategy == Strategy::Rust);
 
-            self.obligations.append(&mut stalled_obligations);
+            while let Some(o) = stalled_obligations.pop_back() {
+                self.obligations.push_front(o);
+            }
             assert!(stalled_obligations.is_empty());
         }
 
@@ -271,6 +273,7 @@ impl Solver {
         }
         match goal.kind {
             GoalKind::True => Ok(None),
+            GoalKind::False => Err(ProveError::NotProvable),
             GoalKind::Leaf(ref application) => {
                 match self.strategy {
                     Strategy::Rust => self.solve_leaf_rust(&environment, &goal, application, depth),
@@ -507,7 +510,60 @@ impl Solver {
                           else_goal: &Goal<Application>, // G3
                           depth: usize)
                           -> Result<Option<Obligation>, ProveError> {
-        unimplemented!()
+        match self.strategy {
+            Strategy::Rust =>
+                self.solve_if_then_else_rust(environment, goal, cond_goal,
+                                             then_goal, else_goal, depth),
+            Strategy::DepthFirstSearch =>
+                unimplemented!(),
+        }
+    }
+
+    fn solve_if_then_else_rust(&mut self,
+                               environment: &Arc<Environment>,
+                               goal: &Goal<Application>, // if G1 then G2 else G3
+                               cond_goal: &Goal<Application>, // G1
+                               then_goal: &Goal<Application>, // G2
+                               else_goal: &Goal<Application>, // G3
+                               depth: usize)
+                               -> Result<Option<Obligation>, ProveError> {
+        // we can only *reliably* test whether something is provable
+        // if no inference is needed; actually, this predicate itself
+        // is incomplete, since there could be inference variables in the
+        // environment
+        let cond_goal = self.canonicalize(&cond_goal);
+        if ContainsInferenceVars::test(&cond_goal) {
+            return Ok(Some(Obligation {
+                environment: environment.clone(),
+                goal: goal.clone(),
+                depth: depth,
+            }));
+        }
+
+        // try to solve `cond`:
+        let mut solver = self.fork(&cond_goal);
+        solver.obligations
+            .push_back(Obligation::new(environment.clone(), cond_goal.clone(), depth));
+        match solver.find_next_solution() {
+            Ok(_) => {
+                self.obligations.push_back(Obligation {
+                    environment: environment.clone(),
+                    goal: then_goal.clone(),
+                    depth: depth
+                });
+                Ok(None)
+            }
+            Err(ProveError::NotProvable) => {
+                self.obligations.push_back(Obligation {
+                    environment: environment.clone(),
+                    goal: else_goal.clone(),
+                    depth: depth
+                });
+                Ok(None)
+            }
+            Err(ProveError::Ambiguous) => Err(ProveError::Ambiguous),
+            Err(ProveError::Overflow) => Err(ProveError::Overflow),
+        }
     }
 
     fn solve_not_rust(&mut self,

@@ -92,14 +92,6 @@ impl LowerClause<Application> for ast::Rule {
 impl LowerClause<Application> for ast::Fact {
     fn lower_clause(&self, env: &mut LowerEnvironment) -> LowerResult<Vec<Clause<Application>>> {
         match *self.data {
-            ast::FactData::Not(_) => {
-                Err(Error {
-                    path: env.path(),
-                    span: self.span,
-                    kind: ErrorKind::NotInClause,
-                })
-            }
-
             ast::FactData::And(ref f1, ref f2) => {
                 let c1 = f1.lower_clause(env)?;
                 let c2 = f2.lower_clause(env)?;
@@ -123,29 +115,18 @@ impl LowerClause<Application> for ast::Fact {
                     .collect())
             }
 
-            ast::FactData::Exists(..) => {
-                Err(Error {
-                    path: env.path(),
-                    span: self.span,
-                    kind: ErrorKind::ExistsInClause,
-                })
-            }
-
             ast::FactData::Apply(ref appl) => appl.lower_clause(env),
 
-            ast::FactData::Or(..) => {
-                Err(Error {
-                    path: env.path(),
-                    span: self.span,
-                    kind: ErrorKind::OrInClause,
-                })
-            }
-
+            ast::FactData::Exists(..) |
+            ast::FactData::Or(..) |
+            ast::FactData::True |
+            ast::FactData::False |
+            ast::FactData::Not(..) |
             ast::FactData::IfThenElse(..) => {
                 Err(Error {
                     path: env.path(),
                     span: self.span,
-                    kind: ErrorKind::IfThenElseInClause,
+                    kind: ErrorKind::IllegalClause,
                 })
             }
         }

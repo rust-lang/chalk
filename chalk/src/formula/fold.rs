@@ -154,7 +154,7 @@ impl<L: Fold> Fold for ClauseImplication<L> {
 impl<L: Fold> Fold for Goal<L> {
     fn fold_with<F: Folder>(&self, folder: &mut F) -> Self {
         fold!(self, folder, Goal, GoalData, GoalKind {
-            nullary { True },
+            nullary { True, False },
             Leaf(l),
             Not(l),
             And(l, r),
@@ -168,7 +168,7 @@ impl<L: Fold> Fold for Goal<L> {
 
     fn find_with<F: Finder>(&self, finder: &mut F) -> Option<F::Result> {
         find!(self, finder, Goal, GoalData, GoalKind {
-            nullary { True },
+            nullary { True, False },
             Leaf(l),
             Not(l),
             And(l, r),

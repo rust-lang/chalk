@@ -56,6 +56,9 @@ pub enum FactData {
     IfThenElse(Fact, Fact, Fact), // if { } then { } else { }
 
     Apply(Application),
+
+    True,
+    False,
 }
 
 #[derive(Debug)]

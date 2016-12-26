@@ -43,6 +43,7 @@ impl<L: Debug> Debug for GoalKind<L> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             GoalKind::True => write!(fmt, "true")?,
+            GoalKind::False => write!(fmt, "false")?,
             GoalKind::Leaf(ref l) => l.fmt(fmt)?,
             GoalKind::Not(ref a) => write!(fmt, "not({:?})", a)?,
             GoalKind::And(ref a, ref b) => write!(fmt, "and({:?}, {:?})", a, b)?,
