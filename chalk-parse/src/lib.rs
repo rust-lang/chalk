@@ -25,13 +25,12 @@ fn test_program() {
     let ast = parse_program("
 // comment
 Env |- ?X : ?Type :-
-    !,
     Env |- E : (struct: S),
     struct: S has_field: F with_type: ?Type,
     ?X implementedFor: Vec[i32],
     foo(Bar, Baz, Vec[i32, u32], (?X), ((Vec[i32])), (?X implementedFor: Vec[i32])),
-    forall(?Y -> ?X equalTo: ?Y),
-    implies(Bar(X) => Bar(Y)).
+    forall{?Y -> ?X equalTo: ?Y},
+    (Bar(X) => Bar(Y)).
 ").unwrap();
     println!("{:#?}", ast);
 }

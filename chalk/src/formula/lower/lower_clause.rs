@@ -140,6 +140,14 @@ impl LowerClause<Application> for ast::Fact {
                     kind: ErrorKind::OrInClause,
                 })
             }
+
+            ast::FactData::IfThenElse(..) => {
+                Err(Error {
+                    path: env.path(),
+                    span: self.span,
+                    kind: ErrorKind::IfThenElseInClause,
+                })
+            }
         }
     }
 }

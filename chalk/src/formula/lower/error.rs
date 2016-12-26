@@ -16,6 +16,7 @@ pub enum ErrorKind {
     ExistsInClause,
     NotInClause,
     NoOperator,
+    IfThenElseInClause,
 }
 
 pub type LowerResult<L> = Result<L, Error>;

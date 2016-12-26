@@ -68,6 +68,11 @@ impl Fact {
             FactData::Apply(ref appl) => {
                 appl.for_each_free_variable(func);
             }
+            FactData::IfThenElse(ref cond, ref then, ref otherwise) => {
+                cond.for_each_free_variable(func);
+                then.for_each_free_variable(func);
+                otherwise.for_each_free_variable(func);
+            }
             FactData::Exists(bound_v, ref f) |
             FactData::ForAll(bound_v, ref f) => {
                 f.for_each_free_variable(&mut |s, free_v| {

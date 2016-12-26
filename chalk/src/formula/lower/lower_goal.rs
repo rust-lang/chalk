@@ -65,6 +65,15 @@ impl LowerGoal<Application> for ast::Fact {
                 Ok(c.in_exists(1))
             }
 
+            ast::FactData::IfThenElse(ref c, ref t, ref e) => {
+                let c = c.lower_goal(env)?;
+                let t = t.lower_goal(env)?;
+                let e = e.lower_goal(env)?;
+                Ok(Goal::new(GoalData {
+                    kind: GoalKind::IfThenElse(c, t, e)
+                }))
+            }
+
             ast::FactData::Apply(ref appl) => {
                 appl.lower_goal(env)
             }

@@ -51,8 +51,9 @@ pub enum FactData {
     Not(Fact),
 
     Implication(Fact, Fact), // A => B
-    Exists(Variable, Fact), // exists(x: A)
-    ForAll(Variable, Fact), // forall(x: A)
+    Exists(Variable, Fact), // exists { ?X -> A }
+    ForAll(Variable, Fact), // forall { ?X -> A }
+    IfThenElse(Fact, Fact, Fact), // if { } then { } else { }
 
     Apply(Application),
 }

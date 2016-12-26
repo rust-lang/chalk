@@ -279,6 +279,9 @@ impl Solver {
                     }
                 }
             }
+            GoalKind::IfThenElse(ref cond_goal, ref then_goal, ref else_goal) => {
+                self.solve_if_then_else(&environment, &goal, cond_goal, then_goal, else_goal, depth)
+            }
             GoalKind::Not(ref inverted_goal) => {
                 match self.strategy {
                     Strategy::Rust => {
@@ -494,6 +497,17 @@ impl Solver {
             self.infer.unify(leaf1, leaf2)?;
         }
         Ok(condition)
+    }
+
+    fn solve_if_then_else(&mut self,
+                          environment: &Arc<Environment>,
+                          goal: &Goal<Application>, // if G1 then G2 else G3
+                          cond_goal: &Goal<Application>, // G1
+                          then_goal: &Goal<Application>, // G2
+                          else_goal: &Goal<Application>, // G3
+                          depth: usize)
+                          -> Result<Option<Obligation>, ProveError> {
+        unimplemented!()
     }
 
     fn solve_not_rust(&mut self,

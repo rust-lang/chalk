@@ -23,7 +23,7 @@ is_type: ref[?LT, ?T] :- is_lifetime: ?LT, is_type: ?T.
 is_type: ref_mut[?LT, ?T] :- is_lifetime: ?LT, is_type: ?T.
 is_type: fn[?A, ?R] :- is_type: ?A, is_type: ?R.
 is_type: tup[?A, ?B] :- is_type: ?A, is_type: ?B.
-is_type: for[?LT, ?T] :- implies(is_lifetime: ?LT => is_type: ?T).
+is_type: for[?LT, ?T] :- (is_lifetime: ?LT => is_type: ?T).
 
 // Lifetimes: any identifier. Lifetimes scoping is controlled by implications above.
 // is_lifetime: ?T.
@@ -67,7 +67,7 @@ normalize_type: ref_mut[?LT, ?T] to_type: ref_mut[?LT, ?T] if: Nil.
 normalize_type: fn[?A, ?R] to_type: fn[?A, ?R] if: Nil.
 normalize_type: tup[?A, ?B] to_type: tup[?A, ?B] if: Nil.
 normalize_type: Project[?TraitRef, ?Item] to_type: Project[?TraitRef, ?Item] if: Nil :-
-    !(exists(?T -> exists(?O -> project: ?Item from: ?TraitRef to: ?T if: ?O))).
+    !{exists{?T -> exists{?O -> project: ?Item from: ?TraitRef to: ?T if: ?O}}}.
 normalize_type: Project[?TraitRef, ?Item] to_type: ?U if: [?O1, ?O2] :-
     project: ?Item from: ?TraitRef to: ?T if: ?O1,
     normalize_type: ?T to_type: ?U if: ?O2.

@@ -160,6 +160,7 @@ impl<L: Fold> Fold for Goal<L> {
             And(l, r),
             Or(l, r),
             Exists(q),
+            IfThenElse(a, b, c),
             Implication(c, g),
             ForAll(q)
         })
@@ -173,6 +174,7 @@ impl<L: Fold> Fold for Goal<L> {
             And(l, r),
             Or(l, r),
             Exists(q),
+            IfThenElse(a, b, c),
             Implication(c, g),
             ForAll(q)
         })

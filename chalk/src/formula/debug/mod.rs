@@ -21,10 +21,10 @@ impl<L: Debug> Debug for ClauseImplication<L> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         let ClauseImplication { ref condition, ref consequence } = *self;
         if let &Some(ref goal) = condition {
-            write!(fmt, "implies(")?;
-            goal.fmt(fmt)?;
-            write!(fmt, " => ")?;
+            write!(fmt, "(")?;
             consequence.fmt(fmt)?;
+            write!(fmt, " :- ")?;
+            goal.fmt(fmt)?;
             write!(fmt, ")")?;
         } else {
             consequence.fmt(fmt)?;
@@ -48,7 +48,7 @@ impl<L: Debug> Debug for GoalKind<L> {
             GoalKind::And(ref a, ref b) => write!(fmt, "and({:?}, {:?})", a, b)?,
             GoalKind::Or(ref a, ref b) => write!(fmt, "or({:?}; {:?})", a, b)?,
             GoalKind::Implication(ref clauses, ref l) => {
-                write!(fmt, "implies(")?;
+                write!(fmt, "(")?;
                 for (index, clause) in clauses.iter().enumerate() {
                     if index > 0 {
                         write!(fmt, ", ")?;
@@ -67,6 +67,15 @@ impl<L: Debug> Debug for GoalKind<L> {
                 write!(fmt, "exists")?;
                 q.fmt(fmt)?;
             }
+            GoalKind::IfThenElse(ref c, ref t, ref e) => {
+                write!(fmt, "if {{")?;
+                c.fmt(fmt)?;
+                write!(fmt, "}} then {{")?;
+                t.fmt(fmt)?;
+                write!(fmt, "}} else {{")?;
+                e.fmt(fmt)?;
+                write!(fmt, "}}")?;
+            }
         }
         Ok(())
     }
@@ -74,7 +83,7 @@ impl<L: Debug> Debug for GoalKind<L> {
 
 impl<F: Debug> Debug for Quantification<F> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "(")?;
+        write!(fmt, "{{")?;
         for i in 0..self.num_binders {
             if i > 0 {
                 write!(fmt, ", ")?;
@@ -84,7 +93,7 @@ impl<F: Debug> Debug for Quantification<F> {
         write!(fmt, " -> ")?;
         self.skip_binders().fmt(fmt)?;
         env::unbind_names(self.num_binders); // Nit: not exn-safe
-        write!(fmt, ")")
+        write!(fmt, "}}")
     }
 }
 

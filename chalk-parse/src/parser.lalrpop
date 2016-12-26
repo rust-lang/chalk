@@ -15,7 +15,7 @@ Item: Option<Item> = {
 };
 
 Rule: Rule = {
-    <s0:@L> <a:Application> ":-" <f:Fact<FactData>> "." <s1:@R> => Rule {
+    <s0:@L> <a:Application> ":-" <f:Goal> "." <s1:@R> => Rule {
         span: Span::new(s0, s1),
         consequence: a,
         condition: f
@@ -48,14 +48,16 @@ FactDataOr: Box<FactData> = {
 
 FactDataFunc: Box<FactData> = {
     FactDataApply,
-    "!" "(" <l:Fact<FactDataFunc>> ")" =>
+    "!" "{" <l:Goal> "}" =>
         Box::new(FactData::Not(l)),
-    "implies" "(" <l:Fact<FactData>> "=>" <r:Fact<FactData>> ")" =>
+    "(" <l:Goal> "=>" <r:Goal> ")" =>
         Box::new(FactData::Implication(l, r)),
-    "exists" "(" <v:Variable> "->" <b:Fact<FactData>> ")" =>
+    "exists" "{" <v:Variable> "->" <b:Goal> "}" =>
         Box::new(FactData::Exists(v, b)),
-    "forall" "(" <v:Variable> "->" <b:Fact<FactData>> ")" =>
+    "forall" "{" <v:Variable> "->" <b:Goal> "}" =>
         Box::new(FactData::ForAll(v, b)),
+    "if" "{" <a:Goal> "}" "then" "{" <b:Goal> "}" "else" "{" <c:Goal> "}" =>
+        Box::new(FactData::IfThenElse(a, b, c)),
 };
 
 FactDataApply: Box<FactData> = {
@@ -137,6 +139,12 @@ BitOperator: Bit = {
 
 Operator: Operator = {
     r"([:alpha:]|_)([:alnum:]|_)*:" => Operator::Colon(intern(<>)),
+    "if" => Operator::Colon(intern(<>)),
+    "then" => Operator::Colon(intern(<>)),
+    "else" => Operator::Colon(intern(<>)),
+    "exists" => Operator::Colon(intern(<>)),
+    "forall" => Operator::Colon(intern(<>)),
+    "implies" => Operator::Colon(intern(<>)),
     r"[-|!@#$%^&*=+:?~<>][-|!@#$%^&*=+/:?~<>]*|/[-|!@#$%^&*=+:?~<>]*" => Operator::Symbols(intern(<>)),
 };
 
