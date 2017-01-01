@@ -48,7 +48,7 @@ fn solve_with_strategy(strategy: Strategy,
                        goal: Goal<Application>,
                        expected_solutions: Vec<&str>) {
     let root_environment = Arc::new(Environment::new(None, clauses));
-    let solutions = Solver::solve(root_environment, goal, strategy);
+    let solutions: Vec<_> = Solver::new(&root_environment, &goal, strategy).collect();
 
     let is_match: Vec<bool> = expected_solutions.iter()
         .zip(&solutions)

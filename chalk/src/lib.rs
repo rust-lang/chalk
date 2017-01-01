@@ -58,22 +58,26 @@ mod subst;
 
 pub use self::formula::*;
 
-pub fn solve_dfs(clauses: Vec<Clause<Application>>, root_goal: Goal<Application>) -> Vec<String> {
+pub fn solve_dfs(clauses: Vec<Clause<Application>>,
+                 root_goal: Goal<Application>)
+                 -> impl Iterator<Item = String> {
     use solve::Environment;
     use solve::{Solver, Strategy};
     use std::sync::Arc;
 
     let root_environment = Arc::new(Environment::new(None, clauses));
-    Solver::solve(root_environment, root_goal, Strategy::DepthFirstSearch)
+    Solver::new(&root_environment, &root_goal, Strategy::DepthFirstSearch)
 }
 
-pub fn solve_rust(clauses: Vec<Clause<Application>>, root_goal: Goal<Application>) -> Vec<String> {
+pub fn solve_rust(clauses: Vec<Clause<Application>>,
+                  root_goal: Goal<Application>)
+                  -> impl Iterator<Item = String> {
     use solve::Environment;
     use solve::{Solver, Strategy};
     use std::sync::Arc;
 
     let root_environment = Arc::new(Environment::new(None, clauses));
-    Solver::solve(root_environment, root_goal, Strategy::Rust)
+    Solver::new(&root_environment, &root_goal, Strategy::Rust)
 }
 
 pub use self::cli::main;

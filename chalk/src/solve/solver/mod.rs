@@ -13,7 +13,6 @@ use self::instantiate::InstantiateError;
 pub struct Solver {
     infer: InferenceTable,
     root_goal: Goal<Application>,
-    solutions: Vec<String>,
     obligations: VecDeque<Obligation>,
     choice_points: Vec<ChoicePoint>,
     strategy: Strategy,
@@ -64,26 +63,15 @@ enum ProveError {
 struct UnrollError;
 
 impl Solver {
-    pub fn solve(root_environment: Arc<Environment>,
-                 root_goal: Goal<Application>,
-                 strategy: Strategy)
-                 -> Vec<String> {
-        // Peel off any our "exists" goals and instantiate them with inference variables.
-        let mut solver = Solver::new(&root_environment, &root_goal, strategy);
-        solver.run();
-        solver.solutions
-    }
-
-    fn new(root_environment: &Arc<Environment>,
-           root_goal: &Goal<Application>,
-           strategy: Strategy)
-           -> Self {
+    pub fn new(root_environment: &Arc<Environment>,
+               root_goal: &Goal<Application>,
+               strategy: Strategy)
+               -> Self {
         let mut infer = InferenceTable::new();
         let root_goal = infer.peel_goal(root_environment, root_goal);
         Solver {
             infer: infer,
             root_goal: root_goal.clone(),
-            solutions: vec![],
             obligations: vec![Obligation::new(root_environment.clone(), root_goal, 0)].into(),
             choice_points: vec![],
             strategy: strategy,
@@ -94,7 +82,6 @@ impl Solver {
         Solver {
             infer: self.infer.clone(),
             root_goal: goal.clone(),
-            solutions: vec![],
             obligations: VecDeque::new(),
             choice_points: vec![],
             strategy: self.strategy,
@@ -107,34 +94,6 @@ impl Solver {
         // not be). Should be able to fix this without extending leaf
         // but might need to generalize folder trait.
         self.infer.normalize_deep(goal)
-    }
-
-    fn run(&mut self) {
-        loop {
-            match self.find_next_solution() {
-                Ok(solution) => {
-                    self.solutions.push(solution);
-                }
-                Err(ProveError::NotProvable) => {}
-                Err(ProveError::Ambiguous) => {
-                    if !self.solutions.iter().any(|s| s == "<<ambiguous>>") {
-                        self.solutions.push("<<ambiguous>>".to_string());
-                    }
-                }
-                Err(ProveError::Overflow) => {
-                    if !self.solutions.iter().any(|s| s == "<<overflow>>") {
-                        self.solutions.push("<<overflow>>".to_string());
-                    }
-                }
-            }
-
-            match self.unroll() {
-                Ok(()) => { }
-                Err(UnrollError) => {
-                    return;
-                }
-            }
-        }
     }
 
     fn find_next_solution(&mut self) -> Result<String, ProveError> {
@@ -653,6 +612,44 @@ impl InferenceTable {
             }
         }
         goal
+    }
+}
+
+impl Iterator for Solver {
+    type Item = String;
+
+    fn next(&mut self) -> Option<String> {
+        loop {
+            if self.obligations.is_empty() {
+                if self.choice_points.is_empty() {
+                    return None;
+                }
+
+                match self.unroll() {
+                    Ok(()) => { }
+                    Err(UnrollError) => {
+                        return None;
+                    }
+                }
+            }
+
+            match self.find_next_solution() {
+                Ok(solution) => {
+                    return Some(solution);
+                }
+                Err(ProveError::NotProvable) => {
+                    self.obligations.clear();
+                }
+                Err(ProveError::Ambiguous) => {
+                    self.obligations.clear();
+                    return Some("<<ambiguous>>".to_string());
+                }
+                Err(ProveError::Overflow) => {
+                    self.obligations.clear();
+                    return Some("<<overflow>>".to_string());
+                }
+            }
+        }
     }
 }
 
