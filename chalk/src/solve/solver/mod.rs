@@ -523,8 +523,30 @@ impl Solver {
                                              else_goal,
                                              depth)
             }
-            Strategy::DepthFirstSearch => unimplemented!(),
+            Strategy::DepthFirstSearch => {
+                self.solve_if_then_else_prolog(environment,
+                                               goal,
+                                               cond_goal,
+                                               then_goal,
+                                               else_goal,
+                                               depth)
+            }
         }
+    }
+
+    fn solve_if_then_else_prolog(&mut self,
+                                 environment: &Arc<Environment>,
+                                 goal: &Goal<Application>, // if G1 then G2 else G3
+                                 cond_goal: &Goal<Application>, // G1
+                                 then_goal: &Goal<Application>, // G2
+                                 else_goal: &Goal<Application>, // G3
+                                 depth: usize)
+                                 -> Result<Option<Obligation>, ProveError> {
+        // Meaning of `if/then/else` in prolog is dubious. Since
+        // prolog strategy can't "defer" things, it just means
+        // "provable at this time".
+
+        self.solve_if_then_else_common(environment, goal, &cond_goal, then_goal, else_goal, depth)
     }
 
     fn solve_if_then_else_rust(&mut self,
@@ -548,6 +570,17 @@ impl Solver {
             }));
         }
 
+        self.solve_if_then_else_common(environment, goal, &cond_goal, then_goal, else_goal, depth)
+    }
+
+    fn solve_if_then_else_common(&mut self,
+                                 environment: &Arc<Environment>,
+                                 goal: &Goal<Application>, // if G1 then G2 else G3
+                                 cond_goal: &Goal<Application>, // G1
+                                 then_goal: &Goal<Application>, // G2
+                                 else_goal: &Goal<Application>, // G3
+                                 depth: usize)
+                                 -> Result<Option<Obligation>, ProveError> {
         // try to solve `cond`:
         let mut solver = self.fork(&cond_goal);
         solver.obligations
