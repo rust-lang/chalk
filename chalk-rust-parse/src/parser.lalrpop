@@ -91,7 +91,11 @@ TraitRef<S>: TraitRef = {
 };
 
 Comma<T>: Vec<T> = {
-    () => vec![],
+    Comma1<T>? => <>.unwrap_or(vec![])
+};
+
+Comma1<T>: Vec<T> = {
+    <t:T> => vec![],
     <v:Comma<T>> "," <t:T> => {
         let mut v = v;
         v.push(t);

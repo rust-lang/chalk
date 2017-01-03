@@ -1,6 +1,10 @@
-use chalk_rust_parse::ast;
+use chalk_rust_parse::{self, ast};
 
 error_chain! {
+    links {
+        Parse(chalk_rust_parse::errors::Error, chalk_rust_parse::errors::ErrorKind);
+    }
+
     errors {
         InvalidTypeName(identifier: ast::Identifier) {
             description("invalid type name")

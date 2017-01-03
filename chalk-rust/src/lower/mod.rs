@@ -3,6 +3,8 @@ use errors::*;
 use ir;
 use std::collections::HashMap;
 
+mod test;
+
 type TypeKinds = HashMap<ir::Identifier, ir::TypeKind>;
 
 type ParameterMap = HashMap<ir::Identifier, usize>;

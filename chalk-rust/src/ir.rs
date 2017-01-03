@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 pub type Identifier = InternedString;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// For each struct/trait:
     pub type_kinds: HashMap<InternedString, TypeKind>,
@@ -24,6 +25,7 @@ pub struct ItemId {
     pub index: usize
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeKind {
     pub id: ItemId,
     pub sort: TypeSort,
@@ -37,6 +39,7 @@ pub enum TypeSort {
     Trait,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Impl {
     pub id: ItemId,
     pub parameters: Vec<Identifier>,
@@ -44,11 +47,13 @@ pub struct Impl {
     pub assoc_ty_values: Vec<AssocTyValue>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AssocTyValue {
     pub name: Identifier,
     pub value: Ty,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Ty {
     Var {
         depth: usize,
@@ -62,16 +67,19 @@ pub enum Ty {
     },
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraitRef {
     pub trait_id: ItemId,
     pub args: Vec<Ty>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
