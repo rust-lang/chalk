@@ -39,7 +39,7 @@ impl Folder for Quantifier {
         let next_index = self.var_map.len();
         Ok(self.var_map
            .entry(depth)
-           .or_insert(ir::Ty::Var { depth: next_index })
+           .or_insert(ir::Ty::Var(next_index))
            .clone())
     }
 }

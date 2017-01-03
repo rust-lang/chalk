@@ -84,7 +84,7 @@ impl InferenceTable {
 
 impl Ty {
     pub fn inference_var(&self) -> Option<InferenceVariable> {
-        if let Ty::Var { depth } = *self {
+        if let Ty::Var(depth) = *self {
             Some(InferenceVariable::from_depth(depth))
         } else {
             None
@@ -133,7 +133,7 @@ impl<'t> Unifier<'t> {
         debug!("unify_in_snapshot, normalized b={:?}", b);
 
         match (a, b) {
-            (&Ty::Var { depth: depth1 }, &Ty::Var { depth: depth2 }) => {
+            (&Ty::Var(depth1), &Ty::Var(depth2)) => {
                 let var1 = InferenceVariable::from_depth(depth1);
                 let var2 = InferenceVariable::from_depth(depth2);
                 debug!("unify_in_snapshot: unify_var_var({:?}, {:?})", var1, var2);
@@ -143,20 +143,20 @@ impl<'t> Unifier<'t> {
                     .expect("unification of two unbound variables cannot fail"))
             }
 
-            (&Ty::Var { depth }, &Ty::Apply { ref apply }) |
-            (&Ty::Apply { ref apply }, &Ty::Var { depth }) => {
+            (&Ty::Var(depth), &Ty::Apply(ref apply)) |
+            (&Ty::Apply(ref apply), &Ty::Var(depth)) => {
                 self.unify_var_apply(InferenceVariable::from_depth(depth), apply)
             }
 
-            (&Ty::Apply { apply: ref apply1 }, &Ty::Apply { apply: ref apply2 }) => {
+            (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
                 self.unify_apply_apply(apply1, apply2)
             }
 
-            (ty, &Ty::Projection { ref proj }) |
-            (&Ty::Projection { ref proj }, ty) => {
+            (ty, &Ty::Projection(ref proj)) |
+            (&Ty::Projection(ref proj), ty) => {
                 Ok(self.normalizations.push(NormalizeTo {
                     projection: proj.clone(),
-                    ty: ty.clone()
+                    ty: ty.clone(),
                 }))
             }
         }
@@ -229,12 +229,12 @@ impl<'t> Unifier<'t> {
         }
 
         match *arg {
-            Ty::Apply { apply: ref arg_apply } => {
+            Ty::Apply(ref arg_apply) => {
                 self.universe_check(universe_index, arg_apply.universe_index())?;
                 self.occurs_check_apply(var, universe_index, arg_apply)?;
             }
 
-            Ty::Var { depth } => {
+            Ty::Var(depth) => {
                 let v = InferenceVariable::from_depth(depth);
                 let ui = match self.table.unify.probe_value(v) {
                     InferenceValue::Unbound(ui) => ui,
@@ -259,7 +259,7 @@ impl<'t> Unifier<'t> {
                 }
             }
 
-            Ty::Projection { ref proj } => panic!("unimplemented: projection {:?}", proj),
+            Ty::Projection(ref proj) => panic!("unimplemented: projection {:?}", proj),
         }
         Ok(())
     }

@@ -54,15 +54,9 @@ pub struct AssocTyValue {
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Ty {
-    Var {
-        depth: usize,
-    },
-    Apply {
-        apply: ApplicationTy,
-    },
-    Projection {
-        proj: ProjectionTy,
-    },
+    Var(usize),
+    Apply(ApplicationTy),
+    Projection(ProjectionTy),
 }
 
 #[derive(Clone, PartialEq, Eq)]

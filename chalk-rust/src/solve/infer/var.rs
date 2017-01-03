@@ -18,7 +18,7 @@ impl InferenceVariable {
     }
 
     pub fn to_ty(&self) -> ir::Ty {
-        ir::Ty::Var { depth: self.index as usize }
+        ir::Ty::Var(self.index as usize)
     }
 }
 

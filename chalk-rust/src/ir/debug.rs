@@ -16,9 +16,9 @@ impl Debug for ItemId {
 impl Debug for Ty {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
-            Ty::Var { depth } => write!(fmt, "?{}", depth),
-            Ty::Apply { ref apply } => write!(fmt, "{:?}", apply),
-            Ty::Projection { ref proj } => write!(fmt, "{:?}", proj),
+            Ty::Var(depth) => write!(fmt, "?{}", depth),
+            Ty::Apply(ref apply) => write!(fmt, "{:?}", apply),
+            Ty::Projection(ref proj) => write!(fmt, "{:?}", proj),
         }
     }
 }

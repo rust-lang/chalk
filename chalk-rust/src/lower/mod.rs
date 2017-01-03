@@ -265,14 +265,12 @@ impl LowerTy for Ty {
                                                                              0))
                         }
 
-                        Ok(ir::Ty::Apply {
-                            apply: ir::ApplicationTy {
-                                id: id,
-                                args: vec![],
-                            },
-                        })
+                        Ok(ir::Ty::Apply(ir::ApplicationTy {
+                            id: id,
+                            args: vec![],
+                        }))
                     }
-                    NameLookup::Parameter(d) => Ok(ir::Ty::Var { depth: d }),
+                    NameLookup::Parameter(d) => Ok(ir::Ty::Var(d)),
                 }
             }
 
@@ -291,15 +289,13 @@ impl LowerTy for Ty {
 
                 let args = try!(args.iter().map(|t| t.lower(env)).collect());
 
-                Ok(ir::Ty::Apply {
-                    apply: ir::ApplicationTy {
-                        id: id,
-                        args: args,
-                    },
-                })
+                Ok(ir::Ty::Apply(ir::ApplicationTy {
+                    id: id,
+                    args: args,
+                }))
             }
 
-            Ty::Projection { ref proj } => Ok(ir::Ty::Projection { proj: proj.lower(env)? }),
+            Ty::Projection { ref proj } => Ok(ir::Ty::Projection(proj.lower(env)?)),
         }
     }
 }

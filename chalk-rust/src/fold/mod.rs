@@ -39,13 +39,11 @@ impl<T: Fold> Fold for Option<T> {
 impl Fold for ir::Ty {
     fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
         match *self {
-            ir::Ty::Var { depth } => folder.fold_var(depth),
-            ir::Ty::Apply { ref apply } => {
-                Ok(ir::Ty::Apply {
-                    apply: apply.fold_with(folder)?
-                })
+            ir::Ty::Var(depth) => folder.fold_var(depth),
+            ir::Ty::Apply(ref apply) => Ok(ir::Ty::Apply(apply.fold_with(folder)?)),
+            ir::Ty::Projection(ref proj) => {
+                Ok(ir::Ty::Projection(proj.fold_with(folder)?))
             }
-            ir::Ty::Projection { ref proj } => Ok(ir::Ty::Projection { proj: proj.fold_with(folder)? }),
         }
     }
 }
