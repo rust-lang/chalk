@@ -13,4 +13,5 @@ version = "0.12.1"
 version = "0.12.1"
 
 [dependencies]
+error-chain = "0.7.2"
 lalrpop-intern = "0.12.1"

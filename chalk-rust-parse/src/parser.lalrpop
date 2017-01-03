@@ -3,7 +3,9 @@ use lalrpop_intern::intern;
 
 grammar;
 
-pub Items: Vec<Item> = Item*;
+pub Program: Program = {
+    Item* => Program { items: <> }
+};
 
 Item: Item = {
     StructDefn => Item::StructDefn(<>),
@@ -13,7 +15,7 @@ Item: Item = {
 };
 
 StructDefn: StructDefn = {
-    "struct" <n:Id><p:Angle<Id>> <w:WhereClauses> ";" => StructDefn {
+    "struct" <n:Id><p:Angle<Id>> <w:WhereClauses> "{" "}" => StructDefn {
         name: n,
         parameters: p,
         where_clauses: w

@@ -31,6 +31,7 @@ pub struct TypeKind {
     pub parameters: Vec<Identifier>,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeSort {
     Struct,
     Trait,
@@ -53,7 +54,7 @@ pub enum Ty {
         depth: usize,
     },
     Apply {
-        name: Identifier,
+        id: ItemId,
         args: Vec<Ty>
     },
     Projection {
@@ -67,7 +68,7 @@ pub struct ProjectionTy {
 }
 
 pub struct TraitRef {
-    pub trait_name: Identifier,
+    pub trait_id: ItemId,
     pub args: Vec<Ty>,
 }
 

@@ -18,6 +18,11 @@ error_chain! {
             description("incorrect number of type parameters")
             display("`{}` takes {} type parameters, not {}", identifier.str, expected, actual)
         }
+
+        NotTrait(identifier: ast::Identifier) {
+            description("not a trait")
+            display("expected a trait, found `{}`, which is not a trait", identifier.str)
+        }
     }
 }
 

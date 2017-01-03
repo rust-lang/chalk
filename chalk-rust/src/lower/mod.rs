@@ -31,7 +31,7 @@ impl<'k> Env<'k> {
     }
 }
 
-trait LowerProgram {
+pub trait LowerProgram {
     fn lower(&self) -> Result<ir::Program>;
 }
 
@@ -67,7 +67,8 @@ impl LowerProgram for Program {
                     where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
                 Item::TraitDefn(ref d) => {
-                    assoc_ty_names.insert(item_id, d.assoc_ty_names.iter().map(|a| a.str).collect());
+                    let names = d.assoc_ty_names.iter().map(|a| a.str).collect();
+                    assoc_ty_names.insert(item_id, names);
                     where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
                 Item::Impl(ref d) => {
@@ -194,8 +195,17 @@ trait LowerTraitRef {
 
 impl LowerTraitRef for TraitRef {
     fn lower(&self, env: &Env) -> Result<ir::TraitRef> {
+        let k = match env.lookup(self.trait_name)? {
+            NameLookup::Type(k) => k,
+            NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(self.trait_name)),
+        };
+
+        if k.sort != ir::TypeSort::Trait {
+            bail!(ErrorKind::NotTrait(self.trait_name));
+        }
+
         Ok(ir::TraitRef {
-            trait_name: self.trait_name.str,
+            trait_id: k.id,
             args: try!(self.args.iter().map(|a| a.lower(env)).collect()),
         })
     }
@@ -231,7 +241,7 @@ impl LowerTy for Ty {
                         }
 
                         Ok(ir::Ty::Apply {
-                            name: k.name,
+                            id: k.id,
                             args: vec![],
                         })
                     }
@@ -254,7 +264,7 @@ impl LowerTy for Ty {
                 let args = try!(args.iter().map(|t| t.lower(env)).collect());
 
                 Ok(ir::Ty::Apply {
-                    name: k.name,
+                    id: k.id,
                     args: args,
                 })
             }
