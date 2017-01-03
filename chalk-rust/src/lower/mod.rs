@@ -7,34 +7,39 @@ use std::iter::once;
 
 mod test;
 
-type TypeKinds = HashMap<ir::Identifier, ir::TypeKind>;
-
+type TypeIds = HashMap<ir::Identifier, ir::ItemId>;
+type TypeKinds = HashMap<ir::ItemId, ir::TypeKind>;
 type ParameterMap = HashMap<ir::Identifier, usize>;
 
 #[derive(Debug)]
 struct Env<'k> {
+    type_ids: &'k TypeIds,
     type_kinds: &'k TypeKinds,
     parameter_map: &'k ParameterMap,
 }
 
-enum NameLookup<'k> {
-    Type(&'k ir::TypeKind),
+enum NameLookup {
+    Type(ir::ItemId),
     Parameter(usize),
 }
 
 const SELF: &str = "Self";
 
 impl<'k> Env<'k> {
-    fn lookup(&self, name: Identifier) -> Result<NameLookup<'k>> {
+    fn lookup(&self, name: Identifier) -> Result<NameLookup> {
         if let Some(k) = self.parameter_map.get(&name.str) {
             return Ok(NameLookup::Parameter(*k));
         }
 
-        if let Some(k) = self.type_kinds.get(&name.str) {
-            return Ok(NameLookup::Type(k));
+        if let Some(id) = self.type_ids.get(&name.str) {
+            return Ok(NameLookup::Type(*id));
         }
 
         bail!(ErrorKind::InvalidTypeName(name))
+    }
+
+    fn type_kind(&self, id: ir::ItemId) -> &ir::TypeKind {
+        &self.type_kinds[&id]
     }
 }
 
@@ -44,19 +49,18 @@ pub trait LowerProgram {
 
 impl LowerProgram for Program {
     fn lower(&self) -> Result<ir::Program> {
-        let type_kinds: TypeKinds = try!(self.items
-            .iter()
-            .enumerate()
-            .flat_map(|(index, item)| {
-                let item_id = ir::ItemId { index: index };
-                match *item {
-                    Item::StructDefn(ref d) => Some(d.lower_type_kind(item_id)),
-                    Item::TraitDefn(ref d) => Some(d.lower_type_kind(item_id)),
-                    Item::Impl(_) | Item::Goal(_) => None,
-                }
-            })
-            .map(|k_err| k_err.map(|k| (k.name, k)))
-            .collect());
+        let mut type_ids = HashMap::new();
+        let mut type_kinds = HashMap::new();
+        for (index, item) in self.items.iter().enumerate() {
+            let item_id = ir::ItemId { index: index };
+            let k = match *item {
+                Item::StructDefn(ref d) => d.lower_type_kind()?,
+                Item::TraitDefn(ref d) => d.lower_type_kind()?,
+                Item::Impl(_) | Item::Goal(_) => continue,
+            };
+            type_ids.insert(k.name, item_id);
+            type_kinds.insert(item_id, k);
+        }
 
         let mut where_clauses = HashMap::new();
         let mut assoc_ty_names = HashMap::new();
@@ -66,6 +70,7 @@ impl LowerProgram for Program {
             let item_id = ir::ItemId { index: index };
             let parameter_map = item.parameter_map();
             let env = Env {
+                type_ids: &type_ids,
                 type_kinds: &type_kinds,
                 parameter_map: &parameter_map,
             };
@@ -99,7 +104,7 @@ impl LowerProgram for Program {
 }
 
 trait LowerTypeKind {
-    fn lower_type_kind(&self, item_id: ir::ItemId) -> Result<ir::TypeKind>;
+    fn lower_type_kind(&self) -> Result<ir::TypeKind>;
 }
 
 trait LowerParameterMap {
@@ -150,9 +155,8 @@ trait LowerWhereClauses {
 }
 
 impl LowerTypeKind for StructDefn {
-    fn lower_type_kind(&self, item_id: ir::ItemId) -> Result<ir::TypeKind> {
+    fn lower_type_kind(&self) -> Result<ir::TypeKind> {
         Ok(ir::TypeKind {
-            id: item_id,
             sort: ir::TypeSort::Struct,
             name: self.name.str,
             parameters: self.parameters.iter().map(|p| p.str).collect(),
@@ -167,9 +171,8 @@ impl LowerWhereClauses for StructDefn {
 }
 
 impl LowerTypeKind for TraitDefn {
-    fn lower_type_kind(&self, item_id: ir::ItemId) -> Result<ir::TypeKind> {
+    fn lower_type_kind(&self) -> Result<ir::TypeKind> {
         Ok(ir::TypeKind {
-            id: item_id,
             sort: ir::TypeSort::Trait,
             name: self.name.str,
             parameters: once(intern(SELF)).chain(self.parameters.iter().map(|p| p.str)).collect(),
@@ -215,17 +218,18 @@ trait LowerTraitRef {
 
 impl LowerTraitRef for TraitRef {
     fn lower(&self, env: &Env) -> Result<ir::TraitRef> {
-        let k = match env.lookup(self.trait_name)? {
-            NameLookup::Type(k) => k,
+        let id = match env.lookup(self.trait_name)? {
+            NameLookup::Type(id) => id,
             NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(self.trait_name)),
         };
 
+        let k = env.type_kind(id);
         if k.sort != ir::TypeSort::Trait {
             bail!(ErrorKind::NotTrait(self.trait_name));
         }
 
         Ok(ir::TraitRef {
-            trait_id: k.id,
+            trait_id: id,
             args: try!(self.args.iter().map(|a| a.lower(env)).collect()),
         })
     }
@@ -253,7 +257,8 @@ impl LowerTy for Ty {
         match *self {
             Ty::Id { name } => {
                 match env.lookup(name)? {
-                    NameLookup::Type(k) => {
+                    NameLookup::Type(id) => {
+                        let k = env.type_kind(id);
                         if k.parameters.len() > 0 {
                             bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
                                                                              k.parameters.len(),
@@ -261,8 +266,10 @@ impl LowerTy for Ty {
                         }
 
                         Ok(ir::Ty::Apply {
-                            id: k.id,
-                            args: vec![],
+                            apply: ir::ApplicationTy {
+                                id: id,
+                                args: vec![],
+                            },
                         })
                     }
                     NameLookup::Parameter(d) => Ok(ir::Ty::Var { depth: d }),
@@ -270,11 +277,12 @@ impl LowerTy for Ty {
             }
 
             Ty::Apply { name, ref args } => {
-                let k = match env.lookup(name)? {
-                    NameLookup::Type(k) => k,
+                let id = match env.lookup(name)? {
+                    NameLookup::Type(id) => id,
                     NameLookup::Parameter(_) => bail!(ErrorKind::CannotApplyTypeParameter(name)),
                 };
 
+                let k = env.type_kind(id);
                 if k.parameters.len() != args.len() {
                     bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
                                                                      k.parameters.len(),
@@ -284,8 +292,10 @@ impl LowerTy for Ty {
                 let args = try!(args.iter().map(|t| t.lower(env)).collect());
 
                 Ok(ir::Ty::Apply {
-                    id: k.id,
-                    args: args,
+                    apply: ir::ApplicationTy {
+                        id: id,
+                        args: args,
+                    },
                 })
             }
 

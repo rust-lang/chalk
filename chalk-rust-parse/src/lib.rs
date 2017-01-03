@@ -18,3 +18,10 @@ pub fn parse_program(text: &str) -> Result<ast::Program> {
         Err(e) => bail!("parse error: {:?}", e),
     }
 }
+
+pub fn parse_ty(text: &str) -> Result<ast::Ty> {
+    match parser::parse_Ty(text) {
+        Ok(v) => Ok(v),
+        Err(e) => bail!("error parsing `{}`: {:?}", text, e),
+    }
+}

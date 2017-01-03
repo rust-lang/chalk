@@ -6,7 +6,7 @@ pub type Identifier = InternedString;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// For each struct/trait:
-    pub type_kinds: HashMap<InternedString, TypeKind>,
+    pub type_kinds: HashMap<ItemId, TypeKind>,
 
     /// For each item:
     pub where_clauses: HashMap<ItemId, Vec<WhereClause>>,
@@ -20,14 +20,13 @@ pub struct Program {
     pub goals: Vec<WhereClause>,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ItemId {
     pub index: usize
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeKind {
-    pub id: ItemId,
     pub sort: TypeSort,
     pub name: Identifier,
     pub parameters: Vec<Identifier>,
@@ -53,27 +52,32 @@ pub struct AssocTyValue {
     pub value: Ty,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Ty {
     Var {
         depth: usize,
     },
     Apply {
-        id: ItemId,
-        args: Vec<Ty>
+        apply: ApplicationTy,
     },
     Projection {
         proj: ProjectionTy,
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
+pub struct ApplicationTy {
+    pub id: ItemId,
+    pub args: Vec<Ty>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TraitRef {
     pub trait_id: ItemId,
     pub args: Vec<Ty>,
@@ -84,3 +88,14 @@ pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Environment {
+    pub clauses: Vec<WhereClause>,
+}
+
+mod debug;
+mod tls;
+
+pub use self::tls::set_program_in;
+pub use self::tls::with_current_program;
