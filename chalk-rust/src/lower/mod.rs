@@ -200,13 +200,13 @@ impl LowerWhereClause for WhereClause {
     fn lower(&self, env: &Env) -> Result<ir::WhereClause> {
         Ok(match *self {
             WhereClause::Implemented { ref trait_ref } => {
-                ir::WhereClause::Implemented { trait_ref: trait_ref.lower(env)? }
+                ir::WhereClause::Implemented(trait_ref.lower(env)?)
             }
             WhereClause::ProjectionEq { ref projection, ref ty } => {
-                ir::WhereClause::ProjectionEq {
+                ir::WhereClause::NormalizeTo(ir::NormalizeTo {
                     projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
-                }
+                })
             }
         })
     }

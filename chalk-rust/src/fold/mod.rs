@@ -1,12 +1,24 @@
 use errors::*;
 use ir;
 
-pub trait Fold: Sized {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self>;
-}
-
 pub trait Folder {
     fn fold_var(&mut self, depth: usize) -> Result<ir::Ty>;
+}
+
+impl<'f, F: Folder> Folder for &'f mut F {
+    fn fold_var(&mut self, depth: usize) -> Result<ir::Ty> {
+        (**self).fold_var(depth)
+    }
+}
+
+impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
+    fn fold_var(&mut self, depth: usize) -> Result<ir::Ty> {
+        self.0.fold_var(depth)?.fold_with(&mut self.1)
+    }
+}
+
+pub trait Fold: Sized {
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self>;
 }
 
 impl<T: Fold> Fold for Vec<T> {
@@ -80,27 +92,21 @@ impl Fold for ir::ItemId {
 impl Fold for ir::WhereClause {
     fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
         match *self {
-            ir::WhereClause::Implemented { ref trait_ref } => {
-                Ok(ir::WhereClause::Implemented { trait_ref: trait_ref.fold_with(folder)? })
+            ir::WhereClause::Implemented(ref trait_ref) => {
+                Ok(ir::WhereClause::Implemented(trait_ref.fold_with(folder)?))
             }
-            ir::WhereClause::ProjectionEq { ref projection, ref ty } => {
-                Ok(ir::WhereClause::ProjectionEq {
-                    projection: projection.fold_with(folder)?,
-                    ty: ty.fold_with(folder)?,
-                })
+            ir::WhereClause::NormalizeTo(ref pred) => {
+                Ok(ir::WhereClause::NormalizeTo(pred.fold_with(folder)?))
             }
         }
     }
 }
 
-impl<'f, F: Folder> Folder for &'f mut F {
-    fn fold_var(&mut self, depth: usize) -> Result<ir::Ty> {
-        (**self).fold_var(depth)
-    }
-}
-
-impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
-    fn fold_var(&mut self, depth: usize) -> Result<ir::Ty> {
-        self.0.fold_var(depth)?.fold_with(&mut self.1)
+impl Fold for ir::NormalizeTo {
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
+        Ok(ir::NormalizeTo {
+            projection: self.projection.fold_with(folder)?,
+            ty: self.ty.fold_with(folder)?,
+        })
     }
 }

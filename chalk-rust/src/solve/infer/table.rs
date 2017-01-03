@@ -108,6 +108,7 @@ impl ItemId {
 struct Unifier<'t> {
     table: &'t mut InferenceTable,
     snapshot: InferenceSnapshot,
+    normalizations: Vec<NormalizeTo>,
 }
 
 impl<'t> Unifier<'t> {
@@ -116,10 +117,12 @@ impl<'t> Unifier<'t> {
         Unifier {
             table: table,
             snapshot: snapshot,
+            normalizations: vec![],
         }
     }
 
-    pub fn unify_ty_ty(&mut self, a: &Ty, b: &Ty) -> Result<()> {
+    pub fn unify_ty_ty<'a>(&mut self, a: &'a Ty, b: &'a Ty) -> Result<()> {
+        //             ^^                 ^^         ^^ FIXME rustc bug
         if let Some(n_a) = self.table.normalize_shallow(a) {
             return self.unify_ty_ty(&n_a, b);
         } else if let Some(n_b) = self.table.normalize_shallow(b) {
@@ -149,9 +152,12 @@ impl<'t> Unifier<'t> {
                 self.unify_apply_apply(apply1, apply2)
             }
 
-            (_, &Ty::Projection { ref proj }) |
-            (&Ty::Projection { ref proj }, _) => {
-                panic!("unimplemented: projection proj={:?}", proj)
+            (ty, &Ty::Projection { ref proj }) |
+            (&Ty::Projection { ref proj }, ty) => {
+                Ok(self.normalizations.push(NormalizeTo {
+                    projection: proj.clone(),
+                    ty: ty.clone()
+                }))
             }
         }
     }
@@ -246,13 +252,14 @@ impl<'t> Unifier<'t> {
                     //
                     // where ?A is in universe 0 and ?B is in universe 1.
                     // This is OK, if ?B is promoted to universe 0.
-                    self.table.unify.unify_var_value(v, InferenceValue::Unbound(universe_index)).unwrap();
+                    self.table
+                        .unify
+                        .unify_var_value(v, InferenceValue::Unbound(universe_index))
+                        .unwrap();
                 }
             }
 
-            Ty::Projection { ref proj } => {
-                panic!("unimplemented: projection {:?}", proj)
-            }
+            Ty::Projection { ref proj } => panic!("unimplemented: projection {:?}", proj),
         }
         Ok(())
     }

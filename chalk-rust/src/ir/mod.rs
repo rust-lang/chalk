@@ -85,13 +85,19 @@ pub struct TraitRef {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WhereClause {
-    Implemented { trait_ref: TraitRef },
-    ProjectionEq { projection: ProjectionTy, ty: Ty },
+    Implemented(TraitRef),
+    NormalizeTo(NormalizeTo),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Environment {
     pub clauses: Vec<WhereClause>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NormalizeTo {
+    pub projection: ProjectionTy,
+    pub ty: Ty,
 }
 
 mod debug;
