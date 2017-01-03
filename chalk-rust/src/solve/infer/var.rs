@@ -2,6 +2,7 @@ use ena::unify::{UnifyKey, UnifyValue};
 use ir;
 use std::cmp::min;
 use std::fmt;
+use std::u32;
 
 use super::universe::UniverseIndex;
 
@@ -12,11 +13,12 @@ pub struct InferenceVariable {
 
 impl InferenceVariable {
     pub fn from_depth(depth: usize) -> InferenceVariable {
-        InferenceVariable { index: depth }
+        assert!(depth < u32::MAX as usize);
+        InferenceVariable { index: depth as u32 }
     }
 
     pub fn to_ty(&self) -> ir::Ty {
-        ir::Ty::Var { depth: self.index }
+        ir::Ty::Var { depth: self.index as usize }
     }
 }
 

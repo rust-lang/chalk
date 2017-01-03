@@ -1,4 +1,4 @@
 #![allow(dead_code)]
 
-// mod infer;
+mod infer;
 mod quantify;

@@ -52,17 +52,6 @@
                                                              application2.args.len()));
                 }
 
-                let zipped_args = application1.args.iter().zip(&application2.args).enumerate();
-                for (index, (arg1, arg2)) in zipped_args {
-                    match self.unify(arg1, arg2) {
-                        Ok(()) => (),
-                        Err(err) => {
-                            return Err(UnifyError::IncompatibleArgument(application1.constant,
-                                                                        index,
-                                                                        Box::new(err)))
-                        }
-                    }
-                }
 
                 Ok(())
             }
@@ -98,59 +87,3 @@
         Ok(())
     }
 
-    fn occurs_check(&mut self,
-                    var: InferenceVariable,
-                    universe_index: UniverseIndex,
-                    application: &Application)
-                    -> UnifyResult<()> {
-        for arg in &application.args {
-            let arg = self.normalize_shallow(arg);
-            match arg.kind {
-                LeafKind::BoundVariable(_) => {
-                    panic!("found bound variable in occurs check")
-                }
-
-                LeafKind::Application(ref c) => {
-                    self.universe_check(universe_index, c.constant.universe_index())?;
-                    self.occurs_check(var, universe_index, c)?;
-                }
-
-                LeafKind::InferenceVariable(v) => {
-                    match self.unify.probe_value(v) {
-                        InferenceValue::Unbound(ui) => {
-                            if self.unify.unioned(v, var) {
-                                return Err(UnifyError::Cycle);
-                            }
-
-                            if universe_index < ui {
-                                // Scenario is like:
-                                //
-                                // ?A = foo(?B)
-                                //
-                                // where ?A is in universe 0 and ?B is in universe 1.
-                                // This is OK, if ?B is promoted to universe 0.
-                                self.unify.unify_var_value(v, InferenceValue::Unbound(universe_index)).unwrap();
-                            }
-                        }
-
-                        InferenceValue::Bound(_) => {
-                            unreachable!("expected `arg` to be normalized");
-                        }
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    fn universe_check(&mut self,
-                      universe_index: UniverseIndex,
-                      application_universe_index: UniverseIndex)
-                      -> UnifyResult<()> {
-        debug!("universe_check({:?}, {:?})", universe_index, application_universe_index);
-        if universe_index < application_universe_index {
-            bail!(ErrorKind::IncompatibleUniverses(universe_index, application_universe_index))
-        } else {
-            Ok(())
-        }
-    }
