@@ -1,7 +1,9 @@
 use chalk_rust_parse::ast::*;
+use lalrpop_intern::intern;
 use errors::*;
 use ir;
 use std::collections::HashMap;
+use std::iter::once;
 
 mod test;
 
@@ -19,6 +21,8 @@ enum NameLookup<'k> {
     Type(&'k ir::TypeKind),
     Parameter(usize),
 }
+
+const SELF: &str = "Self";
 
 impl<'k> Env<'k> {
     fn lookup(&self, name: Identifier) -> Result<NameLookup<'k>> {
@@ -99,19 +103,32 @@ trait LowerTypeKind {
 }
 
 trait LowerParameterMap {
-    fn parameters(&self) -> &[Identifier];
+    fn synthetic_parameters(&self) -> Option<ir::Identifier>;
+    fn declared_parameters(&self) -> &[Identifier];
 
     fn parameter_map(&self) -> ParameterMap {
-        self.parameters()
-            .iter()
+        self.synthetic_parameters()
+            .into_iter()
+            .chain(self.declared_parameters()
+                .iter()
+                .map(|id| id.str))
             .enumerate()
-            .map(|(index, id)| (id.str, index))
+            .map(|(index, id)| (id, index))
             .collect()
     }
 }
 
 impl LowerParameterMap for Item {
-    fn parameters(&self) -> &[Identifier] {
+    fn synthetic_parameters(&self) -> Option<ir::Identifier> {
+        match *self {
+            Item::TraitDefn(..) => Some(intern(SELF)),
+            Item::StructDefn(..) |
+            Item::Impl(..) |
+            Item::Goal(..) => None,
+        }
+    }
+
+    fn declared_parameters(&self) -> &[Identifier] {
         match *self {
             Item::StructDefn(ref d) => &d.parameters,
             Item::TraitDefn(ref d) => &d.parameters,
@@ -155,7 +172,7 @@ impl LowerTypeKind for TraitDefn {
             id: item_id,
             sort: ir::TypeSort::Trait,
             name: self.name.str,
-            parameters: self.parameters.iter().map(|p| p.str).collect(),
+            parameters: once(intern(SELF)).chain(self.parameters.iter().map(|p| p.str)).collect(),
         })
     }
 }

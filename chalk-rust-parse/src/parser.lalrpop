@@ -32,7 +32,7 @@ TraitDefn: TraitDefn = {
 };
 
 AssocTyName: Identifier = {
-    "type" <Id>
+    "type" <Id> ";"
 };
 
 Impl: Impl = {
@@ -51,7 +51,7 @@ Impl: Impl = {
 };
 
 AssocTyValue: AssocTyValue = {
-    "type" <n:Id> "=" <v:Ty> => AssocTyValue {
+    "type" <n:Id> "=" <v:Ty> ";" => AssocTyValue {
         name: n,
         value: v,
     },

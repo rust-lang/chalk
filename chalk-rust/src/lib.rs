@@ -1,4 +1,5 @@
 #![recursion_limit = "1024"]
+#![feature(static_in_const)]
 
 extern crate chalk_rust_parse;
 

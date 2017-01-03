@@ -28,3 +28,24 @@ fn invalid_name() {
 fn type_parameter() {
     parse_and_lower("struct Foo { } trait Bar { } impl<X> Bar for X { }").unwrap();
 }
+
+#[test]
+fn type_parameter_bound() {
+    parse_and_lower("struct Foo { } trait Bar { } trait Eq { } impl<X> Bar for X where X: Eq { }")
+        .unwrap();
+}
+
+#[test]
+fn assoc_tys() {
+    parse_and_lower("
+    struct String { }
+    struct Char { }
+
+    trait Iterator { type Item; }
+    impl Iterator for String { type Item = Char; }
+
+    trait Foo { }
+    impl<X> Foo for <X as Iterator>::Item where X: Iterator { }
+    ")
+        .unwrap();
+}
