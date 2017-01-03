@@ -7,4 +7,5 @@ authors = ["Niko Matsakis <niko@alum.mit.edu>"]
 
 [dependencies]
 chalk-rust-parse = { path = "../chalk-rust-parse" }
+error-chain = "0.7.2"
 lalrpop-intern = "0.12.1"

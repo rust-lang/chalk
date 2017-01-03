@@ -1,8 +1,7 @@
 use chalk_rust_parse::ast::*;
+use errors::*;
 use ir;
 use std::collections::HashMap;
-
-type Result<T> = ::std::result::Result<T, Identifier>;
 
 type TypeKinds = HashMap<ir::Identifier, ir::TypeKind>;
 
@@ -28,7 +27,7 @@ impl<'k> Env<'k> {
             return Ok(NameLookup::Type(k));
         }
 
-        Err(name)
+        bail!(ErrorKind::InvalidTypeName(name))
     }
 }
 
