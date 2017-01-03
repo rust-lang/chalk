@@ -4,8 +4,6 @@
 *.dll
 *.exe
 TAGS
-/chalk/Cargo.lock
-/chalk/target/
-/chalk-parse/Cargo.lock
-/chalk-parse/target/
+/*/Cargo.lock
+/*/target/
 *~

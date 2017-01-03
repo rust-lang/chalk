@@ -1,0 +1,112 @@
+use ast::*;
+use lalrpop_intern::{intern, InternedString};
+use std::iter::once;
+
+grammar;
+
+pub Items: Vec<Item> = Item*;
+
+Item: Item = {
+    StructDefn => Item::StructDefn(<>),
+    TraitDefn => Item::TraitDefn(<>),
+    Impl => Item::Impl(<>),
+    "where" <WhereClause> => Item::WhereClause(<>),
+};
+
+StructDefn: StructDefn = {
+    "struct" <n:Id><p:Angle<Id>> <w:WhereClauses> ";" => StructDefn {
+        name: n,
+        parameters: p,
+        where_clauses: w
+    }
+};
+
+TraitDefn: TraitDefn = {
+    "trait" <n:Id><p:Angle<Id>> <w:WhereClauses> "{" <assoc:AssocTyDefn*> "}" => TraitDefn {
+        name: n,
+        parameters: p,
+        where_clauses: w,
+    }
+};
+
+AssocTyDefn: AssocTyDefn = {
+    "type" <n:Id> => AssocTyDefn {
+        name: n,
+    }
+};
+
+Impl: Impl = {
+    "impl" <p:Angle<Id>> <t:Id> <a:Angle<Ty>> "for" <s:Ty> <w:WhereClauses> "{"
+        <assoc:AssocTyValue*>"}" =>
+    {
+        let mut args = vec![s];
+        args.extend(a);
+        Impl {
+            parameters: p,
+            trait_ref: TraitRef { trait_name: t, args: a },
+            where_clauses: w,
+            assoc_ty_defns: assoc
+        }
+    },
+};
+
+AssocTyValue: AssocTyValue = {
+    "type" <n:Id> "=" <v:Ty> => AssocTyValue {
+        name: n,
+        value: v,
+    },
+};
+
+Ty: Ty = {
+    <n:Id> => Ty::Id { name: n},
+    <n:Id> "<" <a:Comma<Ty>> ">" => Ty::Apply { name: n, args: a },
+    <p:ProjectionTy> => Ty::Projection { proj: p },
+};
+
+ProjectionTy: ProjectionTy = {
+    "<" <t:TraitRef<"as">> ">" "::" <n:Id> => ProjectionTy {
+        trait_ref: t, name: n
+    },
+};
+
+WhereClauses: Vec<WhereClause> = {
+    "where" <Comma<WhereClause>>,
+    () => vec![],
+};
+
+WhereClause: WhereClause = {
+    <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
+    <p:ProjectionTy> "==" <t:Ty> => WhereClause::ProjectionEq { projection: p, ty: t },
+};
+
+TraitRef<S>: TraitRef = {
+    <s:Ty> S <t:Id> <a:Angle<Ty>> => {
+        let mut args = vec![s];
+        args.extend(a);
+        TraitRef {
+            trait_name: t,
+            args: args,
+        }
+    },
+};
+
+Comma<T>: Vec<T> = {
+    () => vec![],
+    <v:Comma<T>> "," <t:T> => {
+        let mut v = v;
+        v.push(t);
+        v
+    }
+};
+
+Angle<T>: Vec<T> = {
+    "<" <Comma<T>> ">",
+    () => vec![],
+};
+
+Id: Identifier = {
+    <l:@L> <s:r"([:alpha:]|_)([:alnum:]|_)*"> <r:@R> => Identifier {
+        str: intern(s),
+        span: Span::new(l, r),
+    }
+};

@@ -1,0 +1,16 @@
+[package]
+name = "chalk-rust-parse"
+version = "0.1.0"
+authors = ["Niko Matsakis <niko@alum.mit.edu>"]
+build = "build.rs" # LALRPOP preprocessing
+workspace = "../chalk-rust"
+
+# Add a dependency on the LALRPOP runtime library:
+[dependencies.lalrpop-util]
+version = "0.12.1"
+ 
+[build-dependencies.lalrpop]
+version = "0.12.1"
+
+[dependencies]
+lalrpop-intern = "0.12.1"

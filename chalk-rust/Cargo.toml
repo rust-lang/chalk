@@ -1,0 +1,10 @@
+[package]
+name = "chalk-rust"
+version = "0.1.0"
+authors = ["Niko Matsakis <niko@alum.mit.edu>"]
+
+[workspace]
+
+[dependencies]
+chalk-rust-parse = { path = "../chalk-rust-parse" }
+lalrpop-intern = "0.12.1"
