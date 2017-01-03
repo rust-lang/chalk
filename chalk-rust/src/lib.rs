@@ -9,6 +9,7 @@ extern crate error_chain;
 extern crate lalrpop_intern;
 
 mod errors;
+mod fold;
 mod ir;
 mod lower;
 
