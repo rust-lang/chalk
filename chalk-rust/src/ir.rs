@@ -4,14 +4,22 @@ use std::collections::HashMap;
 pub type Identifier = InternedString;
 
 pub struct Program {
+    /// For each struct/trait:
     pub type_kinds: HashMap<InternedString, TypeKind>,
+
+    /// For each item:
     pub where_clauses: HashMap<ItemId, Vec<WhereClause>>,
-    pub trait_defns: Vec<TraitDefn>,
+
+    /// For each trait:
+    pub assoc_ty_names: HashMap<ItemId, Vec<Identifier>>,
+
+    /// For each impl:
     pub impls: Vec<Impl>,
+
     pub goals: Vec<WhereClause>,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ItemId {
     pub index: usize
 }
@@ -28,21 +36,10 @@ pub enum TypeSort {
     Trait,
 }
 
-pub struct TraitDefn {
-    pub name: Identifier,
-    pub parameters: Vec<Identifier>,
-    pub where_clauses: Vec<WhereClause>,
-    pub assoc_ty_defns: Vec<AssocTyDefn>,
-}
-
-pub struct AssocTyDefn {
-    pub name: Identifier,
-}
-
 pub struct Impl {
+    pub id: ItemId,
     pub parameters: Vec<Identifier>,
     pub trait_ref: TraitRef,
-    pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
 }
 

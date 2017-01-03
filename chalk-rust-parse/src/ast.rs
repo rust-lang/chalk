@@ -33,11 +33,7 @@ pub struct TraitDefn {
     pub name: Identifier,
     pub parameters: Vec<Identifier>,
     pub where_clauses: Vec<WhereClause>,
-    pub assoc_ty_defns: Vec<AssocTyDefn>,
-}
-
-pub struct AssocTyDefn {
-    pub name: Identifier,
+    pub assoc_ty_names: Vec<Identifier>,
 }
 
 pub struct Impl {

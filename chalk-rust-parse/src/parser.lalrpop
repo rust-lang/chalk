@@ -1,6 +1,5 @@
 use ast::*;
-use lalrpop_intern::{intern, InternedString};
-use std::iter::once;
+use lalrpop_intern::intern;
 
 grammar;
 
@@ -10,7 +9,7 @@ Item: Item = {
     StructDefn => Item::StructDefn(<>),
     TraitDefn => Item::TraitDefn(<>),
     Impl => Item::Impl(<>),
-    "where" <WhereClause> => Item::WhereClause(<>),
+    "where" <WhereClause> => Item::Goal(<>),
 };
 
 StructDefn: StructDefn = {
@@ -22,17 +21,16 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    "trait" <n:Id><p:Angle<Id>> <w:WhereClauses> "{" <assoc:AssocTyDefn*> "}" => TraitDefn {
+    "trait" <n:Id><p:Angle<Id>> <w:WhereClauses> "{" <a:AssocTyName*> "}" => TraitDefn {
         name: n,
         parameters: p,
         where_clauses: w,
+        assoc_ty_names: a,
     }
 };
 
-AssocTyDefn: AssocTyDefn = {
-    "type" <n:Id> => AssocTyDefn {
-        name: n,
-    }
+AssocTyName: Identifier = {
+    "type" <Id>
 };
 
 Impl: Impl = {
@@ -43,9 +41,9 @@ Impl: Impl = {
         args.extend(a);
         Impl {
             parameters: p,
-            trait_ref: TraitRef { trait_name: t, args: a },
+            trait_ref: TraitRef { trait_name: t, args: args },
             where_clauses: w,
-            assoc_ty_defns: assoc
+            assoc_ty_values: assoc,
         }
     },
 };

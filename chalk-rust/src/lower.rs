@@ -51,27 +51,42 @@ impl LowerProgram for Program {
             .map(|k_err| k_err.map(|k| (k.name, k)))
             .collect());
 
-        let where_clauses: HashMap<_, _> = try!(self.items
-            .iter()
-            .enumerate()
-            .flat_map(|(index, item)| {
-                let item_id = ir::ItemId { index: index };
-                match *item {
-                    Item::StructDefn(ref d) => {
-                        Some(d.lower_where_clauses(&type_kinds).map(|w| (item_id, w)))
-                    }
-                    Item::TraitDefn(ref d) => {
-                        Some(d.lower_where_clauses(&type_kinds).map(|w| (item_id, w)))
-                    }
-                    Item::Impl(ref d) => {
-                        Some(d.lower_where_clauses(&type_kinds).map(|w| (item_id, w)))
-                    }
-                    Item::Goal(_) => None,
+        let mut where_clauses = HashMap::new();
+        let mut assoc_ty_names = HashMap::new();
+        let mut impls = Vec::new();
+        let mut goals = Vec::new();
+        for (index, item) in self.items.iter().enumerate() {
+            let item_id = ir::ItemId { index: index };
+            let parameter_map = item.parameter_map();
+            let env = Env {
+                type_kinds: &type_kinds,
+                parameter_map: &parameter_map,
+            };
+            match *item {
+                Item::StructDefn(ref d) => {
+                    where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
-            })
-            .collect());
+                Item::TraitDefn(ref d) => {
+                    assoc_ty_names.insert(item_id, d.assoc_ty_names.iter().map(|a| a.str).collect());
+                    where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
+                }
+                Item::Impl(ref d) => {
+                    impls.push(d.lower_impl(item_id, &env)?);
+                    where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
+                }
+                Item::Goal(ref d) => {
+                    goals.push(d.lower(&env)?);
+                }
+            }
+        }
 
-        unimplemented!()
+        Ok(ir::Program {
+            type_kinds: type_kinds,
+            where_clauses: where_clauses,
+            goals: goals,
+            assoc_ty_names: assoc_ty_names,
+            impls: impls,
+        })
     }
 }
 
@@ -79,25 +94,36 @@ trait LowerTypeKind {
     fn lower_type_kind(&self, item_id: ir::ItemId) -> Result<ir::TypeKind>;
 }
 
-trait LowerWhereClauses {
+trait LowerParameterMap {
     fn parameters(&self) -> &[Identifier];
-    fn where_clauses(&self) -> &[WhereClause];
 
-    fn lower_where_clauses(&self, type_kinds: &TypeKinds) -> Result<Vec<ir::WhereClause>> {
-        let parameter_map: ParameterMap = self.parameters()
+    fn parameter_map(&self) -> ParameterMap {
+        self.parameters()
             .iter()
             .enumerate()
             .map(|(index, id)| (id.str, index))
-            .collect();
+            .collect()
+    }
+}
 
-        let env = Env {
-            parameter_map: &parameter_map,
-            type_kinds: type_kinds,
-        };
+impl LowerParameterMap for Item {
+    fn parameters(&self) -> &[Identifier] {
+        match *self {
+            Item::StructDefn(ref d) => &d.parameters,
+            Item::TraitDefn(ref d) => &d.parameters,
+            Item::Impl(ref d) => &d.parameters,
+            Item::Goal(..) => &[],
+        }
+    }
+}
 
+trait LowerWhereClauses {
+    fn where_clauses(&self) -> &[WhereClause];
+
+    fn lower_where_clauses(&self, env: &Env) -> Result<Vec<ir::WhereClause>> {
         self.where_clauses()
             .iter()
-            .map(|wc| wc.lower(&env))
+            .map(|wc| wc.lower(env))
             .collect()
     }
 }
@@ -114,9 +140,6 @@ impl LowerTypeKind for StructDefn {
 }
 
 impl LowerWhereClauses for StructDefn {
-    fn parameters(&self) -> &[Identifier] {
-        &self.parameters
-    }
     fn where_clauses(&self) -> &[WhereClause] {
         &self.where_clauses
     }
@@ -134,18 +157,12 @@ impl LowerTypeKind for TraitDefn {
 }
 
 impl LowerWhereClauses for TraitDefn {
-    fn parameters(&self) -> &[Identifier] {
-        &self.parameters
-    }
     fn where_clauses(&self) -> &[WhereClause] {
         &self.where_clauses
     }
 }
 
 impl LowerWhereClauses for Impl {
-    fn parameters(&self) -> &[Identifier] {
-        &self.parameters
-    }
     fn where_clauses(&self) -> &[WhereClause] {
         &self.where_clauses
     }
@@ -244,5 +261,33 @@ impl LowerTy for Ty {
 
             Ty::Projection { ref proj } => Ok(ir::Ty::Projection { proj: proj.lower(env)? }),
         }
+    }
+}
+
+trait LowerImpl {
+    fn lower_impl(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::Impl>;
+}
+
+impl LowerImpl for Impl {
+    fn lower_impl(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::Impl> {
+        Ok(ir::Impl {
+            id: item_id,
+            trait_ref: self.trait_ref.lower(env)?,
+            parameters: self.parameters.iter().map(|p| p.str).collect(),
+            assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(env)).collect()),
+        })
+    }
+}
+
+trait LowerAssocTyValue {
+    fn lower(&self, env: &Env) -> Result<ir::AssocTyValue>;
+}
+
+impl LowerAssocTyValue for AssocTyValue {
+    fn lower(&self, env: &Env) -> Result<ir::AssocTyValue> {
+        Ok(ir::AssocTyValue {
+            name: self.name.str,
+            value: self.value.lower(env)?,
+        })
     }
 }
