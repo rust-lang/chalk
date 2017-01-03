@@ -2,7 +2,7 @@ use chalk_rust_parse::ast::*;
 use ir;
 use std::collections::HashMap;
 
-type Result<T> = ::std::result::Result<T, ()>;
+type Result<T> = ::std::result::Result<T, Identifier>;
 
 type TypeKinds = HashMap<ir::Identifier, ir::TypeKind>;
 
@@ -11,6 +11,25 @@ type ParameterMap = HashMap<ir::Identifier, usize>;
 struct Env<'k> {
     type_kinds: &'k TypeKinds,
     parameter_map: &'k ParameterMap,
+}
+
+enum NameLookup<'k> {
+    Type(&'k ir::TypeKind),
+    Parameter(usize),
+}
+
+impl<'k> Env<'k> {
+    fn lookup(&self, name: Identifier) -> Result<NameLookup<'k>> {
+        if let Some(k) = self.parameter_map.get(&name.str) {
+            return Ok(NameLookup::Parameter(*k));
+        }
+
+        if let Some(k) = self.type_kinds.get(&name.str) {
+            return Ok(NameLookup::Type(k));
+        }
+
+        Err(name)
+    }
 }
 
 trait LowerProgram {
@@ -185,6 +204,38 @@ trait LowerTy {
 
 impl LowerTy for Ty {
     fn lower(&self, env: &Env) -> Result<ir::Ty> {
-        unimplemented!()
+        match *self {
+            Ty::Id { name } => {
+                match env.lookup(name)? {
+                    NameLookup::Type(k) => {
+                        unimplemented!()
+                    }
+                    NameLookup::Parameter(d) => {
+                        Ok(ir::Ty::Var { depth: d })
+                    }
+                }
+            }
+
+            Ty::Apply { name, ref args } => {
+                let k = match env.lookup(name)? {
+                    NameLookup::Type(k) => k,
+                    NameLookup::Parameter(d) => {
+                        unimplemented!()
+                    }
+                };
+
+                if k.parameters.len() != args.len() {
+                    unimplemented!()
+                }
+
+                let args = try!(args.iter().map(|t| t.lower(env)).collect());
+
+                Ok(ir::Ty::Apply { name: k.name, args: args })
+            }
+
+            Ty::Projection { ref proj } => {
+                Ok(ir::Ty::Projection { proj: proj.lower(env)? })
+            }
+        }
     }
 }

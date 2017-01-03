@@ -75,6 +75,7 @@ pub struct TraitRef {
     pub args: Vec<Ty>,
 }
 
+#[derive(Copy, Clone)]
 pub struct Identifier {
     pub str: InternedString,
     pub span: Span,
