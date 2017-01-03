@@ -95,7 +95,7 @@ Comma<T>: Vec<T> = {
 };
 
 Comma1<T>: Vec<T> = {
-    <t:T> => vec![],
+    <t:T> => vec![t],
     <v:Comma<T>> "," <t:T> => {
         let mut v = v;
         v.push(t);

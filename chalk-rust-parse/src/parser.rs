@@ -4306,7 +4306,7 @@ pub fn __action46<
     (_, t, _): (usize, Ty, usize),
 ) -> Vec<Ty>
 {
-    vec![]
+    vec![t]
 }
 
 #[allow(unused_variables)]
@@ -4357,7 +4357,7 @@ pub fn __action50<
     (_, t, _): (usize, WhereClause, usize),
 ) -> Vec<WhereClause>
 {
-    vec![]
+    vec![t]
 }
 
 #[allow(unused_variables)]
@@ -4408,7 +4408,7 @@ pub fn __action54<
     (_, t, _): (usize, Identifier, usize),
 ) -> Vec<Identifier>
 {
-    vec![]
+    vec![t]
 }
 
 #[allow(unused_variables)]

@@ -9,6 +9,7 @@ type TypeKinds = HashMap<ir::Identifier, ir::TypeKind>;
 
 type ParameterMap = HashMap<ir::Identifier, usize>;
 
+#[derive(Debug)]
 struct Env<'k> {
     type_kinds: &'k TypeKinds,
     parameter_map: &'k ParameterMap,
