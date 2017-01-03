@@ -6,6 +6,18 @@ error_chain! {
             description("invalid type name")
                 display("invalid type name `{}`", identifier.str)
         }
+
+        CannotApplyTypeParameter(identifier: ast::Identifier) {
+            description("cannot apply type parameter")
+                display("cannot apply type parameter `{}`", identifier.str)
+        }
+
+        IncorrectNumberOfTypeParameters(identifier: ast::Identifier,
+                                        expected: usize,
+                                        actual: usize) {
+            description("incorrect number of type parameters")
+            display("`{}` takes {} type parameters, not {}", identifier.str, expected, actual)
+        }
     }
 }
 

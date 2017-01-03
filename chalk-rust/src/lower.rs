@@ -207,34 +207,42 @@ impl LowerTy for Ty {
             Ty::Id { name } => {
                 match env.lookup(name)? {
                     NameLookup::Type(k) => {
-                        unimplemented!()
+                        if k.parameters.len() > 0 {
+                            bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
+                                                                             k.parameters.len(),
+                                                                             0))
+                        }
+
+                        Ok(ir::Ty::Apply {
+                            name: k.name,
+                            args: vec![],
+                        })
                     }
-                    NameLookup::Parameter(d) => {
-                        Ok(ir::Ty::Var { depth: d })
-                    }
+                    NameLookup::Parameter(d) => Ok(ir::Ty::Var { depth: d }),
                 }
             }
 
             Ty::Apply { name, ref args } => {
                 let k = match env.lookup(name)? {
                     NameLookup::Type(k) => k,
-                    NameLookup::Parameter(d) => {
-                        unimplemented!()
-                    }
+                    NameLookup::Parameter(_) => bail!(ErrorKind::CannotApplyTypeParameter(name)),
                 };
 
                 if k.parameters.len() != args.len() {
-                    unimplemented!()
+                    bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
+                                                                     k.parameters.len(),
+                                                                     args.len()))
                 }
 
                 let args = try!(args.iter().map(|t| t.lower(env)).collect());
 
-                Ok(ir::Ty::Apply { name: k.name, args: args })
+                Ok(ir::Ty::Apply {
+                    name: k.name,
+                    args: args,
+                })
             }
 
-            Ty::Projection { ref proj } => {
-                Ok(ir::Ty::Projection { proj: proj.lower(env)? })
-            }
+            Ty::Projection { ref proj } => Ok(ir::Ty::Projection { proj: proj.lower(env)? }),
         }
     }
 }
