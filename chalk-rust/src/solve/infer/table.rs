@@ -8,7 +8,7 @@ use super::var::*;
 
 #[derive(Clone)]
 pub struct InferenceTable {
-    unify: unify::UnificationTable<InferenceVariable>,
+    pub(super) unify: unify::UnificationTable<InferenceVariable>,
     values: Vec<Arc<Ty>>,
 }
 
@@ -81,7 +81,7 @@ impl InferenceTable {
             })
     }
 
-    fn probe_var(&mut self, var: InferenceVariable) -> Option<Arc<Ty>> {
+    pub(super) fn probe_var(&mut self, var: InferenceVariable) -> Option<Arc<Ty>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(val) => Some(self.values[val.as_usize()].clone()),

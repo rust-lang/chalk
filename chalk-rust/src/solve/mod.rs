@@ -1,10 +1,15 @@
 mod environment;
 mod infer;
-mod quantify;
 mod implemented;
 mod implemented_with;
+mod solver;
 
 pub struct Solution<G> {
-    successful: bool,
+    successful: Successful,
     refined_goal: G
+}
+
+pub enum Successful {
+    Yes,
+    Maybe,
 }

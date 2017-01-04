@@ -1,5 +1,5 @@
+use solve::infer::Quantified;
 use solve::environment::Environment;
-use solve::quantify::Quantified;
 use ir::*;
 
 pub struct Implemented {
