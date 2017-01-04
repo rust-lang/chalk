@@ -31,9 +31,11 @@ macro_rules! debug {
 #[macro_use]
 mod macros;
 
+mod cast;
 mod errors;
 mod fold;
 mod ir;
 mod lower;
 mod solve;
 mod zip;
+

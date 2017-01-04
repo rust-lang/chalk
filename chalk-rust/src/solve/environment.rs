@@ -20,7 +20,7 @@ impl<G> InEnvironment<G> {
         InEnvironment { environment: environment.clone(), goal }
     }
 
-    pub fn map_goal<OP, H>(self, op: OP) -> InEnvironment<H>
+    pub fn map<OP, H>(self, op: OP) -> InEnvironment<H>
         where OP: FnOnce(G) -> H
     {
         InEnvironment {

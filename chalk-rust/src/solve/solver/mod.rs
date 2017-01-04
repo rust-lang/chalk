@@ -1,3 +1,4 @@
+use cast::Cast;
 use errors::*;
 use ir::*;
 use solve::environment::InEnvironment;
@@ -21,11 +22,7 @@ impl Solver {
                     value: InEnvironment::new(&environment, trait_ref),
                     binders: binders,
                 };
-                Implemented::new(self, q).solve().map(|soln| {
-                    soln.map_goal(|refined_goal| {
-                        refined_goal.map(|in_env| in_env.map_goal(WhereClause::Implemented))
-                    })
-                })
+                Implemented::new(self, q).solve().cast()
             }
             WhereClause::NormalizeTo(_normalize_to) => unimplemented!(),
         }

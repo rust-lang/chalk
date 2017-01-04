@@ -11,7 +11,7 @@ pub struct Solution<G> {
 }
 
 impl<G> Solution<G> {
-    pub fn map_goal<OP, H>(self, op: OP) -> Solution<H>
+    pub fn map<OP, H>(self, op: OP) -> Solution<H>
         where OP: FnOnce(G) -> H
     {
         Solution {
