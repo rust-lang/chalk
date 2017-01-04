@@ -333,4 +333,3 @@ impl LowerTrait for TraitDefn {
         })
     }
 }
-

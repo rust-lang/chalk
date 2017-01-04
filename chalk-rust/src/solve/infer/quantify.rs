@@ -5,20 +5,6 @@ use std::collections::HashMap;
 
 use super::{InferenceTable, InferenceVariable};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Quantified<T> {
-    pub value: T,
-    pub binders: usize,
-}
-
-impl<T> Quantified<T> {
-    pub fn map<OP, U>(self, op: OP) -> Quantified<U>
-        where OP: FnOnce(T) -> U
-    {
-        Quantified { value: op(self.value), binders: self.binders }
-    }
-}
-
 impl InferenceTable {
     /// Given a value `value` with variables in it, replaces those
     /// variables with their instantiated values; any variables not
@@ -33,12 +19,12 @@ impl InferenceTable {
     /// would be quantified to
     ///
     ///    Quantified { value: `?0: Foo<?1>`, binders: 2 }
-    pub fn quantify<T>(&mut self, value: &T) -> Quantified<T::Result>
+    pub fn quantify<T>(&mut self, value: &T) -> ir::Quantified<T::Result>
         where T: Fold
     {
         let mut q = Quantifier { table: self, var_map: HashMap::new() };
         let r = value.fold_with(&mut q).unwrap();
-        Quantified {
+        ir::Quantified {
             value: r,
             binders: q.var_map.len(),
         }

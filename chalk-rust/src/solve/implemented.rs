@@ -2,7 +2,6 @@ use errors::*;
 use ir::*;
 use solve::environment::InEnvironment;
 use solve::implemented_with::ImplementedWith;
-use solve::infer::Quantified;
 use solve::solver::Solver;
 use solve::{Solution, Successful};
 use std::collections::HashSet;

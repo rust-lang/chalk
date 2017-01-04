@@ -2,7 +2,7 @@ use errors::*;
 use ir::*;
 use solve::{Solution, Successful};
 use solve::environment::{Environment, InEnvironment};
-use solve::infer::{InferenceTable, Quantified};
+use solve::infer::InferenceTable;
 use solve::solver::Solver;
 use std::sync::Arc;
 

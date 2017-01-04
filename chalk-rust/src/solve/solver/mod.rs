@@ -1,7 +1,6 @@
 use errors::*;
 use ir::*;
 use solve::environment::InEnvironment;
-use solve::infer::Quantified;
 use solve::implemented::Implemented;
 use std::sync::Arc;
 
