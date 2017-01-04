@@ -1,7 +1,7 @@
 use errors::*;
 use ir::*;
 use solve::Solution;
-use solve::environment::Environment;
+use solve::environment::{Environment, InEnvironment};
 use solve::infer::{InferenceTable, Quantified};
 use solve::solver::Solver;
 use std::sync::Arc;
@@ -16,10 +16,10 @@ pub struct ImplementedWith<'s> {
 
 impl<'s> ImplementedWith<'s> {
     pub fn new(solver: &'s mut Solver,
-               q: Quantified<(Arc<Environment>, TraitRef)>,
+               q: Quantified<InEnvironment<TraitRef>>,
                impl_id: ItemId)
                -> Self {
-        let (environment, goal) = q.value;
+        let InEnvironment { environment, goal } = q.value;
         let infer = InferenceTable::new_with_vars(q.binders, environment.universe);
         ImplementedWith {
             solver: solver,
@@ -30,7 +30,7 @@ impl<'s> ImplementedWith<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<Quantified<(Arc<Environment>, TraitRef)>>> {
+    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<TraitRef>>>> {
         let environment = self.environment.clone();
         let program = self.solver.program.clone();
 
@@ -60,9 +60,9 @@ impl<'s> ImplementedWith<'s> {
         let successful = {
             let infer = &mut self.infer;
             let q_where_clauses = where_clauses.iter().map(|wc| infer.quantify(&(environment.clone(), wc)));
-            self.solver.solve_all(q_where_clauses)?
+            unimplemented!() // self.solver.solve_all(q_where_clauses)?
         };
-        let refined_goal = self.infer.quantify(&(environment, &self.goal));
+        let refined_goal = self.infer.quantify(&InEnvironment::new(environment, &self.goal));
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

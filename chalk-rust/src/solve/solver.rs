@@ -1,7 +1,8 @@
 use errors::*;
 use ir::*;
-use solve::environment::Environment;
+use solve::environment::{Environment, InEnvironment};
 use solve::infer::Quantified;
+use solve::implemented::Implemented;
 use std::sync::Arc;
 
 use super::*;
@@ -11,22 +12,23 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn solve_wc(&mut self,
-                    wc: Quantified<(Arc<Environment>, WhereClause)>)
-                    -> Result<Successful> {
-        unimplemented!()
-    }
-
-    pub fn solve_all<'a, WC>(&mut self, wcs: WC) -> Result<Successful>
-        where WC: IntoIterator<Item = Quantified<(Arc<Environment>, WhereClause)>>
-    {
-        let mut successful = Successful::Yes;
-        for wc in wcs {
-            match self.solve_wc(wc)? {
-                Successful::Yes => {}
-                Successful::Maybe => successful = Successful::Maybe,
+    pub fn solve(&mut self,
+                 wc: Quantified<InEnvironment<WhereClause>>)
+                 -> Result<Solution<Quantified<InEnvironment<WhereClause>>>> {
+        let Quantified { value: InEnvironment { environment, goal: wc }, binders } = wc;
+        match wc {
+            WhereClause::Implemented(trait_ref) => {
+                let q = Quantified {
+                    value: InEnvironment::new(environment, trait_ref),
+                    binders: binders,
+                };
+                Implemented::new(self, q).solve().map(|soln| {
+                    soln.map_goal(|refined_goal| {
+                        refined_goal.map(|in_env| in_env.map_goal(WhereClause::Implemented))
+                    })
+                })
             }
+            WhereClause::NormalizeTo(normalize_to) => unimplemented!(),
         }
-        Ok(successful)
     }
 }

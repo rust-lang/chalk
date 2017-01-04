@@ -11,6 +11,14 @@ pub struct Quantified<T> {
     pub binders: usize,
 }
 
+impl<T> Quantified<T> {
+    pub fn map<OP, U>(self, op: OP) -> Quantified<U>
+        where OP: FnOnce(T) -> U
+    {
+        Quantified { value: op(self.value), binders: self.binders }
+    }
+}
+
 impl InferenceTable {
     /// Given a value `value` with variables in it, replaces those
     /// variables with their instantiated values; any variables not

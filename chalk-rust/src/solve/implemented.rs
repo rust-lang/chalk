@@ -1,22 +1,20 @@
 use errors::*;
 use ir::*;
-use solve::environment::Environment;
+use solve::environment::InEnvironment;
 use solve::implemented_with::ImplementedWith;
 use solve::infer::Quantified;
 use solve::solver::Solver;
 use solve::{Solution, Successful};
 use std::collections::HashSet;
-use std::sync::Arc;
 
 pub struct Implemented<'s> {
     solver: &'s mut Solver,
-    env_goal: Quantified<(Arc<Environment>, TraitRef)>,
+    env_goal: Quantified<InEnvironment<TraitRef>>,
 }
 
 impl<'s> Implemented<'s> {
-    pub fn new(&self,
-               solver: &'s mut Solver,
-               env_goal: Quantified<(Arc<Environment>, TraitRef)>)
+    pub fn new(solver: &'s mut Solver,
+               env_goal: Quantified<InEnvironment<TraitRef>>)
                -> Self {
         Implemented {
             solver: solver,
@@ -24,7 +22,7 @@ impl<'s> Implemented<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<Quantified<(Arc<Environment>, TraitRef)>>> {
+    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<TraitRef>>>> {
         let program = self.solver.program.clone();
 
         // For each impl, recursively apply it. Note that all we need
@@ -34,7 +32,7 @@ impl<'s> Implemented<'s> {
         for (&impl_id, impl_data) in &program.impl_data {
             // screen out the things that are for the totally wrong
             // trait, just to keep debug logging under control
-            let goal_trait_id = self.env_goal.value.1.trait_id;
+            let goal_trait_id = self.env_goal.value.goal.trait_id;
             if impl_data.trait_ref.trait_id != goal_trait_id {
                 continue;
             }
@@ -68,8 +66,8 @@ impl<'s> Implemented<'s> {
 
         if candidates.len() == 0 {
             bail!("`{:?}` is not implemented in environment `{:?}`",
-                  self.env_goal.value.1,
-                  self.env_goal.value.0);
+                  self.env_goal.value.goal,
+                  self.env_goal.value.environment);
         }
 
         if candidates.len() == 1 {
