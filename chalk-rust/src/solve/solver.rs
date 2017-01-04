@@ -19,7 +19,7 @@ impl Solver {
         match wc {
             WhereClause::Implemented(trait_ref) => {
                 let q = Quantified {
-                    value: InEnvironment::new(environment, trait_ref),
+                    value: InEnvironment::new(&environment, trait_ref),
                     binders: binders,
                 };
                 Implemented::new(self, q).solve().map(|soln| {

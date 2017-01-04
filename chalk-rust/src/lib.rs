@@ -36,3 +36,4 @@ mod fold;
 mod ir;
 mod lower;
 mod solve;
+mod zip;

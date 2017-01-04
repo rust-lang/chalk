@@ -16,8 +16,8 @@ pub struct InEnvironment<G> {
 }
 
 impl<G> InEnvironment<G> {
-    pub fn new(environment: Arc<Environment>, goal: G) -> Self {
-        InEnvironment { environment, goal }
+    pub fn new(environment: &Arc<Environment>, goal: G) -> Self {
+        InEnvironment { environment: environment.clone(), goal }
     }
 
     pub fn map_goal<OP, H>(self, op: OP) -> InEnvironment<H>

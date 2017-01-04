@@ -10,12 +10,6 @@ pub struct Solution<G> {
     refined_goal: G,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Successful {
-    Yes,
-    Maybe,
-}
-
 impl<G> Solution<G> {
     pub fn map_goal<OP, H>(self, op: OP) -> Solution<H>
         where OP: FnOnce(G) -> H
@@ -23,6 +17,30 @@ impl<G> Solution<G> {
         Solution {
             successful: self.successful,
             refined_goal: op(self.refined_goal),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Successful {
+    Yes,
+    Maybe,
+}
+
+impl Successful {
+    pub fn and(self, s: Successful) -> Successful {
+        use self::Successful::*;
+        match (self, s) {
+            (Yes, Yes) => Yes,
+            (Maybe, _) | (_, Maybe) => Maybe,
+        }
+    }
+
+    pub fn or(self, s: Successful) -> Successful {
+        use self::Successful::*;
+        match (self, s) {
+            (Maybe, Maybe) => Maybe,
+            (Yes, _) | (_, Yes) => Yes,
         }
     }
 }

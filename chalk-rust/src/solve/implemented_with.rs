@@ -1,6 +1,6 @@
 use errors::*;
 use ir::*;
-use solve::Solution;
+use solve::{Solution, Successful};
 use solve::environment::{Environment, InEnvironment};
 use solve::infer::{InferenceTable, Quantified};
 use solve::solver::Solver;
@@ -57,15 +57,21 @@ impl<'s> ImplementedWith<'s> {
         // Now try to prove the where-clauses one by one. If all of
         // them can be successfully proved, then we know that this
         // impl applies. If any of them error out, this impl does not.
-        let successful = {
-            let infer = &mut self.infer;
-            let q_where_clauses = where_clauses.iter().map(|wc| infer.quantify(&(environment.clone(), wc)));
-            unimplemented!() // self.solver.solve_all(q_where_clauses)?
-        };
-        let refined_goal = self.infer.quantify(&InEnvironment::new(environment, &self.goal));
+        let mut successful = Successful::Yes;
+        for wc in &where_clauses {
+            let wc_successful = self.solve_wc(wc)?;
+            successful = successful.and(wc_successful);
+        }
+        let refined_goal = self.infer.quantify(&InEnvironment::new(&environment, &self.goal));
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,
         })
+    }
+
+    fn solve_wc(&mut self, wc: &WhereClause) -> Result<Successful> {
+        let q_wc = self.infer.quantify(&InEnvironment::new(&self.environment, wc));
+        let solution = self.solver.solve(q_wc)?;
+        unimplemented!()
     }
 }

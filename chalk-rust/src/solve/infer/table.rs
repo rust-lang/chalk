@@ -2,6 +2,7 @@ use ena::unify;
 use errors::*;
 use ir::*;
 use std::sync::Arc;
+use zip::{Zip, Zipper};
 
 use super::universe::UniverseIndex;
 use super::var::*;
@@ -89,10 +90,10 @@ impl InferenceTable {
     }
 
     pub fn unify<T>(&mut self, a: &T, b: &T) -> Result<Vec<NormalizeTo>>
-        where T: Unifiable
+        where T: Zip
     {
         let mut unifier = Unifier::new(self);
-        match Unifiable::unify(&mut unifier, a, b) {
+        match Zip::zip_with(&mut unifier, a, b) {
             Ok(()) => unifier.commit(),
             Err(e) => {
                 unifier.rollback();
@@ -124,22 +125,6 @@ impl ItemId {
     }
 }
 
-pub trait Unifiable {
-    fn unify(unifier: &mut Unifier, a: &Self, b: &Self) -> Result<()>;
-}
-
-impl Unifiable for Ty {
-    fn unify(unifier: &mut Unifier, a: &Self, b: &Self) -> Result<()> {
-        unifier.unify_ty_ty(a, b)
-    }
-}
-
-impl Unifiable for TraitRef {
-    fn unify(unifier: &mut Unifier, a: &Self, b: &Self) -> Result<()> {
-        unifier.unify_trait_ref_trait_ref(a, b)
-    }
-}
-
 pub struct Unifier<'t> {
     table: &'t mut InferenceTable,
     snapshot: InferenceSnapshot,
@@ -163,15 +148,6 @@ impl<'t> Unifier<'t> {
 
     fn rollback(self) {
         self.table.rollback_to(self.snapshot);
-    }
-
-    fn unify_trait_ref_trait_ref(&mut self, a: &TraitRef, b: &TraitRef) -> Result<()> {
-        if a.trait_id != b.trait_id {
-            bail!("incompatible traits `{:?}` vs `{:?}`", a.trait_id, b.trait_id);
-        }
-
-        assert_eq!(a.args.len(), b.args.len());
-        self.unify_tys_tys(&a.args, &b.args)
     }
 
     fn unify_ty_ty<'a>(&mut self, a: &'a Ty, b: &'a Ty) -> Result<()> {
@@ -202,7 +178,7 @@ impl<'t> Unifier<'t> {
             }
 
             (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
-                self.unify_apply_apply(apply1, apply2)
+                Zip::zip_with(self, apply1, apply2)
             }
 
             (ty, &Ty::Projection(ref proj)) |
@@ -213,21 +189,6 @@ impl<'t> Unifier<'t> {
                 }))
             }
         }
-    }
-
-    fn unify_apply_apply(&mut self, a: &ApplicationTy, b: &ApplicationTy) -> Result<()> {
-        if a.id != b.id {
-            bail!("incompatible types `{:?}` vs `{:?}`", a.id, b.id);
-        }
-        self.unify_tys_tys(&a.args, &b.args)
-    }
-
-    fn unify_tys_tys<'a>(&mut self, a: &'a [Ty], b: &'a [Ty]) -> Result<()> {
-        assert_eq!(a.len(), b.len());
-        for (a_elem, b_elem) in a.iter().zip(b) {
-            self.unify_ty_ty(a_elem, b_elem)?;
-        }
-        Ok(())
     }
 
     fn unify_var_apply(&mut self, var: InferenceVariable, apply: &ApplicationTy) -> Result<()> {
@@ -316,6 +277,19 @@ impl<'t> Unifier<'t> {
             }
 
             Ty::Projection(ref proj) => panic!("unimplemented: projection {:?}", proj),
+        }
+        Ok(())
+    }
+}
+
+impl<'t> Zipper for Unifier<'t> {
+    fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()> {
+        self.unify_ty_ty(a, b)
+    }
+
+    fn zip_item_ids(&mut self, a: ItemId, b: ItemId) -> Result<()> {
+        if a != b {
+            bail!("incompatible `{:?}` vs `{:?}`", a, b);
         }
         Ok(())
     }
