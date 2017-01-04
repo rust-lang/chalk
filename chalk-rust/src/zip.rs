@@ -1,21 +1,15 @@
 use errors::*;
-use ir;
-use solve::environment;
-use solve::infer;
+use ir::*;
+use solve::environment::Environment;
 use std::sync::Arc;
 
 pub trait Zipper {
-    fn zip_tys(&mut self, a: &ir::Ty, b: &ir::Ty) -> Result<()>;
-    fn zip_item_ids(&mut self, a: ir::ItemId, b: ir::ItemId) -> Result<()>;
+    fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()>;
 }
 
 impl<'f, Z: Zipper> Zipper for &'f mut Z {
-    fn zip_tys(&mut self, a: &ir::Ty, b: &ir::Ty) -> Result<()> {
+    fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()> {
         (**self).zip_tys(a, b)
-    }
-
-    fn zip_item_ids(&mut self, a: ir::ItemId, b: ir::ItemId) -> Result<()> {
-        (**self).zip_item_ids(a, b)
     }
 }
 
@@ -71,19 +65,31 @@ impl<T: Zip, U: Zip> Zip for (T, U) {
     }
 }
 
-impl Zip for ir::Ty {
+impl Zip for Ty {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         zipper.zip_tys(a, b)
     }
 }
 
-impl Zip for ir::ItemId {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        zipper.zip_item_ids(*a, *b)
+impl Zip for ItemId {
+    fn zip_with<Z: Zipper>(_zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        if a != b {
+            bail!("cannot zip `{:?}` and `{:?}`", a, b)
+        }
+        Ok(())
     }
 }
 
-impl Zip for ir::TraitRef {
+impl Zip for Identifier {
+    fn zip_with<Z: Zipper>(_zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        if a != b {
+            bail!("cannot zip `{:?}` and `{:?}`", a, b)
+        }
+        Ok(())
+    }
+}
+
+impl Zip for TraitRef {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         Zip::zip_with(zipper, &a.trait_id, &b.trait_id)?;
         Zip::zip_with(zipper, &a.args, &b.args)?;
@@ -91,10 +97,52 @@ impl Zip for ir::TraitRef {
     }
 }
 
-impl Zip for ir::ApplicationTy {
+impl Zip for ApplicationTy {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         Zip::zip_with(zipper, &a.id, &b.id)?;
         Zip::zip_with(zipper, &a.args, &b.args)?;
         Ok(())
+    }
+}
+
+impl Zip for ProjectionTy {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        Zip::zip_with(zipper, &a.trait_ref, &b.trait_ref)?;
+        Zip::zip_with(zipper, &a.name, &b.name)?;
+        Ok(())
+    }
+}
+
+impl Zip for NormalizeTo {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        Zip::zip_with(zipper, &a.projection, &b.projection)?;
+        Zip::zip_with(zipper, &a.ty, &b.ty)?;
+        Ok(())
+    }
+}
+
+impl Zip for Environment {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        assert_eq!(a.universe, b.universe); // it's wrong to zip 2 env's with distinct universes!
+        assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
+        Zip::zip_with(zipper, &a.clauses, &b.clauses)?;
+        Ok(())
+    }
+}
+
+impl Zip for WhereClause {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        match (a, b) {
+            (&WhereClause::Implemented(ref a), &WhereClause::Implemented(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
+            (&WhereClause::NormalizeTo(ref a), &WhereClause::NormalizeTo(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
+            (&WhereClause::Implemented(_), &WhereClause::NormalizeTo(_)) |
+            (&WhereClause::NormalizeTo(_), &WhereClause::Implemented(_)) => {
+                panic!("cannot zip where-clauses `{:?}` and `{:?}`", a, b)
+            }
+        }
     }
 }

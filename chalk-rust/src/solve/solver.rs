@@ -1,6 +1,6 @@
 use errors::*;
 use ir::*;
-use solve::environment::{Environment, InEnvironment};
+use solve::environment::InEnvironment;
 use solve::infer::Quantified;
 use solve::implemented::Implemented;
 use std::sync::Arc;
@@ -28,7 +28,7 @@ impl Solver {
                     })
                 })
             }
-            WhereClause::NormalizeTo(normalize_to) => unimplemented!(),
+            WhereClause::NormalizeTo(_normalize_to) => unimplemented!(),
         }
     }
 }

@@ -286,11 +286,4 @@ impl<'t> Zipper for Unifier<'t> {
     fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()> {
         self.unify_ty_ty(a, b)
     }
-
-    fn zip_item_ids(&mut self, a: ItemId, b: ItemId) -> Result<()> {
-        if a != b {
-            bail!("incompatible `{:?}` vs `{:?}`", a, b);
-        }
-        Ok(())
-    }
 }
