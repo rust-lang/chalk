@@ -19,7 +19,7 @@ pub struct Quantified<T> {
 /// would be quantified to
 ///
 ///    Quantified { value: `?0: Foo<?1>`, binders: 2 }
-pub fn quantify<T>(value: &T) -> Quantified<T>
+pub fn quantify<T>(value: &T) -> Quantified<T::Result>
     where T: Fold
 {
     let mut q = Quantifier { var_map: HashMap::new() };

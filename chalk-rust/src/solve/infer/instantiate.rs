@@ -8,7 +8,7 @@ use super::*;
 impl InferenceTable {
     // Create a instance of `arg` where each variable is replaced with
     // a fresh inference variable.
-    pub fn instantiate<T: Fold>(&mut self, universe: UniverseIndex, arg: &T) -> T {
+    pub fn instantiate<T: Fold>(&mut self, universe: UniverseIndex, arg: &T) -> T::Result {
         let mut instantiator = Instantiator {
             table: self,
             universe: universe,

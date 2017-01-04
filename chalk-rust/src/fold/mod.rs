@@ -17,18 +17,35 @@ impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
     }
 }
 
-pub trait Fold: Sized {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self>;
+pub trait Fold {
+    type Result;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result>;
+}
+
+impl<'a, T: Fold> Fold for &'a T {
+    type Result = T::Result;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
+        (**self).fold_with(folder)
+    }
 }
 
 impl<T: Fold> Fold for Vec<T> {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
+    type Result = Vec<T::Result>;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         self.iter().map(|e| e.fold_with(folder)).collect()
     }
 }
 
+impl<T: Fold, U: Fold> Fold for (T, U) {
+    type Result = (T::Result, U::Result);
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
+        Ok((self.0.fold_with(folder)?, self.1.fold_with(folder)?))
+    }
+}
+
 impl<T: Fold> Fold for Option<T> {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
+    type Result = Option<T::Result>;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         match *self {
             None => Ok(None),
             Some(ref e) => Ok(Some(e.fold_with(folder)?)),
@@ -37,7 +54,8 @@ impl<T: Fold> Fold for Option<T> {
 }
 
 impl Fold for ir::Ty {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         match *self {
             ir::Ty::Var(depth) => folder.fold_var(depth),
             ir::Ty::Apply(ref apply) => Ok(ir::Ty::Apply(apply.fold_with(folder)?)),
@@ -49,7 +67,8 @@ impl Fold for ir::Ty {
 }
 
 impl Fold for ir::ApplicationTy {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         Ok(ir::ApplicationTy {
             id: self.id.fold_with(folder)?,
             args: self.args.fold_with(folder)?,
@@ -58,7 +77,8 @@ impl Fold for ir::ApplicationTy {
 }
 
 impl Fold for ir::ProjectionTy {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         Ok(ir::ProjectionTy {
             trait_ref: self.trait_ref.fold_with(folder)?,
             name: self.name.fold_with(folder)?,
@@ -67,7 +87,8 @@ impl Fold for ir::ProjectionTy {
 }
 
 impl Fold for ir::TraitRef {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         Ok(ir::TraitRef {
             trait_id: self.trait_id.fold_with(folder)?,
             args: self.args.fold_with(folder)?,
@@ -76,19 +97,22 @@ impl Fold for ir::TraitRef {
 }
 
 impl Fold for ir::Identifier {
-    fn fold_with(&self, _folder: &mut Folder) -> Result<Self> {
+    type Result = Self;
+    fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
         Ok(*self)
     }
 }
 
 impl Fold for ir::ItemId {
-    fn fold_with(&self, _folder: &mut Folder) -> Result<Self> {
+    type Result = Self;
+    fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
         Ok(*self)
     }
 }
 
 impl Fold for ir::WhereClause {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         match *self {
             ir::WhereClause::Implemented(ref trait_ref) => {
                 Ok(ir::WhereClause::Implemented(trait_ref.fold_with(folder)?))
@@ -101,7 +125,8 @@ impl Fold for ir::WhereClause {
 }
 
 impl Fold for ir::NormalizeTo {
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self> {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         Ok(ir::NormalizeTo {
             projection: self.projection.fold_with(folder)?,
             ty: self.ty.fold_with(folder)?,
