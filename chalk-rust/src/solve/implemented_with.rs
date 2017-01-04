@@ -15,8 +15,7 @@ pub struct ImplementedWith<'s> {
 }
 
 impl<'s> ImplementedWith<'s> {
-    pub fn new(&self,
-               solver: &'s mut Solver,
+    pub fn new(solver: &'s mut Solver,
                q: Quantified<(Arc<Environment>, TraitRef)>,
                impl_id: ItemId)
                -> Self {
@@ -31,7 +30,7 @@ impl<'s> ImplementedWith<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<Quantified<TraitRef>>> {
+    pub fn solve(&mut self) -> Result<Solution<Quantified<(Arc<Environment>, TraitRef)>>> {
         let environment = self.environment.clone();
         let program = self.solver.program.clone();
 
@@ -63,7 +62,7 @@ impl<'s> ImplementedWith<'s> {
             let q_where_clauses = where_clauses.iter().map(|wc| infer.quantify(&(environment.clone(), wc)));
             self.solver.solve_all(q_where_clauses)?
         };
-        let refined_goal = self.infer.quantify(&self.goal);
+        let refined_goal = self.infer.quantify(&(environment, &self.goal));
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

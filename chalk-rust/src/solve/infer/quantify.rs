@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use super::{InferenceTable, InferenceVariable};
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Quantified<T> {
     pub value: T,
     pub binders: usize,

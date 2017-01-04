@@ -25,7 +25,7 @@ pub struct ItemId {
     pub index: usize
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {
     pub sort: TypeSort,
     pub name: Identifier,
@@ -38,51 +38,51 @@ pub enum TypeSort {
     Trait,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplData {
     pub parameters: Vec<Identifier>,
     pub trait_ref: TraitRef,
     pub assoc_ty_values: Vec<AssocTyValue>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssocTyValue {
     pub name: Identifier,
     pub value: Ty,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Ty {
     Var(usize),
     Apply(ApplicationTy),
     Projection(ProjectionTy),
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ApplicationTy {
     pub id: ItemId,
     pub args: Vec<Ty>,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TraitRef {
     pub trait_id: ItemId,
     pub args: Vec<Ty>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WhereClause {
     Implemented(TraitRef),
     NormalizeTo(NormalizeTo),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NormalizeTo {
     pub projection: ProjectionTy,
     pub ty: Ty,
