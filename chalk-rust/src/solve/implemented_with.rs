@@ -1,14 +1,15 @@
 use errors::*;
+use ir::*;
 use solve::Solution;
 use solve::environment::Environment;
 use solve::infer::{InferenceTable, Quantified};
 use solve::solver::Solver;
-use ir::*;
+use std::sync::Arc;
 
 pub struct ImplementedWith<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
-    environment: Environment,
+    environment: Arc<Environment>,
     goal: TraitRef,
     impl_id: ItemId,
 }
@@ -16,7 +17,7 @@ pub struct ImplementedWith<'s> {
 impl<'s> ImplementedWith<'s> {
     pub fn new(&self,
                solver: &'s mut Solver,
-               q: Quantified<(Environment, TraitRef)>,
+               q: Quantified<(Arc<Environment>, TraitRef)>,
                impl_id: ItemId)
                -> Self {
         let (environment, goal) = q.value;
@@ -31,8 +32,8 @@ impl<'s> ImplementedWith<'s> {
     }
 
     pub fn solve(&mut self) -> Result<Solution<Quantified<TraitRef>>> {
-        let universe = self.environment.universe;
-        let program = self.environment.program.clone();
+        let environment = self.environment.clone();
+        let program = self.solver.program.clone();
 
         // Extract the trait-ref that this impl implements and its where-clauses,
         // instantiating all the impl parameters with fresh variables.
@@ -43,7 +44,7 @@ impl<'s> ImplementedWith<'s> {
         //
         // this would yield `Option<?1>: Clone` and `?1: Clone`.
         let (impl_trait_ref, mut where_clauses) = self.infer
-            .instantiate(universe,
+            .instantiate(environment.universe,
                          &(&program.impl_data[&self.impl_id].trait_ref,
                            &program.where_clauses[&self.impl_id]));
 
@@ -59,7 +60,7 @@ impl<'s> ImplementedWith<'s> {
         // impl applies. If any of them error out, this impl does not.
         let successful = {
             let infer = &mut self.infer;
-            let q_where_clauses = where_clauses.iter().map(|wc| infer.quantify(wc));
+            let q_where_clauses = where_clauses.iter().map(|wc| infer.quantify(&(environment.clone(), wc)));
             self.solver.solve_all(q_where_clauses)?
         };
         let refined_goal = self.infer.quantify(&self.goal);

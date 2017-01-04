@@ -1,5 +1,8 @@
 use errors::*;
 use ir;
+use solve::environment;
+use solve::infer;
+use std::sync::Arc;
 
 pub trait Folder {
     fn fold_var(&mut self, depth: usize) -> Result<ir::Ty>;
@@ -23,11 +26,11 @@ pub trait Fold {
 }
 
 macro_rules! struct_fold {
-    (ir::$s:ident { $($name:ident),* }) => {
-        impl Fold for ir::$s {
+    ($m:ident :: $s:ident { $($name:ident),* }) => {
+        impl Fold for $m::$s {
             type Result = Self;
             fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
-                Ok(ir::$s {
+                Ok($m::$s {
                     $($name: self.$name.fold_with(folder)?),*
                 })
             }
@@ -46,6 +49,13 @@ impl<T: Fold> Fold for Vec<T> {
     type Result = Vec<T::Result>;
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         self.iter().map(|e| e.fold_with(folder)).collect()
+    }
+}
+
+impl<T: Fold> Fold for Arc<T> {
+    type Result = Arc<T::Result>;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
+        Ok(Arc::new((**self).fold_with(folder)?))
     }
 }
 
@@ -86,6 +96,13 @@ impl Fold for ir::Identifier {
     }
 }
 
+impl Fold for infer::UniverseIndex {
+    type Result = Self;
+    fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
+        Ok(*self)
+    }
+}
+
 impl Fold for ir::ItemId {
     type Result = Self;
     fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
@@ -113,3 +130,4 @@ struct_fold!(ir::TraitRef { trait_id, args });
 struct_fold!(ir::NormalizeTo { projection, ty });
 struct_fold!(ir::ImplData { parameters, trait_ref, assoc_ty_values });
 struct_fold!(ir::AssocTyValue { name, value });
+struct_fold!(environment::Environment { universe, clauses });

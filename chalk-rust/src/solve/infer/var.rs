@@ -6,7 +6,7 @@ use std::u32;
 
 use super::universe::UniverseIndex;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct InferenceVariable {
     index: u32,
 }

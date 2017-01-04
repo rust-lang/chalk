@@ -38,7 +38,7 @@ impl InferenceTable {
 
 struct Quantifier<'q> {
     table: &'q mut InferenceTable,
-    var_map: HashMap<usize, InferenceVariable>,
+    var_map: HashMap<InferenceVariable, InferenceVariable>,
 }
 
 impl<'q> Folder for Quantifier<'q> {
@@ -48,7 +48,7 @@ impl<'q> Folder for Quantifier<'q> {
             Some(ty) => {
                 // If this variable is bound, canonicalize it to its
                 // bound value.
-                ty.fold_with(self)
+                (*ty).fold_with(self)
             }
             None => {
                 // If this variable is not yet bound, find its
@@ -58,7 +58,7 @@ impl<'q> Folder for Quantifier<'q> {
                 let root_var = self.table.unify.find(var);
                 let next_index = self.var_map.len();
                 Ok(self.var_map
-                   .entry(depth)
+                   .entry(root_var)
                    .or_insert(InferenceVariable::from_depth(next_index))
                    .to_ty())
             }

@@ -1,8 +1,8 @@
-mod environment;
-mod infer;
-mod implemented;
-mod implemented_with;
-mod solver;
+pub mod environment;
+pub mod infer;
+pub mod implemented;
+pub mod implemented_with;
+pub mod solver;
 
 pub struct Solution<G> {
     successful: Successful,
