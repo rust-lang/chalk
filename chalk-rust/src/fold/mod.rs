@@ -22,6 +22,19 @@ pub trait Fold {
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result>;
 }
 
+macro_rules! struct_fold {
+    (ir::$s:ident { $($name:ident),* }) => {
+        impl Fold for ir::$s {
+            type Result = Self;
+            fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
+                Ok(ir::$s {
+                    $($name: self.$name.fold_with(folder)?),*
+                })
+            }
+        }
+    }
+}
+
 impl<'a, T: Fold> Fold for &'a T {
     type Result = T::Result;
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
@@ -66,36 +79,6 @@ impl Fold for ir::Ty {
     }
 }
 
-impl Fold for ir::ApplicationTy {
-    type Result = Self;
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
-        Ok(ir::ApplicationTy {
-            id: self.id.fold_with(folder)?,
-            args: self.args.fold_with(folder)?,
-        })
-    }
-}
-
-impl Fold for ir::ProjectionTy {
-    type Result = Self;
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
-        Ok(ir::ProjectionTy {
-            trait_ref: self.trait_ref.fold_with(folder)?,
-            name: self.name.fold_with(folder)?,
-        })
-    }
-}
-
-impl Fold for ir::TraitRef {
-    type Result = Self;
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
-        Ok(ir::TraitRef {
-            trait_id: self.trait_id.fold_with(folder)?,
-            args: self.args.fold_with(folder)?,
-        })
-    }
-}
-
 impl Fold for ir::Identifier {
     type Result = Self;
     fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
@@ -124,12 +107,9 @@ impl Fold for ir::WhereClause {
     }
 }
 
-impl Fold for ir::NormalizeTo {
-    type Result = Self;
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
-        Ok(ir::NormalizeTo {
-            projection: self.projection.fold_with(folder)?,
-            ty: self.ty.fold_with(folder)?,
-        })
-    }
-}
+struct_fold!(ir::ApplicationTy { id, args });
+struct_fold!(ir::ProjectionTy { trait_ref, name });
+struct_fold!(ir::TraitRef { trait_id, args });
+struct_fold!(ir::NormalizeTo { projection, ty });
+struct_fold!(ir::ImplData { parameters, trait_ref, assoc_ty_values });
+struct_fold!(ir::AssocTyValue { name, value });

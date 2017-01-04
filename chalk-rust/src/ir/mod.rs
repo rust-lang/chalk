@@ -1,6 +1,5 @@
 use lalrpop_intern::InternedString;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 pub type Identifier = InternedString;
 

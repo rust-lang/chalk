@@ -1,7 +1,6 @@
 use ena::unify;
 use errors::*;
 use ir::*;
-use std::borrow::Cow;
 use std::sync::Arc;
 
 use super::universe::UniverseIndex;

@@ -1,6 +1,8 @@
 #![recursion_limit = "1024"]
 #![feature(static_in_const)]
 
+#![allow(dead_code)] // FIXME- while iterating
+
 extern crate chalk_rust_parse;
 #[macro_use]
 extern crate error_chain;
@@ -32,5 +34,3 @@ mod fold;
 mod ir;
 mod lower;
 mod solve;
-
-
