@@ -5,6 +5,9 @@ pub type Identifier = InternedString;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
+    /// From type-name to item-id. Used during lowering only.
+    pub type_ids: HashMap<Identifier, ItemId>,
+
     /// For each struct/trait:
     pub type_kinds: HashMap<ItemId, TypeKind>,
 

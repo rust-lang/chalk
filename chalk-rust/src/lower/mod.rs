@@ -85,7 +85,7 @@ impl LowerProgram for Program {
             }
         }
 
-        Ok(ir::Program { type_kinds, trait_data, impl_data })
+        Ok(ir::Program { type_ids, type_kinds, trait_data, impl_data })
     }
 }
 
@@ -135,6 +135,16 @@ impl LowerParameterMap for Item {
     }
 }
 
+impl LowerParameterMap for Goals {
+    fn synthetic_parameters(&self) -> Option<ir::Identifier> {
+        None
+    }
+
+    fn declared_parameters(&self) -> &[Identifier] {
+        &self.parameters
+    }
+}
+
 trait LowerWhereClauses {
     fn where_clauses(&self) -> &[WhereClause];
 
@@ -179,6 +189,12 @@ impl LowerWhereClauses for TraitDefn {
 }
 
 impl LowerWhereClauses for Impl {
+    fn where_clauses(&self) -> &[WhereClause] {
+        &self.where_clauses
+    }
+}
+
+impl LowerWhereClauses for Goals {
     fn where_clauses(&self) -> &[WhereClause] {
         &self.where_clauses
     }
@@ -331,5 +347,22 @@ impl LowerTrait for TraitDefn {
             where_clauses: self.lower_where_clauses(&env)?,
             assoc_ty_names: self.assoc_ty_names.iter().map(|a| a.str).collect(),
         })
+    }
+}
+
+pub trait LowerGoals {
+    fn lower(&self, program: &ir::Program) -> Result<ir::Quantified<Vec<ir::WhereClause>>>;
+}
+
+impl LowerGoals for Goals {
+    fn lower(&self, program: &ir::Program) -> Result<ir::Quantified<Vec<ir::WhereClause>>> {
+        let env = Env {
+            type_ids: &program.type_ids,
+            type_kinds: &program.type_kinds,
+            parameter_map: &self.parameter_map(),
+        };
+
+        let where_clauses = self.lower_where_clauses(&env)?;
+        Ok(ir::Quantified { value: where_clauses, binders: env.parameter_map.len() })
     }
 }
