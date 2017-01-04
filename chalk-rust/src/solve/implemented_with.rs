@@ -100,7 +100,26 @@ impl<'s> ImplementedWith<'s> {
         let quantified_goal = self.infer.quantify(&InEnvironment::new(&self.environment, wc));
         let solution = self.solver.solve(quantified_goal.clone())?;
 
-        // Solving the where-clause may have yielded
+        // Regardless of whether the result is ambiguous or not,
+        // solving the where-clause may have yielded a refined
+        // goal. For example, if the original where-clause was
+        // something like `Foo<?4>: Borrow<?3>`, we would have
+        // "quantified" that to yield `exists ?0, ?1. Foo<?0>: Borrow<?1>`.
+        // We may now have gotten back a refined goal like `exists ?0. Foo<?0>:
+        // Borrow<Foo<?0>>`. In that case, we can unify `?3` with `Foo<?4>`.
+        //
+        // To make that unification happen, we first instantiate all
+        // the variables on the goal we got back with new inference
+        // variables. So we would thus convert `exists ?0. Foo<?0>:
+        // Borrow<Foo<?0>>` into `Foo<?5>: Borrow<Foo<?5>>`.  We would
+        // then unify this with our original goal (`Foo<?4>:
+        // Borrow<?3>`). This will result in the equations `?4 = ?5`
+        // and `?3 = Foo<?5>`.
+        //
+        // As a potential efficiency improvement, one could imagine a
+        // more algorithm written just for this case instead of
+        // instantiating with variables and applying the standard
+        // unification algorithm. But this is good enough for now.
         if solution.refined_goal != quantified_goal {
             let refined_goal = self.infer
                 .instantiate(self.environment.universe, &solution.refined_goal.value);
@@ -108,6 +127,7 @@ impl<'s> ImplementedWith<'s> {
             self.infer.unify(wc, &refined_goal.goal)?;
             *inference_progress = true;
         }
+
         Ok(solution.successful)
     }
 }
