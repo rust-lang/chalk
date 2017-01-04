@@ -42,10 +42,11 @@ impl<'s> ImplementedWith<'s> {
         //     impl<T: Clone> Clone for Option<T>
         //
         // this would yield `Option<?1>: Clone` and `?1: Clone`.
-        let (impl_trait_ref, mut where_clauses) = self.infer
-            .instantiate(environment.universe,
-                         &(&program.impl_data[&self.impl_id].trait_ref,
-                           &program.where_clauses[&self.impl_id]));
+        let (impl_trait_ref, mut where_clauses) = {
+            let impl_data = &program.impl_data[&self.impl_id];
+            self.infer.instantiate(environment.universe,
+                                   &(&impl_data.trait_ref, &impl_data.where_clauses))
+        };
 
         // Unify the trait-ref we are looking for (`self.goal`) with
         // the trait-ref that the impl supplies (if we can). This will

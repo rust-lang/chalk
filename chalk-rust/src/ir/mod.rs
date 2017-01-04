@@ -8,14 +8,11 @@ pub struct Program {
     /// For each struct/trait:
     pub type_kinds: HashMap<ItemId, TypeKind>,
 
-    /// For each item:
-    pub where_clauses: HashMap<ItemId, Vec<WhereClause>>,
-
-    /// For each trait:
-    pub assoc_ty_names: HashMap<ItemId, Vec<Identifier>>,
-
     /// For each impl:
     pub impl_data: HashMap<ItemId, ImplData>,
+
+    /// For each trait:
+    pub trait_data: HashMap<ItemId, TraitData>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -40,7 +37,15 @@ pub enum TypeSort {
 pub struct ImplData {
     pub parameters: usize,
     pub trait_ref: TraitRef,
+    pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TraitData {
+    pub parameters: usize, // including the implicit `Self`
+    pub where_clauses: Vec<WhereClause>,
+    pub assoc_ty_names: Vec<Identifier>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

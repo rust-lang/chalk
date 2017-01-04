@@ -61,8 +61,7 @@ impl LowerProgram for Program {
             type_kinds.insert(item_id, k);
         }
 
-        let mut where_clauses = HashMap::new();
-        let mut assoc_ty_names = HashMap::new();
+        let mut trait_data = HashMap::new();
         let mut impl_data = HashMap::new();
         for (index, item) in self.items.iter().enumerate() {
             let item_id = ir::ItemId { index: index };
@@ -73,27 +72,20 @@ impl LowerProgram for Program {
                 parameter_map: &parameter_map,
             };
             match *item {
-                Item::StructDefn(ref d) => {
-                    where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
+                Item::StructDefn(ref _d) => {
+                    // where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
                 Item::TraitDefn(ref d) => {
-                    let names = d.assoc_ty_names.iter().map(|a| a.str).collect();
-                    assoc_ty_names.insert(item_id, names);
-                    where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
+                    // where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
+                    trait_data.insert(item_id, d.lower_trait(&env)?);
                 }
                 Item::Impl(ref d) => {
                     impl_data.insert(item_id, d.lower_impl(&env)?);
-                    where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
             }
         }
 
-        Ok(ir::Program {
-            type_kinds: type_kinds,
-            where_clauses: where_clauses,
-            assoc_ty_names: assoc_ty_names,
-            impl_data: impl_data,
-        })
+        Ok(ir::Program { type_kinds, trait_data, impl_data })
     }
 }
 
@@ -310,6 +302,7 @@ impl LowerImpl for Impl {
             trait_ref: self.trait_ref.lower(env)?,
             parameters: self.parameters.len(),
             assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(env)).collect()),
+            where_clauses: self.lower_where_clauses(&env)?,
         })
     }
 }
@@ -326,3 +319,18 @@ impl LowerAssocTyValue for AssocTyValue {
         })
     }
 }
+
+trait LowerTrait {
+    fn lower_trait(&self, env: &Env) -> Result<ir::TraitData>;
+}
+
+impl LowerTrait for TraitDefn {
+    fn lower_trait(&self, env: &Env) -> Result<ir::TraitData> {
+        Ok(ir::TraitData {
+            parameters: self.parameters.len() + 1,
+            where_clauses: self.lower_where_clauses(&env)?,
+            assoc_ty_names: self.assoc_ty_names.iter().map(|a| a.str).collect(),
+        })
+    }
+}
+

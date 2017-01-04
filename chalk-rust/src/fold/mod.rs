@@ -145,7 +145,7 @@ struct_fold!(ir::ApplicationTy { id, args });
 struct_fold!(ir::ProjectionTy { trait_ref, name });
 struct_fold!(ir::TraitRef { trait_id, args });
 struct_fold!(ir::NormalizeTo { projection, ty });
-struct_fold!(ir::ImplData { parameters, trait_ref, assoc_ty_values });
+struct_fold!(ir::ImplData { parameters, trait_ref, assoc_ty_values, where_clauses });
 struct_fold!(ir::AssocTyValue { name, value });
 struct_fold!(environment::Environment { universe, clauses });
 
