@@ -1,3 +1,4 @@
+mod instantiate;
 mod table;
 mod universe;
 mod var;

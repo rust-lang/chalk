@@ -64,7 +64,7 @@ impl LowerProgram for Program {
 
         let mut where_clauses = HashMap::new();
         let mut assoc_ty_names = HashMap::new();
-        let mut impls = Vec::new();
+        let mut impl_data = HashMap::new();
         let mut goals = Vec::new();
         for (index, item) in self.items.iter().enumerate() {
             let item_id = ir::ItemId { index: index };
@@ -84,7 +84,7 @@ impl LowerProgram for Program {
                     where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
                 Item::Impl(ref d) => {
-                    impls.push(d.lower_impl(item_id, &env)?);
+                    impl_data.insert(item_id, d.lower_impl(&env)?);
                     where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
                 Item::Goal(ref d) => {
@@ -98,7 +98,7 @@ impl LowerProgram for Program {
             where_clauses: where_clauses,
             goals: goals,
             assoc_ty_names: assoc_ty_names,
-            impls: impls,
+            impl_data: impl_data,
         })
     }
 }
@@ -301,13 +301,12 @@ impl LowerTy for Ty {
 }
 
 trait LowerImpl {
-    fn lower_impl(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::Impl>;
+    fn lower_impl(&self, env: &Env) -> Result<ir::ImplData>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::Impl> {
-        Ok(ir::Impl {
-            id: item_id,
+    fn lower_impl(&self, env: &Env) -> Result<ir::ImplData> {
+        Ok(ir::ImplData {
             trait_ref: self.trait_ref.lower(env)?,
             parameters: self.parameters.iter().map(|p| p.str).collect(),
             assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(env)).collect()),

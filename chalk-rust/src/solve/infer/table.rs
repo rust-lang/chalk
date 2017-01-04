@@ -26,6 +26,14 @@ impl InferenceTable {
         }
     }
 
+    pub fn new_with_vars(vars: usize, universe: UniverseIndex) -> Self {
+        let mut table = InferenceTable::new();
+        for _ in 0..vars {
+            table.new_variable(universe);
+        }
+        table
+    }
+
     pub fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
         self.unify.new_key(InferenceValue::Unbound(ui))
     }

@@ -1,5 +1,6 @@
 use lalrpop_intern::InternedString;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub type Identifier = InternedString;
 
@@ -15,7 +16,7 @@ pub struct Program {
     pub assoc_ty_names: HashMap<ItemId, Vec<Identifier>>,
 
     /// For each impl:
-    pub impls: Vec<Impl>,
+    pub impl_data: HashMap<ItemId, ImplData>,
 
     pub goals: Vec<WhereClause>,
 }
@@ -39,8 +40,7 @@ pub enum TypeSort {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Impl {
-    pub id: ItemId,
+pub struct ImplData {
     pub parameters: Vec<Identifier>,
     pub trait_ref: TraitRef,
     pub assoc_ty_values: Vec<AssocTyValue>,
@@ -81,11 +81,6 @@ pub struct TraitRef {
 pub enum WhereClause {
     Implemented(TraitRef),
     NormalizeTo(NormalizeTo),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Environment {
-    pub clauses: Vec<WhereClause>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
