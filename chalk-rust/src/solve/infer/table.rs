@@ -87,6 +87,19 @@ impl InferenceTable {
             InferenceValue::Bound(val) => Some(self.values[val.as_usize()].clone()),
         }
     }
+
+    pub fn unify<T>(&mut self, a: &T, b: &T) -> Result<Vec<NormalizeTo>>
+        where T: Unifiable
+    {
+        let mut unifier = Unifier::new(self);
+        match Unifiable::unify(&mut unifier, a, b) {
+            Ok(()) => unifier.commit(),
+            Err(e) => {
+                unifier.rollback();
+                Err(e)
+            }
+        }
+    }
 }
 
 impl Ty {
@@ -111,15 +124,30 @@ impl ItemId {
     }
 }
 
+pub trait Unifiable {
+    fn unify(unifier: &mut Unifier, a: &Self, b: &Self) -> Result<()>;
+}
 
-struct Unifier<'t> {
+impl Unifiable for Ty {
+    fn unify(unifier: &mut Unifier, a: &Self, b: &Self) -> Result<()> {
+        unifier.unify_ty_ty(a, b)
+    }
+}
+
+impl Unifiable for TraitRef {
+    fn unify(unifier: &mut Unifier, a: &Self, b: &Self) -> Result<()> {
+        unifier.unify_trait_ref_trait_ref(a, b)
+    }
+}
+
+pub struct Unifier<'t> {
     table: &'t mut InferenceTable,
     snapshot: InferenceSnapshot,
     normalizations: Vec<NormalizeTo>,
 }
 
 impl<'t> Unifier<'t> {
-    pub fn new(table: &'t mut InferenceTable) -> Self {
+    fn new(table: &'t mut InferenceTable) -> Self {
         let snapshot = table.snapshot();
         Unifier {
             table: table,
@@ -128,8 +156,26 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    pub fn unify_ty_ty<'a>(&mut self, a: &'a Ty, b: &'a Ty) -> Result<()> {
-        //             ^^                 ^^         ^^ FIXME rustc bug
+    fn commit(self) -> Result<Vec<NormalizeTo>> {
+        self.table.commit(self.snapshot);
+        Ok(self.normalizations)
+    }
+
+    fn rollback(self) {
+        self.table.rollback_to(self.snapshot);
+    }
+
+    fn unify_trait_ref_trait_ref(&mut self, a: &TraitRef, b: &TraitRef) -> Result<()> {
+        if a.trait_id != b.trait_id {
+            bail!("incompatible traits `{:?}` vs `{:?}`", a.trait_id, b.trait_id);
+        }
+
+        assert_eq!(a.args.len(), b.args.len());
+        self.unify_tys_tys(&a.args, &b.args)
+    }
+
+    fn unify_ty_ty<'a>(&mut self, a: &'a Ty, b: &'a Ty) -> Result<()> {
+        //         ^^                 ^^         ^^ FIXME rustc bug
         if let Some(n_a) = self.table.normalize_shallow(a) {
             return self.unify_ty_ty(&n_a, b);
         } else if let Some(n_b) = self.table.normalize_shallow(b) {
@@ -169,14 +215,17 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    fn unify_apply_apply(&mut self, apply1: &ApplicationTy, apply2: &ApplicationTy) -> Result<()> {
-        if apply1.id != apply2.id {
-            bail!("incompatible constants {:?} vs {:?}", apply1.id, apply2.id);
+    fn unify_apply_apply(&mut self, a: &ApplicationTy, b: &ApplicationTy) -> Result<()> {
+        if a.id != b.id {
+            bail!("incompatible types `{:?}` vs `{:?}`", a.id, b.id);
         }
+        self.unify_tys_tys(&a.args, &b.args)
+    }
 
-        assert_eq!(apply1.args.len(), apply2.args.len());
-        for (arg1, arg2) in apply1.args.iter().zip(&apply2.args) {
-            self.unify_ty_ty(arg1, arg2)?;
+    fn unify_tys_tys<'a>(&mut self, a: &'a [Ty], b: &'a [Ty]) -> Result<()> {
+        assert_eq!(a.len(), b.len());
+        for (a_elem, b_elem) in a.iter().zip(b) {
+            self.unify_ty_ty(a_elem, b_elem)?;
         }
         Ok(())
     }

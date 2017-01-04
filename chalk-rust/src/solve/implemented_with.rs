@@ -27,9 +27,22 @@ impl ImplementedWith {
     pub fn solve(&mut self) -> Result<Solution<TraitRef>> {
         let universe = self.environment.universe;
         let program = self.environment.program.clone();
-        let (impl_data, where_clauses) =
-            self.infer.instantiate(universe, &(&program.impl_data[&self.impl_id],
+
+        // Extract the trait-ref that this impl implements and its where-clauses,
+        // instantiating all the impl parameters with fresh variables.
+        //
+        // So, assuming `?1` is the next new variable in `self.infer`, if we had:
+        //
+        //     impl<T: Clone> Clone for Option<T>
+        //
+        // this would yield `Option<?1>: Clone` and `?1: Clone`.
+        let (impl_trait_ref, where_clauses) =
+            self.infer.instantiate(universe, &(&program.impl_data[&self.impl_id].trait_ref,
                                                &program.where_clauses[&self.impl_id]));
+
+        // Unify the trait-ref we are looking for (`self.goal`) with the trait-ref that
+        // the impl supplies (if we can).
+
 
         unimplemented!()
     }
