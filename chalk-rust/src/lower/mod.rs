@@ -3,7 +3,6 @@ use lalrpop_intern::intern;
 use errors::*;
 use ir;
 use std::collections::HashMap;
-use std::iter::once;
 
 mod test;
 
@@ -56,7 +55,7 @@ impl LowerProgram for Program {
             let k = match *item {
                 Item::StructDefn(ref d) => d.lower_type_kind()?,
                 Item::TraitDefn(ref d) => d.lower_type_kind()?,
-                Item::Impl(_) | Item::Goal(_) => continue,
+                Item::Impl(_) => continue,
             };
             type_ids.insert(k.name, item_id);
             type_kinds.insert(item_id, k);
@@ -65,7 +64,6 @@ impl LowerProgram for Program {
         let mut where_clauses = HashMap::new();
         let mut assoc_ty_names = HashMap::new();
         let mut impl_data = HashMap::new();
-        let mut goals = Vec::new();
         for (index, item) in self.items.iter().enumerate() {
             let item_id = ir::ItemId { index: index };
             let parameter_map = item.parameter_map();
@@ -87,16 +85,12 @@ impl LowerProgram for Program {
                     impl_data.insert(item_id, d.lower_impl(&env)?);
                     where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
-                Item::Goal(ref d) => {
-                    goals.push(d.lower(&env)?);
-                }
             }
         }
 
         Ok(ir::Program {
             type_kinds: type_kinds,
             where_clauses: where_clauses,
-            goals: goals,
             assoc_ty_names: assoc_ty_names,
             impl_data: impl_data,
         })
@@ -112,11 +106,19 @@ trait LowerParameterMap {
     fn declared_parameters(&self) -> &[Identifier];
 
     fn parameter_map(&self) -> ParameterMap {
-        self.synthetic_parameters()
-            .into_iter()
-            .chain(self.declared_parameters()
-                .iter()
-                .map(|id| id.str))
+        // (*) It is important that the declared parameters come
+        // before the subtle parameters in the ordering. This is
+        // because of traits, when used as types, only have the first
+        // N parameters in their kind (that is, they do not have Self).
+        //
+        // Note that if `Self` appears in the where-clauses etc, the
+        // trait is not object-safe, and hence not supposed to be used
+        // as an object. Actually the handling of object types is
+        // probably just kind of messed up right now. That's ok.
+        self.declared_parameters()
+            .iter()
+            .map(|id| id.str)
+            .chain(self.synthetic_parameters()) // (*) see above
             .enumerate()
             .map(|(index, id)| (id, index))
             .collect()
@@ -128,8 +130,7 @@ impl LowerParameterMap for Item {
         match *self {
             Item::TraitDefn(..) => Some(intern(SELF)),
             Item::StructDefn(..) |
-            Item::Impl(..) |
-            Item::Goal(..) => None,
+            Item::Impl(..) => None,
         }
     }
 
@@ -138,7 +139,6 @@ impl LowerParameterMap for Item {
             Item::StructDefn(ref d) => &d.parameters,
             Item::TraitDefn(ref d) => &d.parameters,
             Item::Impl(ref d) => &d.parameters,
-            Item::Goal(..) => &[],
         }
     }
 }
@@ -159,7 +159,7 @@ impl LowerTypeKind for StructDefn {
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Struct,
             name: self.name.str,
-            parameters: self.parameters.iter().map(|p| p.str).collect(),
+            parameters: self.parameters.len(),
         })
     }
 }
@@ -175,7 +175,7 @@ impl LowerTypeKind for TraitDefn {
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Trait,
             name: self.name.str,
-            parameters: once(intern(SELF)).chain(self.parameters.iter().map(|p| p.str)).collect(),
+            parameters: self.parameters.len(), // for the purposes of the *type*, ignore `Self`
         })
     }
 }
@@ -259,9 +259,9 @@ impl LowerTy for Ty {
                 match env.lookup(name)? {
                     NameLookup::Type(id) => {
                         let k = env.type_kind(id);
-                        if k.parameters.len() > 0 {
+                        if k.parameters > 0 {
                             bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
-                                                                             k.parameters.len(),
+                                                                             k.parameters,
                                                                              0))
                         }
 
@@ -281,9 +281,9 @@ impl LowerTy for Ty {
                 };
 
                 let k = env.type_kind(id);
-                if k.parameters.len() != args.len() {
+                if k.parameters != args.len() {
                     bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
-                                                                     k.parameters.len(),
+                                                                     k.parameters,
                                                                      args.len()))
                 }
 
@@ -308,7 +308,7 @@ impl LowerImpl for Impl {
     fn lower_impl(&self, env: &Env) -> Result<ir::ImplData> {
         Ok(ir::ImplData {
             trait_ref: self.trait_ref.lower(env)?,
-            parameters: self.parameters.iter().map(|p| p.str).collect(),
+            parameters: self.parameters.len(),
             assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(env)).collect()),
         })
     }

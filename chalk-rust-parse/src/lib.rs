@@ -25,3 +25,11 @@ pub fn parse_ty(text: &str) -> Result<ast::Ty> {
         Err(e) => bail!("error parsing `{}`: {:?}", text, e),
     }
 }
+
+pub fn parse_goals(text: &str) -> Result<ast::Goals> {
+    match parser::parse_Goals(text) {
+        Ok(v) => Ok(v),
+        Err(e) => bail!("parse error: {:?}", e),
+    }
+}
+

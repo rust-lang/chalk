@@ -110,6 +110,13 @@ impl Fold for ir::ItemId {
     }
 }
 
+impl Fold for usize {
+    type Result = Self;
+    fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
+        Ok(*self)
+    }
+}
+
 impl Fold for ir::WhereClause {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {

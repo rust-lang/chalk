@@ -11,7 +11,13 @@ Item: Item = {
     StructDefn => Item::StructDefn(<>),
     TraitDefn => Item::TraitDefn(<>),
     Impl => Item::Impl(<>),
-    "where" <WhereClause> => Item::Goal(<>),
+};
+
+pub Goals: Goals = {
+    <p:("for" "<" <Comma<Id>> ">")?> <w:Comma<WhereClause>> => Goals {
+        parameters: p.unwrap_or(vec![]),
+        where_clauses: w,
+    }
 };
 
 StructDefn: StructDefn = {

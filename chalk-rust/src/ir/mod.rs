@@ -16,8 +16,6 @@ pub struct Program {
 
     /// For each impl:
     pub impl_data: HashMap<ItemId, ImplData>,
-
-    pub goals: Vec<WhereClause>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -29,7 +27,7 @@ pub struct ItemId {
 pub struct TypeKind {
     pub sort: TypeSort,
     pub name: Identifier,
-    pub parameters: Vec<Identifier>,
+    pub parameters: usize,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -40,7 +38,7 @@ pub enum TypeSort {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplData {
-    pub parameters: Vec<Identifier>,
+    pub parameters: usize,
     pub trait_ref: TraitRef,
     pub assoc_ty_values: Vec<AssocTyValue>,
 }

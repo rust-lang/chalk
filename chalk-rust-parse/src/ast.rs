@@ -20,7 +20,6 @@ pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
     Impl(Impl),
-    Goal(WhereClause),
 }
 
 pub struct StructDefn {
@@ -80,4 +79,9 @@ pub struct Identifier {
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
+}
+
+pub struct Goals {
+    pub parameters: Vec<Identifier>,
+    pub where_clauses: Vec<WhereClause>,
 }
