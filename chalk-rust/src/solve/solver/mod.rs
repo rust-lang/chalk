@@ -56,13 +56,22 @@ impl Solver {
         result
     }
 
-    pub fn solve_any<P,Ps,C,R>(&mut self,
+    /// Given a closed goal `start_goal`, and a number of possible
+    /// ways to solve it (`possibilities`), invokes
+    /// `evaluate_possibility` to evaluate each possibility in
+    /// turn. Collates the results and, if there is an unambigious
+    /// result, returns it.
+    ///
+    /// In general, an unambiguous result can result either because we
+    /// found only a single possibility that did not yield an error or
+    /// because multiple possibilities resulted in the same solution.
+    pub fn solve_any<P,Ps,E,R>(&mut self,
                                possibilities: Ps,
-                               start_goal: &R,
-                               mut candidate_fn: C)
-                               -> Result<Solution<R>>
+                               start_goal: &Quantified<R>,
+                               mut evaluate_possibility: E)
+                               -> Result<Solution<Quantified<R>>>
         where Ps: IntoIterator<Item = P>,
-              C: FnMut(&mut Solver, P) -> Result<Solution<R>>,
+              E: FnMut(&mut Solver, P) -> Result<Solution<Quantified<R>>>,
               R: Clone + Hash + Eq
     {
         // For each impl, recursively apply it. Note that all we need
@@ -70,7 +79,7 @@ impl Solver {
         // actually need to know *which impl* implified with.
         let mut candidates = HashSet::new();
         for possibility in possibilities {
-            if let Ok(solution) = candidate_fn(self, possibility) {
+            if let Ok(solution) = evaluate_possibility(self, possibility) {
                 // If we found an impl which definitively applies
                 // **without unifying anything in the goal**, then we
                 // know that the type is indeed implemented (though
