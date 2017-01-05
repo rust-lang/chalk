@@ -110,8 +110,8 @@ impl<T> Quantified<T> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Goal {
-    ForAll(Box<Goal>),
-    Exists(Box<Goal>),
+    ForAll(usize, Box<Goal>),
+    Exists(usize, Box<Goal>),
     Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
     Leaf(WhereClause),

@@ -1,6 +1,6 @@
 use errors::*;
 use ir::*;
-use solve::environment::Environment;
+use solve::environment::{Environment, InEnvironment};
 use std::sync::Arc;
 
 pub trait Zipper {
@@ -15,19 +15,6 @@ impl<'f, Z: Zipper> Zipper for &'f mut Z {
 
 pub trait Zip {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()>;
-}
-
-macro_rules! struct_zip {
-    ($m:ident :: $s:ident { $($name:ident),* }) => {
-        impl Zip for $m::$s {
-            fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-                $(
-                    Zip::zip_with(zipper, &a.$name, &b.$name)?;
-                )*
-                Ok(())
-            }
-        }
-    }
 }
 
 impl<'a, T: Zip> Zip for &'a T {
@@ -93,6 +80,14 @@ impl Zip for TraitRef {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         Zip::zip_with(zipper, &a.trait_id, &b.trait_id)?;
         Zip::zip_with(zipper, &a.args, &b.args)?;
+        Ok(())
+    }
+}
+
+impl<T: Zip> Zip for InEnvironment<T> {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        Zip::zip_with(zipper, &a.environment, &b.environment)?;
+        Zip::zip_with(zipper, &a.goal, &b.goal)?;
         Ok(())
     }
 }

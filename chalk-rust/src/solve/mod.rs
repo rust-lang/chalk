@@ -2,6 +2,7 @@ pub mod environment;
 pub mod infer;
 pub mod implemented;
 pub mod implemented_with;
+pub mod goal;
 pub mod solver;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

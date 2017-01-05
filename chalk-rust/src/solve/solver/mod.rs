@@ -1,7 +1,7 @@
 use cast::Cast;
 use errors::*;
 use ir::*;
-use solve::environment::{Environment, InEnvironment};
+use solve::environment::InEnvironment;
 use solve::implemented::Implemented;
 use solve::infer::InferenceTable;
 use std::sync::Arc;
@@ -39,8 +39,7 @@ impl Solver {
     /// for `where_clauses` to be true.
     pub fn solve_all(&mut self,
                      infer: &mut InferenceTable,
-                     environment: &Arc<Environment>,
-                     mut where_clauses: Vec<WhereClause>)
+                     mut where_clauses: Vec<InEnvironment<WhereClause>>)
                      -> Result<Successful> {
         // Try to solve all the where-clauses. We do this via a
         // fixed-point iteration. We try to solve each where-clause in
@@ -54,7 +53,7 @@ impl Solver {
             progress = false;
 
             for wc in where_clauses.drain(..) {
-                match self.solve_one(infer, environment, &wc, &mut progress)? {
+                match self.solve_one(infer, &wc, &mut progress)? {
                     Successful::Yes => (),
                     Successful::Maybe => retained.push(wc),
                 }
@@ -74,12 +73,11 @@ impl Solver {
 
     fn solve_one(&mut self,
                  infer: &mut InferenceTable,
-                 environment: &Arc<Environment>,
-                 wc: &WhereClause,
+                 wc: &InEnvironment<WhereClause>,
                  inference_progress: &mut bool)
                  -> Result<Successful> {
-        let quantified_goal = infer.quantify(&InEnvironment::new(&environment, wc));
-        let solution = self.solve(quantified_goal.clone())?;
+        let quantified_wc = infer.quantify(&wc);
+        let solution = self.solve(quantified_wc.clone())?;
 
         // Regardless of whether the result is ambiguous or not,
         // solving the where-clause may have yielded a refined
@@ -101,11 +99,10 @@ impl Solver {
         // more algorithm written just for this case instead of
         // instantiating with variables and applying the standard
         // unification algorithm. But this is good enough for now.
-        if solution.refined_goal != quantified_goal {
+        if solution.refined_goal != quantified_wc {
             let refined_goal =
-                infer.instantiate(environment.universe, &solution.refined_goal.value);
-            infer.unify(environment, &refined_goal.environment)?;
-            infer.unify(wc, &refined_goal.goal)?;
+                infer.instantiate(wc.environment.universe, &solution.refined_goal.value);
+            infer.unify(wc, &refined_goal)?;
             *inference_progress = true;
         }
 
