@@ -267,7 +267,7 @@ impl LowerTy for Ty {
                         }
 
                         Ok(ir::Ty::Apply(ir::ApplicationTy {
-                            id: id,
+                            name: ir::TypeName::ItemId(id),
                             args: vec![],
                         }))
                     }
@@ -291,7 +291,7 @@ impl LowerTy for Ty {
                 let args = try!(args.iter().map(|t| t.lower(env)).collect());
 
                 Ok(ir::Ty::Apply(ir::ApplicationTy {
-                    id: id,
+                    name: ir::TypeName::ItemId(id),
                     args: args,
                 }))
             }

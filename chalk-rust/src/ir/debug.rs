@@ -13,6 +13,15 @@ impl Debug for ItemId {
     }
 }
 
+impl Debug for TypeName {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            TypeName::ItemId(id) => write!(fmt, "{:?}", id),
+            TypeName::ForAll(universe) => write!(fmt, "!{}", universe.counter),
+        }
+    }
+}
+
 impl Debug for Ty {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
@@ -25,7 +34,7 @@ impl Debug for Ty {
 
 impl Debug for ApplicationTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?}{:?}", self.id, Angle(&self.args))
+        write!(fmt, "{:?}{:?}", self.name, Angle(&self.args))
     }
 }
 

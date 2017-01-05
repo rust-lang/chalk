@@ -109,6 +109,13 @@ impl Fold for ir::ItemId {
     }
 }
 
+impl Fold for ir::TypeName {
+    type Result = Self;
+    fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
+        Ok(*self)
+    }
+}
+
 impl Fold for usize {
     type Result = Self;
     fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
@@ -140,7 +147,7 @@ impl<F: Fold> Fold for environment::InEnvironment<F> {
     }
 }
 
-struct_fold!(ir::ApplicationTy { id, args });
+struct_fold!(ir::ApplicationTy { name, args });
 struct_fold!(ir::ProjectionTy { trait_ref, name });
 struct_fold!(ir::TraitRef { trait_id, args });
 struct_fold!(ir::NormalizeTo { projection, ty });

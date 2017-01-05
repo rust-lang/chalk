@@ -114,13 +114,19 @@ impl Ty {
 
 impl ApplicationTy {
     pub fn universe_index(&self) -> UniverseIndex {
-        self.id.universe_index()
+        self.name.universe_index()
     }
 }
 
-impl ItemId {
+impl TypeName {
     pub fn universe_index(&self) -> UniverseIndex {
-        UniverseIndex { counter: 0 }
+        match *self {
+            TypeName::ItemId(_) => UniverseIndex::root(),
+            TypeName::ForAll(universe) => {
+                assert!(universe.counter > 0);
+                universe
+            }
+        }
     }
 }
 

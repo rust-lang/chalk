@@ -67,6 +67,15 @@ impl Zip for ItemId {
     }
 }
 
+impl Zip for TypeName {
+    fn zip_with<Z: Zipper>(_zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        if a != b {
+            bail!("cannot zip `{:?}` and `{:?}`", a, b)
+        }
+        Ok(())
+    }
+}
+
 impl Zip for Identifier {
     fn zip_with<Z: Zipper>(_zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         if a != b {
@@ -94,7 +103,7 @@ impl<T: Zip> Zip for InEnvironment<T> {
 
 impl Zip for ApplicationTy {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &a.id, &b.id)?;
+        Zip::zip_with(zipper, &a.name, &b.name)?;
         Zip::zip_with(zipper, &a.args, &b.args)?;
         Ok(())
     }

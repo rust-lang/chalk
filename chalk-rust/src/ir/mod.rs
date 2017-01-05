@@ -18,6 +18,12 @@ pub struct Program {
     pub trait_data: HashMap<ItemId, TraitData>,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TypeName {
+    ItemId(ItemId),
+    ForAll(UniverseIndex),
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UniverseIndex {
     pub counter: usize,
@@ -77,7 +83,7 @@ pub enum Ty {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ApplicationTy {
-    pub id: ItemId,
+    pub name: TypeName,
     pub args: Vec<Ty>,
 }
 
