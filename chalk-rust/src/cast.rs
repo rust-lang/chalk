@@ -32,6 +32,12 @@ impl Cast<WhereClause> for TraitRef {
     }
 }
 
+impl Cast<WhereClause> for NormalizeTo {
+    fn cast(self) -> WhereClause {
+        WhereClause::NormalizeTo(self)
+    }
+}
+
 macro_rules! map_impl {
     (impl[$($t:tt)*] Cast<$b:ty> for $a:ty) => {
         impl<$($t)*> Cast<$b> for $a {

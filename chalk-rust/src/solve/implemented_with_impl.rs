@@ -6,7 +6,7 @@ use solve::infer::InferenceTable;
 use solve::solver::Solver;
 use std::sync::Arc;
 
-pub struct ImplementedWith<'s> {
+pub struct ImplementedWithImpl<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
     environment: Arc<Environment>,
@@ -14,14 +14,14 @@ pub struct ImplementedWith<'s> {
     impl_id: ItemId,
 }
 
-impl<'s> ImplementedWith<'s> {
+impl<'s> ImplementedWithImpl<'s> {
     pub fn new(solver: &'s mut Solver,
                q: Quantified<InEnvironment<TraitRef>>,
                impl_id: ItemId)
                -> Self {
         let InEnvironment { environment, goal } = q.value;
         let infer = InferenceTable::new_with_vars(q.binders, environment.universe);
-        ImplementedWith {
+        ImplementedWithImpl {
             solver: solver,
             environment: environment,
             infer: infer,

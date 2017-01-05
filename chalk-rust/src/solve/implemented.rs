@@ -1,7 +1,7 @@
 use errors::*;
 use ir::*;
 use solve::environment::InEnvironment;
-use solve::implemented_with::ImplementedWith;
+use solve::implemented_with_impl::ImplementedWithImpl;
 use solve::solver::Solver;
 use solve::{Solution, Successful};
 use std::collections::HashSet;
@@ -12,9 +12,7 @@ pub struct Implemented<'s> {
 }
 
 impl<'s> Implemented<'s> {
-    pub fn new(solver: &'s mut Solver,
-               env_goal: Quantified<InEnvironment<TraitRef>>)
-               -> Self {
+    pub fn new(solver: &'s mut Solver, env_goal: Quantified<InEnvironment<TraitRef>>) -> Self {
         Implemented {
             solver: solver,
             env_goal: env_goal,
@@ -36,7 +34,8 @@ impl<'s> Implemented<'s> {
                 continue;
             }
 
-            let result = ImplementedWith::new(self.solver, self.env_goal.clone(), impl_id).solve();
+            let result = ImplementedWithImpl::new(self.solver, self.env_goal.clone(), impl_id)
+                .solve();
             if let Ok(solution) = result {
                 // If we found an impl which definitively applies
                 // **without unifying anything in the goal**, then we
@@ -94,7 +93,7 @@ impl<'s> Implemented<'s> {
         // But you get the idea.
         return Ok(Solution {
             successful: Successful::Maybe,
-            refined_goal: self.env_goal.clone()
+            refined_goal: self.env_goal.clone(),
         });
     }
 }

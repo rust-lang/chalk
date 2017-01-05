@@ -150,10 +150,14 @@ fn prove_forall() {
             "`Vec<!1> as Clone` is not implemented"
         }
 
-        //goal {
-        //    forall<T> { if (T: Clone) { Vec<T>: Clone } }
-        //} yields {
-        //    ""
-        //}
+        goal {
+            forall<T> {
+                if (T: Clone) {
+                    Vec<T>: Clone
+                }
+            }
+        } yields {
+            ""
+        }
     }
 }
