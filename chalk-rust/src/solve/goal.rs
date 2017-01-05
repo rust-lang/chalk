@@ -22,17 +22,16 @@ impl<'s> Prove<'s> {
     pub fn new(solver: &'s mut Solver, goal: Box<Goal>) -> Self {
         let mut prove = Prove { solver, infer: InferenceTable::new(), goals: vec![] };
         let environment = &Environment::new();
-        prove.decompose(goal, environment, &mut vec![]);
+        prove.decompose(&goal, environment, &mut vec![]);
         prove
     }
 
     fn decompose(&mut self,
-                 goal: Box<Goal>,
+                 goal: &Goal,
                  environment: &Arc<Environment>,
                  bindings: &mut Vec<Binding>) {
-        let goal = *goal;
-        match goal {
-            Goal::ForAll(num_binders, subgoal) => {
+        match *goal {
+            Goal::ForAll(num_binders, ref subgoal) => {
                 let mut new_environment = environment.clone();
                 for _ in 0 .. num_binders {
                     new_environment = new_environment.new_universe();
@@ -43,7 +42,7 @@ impl<'s> Prove<'s> {
                     bindings.pop();
                 }
             }
-            Goal::Exists(num_binders, subgoal) => {
+            Goal::Exists(num_binders, ref subgoal) => {
                 for _ in 0 .. num_binders {
                     bindings.push(Binding::Exists(self.infer.new_variable(environment.universe)));
                 }
@@ -52,16 +51,17 @@ impl<'s> Prove<'s> {
                     bindings.pop().unwrap();
                 }
             }
-            Goal::Implies(wc, subgoal) => {
+            Goal::Implies(ref wc, ref subgoal) => {
+                let wc = Subst::apply(&bindings, wc);
                 let new_environment = &environment.add_clauses(wc);
                 self.decompose(subgoal, new_environment, bindings);
             }
-            Goal::And(subgoal1, subgoal2) => {
+            Goal::And(ref subgoal1, ref subgoal2) => {
                 self.decompose(subgoal1, environment, bindings);
                 self.decompose(subgoal2, environment, bindings);
             }
-            Goal::Leaf(wc) => {
-                let wc = Subst::apply(&bindings, &wc);
+            Goal::Leaf(ref wc) => {
+                let wc = Subst::apply(&bindings, wc);
                 self.goals.push(InEnvironment::new(environment, wc));
             }
         }
