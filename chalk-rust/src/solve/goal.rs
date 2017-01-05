@@ -60,6 +60,7 @@ impl<'s> Prove<'s> {
                 self.decompose(subgoal2, environment, bindings);
             }
             Goal::Leaf(wc) => {
+                // FIXME need to apply substitution here
                 self.goals.push(InEnvironment::new(environment, wc));
             }
         }

@@ -120,5 +120,5 @@ pub enum Goal {
 mod debug;
 mod tls;
 
-pub use self::tls::set_program_in;
+pub use self::tls::set_current_program;
 pub use self::tls::with_current_program;

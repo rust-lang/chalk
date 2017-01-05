@@ -25,7 +25,7 @@ impl Debug for Ty {
 
 impl Debug for ApplicationTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?}<{:?}>", self.id, Angle(&self.args))
+        write!(fmt, "{:?}{:?}", self.id, Angle(&self.args))
     }
 }
 

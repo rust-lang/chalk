@@ -10,16 +10,35 @@ use super::*;
 
 pub struct Solver {
     pub(super) program: Arc<Program>,
+
+    stack: Vec<Quantified<InEnvironment<WhereClause>>>,
 }
 
 impl Solver {
+    pub fn new(program: &Arc<Program>) -> Self {
+        Solver { program: program.clone(), stack: vec![] }
+    }
+
     /// Tries to solve one **closed** where-clause `wc` (in the given
     /// environment).
     pub fn solve(&mut self,
-                 wc: Quantified<InEnvironment<WhereClause>>)
+                 wc_env: Quantified<InEnvironment<WhereClause>>)
                  -> Result<Solution<Quantified<InEnvironment<WhereClause>>>> {
-        let Quantified { value: InEnvironment { environment, goal: wc }, binders } = wc;
-        match wc {
+        debug!("Solver::solve({:?})", wc_env);
+
+        if self.stack.contains(&wc_env) {
+            // Recursive invocation
+            debug!("solve: {:?} already on the stack", wc_env);
+            return Ok(Solution {
+                successful: Successful::Maybe,
+                refined_goal: wc_env,
+            });
+        }
+
+        self.stack.push(wc_env.clone());
+
+        let Quantified { value: InEnvironment { environment, goal: wc }, binders } = wc_env;
+        let result = match wc {
             WhereClause::Implemented(trait_ref) => {
                 let q = Quantified {
                     value: InEnvironment::new(&environment, trait_ref),
@@ -28,7 +47,11 @@ impl Solver {
                 Implemented::new(self, q).solve().cast()
             }
             WhereClause::NormalizeTo(_normalize_to) => unimplemented!(),
-        }
+        };
+
+        self.stack.pop().unwrap();
+
+        result
     }
 
     /// Try to solve all of `where_clauses`, which may contain
@@ -41,6 +64,8 @@ impl Solver {
                      infer: &mut InferenceTable,
                      mut where_clauses: Vec<InEnvironment<WhereClause>>)
                      -> Result<Successful> {
+        debug!("solve_all(where_clauses={:#?})", where_clauses);
+
         // Try to solve all the where-clauses. We do this via a
         // fixed-point iteration. We try to solve each where-clause in
         // turn. Anything which is successful, we drop; anything

@@ -125,7 +125,7 @@ impl ItemId {
     }
 }
 
-pub struct Unifier<'t> {
+struct Unifier<'t> {
     table: &'t mut InferenceTable,
     snapshot: InferenceSnapshot,
     normalizations: Vec<NormalizeTo>,
@@ -158,14 +158,14 @@ impl<'t> Unifier<'t> {
             return self.unify_ty_ty(a, &n_b);
         }
 
-        debug!("unify_in_snapshot, normalized a={:?}", a);
-        debug!("unify_in_snapshot, normalized b={:?}", b);
+        debug!("unify_ty_ty(normalized a={:?})", a);
+        debug!("unify_ty_ty(normalized b={:?})", b);
 
         match (a, b) {
             (&Ty::Var(depth1), &Ty::Var(depth2)) => {
                 let var1 = InferenceVariable::from_depth(depth1);
                 let var2 = InferenceVariable::from_depth(depth2);
-                debug!("unify_in_snapshot: unify_var_var({:?}, {:?})", var1, var2);
+                debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
                 Ok(self.table
                     .unify
                     .unify_var_var(var1, var2)
@@ -206,6 +206,12 @@ impl<'t> Unifier<'t> {
 
         self.universe_check(universe_index, apply.universe_index())?;
         self.occurs_check_apply(var, universe_index, apply)?;
+
+        let value_index = ValueIndex::new(self.table.values.len());
+        self.table.values.push(Arc::new(Ty::Apply(apply.clone())));
+        self.table.unify.unify_var_value(var, InferenceValue::Bound(value_index)).unwrap();
+        debug!("unify_var_apply: var {:?} set to {:?}", var, apply);
+
         Ok(())
     }
 

@@ -53,6 +53,7 @@ impl<'s> ImplementedWith<'s> {
         // result in some auxiliary normalization clauses we must
         // prove.
         let normalize_to = self.infer.unify(&self.goal, &impl_trait_ref)?;
+        debug!("implemented_with::solve: normalize_to={:?}", normalize_to);
 
         // Combine the where-clauses from the impl with the results
         // from unification into one master list of things to solve,

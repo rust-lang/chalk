@@ -19,7 +19,7 @@ pub trait Zip {
 
 impl<'a, T: Zip> Zip for &'a T {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &**a, &**b)
+        <T as Zip>::zip_with(zipper, a, b)
     }
 }
 
@@ -40,7 +40,7 @@ impl<T: Zip> Zip for Vec<T> {
 
 impl<T: Zip> Zip for Arc<T> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &**a, &**b)
+        <T as Zip>::zip_with(zipper, a, b)
     }
 }
 

@@ -5,6 +5,8 @@ pub mod implemented_with;
 pub mod goal;
 pub mod solver;
 
+#[cfg(test)] mod test;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Solution<G> {
     successful: Successful,
