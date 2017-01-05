@@ -88,3 +88,34 @@ fn prove_clone() {
         }
     }
 }
+
+#[test]
+fn prove_infer() {
+    test! {
+        program {
+            struct Foo { }
+            struct Bar { }
+            trait Map<T> { }
+            impl Map<Bar> for Foo { }
+            impl Map<Foo> for Bar { }
+        }
+
+        goal {
+            exists<A, B> (A: Map<B>)
+        } yields {
+            "Maybe"
+        }
+
+        goal {
+            exists<A> (A: Map<Bar>)
+        } yields {
+            "Yes"
+        }
+
+        goal {
+            exists<A> (Foo: Map<A>)
+        } yields {
+            "Yes"
+        }
+    }
+}

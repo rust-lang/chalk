@@ -19,8 +19,8 @@ pub Goal: Box<Goal> = {
 };
 
 Goal1: Box<Goal> = {
-    "(" "forall" "<" <p:Comma<Id>> ">" <g:Goal> ")" => Box::new(Goal::ForAll(p, g)),
-    "(" "exists" "<" <p:Comma<Id>> ">" <g:Goal> ")" => Box::new(Goal::Exists(p, g)),
+    "forall" "<" <p:Comma<Id>> ">" "(" <g:Goal> ")" => Box::new(Goal::ForAll(p, g)),
+    "exists" "<" <p:Comma<Id>> ">" "(" <g:Goal> ")" => Box::new(Goal::Exists(p, g)),
     "if" <w:Comma<WhereClause>> "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
     <w:WhereClause> => Box::new(Goal::Leaf(w)),
 };
