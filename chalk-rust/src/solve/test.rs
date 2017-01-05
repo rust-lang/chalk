@@ -157,7 +157,7 @@ fn prove_forall() {
                 }
             }
         } yields {
-            "`Vec<!1> as Clone` is not implemented" // FIXME
+            "Yes"
         }
     }
 }

@@ -6,7 +6,7 @@ use solve::infer::InferenceTable;
 use solve::solver::Solver;
 use std::sync::Arc;
 
-pub struct ImplementWithClause<'s> {
+pub struct ImplementedWithClause<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
     environment: Arc<Environment>,
@@ -14,7 +14,7 @@ pub struct ImplementWithClause<'s> {
     clause_index: usize,
 }
 
-impl<'s> ImplementWithClause<'s> {
+impl<'s> ImplementedWithClause<'s> {
     pub fn new(solver: &'s mut Solver,
                q: Quantified<InEnvironment<TraitRef>>,
                clause_index: usize)
@@ -22,10 +22,10 @@ impl<'s> ImplementWithClause<'s> {
         let InEnvironment { environment, goal } = q.value;
         let infer = InferenceTable::new_with_vars(q.binders, environment.universe);
         assert!(clause_index < environment.clauses.len());
-        ImplementWithClause { solver, infer, environment, goal, clause_index }
+        ImplementedWithClause { solver, infer, environment, goal, clause_index }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<TraitRef>>>> {
+    pub fn solve(mut self) -> Result<Solution<Quantified<InEnvironment<TraitRef>>>> {
         let environment = self.environment.clone();
         let clause = &environment.clauses[self.clause_index];
 
