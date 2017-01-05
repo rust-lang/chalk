@@ -138,18 +138,30 @@ fn prove_forall() {
             "`!1 as Marker` is not implemented"
         }
 
+        // If we assume `T: Marker`, then obviously `T: Marker`.
+        goal {
+            forall<T> { if (T: Marker) { T: Marker } }
+        } yields {
+            "Yes"
+        }
+
+        // We don't have know to anything about `T` to know that
+        // `Vec<T>: Marker`.
         goal {
             forall<T> { Vec<T>: Marker }
         } yields {
             "Yes"
         }
 
+        // Here, we don't know that `T: Clone`, so we can't prove that
+        // `Vec<T>: Clone`.
         goal {
             forall<T> { Vec<T>: Clone }
         } yields {
             "`Vec<!1> as Clone` is not implemented"
         }
 
+        // Here, we do know that `T: Clone`, so we can.
         goal {
             forall<T> {
                 if (T: Clone) {
