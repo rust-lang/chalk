@@ -4,7 +4,6 @@ use ir::*;
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
-use super::universe::UniverseIndex;
 use super::var::*;
 
 #[derive(Clone)]

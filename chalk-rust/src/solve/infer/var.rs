@@ -4,8 +4,6 @@ use std::cmp::min;
 use std::fmt;
 use std::u32;
 
-use super::universe::UniverseIndex;
-
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct InferenceVariable {
     index: u32,
@@ -44,7 +42,7 @@ impl UnifyKey for InferenceVariable {
 /// `InferenceTable.value` vector.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum InferenceValue {
-    Unbound(UniverseIndex),
+    Unbound(ir::UniverseIndex),
     Bound(ValueIndex),
 }
 

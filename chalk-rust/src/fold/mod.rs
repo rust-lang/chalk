@@ -1,7 +1,6 @@
 use errors::*;
 use ir;
 use solve::environment;
-use solve::infer;
 use std::sync::Arc;
 
 pub trait Folder {
@@ -96,7 +95,7 @@ impl Fold for ir::Identifier {
     }
 }
 
-impl Fold for infer::UniverseIndex {
+impl Fold for ir::UniverseIndex {
     type Result = Self;
     fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
         Ok(*self)

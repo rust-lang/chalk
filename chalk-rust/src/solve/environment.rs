@@ -1,8 +1,6 @@
 use ir::*;
 use std::sync::Arc;
 
-use super::infer::UniverseIndex;
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Environment {
     pub universe: UniverseIndex,

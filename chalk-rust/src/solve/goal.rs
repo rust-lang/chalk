@@ -2,7 +2,7 @@ use errors::*;
 use fold::*;
 use ir::*;
 use solve::environment::{Environment, InEnvironment};
-use solve::infer::{InferenceTable, InferenceVariable, UniverseIndex};
+use solve::infer::{InferenceTable, InferenceVariable};
 use solve::solver::Solver;
 use solve::Successful;
 use std::sync::Arc;
