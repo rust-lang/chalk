@@ -99,19 +99,19 @@ fn prove_infer() {
         }
 
         goal {
-            exists<A, B> (A: Map<B>)
+            exists<A, B> { A: Map<B> }
         } yields {
             "Maybe"
         }
 
         goal {
-            exists<A> (A: Map<Bar>)
+            exists<A> { A: Map<Bar> }
         } yields {
             "Yes"
         }
 
         goal {
-            exists<A> (Foo: Map<A>)
+            exists<A> { Foo: Map<A> }
         } yields {
             "Yes"
         }
@@ -133,25 +133,25 @@ fn prove_forall() {
         }
 
         goal {
-            forall<T> (T: Marker)
+            forall<T> { T: Marker }
         } yields {
             "`!1 as Marker` is not implemented"
         }
 
         goal {
-            forall<T> (Vec<T>: Marker)
+            forall<T> { Vec<T>: Marker }
         } yields {
             "Yes"
         }
 
         goal {
-            forall<T> (Vec<T>: Clone)
+            forall<T> { Vec<T>: Clone }
         } yields {
             "`Vec<!1> as Clone` is not implemented"
         }
 
         //goal {
-        //    forall<T> (if (T: Clone) { Vec<T>: Clone })
+        //    forall<T> { if (T: Clone) { Vec<T>: Clone } }
         //} yields {
         //    ""
         //}

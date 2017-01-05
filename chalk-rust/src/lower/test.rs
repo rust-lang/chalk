@@ -58,7 +58,7 @@ fn assoc_tys() {
 #[test]
 fn goal_quantifiers() {
     let program = Arc::new(parse_and_lower("trait Foo { }").unwrap());
-    let goal = parse_and_lower_goal(&program, "forall<X> (exists<Y> (forall<Z> (Z: Foo<Y, X>)))")
+    let goal = parse_and_lower_goal(&program, "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}")
         .unwrap();
     set_current_program(&program, || {
         assert_eq!(format!("{:?}", goal), "ForAll(1, Exists(1, ForAll(1, Leaf(Implemented(?2 as Foo<?1, ?0>)))))");
