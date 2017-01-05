@@ -1,4 +1,5 @@
 use errors::*;
+use fold::*;
 use ir::*;
 use solve::environment::{Environment, InEnvironment};
 use solve::infer::{InferenceTable, InferenceVariable, UniverseIndex};
@@ -60,7 +61,7 @@ impl<'s> Prove<'s> {
                 self.decompose(subgoal2, environment, bindings);
             }
             Goal::Leaf(wc) => {
-                // FIXME need to apply substitution here
+                let wc = Subst::apply(&bindings, &wc);
                 self.goals.push(InEnvironment::new(environment, wc));
             }
         }
@@ -68,5 +69,24 @@ impl<'s> Prove<'s> {
 
     pub fn solve(mut self) -> Result<Successful> {
         self.solver.solve_all(&mut self.infer, self.goals)
+    }
+}
+
+struct Subst<'b> {
+    bindings: &'b [Binding]
+}
+
+impl<'b> Subst<'b> {
+    fn apply<T: Fold>(bindings: &[Binding], value: &T) -> T::Result {
+        value.fold_with(&mut Subst { bindings }).unwrap()
+    }
+}
+
+impl<'b> Folder for Subst<'b> {
+    fn fold_var(&mut self, depth: usize) -> Result<Ty> {
+        match self.bindings[depth] {
+            Binding::ForAll(_) => unimplemented!(),
+            Binding::Exists(v) => Ok(v.to_ty()),
+        }
     }
 }
