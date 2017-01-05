@@ -9154,7 +9154,7 @@ pub fn __action10<
     (_, _, _): (usize, &'input str, usize),
 ) -> Box<Goal>
 {
-    Box::new(Goal::ForAll(p, g))
+    Box::new(Goal::Exists(p, g))
 }
 
 #[allow(unused_variables)]

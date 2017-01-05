@@ -2,11 +2,16 @@
 
 use chalk_rust_parse;
 use errors::*;
-use ir;
-use super::LowerProgram;
+use ir::*;
+use std::sync::Arc;
+use super::{LowerProgram, LowerGoal};
 
-fn parse_and_lower(text: &str) -> Result<ir::Program> {
+fn parse_and_lower(text: &str) -> Result<Program> {
     chalk_rust_parse::parse_program(text)?.lower()
+}
+
+fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
+    chalk_rust_parse::parse_goal(text)?.lower(program)
 }
 
 #[test]
@@ -48,4 +53,14 @@ fn assoc_tys() {
     impl<X> Foo for <X as Iterator>::Item where X: Iterator { }
     ")
         .unwrap();
+}
+
+#[test]
+fn goal_quantifiers() {
+    let program = Arc::new(parse_and_lower("trait Foo { }").unwrap());
+    let goal = parse_and_lower_goal(&program, "(forall<X> (exists<Y> (forall<Z> Z: Foo<Y, X>)))")
+        .unwrap();
+    set_current_program(&program, || {
+        assert_eq!(format!("{:?}", goal), "ForAll(1, Exists(1, ForAll(1, Leaf(Implemented(?2 as Foo<?1, ?0>)))))");
+    });
 }
