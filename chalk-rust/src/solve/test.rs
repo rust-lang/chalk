@@ -44,7 +44,7 @@ fn solve_goal(program_text: &str,
             // remove all whitespace:
             let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
             let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-            assert_eq!(expected1, result1);
+            assert!(!expected1.is_empty() && result1.starts_with(&expected1));
         }
     });
 }
@@ -76,15 +76,13 @@ fn prove_clone() {
         goal {
             Bar: Clone
         } yields {
-            "`Bar as Clone` is not implemented in environment \
-             `Environment { universe: UniverseIndex { counter: 0 }, clauses: [] }`"
+            "`Bar as Clone` is not implemented"
         }
 
         goal {
             Vec<Bar>: Clone
         } yields {
-            "`Vec<Bar> as Clone` is not implemented in environment \
-             `Environment { universe: UniverseIndex { counter: 0 }, clauses: [] }`"
+            "`Vec<Bar> as Clone` is not implemented"
         }
     }
 }
@@ -116,6 +114,40 @@ fn prove_infer() {
             exists<A> (Foo: Map<A>)
         } yields {
             "Yes"
+        }
+    }
+}
+
+#[test]
+fn prove_forall() {
+    test! {
+        program {
+            struct Foo { }
+            struct Vec<T> { }
+
+            trait Marker { }
+            impl<T> Marker for Vec<T> { }
+
+            trait Clone { }
+            impl<T> Clone for Vec<T> where T: Clone { }
+        }
+
+        goal {
+            forall<T> (T: Marker)
+        } yields {
+            "`!1 as Marker` is not implemented"
+        }
+
+        goal {
+            forall<T> (Vec<T>: Marker)
+        } yields {
+            "Yes"
+        }
+
+        goal {
+            forall<T> (Vec<T>: Clone)
+        } yields {
+            "`Vec<!1> as Clone` is not implemented"
         }
     }
 }

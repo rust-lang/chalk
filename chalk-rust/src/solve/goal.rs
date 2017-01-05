@@ -85,7 +85,10 @@ impl<'b> Subst<'b> {
 impl<'b> Folder for Subst<'b> {
     fn fold_var(&mut self, depth: usize) -> Result<Ty> {
         match self.bindings[depth] {
-            Binding::ForAll(_) => unimplemented!(),
+            Binding::ForAll(u) => Ok(Ty::Apply(ApplicationTy {
+                name: TypeName::ForAll(u),
+                args: vec![]
+            })),
             Binding::Exists(v) => Ok(v.to_ty()),
         }
     }
