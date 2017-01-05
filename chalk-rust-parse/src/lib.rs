@@ -26,8 +26,8 @@ pub fn parse_ty(text: &str) -> Result<ast::Ty> {
     }
 }
 
-pub fn parse_goals(text: &str) -> Result<ast::Goals> {
-    match parser::parse_Goals(text) {
+pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
+    match parser::parse_Goal(text) {
         Ok(v) => Ok(v),
         Err(e) => bail!("parse error: {:?}", e),
     }

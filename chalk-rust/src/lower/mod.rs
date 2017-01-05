@@ -135,24 +135,11 @@ impl LowerParameterMap for Item {
     }
 }
 
-impl LowerParameterMap for Goals {
-    fn synthetic_parameters(&self) -> Option<ir::Identifier> {
-        None
-    }
-
-    fn declared_parameters(&self) -> &[Identifier] {
-        &self.parameters
-    }
-}
-
 trait LowerWhereClauses {
     fn where_clauses(&self) -> &[WhereClause];
 
     fn lower_where_clauses(&self, env: &Env) -> Result<Vec<ir::WhereClause>> {
-        self.where_clauses()
-            .iter()
-            .map(|wc| wc.lower(env))
-            .collect()
+        self.where_clauses().lower(env)
     }
 }
 
@@ -194,9 +181,15 @@ impl LowerWhereClauses for Impl {
     }
 }
 
-impl LowerWhereClauses for Goals {
-    fn where_clauses(&self) -> &[WhereClause] {
-        &self.where_clauses
+trait LowerWhereClauseVec {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::WhereClause>>;
+}
+
+impl LowerWhereClauseVec for [WhereClause] {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::WhereClause>> {
+        self.iter()
+            .map(|wc| wc.lower(env))
+            .collect()
     }
 }
 
@@ -350,19 +343,35 @@ impl LowerTrait for TraitDefn {
     }
 }
 
-pub trait LowerGoals {
-    fn lower(&self, program: &ir::Program) -> Result<ir::Quantified<Vec<ir::WhereClause>>>;
+pub trait LowerGoal<A> {
+    fn lower(&self, arg: &A) -> Result<Box<ir::Goal>>;
 }
 
-impl LowerGoals for Goals {
-    fn lower(&self, program: &ir::Program) -> Result<ir::Quantified<Vec<ir::WhereClause>>> {
+impl LowerGoal<ir::Program> for Goal {
+    fn lower(&self, program: &ir::Program) -> Result<Box<ir::Goal>> {
         let env = Env {
             type_ids: &program.type_ids,
             type_kinds: &program.type_kinds,
-            parameter_map: &self.parameter_map(),
+            parameter_map: &HashMap::new()
         };
 
-        let where_clauses = self.lower_where_clauses(&env)?;
-        Ok(ir::Quantified { value: where_clauses, binders: env.parameter_map.len() })
+        self.lower(&env)
+    }
+}
+
+impl<'k> LowerGoal<Env<'k>> for Goal {
+    fn lower(&self, env: &Env<'k>) -> Result<Box<ir::Goal>> {
+        match *self {
+            Goal::ForAll(ref _ids, ref _g) =>
+                unimplemented!(),
+            Goal::Exists(ref _ids, ref _g) =>
+                unimplemented!(),
+            Goal::Implies(ref wc, ref g) =>
+                Ok(Box::new(ir::Goal::Implies(wc.lower(env)?, g.lower(env)?))),
+            Goal::And(ref g1, ref g2) =>
+                Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
+            Goal::Leaf(ref wc) =>
+                Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
+        }
     }
 }

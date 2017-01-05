@@ -13,11 +13,16 @@ Item: Item = {
     Impl => Item::Impl(<>),
 };
 
-pub Goals: Goals = {
-    <p:("for" "<" <Comma<Id>> ">")?> <w:Comma<WhereClause>> => Goals {
-        parameters: p.unwrap_or(vec![]),
-        where_clauses: w,
-    }
+pub Goal: Box<Goal> = {
+    Goal1,
+    <g1:Goal1> "," <g2:Goal> => Box::new(Goal::And(g1, g2)),
+};
+
+Goal1: Box<Goal> = {
+    "(" "forall" "<" <p:Comma<Id>> ">" <g:Goal> ")" => Box::new(Goal::ForAll(p, g)),
+    "(" "exists" "<" <p:Comma<Id>> ">" <g:Goal> ")" => Box::new(Goal::ForAll(p, g)),
+    "if" <w:Comma<WhereClause>> "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
+    <w:WhereClause> => Box::new(Goal::Leaf(w)),
 };
 
 StructDefn: StructDefn = {

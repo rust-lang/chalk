@@ -81,7 +81,10 @@ pub enum WhereClause {
     ProjectionEq { projection: ProjectionTy, ty: Ty },
 }
 
-pub struct Goals {
-    pub parameters: Vec<Identifier>,
-    pub where_clauses: Vec<WhereClause>,
+pub enum Goal {
+    ForAll(Vec<Identifier>, Box<Goal>),
+    Exists(Vec<Identifier>, Box<Goal>),
+    Implies(Vec<WhereClause>, Box<Goal>),
+    And(Box<Goal>, Box<Goal>),
+    Leaf(WhereClause),
 }
