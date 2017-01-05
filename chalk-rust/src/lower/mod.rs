@@ -361,11 +361,20 @@ impl LowerGoal<ir::Program> for Goal {
 
 impl<'k> LowerGoal<Env<'k>> for Goal {
     fn lower(&self, env: &Env<'k>) -> Result<Box<ir::Goal>> {
+        let lower_quantified = |ids: &[Identifier], goal: &Goal| -> Result<Box<ir::Goal>> {
+            let mut next_id = env.parameter_map.len();
+            let mut parameter_map = env.parameter_map.clone();
+            for &id in ids {
+                parameter_map.insert(id.str, next_id);
+                next_id += 1;
+            }
+            goal.lower(&Env { parameter_map: &parameter_map, ..*env })
+        };
         match *self {
-            Goal::ForAll(ref _ids, ref _g) =>
-                unimplemented!(),
-            Goal::Exists(ref _ids, ref _g) =>
-                unimplemented!(),
+            Goal::ForAll(ref ids, ref g) =>
+                Ok(Box::new(ir::Goal::ForAll(ids.len(), lower_quantified(ids, g)?))),
+            Goal::Exists(ref ids, ref g) =>
+                Ok(Box::new(ir::Goal::Exists(ids.len(), lower_quantified(ids, g)?))),
             Goal::Implies(ref wc, ref g) =>
                 Ok(Box::new(ir::Goal::Implies(wc.lower(env)?, g.lower(env)?))),
             Goal::And(ref g1, ref g2) =>

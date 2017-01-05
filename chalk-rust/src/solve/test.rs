@@ -15,11 +15,8 @@ fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goa
 }
 
 macro_rules! test {
-    (test $name:ident { program $program:tt $(goal $goal:tt yields { $expected:expr })* }) => {
-        #[test]
-        fn $name() {
-            solve_goal(stringify!($program), vec![$((stringify!($goal), $expected)),*])
-        }
+    (program $program:tt $(goal $goal:tt yields { $expected:expr })*) => {
+        solve_goal(stringify!($program), vec![$((stringify!($goal), $expected)),*])
     }
 }
 
@@ -52,8 +49,9 @@ fn solve_goal(program_text: &str,
     });
 }
 
-test! {
-    test prove_clone {
+#[test]
+fn prove_clone() {
+    test! {
         program {
             struct Foo { }
             struct Bar { }
