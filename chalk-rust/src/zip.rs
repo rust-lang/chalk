@@ -117,7 +117,7 @@ impl Zip for ProjectionTy {
     }
 }
 
-impl Zip for NormalizeTo {
+impl Zip for Normalize {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         Zip::zip_with(zipper, &a.projection, &b.projection)?;
         Zip::zip_with(zipper, &a.ty, &b.ty)?;
@@ -140,11 +140,11 @@ impl Zip for WhereClause {
             (&WhereClause::Implemented(ref a), &WhereClause::Implemented(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
-            (&WhereClause::NormalizeTo(ref a), &WhereClause::NormalizeTo(ref b)) => {
+            (&WhereClause::Normalize(ref a), &WhereClause::Normalize(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
-            (&WhereClause::Implemented(_), &WhereClause::NormalizeTo(_)) |
-            (&WhereClause::NormalizeTo(_), &WhereClause::Implemented(_)) => {
+            (&WhereClause::Implemented(_), &WhereClause::Normalize(_)) |
+            (&WhereClause::Normalize(_), &WhereClause::Implemented(_)) => {
                 bail!("cannot zip where-clauses `{:?}` and `{:?}`", a, b)
             }
         }

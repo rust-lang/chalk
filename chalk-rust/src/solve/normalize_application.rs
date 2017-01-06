@@ -6,20 +6,20 @@ use solve::infer::InferenceTable;
 use solve::solver::Solver;
 use std::sync::Arc;
 
-pub struct NormalizeToApplication<'s> {
+pub struct NormalizeApplication<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
     environment: Arc<Environment>,
-    goal: NormalizeTo,
+    goal: Normalize,
 }
 
-impl<'s> NormalizeToApplication<'s> {
+impl<'s> NormalizeApplication<'s> {
     pub fn new(solver: &'s mut Solver,
-               q: Quantified<InEnvironment<NormalizeTo>>)
+               q: Quantified<InEnvironment<Normalize>>)
                -> Self {
         let InEnvironment { environment, goal } = q.value;
         let infer = InferenceTable::new_with_vars(&q.binders);
-        NormalizeToApplication {
+        NormalizeApplication {
             solver: solver,
             environment: environment,
             infer: infer,
@@ -27,7 +27,7 @@ impl<'s> NormalizeToApplication<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<NormalizeTo>>>> {
+    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<Normalize>>>> {
         let environment = self.environment.clone();
 
         // Construct an application from the projection. So if we have
@@ -52,7 +52,7 @@ impl<'s> NormalizeToApplication<'s> {
         // them can be successfully proved, then we know that this
         // unification succeeded.
         let env_where_clauses: Vec<_> =
-            normalize_to1.into_iter().map(WhereClause::NormalizeTo)
+            normalize_to1.into_iter().map(WhereClause::Normalize)
                          .map(|wc| InEnvironment::new(&environment, wc))
                          .collect();
         let successful = self.solver.solve_all(&mut self.infer, env_where_clauses)?;

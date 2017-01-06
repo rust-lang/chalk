@@ -32,9 +32,9 @@ impl Cast<WhereClause> for TraitRef {
     }
 }
 
-impl Cast<WhereClause> for NormalizeTo {
+impl Cast<WhereClause> for Normalize {
     fn cast(self) -> WhereClause {
-        WhereClause::NormalizeTo(self)
+        WhereClause::Normalize(self)
     }
 }
 

@@ -10,13 +10,13 @@ pub struct NormalizeWithImpl<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
     environment: Arc<Environment>,
-    goal: NormalizeTo,
+    goal: Normalize,
     impl_id: ItemId,
 }
 
 impl<'s> NormalizeWithImpl<'s> {
     pub fn new(solver: &'s mut Solver,
-               q: Quantified<InEnvironment<NormalizeTo>>,
+               q: Quantified<InEnvironment<Normalize>>,
                impl_id: ItemId)
                -> Self {
         let InEnvironment { environment, goal } = q.value;
@@ -30,7 +30,7 @@ impl<'s> NormalizeWithImpl<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<NormalizeTo>>>> {
+    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<Normalize>>>> {
         let environment = self.environment.clone();
         let program = self.solver.program.clone();
 
@@ -91,8 +91,8 @@ impl<'s> NormalizeWithImpl<'s> {
         // pairing each with the environment.
         let env_where_clauses: Vec<_> =
             where_clauses.into_iter()
-                         .chain(normalize_to1.into_iter().map(WhereClause::NormalizeTo))
-                         .chain(normalize_to2.into_iter().map(WhereClause::NormalizeTo))
+                         .chain(normalize_to1.into_iter().map(WhereClause::Normalize))
+                         .chain(normalize_to2.into_iter().map(WhereClause::Normalize))
                          .map(|wc| InEnvironment::new(&environment, wc))
                          .collect();
 

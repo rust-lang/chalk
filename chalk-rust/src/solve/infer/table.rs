@@ -88,7 +88,7 @@ impl InferenceTable {
         }
     }
 
-    pub fn unify<T>(&mut self, a: &T, b: &T) -> Result<Vec<NormalizeTo>>
+    pub fn unify<T>(&mut self, a: &T, b: &T) -> Result<Vec<Normalize>>
         where T: Zip
     {
         let mut unifier = Unifier::new(self);
@@ -133,7 +133,7 @@ impl TypeName {
 struct Unifier<'t> {
     table: &'t mut InferenceTable,
     snapshot: InferenceSnapshot,
-    normalizations: Vec<NormalizeTo>,
+    normalizations: Vec<Normalize>,
 }
 
 impl<'t> Unifier<'t> {
@@ -146,7 +146,7 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    fn commit(self) -> Result<Vec<NormalizeTo>> {
+    fn commit(self) -> Result<Vec<Normalize>> {
         self.table.commit(self.snapshot);
         Ok(self.normalizations)
     }
@@ -188,7 +188,7 @@ impl<'t> Unifier<'t> {
 
             (ty, &Ty::Projection(ref proj)) |
             (&Ty::Projection(ref proj), ty) => {
-                Ok(self.normalizations.push(NormalizeTo {
+                Ok(self.normalizations.push(Normalize {
                     projection: proj.clone(),
                     ty: ty.clone(),
                 }))

@@ -68,7 +68,7 @@ impl<'s> ImplementedWithImpl<'s> {
         // pairing each with the environment.
         let env_where_clauses: Vec<_> =
             where_clauses.into_iter()
-                         .chain(normalize_to.into_iter().map(WhereClause::NormalizeTo))
+                         .chain(normalize_to.into_iter().map(WhereClause::Normalize))
                          .map(|wc| InEnvironment::new(&environment, wc))
                          .collect();
 

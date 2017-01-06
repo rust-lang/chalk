@@ -36,7 +36,7 @@ impl<'s, G> MatchClause<'s, G>
         let normalize_to = self.infer.unify(&self.goal.clone().cast(), &clause)?;
         let env_where_clauses: Vec<_> =
             normalize_to.into_iter()
-                        .map(WhereClause::NormalizeTo)
+                        .map(WhereClause::Normalize)
                         .map(|wc| InEnvironment::new(&environment, wc))
                         .collect();
         let successful = self.solver.solve_all(&mut self.infer, env_where_clauses)?;

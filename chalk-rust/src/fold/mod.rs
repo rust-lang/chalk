@@ -130,8 +130,8 @@ impl Fold for ir::WhereClause {
             ir::WhereClause::Implemented(ref trait_ref) => {
                 Ok(ir::WhereClause::Implemented(trait_ref.fold_with(folder)?))
             }
-            ir::WhereClause::NormalizeTo(ref pred) => {
-                Ok(ir::WhereClause::NormalizeTo(pred.fold_with(folder)?))
+            ir::WhereClause::Normalize(ref pred) => {
+                Ok(ir::WhereClause::Normalize(pred.fold_with(folder)?))
             }
         }
     }
@@ -150,7 +150,7 @@ impl<F: Fold> Fold for environment::InEnvironment<F> {
 struct_fold!(ir::ApplicationTy { name, args });
 struct_fold!(ir::ProjectionTy { trait_ref, name });
 struct_fold!(ir::TraitRef { trait_id, args });
-struct_fold!(ir::NormalizeTo { projection, ty });
+struct_fold!(ir::Normalize { projection, ty });
 struct_fold!(ir::ImplData { parameters, trait_ref, assoc_ty_values, where_clauses });
 struct_fold!(ir::AssocTyValue { name, value });
 struct_fold!(environment::Environment { universe, clauses });

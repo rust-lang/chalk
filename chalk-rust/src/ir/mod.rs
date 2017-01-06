@@ -118,11 +118,11 @@ pub struct TraitRef {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WhereClause {
     Implemented(TraitRef),
-    NormalizeTo(NormalizeTo),
+    Normalize(Normalize),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NormalizeTo {
+pub struct Normalize {
     pub projection: ProjectionTy,
     pub ty: Ty,
 }

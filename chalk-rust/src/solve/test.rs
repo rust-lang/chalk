@@ -376,8 +376,8 @@ fn normalize() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        NormalizeTo(
-                            NormalizeTo {
+                        Normalize(
+                            Normalize {
                                 projection: <Vec<!1> as Iterator>::Item,
                                 ty: !1
                             }
@@ -397,8 +397,8 @@ fn normalize() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        NormalizeTo(
-                            NormalizeTo {
+                        Normalize(
+                            Normalize {
                                 projection: <Vec<!1> as Iterator>::Item,
                                 ty: !1
                             }
@@ -422,8 +422,8 @@ fn normalize() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        NormalizeTo(
-                            NormalizeTo {
+                        Normalize(
+                            Normalize {
                                 projection: <!1 as Iterator>::Item,
                                 ty: u32
                             }
@@ -447,8 +447,8 @@ fn normalize() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        NormalizeTo(
-                            NormalizeTo {
+                        Normalize(
+                            Normalize {
                                 projection: <!1 as Iterator>::Item,
                                 ty: (Iterator::Item)<!1>
                             }
@@ -483,8 +483,8 @@ fn normalize_rev_infer() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        NormalizeTo(
-                            NormalizeTo {
+                        Normalize(
+                            Normalize {
                                 projection: <u32 as Identity>::Item,
                                 ty: u32
                             }

@@ -2,26 +2,26 @@ use errors::*;
 use ir::*;
 use solve::environment::InEnvironment;
 use solve::match_clause::MatchClause;
-use solve::normalize_to_application::NormalizeToApplication;
+use solve::normalize_application::NormalizeApplication;
 use solve::normalize_with_impl::NormalizeWithImpl;
 use solve::solver::Solver;
 use solve::Solution;
 
-pub struct Normalize<'s> {
+pub struct SolveNormalize<'s> {
     solver: &'s mut Solver,
-    env_goal: Quantified<InEnvironment<NormalizeTo>>,
+    env_goal: Quantified<InEnvironment<Normalize>>,
 }
 
-impl<'s> Normalize<'s> {
-    pub fn new(solver: &'s mut Solver, env_goal: Quantified<InEnvironment<NormalizeTo>>) -> Self {
-        Normalize {
+impl<'s> SolveNormalize<'s> {
+    pub fn new(solver: &'s mut Solver, env_goal: Quantified<InEnvironment<Normalize>>) -> Self {
+        SolveNormalize {
             solver: solver,
             env_goal: env_goal,
         }
     }
 
-    pub fn solve(self) -> Result<Solution<Quantified<InEnvironment<NormalizeTo>>>> {
-        let Normalize { solver, env_goal } = self;
+    pub fn solve(self) -> Result<Solution<Quantified<InEnvironment<Normalize>>>> {
+        let SolveNormalize { solver, env_goal } = self;
         let program = solver.program.clone();
 
         // First try to find a solution in the environment.
@@ -51,6 +51,6 @@ impl<'s> Normalize<'s> {
 
         // If we can't find anything better, the fallback is to
         // normalize into an application of `Iterator::Item`.
-        NormalizeToApplication::new(solver, env_goal).solve()
+        NormalizeApplication::new(solver, env_goal).solve()
     }
 }

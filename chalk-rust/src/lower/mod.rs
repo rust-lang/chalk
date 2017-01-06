@@ -204,7 +204,7 @@ impl LowerWhereClause for WhereClause {
                 ir::WhereClause::Implemented(trait_ref.lower(env)?)
             }
             WhereClause::ProjectionEq { ref projection, ref ty } => {
-                ir::WhereClause::NormalizeTo(ir::NormalizeTo {
+                ir::WhereClause::Normalize(ir::Normalize {
                     projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
                 })
