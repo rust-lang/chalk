@@ -1,4 +1,3 @@
-use cast::Cast;
 use errors::*;
 use ir::*;
 use solve::Solution;
@@ -80,13 +79,11 @@ impl<'s> NormalizeWithImpl<'s> {
         // result in some auxiliary normalization clauses we must
         // prove.
         let normalize_to1 = self.infer.unify(&self.goal.projection.trait_ref, &impl_trait_ref)?;
-        let normalize_to1: Vec<WhereClause> = normalize_to1.cast();
         debug!("implemented_with::solve: normalize_to1={:?}", normalize_to1);
 
         // Unify the result of normalization (`self.goal.ty`) with the
         // value that this impl provides (`assoc_ty_value`).
         let normalize_to2 = self.infer.unify(&self.goal.ty, &assoc_ty_value)?;
-        let normalize_to2: Vec<WhereClause> = normalize_to2.cast();
         debug!("implemented_with::solve: normalize_to2={:?}", normalize_to2);
 
         // Combine the where-clauses from the impl with the results
@@ -94,8 +91,8 @@ impl<'s> NormalizeWithImpl<'s> {
         // pairing each with the environment.
         let env_where_clauses: Vec<_> =
             where_clauses.into_iter()
-                         .chain(normalize_to1)
-                         .chain(normalize_to2)
+                         .chain(normalize_to1.into_iter().map(WhereClause::NormalizeTo))
+                         .chain(normalize_to2.into_iter().map(WhereClause::NormalizeTo))
                          .map(|wc| InEnvironment::new(&environment, wc))
                          .collect();
 

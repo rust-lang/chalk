@@ -36,8 +36,8 @@ pub enum TypeName {
 /// an **application type** like `(Iterator::Item)<T>`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssociatedType {
-    trait_id: ItemId,
-    name: Identifier,
+    pub trait_id: ItemId,
+    pub name: Identifier,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

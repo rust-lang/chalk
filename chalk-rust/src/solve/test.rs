@@ -433,5 +433,30 @@ fn normalize() {
                 }
             }"
         }
+
+        goal {
+            forall<T> {
+                if (T: Iterator) {
+                    exists<U> {
+                        <T as Iterator>::Item == U
+                    }
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        NormalizeTo(
+                            NormalizeTo {
+                                projection: <!1 as Iterator>::Item,
+                                ty: (Iterator::Item)<!1>
+                            }
+                        )
+                    ],
+                    binders: []
+                }
+            }"
+        }
     }
 }
