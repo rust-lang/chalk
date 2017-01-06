@@ -63,7 +63,7 @@ impl Debug for ProjectionTy {
     }
 }
 
-struct Angle<'a, T: 'a>(&'a [T]);
+pub struct Angle<'a, T: 'a>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
@@ -81,3 +81,21 @@ impl<'a, T: Debug> Debug for Angle<'a, T> {
         Ok(())
     }
 }
+
+impl Debug for Normalize {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{:?} == {:?}", self.projection, self.ty)
+    }
+}
+
+impl Debug for WhereClause {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            WhereClause::Normalize(ref n) => write!(fmt, "{:?}", n),
+            WhereClause::Implemented(ref n) => {
+                write!(fmt, "{:?}: {:?}{:?}", n.args[0], n.trait_id, Angle(&n.args[1..]))
+            }
+        }
+    }
+}
+

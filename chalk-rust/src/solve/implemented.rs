@@ -42,8 +42,10 @@ impl<'s> Implemented<'s> {
         solver.solve_any(&program.impl_data, &env_goal, |solver, (&impl_id, _impl_data)| {
             ImplementedWithImpl::new(solver, env_goal.clone(), impl_id).solve()
         }).chain_err(|| {
-            format!("`{:?}` is not implemented in environment `{:?}`",
-                    env_goal.value.goal,
+            format!("`{:?}{:?}` is not implemented for `{:?}` in environment `{:?}`",
+                    env_goal.value.goal.trait_id,
+                    debug::Angle(&env_goal.value.goal.args[1..]),
+                    &env_goal.value.goal.args[0],
                     env_goal.value.environment)
         })
     }

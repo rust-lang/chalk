@@ -74,9 +74,7 @@ fn prove_clone() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            Vec<Foo> as Clone
-                        )
+                        Vec<Foo>: Clone
                     ],
                     binders: []
                 }
@@ -90,9 +88,7 @@ fn prove_clone() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            Foo as Clone
-                        )
+                        Foo: Clone
                     ],
                     binders: []
                 }
@@ -102,13 +98,13 @@ fn prove_clone() {
         goal {
             Bar: Clone
         } yields {
-            "`Bar as Clone` is not implemented"
+            "`Clone` is not implemented for `Bar`"
         }
 
         goal {
             Vec<Bar>: Clone
         } yields {
-            "`Vec<Bar> as Clone` is not implemented"
+            "`Clone` is not implemented for `Vec<Bar>`"
         }
     }
 }
@@ -131,9 +127,7 @@ fn prove_infer() {
                 successful: Maybe,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            ?0 as Map<?1>
-                        )
+                        ?0: Map<?1>
                     ],
                     binders: [
                         U0,
@@ -150,9 +144,7 @@ fn prove_infer() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            Foo as Map<Bar>
-                        )
+                        Foo: Map<Bar>
                     ],
                     binders: []
                 }
@@ -166,9 +158,7 @@ fn prove_infer() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            Foo as Map<Bar>
-                        )
+                        Foo: Map<Bar>
                     ],
                     binders: []
                 }
@@ -194,7 +184,7 @@ fn prove_forall() {
         goal {
             forall<T> { T: Marker }
         } yields {
-            "`!1 as Marker` is not implemented"
+            "`Marker` is not implemented for `!1`"
         }
 
         // If we assume `T: Marker`, then obviously `T: Marker`.
@@ -205,9 +195,7 @@ fn prove_forall() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            !1 as Marker
-                        )
+                        !1: Marker
                     ],
                     binders: []
                 }
@@ -223,9 +211,7 @@ fn prove_forall() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            Vec<!1> as Marker
-                        )
+                        Vec<!1>: Marker
                     ],
                     binders: []
                 }
@@ -237,7 +223,7 @@ fn prove_forall() {
         goal {
             forall<T> { Vec<T>: Clone }
         } yields {
-            "`Vec<!1> as Clone` is not implemented"
+            "`Clone` is not implemented for `Vec<!1>`"
         }
 
         // Here, we do know that `T: Clone`, so we can.
@@ -252,9 +238,7 @@ fn prove_forall() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            Vec<!1> as Clone
-                        )
+                        Vec<!1>: Clone
                     ],
                     binders: []
                 }
@@ -284,9 +268,7 @@ fn higher_ranked() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            SomeType<!1> as Foo<u8>
-                        )
+                        SomeType<!1>: Foo<u8>
                     ],
                     binders: []
                 }
@@ -310,7 +292,7 @@ fn ordering() {
                 }
             }
         } yields {
-            "`!1 as Foo<?0>` is not implemented"
+            "`Foo<?0>` is not implemented for `!1`"
         }
     }
 }
@@ -340,9 +322,7 @@ fn max_depth() {
                 successful: Maybe,
                 refined_goal: Quantified {
                     value: [
-                        Implemented(
-                            S<S<S<S<?0>>>> as Foo
-                        )
+                        S<S<S<S<?0>>>>: Foo
                     ],
                     binders: [
                         U0
@@ -376,12 +356,7 @@ fn normalize() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Normalize(
-                            Normalize {
-                                projection: <Vec<!1> as Iterator>::Item,
-                                ty: !1
-                            }
-                        )
+                        <Vec<!1> as Iterator>::Item == !1
                     ],
                     binders: []
                 }
@@ -397,12 +372,7 @@ fn normalize() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Normalize(
-                            Normalize {
-                                projection: <Vec<!1> as Iterator>::Item,
-                                ty: !1
-                            }
-                        )
+                        <Vec<!1> as Iterator>::Item == !1
                     ],
                     binders: []
                 }
@@ -422,12 +392,7 @@ fn normalize() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Normalize(
-                            Normalize {
-                                projection: <!1 as Iterator>::Item,
-                                ty: u32
-                            }
-                        )
+                        <!1 as Iterator>::Item == u32
                     ],
                     binders: []
                 }
@@ -447,12 +412,7 @@ fn normalize() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Normalize(
-                            Normalize {
-                                projection: <!1 as Iterator>::Item,
-                                ty: (Iterator::Item)<!1>
-                            }
-                        )
+                        <!1 as Iterator>::Item == (Iterator::Item)<!1>
                     ],
                     binders: []
                 }
@@ -483,12 +443,7 @@ fn normalize_rev_infer() {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: [
-                        Normalize(
-                            Normalize {
-                                projection: <u32 as Identity>::Item,
-                                ty: u32
-                            }
-                        )
+                        <u32 as Identity>::Item == u32
                     ],
                     binders: []
                 }

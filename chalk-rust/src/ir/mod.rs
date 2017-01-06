@@ -115,13 +115,13 @@ pub struct TraitRef {
     pub args: Vec<Ty>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum WhereClause {
     Implemented(TraitRef),
     Normalize(Normalize),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Normalize {
     pub projection: ProjectionTy,
     pub ty: Ty,
@@ -150,7 +150,7 @@ pub enum Goal {
     Leaf(WhereClause),
 }
 
-mod debug;
+pub mod debug;
 mod tls;
 
 pub use self::tls::set_current_program;
