@@ -34,7 +34,13 @@ fn solve_goal(program_text: &str,
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
             let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len()-1]).unwrap();
-            let result = match Prove::new(&mut Solver::new(&program), goal).solve() {
+
+            // Pick a low overflow depth just because the existing
+            // tests don't require a higher one.
+            let overflow_depth = 3;
+
+            let mut solver = Solver::new(&program, overflow_depth);
+            let result = match Prove::new(&mut solver, goal).solve() {
                 Ok(v) => format!("{:#?}", v),
                 Err(e) => format!("{}", e),
             };
@@ -305,6 +311,44 @@ fn ordering() {
             }
         } yields {
             "`!1 as Foo<?0>` is not implemented"
+        }
+    }
+}
+
+/// This test forces the solver into an overflow scenario: `Foo` is
+/// only implemented for `S<S<S<...>>>` ad infinitum. So when asked to
+/// compute the type for which `Foo` is implemented, we wind up
+/// recursing for a while before we overflow. You can see that our
+/// final result is "Maybe" (i.e., either multiple proof trees or an
+/// infinite proof tree) and that we do conclude that, if a definite
+/// proof tree exists, it must begin with `S<S<S<S<...>>>>`.
+#[test]
+fn max_depth() {
+    test! {
+        program {
+            trait Foo { }
+            struct S<T> { }
+            impl<T> Foo for S<T> where T: Foo { }
+        }
+
+        goal {
+            exists<T> {
+                T: Foo
+            }
+        } yields {
+            "Solution {
+                successful: Maybe,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            S<S<S<S<?0>>>> as Foo
+                        )
+                    ],
+                    binders: [
+                        U0
+                    ]
+                }
+            }"
         }
     }
 }

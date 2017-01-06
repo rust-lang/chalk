@@ -12,13 +12,13 @@ use super::*;
 
 pub struct Solver {
     pub(super) program: Arc<Program>,
-
+    overflow_depth: usize,
     stack: Vec<Quantified<InEnvironment<WhereClause>>>,
 }
 
 impl Solver {
-    pub fn new(program: &Arc<Program>) -> Self {
-        Solver { program: program.clone(), stack: vec![] }
+    pub fn new(program: &Arc<Program>, overflow_depth: usize) -> Self {
+        Solver { program: program.clone(), stack: vec![], overflow_depth, }
     }
 
     /// Tries to solve one **closed** where-clause `wc` (in the given
@@ -28,9 +28,9 @@ impl Solver {
                  -> Result<Solution<Quantified<InEnvironment<WhereClause>>>> {
         debug!("Solver::solve({:?})", wc_env);
 
-        if self.stack.contains(&wc_env) {
-            // Recursive invocation
-            debug!("solve: {:?} already on the stack", wc_env);
+        if self.stack.contains(&wc_env) || self.stack.len() > self.overflow_depth {
+            // Recursive invocation or overflow
+            debug!("solve: {:?} already on the stack or overflowed max depth", wc_env);
             return Ok(Solution {
                 successful: Successful::Maybe,
                 refined_goal: wc_env,
