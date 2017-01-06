@@ -4,7 +4,7 @@ use ir::*;
 use solve::environment::{Environment, InEnvironment};
 use solve::infer::{InferenceTable, InferenceVariable};
 use solve::solver::Solver;
-use solve::Successful;
+use solve::Solution;
 use std::sync::Arc;
 
 pub struct Prove<'s> {
@@ -20,7 +20,11 @@ enum Binding {
 
 impl<'s> Prove<'s> {
     pub fn new(solver: &'s mut Solver, goal: Box<Goal>) -> Self {
-        let mut prove = Prove { solver, infer: InferenceTable::new(), goals: vec![] };
+        let mut prove = Prove {
+            solver: solver,
+            infer: InferenceTable::new(),
+            goals: vec![],
+        };
         let environment = &Environment::new();
         prove.decompose(&goal, environment, &mut vec![]);
         prove
@@ -33,21 +37,21 @@ impl<'s> Prove<'s> {
         match *goal {
             Goal::ForAll(num_binders, ref subgoal) => {
                 let mut new_environment = environment.clone();
-                for _ in 0 .. num_binders {
+                for _ in 0..num_binders {
                     new_environment = new_environment.new_universe();
                     bindings.push(Binding::ForAll(new_environment.universe));
                 }
                 self.decompose(subgoal, &new_environment, bindings);
-                for _ in 0 .. num_binders {
+                for _ in 0..num_binders {
                     bindings.pop();
                 }
             }
             Goal::Exists(num_binders, ref subgoal) => {
-                for _ in 0 .. num_binders {
+                for _ in 0..num_binders {
                     bindings.push(Binding::Exists(self.infer.new_variable(environment.universe)));
                 }
                 self.decompose(subgoal, environment, bindings);
-                for _ in 0 .. num_binders {
+                for _ in 0..num_binders {
                     bindings.pop().unwrap();
                 }
             }
@@ -67,28 +71,38 @@ impl<'s> Prove<'s> {
         }
     }
 
-    pub fn solve(mut self) -> Result<Successful> {
-        self.solver.solve_all(&mut self.infer, self.goals)
+    pub fn solve(mut self) -> Result<Solution<Quantified<Vec<WhereClause>>>> {
+        let successful = self.solver.solve_all(&mut self.infer, self.goals.clone())?;
+        let refined_goal = self.infer.quantify(&self.goals
+            .into_iter()
+            .map(|g| g.goal)
+            .collect::<Vec<_>>());
+        Ok(Solution {
+            successful: successful,
+            refined_goal: refined_goal,
+        })
     }
 }
 
 struct Subst<'b> {
-    bindings: &'b [Binding]
+    bindings: &'b [Binding],
 }
 
 impl<'b> Subst<'b> {
     fn apply<T: Fold>(bindings: &[Binding], value: &T) -> T::Result {
-        value.fold_with(&mut Subst { bindings }).unwrap()
+        value.fold_with(&mut Subst { bindings: bindings }).unwrap()
     }
 }
 
 impl<'b> Folder for Subst<'b> {
     fn fold_var(&mut self, depth: usize) -> Result<Ty> {
         match self.bindings[depth] {
-            Binding::ForAll(u) => Ok(Ty::Apply(ApplicationTy {
-                name: TypeName::ForAll(u),
-                args: vec![]
-            })),
+            Binding::ForAll(u) => {
+                Ok(Ty::Apply(ApplicationTy {
+                    name: TypeName::ForAll(u),
+                    args: vec![],
+                }))
+            }
             Binding::Exists(v) => Ok(v.to_ty()),
         }
     }

@@ -38,8 +38,8 @@ fn solve_goal(program_text: &str,
                 Ok(v) => format!("{:#?}", v),
                 Err(e) => format!("{}", e),
             };
-            println!("expected:\n{:?}", expected);
-            println!("actual:\n{:#?}", result);
+            println!("expected:\n{}", expected);
+            println!("actual:\n{}", result);
 
             // remove all whitespace:
             let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
@@ -64,13 +64,33 @@ fn prove_clone() {
         goal {
             Vec<Foo>: Clone
         } yields {
-            "Yes"
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            Vec<Foo> as Clone
+                        )
+                    ],
+                    binders: 0
+                }
+            }"
         }
 
         goal {
             Foo: Clone
         } yields {
-            "Yes"
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            Foo as Clone
+                        )
+                    ],
+                    binders: 0
+                }
+            }"
         }
 
         goal {
@@ -101,19 +121,49 @@ fn prove_infer() {
         goal {
             exists<A, B> { A: Map<B> }
         } yields {
-            "Maybe"
+            "Solution {
+                successful: Maybe,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            ?0 as Map<?1>
+                        )
+                    ],
+                    binders: 2
+                }
+            }"
         }
 
         goal {
             exists<A> { A: Map<Bar> }
         } yields {
-            "Yes"
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            Foo as Map<Bar>
+                        )
+                    ],
+                    binders: 0
+                }
+            }"
         }
 
         goal {
             exists<A> { Foo: Map<A> }
         } yields {
-            "Yes"
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            Foo as Map<Bar>
+                        )
+                    ],
+                    binders: 0
+                }
+            }"
         }
     }
 }
@@ -142,7 +192,17 @@ fn prove_forall() {
         goal {
             forall<T> { if (T: Marker) { T: Marker } }
         } yields {
-            "Yes"
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            !1 as Marker
+                        )
+                    ],
+                    binders: 0
+                }
+            }"
         }
 
         // We don't have know to anything about `T` to know that
@@ -150,7 +210,17 @@ fn prove_forall() {
         goal {
             forall<T> { Vec<T>: Marker }
         } yields {
-            "Yes"
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            Vec<!1> as Marker
+                        )
+                    ],
+                    binders: 0
+                }
+            }"
         }
 
         // Here, we don't know that `T: Clone`, so we can't prove that
@@ -169,7 +239,17 @@ fn prove_forall() {
                 }
             }
         } yields {
-            "Yes"
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            Vec<!1> as Clone
+                        )
+                    ],
+                    binders: 0
+                }
+            }"
         }
     }
 }
@@ -191,7 +271,17 @@ fn higher_ranked() {
                 }
             }
         } yields {
-            "Yes"
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        Implemented(
+                            SomeType<!1> as Foo<u8>
+                        )
+                    ],
+                    binders: 0
+                }
+            }"
         }
     }
 }
