@@ -72,7 +72,7 @@ fn prove_clone() {
                             Vec<Foo> as Clone
                         )
                     ],
-                    binders: 0
+                    binders: []
                 }
             }"
         }
@@ -88,7 +88,7 @@ fn prove_clone() {
                             Foo as Clone
                         )
                     ],
-                    binders: 0
+                    binders: []
                 }
             }"
         }
@@ -129,7 +129,10 @@ fn prove_infer() {
                             ?0 as Map<?1>
                         )
                     ],
-                    binders: 2
+                    binders: [
+                        U0,
+                        U0
+                    ]
                 }
             }"
         }
@@ -145,7 +148,7 @@ fn prove_infer() {
                             Foo as Map<Bar>
                         )
                     ],
-                    binders: 0
+                    binders: []
                 }
             }"
         }
@@ -161,7 +164,7 @@ fn prove_infer() {
                             Foo as Map<Bar>
                         )
                     ],
-                    binders: 0
+                    binders: []
                 }
             }"
         }
@@ -200,7 +203,7 @@ fn prove_forall() {
                             !1 as Marker
                         )
                     ],
-                    binders: 0
+                    binders: []
                 }
             }"
         }
@@ -218,7 +221,7 @@ fn prove_forall() {
                             Vec<!1> as Marker
                         )
                     ],
-                    binders: 0
+                    binders: []
                 }
             }"
         }
@@ -247,7 +250,7 @@ fn prove_forall() {
                             Vec<!1> as Clone
                         )
                     ],
-                    binders: 0
+                    binders: []
                 }
             }"
         }
@@ -279,9 +282,29 @@ fn higher_ranked() {
                             SomeType<!1> as Foo<u8>
                         )
                     ],
-                    binders: 0
+                    binders: []
                 }
             }"
+        }
+    }
+}
+
+#[test]
+fn ordering() {
+    test! {
+        program {
+            trait Foo<T> { }
+            impl<U> Foo<U> for U { }
+        }
+
+        goal {
+            exists<V> {
+                forall<U> {
+                    U: Foo<V>
+                }
+            }
+        } yields {
+            "`!1 as Foo<?0>` is not implemented"
         }
     }
 }

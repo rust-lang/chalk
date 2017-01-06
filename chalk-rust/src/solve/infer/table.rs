@@ -25,10 +25,10 @@ impl InferenceTable {
         }
     }
 
-    pub fn new_with_vars(vars: usize, universe: UniverseIndex) -> Self {
+    pub fn new_with_vars(vars: &[UniverseIndex]) -> Self {
         let mut table = InferenceTable::new();
-        for _ in 0..vars {
-            table.new_variable(universe);
+        for &ui in vars {
+            table.new_variable(ui);
         }
         table
     }

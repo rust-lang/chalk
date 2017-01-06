@@ -24,7 +24,7 @@ pub enum TypeName {
     ForAll(UniverseIndex),
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UniverseIndex {
     pub counter: usize,
 }
@@ -114,7 +114,7 @@ pub struct NormalizeTo {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Quantified<T> {
     pub value: T,
-    pub binders: usize,
+    pub binders: Vec<UniverseIndex>,
 }
 
 impl<T> Quantified<T> {

@@ -13,6 +13,12 @@ impl Debug for ItemId {
     }
 }
 
+impl Debug for UniverseIndex {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "U{}", self.counter)
+    }
+}
+
 impl Debug for TypeName {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {

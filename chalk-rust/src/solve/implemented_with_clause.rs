@@ -20,7 +20,7 @@ impl<'s> ImplementedWithClause<'s> {
                clause_index: usize)
                -> Self {
         let InEnvironment { environment, goal } = q.value;
-        let infer = InferenceTable::new_with_vars(q.binders, environment.universe);
+        let infer = InferenceTable::new_with_vars(&q.binders);
         assert!(clause_index < environment.clauses.len());
         ImplementedWithClause { solver, infer, environment, goal, clause_index }
     }

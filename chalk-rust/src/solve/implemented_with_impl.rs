@@ -20,7 +20,7 @@ impl<'s> ImplementedWithImpl<'s> {
                impl_id: ItemId)
                -> Self {
         let InEnvironment { environment, goal } = q.value;
-        let infer = InferenceTable::new_with_vars(q.binders, environment.universe);
+        let infer = InferenceTable::new_with_vars(&q.binders);
         ImplementedWithImpl {
             solver: solver,
             environment: environment,
