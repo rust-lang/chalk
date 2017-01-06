@@ -1,8 +1,8 @@
 use errors::*;
 use ir::*;
 use solve::environment::InEnvironment;
-use solve::implemented_with_clause::ImplementedWithClause;
 use solve::implemented_with_impl::ImplementedWithImpl;
+use solve::match_clause::MatchClause;
 use solve::solver::Solver;
 use solve::Solution;
 
@@ -27,7 +27,7 @@ impl<'s> Implemented<'s> {
         let environment = &env_goal.value.environment;
         let num_clauses = environment.clauses.len();
         let env_result = solver.solve_any(0..num_clauses, &env_goal, |solver, clause_index| {
-            ImplementedWithClause::new(solver, env_goal.clone(), clause_index).solve()
+            MatchClause::new(solver, &env_goal, clause_index).solve()
         });
 
         // If we found something in the environment, even if it might

@@ -145,7 +145,7 @@ impl Zip for WhereClause {
             }
             (&WhereClause::Implemented(_), &WhereClause::NormalizeTo(_)) |
             (&WhereClause::NormalizeTo(_), &WhereClause::Implemented(_)) => {
-                panic!("cannot zip where-clauses `{:?}` and `{:?}`", a, b)
+                bail!("cannot zip where-clauses `{:?}` and `{:?}`", a, b)
             }
         }
     }

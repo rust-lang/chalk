@@ -2,7 +2,7 @@ pub mod environment;
 pub mod infer;
 pub mod implemented;
 pub mod implemented_with_impl;
-pub mod implemented_with_clause;
+pub mod match_clause;
 pub mod goal;
 pub mod solver;
 
