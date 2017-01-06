@@ -1,26 +1,26 @@
 use errors::*;
 use ir::*;
 use solve::environment::InEnvironment;
-use solve::implemented_with_impl::ImplementedWithImpl;
 use solve::match_clause::MatchClause;
+use solve::normalize_with_impl::NormalizeWithImpl;
 use solve::solver::Solver;
 use solve::Solution;
 
-pub struct Implemented<'s> {
+pub struct Normalize<'s> {
     solver: &'s mut Solver,
-    env_goal: Quantified<InEnvironment<TraitRef>>,
+    env_goal: Quantified<InEnvironment<NormalizeTo>>,
 }
 
-impl<'s> Implemented<'s> {
-    pub fn new(solver: &'s mut Solver, env_goal: Quantified<InEnvironment<TraitRef>>) -> Self {
-        Implemented {
+impl<'s> Normalize<'s> {
+    pub fn new(solver: &'s mut Solver, env_goal: Quantified<InEnvironment<NormalizeTo>>) -> Self {
+        Normalize {
             solver: solver,
             env_goal: env_goal,
         }
     }
 
-    pub fn solve(self) -> Result<Solution<Quantified<InEnvironment<TraitRef>>>> {
-        let Implemented { solver, env_goal } = self;
+    pub fn solve(self) -> Result<Solution<Quantified<InEnvironment<NormalizeTo>>>> {
+        let Normalize { solver, env_goal } = self;
         let program = solver.program.clone();
 
         // First try to find a solution in the environment.
@@ -40,7 +40,7 @@ impl<'s> Implemented<'s> {
 
         // Nothing in the environment, so try impls.
         solver.solve_any(&program.impl_data, &env_goal, |solver, (&impl_id, _impl_data)| {
-            ImplementedWithImpl::new(solver, env_goal.clone(), impl_id).solve()
+            NormalizeWithImpl::new(solver, env_goal.clone(), impl_id).solve()
         }).chain_err(|| {
             format!("`{:?}` is not implemented in environment `{:?}`",
                     env_goal.value.goal,

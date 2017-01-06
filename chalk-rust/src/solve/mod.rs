@@ -3,6 +3,8 @@ pub mod infer;
 pub mod implemented;
 pub mod implemented_with_impl;
 pub mod match_clause;
+pub mod normalize;
+pub mod normalize_with_impl;
 pub mod goal;
 pub mod solver;
 

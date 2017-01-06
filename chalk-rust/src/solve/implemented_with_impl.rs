@@ -44,6 +44,14 @@ impl<'s> ImplementedWithImpl<'s> {
         // this would yield `Option<?1>: Clone` and `?1: Clone`.
         let (impl_trait_ref, where_clauses) = {
             let impl_data = &program.impl_data[&self.impl_id];
+
+            // screen out impls that are for the totally wrong trait
+            // early, just to keep debug logging under control. This
+            // would otherwise fail when we unify the trait-ref below.
+            if impl_data.trait_ref.trait_id != self.goal.trait_id {
+                bail!("impl for wrong trait");
+            }
+
             self.infer.instantiate(environment.universe,
                                    &(&impl_data.trait_ref, &impl_data.where_clauses))
         };

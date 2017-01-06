@@ -352,3 +352,86 @@ fn max_depth() {
         }
     }
 }
+
+#[test]
+fn normalize() {
+    test! {
+        program {
+            trait Iterator { type Item; }
+            struct Vec<T> { }
+            struct u32 { }
+            impl<T> Iterator for Vec<T> {
+                type Item = T;
+            }
+        }
+
+        goal {
+            forall<T> {
+                exists<U> {
+                    <Vec<T> as Iterator>::Item == U
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        NormalizeTo(
+                            NormalizeTo {
+                                projection: <Vec<!1> as Iterator>::Item,
+                                ty: !1
+                            }
+                        )
+                    ],
+                    binders: []
+                }
+            }"
+        }
+
+        goal {
+            forall<T> {
+                <Vec<T> as Iterator>::Item == T
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        NormalizeTo(
+                            NormalizeTo {
+                                projection: <Vec<!1> as Iterator>::Item,
+                                ty: !1
+                            }
+                        )
+                    ],
+                    binders: []
+                }
+            }"
+        }
+
+        goal {
+            forall<T> {
+                if (<T as Iterator>::Item == u32) {
+                    exists<U> {
+                        <T as Iterator>::Item == U
+                    }
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        NormalizeTo(
+                            NormalizeTo {
+                                projection: <!1 as Iterator>::Item,
+                                ty: u32
+                            }
+                        )
+                    ],
+                    binders: []
+                }
+            }"
+        }
+    }
+}

@@ -2,6 +2,7 @@ use cast::Cast;
 use errors::*;
 use ir::*;
 use solve::environment::InEnvironment;
+use solve::normalize::Normalize;
 use solve::implemented::Implemented;
 use solve::infer::InferenceTable;
 use std::collections::HashSet;
@@ -48,7 +49,13 @@ impl Solver {
                 };
                 Implemented::new(self, q).solve().cast()
             }
-            WhereClause::NormalizeTo(_normalize_to) => unimplemented!(),
+            WhereClause::NormalizeTo(normalize_to) => {
+                let q = Quantified {
+                    value: InEnvironment::new(&environment, normalize_to),
+                    binders: binders,
+                };
+                Normalize::new(self, q).solve().cast()
+            }
         };
 
         self.stack.pop().unwrap();
