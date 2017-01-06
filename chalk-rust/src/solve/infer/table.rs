@@ -121,7 +121,7 @@ impl ApplicationTy {
 impl TypeName {
     pub fn universe_index(&self) -> UniverseIndex {
         match *self {
-            TypeName::ItemId(_) => UniverseIndex::root(),
+            TypeName::ItemId(_) | TypeName::AssociatedType(_) => UniverseIndex::root(),
             TypeName::ForAll(universe) => {
                 assert!(universe.counter > 0);
                 universe

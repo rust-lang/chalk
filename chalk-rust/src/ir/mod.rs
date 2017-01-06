@@ -20,8 +20,24 @@ pub struct Program {
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeName {
+    /// a type like `Vec<T>`
     ItemId(ItemId),
+
+    /// skolemized form of a type parameter like `T`
     ForAll(UniverseIndex),
+
+    /// an associated type like `Iterator::Item`; see `AssociatedType` for details
+    AssociatedType(AssociatedType),
+}
+
+/// Represents an associated item like `Iterator::Item`.  This is used
+/// when we have tried to normalize a projection like `T::Item` but
+/// couldn't find a better representation.  In that case, we generate
+/// an **application type** like `(Iterator::Item)<T>`.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AssociatedType {
+    trait_id: ItemId,
+    name: Identifier,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

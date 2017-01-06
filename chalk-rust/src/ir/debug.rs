@@ -24,7 +24,14 @@ impl Debug for TypeName {
         match *self {
             TypeName::ItemId(id) => write!(fmt, "{:?}", id),
             TypeName::ForAll(universe) => write!(fmt, "!{}", universe.counter),
+            TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
         }
+    }
+}
+
+impl Debug for AssociatedType {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "({:?}::{})", self.trait_id, self.name)
     }
 }
 
