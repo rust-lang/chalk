@@ -460,3 +460,39 @@ fn normalize() {
         }
     }
 }
+
+/// Demonstrates that, given the expected value of the associated
+/// type, we can use that to narrow down the relevant impls.
+#[test]
+fn normalize_rev_infer() {
+    test! {
+        program {
+            trait Identity { type Item; }
+            struct u32 { }
+            struct i32 { }
+            impl Identity for u32 { type Item = u32; }
+            impl Identity for i32 { type Item = i32; }
+        }
+
+        goal {
+            exists<T> {
+                <T as Identity>::Item == u32
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: [
+                        NormalizeTo(
+                            NormalizeTo {
+                                projection: <u32 as Identity>::Item,
+                                ty: u32
+                            }
+                        )
+                    ],
+                    binders: []
+                }
+            }"
+        }
+    }
+}
