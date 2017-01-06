@@ -3,4 +3,7 @@ rust:
   - nightly
 script:
   - cd chalk; cargo test
+  - cd ../chalk-parse; cargo test
+  - cd ../chalk-rust; cargo test
+  - cd ../chalk-rust-parse; cargo test
 
