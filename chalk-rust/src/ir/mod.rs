@@ -152,6 +152,20 @@ impl<T> Quantified<T> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Constrained<T> {
+    pub value: T,
+    pub constraints: Vec<Constraint>,
+}
+
+impl<T> Constrained<T> {
+    pub fn map<OP, U>(self, op: OP) -> Constrained<U>
+        where OP: FnOnce(T) -> U
+    {
+        Constrained { value: op(self.value), constraints: self.constraints }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Goal {
     ForAll(usize, Box<Goal>),
     Exists(usize, Box<Goal>),
@@ -160,8 +174,13 @@ pub enum Goal {
     Leaf(WhereClause),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Constraint {
+}
+
 pub mod debug;
 mod tls;
 
 pub use self::tls::set_current_program;
 pub use self::tls::with_current_program;
+

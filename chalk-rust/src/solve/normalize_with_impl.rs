@@ -30,7 +30,7 @@ impl<'s> NormalizeWithImpl<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<InEnvironment<Normalize>>> {
+    pub fn solve(mut self) -> Result<Solution<InEnvironment<Normalize>>> {
         let environment = self.environment.clone();
         let program = self.solver.program.clone();
 
@@ -68,7 +68,7 @@ impl<'s> NormalizeWithImpl<'s> {
 
             // instantiate the trait-ref, where-clause, and assoc-ty-value all together,
             // since they are defined in terms of a common set of variables
-            self.infer.instantiate(environment.universe,
+            self.infer.instantiate(impl_data.parameter_kinds.iter().map(|_| environment.universe),
                                    &(&impl_data.trait_ref,
                                      (&impl_data.where_clauses,
                                       assoc_ty_value)))
@@ -100,7 +100,8 @@ impl<'s> NormalizeWithImpl<'s> {
         // them can be successfully proved, then we know that this
         // impl applies. If any of them error out, this impl does not.
         let successful = self.solver.solve_all(&mut self.infer, env_where_clauses)?;
-        let refined_goal = self.infer.quantify(&InEnvironment::new(&environment, &self.goal));
+        let refined_goal = self.infer.constrained(InEnvironment::new(&environment, &self.goal));
+        let refined_goal = self.infer.quantify(&refined_goal);
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

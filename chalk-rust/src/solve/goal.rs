@@ -73,10 +73,11 @@ impl<'s> Prove<'s> {
 
     pub fn solve(mut self) -> Result<Solution<Vec<WhereClause>>> {
         let successful = self.solver.solve_all(&mut self.infer, self.goals.clone())?;
-        let refined_goal = self.infer.quantify(&self.goals
+        let refined_goal = self.infer.constrained(self.goals
             .into_iter()
             .map(|g| g.goal)
             .collect::<Vec<_>>());
+        let refined_goal = self.infer.quantify(&refined_goal);
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

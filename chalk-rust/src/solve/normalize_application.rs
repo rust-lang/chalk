@@ -27,7 +27,7 @@ impl<'s> NormalizeApplication<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<InEnvironment<Normalize>>> {
+    pub fn solve(mut self) -> Result<Solution<InEnvironment<Normalize>>> {
         let environment = self.environment.clone();
 
         // Construct an application from the projection. So if we have
@@ -56,7 +56,8 @@ impl<'s> NormalizeApplication<'s> {
                          .map(|wc| InEnvironment::new(&environment, wc))
                          .collect();
         let successful = self.solver.solve_all(&mut self.infer, env_where_clauses)?;
-        let refined_goal = self.infer.quantify(&InEnvironment::new(&environment, &self.goal));
+        let refined_goal = self.infer.constrained(InEnvironment::new(&environment, &self.goal));
+        let refined_goal = self.infer.quantify(&refined_goal);
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

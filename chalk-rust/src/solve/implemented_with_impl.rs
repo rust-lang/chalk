@@ -30,7 +30,7 @@ impl<'s> ImplementedWithImpl<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<InEnvironment<TraitRef>>> {
+    pub fn solve(mut self) -> Result<Solution<InEnvironment<TraitRef>>> {
         let environment = self.environment.clone();
         let program = self.solver.program.clone();
 
@@ -52,7 +52,7 @@ impl<'s> ImplementedWithImpl<'s> {
                 bail!("impl for wrong trait");
             }
 
-            self.infer.instantiate(environment.universe,
+            self.infer.instantiate(impl_data.parameter_kinds.iter().map(|_| environment.universe),
                                    &(&impl_data.trait_ref, &impl_data.where_clauses))
         };
 
@@ -76,7 +76,8 @@ impl<'s> ImplementedWithImpl<'s> {
         // them can be successfully proved, then we know that this
         // impl applies. If any of them error out, this impl does not.
         let successful = self.solver.solve_all(&mut self.infer, env_where_clauses)?;
-        let refined_goal = self.infer.quantify(&InEnvironment::new(&environment, &self.goal));
+        let refined_goal = self.infer.constrained(InEnvironment::new(&environment, &self.goal));
+        let refined_goal = self.infer.quantify(&refined_goal);
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

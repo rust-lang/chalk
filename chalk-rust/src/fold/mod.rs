@@ -163,6 +163,23 @@ impl<F: Fold> Fold for InEnvironment<F> {
     }
 }
 
+impl<F: Fold> Fold for Constrained<F> {
+    type Result = Constrained<F::Result>;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
+        Ok(Constrained {
+            value: self.value.fold_with(folder)?,
+            constraints: self.constraints.fold_with(folder)?,
+        })
+    }
+}
+
+impl Fold for Constraint {
+    type Result = Constraint;
+    fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
+        unimplemented!()
+    }
+}
+
 struct_fold!(ApplicationTy { name, parameters });
 struct_fold!(ProjectionTy { trait_ref, name });
 struct_fold!(TraitRef { trait_id, parameters });

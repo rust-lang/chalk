@@ -52,6 +52,7 @@ map_impl!(impl[T: Cast<U>, U] Cast<Option<U>> for Option<T>);
 map_impl!(impl[T: Cast<U>, U] Cast<Quantified<U>> for Quantified<T>);
 map_impl!(impl[T: Cast<U>, U] Cast<Solution<U>> for Solution<T>);
 map_impl!(impl[T: Cast<U>, U] Cast<InEnvironment<U>> for InEnvironment<T>);
+map_impl!(impl[T: Cast<U>, U] Cast<Constrained<U>> for Constrained<T>);
 map_impl!(impl[T: Cast<U>, U, E] Cast<Result<U, E>> for Result<T, E>);
 
 impl<T, U> Cast<Vec<U>> for Vec<T>

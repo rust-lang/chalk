@@ -40,7 +40,8 @@ impl<'s, G> MatchClause<'s, G>
                         .map(|wc| InEnvironment::new(&environment, wc))
                         .collect();
         let successful = self.solver.solve_all(&mut self.infer, env_where_clauses)?;
-        let refined_goal = self.infer.quantify(&InEnvironment::new(&environment, self.goal));
+        let refined_goal = self.infer.constrained(InEnvironment::new(&environment, &self.goal));
+        let refined_goal = self.infer.quantify(&refined_goal);
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

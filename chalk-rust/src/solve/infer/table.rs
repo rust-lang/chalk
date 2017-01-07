@@ -10,6 +10,12 @@ use super::var::*;
 pub struct InferenceTable {
     pub(super) unify: unify::UnificationTable<InferenceVariable>,
     values: Vec<Arc<Ty>>,
+
+    /// As we unify, we collect side-constraints (e.g. on regions).
+    /// These can be extracted via a `constrained()` call.
+    ///
+    /// FIXME The `Option` is a sign that this doesn't belong here.
+    constraints: Option<Vec<Constraint>>,
 }
 
 pub struct InferenceSnapshot {
@@ -22,6 +28,7 @@ impl InferenceTable {
         InferenceTable {
             unify: unify::UnificationTable::new(),
             values: vec![],
+            constraints: Some(vec![]),
         }
     }
 
@@ -31,6 +38,13 @@ impl InferenceTable {
             table.new_variable(ui);
         }
         table
+    }
+
+    pub fn constrained<T>(&mut self, value: T) -> Constrained<T> {
+        Constrained {
+            value: value,
+            constraints: self.constraints.take().expect("constrained() called twice"),
+        }
     }
 
     pub fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {

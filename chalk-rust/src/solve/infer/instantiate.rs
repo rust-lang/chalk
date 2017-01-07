@@ -1,36 +1,30 @@
 use errors::*;
 use ir::*;
 use fold::*;
-use std::collections::HashMap;
 
 use super::*;
 
 impl InferenceTable {
     // Create a instance of `arg` where each variable is replaced with
     // a fresh inference variable.
-    pub fn instantiate<T: Fold>(&mut self, universe: UniverseIndex, arg: &T) -> T::Result {
-        let mut instantiator = Instantiator {
-            table: self,
-            universe: universe,
-            vars: HashMap::new(),
-        };
+    pub fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
+        where T: Fold,
+              U: IntoIterator<Item = UniverseIndex>
+    {
+        let vars: Vec<_> = universes.into_iter()
+            .map(|u| self.new_variable(u))
+            .collect();
+        let mut instantiator = Instantiator { vars: vars };
         arg.fold_with(&mut instantiator).expect("")
     }
 }
 
-struct Instantiator<'t> {
-    table: &'t mut InferenceTable,
-    universe: UniverseIndex,
-    vars: HashMap<usize, InferenceVariable>,
+struct Instantiator {
+    vars: Vec<InferenceVariable>,
 }
 
-impl<'t> Folder for Instantiator<'t> {
+impl Folder for Instantiator {
     fn fold_var(&mut self, depth: usize) -> Result<Ty> {
-        let table = &mut self.table;
-        let universe = self.universe;
-        Ok(self.vars
-            .entry(depth)
-            .or_insert_with(|| table.new_variable(universe))
-            .to_ty())
+        Ok(self.vars[depth].to_ty())
     }
 }

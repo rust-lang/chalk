@@ -1,6 +1,5 @@
 use cast::Cast;
 use errors::*;
-use ir::*;
 use solve::environment::InEnvironment;
 use solve::normalize::SolveNormalize;
 use solve::implemented::Implemented;
@@ -34,7 +33,7 @@ impl Solver {
             debug!("solve: {:?} already on the stack or overflowed max depth", wc_env);
             return Ok(Solution {
                 successful: Successful::Maybe,
-                refined_goal: wc_env,
+                refined_goal: wc_env.map(|w| Constrained { value: w, constraints: vec![] })
             });
         }
 
@@ -103,7 +102,11 @@ impl Solver {
                 // multiple impls, perhaps with distinct unifications,
                 // then we have to return an ambiguous result.
                 if let Successful::Yes = solution.successful {
-                    if solution.refined_goal == *start_goal {
+                    if {
+                        solution.refined_goal.binders == start_goal.binders &&
+                        solution.refined_goal.value.value == start_goal.value &&
+                            solution.refined_goal.value.constraints.is_empty()
+                    } {
                         return Ok(solution);
                     }
                 }
@@ -141,7 +144,7 @@ impl Solver {
         // But you get the idea.
         return Ok(Solution {
             successful: Successful::Maybe,
-            refined_goal: start_goal.clone(),
+            refined_goal: start_goal.clone().map(|g| Constrained { value: g, constraints: vec![] }),
         });
     }
 
@@ -215,10 +218,14 @@ impl Solver {
         // more algorithm written just for this case instead of
         // instantiating with variables and applying the standard
         // unification algorithm. But this is good enough for now.
-        if solution.refined_goal != quantified_wc {
+        if {
+            solution.refined_goal.binders != quantified_wc.binders ||
+            solution.refined_goal.value.value != quantified_wc.value
+        } {
             let refined_goal =
-                infer.instantiate(wc.environment.universe, &solution.refined_goal.value);
-            infer.unify(wc, &refined_goal)?;
+                infer.instantiate(quantified_wc.binders.iter().cloned(),
+                                  &solution.refined_goal.value);
+            infer.unify(wc, &refined_goal.value)?;
             *inference_progress = true;
         }
 

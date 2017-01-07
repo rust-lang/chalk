@@ -1,4 +1,4 @@
-use ir::Quantified;
+use ir::*;
 
 pub mod environment;
 pub mod infer;
@@ -16,7 +16,7 @@ pub mod solver;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Solution<G> {
     successful: Successful,
-    refined_goal: Quantified<G>,
+    refined_goal: Quantified<Constrained<G>>,
 }
 
 impl<G> Solution<G> {
@@ -25,7 +25,7 @@ impl<G> Solution<G> {
     {
         Solution {
             successful: self.successful,
-            refined_goal: self.refined_goal.map(op),
+            refined_goal: self.refined_goal.map(|c| c.map(op)),
         }
     }
 }

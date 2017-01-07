@@ -73,9 +73,12 @@ fn prove_clone() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        Vec<Foo>: Clone
-                    ],
+                    value: Constrained {
+                        value: [
+                            Vec<Foo>: Clone
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -87,9 +90,12 @@ fn prove_clone() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        Foo: Clone
-                    ],
+                    value: Constrained {
+                        value: [
+                            Foo: Clone
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -126,9 +132,12 @@ fn prove_infer() {
             "Solution {
                 successful: Maybe,
                 refined_goal: Quantified {
-                    value: [
-                        ?0: Map<?1>
-                    ],
+                    value: Constrained {
+                        value: [
+                            ?0: Map<?1>
+                        ],
+                        constraints: []
+                    },
                     binders: [
                         U0,
                         U0
@@ -143,9 +152,12 @@ fn prove_infer() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        Foo: Map<Bar>
-                    ],
+                    value: Constrained {
+                        value: [
+                            Foo: Map<Bar>
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -157,9 +169,12 @@ fn prove_infer() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        Foo: Map<Bar>
-                    ],
+                    value: Constrained {
+                        value: [
+                            Foo: Map<Bar>
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -194,9 +209,12 @@ fn prove_forall() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        !1: Marker
-                    ],
+                    value: Constrained {
+                        value: [
+                            !1: Marker
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -210,9 +228,12 @@ fn prove_forall() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        Vec<!1>: Marker
-                    ],
+                    value: Constrained {
+                        value: [
+                            Vec<!1>: Marker
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -237,9 +258,12 @@ fn prove_forall() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        Vec<!1>: Clone
-                    ],
+                    value: Constrained {
+                        value: [
+                            Vec<!1>: Clone
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -267,9 +291,12 @@ fn higher_ranked() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        SomeType<!1>: Foo<u8>
-                    ],
+                    value: Constrained {
+                        value: [
+                            SomeType<!1>: Foo<u8>
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -321,9 +348,12 @@ fn max_depth() {
             "Solution {
                 successful: Maybe,
                 refined_goal: Quantified {
-                    value: [
-                        S<S<S<S<?0>>>>: Foo
-                    ],
+                    value: Constrained {
+                        value: [
+                            S<S<S<S<?0>>>>: Foo
+                        ],
+                        constraints: []
+                    },
                     binders: [
                         U0
                     ]
@@ -355,9 +385,12 @@ fn normalize() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        <Vec<!1> as Iterator>::Item == !1
-                    ],
+                    value: Constrained {
+                        value: [
+                            <Vec<!1> as Iterator>::Item == !1
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -371,9 +404,12 @@ fn normalize() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        <Vec<!1> as Iterator>::Item == !1
-                    ],
+                    value: Constrained {
+                        value: [
+                            <Vec<!1> as Iterator>::Item == !1
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -391,9 +427,12 @@ fn normalize() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        <!1 as Iterator>::Item == u32
-                    ],
+                    value: Constrained {
+                        value: [
+                            <!1 as Iterator>::Item == u32
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -411,9 +450,12 @@ fn normalize() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        <!1 as Iterator>::Item == (Iterator::Item)<!1>
-                    ],
+                    value: Constrained {
+                        value: [
+                            <!1 as Iterator>::Item == (Iterator::Item)<!1>
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
@@ -442,9 +484,12 @@ fn normalize_rev_infer() {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
-                    value: [
-                        <u32 as Identity>::Item == u32
-                    ],
+                    value: Constrained {
+                        value: [
+                            <u32 as Identity>::Item == u32
+                        ],
+                        constraints: []
+                    },
                     binders: []
                 }
             }"
