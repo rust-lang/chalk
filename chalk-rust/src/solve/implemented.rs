@@ -19,7 +19,7 @@ impl<'s> Implemented<'s> {
         }
     }
 
-    pub fn solve(self) -> Result<Solution<Quantified<InEnvironment<TraitRef>>>> {
+    pub fn solve(self) -> Result<Solution<InEnvironment<TraitRef>>> {
         let Implemented { solver, env_goal } = self;
         let program = solver.program.clone();
 

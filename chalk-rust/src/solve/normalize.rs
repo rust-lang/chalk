@@ -20,7 +20,7 @@ impl<'s> SolveNormalize<'s> {
         }
     }
 
-    pub fn solve(self) -> Result<Solution<Quantified<InEnvironment<Normalize>>>> {
+    pub fn solve(self) -> Result<Solution<InEnvironment<Normalize>>> {
         let SolveNormalize { solver, env_goal } = self;
         let program = solver.program.clone();
 

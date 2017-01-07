@@ -30,7 +30,7 @@ impl<'s> ImplementedWithImpl<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<TraitRef>>>> {
+    pub fn solve(&mut self) -> Result<Solution<InEnvironment<TraitRef>>> {
         let environment = self.environment.clone();
         let program = self.solver.program.clone();
 

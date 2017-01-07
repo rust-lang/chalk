@@ -26,7 +26,7 @@ impl Solver {
     /// environment).
     pub fn solve(&mut self,
                  wc_env: Quantified<InEnvironment<WhereClause>>)
-                 -> Result<Solution<Quantified<InEnvironment<WhereClause>>>> {
+                 -> Result<Solution<InEnvironment<WhereClause>>> {
         debug!("Solver::solve({:?})", wc_env);
 
         if self.stack.contains(&wc_env) || self.stack.len() > self.overflow_depth {
@@ -76,9 +76,9 @@ impl Solver {
                                possibilities: Ps,
                                start_goal: &Quantified<R>,
                                mut evaluate_possibility: E)
-                               -> Result<Solution<Quantified<R>>>
+                               -> Result<Solution<R>>
         where Ps: IntoIterator<Item = P>,
-              E: FnMut(&mut Solver, P) -> Result<Solution<Quantified<R>>>,
+              E: FnMut(&mut Solver, P) -> Result<Solution<R>>,
               R: Clone + Hash + Eq
     {
         // For each impl, recursively apply it. Note that all we need

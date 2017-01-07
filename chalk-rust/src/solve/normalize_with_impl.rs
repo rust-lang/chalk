@@ -30,7 +30,7 @@ impl<'s> NormalizeWithImpl<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<Normalize>>>> {
+    pub fn solve(&mut self) -> Result<Solution<InEnvironment<Normalize>>> {
         let environment = self.environment.clone();
         let program = self.solver.program.clone();
 

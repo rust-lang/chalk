@@ -27,7 +27,7 @@ impl<'s> NormalizeApplication<'s> {
         }
     }
 
-    pub fn solve(&mut self) -> Result<Solution<Quantified<InEnvironment<Normalize>>>> {
+    pub fn solve(&mut self) -> Result<Solution<InEnvironment<Normalize>>> {
         let environment = self.environment.clone();
 
         // Construct an application from the projection. So if we have

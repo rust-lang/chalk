@@ -30,7 +30,7 @@ impl<'s, G> MatchClause<'s, G>
         MatchClause { solver, infer, environment, goal, clause_index }
     }
 
-    pub fn solve(mut self) -> Result<Solution<Quantified<InEnvironment<G>>>> {
+    pub fn solve(mut self) -> Result<Solution<InEnvironment<G>>> {
         let environment = self.environment.clone();
         let clause = &environment.clauses[self.clause_index];
         let normalize_to = self.infer.unify(&self.goal.clone().cast(), &clause)?;
