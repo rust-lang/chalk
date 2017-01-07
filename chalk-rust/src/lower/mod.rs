@@ -3,6 +3,7 @@ use lalrpop_intern::intern;
 use errors::*;
 use ir;
 use std::collections::HashMap;
+use std::iter;
 
 mod test;
 
@@ -148,7 +149,7 @@ impl LowerTypeKind for StructDefn {
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Struct,
             name: self.name.str,
-            parameters: self.parameters.len(),
+            parameter_kinds: self.parameters.iter().map(|&id| ir::ParameterKind::Ty(id.str)).collect(),
         })
     }
 }
@@ -164,7 +165,9 @@ impl LowerTypeKind for TraitDefn {
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Trait,
             name: self.name.str,
-            parameters: self.parameters.len(), // for the purposes of the *type*, ignore `Self`
+
+            // for the purposes of the *type*, ignore `Self`:
+            parameter_kinds: self.parameters.iter().map(|&id| ir::ParameterKind::Ty(id.str)).collect(),
         })
     }
 }
@@ -229,9 +232,11 @@ impl LowerTraitRef for TraitRef {
             bail!(ErrorKind::NotTrait(self.trait_name));
         }
 
+        let parameters = self.args.iter().map(|a| Ok(ir::Parameter::Ty(a.lower(env)?))).collect::<Result<Vec<_>>>()?;
+
         Ok(ir::TraitRef {
             trait_id: id,
-            args: try!(self.args.iter().map(|a| a.lower(env)).collect()),
+            parameters: parameters,
         })
     }
 }
@@ -260,15 +265,15 @@ impl LowerTy for Ty {
                 match env.lookup(name)? {
                     NameLookup::Type(id) => {
                         let k = env.type_kind(id);
-                        if k.parameters > 0 {
+                        if k.parameter_kinds.len() > 0 {
                             bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
-                                                                             k.parameters,
+                                                                             k.parameter_kinds.len(),
                                                                              0))
                         }
 
                         Ok(ir::Ty::Apply(ir::ApplicationTy {
                             name: ir::TypeName::ItemId(id),
-                            args: vec![],
+                            parameters: vec![],
                         }))
                     }
                     NameLookup::Parameter(d) => Ok(ir::Ty::Var(d)),
@@ -282,17 +287,17 @@ impl LowerTy for Ty {
                 };
 
                 let k = env.type_kind(id);
-                if k.parameters != args.len() {
+                if k.parameter_kinds.len() != args.len() {
                     bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
-                                                                     k.parameters,
+                                                                     k.parameter_kinds.len(),
                                                                      args.len()))
                 }
 
-                let args = try!(args.iter().map(|t| t.lower(env)).collect());
+                let parameters = args.iter().map(|t| Ok(ir::Parameter::Ty(t.lower(env)?))).collect::<Result<Vec<_>>>()?;
 
                 Ok(ir::Ty::Apply(ir::ApplicationTy {
                     name: ir::TypeName::ItemId(id),
-                    args: args,
+                    parameters: parameters,
                 }))
             }
 
@@ -309,7 +314,7 @@ impl LowerImpl for Impl {
     fn lower_impl(&self, env: &Env) -> Result<ir::ImplData> {
         Ok(ir::ImplData {
             trait_ref: self.trait_ref.lower(env)?,
-            parameters: self.parameters.len(),
+            parameter_kinds: self.parameters.iter().map(|&id| ir::ParameterKind::Ty(id.str)).collect(),
             assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(env)).collect()),
             where_clauses: self.lower_where_clauses(&env)?,
         })
@@ -336,7 +341,9 @@ trait LowerTrait {
 impl LowerTrait for TraitDefn {
     fn lower_trait(&self, env: &Env) -> Result<ir::TraitData> {
         Ok(ir::TraitData {
-            parameters: self.parameters.len() + 1,
+            parameter_kinds: iter::once(ir::ParameterKind::Ty(intern(SELF))).chain(
+                self.parameters.iter().map(|&id| ir::ParameterKind::Ty(id.str)))
+                .collect(),
             where_clauses: self.lower_where_clauses(&env)?,
             assoc_ty_names: self.assoc_ty_names.iter().map(|a| a.str).collect(),
         })

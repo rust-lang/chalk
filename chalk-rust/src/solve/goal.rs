@@ -100,7 +100,7 @@ impl<'b> Folder for Subst<'b> {
             Binding::ForAll(u) => {
                 Ok(Ty::Apply(ApplicationTy {
                     name: TypeName::ForAll(u),
-                    args: vec![],
+                    parameters: vec![],
                 }))
             }
             Binding::Exists(v) => Ok(v.to_ty()),

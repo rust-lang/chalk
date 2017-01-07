@@ -52,6 +52,14 @@ impl<T: Zip, U: Zip> Zip for (T, U) {
     }
 }
 
+impl Zip for Parameter {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        match (a, b) {
+            (&Parameter::Ty(ref a), &Parameter::Ty(ref b)) => Zip::zip_with(zipper, a, b),
+        }
+    }
+}
+
 impl Zip for Ty {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         zipper.zip_tys(a, b)
@@ -88,7 +96,7 @@ impl Zip for Identifier {
 impl Zip for TraitRef {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         Zip::zip_with(zipper, &a.trait_id, &b.trait_id)?;
-        Zip::zip_with(zipper, &a.args, &b.args)?;
+        Zip::zip_with(zipper, &a.parameters, &b.parameters)?;
         Ok(())
     }
 }
@@ -104,7 +112,7 @@ impl<T: Zip> Zip for InEnvironment<T> {
 impl Zip for ApplicationTy {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         Zip::zip_with(zipper, &a.name, &b.name)?;
-        Zip::zip_with(zipper, &a.args, &b.args)?;
+        Zip::zip_with(zipper, &a.parameters, &b.parameters)?;
         Ok(())
     }
 }

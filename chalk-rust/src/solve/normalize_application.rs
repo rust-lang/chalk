@@ -38,8 +38,8 @@ impl<'s> NormalizeApplication<'s> {
                 trait_id: self.goal.projection.trait_ref.trait_id,
                 name: self.goal.projection.name,
             });
-            let args = self.goal.projection.trait_ref.args.clone();
-            Ty::Apply(ApplicationTy { name, args })
+            let parameters = self.goal.projection.trait_ref.parameters.clone();
+            Ty::Apply(ApplicationTy { name, parameters })
         };
 
         // Unify the result of normalization (`self.goal.ty`) with the

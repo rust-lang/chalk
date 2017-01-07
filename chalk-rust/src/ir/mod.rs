@@ -60,7 +60,7 @@ pub struct ItemId {
 pub struct TypeKind {
     pub sort: TypeSort,
     pub name: Identifier,
-    pub parameters: usize,
+    pub parameter_kinds: Vec<ParameterKind>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -71,7 +71,7 @@ pub enum TypeSort {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplData {
-    pub parameters: usize,
+    pub parameter_kinds: Vec<ParameterKind>,
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
@@ -79,7 +79,7 @@ pub struct ImplData {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitData {
-    pub parameters: usize, // including the implicit `Self`
+    pub parameter_kinds: Vec<ParameterKind>, // including the implicit `Self` as param 0
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_names: Vec<Identifier>,
 }
@@ -100,7 +100,17 @@ pub enum Ty {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ApplicationTy {
     pub name: TypeName,
-    pub args: Vec<Ty>,
+    pub parameters: Vec<Parameter>,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum ParameterKind {
+    Ty(Identifier),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum Parameter {
+    Ty(Ty),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -112,7 +122,7 @@ pub struct ProjectionTy {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TraitRef {
     pub trait_id: ItemId,
-    pub args: Vec<Ty>,
+    pub parameters: Vec<Parameter>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

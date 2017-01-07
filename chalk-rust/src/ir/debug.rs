@@ -35,6 +35,22 @@ impl Debug for AssociatedType {
     }
 }
 
+impl Debug for ParameterKind {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            ParameterKind::Ty(ref n) => write!(fmt, "{}", n),
+        }
+    }
+}
+
+impl Debug for Parameter {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            Parameter::Ty(ref t) => write!(fmt, "{:?}", t),
+        }
+    }
+}
+
 impl Debug for Ty {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
@@ -47,13 +63,17 @@ impl Debug for Ty {
 
 impl Debug for ApplicationTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?}{:?}", self.name, Angle(&self.args))
+        write!(fmt, "{:?}{:?}", self.name, Angle(&self.parameters))
     }
 }
 
 impl Debug for TraitRef {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?} as {:?}{:?}", self.args[0], self.trait_id, Angle(&self.args[1..]))
+        write!(fmt,
+               "{:?} as {:?}{:?}",
+               self.parameters[0],
+               self.trait_id,
+               Angle(&self.parameters[1..]))
     }
 }
 
@@ -93,9 +113,12 @@ impl Debug for WhereClause {
         match *self {
             WhereClause::Normalize(ref n) => write!(fmt, "{:?}", n),
             WhereClause::Implemented(ref n) => {
-                write!(fmt, "{:?}: {:?}{:?}", n.args[0], n.trait_id, Angle(&n.args[1..]))
+                write!(fmt,
+                       "{:?}: {:?}{:?}",
+                       n.parameters[0],
+                       n.trait_id,
+                       Angle(&n.parameters[1..]))
             }
         }
     }
 }
-

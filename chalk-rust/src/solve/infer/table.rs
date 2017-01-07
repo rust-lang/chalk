@@ -241,32 +241,42 @@ impl<'t> Unifier<'t> {
                           universe_index: UniverseIndex,
                           apply: &ApplicationTy)
                           -> Result<()> {
-        for arg in &apply.args {
-            self.occurs_check_arg(var, universe_index, arg)?;
+        for parameter in &apply.parameters {
+            self.occurs_check_parameter(var, universe_index, parameter)?;
         }
         Ok(())
     }
 
-    fn occurs_check_arg(&mut self,
-                        var: InferenceVariable,
-                        universe_index: UniverseIndex,
-                        arg: &Ty)
-                        -> Result<()> {
-        if let Some(n_arg) = self.table.normalize_shallow(arg) {
-            return self.occurs_check_arg(var, universe_index, &n_arg);
+    fn occurs_check_parameter(&mut self,
+                              var: InferenceVariable,
+                              universe_index: UniverseIndex,
+                              arg: &Parameter)
+                              -> Result<()> {
+        match *arg {
+            Parameter::Ty(ref t) => self.occurs_check_parameter_ty(var, universe_index, t),
+        }
+    }
+
+    fn occurs_check_parameter_ty(&mut self,
+                                 var: InferenceVariable,
+                                 universe_index: UniverseIndex,
+                                 parameter: &Ty)
+                                 -> Result<()> {
+        if let Some(n_parameter) = self.table.normalize_shallow(parameter) {
+            return self.occurs_check_parameter_ty(var, universe_index, &n_parameter);
         }
 
-        match *arg {
-            Ty::Apply(ref arg_apply) => {
-                self.universe_check(universe_index, arg_apply.universe_index())?;
-                self.occurs_check_apply(var, universe_index, arg_apply)?;
+        match *parameter {
+            Ty::Apply(ref parameter_apply) => {
+                self.universe_check(universe_index, parameter_apply.universe_index())?;
+                self.occurs_check_apply(var, universe_index, parameter_apply)?;
             }
 
             Ty::Var(depth) => {
                 let v = InferenceVariable::from_depth(depth);
                 let ui = match self.table.unify.probe_value(v) {
                     InferenceValue::Unbound(ui) => ui,
-                    InferenceValue::Bound(_) => unreachable!("expected `arg` to be normalized"),
+                    InferenceValue::Bound(_) => unreachable!("expected `parameter` to be normalized"),
                 };
 
                 if self.table.unify.unioned(v, var) {

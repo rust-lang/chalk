@@ -44,8 +44,8 @@ impl<'s> Implemented<'s> {
         }).chain_err(|| {
             format!("`{:?}{:?}` is not implemented for `{:?}` in environment `{:?}`",
                     env_goal.value.goal.trait_id,
-                    debug::Angle(&env_goal.value.goal.args[1..]),
-                    &env_goal.value.goal.args[0],
+                    debug::Angle(&env_goal.value.goal.parameters[1..]),
+                    &env_goal.value.goal.parameters[0],
                     env_goal.value.environment)
         })
     }
