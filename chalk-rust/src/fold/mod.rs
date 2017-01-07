@@ -1,20 +1,20 @@
 use errors::*;
-use ir;
-use solve::environment;
+use ir::*;
+use solve::environment::{Environment, InEnvironment};
 use std::sync::Arc;
 
 pub trait Folder {
-    fn fold_var(&mut self, depth: usize) -> Result<ir::Ty>;
+    fn fold_var(&mut self, depth: usize) -> Result<Ty>;
 }
 
 impl<'f, F: Folder> Folder for &'f mut F {
-    fn fold_var(&mut self, depth: usize) -> Result<ir::Ty> {
+    fn fold_var(&mut self, depth: usize) -> Result<Ty> {
         (**self).fold_var(depth)
     }
 }
 
 impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
-    fn fold_var(&mut self, depth: usize) -> Result<ir::Ty> {
+    fn fold_var(&mut self, depth: usize) -> Result<Ty> {
         self.0.fold_var(depth)?.fold_with(&mut self.1)
     }
 }
@@ -25,11 +25,11 @@ pub trait Fold {
 }
 
 macro_rules! struct_fold {
-    ($m:ident :: $s:ident { $($name:ident),* }) => {
-        impl Fold for $m::$s {
+    ($s:ident { $($name:ident),* }) => {
+        impl Fold for $s {
             type Result = Self;
             fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
-                Ok($m::$s {
+                Ok($s {
                     $($name: self.$name.fold_with(folder)?),*
                 })
             }
@@ -75,50 +75,50 @@ impl<T: Fold> Fold for Option<T> {
     }
 }
 
-impl Fold for ir::Parameter {
+impl Fold for Parameter {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         match *self {
-            ir::Parameter::Ty(ref t) => Ok(ir::Parameter::Ty(t.fold_with(folder)?)),
+            Parameter::Ty(ref t) => Ok(Parameter::Ty(t.fold_with(folder)?)),
         }
     }
 }
 
-impl Fold for ir::Ty {
+impl Fold for Ty {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         match *self {
-            ir::Ty::Var(depth) => folder.fold_var(depth),
-            ir::Ty::Apply(ref apply) => Ok(ir::Ty::Apply(apply.fold_with(folder)?)),
-            ir::Ty::Projection(ref proj) => {
-                Ok(ir::Ty::Projection(proj.fold_with(folder)?))
+            Ty::Var(depth) => folder.fold_var(depth),
+            Ty::Apply(ref apply) => Ok(Ty::Apply(apply.fold_with(folder)?)),
+            Ty::Projection(ref proj) => {
+                Ok(Ty::Projection(proj.fold_with(folder)?))
             }
         }
     }
 }
 
-impl Fold for ir::Identifier {
+impl Fold for Identifier {
     type Result = Self;
     fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
         Ok(*self)
     }
 }
 
-impl Fold for ir::UniverseIndex {
+impl Fold for UniverseIndex {
     type Result = Self;
     fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
         Ok(*self)
     }
 }
 
-impl Fold for ir::ItemId {
+impl Fold for ItemId {
     type Result = Self;
     fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
         Ok(*self)
     }
 }
 
-impl Fold for ir::TypeName {
+impl Fold for TypeName {
     type Result = Self;
     fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
         Ok(*self)
@@ -132,42 +132,42 @@ impl Fold for usize {
     }
 }
 
-impl Fold for ir::ParameterKind {
+impl Fold for ParameterKind {
     type Result = Self;
     fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
         Ok(self.clone())
     }
 }
 
-impl Fold for ir::WhereClause {
+impl Fold for WhereClause {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
         match *self {
-            ir::WhereClause::Implemented(ref trait_ref) => {
-                Ok(ir::WhereClause::Implemented(trait_ref.fold_with(folder)?))
+            WhereClause::Implemented(ref trait_ref) => {
+                Ok(WhereClause::Implemented(trait_ref.fold_with(folder)?))
             }
-            ir::WhereClause::Normalize(ref pred) => {
-                Ok(ir::WhereClause::Normalize(pred.fold_with(folder)?))
+            WhereClause::Normalize(ref pred) => {
+                Ok(WhereClause::Normalize(pred.fold_with(folder)?))
             }
         }
     }
 }
 
-impl<F: Fold> Fold for environment::InEnvironment<F> {
-    type Result = environment::InEnvironment<F::Result>;
+impl<F: Fold> Fold for InEnvironment<F> {
+    type Result = InEnvironment<F::Result>;
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
-        Ok(environment::InEnvironment {
+        Ok(InEnvironment {
             environment: self.environment.fold_with(folder)?,
             goal: self.goal.fold_with(folder)?,
         })
     }
 }
 
-struct_fold!(ir::ApplicationTy { name, parameters });
-struct_fold!(ir::ProjectionTy { trait_ref, name });
-struct_fold!(ir::TraitRef { trait_id, parameters });
-struct_fold!(ir::Normalize { projection, ty });
-struct_fold!(ir::ImplData { parameter_kinds, trait_ref, assoc_ty_values, where_clauses });
-struct_fold!(ir::AssocTyValue { name, value });
-struct_fold!(environment::Environment { universe, clauses });
+struct_fold!(ApplicationTy { name, parameters });
+struct_fold!(ProjectionTy { trait_ref, name });
+struct_fold!(TraitRef { trait_id, parameters });
+struct_fold!(Normalize { projection, ty });
+struct_fold!(ImplData { parameter_kinds, trait_ref, assoc_ty_values, where_clauses });
+struct_fold!(AssocTyValue { name, value });
+struct_fold!(Environment { universe, clauses });
 
