@@ -5,17 +5,26 @@ use std::sync::Arc;
 
 pub trait Folder {
     fn fold_var(&mut self, depth: usize) -> Result<Ty>;
+    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime>;
 }
 
 impl<'f, F: Folder> Folder for &'f mut F {
     fn fold_var(&mut self, depth: usize) -> Result<Ty> {
         (**self).fold_var(depth)
     }
+
+    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
+        (**self).fold_lifetime_var(depth)
+    }
 }
 
 impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
     fn fold_var(&mut self, depth: usize) -> Result<Ty> {
         self.0.fold_var(depth)?.fold_with(&mut self.1)
+    }
+
+    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
+        self.0.fold_lifetime_var(depth)?.fold_with(&mut self.1)
     }
 }
 
@@ -75,15 +84,6 @@ impl<T: Fold> Fold for Option<T> {
     }
 }
 
-impl Fold for Parameter {
-    type Result = Self;
-    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
-        match *self {
-            Parameter::Ty(ref t) => Ok(Parameter::Ty(t.fold_with(folder)?)),
-        }
-    }
-}
-
 impl Fold for Ty {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
@@ -93,6 +93,16 @@ impl Fold for Ty {
             Ty::Projection(ref proj) => {
                 Ok(Ty::Projection(proj.fold_with(folder)?))
             }
+        }
+    }
+}
+
+impl Fold for Lifetime {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
+        match *self {
+            Lifetime::Var(depth) => folder.fold_lifetime_var(depth),
+            Lifetime::ForAll(universe) => Ok(Lifetime::ForAll(universe)),
         }
     }
 }
@@ -132,10 +142,13 @@ impl Fold for usize {
     }
 }
 
-impl Fold for ParameterKind {
-    type Result = Self;
-    fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
-        Ok(self.clone())
+impl<T: Fold, L: Fold> Fold for ParameterKind<T, L> {
+    type Result = ParameterKind<T::Result, L::Result>;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
+        match *self {
+            ParameterKind::Ty(ref t) => Ok(ParameterKind::Ty(t.fold_with(folder)?)),
+            ParameterKind::Lifetime(ref l) => Ok(ParameterKind::Lifetime(l.fold_with(folder)?)),
+        }
     }
 }
 

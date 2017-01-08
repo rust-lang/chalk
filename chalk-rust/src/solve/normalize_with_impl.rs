@@ -68,10 +68,9 @@ impl<'s> NormalizeWithImpl<'s> {
 
             // instantiate the trait-ref, where-clause, and assoc-ty-value all together,
             // since they are defined in terms of a common set of variables
-            self.infer.instantiate(impl_data.parameter_kinds.iter().map(|_| environment.universe),
-                                   &(&impl_data.trait_ref,
-                                     (&impl_data.where_clauses,
-                                      assoc_ty_value)))
+            self.infer.instantiate(
+                impl_data.parameter_kinds.iter().map(|k| k.as_ref().map(|_| environment.universe)),
+                &(&impl_data.trait_ref, (&impl_data.where_clauses, assoc_ty_value)))
         };
 
         // Unify the trait-ref we are looking for (`self.goal`) with

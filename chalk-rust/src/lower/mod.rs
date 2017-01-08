@@ -8,7 +8,7 @@ mod test;
 
 type TypeIds = HashMap<ir::Identifier, ir::ItemId>;
 type TypeKinds = HashMap<ir::ItemId, ir::TypeKind>;
-type ParameterMap = HashMap<ir::ParameterKind, usize>;
+type ParameterMap = HashMap<ir::ParameterKind<ir::Identifier>, usize>;
 
 #[derive(Debug)]
 struct Env<'k> {
@@ -94,9 +94,9 @@ trait LowerTypeKind {
 }
 
 trait LowerParameterMap {
-    fn synthetic_parameters(&self) -> Option<ir::ParameterKind>;
+    fn synthetic_parameters(&self) -> Option<ir::ParameterKind<ir::Identifier>>;
     fn declared_parameters(&self) -> &[ParameterKind];
-    fn all_parameters(&self) -> Vec<ir::ParameterKind> {
+    fn all_parameters(&self) -> Vec<ir::ParameterKind<ir::Identifier>> {
         self.declared_parameters()
             .iter()
             .map(|id| id.lower())
@@ -123,7 +123,7 @@ trait LowerParameterMap {
 }
 
 impl LowerParameterMap for Item {
-    fn synthetic_parameters(&self) -> Option<ir::ParameterKind> {
+    fn synthetic_parameters(&self) -> Option<ir::ParameterKind<ir::Identifier>> {
         match *self {
             Item::TraitDefn(ref d) => d.synthetic_parameters(),
             Item::StructDefn(..) |
@@ -141,7 +141,7 @@ impl LowerParameterMap for Item {
 }
 
 impl LowerParameterMap for TraitDefn {
-   fn synthetic_parameters(&self) -> Option<ir::ParameterKind> {
+   fn synthetic_parameters(&self) -> Option<ir::ParameterKind<ir::Identifier>> {
        Some(ir::ParameterKind::Ty(intern(SELF)))
     }
 
@@ -152,11 +152,11 @@ impl LowerParameterMap for TraitDefn {
 
 
 trait LowerParameterKind {
-    fn lower(&self) -> ir::ParameterKind;
+    fn lower(&self) -> ir::ParameterKind<ir::Identifier>;
 }
 
 impl LowerParameterKind for ParameterKind {
-    fn lower(&self) -> ir::ParameterKind {
+    fn lower(&self) -> ir::ParameterKind<ir::Identifier> {
         match *self {
             ParameterKind::Ty(ref n) => ir::ParameterKind::Ty(n.str),
         }
@@ -259,7 +259,7 @@ impl LowerTraitRef for TraitRef {
             bail!(ErrorKind::NotTrait(self.trait_name));
         }
 
-        let parameters = self.args.iter().map(|a| Ok(ir::Parameter::Ty(a.lower(env)?))).collect::<Result<Vec<_>>>()?;
+        let parameters = self.args.iter().map(|a| Ok(ir::ParameterKind::Ty(a.lower(env)?))).collect::<Result<Vec<_>>>()?;
 
         Ok(ir::TraitRef {
             trait_id: id,
@@ -320,7 +320,7 @@ impl LowerTy for Ty {
                                                                      args.len()))
                 }
 
-                let parameters = args.iter().map(|t| Ok(ir::Parameter::Ty(t.lower(env)?))).collect::<Result<Vec<_>>>()?;
+                let parameters = args.iter().map(|t| Ok(ir::ParameterKind::Ty(t.lower(env)?))).collect::<Result<Vec<_>>>()?;
 
                 Ok(ir::Ty::Apply(ir::ApplicationTy {
                     name: ir::TypeName::ItemId(id),
@@ -393,20 +393,11 @@ impl LowerGoal<ir::Program> for Goal {
 
 impl<'k> LowerGoal<Env<'k>> for Goal {
     fn lower(&self, env: &Env<'k>) -> Result<Box<ir::Goal>> {
-        let lower_quantified = |pks: &[ParameterKind], goal: &Goal| -> Result<Box<ir::Goal>> {
-            let mut next_id = env.parameter_map.len();
-            let mut parameter_map = env.parameter_map.clone();
-            for pk in pks {
-                parameter_map.insert(pk.lower(), next_id);
-                next_id += 1;
-            }
-            goal.lower(&Env { parameter_map: &parameter_map, ..*env })
-        };
         match *self {
             Goal::ForAll(ref ids, ref g) =>
-                Ok(Box::new(ir::Goal::ForAll(ids.len(), lower_quantified(ids, g)?))),
+                g.lower_quantified(env, ir::QuantifierKind::ForAll, ids),
             Goal::Exists(ref ids, ref g) =>
-                Ok(Box::new(ir::Goal::Exists(ids.len(), lower_quantified(ids, g)?))),
+                g.lower_quantified(env, ir::QuantifierKind::Exists, ids),
             Goal::Implies(ref wc, ref g) =>
                 Ok(Box::new(ir::Goal::Implies(wc.lower(env)?, g.lower(env)?))),
             Goal::And(ref g1, ref g2) =>
@@ -414,5 +405,36 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
             Goal::Leaf(ref wc) =>
                 Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
         }
+    }
+}
+
+trait LowerQuantifiedGoal {
+    fn lower_quantified(&self,
+                        env: &Env,
+                        quantifier_kind: ir::QuantifierKind,
+                        parameter_kinds: &[ParameterKind])
+                        -> Result<Box<ir::Goal>>;
+}
+
+impl LowerQuantifiedGoal for Goal {
+    fn lower_quantified(&self,
+                        env: &Env,
+                        quantifier_kind: ir::QuantifierKind,
+                        parameter_kinds: &[ParameterKind])
+                        -> Result<Box<ir::Goal>>
+    {
+        if parameter_kinds.is_empty() {
+            return self.lower(env);
+        }
+
+        let next_id = env.parameter_map.len();
+        let mut parameter_map = env.parameter_map.clone();
+        parameter_map.insert(parameter_kinds[0].lower(), next_id);
+        let parameter_kind = match parameter_kinds[0] {
+            ParameterKind::Ty(_) => ir::ParameterKind::Ty(()),
+        };
+        let quantified_env = &Env { parameter_map: &parameter_map, ..*env };
+        let subgoal = self.lower_quantified(quantified_env, quantifier_kind, &parameter_kinds[1..])?;
+        Ok(Box::new(ir::Goal::Quantified(quantifier_kind, parameter_kind, subgoal)))
     }
 }

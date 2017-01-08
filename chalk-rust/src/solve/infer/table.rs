@@ -4,12 +4,18 @@ use ir::*;
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
+use super::lifetime_var::*;
 use super::var::*;
 
 #[derive(Clone)]
 pub struct InferenceTable {
     pub(super) unify: unify::UnificationTable<InferenceVariable>,
     values: Vec<Arc<Ty>>,
+
+    /// Unlike normal variables, we don't unify lifetime variables.
+    /// Instead, we just keep track of the universe in which they were
+    /// created.
+    lifetime_vars: Vec<UniverseIndex>,
 
     /// As we unify, we collect side-constraints (e.g. on regions).
     /// These can be extracted via a `constrained()` call.
@@ -23,19 +29,22 @@ pub struct InferenceSnapshot {
     values_len: usize,
 }
 
+pub type ParameterInferenceVariable = ParameterKind<InferenceVariable, LifetimeInferenceVariable>;
+
 impl InferenceTable {
     pub fn new() -> Self {
         InferenceTable {
             unify: unify::UnificationTable::new(),
             values: vec![],
+            lifetime_vars: vec![],
             constraints: Some(vec![]),
         }
     }
 
-    pub fn new_with_vars(vars: &[UniverseIndex]) -> Self {
+    pub fn new_with_vars(vars: &[ParameterKind<UniverseIndex>]) -> Self {
         let mut table = InferenceTable::new();
         for &ui in vars {
-            table.new_variable(ui);
+            table.new_parameter_variable(ui);
         }
         table
     }
@@ -49,6 +58,24 @@ impl InferenceTable {
 
     pub fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
         self.unify.new_key(InferenceValue::Unbound(ui))
+    }
+
+    pub fn new_lifetime_variable(&mut self, ui: UniverseIndex) -> LifetimeInferenceVariable {
+        let index = self.lifetime_vars.len();
+        self.lifetime_vars.push(ui);
+        LifetimeInferenceVariable::from_depth(index)
+    }
+
+    pub fn new_parameter_variable(&mut self, ui: ParameterKind<UniverseIndex>)
+                                  -> ParameterInferenceVariable {
+        match ui {
+            ParameterKind::Ty(ui) => ParameterKind::Ty(self.new_variable(ui)),
+            ParameterKind::Lifetime(ui) => ParameterKind::Lifetime(self.new_lifetime_variable(ui)),
+        }
+    }
+
+    pub fn lifetime_universe(&mut self, var: LifetimeInferenceVariable) -> UniverseIndex {
+        self.lifetime_vars[var.to_usize()]
     }
 
     pub fn snapshot(&mut self) -> InferenceSnapshot {
@@ -267,7 +294,8 @@ impl<'t> Unifier<'t> {
                               arg: &Parameter)
                               -> Result<()> {
         match *arg {
-            Parameter::Ty(ref t) => self.occurs_check_parameter_ty(var, universe_index, t),
+            ParameterKind::Ty(ref t) => self.occurs_check_parameter_ty(var, universe_index, t),
+            ParameterKind::Lifetime(_) => Ok(()),
         }
     }
 
@@ -320,5 +348,9 @@ impl<'t> Unifier<'t> {
 impl<'t> Zipper for Unifier<'t> {
     fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()> {
         self.unify_ty_ty(a, b)
+    }
+
+    fn zip_lifetimes(&mut self, _a: &Lifetime, _b: &Lifetime) -> Result<()> {
+        unimplemented!()
     }
 }

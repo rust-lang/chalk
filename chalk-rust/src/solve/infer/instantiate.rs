@@ -9,10 +9,10 @@ impl InferenceTable {
     // a fresh inference variable.
     pub fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
         where T: Fold,
-              U: IntoIterator<Item = UniverseIndex>
+              U: IntoIterator<Item = ParameterKind<UniverseIndex>>
     {
         let vars: Vec<_> = universes.into_iter()
-            .map(|u| self.new_variable(u))
+            .map(|u| self.new_parameter_variable(u))
             .collect();
         let mut instantiator = Instantiator { vars: vars };
         arg.fold_with(&mut instantiator).expect("")
@@ -20,11 +20,15 @@ impl InferenceTable {
 }
 
 struct Instantiator {
-    vars: Vec<InferenceVariable>,
+    vars: Vec<ParameterInferenceVariable>,
 }
 
 impl Folder for Instantiator {
     fn fold_var(&mut self, depth: usize) -> Result<Ty> {
-        Ok(self.vars[depth].to_ty())
+        Ok(self.vars[depth].as_ref().ty().unwrap().to_ty())
+    }
+
+    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
+        Ok(self.vars[depth].as_ref().lifetime().unwrap().to_lifetime())
     }
 }

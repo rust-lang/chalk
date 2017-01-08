@@ -35,18 +35,11 @@ impl Debug for AssociatedType {
     }
 }
 
-impl Debug for ParameterKind {
+impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
-            ParameterKind::Ty(ref n) => write!(fmt, "{}", n),
-        }
-    }
-}
-
-impl Debug for Parameter {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
-            Parameter::Ty(ref t) => write!(fmt, "{:?}", t),
+            ParameterKind::Ty(ref n) => write!(fmt, "{:?}", n),
+            ParameterKind::Lifetime(ref n) => write!(fmt, "{:?}", n),
         }
     }
 }
@@ -57,6 +50,15 @@ impl Debug for Ty {
             Ty::Var(depth) => write!(fmt, "?{}", depth),
             Ty::Apply(ref apply) => write!(fmt, "{:?}", apply),
             Ty::Projection(ref proj) => write!(fmt, "{:?}", proj),
+        }
+    }
+}
+
+impl Debug for Lifetime {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            Lifetime::Var(depth) => write!(fmt, "'?{}", depth),
+            Lifetime::ForAll(universe) => write!(fmt, "'!{}", universe.counter),
         }
     }
 }
@@ -119,6 +121,23 @@ impl Debug for WhereClause {
                        n.trait_id,
                        Angle(&n.parameters[1..]))
             }
+        }
+    }
+}
+
+impl Debug for Goal {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            Goal::Quantified(qkind, ParameterKind::Ty(()), ref g) =>
+                write!(fmt, "{:?}<type> {{ {:?} }}", qkind, g),
+            Goal::Quantified(qkind, ParameterKind::Lifetime(()), ref g) =>
+                write!(fmt, "{:?}<type> {{ {:?} }}", qkind, g),
+            Goal::Implies(ref wc, ref g) =>
+                write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
+            Goal::And(ref g1, ref g2) =>
+                write!(fmt, "({:?}, {:?})", g1, g2),
+            Goal::Leaf(ref wc) =>
+                write!(fmt, "{:?}", wc),
         }
     }
 }

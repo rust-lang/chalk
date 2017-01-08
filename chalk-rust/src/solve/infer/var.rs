@@ -15,6 +15,10 @@ impl InferenceVariable {
         InferenceVariable { index: depth as u32 }
     }
 
+    pub fn from_u32(depth: u32) -> InferenceVariable {
+        InferenceVariable { index: depth }
+    }
+
     pub fn to_ty(&self) -> ir::Ty {
         ir::Ty::Var(self.index as usize)
     }

@@ -52,8 +52,9 @@ impl<'s> ImplementedWithImpl<'s> {
                 bail!("impl for wrong trait");
             }
 
-            self.infer.instantiate(impl_data.parameter_kinds.iter().map(|_| environment.universe),
-                                   &(&impl_data.trait_ref, &impl_data.where_clauses))
+            self.infer.instantiate(
+                impl_data.parameter_kinds.iter().map(|k| k.as_ref().map(|_| environment.universe)),
+                &(&impl_data.trait_ref, &impl_data.where_clauses))
         };
 
         // Unify the trait-ref we are looking for (`self.goal`) with

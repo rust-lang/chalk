@@ -5,11 +5,16 @@ use std::sync::Arc;
 
 pub trait Zipper {
     fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()>;
+    fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()>;
 }
 
 impl<'f, Z: Zipper> Zipper for &'f mut Z {
     fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()> {
         (**self).zip_tys(a, b)
+    }
+
+    fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
+        (**self).zip_lifetimes(a, b)
     }
 }
 
@@ -52,10 +57,15 @@ impl<T: Zip, U: Zip> Zip for (T, U) {
     }
 }
 
-impl Zip for Parameter {
+impl<T: Zip, L: Zip> Zip for ParameterKind<T, L> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         match (a, b) {
-            (&Parameter::Ty(ref a), &Parameter::Ty(ref b)) => Zip::zip_with(zipper, a, b),
+            (&ParameterKind::Ty(ref a), &ParameterKind::Ty(ref b)) => Zip::zip_with(zipper, a, b),
+            (&ParameterKind::Lifetime(ref a), &ParameterKind::Lifetime(ref b)) => Zip::zip_with(zipper, a, b),
+            (&ParameterKind::Ty(_), &ParameterKind::Lifetime(_)) |
+            (&ParameterKind::Lifetime(_), &ParameterKind::Ty(_)) => {
+                panic!("zipping things of mixed kind")
+            }
         }
     }
 }
@@ -63,6 +73,12 @@ impl Zip for Parameter {
 impl Zip for Ty {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         zipper.zip_tys(a, b)
+    }
+}
+
+impl Zip for Lifetime {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        zipper.zip_lifetimes(a, b)
     }
 }
 

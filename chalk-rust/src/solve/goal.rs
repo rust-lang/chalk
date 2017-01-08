@@ -2,7 +2,7 @@ use errors::*;
 use fold::*;
 use ir::*;
 use solve::environment::{Environment, InEnvironment};
-use solve::infer::{InferenceTable, InferenceVariable};
+use solve::infer::{InferenceTable, ParameterInferenceVariable};
 use solve::solver::Solver;
 use solve::Solution;
 use std::sync::Arc;
@@ -14,8 +14,8 @@ pub struct Prove<'s> {
 }
 
 enum Binding {
-    ForAll(UniverseIndex),
-    Exists(InferenceVariable),
+    ForAll(ParameterKind<UniverseIndex>),
+    Exists(ParameterInferenceVariable),
 }
 
 impl<'s> Prove<'s> {
@@ -35,25 +35,19 @@ impl<'s> Prove<'s> {
                  environment: &Arc<Environment>,
                  bindings: &mut Vec<Binding>) {
         match *goal {
-            Goal::ForAll(num_binders, ref subgoal) => {
-                let mut new_environment = environment.clone();
-                for _ in 0..num_binders {
-                    new_environment = new_environment.new_universe();
-                    bindings.push(Binding::ForAll(new_environment.universe));
-                }
+            Goal::Quantified(QuantifierKind::ForAll, ref parameter_kind, ref subgoal) => {
+                let new_environment = environment.clone().new_universe();
+                let parameter_universe = parameter_kind.map(|()| new_environment.universe);
+                bindings.push(Binding::ForAll(parameter_universe));
                 self.decompose(subgoal, &new_environment, bindings);
-                for _ in 0..num_binders {
-                    bindings.pop();
-                }
+                bindings.pop().unwrap();
             }
-            Goal::Exists(num_binders, ref subgoal) => {
-                for _ in 0..num_binders {
-                    bindings.push(Binding::Exists(self.infer.new_variable(environment.universe)));
-                }
+            Goal::Quantified(QuantifierKind::Exists, ref parameter_kind, ref subgoal) => {
+                let parameter_universe = parameter_kind.map(|()| environment.universe);
+                let var = self.infer.new_parameter_variable(parameter_universe);
+                bindings.push(Binding::Exists(var));
                 self.decompose(subgoal, environment, bindings);
-                for _ in 0..num_binders {
-                    bindings.pop().unwrap();
-                }
+                bindings.pop().unwrap();
             }
             Goal::Implies(ref wc, ref subgoal) => {
                 let wc = Subst::apply(&bindings, wc);
@@ -100,11 +94,18 @@ impl<'b> Folder for Subst<'b> {
         match self.bindings[depth] {
             Binding::ForAll(u) => {
                 Ok(Ty::Apply(ApplicationTy {
-                    name: TypeName::ForAll(u),
+                    name: TypeName::ForAll(u.ty().unwrap()),
                     parameters: vec![],
                 }))
             }
-            Binding::Exists(v) => Ok(v.to_ty()),
+            Binding::Exists(v) => Ok(v.ty().unwrap().to_ty()),
+        }
+    }
+
+    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
+        match self.bindings[depth] {
+            Binding::ForAll(u) => Ok(Lifetime::ForAll(u.lifetime().unwrap())),
+            Binding::Exists(v) => Ok(v.lifetime().unwrap().to_lifetime()),
         }
     }
 }

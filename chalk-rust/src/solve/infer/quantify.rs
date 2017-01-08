@@ -2,7 +2,8 @@ use errors::*;
 use fold::{Fold, Folder};
 use ir::*;
 
-use super::{InferenceTable, InferenceVariable};
+use super::{InferenceTable, InferenceVariable,
+            LifetimeInferenceVariable, ParameterInferenceVariable};
 use super::var::InferenceValue;
 
 impl InferenceTable {
@@ -36,21 +37,38 @@ impl InferenceTable {
 
 struct Quantifier<'q> {
     table: &'q mut InferenceTable,
-    free_vars: Vec<InferenceVariable>,
+    free_vars: Vec<ParameterInferenceVariable>,
 }
 
 impl<'q> Quantifier<'q> {
-    fn into_binders(self) -> Vec<UniverseIndex> {
+    fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
         let Quantifier { table, free_vars } = self;
-        free_vars.iter()
-                 .map(|&v| {
-                     debug_assert!(table.unify.find(v) == v);
-                     match table.unify.probe_value(v) {
-                         InferenceValue::Unbound(ui) => ui,
-                         InferenceValue::Bound(_) => panic!("free var now bound"),
-                     }
+        free_vars.into_iter()
+                 .map(|p_v| match p_v {
+                     ParameterKind::Ty(v) => {
+                         debug_assert!(table.unify.find(v) == v);
+                         match table.unify.probe_value(v) {
+                             InferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
+                             InferenceValue::Bound(_) => panic!("free var now bound"),
+                         }
+                     },
+
+                     ParameterKind::Lifetime(v) => {
+                         ParameterKind::Lifetime(table.lifetime_universe(v))
+                     },
                  })
                  .collect()
+    }
+
+    fn add(&mut self, free_var: ParameterInferenceVariable) -> usize {
+        match self.free_vars.iter().position(|&v| v == free_var) {
+            Some(i) => i,
+            None => {
+                let next_index = self.free_vars.len();
+                self.free_vars.push(free_var);
+                next_index
+            }
+        }
     }
 }
 
@@ -68,17 +86,16 @@ impl<'q> Folder for Quantifier<'q> {
                 // canonical index `root_var` in the union-find table,
                 // and then map `root_var` to a fresh index that is
                 // unique to this quantification.
-                let root_var = self.table.unify.find(var);
-                let position = match self.free_vars.iter().position(|&v| v == var) {
-                    Some(i) => i,
-                    None => {
-                        let next_index = self.free_vars.len();
-                        self.free_vars.push(root_var);
-                        next_index
-                    }
-                };
+                let free_var = ParameterKind::Ty(self.table.unify.find(var));
+                let position = self.add(free_var);
                 Ok(InferenceVariable::from_depth(position).to_ty())
             }
         }
+    }
+
+    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
+        let free_var = ParameterKind::Lifetime(LifetimeInferenceVariable::from_depth(depth));
+        let position = self.add(free_var);
+        Ok(LifetimeInferenceVariable::from_depth(position).to_lifetime())
     }
 }

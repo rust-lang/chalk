@@ -60,7 +60,7 @@ pub struct ItemId {
 pub struct TypeKind {
     pub sort: TypeSort,
     pub name: Identifier,
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub parameter_kinds: Vec<ParameterKind<Identifier>>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -71,7 +71,7 @@ pub enum TypeSort {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplData {
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub parameter_kinds: Vec<ParameterKind<Identifier>>,
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
@@ -79,7 +79,7 @@ pub struct ImplData {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitData {
-    pub parameter_kinds: Vec<ParameterKind>, // including the implicit `Self` as param 0
+    pub parameter_kinds: Vec<ParameterKind<Identifier>>, // including the implicit `Self` as param 0
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_names: Vec<Identifier>,
 }
@@ -98,20 +98,58 @@ pub enum Ty {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+pub enum Lifetime {
+    Var(usize),
+    ForAll(UniverseIndex),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ApplicationTy {
     pub name: TypeName,
     pub parameters: Vec<Parameter>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum ParameterKind {
-    Ty(Identifier),
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub enum ParameterKind<T, L = T> {
+    Ty(T),
+    Lifetime(L),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum Parameter {
-    Ty(Ty),
+impl<T> ParameterKind<T, T> {
+    pub fn map<OP, U>(self, op: OP) -> ParameterKind<U>
+        where OP: FnOnce(T) -> U
+    {
+        match self {
+            ParameterKind::Ty(t) => ParameterKind::Ty(op(t)),
+            ParameterKind::Lifetime(t) => ParameterKind::Lifetime(op(t)),
+        }
+    }
 }
+
+impl<T, L> ParameterKind<T, L> {
+    pub fn as_ref(&self) -> ParameterKind<&T, &L> {
+        match *self {
+            ParameterKind::Ty(ref t) => ParameterKind::Ty(t),
+            ParameterKind::Lifetime(ref l) => ParameterKind::Lifetime(l),
+        }
+    }
+
+    pub fn ty(self) -> Option<T> {
+        match self {
+            ParameterKind::Ty(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    pub fn lifetime(self) -> Option<L> {
+        match self {
+            ParameterKind::Lifetime(t) => Some(t),
+            _ => None,
+        }
+    }
+}
+
+pub type Parameter = ParameterKind<Ty, Lifetime>;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ProjectionTy {
@@ -140,7 +178,7 @@ pub struct Normalize {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Quantified<T> {
     pub value: T,
-    pub binders: Vec<UniverseIndex>,
+    pub binders: Vec<ParameterKind<UniverseIndex>>,
 }
 
 impl<T> Quantified<T> {
@@ -165,17 +203,22 @@ impl<T> Constrained<T> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Goal {
-    ForAll(usize, Box<Goal>),
-    Exists(usize, Box<Goal>),
+    Quantified(QuantifierKind, ParameterKind<()>, Box<Goal>),
     Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
     Leaf(WhereClause),
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum QuantifierKind {
+    ForAll, Exists
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Constraint {
+    LifetimeEq(Lifetime, Lifetime),
 }
 
 pub mod debug;
