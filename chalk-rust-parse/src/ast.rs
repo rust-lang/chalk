@@ -24,19 +24,23 @@ pub enum Item {
 
 pub struct StructDefn {
     pub name: Identifier,
-    pub parameters: Vec<Identifier>,
+    pub parameter_kinds: Vec<ParameterKind>,
     pub where_clauses: Vec<WhereClause>,
 }
 
 pub struct TraitDefn {
     pub name: Identifier,
-    pub parameters: Vec<Identifier>,
+    pub parameter_kinds: Vec<ParameterKind>,
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_names: Vec<Identifier>,
 }
 
+pub enum ParameterKind {
+    Ty(Identifier),
+}
+
 pub struct Impl {
-    pub parameters: Vec<Identifier>,
+    pub parameter_kinds: Vec<ParameterKind>,
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
@@ -82,8 +86,8 @@ pub enum WhereClause {
 }
 
 pub enum Goal {
-    ForAll(Vec<Identifier>, Box<Goal>),
-    Exists(Vec<Identifier>, Box<Goal>),
+    ForAll(Vec<ParameterKind>, Box<Goal>),
+    Exists(Vec<ParameterKind>, Box<Goal>),
     Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
     Leaf(WhereClause),

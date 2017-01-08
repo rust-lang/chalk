@@ -3,13 +3,12 @@ use lalrpop_intern::intern;
 use errors::*;
 use ir;
 use std::collections::HashMap;
-use std::iter;
 
 mod test;
 
 type TypeIds = HashMap<ir::Identifier, ir::ItemId>;
 type TypeKinds = HashMap<ir::ItemId, ir::TypeKind>;
-type ParameterMap = HashMap<ir::Identifier, usize>;
+type ParameterMap = HashMap<ir::ParameterKind, usize>;
 
 #[derive(Debug)]
 struct Env<'k> {
@@ -27,7 +26,7 @@ const SELF: &str = "Self";
 
 impl<'k> Env<'k> {
     fn lookup(&self, name: Identifier) -> Result<NameLookup> {
-        if let Some(k) = self.parameter_map.get(&name.str) {
+        if let Some(k) = self.parameter_map.get(&ir::ParameterKind::Ty(name.str)) {
             return Ok(NameLookup::Parameter(*k));
         }
 
@@ -95,8 +94,15 @@ trait LowerTypeKind {
 }
 
 trait LowerParameterMap {
-    fn synthetic_parameters(&self) -> Option<ir::Identifier>;
-    fn declared_parameters(&self) -> &[Identifier];
+    fn synthetic_parameters(&self) -> Option<ir::ParameterKind>;
+    fn declared_parameters(&self) -> &[ParameterKind];
+    fn all_parameters(&self) -> Vec<ir::ParameterKind> {
+        self.declared_parameters()
+            .iter()
+            .map(|id| id.lower())
+            .chain(self.synthetic_parameters()) // (*) see above
+            .collect()
+    }
 
     fn parameter_map(&self) -> ParameterMap {
         // (*) It is important that the declared parameters come
@@ -108,10 +114,8 @@ trait LowerParameterMap {
         // trait is not object-safe, and hence not supposed to be used
         // as an object. Actually the handling of object types is
         // probably just kind of messed up right now. That's ok.
-        self.declared_parameters()
-            .iter()
-            .map(|id| id.str)
-            .chain(self.synthetic_parameters()) // (*) see above
+        self.all_parameters()
+            .into_iter()
             .enumerate()
             .map(|(index, id)| (id, index))
             .collect()
@@ -119,19 +123,42 @@ trait LowerParameterMap {
 }
 
 impl LowerParameterMap for Item {
-    fn synthetic_parameters(&self) -> Option<ir::Identifier> {
+    fn synthetic_parameters(&self) -> Option<ir::ParameterKind> {
         match *self {
-            Item::TraitDefn(..) => Some(intern(SELF)),
+            Item::TraitDefn(ref d) => d.synthetic_parameters(),
             Item::StructDefn(..) |
             Item::Impl(..) => None,
         }
     }
 
-    fn declared_parameters(&self) -> &[Identifier] {
+    fn declared_parameters(&self) -> &[ParameterKind] {
         match *self {
-            Item::StructDefn(ref d) => &d.parameters,
-            Item::TraitDefn(ref d) => &d.parameters,
-            Item::Impl(ref d) => &d.parameters,
+            Item::TraitDefn(ref d) => d.declared_parameters(),
+            Item::StructDefn(ref d) => &d.parameter_kinds,
+            Item::Impl(ref d) => &d.parameter_kinds,
+        }
+    }
+}
+
+impl LowerParameterMap for TraitDefn {
+   fn synthetic_parameters(&self) -> Option<ir::ParameterKind> {
+       Some(ir::ParameterKind::Ty(intern(SELF)))
+    }
+
+    fn declared_parameters(&self) -> &[ParameterKind] {
+        &self.parameter_kinds
+    }
+}
+
+
+trait LowerParameterKind {
+    fn lower(&self) -> ir::ParameterKind;
+}
+
+impl LowerParameterKind for ParameterKind {
+    fn lower(&self) -> ir::ParameterKind {
+        match *self {
+            ParameterKind::Ty(ref n) => ir::ParameterKind::Ty(n.str),
         }
     }
 }
@@ -149,7 +176,7 @@ impl LowerTypeKind for StructDefn {
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Struct,
             name: self.name.str,
-            parameter_kinds: self.parameters.iter().map(|&id| ir::ParameterKind::Ty(id.str)).collect(),
+            parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
         })
     }
 }
@@ -167,7 +194,7 @@ impl LowerTypeKind for TraitDefn {
             name: self.name.str,
 
             // for the purposes of the *type*, ignore `Self`:
-            parameter_kinds: self.parameters.iter().map(|&id| ir::ParameterKind::Ty(id.str)).collect(),
+            parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
         })
     }
 }
@@ -314,7 +341,7 @@ impl LowerImpl for Impl {
     fn lower_impl(&self, env: &Env) -> Result<ir::ImplData> {
         Ok(ir::ImplData {
             trait_ref: self.trait_ref.lower(env)?,
-            parameter_kinds: self.parameters.iter().map(|&id| ir::ParameterKind::Ty(id.str)).collect(),
+            parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
             assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(env)).collect()),
             where_clauses: self.lower_where_clauses(&env)?,
         })
@@ -341,9 +368,7 @@ trait LowerTrait {
 impl LowerTrait for TraitDefn {
     fn lower_trait(&self, env: &Env) -> Result<ir::TraitData> {
         Ok(ir::TraitData {
-            parameter_kinds: iter::once(ir::ParameterKind::Ty(intern(SELF))).chain(
-                self.parameters.iter().map(|&id| ir::ParameterKind::Ty(id.str)))
-                .collect(),
+            parameter_kinds: self.all_parameters(),
             where_clauses: self.lower_where_clauses(&env)?,
             assoc_ty_names: self.assoc_ty_names.iter().map(|a| a.str).collect(),
         })
@@ -368,11 +393,11 @@ impl LowerGoal<ir::Program> for Goal {
 
 impl<'k> LowerGoal<Env<'k>> for Goal {
     fn lower(&self, env: &Env<'k>) -> Result<Box<ir::Goal>> {
-        let lower_quantified = |ids: &[Identifier], goal: &Goal| -> Result<Box<ir::Goal>> {
+        let lower_quantified = |pks: &[ParameterKind], goal: &Goal| -> Result<Box<ir::Goal>> {
             let mut next_id = env.parameter_map.len();
             let mut parameter_map = env.parameter_map.clone();
-            for &id in ids {
-                parameter_map.insert(id.str, next_id);
+            for pk in pks {
+                parameter_map.insert(pk.lower(), next_id);
                 next_id += 1;
             }
             goal.lower(&Env { parameter_map: &parameter_map, ..*env })
