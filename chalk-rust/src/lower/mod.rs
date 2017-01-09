@@ -22,6 +22,10 @@ enum NameLookup {
     Parameter(usize),
 }
 
+enum LifetimeLookup {
+    Parameter(usize),
+}
+
 const SELF: &str = "Self";
 
 impl<'k> Env<'k> {
@@ -35,6 +39,14 @@ impl<'k> Env<'k> {
         }
 
         bail!(ErrorKind::InvalidTypeName(name))
+    }
+
+    fn lookup_lifetime(&self, name: Identifier) -> Result<LifetimeLookup> {
+        if let Some(k) = self.parameter_map.get(&ir::ParameterKind::Lifetime(name.str)) {
+            return Ok(LifetimeLookup::Parameter(*k));
+        }
+
+        bail!("invalid lifetime name: {:?}", name.str);
     }
 
     fn type_kind(&self, id: ir::ItemId) -> &ir::TypeKind {
@@ -159,6 +171,7 @@ impl LowerParameterKind for ParameterKind {
     fn lower(&self) -> ir::ParameterKind<ir::Identifier> {
         match *self {
             ParameterKind::Ty(ref n) => ir::ParameterKind::Ty(n.str),
+            ParameterKind::Lifetime(ref n) => ir::ParameterKind::Lifetime(n.str),
         }
     }
 }
@@ -320,7 +333,7 @@ impl LowerTy for Ty {
                                                                      args.len()))
                 }
 
-                let parameters = args.iter().map(|t| Ok(ir::ParameterKind::Ty(t.lower(env)?))).collect::<Result<Vec<_>>>()?;
+                let parameters = args.iter().map(|t| Ok(t.lower(env)?)).collect::<Result<Vec<_>>>()?;
 
                 Ok(ir::Ty::Apply(ir::ApplicationTy {
                     name: ir::TypeName::ItemId(id),
@@ -329,6 +342,35 @@ impl LowerTy for Ty {
             }
 
             Ty::Projection { ref proj } => Ok(ir::Ty::Projection(proj.lower(env)?)),
+        }
+    }
+}
+
+trait LowerParameter {
+    fn lower(&self, env: &Env) -> Result<ir::Parameter>;
+}
+
+impl LowerParameter for Parameter {
+    fn lower(&self, env: &Env) -> Result<ir::Parameter> {
+        match *self {
+            Parameter::Ty(ref t) => Ok(ir::ParameterKind::Ty(t.lower(env)?)),
+            Parameter::Lifetime(ref l) => Ok(ir::ParameterKind::Lifetime(l.lower(env)?)),
+        }
+    }
+}
+
+trait LowerLifetime {
+    fn lower(&self, env: &Env) -> Result<ir::Lifetime>;
+}
+
+impl LowerLifetime for Lifetime {
+    fn lower(&self, env: &Env) -> Result<ir::Lifetime> {
+        match *self {
+            Lifetime::Id { name } => {
+                match env.lookup_lifetime(name)? {
+                    LifetimeLookup::Parameter(d) => Ok(ir::Lifetime::Var(d))
+                }
+            }
         }
     }
 }
@@ -432,6 +474,7 @@ impl LowerQuantifiedGoal for Goal {
         parameter_map.insert(parameter_kinds[0].lower(), next_id);
         let parameter_kind = match parameter_kinds[0] {
             ParameterKind::Ty(_) => ir::ParameterKind::Ty(()),
+            ParameterKind::Lifetime(_) => ir::ParameterKind::Lifetime(()),
         };
         let quantified_env = &Env { parameter_map: &parameter_map, ..*env };
         let subgoal = self.lower_quantified(quantified_env, quantifier_kind, &parameter_kinds[1..])?;

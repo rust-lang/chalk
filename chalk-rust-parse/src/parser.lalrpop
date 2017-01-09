@@ -74,8 +74,12 @@ AssocTyValue: AssocTyValue = {
 
 pub Ty: Ty = {
     <n:Id> => Ty::Id { name: n},
-    <n:Id> "<" <a:Comma<Ty>> ">" => Ty::Apply { name: n, args: a },
+    <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
     <p:ProjectionTy> => Ty::Projection { proj: p },
+};
+
+Parameter: Parameter = {
+    Ty => Parameter::Ty(<>),
 };
 
 ProjectionTy: ProjectionTy = {

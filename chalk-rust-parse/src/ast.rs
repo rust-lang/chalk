@@ -37,6 +37,12 @@ pub struct TraitDefn {
 
 pub enum ParameterKind {
     Ty(Identifier),
+    Lifetime(Identifier),
+}
+
+pub enum Parameter {
+    Ty(Ty),
+    Lifetime(Lifetime),
 }
 
 pub struct Impl {
@@ -57,11 +63,17 @@ pub enum Ty {
     },
     Apply {
         name: Identifier,
-        args: Vec<Ty>
+        args: Vec<Parameter>
     },
     Projection {
         proj: ProjectionTy,
     },
+}
+
+pub enum Lifetime {
+    Id {
+        name: Identifier,
+    }
 }
 
 pub struct ProjectionTy {
