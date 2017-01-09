@@ -55,24 +55,21 @@ impl<'s> Fulfill<'s> {
         self.infer.new_parameter_variable(ui)
     }
 
-    /// Wraps `InferenceTable::constrained`
-    pub fn constrained<T>(&mut self, value: T) -> Constrained<T> {
-        self.infer.constrained(value)
-    }
-
-    /// Wraps `InferenceTable::quantify`
-    pub fn quantify<T>(&mut self, value: &T) -> Quantified<T::Result>
-        where T: Fold
-    {
-        self.infer.quantify(value)
-    }
-
     /// Adds the given where-clauses to the internal list of
     /// obligations that must be solved.
     pub fn extend<WC>(&mut self, wc: WC)
         where WC: IntoIterator<Item=InEnvironment<WhereClause>>
     {
         self.obligations.extend(wc);
+    }
+
+    /// As the final step in process a goal, we always have to deliver
+    /// back a "refined goal" that shows what we learned. This refined
+    /// goal combines any lifetime constraints with the final results
+    /// of inference. It is produced by this method.
+    pub fn refine_goal<G: Fold>(mut self, goal: G) -> Quantified<Constrained<G::Result>> {
+        let constrained_goal = self.infer.constrained(goal);
+        self.infer.quantify(&constrained_goal)
     }
 
     /// Try to solve all of `where_clauses`, which may contain
@@ -129,7 +126,7 @@ impl<'s> Fulfill<'s> {
                  wc: &InEnvironment<WhereClause>,
                  inference_progress: &mut bool)
                  -> Result<Successful> {
-        let quantified_wc = self.quantify(&wc);
+        let quantified_wc = self.infer.quantify(&wc);
         let solution = self.solver.solve(quantified_wc.clone())?;
 
         // Regardless of whether the result is ambiguous or not,

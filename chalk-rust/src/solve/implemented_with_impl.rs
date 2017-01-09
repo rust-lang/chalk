@@ -65,8 +65,7 @@ impl<'s> ImplementedWithImpl<'s> {
         // them can be successfully proved, then we know that this
         // impl applies. If any of them error out, this impl does not.
         let successful = self.fulfill.solve_all()?;
-        let refined_goal = self.fulfill.constrained(InEnvironment::new(&environment, &self.goal));
-        let refined_goal = self.fulfill.quantify(&refined_goal);
+        let refined_goal = self.fulfill.refine_goal(InEnvironment::new(&environment, &self.goal));
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

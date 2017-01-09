@@ -46,8 +46,7 @@ impl<'s> NormalizeApplication<'s> {
         // all of them can be successfully proved, then we know that
         // this unification succeeded.
         let successful = self.fulfill.solve_all()?;
-        let refined_goal = self.fulfill.constrained(InEnvironment::new(&environment, &self.goal));
-        let refined_goal = self.fulfill.quantify(&refined_goal);
+        let refined_goal = self.fulfill.refine_goal(InEnvironment::new(&environment, &self.goal));
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,
