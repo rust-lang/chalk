@@ -4,13 +4,13 @@ use fold::Fold;
 use ir::*;
 use solve::Solution;
 use solve::environment::{Environment, InEnvironment};
-use solve::infer::{InferenceTable, UnificationResult};
+use solve::fulfill::Fulfill;
+use solve::infer::InferenceTable;
 use solve::solver::Solver;
 use std::sync::Arc;
 
 pub struct MatchClause<'s, G: 's> {
-    solver: &'s mut Solver,
-    infer: InferenceTable,
+    fulfill: Fulfill<'s>,
     environment: Arc<Environment>,
     goal: &'s G,
     clause_index: usize,
@@ -27,22 +27,17 @@ impl<'s, G> MatchClause<'s, G>
         let infer = InferenceTable::new_with_vars(&q.binders);
         assert!(clause_index < environment.clauses.len());
         let environment = environment.clone();
-        MatchClause { solver, infer, environment, goal, clause_index }
+        let fulfill = Fulfill::new(solver, infer);
+        MatchClause { fulfill, environment, goal, clause_index }
     }
 
     pub fn solve(mut self) -> Result<Solution<InEnvironment<G>>> {
         let environment = self.environment.clone();
         let clause = &environment.clauses[self.clause_index];
-        let UnificationResult { normalizations } =
-            self.infer.unify(&self.goal.clone().cast(), &clause)?;
-        let env_where_clauses: Vec<_> =
-            normalizations.into_iter()
-                          .map(WhereClause::Normalize)
-                          .map(|wc| InEnvironment::new(&environment, wc))
-                          .collect();
-        let successful = self.solver.solve_all(&mut self.infer, env_where_clauses)?;
-        let refined_goal = self.infer.constrained(InEnvironment::new(&environment, &self.goal));
-        let refined_goal = self.infer.quantify(&refined_goal);
+        self.fulfill.unify(&environment, &self.goal.clone().cast(), &clause)?;
+        let successful = self.fulfill.solve_all()?;
+        let refined_goal = self.fulfill.constrained(InEnvironment::new(&environment, &self.goal));
+        let refined_goal = self.fulfill.quantify(&refined_goal);
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

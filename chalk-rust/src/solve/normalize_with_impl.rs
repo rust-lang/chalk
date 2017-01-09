@@ -2,13 +2,13 @@ use errors::*;
 use ir::*;
 use solve::Solution;
 use solve::environment::{Environment, InEnvironment};
-use solve::infer::{InferenceTable, UnificationResult};
+use solve::fulfill::Fulfill;
+use solve::infer::InferenceTable;
 use solve::solver::Solver;
 use std::sync::Arc;
 
 pub struct NormalizeWithImpl<'s> {
-    solver: &'s mut Solver,
-    infer: InferenceTable,
+    fulfill: Fulfill<'s>,
     environment: Arc<Environment>,
     goal: Normalize,
     impl_id: ItemId,
@@ -22,9 +22,8 @@ impl<'s> NormalizeWithImpl<'s> {
         let InEnvironment { environment, goal } = q.value;
         let infer = InferenceTable::new_with_vars(&q.binders);
         NormalizeWithImpl {
-            solver: solver,
+            fulfill: Fulfill::new(solver, infer),
             environment: environment,
-            infer: infer,
             goal: goal,
             impl_id: impl_id,
         }
@@ -32,7 +31,7 @@ impl<'s> NormalizeWithImpl<'s> {
 
     pub fn solve(mut self) -> Result<Solution<InEnvironment<Normalize>>> {
         let environment = self.environment.clone();
-        let program = self.solver.program.clone();
+        let program = self.fulfill.program();
 
         // Extract the trait-ref that this impl implements, its
         // where-clauses, and the value that it provides for the
@@ -68,41 +67,30 @@ impl<'s> NormalizeWithImpl<'s> {
 
             // instantiate the trait-ref, where-clause, and assoc-ty-value all together,
             // since they are defined in terms of a common set of variables
-            self.infer.instantiate(
+            self.fulfill.instantiate(
                 impl_data.parameter_kinds.iter().map(|k| k.as_ref().map(|_| environment.universe)),
                 &(&impl_data.trait_ref, (&impl_data.where_clauses, assoc_ty_value)))
         };
 
         // Unify the trait-ref we are looking for (`self.goal`) with
-        // the trait-ref that the impl supplies (if we can). This will
-        // result in some auxiliary normalization clauses we must
-        // prove.
-        let UnificationResult { normalizations: normalize_to1 } =
-            self.infer.unify(&self.goal.projection.trait_ref, &impl_trait_ref)?;
-        debug!("implemented_with::solve: normalize_to1={:?}", normalize_to1);
+        // the trait-ref that the impl supplies (if we can).
+        self.fulfill.unify(&environment, &self.goal.projection.trait_ref, &impl_trait_ref)?;
 
         // Unify the result of normalization (`self.goal.ty`) with the
         // value that this impl provides (`assoc_ty_value`).
-        let UnificationResult { normalizations: normalize_to2 } =
-            self.infer.unify(&self.goal.ty, &assoc_ty_value)?;
-        debug!("implemented_with::solve: normalize_to2={:?}", normalize_to2);
+        self.fulfill.unify(&environment, &self.goal.ty, &assoc_ty_value)?;
 
-        // Combine the where-clauses from the impl with the results
-        // from unification into one master list of things to solve,
-        // pairing each with the environment.
-        let env_where_clauses: Vec<_> =
+        // Add the where-clauses from the impl to list of things to solve.
+        self.fulfill.extend(
             where_clauses.into_iter()
-                         .chain(normalize_to1.into_iter().map(WhereClause::Normalize))
-                         .chain(normalize_to2.into_iter().map(WhereClause::Normalize))
-                         .map(|wc| InEnvironment::new(&environment, wc))
-                         .collect();
+                         .map(|wc| InEnvironment::new(&environment, wc)));
 
         // Now try to prove the where-clauses one by one. If all of
         // them can be successfully proved, then we know that this
         // impl applies. If any of them error out, this impl does not.
-        let successful = self.solver.solve_all(&mut self.infer, env_where_clauses)?;
-        let refined_goal = self.infer.constrained(InEnvironment::new(&environment, &self.goal));
-        let refined_goal = self.infer.quantify(&refined_goal);
+        let successful = self.fulfill.solve_all()?;
+        let refined_goal = self.fulfill.constrained(InEnvironment::new(&environment, &self.goal));
+        let refined_goal = self.fulfill.quantify(&refined_goal);
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

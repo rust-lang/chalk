@@ -1,6 +1,7 @@
 use ir::*;
 
 pub mod environment;
+pub mod fulfill;
 pub mod infer;
 pub mod implemented;
 pub mod implemented_with_impl;

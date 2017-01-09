@@ -2,14 +2,14 @@ use errors::*;
 use fold::*;
 use ir::*;
 use solve::environment::{Environment, InEnvironment};
+use solve::fulfill::Fulfill;
 use solve::infer::{InferenceTable, ParameterInferenceVariable};
 use solve::solver::Solver;
 use solve::Solution;
 use std::sync::Arc;
 
 pub struct Prove<'s> {
-    solver: &'s mut Solver,
-    infer: InferenceTable,
+    fulfill: Fulfill<'s>,
     goals: Vec<InEnvironment<WhereClause>>,
 }
 
@@ -21,8 +21,7 @@ enum Binding {
 impl<'s> Prove<'s> {
     pub fn new(solver: &'s mut Solver, goal: Box<Goal>) -> Self {
         let mut prove = Prove {
-            solver: solver,
-            infer: InferenceTable::new(),
+            fulfill: Fulfill::new(solver, InferenceTable::new()),
             goals: vec![],
         };
         let environment = &Environment::new();
@@ -44,7 +43,7 @@ impl<'s> Prove<'s> {
             }
             Goal::Quantified(QuantifierKind::Exists, ref parameter_kind, ref subgoal) => {
                 let parameter_universe = parameter_kind.map(|()| environment.universe);
-                let var = self.infer.new_parameter_variable(parameter_universe);
+                let var = self.fulfill.new_parameter_variable(parameter_universe);
                 bindings.push(Binding::Exists(var));
                 self.decompose(subgoal, environment, bindings);
                 bindings.pop().unwrap();
@@ -66,12 +65,13 @@ impl<'s> Prove<'s> {
     }
 
     pub fn solve(mut self) -> Result<Solution<Vec<WhereClause>>> {
-        let successful = self.solver.solve_all(&mut self.infer, self.goals.clone())?;
-        let refined_goal = self.infer.constrained(self.goals
+        self.fulfill.extend(self.goals.iter().cloned());
+        let successful = self.fulfill.solve_all()?;
+        let refined_goal = self.fulfill.constrained(self.goals
             .into_iter()
             .map(|g| g.goal)
             .collect::<Vec<_>>());
-        let refined_goal = self.infer.quantify(&refined_goal);
+        let refined_goal = self.fulfill.quantify(&refined_goal);
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,
