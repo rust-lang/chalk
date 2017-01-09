@@ -357,6 +357,6 @@ impl<'t> Zipper for Unifier<'t> {
     }
 
     fn zip_lifetimes(&mut self, _a: &Lifetime, _b: &Lifetime) -> Result<()> {
-        unimplemented!()
+        unimplemented!() // FIXME(#5)
     }
 }
