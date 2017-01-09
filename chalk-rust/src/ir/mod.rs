@@ -97,7 +97,7 @@ pub enum Ty {
     Projection(ProjectionTy),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Lifetime {
     Var(usize),
     ForAll(UniverseIndex),
