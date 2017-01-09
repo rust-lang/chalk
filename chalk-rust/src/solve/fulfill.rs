@@ -7,6 +7,7 @@ use solve::environment::{Environment, InEnvironment};
 use solve::infer::{InferenceTable, UnificationResult, ParameterInferenceVariable};
 use solve::solver::Solver;
 use std::collections::HashSet;
+use std::fmt::Debug;
 use std::mem;
 use std::sync::Arc;
 use zip::Zip;
@@ -41,9 +42,12 @@ impl<'s> Fulfill<'s> {
     /// added into our list of pending obligations with the given
     /// environment.
     pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
-        where T: Zip
+        where T: Zip + Debug
     {
         let UnificationResult { normalizations, constraints } = self.infer.unify(a, b)?;
+        debug!("unify({:?}, {:?}) succeeded", a, b);
+        debug!("unify: normalizations={:?}", normalizations);
+        debug!("unify: constraints={:?}", constraints);
         self.constraints.extend(constraints);
         self.extend(normalizations
                     .into_iter()
@@ -72,6 +76,7 @@ impl<'s> Fulfill<'s> {
     pub fn refine_goal<G: Fold>(mut self, goal: G) -> Quantified<Constrained<G::Result>> {
         let mut constraints: Vec<_> = self.constraints.into_iter().collect();
         constraints.sort();
+        debug!("refine_goal: constraints = {:?}", constraints);
         let constrained_goal = Constrained {
             value: goal,
             constraints: constraints,
@@ -156,15 +161,22 @@ impl<'s> Fulfill<'s> {
         // more algorithm written just for this case instead of
         // instantiating with variables and applying the standard
         // unification algorithm. But this is good enough for now.
-        if {
+        let new_type_info = {
             solution.refined_goal.binders != quantified_wc.binders ||
             solution.refined_goal.value.value != quantified_wc.value
-        } {
-            let refined_goal =
-                self.instantiate(quantified_wc.binders.iter().cloned(),
+        };
+
+        if new_type_info || !solution.refined_goal.value.constraints.is_empty() {
+            let Constrained { constraints, value: refined_goal } =
+                self.instantiate(solution.refined_goal.binders.iter().cloned(),
                                  &solution.refined_goal.value);
-            self.infer.unify(wc, &refined_goal.value)?; // FIXME(#4)
-            *inference_progress = true;
+
+            self.constraints.extend(constraints);
+
+            if new_type_info {
+                self.unify(&wc.environment, wc, &refined_goal)?;
+                *inference_progress = true;
+            }
         }
 
         Ok(solution.successful)

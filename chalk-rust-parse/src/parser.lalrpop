@@ -63,6 +63,7 @@ Impl: Impl = {
 
 ParameterKind: ParameterKind = {
     Id => ParameterKind::Ty(<>),
+    LifetimeId => ParameterKind::Lifetime(<>),
 };
 
 AssocTyValue: AssocTyValue = {
@@ -78,8 +79,13 @@ pub Ty: Ty = {
     <p:ProjectionTy> => Ty::Projection { proj: p },
 };
 
+Lifetime: Lifetime = {
+    <n:LifetimeId> => Lifetime::Id { name: n },
+};
+
 Parameter: Parameter = {
     Ty => Parameter::Ty(<>),
+    Lifetime => Parameter::Lifetime(<>),
 };
 
 ProjectionTy: ProjectionTy = {
@@ -129,6 +135,13 @@ Angle<T>: Vec<T> = {
 
 Id: Identifier = {
     <l:@L> <s:r"([:alpha:]|_)([:alnum:]|_)*"> <r:@R> => Identifier {
+        str: intern(s),
+        span: Span::new(l, r),
+    }
+};
+
+LifetimeId: Identifier = {
+    <l:@L> <s:r"'([:alpha:]|_)([:alnum:]|_)*"> <r:@R> => Identifier {
         str: intern(s),
         span: Span::new(l, r),
     }

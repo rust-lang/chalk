@@ -496,3 +496,42 @@ fn normalize_rev_infer() {
         }
     }
 }
+
+/// Demonstrates that, given the expected value of the associated
+/// type, we can use that to narrow down the relevant impls.
+#[test]
+fn region_equality() {
+    test! {
+        program {
+            trait Eq<T> { }
+            impl<T> Eq<T> for T { }
+
+            struct Unit { }
+            struct Ref<'a, T> { }
+        }
+
+        goal {
+            forall<'a, 'b> {
+                Ref<'a, Unit>: Eq<Ref<'b, Unit>>
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            Ref<'!1, Unit>: Eq<Ref<'!2, Unit>>
+                        ],
+                        constraints: [
+                            LifetimeEq(
+                                '!2,
+                                '!1
+                            )
+                        ]
+                    },
+                    binders: []
+                }
+            }"
+        }
+    }
+}
