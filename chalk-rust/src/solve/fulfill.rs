@@ -6,6 +6,7 @@ use solve::Successful;
 use solve::environment::{Environment, InEnvironment};
 use solve::infer::{InferenceTable, UnificationResult, ParameterInferenceVariable};
 use solve::solver::Solver;
+use std::collections::HashSet;
 use std::mem;
 use std::sync::Arc;
 use zip::Zip;
@@ -14,12 +15,12 @@ pub struct Fulfill<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
     obligations: Vec<InEnvironment<WhereClause>>,
+    constraints: HashSet<Constraint>,
 }
 
 impl<'s> Fulfill<'s> {
     pub fn new(solver: &'s mut Solver, infer: InferenceTable) -> Self {
-        let obligations = vec![];
-        Fulfill { solver, infer, obligations }
+        Fulfill { solver, infer, obligations: vec![], constraints: HashSet::new() }
     }
 
     pub fn program(&self) -> Arc<Program> {
@@ -42,7 +43,8 @@ impl<'s> Fulfill<'s> {
     pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
         where T: Zip
     {
-        let UnificationResult { normalizations } = self.infer.unify(a, b)?;
+        let UnificationResult { normalizations, constraints } = self.infer.unify(a, b)?;
+        self.constraints.extend(constraints);
         self.extend(normalizations
                     .into_iter()
                     .map(|wc| InEnvironment::new(environment, wc.cast())));
@@ -68,7 +70,12 @@ impl<'s> Fulfill<'s> {
     /// goal combines any lifetime constraints with the final results
     /// of inference. It is produced by this method.
     pub fn refine_goal<G: Fold>(mut self, goal: G) -> Quantified<Constrained<G::Result>> {
-        let constrained_goal = self.infer.constrained(goal);
+        let mut constraints: Vec<_> = self.constraints.into_iter().collect();
+        constraints.sort();
+        let constrained_goal = Constrained {
+            value: goal,
+            constraints: constraints,
+        };
         self.infer.quantify(&constrained_goal)
     }
 

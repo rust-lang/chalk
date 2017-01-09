@@ -97,7 +97,7 @@ pub enum Ty {
     Projection(ProjectionTy),
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Lifetime {
     Var(usize),
     ForAll(UniverseIndex),
@@ -216,7 +216,7 @@ pub enum QuantifierKind {
     ForAll, Exists
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Constraint {
     LifetimeEq(Lifetime, Lifetime),
 }

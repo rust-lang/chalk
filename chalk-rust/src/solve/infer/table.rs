@@ -16,12 +16,6 @@ pub struct InferenceTable {
     /// Instead, we just keep track of the universe in which they were
     /// created.
     lifetime_vars: Vec<UniverseIndex>,
-
-    /// As we unify, we collect side-constraints (e.g. on regions).
-    /// These can be extracted via a `constrained()` call.
-    ///
-    /// FIXME(#3) The `Option` is a sign that this doesn't belong here.
-    constraints: Option<Vec<Constraint>>,
 }
 
 pub struct InferenceSnapshot {
@@ -37,7 +31,6 @@ impl InferenceTable {
             unify: unify::UnificationTable::new(),
             values: vec![],
             lifetime_vars: vec![],
-            constraints: Some(vec![]),
         }
     }
 
@@ -47,13 +40,6 @@ impl InferenceTable {
             table.new_parameter_variable(ui);
         }
         table
-    }
-
-    pub fn constrained<T>(&mut self, value: T) -> Constrained<T> {
-        Constrained {
-            value: value,
-            constraints: self.constraints.take().expect("constrained() called twice"),
-        }
     }
 
     pub fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
@@ -175,10 +161,12 @@ struct Unifier<'t> {
     table: &'t mut InferenceTable,
     snapshot: InferenceSnapshot,
     normalizations: Vec<Normalize>,
+    constraints: Vec<Constraint>,
 }
 
 pub struct UnificationResult {
     pub normalizations: Vec<Normalize>,
+    pub constraints: Vec<Constraint>,
 }
 
 impl<'t> Unifier<'t> {
@@ -188,6 +176,7 @@ impl<'t> Unifier<'t> {
             table: table,
             snapshot: snapshot,
             normalizations: vec![],
+            constraints: vec![],
         }
     }
 
@@ -195,6 +184,7 @@ impl<'t> Unifier<'t> {
         self.table.commit(self.snapshot);
         Ok(UnificationResult {
             normalizations: self.normalizations,
+            constraints: self.constraints,
         })
     }
 
@@ -356,7 +346,7 @@ impl<'t> Zipper for Unifier<'t> {
         self.unify_ty_ty(a, b)
     }
 
-    fn zip_lifetimes(&mut self, _a: &Lifetime, _b: &Lifetime) -> Result<()> {
-        unimplemented!() // FIXME(#5)
+    fn zip_lifetimes(&mut self, &a: &Lifetime, &b: &Lifetime) -> Result<()> {
+        Ok(self.constraints.push(Constraint::LifetimeEq(a, b)))
     }
 }
