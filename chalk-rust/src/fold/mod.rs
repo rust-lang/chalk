@@ -188,8 +188,11 @@ impl<F: Fold> Fold for Constrained<F> {
 
 impl Fold for Constraint {
     type Result = Constraint;
-    fn fold_with(&self, _folder: &mut Folder) -> Result<Self::Result> {
-        unimplemented!()
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
+        match *self {
+            Constraint::LifetimeEq(ref a, ref b) =>
+                Ok(Constraint::LifetimeEq(a.fold_with(folder)?, b.fold_with(folder)?)),
+        }
     }
 }
 
