@@ -20,7 +20,7 @@ pub struct InferenceTable {
     /// As we unify, we collect side-constraints (e.g. on regions).
     /// These can be extracted via a `constrained()` call.
     ///
-    /// FIXME The `Option` is a sign that this doesn't belong here.
+    /// FIXME(#3) The `Option` is a sign that this doesn't belong here.
     constraints: Option<Vec<Constraint>>,
 }
 

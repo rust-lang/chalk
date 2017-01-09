@@ -156,7 +156,7 @@ impl<'s> Fulfill<'s> {
             let refined_goal =
                 self.instantiate(quantified_wc.binders.iter().cloned(),
                                  &solution.refined_goal.value);
-            self.infer.unify(wc, &refined_goal.value)?; // FIXME
+            self.infer.unify(wc, &refined_goal.value)?; // FIXME(#4)
             *inference_progress = true;
         }
 
