@@ -129,7 +129,7 @@ impl InferenceTable {
         }
     }
 
-    pub fn unify<T>(&mut self, a: &T, b: &T) -> Result<Vec<Normalize>>
+    pub fn unify<T>(&mut self, a: &T, b: &T) -> Result<UnificationResult>
         where T: Zip
     {
         let mut unifier = Unifier::new(self);
@@ -177,6 +177,10 @@ struct Unifier<'t> {
     normalizations: Vec<Normalize>,
 }
 
+pub struct UnificationResult {
+    pub normalizations: Vec<Normalize>,
+}
+
 impl<'t> Unifier<'t> {
     fn new(table: &'t mut InferenceTable) -> Self {
         let snapshot = table.snapshot();
@@ -187,9 +191,11 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    fn commit(self) -> Result<Vec<Normalize>> {
+    fn commit(self) -> Result<UnificationResult> {
         self.table.commit(self.snapshot);
-        Ok(self.normalizations)
+        Ok(UnificationResult {
+            normalizations: self.normalizations,
+        })
     }
 
     fn rollback(self) {

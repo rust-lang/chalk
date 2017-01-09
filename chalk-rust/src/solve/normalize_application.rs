@@ -2,7 +2,7 @@ use errors::*;
 use ir::*;
 use solve::Solution;
 use solve::environment::{Environment, InEnvironment};
-use solve::infer::InferenceTable;
+use solve::infer::{InferenceTable, UnificationResult};
 use solve::solver::Solver;
 use std::sync::Arc;
 
@@ -44,7 +44,8 @@ impl<'s> NormalizeApplication<'s> {
 
         // Unify the result of normalization (`self.goal.ty`) with the
         // application type we just built (`apply_ty`).
-        let normalize_to1 = self.infer.unify(&self.goal.ty, &apply_ty)?;
+        let UnificationResult { normalizations: normalize_to1 } =
+            self.infer.unify(&self.goal.ty, &apply_ty)?;
 
         debug!("implemented_with::solve: normalize_to1={:?}", normalize_to1);
 

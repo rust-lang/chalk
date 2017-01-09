@@ -2,7 +2,7 @@ use errors::*;
 use ir::*;
 use solve::Solution;
 use solve::environment::{Environment, InEnvironment};
-use solve::infer::InferenceTable;
+use solve::infer::{InferenceTable, UnificationResult};
 use solve::solver::Solver;
 use std::sync::Arc;
 
@@ -77,12 +77,14 @@ impl<'s> NormalizeWithImpl<'s> {
         // the trait-ref that the impl supplies (if we can). This will
         // result in some auxiliary normalization clauses we must
         // prove.
-        let normalize_to1 = self.infer.unify(&self.goal.projection.trait_ref, &impl_trait_ref)?;
+        let UnificationResult { normalizations: normalize_to1 } =
+            self.infer.unify(&self.goal.projection.trait_ref, &impl_trait_ref)?;
         debug!("implemented_with::solve: normalize_to1={:?}", normalize_to1);
 
         // Unify the result of normalization (`self.goal.ty`) with the
         // value that this impl provides (`assoc_ty_value`).
-        let normalize_to2 = self.infer.unify(&self.goal.ty, &assoc_ty_value)?;
+        let UnificationResult { normalizations: normalize_to2 } =
+            self.infer.unify(&self.goal.ty, &assoc_ty_value)?;
         debug!("implemented_with::solve: normalize_to2={:?}", normalize_to2);
 
         // Combine the where-clauses from the impl with the results

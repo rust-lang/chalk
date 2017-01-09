@@ -2,7 +2,7 @@ use errors::*;
 use ir::*;
 use solve::Solution;
 use solve::environment::{Environment, InEnvironment};
-use solve::infer::InferenceTable;
+use solve::infer::{InferenceTable, UnificationResult};
 use solve::solver::Solver;
 use std::sync::Arc;
 
@@ -61,15 +61,15 @@ impl<'s> ImplementedWithImpl<'s> {
         // the trait-ref that the impl supplies (if we can). This will
         // result in some auxiliary normalization clauses we must
         // prove.
-        let normalize_to = self.infer.unify(&self.goal, &impl_trait_ref)?;
-        debug!("implemented_with::solve: normalize_to={:?}", normalize_to);
+        let UnificationResult { normalizations } = self.infer.unify(&self.goal, &impl_trait_ref)?;
+        debug!("implemented_with::solve: normalizations={:?}", normalizations);
 
         // Combine the where-clauses from the impl with the results
         // from unification into one master list of things to solve,
         // pairing each with the environment.
         let env_where_clauses: Vec<_> =
             where_clauses.into_iter()
-                         .chain(normalize_to.into_iter().map(WhereClause::Normalize))
+                         .chain(normalizations.into_iter().map(WhereClause::Normalize))
                          .map(|wc| InEnvironment::new(&environment, wc))
                          .collect();
 

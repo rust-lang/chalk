@@ -4,7 +4,7 @@ use fold::Fold;
 use ir::*;
 use solve::Solution;
 use solve::environment::{Environment, InEnvironment};
-use solve::infer::InferenceTable;
+use solve::infer::{InferenceTable, UnificationResult};
 use solve::solver::Solver;
 use std::sync::Arc;
 
@@ -33,12 +33,13 @@ impl<'s, G> MatchClause<'s, G>
     pub fn solve(mut self) -> Result<Solution<InEnvironment<G>>> {
         let environment = self.environment.clone();
         let clause = &environment.clauses[self.clause_index];
-        let normalize_to = self.infer.unify(&self.goal.clone().cast(), &clause)?;
+        let UnificationResult { normalizations } =
+            self.infer.unify(&self.goal.clone().cast(), &clause)?;
         let env_where_clauses: Vec<_> =
-            normalize_to.into_iter()
-                        .map(WhereClause::Normalize)
-                        .map(|wc| InEnvironment::new(&environment, wc))
-                        .collect();
+            normalizations.into_iter()
+                          .map(WhereClause::Normalize)
+                          .map(|wc| InEnvironment::new(&environment, wc))
+                          .collect();
         let successful = self.solver.solve_all(&mut self.infer, env_where_clauses)?;
         let refined_goal = self.infer.constrained(InEnvironment::new(&environment, &self.goal));
         let refined_goal = self.infer.quantify(&refined_goal);
