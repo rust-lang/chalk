@@ -533,5 +533,34 @@ fn region_equality() {
                 }
             }"
         }
+
+        goal {
+            forall<'a> {
+                exists<'b> {
+                    Ref<'a, Unit>: Eq<Ref<'b, Unit>>
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            Ref<'!1, Unit>: Eq<Ref<'?0, Unit>>
+                        ],
+                        constraints: [
+                            LifetimeEq(
+                                '?1,
+                                '!1
+                            )
+                        ]
+                    },
+                    binders: [
+                        U1,
+                        U1
+                    ]
+                }
+            }"
+        }
     }
 }

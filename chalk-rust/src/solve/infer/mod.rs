@@ -3,6 +3,7 @@ mod quantify;
 mod table;
 mod var;
 mod lifetime_var;
+#[cfg(test)] mod test;
 
 pub use self::table::InferenceTable;
 pub use self::table::InferenceSnapshot;

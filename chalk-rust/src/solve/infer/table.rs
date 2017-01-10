@@ -164,6 +164,7 @@ struct Unifier<'t> {
     constraints: Vec<Constraint>,
 }
 
+#[derive(Debug)]
 pub struct UnificationResult {
     pub normalizations: Vec<Normalize>,
     pub constraints: Vec<Constraint>,
@@ -335,7 +336,11 @@ impl<'t> Unifier<'t> {
                 }
             }
 
-            Ty::Projection(ref proj) => panic!("unimplemented: projection {:?}", proj),
+            Ty::Projection(ref proj) => {
+                for parameter in &proj.trait_ref.parameters {
+                    self.occurs_check_parameter(var, universe_index, parameter)?;
+                }
+            }
         }
         Ok(())
     }
