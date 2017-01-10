@@ -337,6 +337,9 @@ impl<'t> Unifier<'t> {
             }
 
             Ty::Projection(ref proj) => {
+                // FIXME(#6) -- this rejects constraints like
+                // `exists(A -> A = Item0<<A as Item1>::foo>)`, which
+                // is probably too conservative.
                 for parameter in &proj.trait_ref.parameters {
                     self.occurs_check_parameter(var, universe_index, parameter)?;
                 }
