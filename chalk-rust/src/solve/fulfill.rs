@@ -1,6 +1,6 @@
 use cast::Cast;
 use errors::*;
-use fold::{Fold, Folder};
+use fold::Fold;
 use ir::*;
 use solve::Successful;
 use solve::environment::{Environment, InEnvironment};
@@ -67,53 +67,6 @@ impl<'s> Fulfill<'s> {
         where WC: IntoIterator<Item=InEnvironment<WhereClause>>
     {
         self.obligations.extend(wc);
-    }
-
-    /// Return current list of pending obligations; used for unit testing primarily
-    pub fn pending_obligations(&self) -> &[InEnvironment<WhereClause>] {
-        &self.obligations
-    }
-
-    /// Create obligations for the given goal in the given
-    /// environment. This may ultimately create any number of
-    /// obligations.
-    pub fn push_goal(&mut self, goal: &Goal, environment: &Arc<Environment>) {
-        self.push_goal_bindings(goal, environment, &mut vec![])
-    }
-
-    fn push_goal_bindings(&mut self,
-                          goal: &Goal,
-                          environment: &Arc<Environment>,
-                          bindings: &mut Vec<Binding>) {
-        match *goal {
-            Goal::Quantified(QuantifierKind::ForAll, ref parameter_kind, ref subgoal) => {
-                let new_environment = environment.clone().new_universe();
-                let parameter_universe = parameter_kind.map(|()| new_environment.universe);
-                bindings.push(Binding::ForAll(parameter_universe));
-                self.push_goal_bindings(subgoal, &new_environment, bindings);
-                bindings.pop().unwrap();
-            }
-            Goal::Quantified(QuantifierKind::Exists, ref parameter_kind, ref subgoal) => {
-                let parameter_universe = parameter_kind.map(|()| environment.universe);
-                let var = self.new_parameter_variable(parameter_universe);
-                bindings.push(Binding::Exists(var));
-                self.push_goal_bindings(subgoal, environment, bindings);
-                bindings.pop().unwrap();
-            }
-            Goal::Implies(ref wc, ref subgoal) => {
-                let wc = Subst::apply(&bindings, wc);
-                let new_environment = &environment.add_clauses(wc);
-                self.push_goal_bindings(subgoal, new_environment, bindings);
-            }
-            Goal::And(ref subgoal1, ref subgoal2) => {
-                self.push_goal_bindings(subgoal1, environment, bindings);
-                self.push_goal_bindings(subgoal2, environment, bindings);
-            }
-            Goal::Leaf(ref wc) => {
-                let wc = Subst::apply(&bindings, wc);
-                self.obligations.push(InEnvironment::new(environment, wc));
-            }
-        }
     }
 
     /// As the final step in process a goal, we always have to deliver
@@ -227,41 +180,5 @@ impl<'s> Fulfill<'s> {
         }
 
         Ok(solution.successful)
-    }
-}
-
-enum Binding {
-    ForAll(ParameterKind<UniverseIndex>),
-    Exists(ParameterInferenceVariable),
-}
-
-struct Subst<'b> {
-    bindings: &'b [Binding],
-}
-
-impl<'b> Subst<'b> {
-    fn apply<T: Fold>(bindings: &[Binding], value: &T) -> T::Result {
-        value.fold_with(&mut Subst { bindings: bindings }).unwrap()
-    }
-}
-
-impl<'b> Folder for Subst<'b> {
-    fn fold_var(&mut self, depth: usize) -> Result<Ty> {
-        match self.bindings[depth] {
-            Binding::ForAll(u) => {
-                Ok(Ty::Apply(ApplicationTy {
-                    name: TypeName::ForAll(u.ty().unwrap()),
-                    parameters: vec![],
-                }))
-            }
-            Binding::Exists(v) => Ok(v.ty().unwrap().to_ty()),
-        }
-    }
-
-    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
-        match self.bindings[depth] {
-            Binding::ForAll(u) => Ok(Lifetime::ForAll(u.lifetime().unwrap())),
-            Binding::Exists(v) => Ok(v.lifetime().unwrap().to_lifetime()),
-        }
     }
 }
