@@ -38,6 +38,27 @@ impl Cast<WhereClause> for Normalize {
     }
 }
 
+impl Cast<WhereClauseGoal> for TraitRef {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::Implemented(self)
+    }
+}
+
+impl Cast<WhereClauseGoal> for Normalize {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::Normalize(self)
+    }
+}
+
+impl Cast<WhereClauseGoal> for WhereClause {
+    fn cast(self) -> WhereClauseGoal {
+        match self {
+            WhereClause::Implemented(a) => a.cast(),
+            WhereClause::Normalize(a) => a.cast(),
+        }
+    }
+}
+
 macro_rules! map_impl {
     (impl[$($t:tt)*] Cast<$b:ty> for $a:ty) => {
         impl<$($t)*> Cast<$b> for $a {

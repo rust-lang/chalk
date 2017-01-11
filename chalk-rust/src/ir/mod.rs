@@ -170,6 +170,12 @@ pub enum WhereClause {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+pub enum WhereClauseGoal {
+    Implemented(TraitRef),
+    Normalize(Normalize),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Normalize {
     pub projection: ProjectionTy,
     pub ty: Ty,
@@ -208,7 +214,7 @@ pub enum Goal {
     Quantified(QuantifierKind, ParameterKind<()>, Box<Goal>),
     Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
-    Leaf(WhereClause),
+    Leaf(WhereClauseGoal),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

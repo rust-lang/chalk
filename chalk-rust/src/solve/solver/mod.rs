@@ -12,7 +12,7 @@ use super::*;
 pub struct Solver {
     pub(super) program: Arc<Program>,
     overflow_depth: usize,
-    stack: Vec<Quantified<InEnvironment<WhereClause>>>,
+    stack: Vec<Quantified<InEnvironment<WhereClauseGoal>>>,
 }
 
 impl Solver {
@@ -23,8 +23,8 @@ impl Solver {
     /// Tries to solve one **closed** where-clause `wc` (in the given
     /// environment).
     pub fn solve(&mut self,
-                 wc_env: Quantified<InEnvironment<WhereClause>>)
-                 -> Result<Solution<InEnvironment<WhereClause>>> {
+                 wc_env: Quantified<InEnvironment<WhereClauseGoal>>)
+                 -> Result<Solution<InEnvironment<WhereClauseGoal>>> {
         debug!("Solver::solve({:?})", wc_env);
 
         if self.stack.contains(&wc_env) || self.stack.len() > self.overflow_depth {
@@ -40,14 +40,14 @@ impl Solver {
 
         let Quantified { value: InEnvironment { environment, goal: wc }, binders } = wc_env;
         let result = match wc {
-            WhereClause::Implemented(trait_ref) => {
+            WhereClauseGoal::Implemented(trait_ref) => {
                 let q = Quantified {
                     value: InEnvironment::new(&environment, trait_ref),
                     binders: binders,
                 };
                 Implemented::new(self, q).solve().cast()
             }
-            WhereClause::Normalize(normalize_to) => {
+            WhereClauseGoal::Normalize(normalize_to) => {
                 let q = Quantified {
                     value: InEnvironment::new(&environment, normalize_to),
                     binders: binders,

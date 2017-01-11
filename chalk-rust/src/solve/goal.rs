@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 pub struct Prove<'s> {
     fulfill: Fulfill<'s>,
-    goals: Vec<InEnvironment<WhereClause>>,
+    goals: Vec<InEnvironment<WhereClauseGoal>>,
 }
 
 enum Binding {
@@ -64,7 +64,7 @@ impl<'s> Prove<'s> {
         }
     }
 
-    pub fn solve(mut self) -> Result<Solution<Vec<WhereClause>>> {
+    pub fn solve(mut self) -> Result<Solution<Vec<WhereClauseGoal>>> {
         self.fulfill.extend(self.goals.iter().cloned());
         let successful = self.fulfill.solve_all()?;
         let goals: Vec<_> = self.goals.into_iter().map(|g| g.goal).collect();

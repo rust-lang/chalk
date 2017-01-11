@@ -15,7 +15,7 @@ use zip::Zip;
 pub struct Fulfill<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
-    obligations: Vec<InEnvironment<WhereClause>>,
+    obligations: Vec<InEnvironment<WhereClauseGoal>>,
     constraints: HashSet<Constraint>,
 }
 
@@ -64,7 +64,7 @@ impl<'s> Fulfill<'s> {
     /// Adds the given where-clauses to the internal list of
     /// obligations that must be solved.
     pub fn extend<WC>(&mut self, wc: WC)
-        where WC: IntoIterator<Item=InEnvironment<WhereClause>>
+        where WC: IntoIterator<Item=InEnvironment<WhereClauseGoal>>
     {
         self.obligations.extend(wc);
     }
@@ -135,7 +135,7 @@ impl<'s> Fulfill<'s> {
     }
 
     fn solve_one(&mut self,
-                 wc: &InEnvironment<WhereClause>,
+                 wc: &InEnvironment<WhereClauseGoal>,
                  inference_progress: &mut bool)
                  -> Result<Successful> {
         let quantified_wc = self.infer.quantify(&wc);

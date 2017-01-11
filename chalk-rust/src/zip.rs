@@ -174,3 +174,20 @@ impl Zip for WhereClause {
         }
     }
 }
+
+impl Zip for WhereClauseGoal {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        match (a, b) {
+            (&WhereClauseGoal::Implemented(ref a), &WhereClauseGoal::Implemented(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
+            (&WhereClauseGoal::Normalize(ref a), &WhereClauseGoal::Normalize(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
+            (&WhereClauseGoal::Implemented(_), &WhereClauseGoal::Normalize(_)) |
+            (&WhereClauseGoal::Normalize(_), &WhereClauseGoal::Implemented(_)) => {
+                bail!("cannot zip where-clause-goals `{:?}` and `{:?}`", a, b)
+            }
+        }
+    }
+}

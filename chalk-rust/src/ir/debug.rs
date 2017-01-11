@@ -125,6 +125,21 @@ impl Debug for WhereClause {
     }
 }
 
+impl Debug for WhereClauseGoal {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            WhereClauseGoal::Normalize(ref n) => write!(fmt, "{:?}", n),
+            WhereClauseGoal::Implemented(ref n) => {
+                write!(fmt,
+                       "{:?}: {:?}{:?}",
+                       n.parameters[0],
+                       n.trait_id,
+                       Angle(&n.parameters[1..]))
+            }
+        }
+    }
+}
+
 impl Debug for Goal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {

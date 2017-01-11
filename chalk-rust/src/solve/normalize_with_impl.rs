@@ -1,3 +1,4 @@
+use cast::Cast;
 use errors::*;
 use ir::*;
 use solve::Solution;
@@ -83,7 +84,7 @@ impl<'s> NormalizeWithImpl<'s> {
         // Add the where-clauses from the impl to list of things to solve.
         self.fulfill.extend(
             where_clauses.into_iter()
-                         .map(|wc| InEnvironment::new(&environment, wc)));
+                         .map(|wc| InEnvironment::new(&environment, wc.cast())));
 
         // Now try to prove the where-clauses one by one. If all of
         // them can be successfully proved, then we know that this

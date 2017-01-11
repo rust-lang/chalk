@@ -166,6 +166,20 @@ impl Fold for WhereClause {
     }
 }
 
+impl Fold for WhereClauseGoal {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {
+        match *self {
+            WhereClauseGoal::Implemented(ref trait_ref) => {
+                Ok(WhereClauseGoal::Implemented(trait_ref.fold_with(folder)?))
+            }
+            WhereClauseGoal::Normalize(ref pred) => {
+                Ok(WhereClauseGoal::Normalize(pred.fold_with(folder)?))
+            }
+        }
+    }
+}
+
 impl<F: Fold> Fold for InEnvironment<F> {
     type Result = InEnvironment<F::Result>;
     fn fold_with(&self, folder: &mut Folder) -> Result<Self::Result> {

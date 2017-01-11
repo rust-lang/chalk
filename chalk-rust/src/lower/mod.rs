@@ -1,3 +1,4 @@
+use cast::Cast;
 use chalk_rust_parse::ast::*;
 use lalrpop_intern::intern;
 use errors::*;
@@ -445,7 +446,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
             Goal::And(ref g1, ref g2) =>
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
             Goal::Leaf(ref wc) =>
-                Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
+                Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?.cast()))),
         }
     }
 }
