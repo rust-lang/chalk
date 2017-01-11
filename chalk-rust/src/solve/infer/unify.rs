@@ -1,5 +1,7 @@
+use cast::Cast;
 use errors::*;
 use ir::*;
+use solve::environment::{Environment, InEnvironment};
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
@@ -7,10 +9,14 @@ use super::{InferenceSnapshot, InferenceTable, InferenceVariable};
 use super::var::{InferenceValue, ValueIndex};
 
 impl InferenceTable {
-    pub fn unify<T>(&mut self, a: &T, b: &T) -> Result<UnificationResult>
+    pub fn unify<T>(&mut self,
+                    environment: &Arc<Environment>,
+                    a: &T,
+                    b: &T)
+                    -> Result<UnificationResult>
         where T: Zip
     {
-        let mut unifier = Unifier::new(self);
+        let mut unifier = Unifier::new(self, environment);
         match Zip::zip_with(&mut unifier, a, b) {
             Ok(()) => unifier.commit(),
             Err(e) => {
@@ -23,24 +29,26 @@ impl InferenceTable {
 
 struct Unifier<'t> {
     table: &'t mut InferenceTable,
+    environment: &'t Arc<Environment>,
     snapshot: InferenceSnapshot,
-    normalizations: Vec<Normalize>,
+    goals: Vec<InEnvironment<WhereClauseGoal>>,
     constraints: Vec<Constraint>,
 }
 
 #[derive(Debug)]
 pub struct UnificationResult {
-    pub normalizations: Vec<Normalize>,
+    pub goals: Vec<InEnvironment<WhereClauseGoal>>,
     pub constraints: Vec<Constraint>,
 }
 
 impl<'t> Unifier<'t> {
-    fn new(table: &'t mut InferenceTable) -> Self {
+    fn new(table: &'t mut InferenceTable, environment: &'t Arc<Environment>) -> Self {
         let snapshot = table.snapshot();
         Unifier {
+            environment: environment,
             table: table,
             snapshot: snapshot,
-            normalizations: vec![],
+            goals: vec![],
             constraints: vec![],
         }
     }
@@ -48,7 +56,7 @@ impl<'t> Unifier<'t> {
     fn commit(self) -> Result<UnificationResult> {
         self.table.commit(self.snapshot);
         Ok(UnificationResult {
-            normalizations: self.normalizations,
+            goals: self.goals,
             constraints: self.constraints,
         })
     }
@@ -84,16 +92,14 @@ impl<'t> Unifier<'t> {
                 self.unify_var_apply(InferenceVariable::from_depth(depth), apply)
             }
 
-            (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
-                Zip::zip_with(self, apply1, apply2)
-            }
+            (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => Zip::zip_with(self, apply1, apply2),
 
             (ty, &Ty::Projection(ref proj)) |
             (&Ty::Projection(ref proj), ty) => {
-                Ok(self.normalizations.push(Normalize {
+                Ok(self.goals.push(InEnvironment::new(self.environment, Normalize {
                     projection: proj.clone(),
                     ty: ty.clone(),
-                }))
+                }.cast())))
             }
         }
     }
@@ -179,7 +185,9 @@ impl<'t> Unifier<'t> {
                 let v = InferenceVariable::from_depth(depth);
                 let ui = match self.table.unify.probe_value(v) {
                     InferenceValue::Unbound(ui) => ui,
-                    InferenceValue::Bound(_) => unreachable!("expected `parameter` to be normalized"),
+                    InferenceValue::Bound(_) => {
+                        unreachable!("expected `parameter` to be normalized")
+                    }
                 };
 
                 if self.table.unify.unioned(v, var) {
@@ -232,7 +240,8 @@ impl ApplicationTy {
 impl TypeName {
     fn universe_index(&self) -> UniverseIndex {
         match *self {
-            TypeName::ItemId(_) | TypeName::AssociatedType(_) => UniverseIndex::root(),
+            TypeName::ItemId(_) |
+            TypeName::AssociatedType(_) => UniverseIndex::root(),
             TypeName::ForAll(universe) => {
                 assert!(universe.counter > 0);
                 universe
@@ -240,4 +249,3 @@ impl TypeName {
         }
     }
 }
-

@@ -1,4 +1,3 @@
-use cast::Cast;
 use errors::*;
 use fold::Fold;
 use ir::*;
@@ -44,14 +43,12 @@ impl<'s> Fulfill<'s> {
     pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
         where T: Zip + Debug
     {
-        let UnificationResult { normalizations, constraints } = self.infer.unify(a, b)?;
+        let UnificationResult { goals, constraints } = self.infer.unify(environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
-        debug!("unify: normalizations={:?}", normalizations);
+        debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
         self.constraints.extend(constraints);
-        self.extend(normalizations
-                    .into_iter()
-                    .map(|wc| InEnvironment::new(environment, wc.cast())));
+        self.extend(goals);
         Ok(())
     }
 

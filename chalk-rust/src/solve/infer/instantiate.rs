@@ -1,5 +1,3 @@
-use errors::*;
-use ir::*;
 use fold::*;
 
 use super::*;

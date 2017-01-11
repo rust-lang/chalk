@@ -1,7 +1,6 @@
 use lalrpop_intern::intern;
-use errors::*;
-use ir::*;
 use fold::*;
+use solve::environment::Environment;
 use super::*;
 
 macro_rules! ty {
@@ -61,7 +60,7 @@ impl InferenceTable {
 }
 
 struct Normalizer<'a> {
-    table: &'a mut InferenceTable
+    table: &'a mut InferenceTable,
 }
 
 impl<'q> Folder for Normalizer<'q> {
@@ -81,12 +80,12 @@ impl<'q> Folder for Normalizer<'q> {
 #[test]
 fn infer() {
     let mut table = InferenceTable::new();
-    let universe0 = UniverseIndex { counter: 0 };
-    let a = table.new_variable(universe0).to_ty();
-    let b = table.new_variable(universe0).to_ty();
-    table.unify(&a, &ty!(apply (item 0) (expr b))).unwrap();
+    let environment0 = Environment::new();
+    let a = table.new_variable(environment0.universe).to_ty();
+    let b = table.new_variable(environment0.universe).to_ty();
+    table.unify(&environment0, &a, &ty!(apply (item 0) (expr b))).unwrap();
     assert_eq!(table.normalize(&a), ty!(apply (item 0) (expr b)));
-    table.unify(&b, &ty!(apply (item 1))).unwrap();
+    table.unify(&environment0, &b, &ty!(apply (item 1))).unwrap();
     assert_eq!(table.normalize(&a), ty!(apply (item 0) (apply (item 1))));
 }
 
@@ -94,77 +93,77 @@ fn infer() {
 fn universe_error() {
     // exists(A -> forall(X -> A = X)) ---> error
     let mut table = InferenceTable::new();
-    let universe0 = UniverseIndex { counter: 0 };
-    let a = table.new_variable(universe0).to_ty();
-    table.unify(&a, &ty!(apply (skol 1))).unwrap_err();
+    let environment0 = Environment::new();
+    let a = table.new_variable(environment0.universe).to_ty();
+    table.unify(&environment0, &a, &ty!(apply (skol 1))).unwrap_err();
 }
 
 #[test]
 fn cycle_error() {
     // exists(A -> A = foo A) ---> error
     let mut table = InferenceTable::new();
-    let universe0 = UniverseIndex { counter: 0 };
-    let a = table.new_variable(universe0).to_ty();
-    table.unify(&a, &ty!(apply (skol 1) (expr a))).unwrap_err();
+    let environment0 = Environment::new();
+    let a = table.new_variable(environment0.universe).to_ty();
+    table.unify(&environment0, &a, &ty!(apply (skol 1) (expr a))).unwrap_err();
 }
 
 #[test]
 fn cycle_indirect() {
     // exists(A -> A = foo B, A = B) ---> error
     let mut table = InferenceTable::new();
-    let universe0 = UniverseIndex { counter: 0 };
-    let a = table.new_variable(universe0).to_ty();
-    let b = table.new_variable(universe0).to_ty();
-    table.unify(&a, &ty!(apply (item 0) (expr b))).unwrap();
-    table.unify(&a, &b).unwrap_err();
+    let environment0 = Environment::new();
+    let a = table.new_variable(environment0.universe).to_ty();
+    let b = table.new_variable(environment0.universe).to_ty();
+    table.unify(&environment0, &a, &ty!(apply (item 0) (expr b))).unwrap();
+    table.unify(&environment0, &a, &b).unwrap_err();
 }
 
 #[test]
 fn universe_error_indirect_1() {
     // exists(A -> forall(X -> exists(B -> B = X, A = B))) ---> error
     let mut table = InferenceTable::new();
-    let universe0 = UniverseIndex { counter: 0 };
-    let universe1 = UniverseIndex { counter: 1 };
-    let a = table.new_variable(universe0).to_ty();
-    let b = table.new_variable(universe1).to_ty();
-    table.unify(&b, &ty!(apply (skol 1))).unwrap();
-    table.unify(&a, &b).unwrap_err();
+    let environment0 = Environment::new();
+    let environment1 = environment0.new_universe();
+    let a = table.new_variable(environment0.universe).to_ty();
+    let b = table.new_variable(environment1.universe).to_ty();
+    table.unify(&environment1, &b, &ty!(apply (skol 1))).unwrap();
+    table.unify(&environment1, &a, &b).unwrap_err();
 }
 
 #[test]
 fn universe_error_indirect_2() {
     // exists(A -> forall(X -> exists(B -> B = A, B = X))) ---> error
     let mut table = InferenceTable::new();
-    let universe0 = UniverseIndex { counter: 0 };
-    let universe1 = UniverseIndex { counter: 1 };
-    let a = table.new_variable(universe0).to_ty();
-    let b = table.new_variable(universe1).to_ty();
-    table.unify(&a, &b).unwrap();
-    table.unify(&b, &ty!(apply (skol 1))).unwrap_err();
+    let environment0 = Environment::new();
+    let environment1 = environment0.new_universe();
+    let a = table.new_variable(environment0.universe).to_ty();
+    let b = table.new_variable(environment1.universe).to_ty();
+    table.unify(&environment1, &a, &b).unwrap();
+    table.unify(&environment1, &b, &ty!(apply (skol 1))).unwrap_err();
 }
 
 #[test]
 fn universe_promote() {
     // exists(A -> forall(X -> exists(B -> A = foo(B), A = foo(i32)))) ---> OK
     let mut table = InferenceTable::new();
-    let universe0 = UniverseIndex { counter: 0 };
-    let universe1 = UniverseIndex { counter: 1 };
-    let a = table.new_variable(universe0).to_ty();
-    let b = table.new_variable(universe1).to_ty();
-    table.unify(&a, &ty!(apply (item 0) (expr b))).unwrap();
-    table.unify(&a, &ty!(apply (item 0) (apply (item 1)))).unwrap();
+    let environment0 = Environment::new();
+    let environment1 = environment0.new_universe();
+    let a = table.new_variable(environment0.universe).to_ty();
+    let b = table.new_variable(environment1.universe).to_ty();
+    table.unify(&environment1, &a, &ty!(apply (item 0) (expr b))).unwrap();
+    table.unify(&environment1, &a, &ty!(apply (item 0) (apply (item 1)))).unwrap();
 }
 
 #[test]
 fn universe_promote_bad() {
     // exists(A -> forall(X -> exists(B -> A = foo(B), B = X))) ---> error
     let mut table = InferenceTable::new();
-    let universe0 = UniverseIndex { counter: 0 };
-    let universe1 = UniverseIndex { counter: 1 };
-    let a = table.new_variable(universe0).to_ty();
-    let b = table.new_variable(universe1).to_ty();
-    table.unify(&a, &ty!(apply (item 0) (expr b))).unwrap();
-    table.unify(&b, &ty!(apply (skol 1))).unwrap_err();
+    let environment0 = Environment::new();
+    let environment1 = environment0.new_universe();
+    let a = table.new_variable(environment0.universe).to_ty();
+    let b = table.new_variable(environment1.universe).to_ty();
+    table.unify(&environment1, &a, &ty!(apply (item 0) (expr b))).unwrap();
+    table.unify(&environment1, &b, &ty!(apply (skol 1))).unwrap_err();
 }
 
 #[test]
@@ -173,10 +172,12 @@ fn projection_eq() {
     //                       ^^^^^^^^^^^^ Can A repeat here? For now,
     //                       we say no, but it's an interesting question.
     let mut table = InferenceTable::new();
-    let universe0 = UniverseIndex { counter: 0 };
-    let a = table.new_variable(universe0).to_ty();
+    let environment0 = Environment::new();
+    let a = table.new_variable(environment0.universe).to_ty();
 
     // expect an error ("cycle during unification")
-    table.unify(&a, &ty!(apply (item 0) (projection ((item 1) (expr a)) "foo"))).unwrap_err();
+    table.unify(&environment0,
+               &a,
+               &ty!(apply (item 0) (projection ((item 1) (expr a)) "foo")))
+        .unwrap_err();
 }
-
