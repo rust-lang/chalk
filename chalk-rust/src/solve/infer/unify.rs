@@ -87,9 +87,9 @@ impl<'t> Unifier<'t> {
                     .expect("unification of two unbound variables cannot fail"))
             }
 
-            (&Ty::Var(depth), &Ty::Apply(ref apply)) |
-            (&Ty::Apply(ref apply), &Ty::Var(depth)) => {
-                self.unify_var_apply(InferenceVariable::from_depth(depth), apply)
+            (&Ty::Var(depth), ty @ &Ty::Apply(_)) |
+            (ty @ &Ty::Apply(_), &Ty::Var(depth)) => {
+                self.unify_var_ty(InferenceVariable::from_depth(depth), ty)
             }
 
             (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => Zip::zip_with(self, apply1, apply2),
@@ -104,8 +104,8 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    fn unify_var_apply(&mut self, var: InferenceVariable, apply: &ApplicationTy) -> Result<()> {
-        debug!("unify_var_apply(var={:?}, apply={:?})", var, apply);
+    fn unify_var_ty(&mut self, var: InferenceVariable, ty: &Ty) -> Result<()> {
+        debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
 
         // Determine the universe index associated with this
         // variable. This is basically a count of the number of
@@ -117,12 +117,12 @@ impl<'t> Unifier<'t> {
             InferenceValue::Bound(_) => panic!("`unify_var_apply` invoked on bound var"),
         };
 
-        self.occurs_check_apply(var, universe_index, apply)?;
+        self.occurs_check_ty(var, universe_index, ty)?;
 
         let value_index = ValueIndex::new(self.table.values.len());
-        self.table.values.push(Arc::new(Ty::Apply(apply.clone())));
+        self.table.values.push(Arc::new(ty.clone()));
         self.table.unify.unify_var_value(var, InferenceValue::Bound(value_index)).unwrap();
-        debug!("unify_var_apply: var {:?} set to {:?}", var, apply);
+        debug!("unify_var_ty: var {:?} set to {:?}", var, ty);
 
         Ok(())
     }
@@ -161,18 +161,18 @@ impl<'t> Unifier<'t> {
                               arg: &Parameter)
                               -> Result<()> {
         match *arg {
-            ParameterKind::Ty(ref t) => self.occurs_check_parameter_ty(var, universe_index, t),
+            ParameterKind::Ty(ref t) => self.occurs_check_ty(var, universe_index, t),
             ParameterKind::Lifetime(_) => Ok(()),
         }
     }
 
-    fn occurs_check_parameter_ty(&mut self,
-                                 var: InferenceVariable,
-                                 universe_index: UniverseIndex,
-                                 parameter: &Ty)
-                                 -> Result<()> {
+    fn occurs_check_ty(&mut self,
+                       var: InferenceVariable,
+                       universe_index: UniverseIndex,
+                       parameter: &Ty)
+                       -> Result<()> {
         if let Some(n_parameter) = self.table.normalize_shallow(parameter) {
-            return self.occurs_check_parameter_ty(var, universe_index, &n_parameter);
+            return self.occurs_check_ty(var, universe_index, &n_parameter);
         }
 
         match *parameter {
