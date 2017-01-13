@@ -18,6 +18,10 @@ macro_rules! ty {
         })
     };
 
+    (var $b:expr) => {
+        Ty::Var($b)
+    };
+
     (expr $b:expr) => {
         $b.clone()
     };
@@ -182,4 +186,50 @@ fn projection_eq() {
                &a,
                &ty!(apply (item 0) (projection ((item 1) (expr a)) "foo")))
         .unwrap_err();
+}
+
+const U0: UniverseIndex = UniverseIndex { counter: 0 };
+const U1: UniverseIndex = UniverseIndex { counter: 1 };
+const U2: UniverseIndex = UniverseIndex { counter: 2 };
+
+#[test]
+fn quantify_simple() {
+    let mut table = InferenceTable::new_with_vars(&[
+        ParameterKind::Ty(U0),
+        ParameterKind::Ty(U1),
+        ParameterKind::Ty(U2),
+    ]);
+
+    assert_eq!(
+        table.quantify(&ty!(apply (item 0) (var 2) (var 1) (var 0))),
+        Quantified {
+            value: ty!(apply (item 0) (var 0) (var 1) (var 2)),
+            binders: vec![ParameterKind::Ty(U2), ParameterKind::Ty(U1), ParameterKind::Ty(U0)],
+        });
+}
+
+#[test]
+fn quantify_bound() {
+    let mut table = InferenceTable::new();
+
+    let environment0 = Environment::new();
+    let environment1 = environment0.new_universe();
+    let environment2 = environment1.new_universe();
+
+    let v0 = table.new_variable(environment0.universe).to_ty();
+    let v1 = table.new_variable(environment1.universe).to_ty();
+    let v2a = table.new_variable(environment2.universe).to_ty();
+    let v2b = table.new_variable(environment2.universe).to_ty();
+
+    table.unify(&environment0,
+                &v2b,
+                &ty!(apply (item 1) (expr v1) (expr v0)))
+        .unwrap();
+
+    assert_eq!(
+        table.quantify(&ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0))),
+        Quantified {
+            value: ty!(apply (item 0) (apply (item 1) (var 0) (var 1)) (var 2) (var 0) (var 1)),
+            binders: vec![ParameterKind::Ty(U1), ParameterKind::Ty(U0), ParameterKind::Ty(U2)],
+        });
 }
