@@ -88,23 +88,23 @@ impl<'b> Subst<'b> {
 
 impl<'b> Folder for Subst<'b> {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        assert_eq!(binders, 0);
-        match self.bindings[depth] {
+        match self.bindings[self.bindings.len() - 1 - depth] {
             Binding::ForAll(u) => {
                 Ok(Ty::Apply(ApplicationTy {
                     name: TypeName::ForAll(u.ty().unwrap()),
                     parameters: vec![],
                 }))
             }
-            Binding::Exists(v) => Ok(v.ty().unwrap().to_ty()),
+            Binding::Exists(v) => Ok(Shifter::up_shift(binders, &v.ty().unwrap().to_ty())),
         }
     }
 
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
-        assert_eq!(binders, 0);
-        match self.bindings[depth] {
+        match self.bindings[self.bindings.len() - 1 - depth] {
             Binding::ForAll(u) => Ok(Lifetime::ForAll(u.lifetime().unwrap())),
-            Binding::Exists(v) => Ok(v.lifetime().unwrap().to_lifetime()),
+            Binding::Exists(v) => {
+                Ok(Shifter::up_shift(binders, &v.lifetime().unwrap().to_lifetime()))
+            }
         }
     }
 }

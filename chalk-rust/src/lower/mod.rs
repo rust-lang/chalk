@@ -470,15 +470,17 @@ impl LowerQuantifiedGoal for Goal {
             return self.lower(env);
         }
 
-        let next_id = env.parameter_map.len();
-        let mut parameter_map = env.parameter_map.clone();
-        parameter_map.insert(parameter_kinds[0].lower(), next_id);
+        let parameter_map: ParameterMap =
+            env.parameter_map.iter()
+                             .map(|(&k, &v)| (k, v + 1))
+                             .chain(Some((parameter_kinds[0].lower(), 0)))
+                             .collect();
+        let quantified_env = &Env { parameter_map: &parameter_map, ..*env };
+        let subgoal = self.lower_quantified(quantified_env, quantifier_kind, &parameter_kinds[1..])?;
         let parameter_kind = match parameter_kinds[0] {
             ParameterKind::Ty(_) => ir::ParameterKind::Ty(()),
             ParameterKind::Lifetime(_) => ir::ParameterKind::Lifetime(()),
         };
-        let quantified_env = &Env { parameter_map: &parameter_map, ..*env };
-        let subgoal = self.lower_quantified(quantified_env, quantifier_kind, &parameter_kinds[1..])?;
         Ok(Box::new(ir::Goal::Quantified(quantifier_kind, parameter_kind, subgoal)))
     }
 }

@@ -1,6 +1,6 @@
 use errors::*;
 use ir::*;
-use super::Folder;
+use super::{Fold, Folder};
 
 pub struct Shifter {
     adjustment: usize
@@ -9,6 +9,10 @@ pub struct Shifter {
 impl Shifter {
     pub fn new(adjustment: usize) -> Shifter {
         Shifter { adjustment }
+    }
+
+    pub fn up_shift<T: Fold>(adjustment: usize, value: &T) -> T::Result {
+        value.fold_with(&mut Shifter::new(adjustment), 0).unwrap()
     }
 }
 

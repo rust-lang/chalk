@@ -92,6 +92,9 @@ pub struct AssocTyValue {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Ty {
+    /// References the binding at the given depth (deBruijn index
+    /// style). In an inference context (i.e., when solving goals),
+    /// free bindings refer into the inference table.
     Var(usize),
     Apply(ApplicationTy),
     Projection(ProjectionTy),
@@ -99,6 +102,7 @@ pub enum Ty {
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Lifetime {
+    /// See Ty::Var(_).
     Var(usize),
     ForAll(UniverseIndex),
 }
@@ -211,6 +215,8 @@ impl<T> Constrained<T> {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Goal {
+    /// Introduces a binding at depth 0, shifting other bindings up
+    /// (deBruijn index).
     Quantified(QuantifierKind, ParameterKind<()>, Box<Goal>),
     Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
