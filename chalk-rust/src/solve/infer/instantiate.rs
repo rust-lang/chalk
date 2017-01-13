@@ -13,7 +13,7 @@ impl InferenceTable {
             .map(|u| self.new_parameter_variable(u))
             .collect();
         let mut instantiator = Instantiator { vars: vars };
-        arg.fold_with(&mut instantiator).expect("")
+        arg.fold_with(&mut instantiator, 0).expect("")
     }
 }
 
@@ -22,11 +22,13 @@ struct Instantiator {
 }
 
 impl Folder for Instantiator {
-    fn fold_var(&mut self, depth: usize) -> Result<Ty> {
+    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+        assert_eq!(binders, 0);
         Ok(self.vars[depth].as_ref().ty().unwrap().to_ty())
     }
 
-    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
+    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+        assert_eq!(binders, 0);
         Ok(self.vars[depth].as_ref().lifetime().unwrap().to_lifetime())
     }
 }

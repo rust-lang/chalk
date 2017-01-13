@@ -1,5 +1,5 @@
 use errors::*;
-use fold::{Fold, Folder};
+use fold::{Fold, Folder, Shifter};
 use ir::*;
 
 use super::{InferenceTable, InferenceVariable,
@@ -27,7 +27,7 @@ impl InferenceTable {
         where T: Fold
     {
         let mut q = Quantifier { table: self, free_vars: Vec::new() };
-        let r = value.fold_with(&mut q).unwrap();
+        let r = value.fold_with(&mut q, 0).unwrap();
         Quantified {
             value: r,
             binders: q.into_binders(),
@@ -73,13 +73,16 @@ impl<'q> Quantifier<'q> {
 }
 
 impl<'q> Folder for Quantifier<'q> {
-    fn fold_var(&mut self, depth: usize) -> Result<Ty> {
+    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {
             Some(ty) => {
-                // If this variable is bound, canonicalize it to its
-                // bound value.
-                (*ty).fold_with(self)
+                // If this variable is bound, we want to replace it
+                // with a quantified version of its bound value; we
+                // also have to shift *that* into the correct binder
+                // depth.
+                let mut folder = (self, Shifter::new(binders));
+                (*ty).fold_with(&mut folder, 0)
             }
             None => {
                 // If this variable is not yet bound, find its
@@ -87,15 +90,15 @@ impl<'q> Folder for Quantifier<'q> {
                 // and then map `root_var` to a fresh index that is
                 // unique to this quantification.
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
-                let position = self.add(free_var);
+                let position = self.add(free_var) + binders;
                 Ok(InferenceVariable::from_depth(position).to_ty())
             }
         }
     }
 
-    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
+    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         let free_var = ParameterKind::Lifetime(LifetimeInferenceVariable::from_depth(depth));
-        let position = self.add(free_var);
+        let position = self.add(free_var) + binders;
         Ok(LifetimeInferenceVariable::from_depth(position).to_lifetime())
     }
 }

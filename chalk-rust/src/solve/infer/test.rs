@@ -55,7 +55,7 @@ impl InferenceTable {
     pub fn normalize<T>(&mut self, value: &T) -> T::Result
         where T: Fold
     {
-        value.fold_with(&mut Normalizer { table: self }).unwrap()
+        value.fold_with(&mut Normalizer { table: self }, 0).unwrap()
     }
 }
 
@@ -64,15 +64,17 @@ struct Normalizer<'a> {
 }
 
 impl<'q> Folder for Normalizer<'q> {
-    fn fold_var(&mut self, depth: usize) -> Result<Ty> {
+    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+        assert_eq!(binders, 0);
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {
-            Some(ty) => (*ty).fold_with(self),
+            Some(ty) => (*ty).fold_with(self, 0),
             None => Ok(var.to_ty()),
         }
     }
 
-    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
+    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+        assert_eq!(binders, 0);
         Ok(LifetimeInferenceVariable::from_depth(depth).to_lifetime())
     }
 }

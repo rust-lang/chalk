@@ -82,12 +82,13 @@ struct Subst<'b> {
 
 impl<'b> Subst<'b> {
     fn apply<T: Fold>(bindings: &[Binding], value: &T) -> T::Result {
-        value.fold_with(&mut Subst { bindings: bindings }).unwrap()
+        value.fold_with(&mut Subst { bindings: bindings }, 0).unwrap()
     }
 }
 
 impl<'b> Folder for Subst<'b> {
-    fn fold_var(&mut self, depth: usize) -> Result<Ty> {
+    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+        assert_eq!(binders, 0);
         match self.bindings[depth] {
             Binding::ForAll(u) => {
                 Ok(Ty::Apply(ApplicationTy {
@@ -99,7 +100,8 @@ impl<'b> Folder for Subst<'b> {
         }
     }
 
-    fn fold_lifetime_var(&mut self, depth: usize) -> Result<Lifetime> {
+    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+        assert_eq!(binders, 0);
         match self.bindings[depth] {
             Binding::ForAll(u) => Ok(Lifetime::ForAll(u.lifetime().unwrap())),
             Binding::Exists(v) => Ok(v.lifetime().unwrap().to_lifetime()),
