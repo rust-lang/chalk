@@ -117,7 +117,6 @@ impl<'t> Unifier<'t> {
             InferenceValue::Bound(_) => panic!("`unify_var_apply` invoked on bound var"),
         };
 
-        self.universe_check(universe_index, apply.universe_index())?;
         self.occurs_check_apply(var, universe_index, apply)?;
 
         let value_index = ValueIndex::new(self.table.values.len());
@@ -149,6 +148,7 @@ impl<'t> Unifier<'t> {
                           universe_index: UniverseIndex,
                           apply: &ApplicationTy)
                           -> Result<()> {
+        self.universe_check(universe_index, apply.universe_index())?;
         for parameter in &apply.parameters {
             self.occurs_check_parameter(var, universe_index, parameter)?;
         }
@@ -177,7 +177,6 @@ impl<'t> Unifier<'t> {
 
         match *parameter {
             Ty::Apply(ref parameter_apply) => {
-                self.universe_check(universe_index, parameter_apply.universe_index())?;
                 self.occurs_check_apply(var, universe_index, parameter_apply)?;
             }
 
