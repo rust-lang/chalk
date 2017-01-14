@@ -68,6 +68,10 @@ pub enum Ty {
     Projection {
         proj: ProjectionTy,
     },
+    ForAll {
+        lifetime_names: Vec<Identifier>,
+        ty: Box<Ty>
+    }
 }
 
 pub enum Lifetime {

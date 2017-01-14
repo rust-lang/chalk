@@ -360,6 +360,16 @@ impl LowerTy for Ty {
             }
 
             Ty::Projection { ref proj } => Ok(ir::Ty::Projection(proj.lower(env)?)),
+
+            Ty::ForAll { ref lifetime_names, ref ty } => {
+                let quantified_env =
+                    env.introduce(lifetime_names
+                                  .iter()
+                                  .map(|id| ir::ParameterKind::Lifetime(id.str)));
+                let ty = ty.lower(&quantified_env)?;
+                let quantified_ty = ir::QuantifiedTy { num_binders: lifetime_names.len(), ty };
+                Ok(ir::Ty::ForAll(Box::new(quantified_ty)))
+            }
         }
     }
 }
