@@ -586,9 +586,7 @@ fn forall_equality() {
             //
             // I'm not quite sure why we get six lifetime constraints,
             // though.
-            forall<'a, 'b> {
-                for<'a, 'b> Ref<'a, Ref<'b, Unit>>: Eq<for<'c, 'd> Ref<'c, Ref<'d, Unit>>>
-            }
+            for<'a, 'b> Ref<'a, Ref<'b, Unit>>: Eq<for<'c, 'd> Ref<'c, Ref<'d, Unit>>>
         } yields {
             "Solution {
                 successful: Yes,
@@ -599,38 +597,38 @@ fn forall_equality() {
                         ],
                         constraints: [
                             LifetimeEq(
-                                '!3,
+                                '!1,
                                 '?0
                             ),
                             LifetimeEq(
-                                '!3,
+                                '!1,
                                 '?1
                             ),
                             LifetimeEq(
-                                '!3,
+                                '!1,
                                 '?2
                             ),
                             LifetimeEq(
-                                '!4,
+                                '!2,
                                 '?3
                             ),
                             LifetimeEq(
-                                '!4,
+                                '!2,
                                 '?4
                             ),
                             LifetimeEq(
-                                '!4,
+                                '!2,
                                 '?5
                             )
                         ]
                     },
                     binders: [
-                        U4,
-                        U4,
-                        U4,
-                        U4,
-                        U4,
-                        U4
+                        U2,
+                        U2,
+                        U2,
+                        U2,
+                        U2,
+                        U2
                     ]
                 }
             }"
@@ -642,10 +640,8 @@ fn forall_equality() {
             //
             // Note that `?0` (in universe 4) must be equal to both
             // `!3` and `!4`, which of course it cannot be.
-            forall<'a, 'b> {
-                for<'a, 'b> Ref<'a, Ref<'b, Ref<'a, Unit>>>: Eq<
-                    for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
-            }
+            for<'a, 'b> Ref<'a, Ref<'b, Ref<'a, Unit>>>: Eq<
+                for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
         } yields {
             "Solution {
                 successful: Yes,
@@ -656,45 +652,51 @@ fn forall_equality() {
                         ],
                         constraints: [
                             LifetimeEq(
-                                '!3,
+                                '!1,
                                 '?0
                             ),
                             LifetimeEq(
-                                '!3,
+                                '!1,
                                 '?1
                             ),
                             LifetimeEq(
-                                '!3,
+                                '!1,
                                 '?2
                             ),
                             LifetimeEq(
-                                '!3,
+                                '!1,
                                 '?3
                             ),
                             LifetimeEq(
-                                '!4,
+                                '!2,
                                 '?0
                             ),
                             LifetimeEq(
-                                '!4,
+                                '!2,
                                 '?4
                             ),
                             LifetimeEq(
-                                '!4,
+                                '!2,
                                 '?5
                             )
                         ]
                     },
                     binders: [
-                        U4,
-                        U4,
-                        U4,
-                        U4,
-                        U4,
-                        U4
+                        U2,
+                        U2,
+                        U2,
+                        U2,
+                        U2,
+                        U2
                     ]
                 }
             }"
         }
     }
+}
+
+/// Demonstrates that, given the expected value of the associated
+/// type, we can use that to narrow down the relevant impls.
+#[test]
+fn forall_projection() {
 }
