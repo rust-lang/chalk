@@ -15,7 +15,7 @@ type ParameterMap = HashMap<ir::ParameterKind<ir::Identifier>, usize>;
 struct Env<'k> {
     type_ids: &'k TypeIds,
     type_kinds: &'k TypeKinds,
-    parameter_map: &'k ParameterMap,
+    parameter_map: ParameterMap,
 }
 
 enum NameLookup {
@@ -82,7 +82,7 @@ impl LowerProgram for Program {
             let env = Env {
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
-                parameter_map: &parameter_map,
+                parameter_map: parameter_map,
             };
             match *item {
                 Item::StructDefn(ref _d) => {
@@ -427,7 +427,7 @@ impl LowerGoal<ir::Program> for Goal {
         let env = Env {
             type_ids: &program.type_ids,
             type_kinds: &program.type_kinds,
-            parameter_map: &HashMap::new()
+            parameter_map: HashMap::new()
         };
 
         self.lower(&env)
@@ -475,7 +475,7 @@ impl LowerQuantifiedGoal for Goal {
                              .map(|(&k, &v)| (k, v + 1))
                              .chain(Some((parameter_kinds[0].lower(), 0)))
                              .collect();
-        let quantified_env = &Env { parameter_map: &parameter_map, ..*env };
+        let quantified_env = &Env { parameter_map: parameter_map, ..*env };
         let subgoal = self.lower_quantified(quantified_env, quantifier_kind, &parameter_kinds[1..])?;
         let parameter_kind = match parameter_kinds[0] {
             ParameterKind::Ty(_) => ir::ParameterKind::Ty(()),
