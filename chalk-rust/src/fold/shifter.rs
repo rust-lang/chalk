@@ -16,6 +16,26 @@ impl Shifter {
     }
 }
 
+impl Ty {
+    pub fn up_shift(&self, adjustment: usize) -> Ty {
+        if adjustment == 0 {
+            self.clone()
+        } else {
+            Shifter::up_shift(adjustment, self)
+        }
+    }
+}
+
+impl Lifetime {
+    pub fn up_shift(&self, adjustment: usize) -> Lifetime {
+        if adjustment == 0 {
+            self.clone()
+        } else {
+            Shifter::up_shift(adjustment, self)
+        }
+    }
+}
+
 impl Folder for Shifter {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         Ok(Ty::Var(depth + self.adjustment + binders))

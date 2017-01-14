@@ -98,6 +98,15 @@ pub enum Ty {
     Var(usize),
     Apply(ApplicationTy),
     Projection(ProjectionTy),
+    ForAll(Box<QuantifiedTy>),
+}
+
+/// for<'a...'z> X -- all binders are instantiated at once,
+/// and we use deBruijn indices within `self.ty`
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct QuantifiedTy {
+    pub num_binders: usize,
+    pub ty: Ty
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

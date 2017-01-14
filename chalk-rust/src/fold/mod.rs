@@ -3,6 +3,7 @@ use ir::*;
 use solve::environment::{Environment, InEnvironment};
 use std::sync::Arc;
 
+mod instantiate;
 mod shifter;
 
 pub use self::shifter::Shifter;
@@ -64,6 +65,13 @@ impl<T: Fold> Fold for Vec<T> {
     }
 }
 
+impl<T: Fold> Fold for Box<T> {
+    type Result = Box<T::Result>;
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+        Ok(Box::new((**self).fold_with(folder, binders)?))
+    }
+}
+
 impl<T: Fold> Fold for Arc<T> {
     type Result = Arc<T::Result>;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
@@ -101,7 +109,18 @@ impl Fold for Ty {
             Ty::Projection(ref proj) => {
                 Ok(Ty::Projection(proj.fold_with(folder, binders)?))
             }
+            Ty::ForAll(ref quantified_ty) => {
+                Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?))
+            }
         }
+    }
+}
+
+impl Fold for QuantifiedTy {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+        let QuantifiedTy { num_binders, ref ty } = *self;
+        Ok(QuantifiedTy { num_binders, ty: ty.fold_with(folder, binders + num_binders)? })
     }
 }
 

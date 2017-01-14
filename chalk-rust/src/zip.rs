@@ -198,8 +198,10 @@ impl Zip for WhereClauseGoal {
 
 impl<T: Zip> Zip for Unify<T> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &a.a, &b.a)?;
-        Zip::zip_with(zipper, &a.b, &b.b)?;
+        let Unify { a: ref a_a, b: ref a_b } = *a;
+        let Unify { a: ref b_a, b: ref b_b } = *b;
+        Zip::zip_with(zipper, &a_a, &b_a)?;
+        Zip::zip_with(zipper, &a_b, &b_b)?;
         Ok(())
     }
 }

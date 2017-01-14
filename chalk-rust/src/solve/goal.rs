@@ -95,7 +95,7 @@ impl<'b> Folder for Subst<'b> {
                     parameters: vec![],
                 }))
             }
-            Binding::Exists(v) => Ok(Shifter::up_shift(binders, &v.ty().unwrap().to_ty())),
+            Binding::Exists(v) => Ok(v.ty().unwrap().to_ty().up_shift(binders)),
         }
     }
 
@@ -103,7 +103,7 @@ impl<'b> Folder for Subst<'b> {
         match self.bindings[self.bindings.len() - 1 - depth] {
             Binding::ForAll(u) => Ok(Lifetime::ForAll(u.lifetime().unwrap())),
             Binding::Exists(v) => {
-                Ok(Shifter::up_shift(binders, &v.lifetime().unwrap().to_lifetime()))
+                Ok(v.lifetime().unwrap().to_lifetime().up_shift(binders))
             }
         }
     }

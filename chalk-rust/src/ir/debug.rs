@@ -50,7 +50,16 @@ impl Debug for Ty {
             Ty::Var(depth) => write!(fmt, "?{}", depth),
             Ty::Apply(ref apply) => write!(fmt, "{:?}", apply),
             Ty::Projection(ref proj) => write!(fmt, "{:?}", proj),
+            Ty::ForAll(ref quantified_ty) => write!(fmt, "{:?}", quantified_ty),
         }
+    }
+}
+
+impl Debug for QuantifiedTy {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        // FIXME -- we should introduce some names or something here
+        let QuantifiedTy { num_binders, ref ty } = *self;
+        write!(fmt, "for<{}> {:?}", num_binders, ty)
     }
 }
 
@@ -154,12 +163,9 @@ impl Debug for Goal {
                 write!(fmt, "{:?}<type> {{ {:?} }}", qkind, g),
             Goal::Quantified(qkind, ParameterKind::Lifetime(()), ref g) =>
                 write!(fmt, "{:?}<type> {{ {:?} }}", qkind, g),
-            Goal::Implies(ref wc, ref g) =>
-                write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
-            Goal::And(ref g1, ref g2) =>
-                write!(fmt, "({:?}, {:?})", g1, g2),
-            Goal::Leaf(ref wc) =>
-                write!(fmt, "{:?}", wc),
+            Goal::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
+            Goal::And(ref g1, ref g2) => write!(fmt, "({:?}, {:?})", g1, g2),
+            Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),
         }
     }
 }
