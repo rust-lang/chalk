@@ -59,6 +59,12 @@ impl Cast<WhereClauseGoal> for WhereClause {
     }
 }
 
+impl Cast<WhereClauseGoal> for Unify<Ty> {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::UnifyTys(self)
+    }
+}
+
 macro_rules! map_impl {
     (impl[$($t:tt)*] Cast<$b:ty> for $a:ty) => {
         impl<$($t)*> Cast<$b> for $a {

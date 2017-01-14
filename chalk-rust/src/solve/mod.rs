@@ -11,6 +11,7 @@ pub mod normalize_application;
 pub mod normalize_with_impl;
 pub mod goal;
 pub mod solver;
+pub mod unify;
 
 #[cfg(test)] mod test;
 

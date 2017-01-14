@@ -184,10 +184,22 @@ impl Zip for WhereClauseGoal {
             (&WhereClauseGoal::Normalize(ref a), &WhereClauseGoal::Normalize(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
-            (&WhereClauseGoal::Implemented(_), &WhereClauseGoal::Normalize(_)) |
-            (&WhereClauseGoal::Normalize(_), &WhereClauseGoal::Implemented(_)) => {
+            (&WhereClauseGoal::UnifyTys(ref a), &WhereClauseGoal::UnifyTys(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
+            (&WhereClauseGoal::Implemented(_), _) |
+            (&WhereClauseGoal::Normalize(_), _) |
+            (&WhereClauseGoal::UnifyTys(_), _) => {
                 bail!("cannot zip where-clause-goals `{:?}` and `{:?}`", a, b)
             }
         }
+    }
+}
+
+impl<T: Zip> Zip for Unify<T> {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        Zip::zip_with(zipper, &a.a, &b.a)?;
+        Zip::zip_with(zipper, &a.b, &b.b)?;
+        Ok(())
     }
 }

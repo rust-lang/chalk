@@ -136,7 +136,14 @@ impl Debug for WhereClauseGoal {
                        n.trait_id,
                        Angle(&n.parameters[1..]))
             }
+            WhereClauseGoal::UnifyTys(ref n) => write!(fmt, "{:?}", n),
         }
+    }
+}
+
+impl<T: Debug> Debug for Unify<T> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "({:?} = {:?})", self.a, self.b)
     }
 }
 

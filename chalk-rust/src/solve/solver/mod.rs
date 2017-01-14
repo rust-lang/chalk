@@ -3,6 +3,7 @@ use errors::*;
 use solve::environment::InEnvironment;
 use solve::normalize::SolveNormalize;
 use solve::implemented::Implemented;
+use solve::unify::SolveUnify;
 use std::collections::HashSet;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -53,6 +54,13 @@ impl Solver {
                     binders: binders,
                 };
                 SolveNormalize::new(self, q).solve().cast()
+            }
+            WhereClauseGoal::UnifyTys(unify) => {
+                let q = Quantified {
+                    value: InEnvironment::new(&environment, unify),
+                    binders: binders,
+                };
+                SolveUnify::new(self, q).solve().cast()
             }
         };
 

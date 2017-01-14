@@ -177,6 +177,13 @@ pub enum WhereClause {
 pub enum WhereClauseGoal {
     Implemented(TraitRef),
     Normalize(Normalize),
+    UnifyTys(Unify<Ty>),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Unify<T> {
+    pub a: T,
+    pub b: T,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

@@ -38,9 +38,9 @@ pub trait Fold {
 }
 
 macro_rules! struct_fold {
-    ($s:ident { $($name:ident),* }) => {
-        impl Fold for $s {
-            type Result = Self;
+    ($s:ident [$($n:ident),*] { $($name:ident),* } $($w:tt)*) => {
+        impl<$($n),*> Fold for $s<$($n),*> $($w)* {
+            type Result = $s<$($n :: Result),*>;
             fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
                 Ok($s {
                     $($name: self.$name.fold_with(folder, binders)?),*
@@ -173,6 +173,9 @@ impl Fold for WhereClauseGoal {
             WhereClauseGoal::Normalize(ref pred) => {
                 Ok(WhereClauseGoal::Normalize(pred.fold_with(folder, binders)?))
             }
+            WhereClauseGoal::UnifyTys(ref unify_tys) => {
+                Ok(WhereClauseGoal::UnifyTys(unify_tys.fold_with(folder, binders)?))
+            }
         }
     }
 }
@@ -207,11 +210,13 @@ impl Fold for Constraint {
     }
 }
 
-struct_fold!(ApplicationTy { name, parameters });
-struct_fold!(ProjectionTy { trait_ref, name });
-struct_fold!(TraitRef { trait_id, parameters });
-struct_fold!(Normalize { projection, ty });
-struct_fold!(ImplData { parameter_kinds, trait_ref, assoc_ty_values, where_clauses });
-struct_fold!(AssocTyValue { name, value });
-struct_fold!(Environment { universe, clauses });
+struct_fold!(ApplicationTy[] { name, parameters });
+struct_fold!(ProjectionTy[] { trait_ref, name });
+struct_fold!(TraitRef[] { trait_id, parameters });
+struct_fold!(Normalize[] { projection, ty });
+struct_fold!(ImplData[] { parameter_kinds, trait_ref, assoc_ty_values, where_clauses });
+struct_fold!(AssocTyValue[] { name, value });
+struct_fold!(Environment[] { universe, clauses });
+struct_fold!(Unify[T] { a, b } where T: Fold);
+
 
