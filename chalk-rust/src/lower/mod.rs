@@ -53,6 +53,23 @@ impl<'k> Env<'k> {
     fn type_kind(&self, id: ir::ItemId) -> &ir::TypeKind {
         &self.type_kinds[&id]
     }
+
+    /// Introduces new parameters, shifting the indices of existing
+    /// parameters to accommodate them. The indices of the new binders
+    /// will be assigned in order as they are iterated.
+    fn introduce<I>(&self, binders: I) -> Self
+        where I: IntoIterator<Item = ir::ParameterKind<ir::Identifier>>,
+              I::IntoIter: ExactSizeIterator,
+    {
+        let binders = binders.into_iter().enumerate().map(|(i, k)| (k, i));
+        let len = binders.len();
+        let parameter_map: ParameterMap =
+            self.parameter_map.iter()
+                              .map(|(&k, &v)| (k, v + len))
+                              .chain(binders)
+                              .collect();
+        Env { parameter_map, ..*self }
+    }
 }
 
 pub trait LowerProgram {
@@ -470,12 +487,7 @@ impl LowerQuantifiedGoal for Goal {
             return self.lower(env);
         }
 
-        let parameter_map: ParameterMap =
-            env.parameter_map.iter()
-                             .map(|(&k, &v)| (k, v + 1))
-                             .chain(Some((parameter_kinds[0].lower(), 0)))
-                             .collect();
-        let quantified_env = &Env { parameter_map: parameter_map, ..*env };
+        let quantified_env = &env.introduce(Some(parameter_kinds[0].lower()));
         let subgoal = self.lower_quantified(quantified_env, quantifier_kind, &parameter_kinds[1..])?;
         let parameter_kind = match parameter_kinds[0] {
             ParameterKind::Ty(_) => ir::ParameterKind::Ty(()),
