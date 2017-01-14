@@ -10886,8 +10886,8 @@ pub fn __action23<
 ) -> Ty
 {
     Ty::ForAll {
-                 lifetime_names: l,
-                 ty: Box::new(t)
+        lifetime_names: l,
+        ty: Box::new(t)
     }
 }
 

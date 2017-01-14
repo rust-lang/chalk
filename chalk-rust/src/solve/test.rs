@@ -564,3 +564,137 @@ fn region_equality() {
         }
     }
 }
+
+/// Demonstrates that, given the expected value of the associated
+/// type, we can use that to narrow down the relevant impls.
+#[test]
+fn forall_equality() {
+    test! {
+        program {
+            trait Eq<T> { }
+            impl<T> Eq<T> for T { }
+
+            struct Unit { }
+            struct Ref<'a, T> { }
+        }
+
+        goal {
+            // A valid equality; we get back a series of solvable
+            // region constraints, since each region variable must
+            // refer to exactly one skolemized region, and they are
+            // all in a valid universe to do so (universe 4).
+            //
+            // I'm not quite sure why we get six lifetime constraints,
+            // though.
+            forall<'a, 'b> {
+                for<'a, 'b> Ref<'a, Ref<'b, Unit>>: Eq<for<'c, 'd> Ref<'c, Ref<'d, Unit>>>
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            for<2> Ref<'?0, Ref<'?1, Unit>>: Eq<for<2> Ref<'?0, Ref<'?1, Unit>>>
+                        ],
+                        constraints: [
+                            LifetimeEq(
+                                '!3,
+                                '?0
+                            ),
+                            LifetimeEq(
+                                '!3,
+                                '?1
+                            ),
+                            LifetimeEq(
+                                '!3,
+                                '?2
+                            ),
+                            LifetimeEq(
+                                '!4,
+                                '?3
+                            ),
+                            LifetimeEq(
+                                '!4,
+                                '?4
+                            ),
+                            LifetimeEq(
+                                '!4,
+                                '?5
+                            )
+                        ]
+                    },
+                    binders: [
+                        U4,
+                        U4,
+                        U4,
+                        U4,
+                        U4,
+                        U4
+                    ]
+                }
+            }"
+        }
+
+        goal {
+            // Note: this equality is false, but we get back successful;
+            // this is because the region constraints are unsolvable.
+            //
+            // Note that `?0` (in universe 4) must be equal to both
+            // `!3` and `!4`, which of course it cannot be.
+            forall<'a, 'b> {
+                for<'a, 'b> Ref<'a, Ref<'b, Ref<'a, Unit>>>: Eq<
+                    for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            for<2> Ref<'?0, Ref<'?1, Ref<'?0, Unit>>>: Eq<for<2> Ref<'?0, Ref<'?1, Ref<'?1, Unit>>>>
+                        ],
+                        constraints: [
+                            LifetimeEq(
+                                '!3,
+                                '?0
+                            ),
+                            LifetimeEq(
+                                '!3,
+                                '?1
+                            ),
+                            LifetimeEq(
+                                '!3,
+                                '?2
+                            ),
+                            LifetimeEq(
+                                '!3,
+                                '?3
+                            ),
+                            LifetimeEq(
+                                '!4,
+                                '?0
+                            ),
+                            LifetimeEq(
+                                '!4,
+                                '?4
+                            ),
+                            LifetimeEq(
+                                '!4,
+                                '?5
+                            )
+                        ]
+                    },
+                    binders: [
+                        U4,
+                        U4,
+                        U4,
+                        U4,
+                        U4,
+                        U4
+                    ]
+                }
+            }"
+        }
+    }
+}

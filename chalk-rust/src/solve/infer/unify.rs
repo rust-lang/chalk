@@ -125,6 +125,8 @@ impl<'t> Unifier<'t> {
         // for<'a...> exists<'b...> T == U &&
         // for<'b...> exists<'a...> T == U
 
+        debug!("unify_forall_tys({:?}, {:?})", ty1, ty2);
+
         let mut environment = self.environment.clone();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|_| {
@@ -139,8 +141,13 @@ impl<'t> Unifier<'t> {
 
         let ty1 = ty1.instantiate(&lifetimes1);
         let ty2 = ty2.instantiate(&lifetimes2);
+        debug!("unify_forall_tys: ty1 = {:?}", ty1);
+        debug!("unify_forall_tys: ty2 = {:?}", ty2);
 
-        self.goals.push(InEnvironment::new(&environment, Unify { a: ty1, b: ty2 }).cast());
+        let goal = InEnvironment::new(&environment, Unify { a: ty1, b: ty2 }).cast();
+        debug!("unify_forall_tys: goal = {:?}", goal);
+
+        self.goals.push(goal);
 
         Ok(())
     }

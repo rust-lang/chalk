@@ -18,7 +18,7 @@ impl<'s> Subst<'s> {
 impl QuantifiedTy {
     pub fn instantiate(&self, parameters: &[Parameter]) -> Ty {
         assert_eq!(self.num_binders, parameters.len());
-        self.ty.fold_with(&mut Subst { parameters }, self.num_binders).unwrap()
+        self.ty.fold_with(&mut Subst { parameters }, 0).unwrap()
     }
 }
 
