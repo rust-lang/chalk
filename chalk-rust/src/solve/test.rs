@@ -696,7 +696,106 @@ fn forall_equality() {
 }
 
 /// Demonstrates that, given the expected value of the associated
-/// type, we can use that to narrow down the relevant impls.
+/// type, we can use that to narrow down the relevant impls.  Produces
+/// a pretty convoluted set of lifetime constraints; seems clear that
+/// we can do some simplification and/or need to change the structure.
 #[test]
 fn forall_projection() {
+    test! {
+        program {
+            trait Eq<T> { }
+            impl<T> Eq<T> for T { }
+
+            trait DropLt<'a> { type Item; }
+            impl<'a, T> DropLt<'a> for T { type Item = T; }
+
+            struct Unit { }
+            struct Ref<'a, T> { }
+        }
+
+        goal {
+            for<'a> <Unit as DropLt<'a>>::Item: Eq<Unit>
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            for<1> <Unit as DropLt<'?0>>::Item: Eq<Unit>
+                        ],
+                        constraints: [
+                            LifetimeEq(
+                                '?0,
+                                '?1
+                            ),
+                            LifetimeEq(
+                                '?2,
+                                '?3
+                            ),
+                            LifetimeEq(
+                                '?2,
+                                '?4
+                            ),
+                            LifetimeEq(
+                                '?3,
+                                '?5
+                            ),
+                            LifetimeEq(
+                                '?1,
+                                '?6
+                            ),
+                            LifetimeEq(
+                                '?4,
+                                '?7
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?8
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?9
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?10
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?11
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?12
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?13
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '!1
+                            )
+                        ]
+                    },
+                    binders: [
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1
+                    ]
+                }
+            }"
+        }
+    }
 }

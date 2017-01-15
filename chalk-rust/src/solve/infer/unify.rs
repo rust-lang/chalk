@@ -106,16 +106,21 @@ impl<'t> Unifier<'t> {
                 self.unify_forall_apply(quantified_ty, apply_ty)
             }
 
-            (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => Zip::zip_with(self, apply1, apply2),
+            (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
+                Zip::zip_with(self, apply1, apply2)
+            }
 
-            (ty, &Ty::Projection(ref proj)) |
-            (&Ty::Projection(ref proj), ty) => {
-                Ok(self.goals.push(InEnvironment::new(self.environment,
-                                                      Normalize {
-                                                              projection: proj.clone(),
-                                                              ty: ty.clone(),
-                                                          }
-                                                          .cast())))
+            (&Ty::Projection(ref proj1), &Ty::Projection(ref proj2)) => {
+                self.unify_projection_tys(proj1, proj2)
+            }
+
+            (ty @ &Ty::Apply(_), &Ty::Projection(ref proj)) |
+            (ty @ &Ty::ForAll(_), &Ty::Projection(ref proj)) |
+            (ty @ &Ty::Var(_), &Ty::Projection(ref proj)) |
+            (&Ty::Projection(ref proj), ty @ &Ty::Apply(_)) |
+            (&Ty::Projection(ref proj), ty @ &Ty::ForAll(_)) |
+            (&Ty::Projection(ref proj), ty @ &Ty::Var(_)) => {
+                self.unify_projection_ty(proj, ty)
             }
         }
     }
@@ -153,6 +158,22 @@ impl<'t> Unifier<'t> {
         self.goals.push(goal);
 
         Ok(())
+    }
+
+    fn unify_projection_tys(&mut self, proj1: &ProjectionTy, proj2: &ProjectionTy) -> Result<()> {
+        let var = self.table.new_variable(self.environment.universe).to_ty();
+        self.unify_projection_ty(proj1, &var)?;
+        self.unify_projection_ty(proj2, &var)?;
+        Ok(())
+    }
+
+    fn unify_projection_ty(&mut self, proj: &ProjectionTy, ty: &Ty) -> Result<()> {
+        Ok(self.goals.push(InEnvironment::new(self.environment,
+                                              Normalize {
+                                                  projection: proj.clone(),
+                                                  ty: ty.clone(),
+                                              }
+                                              .cast())))
     }
 
     fn unify_forall_apply(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Result<()> {
