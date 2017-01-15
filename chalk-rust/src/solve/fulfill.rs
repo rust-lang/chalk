@@ -177,8 +177,6 @@ impl<'s> Fulfill<'s> {
 
             if new_type_info {
                 debug!("fulfill::solve_one: unifying original and refined goal");
-                debug!("fulfill::solve_one: original goal = {:?}", wc);
-                debug!("fulfill::solve_one: refined goal  = {:?}", refined_goal);
                 self.unify(&wc.environment, wc, &refined_goal)?;
                 *inference_progress = true;
             }

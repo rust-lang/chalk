@@ -14,12 +14,37 @@ thread_local! {
 macro_rules! debug {
     ($($t:tt)*) => {
         if *::macros::DEBUG_ENABLED {
-            let indent = ::macros::INDENT.with(|i| i.get());
+            ::macros::dump(format!($($t)*));
+        }
+    }
+}
+
+macro_rules! debug_heading {
+    ($($t:tt)*) => {
+        debug!($($t)*);
+        let _ = &::macros::Indent::new();
+    }
+}
+
+pub fn dump(string: String) {
+    if !*DEBUG_ENABLED {
+        return;
+    }
+
+    let indent = ::macros::INDENT.with(|i| i.get());
+    let mut first = true;
+    for line in string.lines() {
+        if first {
             for _ in 0..indent {
                 print!("| ");
             }
-            println!($($t)*);
+        } else {
+            for _ in 0..indent {
+                print!("  ");
+            }
         }
+        println!("{}", line);
+        first = false;
     }
 }
 

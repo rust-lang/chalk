@@ -1,8 +1,8 @@
 use cast::Cast;
 use errors::*;
 use ir::*;
-use macros::Indent;
 use solve::environment::{Environment, InEnvironment};
+use std::fmt::Debug;
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
@@ -15,8 +15,10 @@ impl InferenceTable {
                     a: &T,
                     b: &T)
                     -> Result<UnificationResult>
-        where T: Zip
+        where T: Zip + Debug,
     {
+        debug_heading!("unify(a={:?}\
+                     ,\n      b={:?})", a, b);
         let mut unifier = Unifier::new(self, environment);
         match Zip::zip_with(&mut unifier, a, b) {
             Ok(()) => unifier.commit(),
@@ -74,9 +76,8 @@ impl<'t> Unifier<'t> {
             return self.unify_ty_ty(a, &n_b);
         }
 
-        debug!("unify_ty_ty(normalized a={:?})", a);
-        debug!("unify_ty_ty(normalized b={:?})", b);
-        let _ = &Indent::new();
+        debug_heading!("unify_ty_ty(a={:?}\
+                     ,\n            b={:?})", a, b);
 
         match (a, b) {
             (&Ty::Var(depth1), &Ty::Var(depth2)) => {
