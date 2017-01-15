@@ -378,7 +378,7 @@ fn normalize() {
         goal {
             forall<T> {
                 exists<U> {
-                    <Vec<T> as Iterator>::Item == U
+                    Vec<T>: Iterator<Item = U>
                 }
             }
         } yields {
@@ -398,7 +398,7 @@ fn normalize() {
 
         goal {
             forall<T> {
-                <Vec<T> as Iterator>::Item == T
+                Vec<T>: Iterator<Item = T>
             }
         } yields {
             "Solution {
@@ -417,9 +417,9 @@ fn normalize() {
 
         goal {
             forall<T> {
-                if (<T as Iterator>::Item == u32) {
+                if (T: Iterator<Item = u32>) {
                     exists<U> {
-                        <T as Iterator>::Item == U
+                        T: Iterator<Item = U>
                     }
                 }
             }
@@ -442,7 +442,7 @@ fn normalize() {
             forall<T> {
                 if (T: Iterator) {
                     exists<U> {
-                        <T as Iterator>::Item == U
+                        T: Iterator<Item = U>
                     }
                 }
             }
@@ -478,7 +478,7 @@ fn normalize_rev_infer() {
 
         goal {
             exists<T> {
-                <T as Identity>::Item == u32
+                T: Identity<Item = u32>
             }
         } yields {
             "Solution {

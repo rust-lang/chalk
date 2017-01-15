@@ -105,7 +105,13 @@ WhereClauses: Vec<WhereClause> = {
 
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
-    <p:ProjectionTy> "==" <t:Ty> => WhereClause::ProjectionEq { projection: p, ty: t },
+    <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> "=" <ty:Ty> ">" => {
+        let mut args = vec![Parameter::Ty(s)];
+        if let Some(a) = a { args.extend(a); }
+        let trait_ref = TraitRef { trait_name: t, args: args };
+        let projection = ProjectionTy { trait_ref, name };
+        WhereClause::ProjectionEq { projection, ty }
+    }
 };
 
 TraitRef<S>: TraitRef = {
