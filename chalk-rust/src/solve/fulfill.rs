@@ -135,6 +135,8 @@ impl<'s> Fulfill<'s> {
                  wc: &InEnvironment<WhereClauseGoal>,
                  inference_progress: &mut bool)
                  -> Result<Successful> {
+        debug!("fulfill::solve_one(wc={:?})", wc);
+
         let quantified_wc = self.infer.quantify(&wc);
         let solution = self.solver.solve(quantified_wc.clone())?;
 
@@ -163,14 +165,20 @@ impl<'s> Fulfill<'s> {
             solution.refined_goal.value.value != quantified_wc.value
         };
 
+        debug!("fulfill::solve_one: new_type_info={}", new_type_info);
+
         if new_type_info || !solution.refined_goal.value.constraints.is_empty() {
             let Constrained { constraints, value: refined_goal } =
                 self.instantiate(solution.refined_goal.binders.iter().cloned(),
                                  &solution.refined_goal.value);
 
+            debug!("fulfill::solve_one: adding constraints {:?}", constraints);
             self.constraints.extend(constraints);
 
             if new_type_info {
+                debug!("fulfill::solve_one: unifying original and refined goal");
+                debug!("fulfill::solve_one: original goal = {:?}", wc);
+                debug!("fulfill::solve_one: refined goal  = {:?}", refined_goal);
                 self.unify(&wc.environment, wc, &refined_goal)?;
                 *inference_progress = true;
             }
