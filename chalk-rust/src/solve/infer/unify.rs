@@ -1,6 +1,7 @@
 use cast::Cast;
 use errors::*;
 use ir::*;
+use macros::Indent;
 use solve::environment::{Environment, InEnvironment};
 use std::sync::Arc;
 use zip::{Zip, Zipper};
@@ -75,6 +76,7 @@ impl<'t> Unifier<'t> {
 
         debug!("unify_ty_ty(normalized a={:?})", a);
         debug!("unify_ty_ty(normalized b={:?})", b);
+        let _ = &Indent::new();
 
         match (a, b) {
             (&Ty::Var(depth1), &Ty::Var(depth2)) => {
