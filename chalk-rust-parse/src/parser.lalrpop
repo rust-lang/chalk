@@ -47,10 +47,10 @@ AssocTyName: Identifier = {
 };
 
 Impl: Impl = {
-    "impl" <p:Angle<ParameterKind>> <t:Id> <a:Angle<Ty>> "for" <s:Ty> <w:WhereClauses> "{"
+    "impl" <p:Angle<ParameterKind>> <t:Id> <a:Angle<Parameter>> "for" <s:Ty> <w:WhereClauses> "{"
         <assoc:AssocTyValue*>"}" =>
     {
-        let mut args = vec![s];
+        let mut args = vec![Parameter::Ty(s)];
         args.extend(a);
         Impl {
             parameter_kinds: p,
@@ -109,8 +109,8 @@ WhereClause: WhereClause = {
 };
 
 TraitRef<S>: TraitRef = {
-    <s:Ty> S <t:Id> <a:Angle<Ty>> => {
-        let mut args = vec![s];
+    <s:Ty> S <t:Id> <a:Angle<Parameter>> => {
+        let mut args = vec![Parameter::Ty(s)];
         args.extend(a);
         TraitRef {
             trait_name: t,

@@ -87,7 +87,7 @@ pub struct ProjectionTy {
 
 pub struct TraitRef {
     pub trait_name: Identifier,
-    pub args: Vec<Ty>,
+    pub args: Vec<Parameter>,
 }
 
 #[derive(Copy, Clone, Debug)]

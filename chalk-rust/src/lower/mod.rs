@@ -290,7 +290,7 @@ impl LowerTraitRef for TraitRef {
             bail!(ErrorKind::NotTrait(self.trait_name));
         }
 
-        let parameters = self.args.iter().map(|a| Ok(ir::ParameterKind::Ty(a.lower(env)?))).collect::<Result<Vec<_>>>()?;
+        let parameters = self.args.iter().map(|a| Ok(a.lower(env)?)).collect::<Result<Vec<_>>>()?;
 
         Ok(ir::TraitRef {
             trait_id: id,
