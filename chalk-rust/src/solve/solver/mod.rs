@@ -1,4 +1,5 @@
 use cast::Cast;
+use macros::Indent;
 use errors::*;
 use solve::environment::InEnvironment;
 use solve::normalize::SolveNormalize;
@@ -27,6 +28,7 @@ impl Solver {
                  wc_env: Quantified<InEnvironment<WhereClauseGoal>>)
                  -> Result<Solution<InEnvironment<WhereClauseGoal>>> {
         debug!("Solver::solve({:?})", wc_env);
+        let _ = &Indent::new();
 
         if self.stack.contains(&wc_env) || self.stack.len() > self.overflow_depth {
             // Recursive invocation or overflow
@@ -65,6 +67,8 @@ impl Solver {
         };
 
         self.stack.pop().unwrap();
+
+        debug!("Solver::solve: result={:?}", result);
 
         result
     }
