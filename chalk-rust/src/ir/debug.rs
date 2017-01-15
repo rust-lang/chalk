@@ -113,9 +113,30 @@ impl<'a, T: Debug> Debug for Angle<'a, T> {
     }
 }
 
+struct Assignment<'a>(Identifier, &'a Ty);
+
+impl<'a> Debug for Assignment<'a> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{} = {:?}", self.0, self.1)
+    }
+}
+
 impl Debug for Normalize {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?} == {:?}", self.projection, self.ty)
+        let assign: &Debug = &Assignment(self.projection.name, &self.ty);
+        let args: Vec<_> = self.projection
+            .trait_ref
+            .parameters
+            .iter()
+            .skip(1)
+            .map(|n| n as &Debug)
+            .chain(Some(assign))
+            .collect();
+        write!(fmt,
+               "{:?}: {:?}{:?}",
+               self.projection.trait_ref.parameters[0],
+               self.projection.trait_ref.trait_id,
+               Angle(&args))
     }
 }
 
