@@ -195,6 +195,7 @@ pub enum WhereClauseGoal {
     Implemented(TraitRef),
     Normalize(Normalize),
     UnifyTys(Unify<Ty>),
+    WellFormed(Ty),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

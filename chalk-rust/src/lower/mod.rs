@@ -553,6 +553,8 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
             Goal::Leaf(ref wc) =>
                 Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?.cast()))),
+            Goal::WellFormed(ref ty) =>
+                Ok(Box::new(ir::Goal::Leaf(ir::WhereClauseGoal::WellFormed(ty.lower(env)?)))),
         }
     }
 }

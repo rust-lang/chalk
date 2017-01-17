@@ -62,6 +62,9 @@ impl Solver {
                 };
                 SolveUnify::new(self, q).solve().cast()
             }
+            WhereClauseGoal::WellFormed(_ty) => {
+                unimplemented!()
+            }
         };
 
         self.stack.pop().unwrap();

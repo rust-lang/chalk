@@ -38,19 +38,6 @@ pub trait Fold {
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result>;
 }
 
-macro_rules! struct_fold {
-    ($s:ident [$($n:ident),*] { $($name:ident),* } $($w:tt)*) => {
-        impl<$($n),*> Fold for $s<$($n),*> $($w)* {
-            type Result = $s<$($n :: Result),*>;
-            fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-                Ok($s {
-                    $($name: self.$name.fold_with(folder, binders)?),*
-                })
-            }
-        }
-    }
-}
-
 impl<'a, T: Fold> Fold for &'a T {
     type Result = T::Result;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
@@ -158,73 +145,37 @@ copy_fold!(ItemId);
 copy_fold!(TypeName);
 copy_fold!(usize);
 
-impl<T: Fold, L: Fold> Fold for ParameterKind<T, L> {
-    type Result = ParameterKind<T::Result, L::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        match *self {
-            ParameterKind::Ty(ref t) => Ok(ParameterKind::Ty(t.fold_with(folder, binders)?)),
-            ParameterKind::Lifetime(ref l) => Ok(ParameterKind::Lifetime(l.fold_with(folder, binders)?)),
-        }
-    }
-}
-
-impl Fold for WhereClause {
-    type Result = Self;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        match *self {
-            WhereClause::Implemented(ref trait_ref) => {
-                Ok(WhereClause::Implemented(trait_ref.fold_with(folder, binders)?))
-            }
-            WhereClause::Normalize(ref pred) => {
-                Ok(WhereClause::Normalize(pred.fold_with(folder, binders)?))
+macro_rules! enum_fold {
+    ($s:ident [$($n:ident),*] { $($variant:ident($($name:ident),*)),* } $($w:tt)*) => {
+        impl<$($n),*> Fold for $s<$($n),*> $($w)* {
+            type Result = $s<$($n :: Result),*>;
+            fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+                match *self {
+                    $(
+                        $s::$variant( $(ref $name),* ) => {
+                            Ok($s::$variant( $($name.fold_with(folder, binders)?),* ))
+                        }
+                    )*
+                }
             }
         }
     }
 }
 
-impl Fold for WhereClauseGoal {
-    type Result = Self;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        match *self {
-            WhereClauseGoal::Implemented(ref trait_ref) => {
-                Ok(WhereClauseGoal::Implemented(trait_ref.fold_with(folder, binders)?))
-            }
-            WhereClauseGoal::Normalize(ref pred) => {
-                Ok(WhereClauseGoal::Normalize(pred.fold_with(folder, binders)?))
-            }
-            WhereClauseGoal::UnifyTys(ref unify_tys) => {
-                Ok(WhereClauseGoal::UnifyTys(unify_tys.fold_with(folder, binders)?))
-            }
-        }
-    }
-}
+enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
+enum_fold!(WhereClause[] { Implemented(a), Normalize(a) });
+enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a), WellFormed(a) });
+enum_fold!(Constraint[] { LifetimeEq(a, b) });
 
-impl<F: Fold> Fold for InEnvironment<F> {
-    type Result = InEnvironment<F::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        Ok(InEnvironment {
-            environment: self.environment.fold_with(folder, binders)?,
-            goal: self.goal.fold_with(folder, binders)?,
-        })
-    }
-}
-
-impl<F: Fold> Fold for Constrained<F> {
-    type Result = Constrained<F::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        Ok(Constrained {
-            value: self.value.fold_with(folder, binders)?,
-            constraints: self.constraints.fold_with(folder, binders)?,
-        })
-    }
-}
-
-impl Fold for Constraint {
-    type Result = Constraint;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        match *self {
-            Constraint::LifetimeEq(ref a, ref b) =>
-                Ok(Constraint::LifetimeEq(a.fold_with(folder, binders)?, b.fold_with(folder, binders)?)),
+macro_rules! struct_fold {
+    ($s:ident [$($n:ident),*] { $($name:ident),* } $($w:tt)*) => {
+        impl<$($n),*> Fold for $s<$($n),*> $($w)* {
+            type Result = $s<$($n :: Result),*>;
+            fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+                Ok($s {
+                    $($name: self.$name.fold_with(folder, binders)?),*
+                })
+            }
         }
     }
 }
@@ -236,6 +187,6 @@ struct_fold!(Normalize[] { projection, ty });
 struct_fold!(ImplData[] { parameter_kinds, trait_ref, assoc_ty_values, where_clauses });
 struct_fold!(AssocTyValue[] { name, value });
 struct_fold!(Environment[] { universe, clauses });
+struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(Unify[T] { a, b } where T: Fold);
-
-
+struct_fold!(Constrained[F] { value, constraints } where F: Fold);

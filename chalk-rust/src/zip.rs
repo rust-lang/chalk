@@ -193,9 +193,13 @@ impl Zip for WhereClauseGoal {
             (&WhereClauseGoal::UnifyTys(ref a), &WhereClauseGoal::UnifyTys(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
+            (&WhereClauseGoal::WellFormed(ref a), &WhereClauseGoal::WellFormed(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
             (&WhereClauseGoal::Implemented(_), _) |
             (&WhereClauseGoal::Normalize(_), _) |
-            (&WhereClauseGoal::UnifyTys(_), _) => {
+            (&WhereClauseGoal::UnifyTys(_), _) |
+            (&WhereClauseGoal::WellFormed(_), _) => {
                 bail!("cannot zip where-clause-goals `{:?}` and `{:?}`", a, b)
             }
         }

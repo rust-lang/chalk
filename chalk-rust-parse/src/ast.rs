@@ -106,5 +106,8 @@ pub enum Goal {
     Exists(Vec<ParameterKind>, Box<Goal>),
     Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
+
+    // Additional kinds of goals:
     Leaf(WhereClause),
+    WellFormed(Ty),
 }
