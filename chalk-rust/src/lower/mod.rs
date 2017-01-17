@@ -78,10 +78,18 @@ pub trait LowerProgram {
 
 impl LowerProgram for Program {
     fn lower(&self) -> Result<ir::Program> {
+        // Make a vector mapping each thing in `self.items` to an id,
+        // based just on its position:
+        let item_ids: Vec<_> =
+            self.items
+                .iter()
+                .enumerate()
+                .map(|(index, _)| ir::ItemId { index: index })
+                .collect();
+
         let mut type_ids = HashMap::new();
         let mut type_kinds = HashMap::new();
-        for (index, item) in self.items.iter().enumerate() {
-            let item_id = ir::ItemId { index: index };
+        for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let k = match *item {
                 Item::StructDefn(ref d) => d.lower_type_kind()?,
                 Item::TraitDefn(ref d) => d.lower_type_kind()?,
@@ -93,8 +101,7 @@ impl LowerProgram for Program {
 
         let mut trait_data = HashMap::new();
         let mut impl_data = HashMap::new();
-        for (index, item) in self.items.iter().enumerate() {
-            let item_id = ir::ItemId { index: index };
+        for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let parameter_map = item.parameter_map();
             let env = Env {
                 type_ids: &type_ids,
@@ -106,7 +113,6 @@ impl LowerProgram for Program {
                     // where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
                 Item::TraitDefn(ref d) => {
-                    // where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                     trait_data.insert(item_id, d.lower_trait(&env)?);
                 }
                 Item::Impl(ref d) => {
