@@ -9,12 +9,14 @@ mod test;
 
 type TypeIds = HashMap<ir::Identifier, ir::ItemId>;
 type TypeKinds = HashMap<ir::ItemId, ir::TypeKind>;
+type AssociatedTyIds = HashMap<(ir::ItemId, ir::Identifier), ir::ItemId>;
 type ParameterMap = HashMap<ir::ParameterKind<ir::Identifier>, usize>;
 
 #[derive(Debug)]
 struct Env<'k> {
     type_ids: &'k TypeIds,
     type_kinds: &'k TypeKinds,
+    associated_ty_ids: &'k AssociatedTyIds,
     parameter_map: ParameterMap,
 }
 
@@ -78,14 +80,30 @@ pub trait LowerProgram {
 
 impl LowerProgram for Program {
     fn lower(&self) -> Result<ir::Program> {
+        let mut index = 0;
+        let mut next_item_id = || -> ir::ItemId {
+            let i = index;
+            index += 1;
+            ir::ItemId { index: i }
+        };
+
         // Make a vector mapping each thing in `self.items` to an id,
         // based just on its position:
         let item_ids: Vec<_> =
             self.items
                 .iter()
-                .enumerate()
-                .map(|(index, _)| ir::ItemId { index: index })
+                .map(|_| next_item_id())
                 .collect();
+
+        // Create ids for associated types
+        let mut associated_ty_ids = HashMap::new();
+        for (item, &item_id) in self.items.iter().zip(&item_ids) {
+            if let Item::TraitDefn(ref d) = *item {
+                for &name in &d.assoc_ty_names {
+                    associated_ty_ids.insert((item_id, name.str), next_item_id());
+                }
+            }
+        }
 
         let mut type_ids = HashMap::new();
         let mut type_kinds = HashMap::new();
@@ -101,11 +119,13 @@ impl LowerProgram for Program {
 
         let mut trait_data = HashMap::new();
         let mut impl_data = HashMap::new();
+        let mut associated_ty_data = HashMap::new();
         for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let parameter_map = item.parameter_map();
             let env = Env {
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
+                associated_ty_ids: &associated_ty_ids,
                 parameter_map: parameter_map,
             };
             match *item {
@@ -114,6 +134,49 @@ impl LowerProgram for Program {
                 }
                 Item::TraitDefn(ref d) => {
                     trait_data.insert(item_id, d.lower_trait(&env)?);
+
+                    let trait_data = &trait_data[&item_id];
+                    for &name in &d.assoc_ty_names {
+                        let associated_ty_id = associated_ty_ids[&(item_id, name.str)];
+
+                        // Given `trait Foo<'a, T>`, produce a trait ref like
+                        //
+                        //     <Ty::Var(0): Foo<Lifetime::Var(1), Ty::Var(2)>
+                        //
+                        // Note that for bindings on items we do not
+                        // use "deBruijn" indexing but rather just
+                        // straight-up indexing. Should probably
+                        // harmonize that at some point.
+                        //
+                        // This will be the where-clause for the
+                        // associated type. (IOW, to project this
+                        // associated type, one must prove that the
+                        // trait applies.)
+                        let trait_ref = ir::TraitRef {
+                            trait_id: item_id,
+                            parameters: {
+                                trait_data.parameter_kinds
+                                          .iter()
+                                          .enumerate()
+                                          .map(|(index, k)| match *k {
+                                              ir::ParameterKind::Lifetime(_) =>
+                                                  ir::ParameterKind::Lifetime(
+                                                      ir::Lifetime::Var(index)),
+                                              ir::ParameterKind::Ty(_) =>
+                                                  ir::ParameterKind::Ty(
+                                                      ir::Ty::Var(index)),
+                                          })
+                                          .collect()
+                            },
+                        };
+
+                        associated_ty_data.insert(associated_ty_id, ir::AssociatedTyData {
+                            trait_id: item_id,
+                            name: name.str,
+                            parameter_kinds: trait_data.parameter_kinds.clone(),
+                            where_clauses: vec![ir::WhereClause::Implemented(trait_ref)]
+                        });
+                    }
                 }
                 Item::Impl(ref d) => {
                     impl_data.insert(item_id, d.lower_impl(&env)?);
@@ -121,7 +184,7 @@ impl LowerProgram for Program {
             }
         }
 
-        Ok(ir::Program { type_ids, type_kinds, trait_data, impl_data })
+        Ok(ir::Program { type_ids, type_kinds, trait_data, impl_data, associated_ty_data })
     }
 }
 
@@ -311,10 +374,12 @@ trait LowerProjectionTy {
 
 impl LowerProjectionTy for ProjectionTy {
     fn lower(&self, env: &Env) -> Result<ir::ProjectionTy> {
-        Ok(ir::ProjectionTy {
-            trait_ref: self.trait_ref.lower(env)?,
-            name: self.name.str,
-        })
+        let ir::TraitRef { trait_id, parameters } = self.trait_ref.lower(env)?;
+        let associated_ty_id = match env.associated_ty_ids.get(&(trait_id, self.name.str)) {
+            Some(&id) => id,
+            None => bail!("no associated type `{}` defined in trait", self.name.str)
+        };
+        Ok(ir::ProjectionTy { associated_ty_id, parameters })
     }
 }
 
@@ -446,7 +511,6 @@ impl LowerTrait for TraitDefn {
         Ok(ir::TraitData {
             parameter_kinds: self.all_parameters(),
             where_clauses: self.lower_where_clauses(&env)?,
-            assoc_ty_names: self.assoc_ty_names.iter().map(|a| a.str).collect(),
         })
     }
 }
@@ -457,9 +521,18 @@ pub trait LowerGoal<A> {
 
 impl LowerGoal<ir::Program> for Goal {
     fn lower(&self, program: &ir::Program) -> Result<Box<ir::Goal>> {
+        let associated_ty_ids: HashMap<_, _> =
+            program.associated_ty_data
+                   .iter()
+                   .map(|(&associated_ty_id, datum)| {
+                       ((datum.trait_id, datum.name), associated_ty_id)
+                   })
+                   .collect();
+
         let env = Env {
             type_ids: &program.type_ids,
             type_kinds: &program.type_kinds,
+            associated_ty_ids: &associated_ty_ids,
             parameter_map: HashMap::new()
         };
 

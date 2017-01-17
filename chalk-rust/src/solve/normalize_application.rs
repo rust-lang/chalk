@@ -30,12 +30,11 @@ impl<'s> NormalizeApplication<'s> {
         // `<T as Iterator>::Item`, we would produce
         // `(Iterator::Item)<T>`.
         let apply_ty = {
-            let name = TypeName::AssociatedType(AssociatedType {
-                trait_id: self.goal.projection.trait_ref.trait_id,
-                name: self.goal.projection.name,
-            });
-            let parameters = self.goal.projection.trait_ref.parameters.clone();
-            Ty::Apply(ApplicationTy { name, parameters })
+            let ProjectionTy { associated_ty_id, ref parameters } = self.goal.projection;
+            Ty::Apply(ApplicationTy {
+                name: TypeName::AssociatedType(associated_ty_id),
+                parameters: parameters.clone()
+            })
         };
 
         // Unify the result of normalization (`self.goal.ty`) with the

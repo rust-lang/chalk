@@ -41,7 +41,7 @@ impl<'s> Fulfill<'s> {
     /// added into our list of pending obligations with the given
     /// environment.
     pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
-        where T: Zip + Debug
+        where T: ?Sized + Zip + Debug
     {
         let UnificationResult { goals, constraints } = self.infer.unify(environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);

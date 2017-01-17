@@ -1,4 +1,3 @@
-use lalrpop_intern::intern;
 use fold::*;
 use solve::environment::Environment;
 use super::*;
@@ -11,10 +10,10 @@ macro_rules! ty {
         })
     };
 
-    (projection $t:tt $n:tt) => {
+    (projection (item $n:tt) $($arg:tt)*) => {
         Ty::Projection(ProjectionTy {
-            trait_ref: trait_ref!($t),
-            name: intern($n),
+            associated_ty_id: ItemId { index: $n },
+            parameters: vec![$(arg!($arg)),*],
         })
     };
 
@@ -184,7 +183,7 @@ fn projection_eq() {
     // expect an error ("cycle during unification")
     table.unify(&environment0,
                &a,
-               &ty!(apply (item 0) (projection ((item 1) (expr a)) "foo")))
+               &ty!(apply (item 0) (projection (item 1) (expr a))))
         .unwrap_err();
 }
 

@@ -33,6 +33,9 @@ impl<'s> NormalizeWithImpl<'s> {
     pub fn solve(mut self) -> Result<Solution<InEnvironment<Normalize>>> {
         let environment = self.environment.clone();
         let program = self.fulfill.program();
+        let goal_projection = &self.goal.projection;
+        let associated_ty_data = &program.associated_ty_data[&goal_projection.associated_ty_id];
+        let trait_data = &program.trait_data[&associated_ty_data.trait_id];
 
         // Extract the trait-ref that this impl implements, its
         // where-clauses, and the value that it provides for the
@@ -46,24 +49,23 @@ impl<'s> NormalizeWithImpl<'s> {
         // this would yield `Option<?1>: Clone` and `?1: Clone`.
         let (impl_trait_ref, (where_clauses, assoc_ty_value)) = {
             let impl_data = &program.impl_data[&self.impl_id];
-            let goal_projection = &self.goal.projection;
 
             // if we are looking for (e.g.) `Iterator::Item`, must be an impl of `Iterator`
-            if impl_data.trait_ref.trait_id != goal_projection.trait_ref.trait_id {
+            if impl_data.trait_ref.trait_id != associated_ty_data.trait_id {
                 bail!("impl trait `{:?}` does not match projection trait `{:?}`",
                       impl_data.trait_ref.trait_id,
-                      goal_projection.trait_ref.trait_id);
+                      associated_ty_data.trait_id)
             }
 
             // find the definition for `Item` (must be present or something is wrong with
             // the program)
             let assoc_ty_value = impl_data.assoc_ty_values
                                           .iter()
-                                          .find(|v| v.name == goal_projection.name)
+                                          .find(|v| v.name == associated_ty_data.name)
                                           .map(|v| &v.value)
                                           .unwrap_or_else(|| {
                                               panic!("impl `{:?}` has no definition for `{}`",
-                                                     self.impl_id, goal_projection.name)
+                                                     self.impl_id, associated_ty_data.name)
                                           });
 
             // instantiate the trait-ref, where-clause, and assoc-ty-value all together,
@@ -75,7 +77,10 @@ impl<'s> NormalizeWithImpl<'s> {
 
         // Unify the trait-ref we are looking for (`self.goal`) with
         // the trait-ref that the impl supplies (if we can).
-        self.fulfill.unify(&environment, &self.goal.projection.trait_ref, &impl_trait_ref)?;
+        let num_trait_params = trait_data.parameter_kinds.len();
+        let (goal_trait_params, goal_other_params) = goal_projection.parameters.split_at(num_trait_params);
+        assert!(goal_other_params.is_empty()); // not handling generic associated tys yet
+        self.fulfill.unify(&environment, goal_trait_params, &impl_trait_ref.parameters[..])?;
 
         // Unify the result of normalization (`self.goal.ty`) with the
         // value that this impl provides (`assoc_ty_value`).

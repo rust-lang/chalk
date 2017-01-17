@@ -16,6 +16,9 @@ pub struct Program {
 
     /// For each trait:
     pub trait_data: HashMap<ItemId, TraitData>,
+
+    /// For each trait:
+    pub associated_ty_data: HashMap<ItemId, AssociatedTyData>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -27,17 +30,7 @@ pub enum TypeName {
     ForAll(UniverseIndex),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
-    AssociatedType(AssociatedType),
-}
-
-/// Represents an associated item like `Iterator::Item`.  This is used
-/// when we have tried to normalize a projection like `T::Item` but
-/// couldn't find a better representation.  In that case, we generate
-/// an **application type** like `(Iterator::Item)<T>`.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AssociatedType {
-    pub trait_id: ItemId,
-    pub name: Identifier,
+    AssociatedType(ItemId),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -81,7 +74,22 @@ pub struct ImplData {
 pub struct TraitData {
     pub parameter_kinds: Vec<ParameterKind<Identifier>>, // including the implicit `Self` as param 0
     pub where_clauses: Vec<WhereClause>,
-    pub assoc_ty_names: Vec<Identifier>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AssociatedTyData {
+    /// The trait this associated type is defined in.
+    pub trait_id: ItemId,
+
+    /// Name of this associated type.
+    pub name: Identifier,
+
+    /// Parameters on this associated type, beginning with those from the trait,
+    /// but possibly including more.
+    pub parameter_kinds: Vec<ParameterKind<Identifier>>,
+
+    /// Where clauses that must hold for the projection be well-formed.
+    pub where_clauses: Vec<WhereClause>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -166,8 +174,8 @@ pub type Parameter = ParameterKind<Ty, Lifetime>;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ProjectionTy {
-    pub trait_ref: TraitRef,
-    pub name: Identifier,
+    pub associated_ty_id: ItemId,
+    pub parameters: Vec<Parameter>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

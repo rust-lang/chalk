@@ -387,7 +387,7 @@ fn normalize() {
                 refined_goal: Quantified {
                     value: Constrained {
                         value: [
-                            Vec<!1>: Iterator<Item = !1>
+                            <Vec<!1> as Iterator>::Item ==> !1
                         ],
                         constraints: []
                     },
@@ -406,7 +406,7 @@ fn normalize() {
                 refined_goal: Quantified {
                     value: Constrained {
                         value: [
-                            Vec<!1>: Iterator<Item = !1>
+                            <Vec<!1> as Iterator>::Item ==> !1
                         ],
                         constraints: []
                     },
@@ -429,7 +429,7 @@ fn normalize() {
                 refined_goal: Quantified {
                     value: Constrained {
                         value: [
-                            !1: Iterator<Item = u32>
+                            <!1 as Iterator>::Item ==> u32
                         ],
                         constraints: []
                     },
@@ -452,7 +452,7 @@ fn normalize() {
                 refined_goal: Quantified {
                     value: Constrained {
                         value: [
-                            !1: Iterator<Item = (Iterator::Item)<!1>>
+                            <!1 as Iterator>::Item ==> (Iterator::Item)<!1>
                         ],
                         constraints: []
                     },
@@ -486,7 +486,7 @@ fn normalize_rev_infer() {
                 refined_goal: Quantified {
                     value: Constrained {
                         value: [
-                            u32: Identity<Item = u32>
+                            <u32 as Identity>::Item ==> u32
                         ],
                         constraints: []
                     },

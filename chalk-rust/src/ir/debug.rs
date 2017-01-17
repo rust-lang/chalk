@@ -4,10 +4,18 @@ use super::*;
 
 impl Debug for ItemId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        with_current_program(|prog| {
-            match prog.and_then(|p| p.type_kinds.get(self)) {
-                Some(k) => write!(fmt, "{}", k.name),
-                None => fmt.debug_struct("ItemId").field("index", &self.index).finish(),
+        with_current_program(|p| match p {
+            Some(prog) => {
+                if let Some(k) = prog.type_kinds.get(self) {
+                    write!(fmt, "{}", k.name)
+                } else if let Some(k) = prog.associated_ty_data.get(self) {
+                    write!(fmt, "({:?}::{})", k.trait_id, k.name)
+                } else {
+                    fmt.debug_struct("ItemId").field("index", &self.index).finish()
+                }
+            }
+            None => {
+                fmt.debug_struct("ItemId").field("index", &self.index).finish()
             }
         })
     }
@@ -26,12 +34,6 @@ impl Debug for TypeName {
             TypeName::ForAll(universe) => write!(fmt, "!{}", universe.counter),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
         }
-    }
-}
-
-impl Debug for AssociatedType {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "({:?}::{})", self.trait_id, self.name)
     }
 }
 
@@ -90,7 +92,25 @@ impl Debug for TraitRef {
 
 impl Debug for ProjectionTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "<{:?}>::{}", self.trait_ref, self.name)
+        with_current_program(|p| match p {
+            Some(program) => {
+                let associated_ty_data = &program.associated_ty_data[&self.associated_ty_id];
+                let trait_id = associated_ty_data.trait_id;
+                let trait_data = &program.trait_data[&trait_id];
+                let trait_num_params = trait_data.parameter_kinds.len();
+                let (trait_params, other_params) = self.parameters.split_at(trait_num_params);
+                write!(fmt,
+                       "<{:?} as {:?}{:?}>::{}{:?}",
+                       &trait_params[0],
+                       trait_id,
+                       Angle(&trait_params[1..]),
+                       associated_ty_data.name,
+                       Angle(&other_params))
+            }
+            None => {
+                write!(fmt, "({:?}){:?}", self.associated_ty_id, Angle(&self.parameters))
+            }
+        })
     }
 }
 
@@ -123,20 +143,7 @@ impl<'a> Debug for Assignment<'a> {
 
 impl Debug for Normalize {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let assign: &Debug = &Assignment(self.projection.name, &self.ty);
-        let args: Vec<_> = self.projection
-            .trait_ref
-            .parameters
-            .iter()
-            .skip(1)
-            .map(|n| n as &Debug)
-            .chain(Some(assign))
-            .collect();
-        write!(fmt,
-               "{:?}: {:?}{:?}",
-               self.projection.trait_ref.parameters[0],
-               self.projection.trait_ref.trait_id,
-               Angle(&args))
+        write!(fmt, "{:?} ==> {:?}", self.projection, self.ty)
     }
 }
 

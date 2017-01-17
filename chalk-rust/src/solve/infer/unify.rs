@@ -15,7 +15,7 @@ impl InferenceTable {
                     a: &T,
                     b: &T)
                     -> Result<UnificationResult>
-        where T: Zip + Debug,
+        where T: ?Sized + Zip + Debug,
     {
         debug_heading!("unify(a={:?}\
                      ,\n      b={:?})", a, b);
@@ -331,7 +331,7 @@ impl<'u, 't> OccursCheck<'u, 't> {
                 // FIXME(#6) -- this rejects constraints like
                 // `exists(A -> A = Item0<<A as Item1>::foo>)`, which
                 // is probably too conservative.
-                for parameter in &proj.trait_ref.parameters {
+                for parameter in &proj.parameters {
                     self.check_parameter(parameter)?;
                 }
             }

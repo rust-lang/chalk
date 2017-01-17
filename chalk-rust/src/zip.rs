@@ -22,13 +22,19 @@ pub trait Zip {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()>;
 }
 
-impl<'a, T: Zip> Zip for &'a T {
+impl<'a, T: ?Sized + Zip> Zip for &'a T {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         <T as Zip>::zip_with(zipper, a, b)
     }
 }
 
 impl<T: Zip> Zip for Vec<T> {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        <[T] as Zip>::zip_with(zipper, a, b)
+    }
+}
+
+impl<T: Zip> Zip for [T] {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         if a.len() != b.len() {
             bail!("cannot zip arrays of different lengths: {} vs {}",
@@ -135,8 +141,8 @@ impl Zip for ApplicationTy {
 
 impl Zip for ProjectionTy {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &a.trait_ref, &b.trait_ref)?;
-        Zip::zip_with(zipper, &a.name, &b.name)?;
+        Zip::zip_with(zipper, &a.associated_ty_id, &b.associated_ty_id)?;
+        Zip::zip_with(zipper, &a.parameters, &b.parameters)?;
         Ok(())
     }
 }
