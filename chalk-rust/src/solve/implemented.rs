@@ -38,7 +38,7 @@ impl<'s> Implemented<'s> {
         let result = solver.solve_any(techniques, &env_goal, |solver, technique| {
             match technique {
                 Technique::WithClause(clause_index) => {
-                    MatchClause::new(solver, &env_goal, clause_index).solve()
+                    MatchClause::new(solver, &env_goal, &environment.clauses[clause_index]).solve()
                 }
                 Technique::WithImpl(impl_id) => {
                     ImplementedWithImpl::new(solver, env_goal.clone(), impl_id).solve()

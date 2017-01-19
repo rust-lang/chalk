@@ -13,7 +13,7 @@ pub struct MatchClause<'s, G: 's> {
     fulfill: Fulfill<'s>,
     environment: Arc<Environment>,
     goal: &'s G,
-    clause_index: usize,
+    clause: &'s WhereClause,
 }
 
 impl<'s, G> MatchClause<'s, G>
@@ -21,20 +21,18 @@ impl<'s, G> MatchClause<'s, G>
 {
     pub fn new(solver: &'s mut Solver,
                q: &'s Quantified<InEnvironment<G>>,
-               clause_index: usize)
+               clause: &'s WhereClause)
                -> Self {
         let InEnvironment { ref environment, ref goal } = q.value;
         let infer = InferenceTable::new_with_vars(&q.binders);
-        assert!(clause_index < environment.clauses.len());
         let environment = environment.clone();
         let fulfill = Fulfill::new(solver, infer);
-        MatchClause { fulfill, environment, goal, clause_index }
+        MatchClause { fulfill, environment, goal, clause }
     }
 
     pub fn solve(mut self) -> Result<Solution<InEnvironment<G>>> {
         let environment = self.environment.clone();
-        let clause = &environment.clauses[self.clause_index];
-        self.fulfill.unify(&environment, &self.goal.clone().cast(), &clause)?;
+        self.fulfill.unify(&environment, &self.goal.clone().cast(), &self.clause)?;
         let successful = self.fulfill.solve_all()?;
         let refined_goal = self.fulfill.refine_goal(InEnvironment::new(&environment, &self.goal));
         Ok(Solution {
