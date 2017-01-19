@@ -799,3 +799,56 @@ fn forall_projection() {
         }
     }
 }
+
+#[test]
+fn elaborate_eq() {
+    test! {
+        program {
+            trait PartialEq { }
+            trait Eq where Self: PartialEq { }
+        }
+
+        goal {
+            forall<T> {
+                if (T: Eq) {
+                    T: PartialEq
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            !1: PartialEq
+                        ],
+                        constraints: []
+                    },
+                    binders: []
+                }
+            }"
+        }
+    }
+}
+
+#[test]
+fn elaborate_transitive() {
+    test! {
+        program {
+            trait PartialEq { }
+            trait Eq where Self: PartialEq { }
+            trait StrictEq where Self: Eq { }
+        }
+
+        goal {
+            forall<T> {
+                if (T: StrictEq) {
+                    T: PartialEq
+                }
+            }
+        } yields {
+            // FIXME this should work
+            "`PartialEq` is not implemented for `!1`"
+        }
+    }
+}

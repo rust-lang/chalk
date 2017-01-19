@@ -7,6 +7,7 @@ mod instantiate;
 mod shifter;
 
 pub use self::shifter::Shifter;
+pub use self::instantiate::Subst;
 
 pub trait Folder {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty>;

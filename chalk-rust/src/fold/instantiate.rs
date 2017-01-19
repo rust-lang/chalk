@@ -10,7 +10,11 @@ pub struct Subst<'s> {
 }
 
 impl<'s> Subst<'s> {
-    fn apply<T: Fold>(parameters: &[Parameter], value: &T) -> T::Result {
+    pub fn new(parameters: &'s [Parameter]) -> Subst<'s> {
+        Subst { parameters }
+    }
+
+    pub fn apply<T: Fold>(parameters: &[Parameter], value: &T) -> T::Result {
         value.fold_with(&mut Subst { parameters }, 0).unwrap()
     }
 }
