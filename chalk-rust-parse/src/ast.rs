@@ -33,7 +33,11 @@ pub struct TraitDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
     pub where_clauses: Vec<WhereClause>,
-    pub assoc_ty_names: Vec<Identifier>,
+    pub assoc_ty_defns: Vec<AssocTyDefn>,
+}
+
+pub struct AssocTyDefn {
+    pub name: Identifier,
 }
 
 pub struct CrateDefn {

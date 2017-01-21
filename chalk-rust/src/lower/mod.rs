@@ -117,8 +117,8 @@ impl LowerProgram for Program {
         let mut associated_ty_ids = HashMap::new();
         for (&(_, item), &item_id) in flat_items.iter().zip(&item_ids) {
             if let Item::TraitDefn(ref d) = *item {
-                for &name in &d.assoc_ty_names {
-                    associated_ty_ids.insert((item_id, name.str), next_item_id());
+                for defn in &d.assoc_ty_defns {
+                    associated_ty_ids.insert((item_id, defn.name.str), next_item_id());
                 }
             }
         }
@@ -156,8 +156,8 @@ impl LowerProgram for Program {
                     trait_data.insert(item_id, d.lower_trait(crate_name, &env)?);
 
                     let trait_data = &trait_data[&item_id];
-                    for &name in &d.assoc_ty_names {
-                        let associated_ty_id = associated_ty_ids[&(item_id, name.str)];
+                    for defn in &d.assoc_ty_defns {
+                        let associated_ty_id = associated_ty_ids[&(item_id, defn.name.str)];
 
                         // Given `trait Foo<'a, T>`, produce a trait ref like
                         //
@@ -192,7 +192,7 @@ impl LowerProgram for Program {
 
                         associated_ty_data.insert(associated_ty_id, ir::AssociatedTyData {
                             trait_id: item_id,
-                            name: name.str,
+                            name: defn.name.str,
                             parameter_kinds: trait_data.parameter_kinds.clone(),
                             where_clauses: vec![ir::WhereClause::Implemented(trait_ref)]
                         });

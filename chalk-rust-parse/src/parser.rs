@@ -43,9 +43,9 @@ mod __parse__Goal {
         Nt_40R(usize),
         NtAngle_3cParameter_3e(Vec<Parameter>),
         NtAngle_3cParameterKind_3e(Vec<ParameterKind>),
-        NtAssocTyName(Identifier),
-        NtAssocTyName_2a(::std::vec::Vec<Identifier>),
-        NtAssocTyName_2b(::std::vec::Vec<Identifier>),
+        NtAssocTyDefn(AssocTyDefn),
+        NtAssocTyDefn_2a(::std::vec::Vec<AssocTyDefn>),
+        NtAssocTyDefn_2b(::std::vec::Vec<AssocTyDefn>),
         NtAssocTyValue(AssocTyValue),
         NtAssocTyValue_2a(::std::vec::Vec<AssocTyValue>),
         NtAssocTyValue_2b(::std::vec::Vec<AssocTyValue>),
@@ -1550,7 +1550,7 @@ mod __parse__Goal {
                 6
             }
             11 => {
-                // AssocTyName = "type", Id, ";" => ActionFn(18);
+                // AssocTyDefn = "type", Id, ";" => ActionFn(18);
                 let __sym2 = __pop_Term_22_3b_22(__symbols);
                 let __sym1 = __pop_NtId(__symbols);
                 let __sym0 = __pop_Term_22type_22(__symbols);
@@ -1559,51 +1559,51 @@ mod __parse__Goal {
                 let __nt = super::__action18::<>(input, __sym0, __sym1, __sym2);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
-                __symbols.push((__start, __Symbol::NtAssocTyName(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn(__nt), __end));
                 7
             }
             12 => {
-                // AssocTyName* =  => ActionFn(51);
+                // AssocTyDefn* =  => ActionFn(51);
                 let __start = __symbols.last().map(|s| s.2.clone()).unwrap_or_default();
                 let __end = __lookahead_start.cloned().unwrap_or_else(|| __start.clone());
                 let __nt = super::__action51::<>(input, &__start, &__end);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 0);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2a(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2a(__nt), __end));
                 8
             }
             13 => {
-                // AssocTyName* = AssocTyName+ => ActionFn(52);
-                let __sym0 = __pop_NtAssocTyName_2b(__symbols);
+                // AssocTyDefn* = AssocTyDefn+ => ActionFn(52);
+                let __sym0 = __pop_NtAssocTyDefn_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
                 let __nt = super::__action52::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2a(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2a(__nt), __end));
                 8
             }
             14 => {
-                // AssocTyName+ = AssocTyName => ActionFn(69);
-                let __sym0 = __pop_NtAssocTyName(__symbols);
+                // AssocTyDefn+ = AssocTyDefn => ActionFn(69);
+                let __sym0 = __pop_NtAssocTyDefn(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
                 let __nt = super::__action69::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2b(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2b(__nt), __end));
                 9
             }
             15 => {
-                // AssocTyName+ = AssocTyName+, AssocTyName => ActionFn(70);
-                let __sym1 = __pop_NtAssocTyName(__symbols);
-                let __sym0 = __pop_NtAssocTyName_2b(__symbols);
+                // AssocTyDefn+ = AssocTyDefn+, AssocTyDefn => ActionFn(70);
+                let __sym1 = __pop_NtAssocTyDefn(__symbols);
+                let __sym0 = __pop_NtAssocTyDefn_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym1.2.clone();
                 let __nt = super::__action70::<>(input, __sym0, __sym1);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2b(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2b(__nt), __end));
                 9
             }
             16 => {
@@ -2331,9 +2331,9 @@ mod __parse__Goal {
                 40
             }
             76 => {
-                // TraitDefn = "trait", Id, Angle<ParameterKind>, WhereClauses, "{", AssocTyName+, "}" => ActionFn(92);
+                // TraitDefn = "trait", Id, Angle<ParameterKind>, WhereClauses, "{", AssocTyDefn+, "}" => ActionFn(92);
                 let __sym6 = __pop_Term_22_7d_22(__symbols);
-                let __sym5 = __pop_NtAssocTyName_2b(__symbols);
+                let __sym5 = __pop_NtAssocTyDefn_2b(__symbols);
                 let __sym4 = __pop_Term_22_7b_22(__symbols);
                 let __sym3 = __pop_NtWhereClauses(__symbols);
                 let __sym2 = __pop_NtAngle_3cParameterKind_3e(__symbols);
@@ -2864,33 +2864,33 @@ mod __parse__Goal {
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_NtAssocTyName<
+    fn __pop_NtAssocTyDefn<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Identifier, usize) {
+    ) -> (usize, AssocTyDefn, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtAssocTyName(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::NtAssocTyDefn(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_NtAssocTyName_2a<
+    fn __pop_NtAssocTyDefn_2a<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Identifier>, usize) {
+    ) -> (usize, ::std::vec::Vec<AssocTyDefn>, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtAssocTyName_2a(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::NtAssocTyDefn_2a(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_NtAssocTyName_2b<
+    fn __pop_NtAssocTyDefn_2b<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Identifier>, usize) {
+    ) -> (usize, ::std::vec::Vec<AssocTyDefn>, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtAssocTyName_2b(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::NtAssocTyDefn_2b(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -3328,9 +3328,9 @@ mod __parse__Program {
         Nt_40R(usize),
         NtAngle_3cParameter_3e(Vec<Parameter>),
         NtAngle_3cParameterKind_3e(Vec<ParameterKind>),
-        NtAssocTyName(Identifier),
-        NtAssocTyName_2a(::std::vec::Vec<Identifier>),
-        NtAssocTyName_2b(::std::vec::Vec<Identifier>),
+        NtAssocTyDefn(AssocTyDefn),
+        NtAssocTyDefn_2a(::std::vec::Vec<AssocTyDefn>),
+        NtAssocTyDefn_2b(::std::vec::Vec<AssocTyDefn>),
         NtAssocTyValue(AssocTyValue),
         NtAssocTyValue_2a(::std::vec::Vec<AssocTyValue>),
         NtAssocTyValue_2b(::std::vec::Vec<AssocTyValue>),
@@ -4955,7 +4955,7 @@ mod __parse__Program {
                 6
             }
             11 => {
-                // AssocTyName = "type", Id, ";" => ActionFn(18);
+                // AssocTyDefn = "type", Id, ";" => ActionFn(18);
                 let __sym2 = __pop_Term_22_3b_22(__symbols);
                 let __sym1 = __pop_NtId(__symbols);
                 let __sym0 = __pop_Term_22type_22(__symbols);
@@ -4964,51 +4964,51 @@ mod __parse__Program {
                 let __nt = super::__action18::<>(input, __sym0, __sym1, __sym2);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
-                __symbols.push((__start, __Symbol::NtAssocTyName(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn(__nt), __end));
                 7
             }
             12 => {
-                // AssocTyName* =  => ActionFn(51);
+                // AssocTyDefn* =  => ActionFn(51);
                 let __start = __symbols.last().map(|s| s.2.clone()).unwrap_or_default();
                 let __end = __lookahead_start.cloned().unwrap_or_else(|| __start.clone());
                 let __nt = super::__action51::<>(input, &__start, &__end);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 0);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2a(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2a(__nt), __end));
                 8
             }
             13 => {
-                // AssocTyName* = AssocTyName+ => ActionFn(52);
-                let __sym0 = __pop_NtAssocTyName_2b(__symbols);
+                // AssocTyDefn* = AssocTyDefn+ => ActionFn(52);
+                let __sym0 = __pop_NtAssocTyDefn_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
                 let __nt = super::__action52::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2a(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2a(__nt), __end));
                 8
             }
             14 => {
-                // AssocTyName+ = AssocTyName => ActionFn(69);
-                let __sym0 = __pop_NtAssocTyName(__symbols);
+                // AssocTyDefn+ = AssocTyDefn => ActionFn(69);
+                let __sym0 = __pop_NtAssocTyDefn(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
                 let __nt = super::__action69::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2b(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2b(__nt), __end));
                 9
             }
             15 => {
-                // AssocTyName+ = AssocTyName+, AssocTyName => ActionFn(70);
-                let __sym1 = __pop_NtAssocTyName(__symbols);
-                let __sym0 = __pop_NtAssocTyName_2b(__symbols);
+                // AssocTyDefn+ = AssocTyDefn+, AssocTyDefn => ActionFn(70);
+                let __sym1 = __pop_NtAssocTyDefn(__symbols);
+                let __sym0 = __pop_NtAssocTyDefn_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym1.2.clone();
                 let __nt = super::__action70::<>(input, __sym0, __sym1);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2b(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2b(__nt), __end));
                 9
             }
             16 => {
@@ -5736,9 +5736,9 @@ mod __parse__Program {
                 40
             }
             76 => {
-                // TraitDefn = "trait", Id, Angle<ParameterKind>, WhereClauses, "{", AssocTyName+, "}" => ActionFn(92);
+                // TraitDefn = "trait", Id, Angle<ParameterKind>, WhereClauses, "{", AssocTyDefn+, "}" => ActionFn(92);
                 let __sym6 = __pop_Term_22_7d_22(__symbols);
-                let __sym5 = __pop_NtAssocTyName_2b(__symbols);
+                let __sym5 = __pop_NtAssocTyDefn_2b(__symbols);
                 let __sym4 = __pop_Term_22_7b_22(__symbols);
                 let __sym3 = __pop_NtWhereClauses(__symbols);
                 let __sym2 = __pop_NtAngle_3cParameterKind_3e(__symbols);
@@ -6269,33 +6269,33 @@ mod __parse__Program {
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_NtAssocTyName<
+    fn __pop_NtAssocTyDefn<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Identifier, usize) {
+    ) -> (usize, AssocTyDefn, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtAssocTyName(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::NtAssocTyDefn(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_NtAssocTyName_2a<
+    fn __pop_NtAssocTyDefn_2a<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Identifier>, usize) {
+    ) -> (usize, ::std::vec::Vec<AssocTyDefn>, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtAssocTyName_2a(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::NtAssocTyDefn_2a(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_NtAssocTyName_2b<
+    fn __pop_NtAssocTyDefn_2b<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Identifier>, usize) {
+    ) -> (usize, ::std::vec::Vec<AssocTyDefn>, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtAssocTyName_2b(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::NtAssocTyDefn_2b(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -6733,9 +6733,9 @@ mod __parse__Ty {
         Nt_40R(usize),
         NtAngle_3cParameter_3e(Vec<Parameter>),
         NtAngle_3cParameterKind_3e(Vec<ParameterKind>),
-        NtAssocTyName(Identifier),
-        NtAssocTyName_2a(::std::vec::Vec<Identifier>),
-        NtAssocTyName_2b(::std::vec::Vec<Identifier>),
+        NtAssocTyDefn(AssocTyDefn),
+        NtAssocTyDefn_2a(::std::vec::Vec<AssocTyDefn>),
+        NtAssocTyDefn_2b(::std::vec::Vec<AssocTyDefn>),
         NtAssocTyValue(AssocTyValue),
         NtAssocTyValue_2a(::std::vec::Vec<AssocTyValue>),
         NtAssocTyValue_2b(::std::vec::Vec<AssocTyValue>),
@@ -7460,7 +7460,7 @@ mod __parse__Ty {
                 6
             }
             11 => {
-                // AssocTyName = "type", Id, ";" => ActionFn(18);
+                // AssocTyDefn = "type", Id, ";" => ActionFn(18);
                 let __sym2 = __pop_Term_22_3b_22(__symbols);
                 let __sym1 = __pop_NtId(__symbols);
                 let __sym0 = __pop_Term_22type_22(__symbols);
@@ -7469,51 +7469,51 @@ mod __parse__Ty {
                 let __nt = super::__action18::<>(input, __sym0, __sym1, __sym2);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 3);
-                __symbols.push((__start, __Symbol::NtAssocTyName(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn(__nt), __end));
                 7
             }
             12 => {
-                // AssocTyName* =  => ActionFn(51);
+                // AssocTyDefn* =  => ActionFn(51);
                 let __start = __symbols.last().map(|s| s.2.clone()).unwrap_or_default();
                 let __end = __lookahead_start.cloned().unwrap_or_else(|| __start.clone());
                 let __nt = super::__action51::<>(input, &__start, &__end);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 0);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2a(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2a(__nt), __end));
                 8
             }
             13 => {
-                // AssocTyName* = AssocTyName+ => ActionFn(52);
-                let __sym0 = __pop_NtAssocTyName_2b(__symbols);
+                // AssocTyDefn* = AssocTyDefn+ => ActionFn(52);
+                let __sym0 = __pop_NtAssocTyDefn_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
                 let __nt = super::__action52::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2a(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2a(__nt), __end));
                 8
             }
             14 => {
-                // AssocTyName+ = AssocTyName => ActionFn(69);
-                let __sym0 = __pop_NtAssocTyName(__symbols);
+                // AssocTyDefn+ = AssocTyDefn => ActionFn(69);
+                let __sym0 = __pop_NtAssocTyDefn(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
                 let __nt = super::__action69::<>(input, __sym0);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 1);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2b(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2b(__nt), __end));
                 9
             }
             15 => {
-                // AssocTyName+ = AssocTyName+, AssocTyName => ActionFn(70);
-                let __sym1 = __pop_NtAssocTyName(__symbols);
-                let __sym0 = __pop_NtAssocTyName_2b(__symbols);
+                // AssocTyDefn+ = AssocTyDefn+, AssocTyDefn => ActionFn(70);
+                let __sym1 = __pop_NtAssocTyDefn(__symbols);
+                let __sym0 = __pop_NtAssocTyDefn_2b(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym1.2.clone();
                 let __nt = super::__action70::<>(input, __sym0, __sym1);
                 let __states_len = __states.len();
                 __states.truncate(__states_len - 2);
-                __symbols.push((__start, __Symbol::NtAssocTyName_2b(__nt), __end));
+                __symbols.push((__start, __Symbol::NtAssocTyDefn_2b(__nt), __end));
                 9
             }
             16 => {
@@ -8241,9 +8241,9 @@ mod __parse__Ty {
                 40
             }
             76 => {
-                // TraitDefn = "trait", Id, Angle<ParameterKind>, WhereClauses, "{", AssocTyName+, "}" => ActionFn(92);
+                // TraitDefn = "trait", Id, Angle<ParameterKind>, WhereClauses, "{", AssocTyDefn+, "}" => ActionFn(92);
                 let __sym6 = __pop_Term_22_7d_22(__symbols);
-                let __sym5 = __pop_NtAssocTyName_2b(__symbols);
+                let __sym5 = __pop_NtAssocTyDefn_2b(__symbols);
                 let __sym4 = __pop_Term_22_7b_22(__symbols);
                 let __sym3 = __pop_NtWhereClauses(__symbols);
                 let __sym2 = __pop_NtAngle_3cParameterKind_3e(__symbols);
@@ -8774,33 +8774,33 @@ mod __parse__Ty {
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_NtAssocTyName<
+    fn __pop_NtAssocTyDefn<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Identifier, usize) {
+    ) -> (usize, AssocTyDefn, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtAssocTyName(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::NtAssocTyDefn(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_NtAssocTyName_2a<
+    fn __pop_NtAssocTyDefn_2a<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Identifier>, usize) {
+    ) -> (usize, ::std::vec::Vec<AssocTyDefn>, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtAssocTyName_2a(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::NtAssocTyDefn_2a(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_NtAssocTyName_2b<
+    fn __pop_NtAssocTyDefn_2b<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Identifier>, usize) {
+    ) -> (usize, ::std::vec::Vec<AssocTyDefn>, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::NtAssocTyName_2b(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::NtAssocTyDefn_2b(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -11423,7 +11423,7 @@ pub fn __action17<
     (_, p, _): (usize, Vec<ParameterKind>, usize),
     (_, w, _): (usize, Vec<WhereClause>, usize),
     (_, _, _): (usize, &'input str, usize),
-    (_, a, _): (usize, ::std::vec::Vec<Identifier>, usize),
+    (_, a, _): (usize, ::std::vec::Vec<AssocTyDefn>, usize),
     (_, _, _): (usize, &'input str, usize),
 ) -> TraitDefn
 {
@@ -11431,7 +11431,7 @@ pub fn __action17<
         name: n,
         parameter_kinds: p,
         where_clauses: w,
-        assoc_ty_names: a,
+        assoc_ty_defns: a,
     }
 }
 
@@ -11441,11 +11441,11 @@ pub fn __action18<
 >(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
-    (_, __0, _): (usize, Identifier, usize),
+    (_, name, _): (usize, Identifier, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Identifier
+) -> AssocTyDefn
 {
-    (__0)
+    AssocTyDefn { name: name }
 }
 
 #[allow(unused_variables)]
@@ -11901,7 +11901,7 @@ pub fn __action51<
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Identifier>
+) -> ::std::vec::Vec<AssocTyDefn>
 {
     vec![]
 }
@@ -11911,8 +11911,8 @@ pub fn __action52<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
-) -> ::std::vec::Vec<Identifier>
+    (_, v, _): (usize, ::std::vec::Vec<AssocTyDefn>, usize),
+) -> ::std::vec::Vec<AssocTyDefn>
 {
     v
 }
@@ -12116,8 +12116,8 @@ pub fn __action69<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Identifier, usize),
-) -> ::std::vec::Vec<Identifier>
+    (_, __0, _): (usize, AssocTyDefn, usize),
+) -> ::std::vec::Vec<AssocTyDefn>
 {
     vec![__0]
 }
@@ -12127,9 +12127,9 @@ pub fn __action70<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
-    (_, e, _): (usize, Identifier, usize),
-) -> ::std::vec::Vec<Identifier>
+    (_, v, _): (usize, ::std::vec::Vec<AssocTyDefn>, usize),
+    (_, e, _): (usize, AssocTyDefn, usize),
+) -> ::std::vec::Vec<AssocTyDefn>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -12566,7 +12566,7 @@ pub fn __action92<
     __2: (usize, Vec<ParameterKind>, usize),
     __3: (usize, Vec<WhereClause>, usize),
     __4: (usize, &'input str, usize),
-    __5: (usize, ::std::vec::Vec<Identifier>, usize),
+    __5: (usize, ::std::vec::Vec<AssocTyDefn>, usize),
     __6: (usize, &'input str, usize),
 ) -> TraitDefn
 {

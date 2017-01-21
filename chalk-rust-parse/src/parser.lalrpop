@@ -43,16 +43,16 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{" <a:AssocTyName*> "}" => TraitDefn {
+    "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn {
         name: n,
         parameter_kinds: p,
         where_clauses: w,
-        assoc_ty_names: a,
+        assoc_ty_defns: a,
     }
 };
 
-AssocTyName: Identifier = {
-    "type" <Id> ";"
+AssocTyDefn: AssocTyDefn = {
+    "type" <name:Id> ";" => AssocTyDefn { name: name }
 };
 
 Impl: Impl = {
