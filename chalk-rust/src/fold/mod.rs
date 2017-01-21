@@ -185,7 +185,6 @@ struct_fold!(ApplicationTy[] { name, parameters });
 struct_fold!(ProjectionTy[] { associated_ty_id, parameters });
 struct_fold!(TraitRef[] { trait_id, parameters });
 struct_fold!(Normalize[] { projection, ty });
-struct_fold!(ImplData[] { parameter_kinds, trait_ref, assoc_ty_values, where_clauses });
 struct_fold!(AssocTyValue[] { name, value });
 struct_fold!(Environment[] { universe, clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);

@@ -80,6 +80,24 @@ pub trait LowerProgram {
 
 impl LowerProgram for Program {
     fn lower(&self) -> Result<ir::Program> {
+        let mut flat_items = vec![];
+        flatten(intern("crate"), &self.items, &mut flat_items);
+
+        fn flatten<'a>(crate_name: ir::Identifier,
+                       items: &'a [Item],
+                       into: &mut Vec<(ir::Identifier, &'a Item)>) {
+            for item in items {
+                match *item {
+                    Item::StructDefn(_) |
+                    Item::TraitDefn(_) |
+                    Item::Impl(_) =>
+                        into.push((crate_name, item)),
+                    Item::CrateDefn(ref defn) =>
+                        flatten(defn.name.str, &defn.items, into),
+                }
+            }
+        }
+
         let mut index = 0;
         let mut next_item_id = || -> ir::ItemId {
             let i = index;
@@ -87,17 +105,17 @@ impl LowerProgram for Program {
             ir::ItemId { index: i }
         };
 
-        // Make a vector mapping each thing in `self.items` to an id,
+        // Make a vector mapping each thing in `flat_items` to an id,
         // based just on its position:
         let item_ids: Vec<_> =
-            self.items
-                .iter()
-                .map(|_| next_item_id())
-                .collect();
+            flat_items
+            .iter()
+            .map(|_| next_item_id())
+            .collect();
 
         // Create ids for associated types
         let mut associated_ty_ids = HashMap::new();
-        for (item, &item_id) in self.items.iter().zip(&item_ids) {
+        for (&(_, item), &item_id) in flat_items.iter().zip(&item_ids) {
             if let Item::TraitDefn(ref d) = *item {
                 for &name in &d.assoc_ty_names {
                     associated_ty_ids.insert((item_id, name.str), next_item_id());
@@ -107,11 +125,12 @@ impl LowerProgram for Program {
 
         let mut type_ids = HashMap::new();
         let mut type_kinds = HashMap::new();
-        for (item, &item_id) in self.items.iter().zip(&item_ids) {
+        for (&(crate_name, item), &item_id) in flat_items.iter().zip(&item_ids) {
             let k = match *item {
-                Item::StructDefn(ref d) => d.lower_type_kind()?,
-                Item::TraitDefn(ref d) => d.lower_type_kind()?,
+                Item::StructDefn(ref d) => d.lower_type_kind(crate_name)?,
+                Item::TraitDefn(ref d) => d.lower_type_kind(crate_name)?,
                 Item::Impl(_) => continue,
+                Item::CrateDefn(_) => continue,
             };
             type_ids.insert(k.name, item_id);
             type_kinds.insert(item_id, k);
@@ -120,7 +139,7 @@ impl LowerProgram for Program {
         let mut trait_data = HashMap::new();
         let mut impl_data = HashMap::new();
         let mut associated_ty_data = HashMap::new();
-        for (item, &item_id) in self.items.iter().zip(&item_ids) {
+        for (&(crate_name, item), &item_id) in flat_items.iter().zip(&item_ids) {
             let parameter_map = item.parameter_map();
             let env = Env {
                 type_ids: &type_ids,
@@ -129,11 +148,12 @@ impl LowerProgram for Program {
                 parameter_map: parameter_map,
             };
             match *item {
+                Item::CrateDefn(_) => { }
                 Item::StructDefn(ref _d) => {
                     // where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
                 Item::TraitDefn(ref d) => {
-                    trait_data.insert(item_id, d.lower_trait(&env)?);
+                    trait_data.insert(item_id, d.lower_trait(crate_name, &env)?);
 
                     let trait_data = &trait_data[&item_id];
                     for &name in &d.assoc_ty_names {
@@ -179,7 +199,7 @@ impl LowerProgram for Program {
                     }
                 }
                 Item::Impl(ref d) => {
-                    impl_data.insert(item_id, d.lower_impl(&env)?);
+                    impl_data.insert(item_id, d.lower_impl(crate_name, &env)?);
                 }
             }
         }
@@ -189,7 +209,7 @@ impl LowerProgram for Program {
 }
 
 trait LowerTypeKind {
-    fn lower_type_kind(&self) -> Result<ir::TypeKind>;
+    fn lower_type_kind(&self, crate_name: ir::Identifier) -> Result<ir::TypeKind>;
 }
 
 trait LowerParameterMap {
@@ -226,6 +246,7 @@ impl LowerParameterMap for Item {
         match *self {
             Item::TraitDefn(ref d) => d.synthetic_parameters(),
             Item::StructDefn(..) |
+            Item::CrateDefn(..) |
             Item::Impl(..) => None,
         }
     }
@@ -235,6 +256,7 @@ impl LowerParameterMap for Item {
             Item::TraitDefn(ref d) => d.declared_parameters(),
             Item::StructDefn(ref d) => &d.parameter_kinds,
             Item::Impl(ref d) => &d.parameter_kinds,
+            Item::CrateDefn(_) => &[],
         }
     }
 }
@@ -272,10 +294,11 @@ trait LowerWhereClauses {
 }
 
 impl LowerTypeKind for StructDefn {
-    fn lower_type_kind(&self) -> Result<ir::TypeKind> {
+    fn lower_type_kind(&self, crate_name: ir::Identifier) -> Result<ir::TypeKind> {
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Struct,
             name: self.name.str,
+            crate_name: crate_name,
             parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
         })
     }
@@ -288,10 +311,11 @@ impl LowerWhereClauses for StructDefn {
 }
 
 impl LowerTypeKind for TraitDefn {
-    fn lower_type_kind(&self) -> Result<ir::TypeKind> {
+    fn lower_type_kind(&self, crate_name: ir::Identifier) -> Result<ir::TypeKind> {
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Trait,
             name: self.name.str,
+            crate_name: crate_name,
 
             // for the purposes of the *type*, ignore `Self`:
             parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
@@ -475,12 +499,13 @@ impl LowerLifetime for Lifetime {
 }
 
 trait LowerImpl {
-    fn lower_impl(&self, env: &Env) -> Result<ir::ImplData>;
+    fn lower_impl(&self, crate_name: ir::Identifier, env: &Env) -> Result<ir::ImplData>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, env: &Env) -> Result<ir::ImplData> {
+    fn lower_impl(&self, crate_name: ir::Identifier, env: &Env) -> Result<ir::ImplData> {
         Ok(ir::ImplData {
+            crate_name: crate_name,
             trait_ref: self.trait_ref.lower(env)?,
             parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
             assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(env)).collect()),
@@ -503,12 +528,13 @@ impl LowerAssocTyValue for AssocTyValue {
 }
 
 trait LowerTrait {
-    fn lower_trait(&self, env: &Env) -> Result<ir::TraitData>;
+    fn lower_trait(&self, crate_name: ir::Identifier, env: &Env) -> Result<ir::TraitData>;
 }
 
 impl LowerTrait for TraitDefn {
-    fn lower_trait(&self, env: &Env) -> Result<ir::TraitData> {
+    fn lower_trait(&self, crate_name: ir::Identifier, env: &Env) -> Result<ir::TraitData> {
         Ok(ir::TraitData {
+            crate_name: crate_name,
             parameter_kinds: self.all_parameters(),
             where_clauses: self.lower_where_clauses(&env)?,
         })

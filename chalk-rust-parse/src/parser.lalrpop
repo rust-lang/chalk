@@ -11,6 +11,14 @@ Item: Item = {
     StructDefn => Item::StructDefn(<>),
     TraitDefn => Item::TraitDefn(<>),
     Impl => Item::Impl(<>),
+    Crate => Item::CrateDefn(<>),
+};
+
+Crate: CrateDefn = {
+    "crate" <name:Id> "{" <items:Item*> "}" => CrateDefn {
+        name: name,
+        items: items,
+    },
 };
 
 pub Goal: Box<Goal> = {

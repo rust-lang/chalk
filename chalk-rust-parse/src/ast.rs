@@ -20,6 +20,7 @@ pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
     Impl(Impl),
+    CrateDefn(CrateDefn),
 }
 
 pub struct StructDefn {
@@ -33,6 +34,11 @@ pub struct TraitDefn {
     pub parameter_kinds: Vec<ParameterKind>,
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_names: Vec<Identifier>,
+}
+
+pub struct CrateDefn {
+    pub name: Identifier,
+    pub items: Vec<Item>
 }
 
 pub enum ParameterKind {

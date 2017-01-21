@@ -52,6 +52,7 @@ pub struct ItemId {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {
     pub sort: TypeSort,
+    pub crate_name: Identifier,
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind<Identifier>>,
 }
@@ -64,6 +65,7 @@ pub enum TypeSort {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplData {
+    pub crate_name: Identifier,
     pub parameter_kinds: Vec<ParameterKind<Identifier>>,
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<WhereClause>,
@@ -72,6 +74,7 @@ pub struct ImplData {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitData {
+    pub crate_name: Identifier,
     pub parameter_kinds: Vec<ParameterKind<Identifier>>, // including the implicit `Self` as param 0
     pub where_clauses: Vec<WhereClause>,
 }
