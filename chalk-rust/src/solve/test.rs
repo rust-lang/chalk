@@ -862,3 +862,37 @@ fn elaborate_transitive() {
         }
     }
 }
+
+#[test]
+fn elaborate_normalize() {
+    test! {
+        program {
+            trait Eq { }
+
+            trait Item where <Self as Item>::Out: Eq {
+                type Out;
+            }
+        }
+
+        goal {
+            forall<T, U> {
+                if (T: Item<Out = U>) {
+                    U: Eq
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            !2: Eq
+                        ],
+                        constraints: []
+                    },
+                    binders: []
+                }
+            }"
+        }
+    }
+}
