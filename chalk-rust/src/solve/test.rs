@@ -896,3 +896,67 @@ fn elaborate_normalize() {
         }
     }
 }
+
+// FIXME -- this test is broken. The final result:
+//
+//     <Vec<!1> as Iterable>::Iter<'!2> ==> Iter<'?0, !1>
+//
+// ought not to include `'?0` but rather `'!2`, or at least something
+// equated with `'!2`.
+#[test]
+fn atc1() {
+    test! {
+        program {
+            struct Vec<T> { }
+
+            trait Iterable {
+                type Iter<'a>;
+            }
+
+            impl<T> Iterable for Vec<T> {
+                type Iter<'a> = Iter<'a, T>;
+            }
+
+            trait Iterator {
+                type Item;
+            }
+
+            struct Iter<'a, T> { }
+            struct Ref<'a, T> { }
+
+            impl<'a, T> Iterator for Iter<'a, T> {
+                type Item = Ref<'a, T>;
+            }
+        }
+
+        goal {
+            forall<T> {
+                forall<'a> {
+                    exists<U> {
+                        Vec<T>: Iterable<Iter<'a> = U>
+                    }
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            <Vec<!1> as Iterable>::Iter<'!2> ==> Iter<'?0, !1>
+                        ],
+                        constraints: [
+                            LifetimeEq(
+                                '!2,
+                                '!2
+                            )
+                        ]
+                    },
+                    binders: [
+                        U2
+                    ]
+                }
+            }"
+        }
+    }
+}

@@ -64,3 +64,44 @@ fn goal_quantifiers() {
         assert_eq!(format!("{:?}", goal), "ForAll<type> { Exists<type> { ForAll<type> { ?0: Foo<?1, ?2> } } }");
     });
 }
+
+#[test]
+fn atc_accounting() {
+    let program = Arc::new(parse_and_lower("
+            struct Vec<T> { }
+
+            trait Iterable {
+                type Iter<'a>;
+            }
+
+            impl<T> Iterable for Vec<T> {
+                type Iter<'a> = Iter<'a, T>;
+            }
+
+            struct Iter<'a, T> { }
+    ").unwrap());
+    set_current_program(&program, || {
+        let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
+        println!("{}", impl_text);
+        assert_eq!(&impl_text[..], r#"ImplData {
+    crate_name: "crate",
+    parameter_kinds: [
+        "T"
+    ],
+    trait_ref: Vec<?0> as Iterable,
+    where_clauses: [],
+    assoc_ty_values: [
+        AssocTyValue {
+            name: "Iter",
+            value: Iter<'?0, ?1>
+        }
+    ]
+}"#);
+        let goal = parse_and_lower_goal(&program, "forall<X> { forall<'a> { forall<Y> { \
+                                                   X: Iterable<Iter<'a> = Y> } } }")
+            .unwrap();
+        let goal_text = format!("{:?}", goal);
+        println!("{}", goal_text);
+        assert_eq!(goal_text, "ForAll<type> { ForAll<lifetime> { ForAll<type> { <?2 as Iterable>::Iter<'?1> ==> ?0 } } }");
+    });
+}

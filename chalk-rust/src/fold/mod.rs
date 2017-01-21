@@ -1,11 +1,14 @@
 use errors::*;
 use ir::*;
 use solve::environment::{Environment, InEnvironment};
+use std::fmt::Debug;
 use std::sync::Arc;
 
 mod instantiate;
+mod shifted;
 mod shifter;
 
+pub use self::shifted::Shifted;
 pub use self::shifter::Shifter;
 pub use self::instantiate::Subst;
 
@@ -14,7 +17,7 @@ pub trait Folder {
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime>;
 }
 
-impl<'f, F: Folder> Folder for &'f mut F {
+impl<'f, F: Folder + ?Sized> Folder for &'f mut F {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         (**self).fold_free_var(depth, binders)
     }
@@ -34,7 +37,7 @@ impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
     }
 }
 
-pub trait Fold {
+pub trait Fold: Debug {
     type Result;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result>;
 }

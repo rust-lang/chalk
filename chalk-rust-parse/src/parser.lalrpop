@@ -52,7 +52,10 @@ TraitDefn: TraitDefn = {
 };
 
 AssocTyDefn: AssocTyDefn = {
-    "type" <name:Id> ";" => AssocTyDefn { name: name }
+    "type" <name:Id> <p:Angle<ParameterKind>> ";" => AssocTyDefn {
+        name: name,
+        parameter_kinds: p
+    }
 };
 
 Impl: Impl = {
@@ -76,8 +79,9 @@ ParameterKind: ParameterKind = {
 };
 
 AssocTyValue: AssocTyValue = {
-    "type" <n:Id> "=" <v:Ty> ";" => AssocTyValue {
+    "type" <n:Id> <a:Angle<ParameterKind>> "=" <v:Ty> ";" => AssocTyValue {
         name: n,
+        parameter_kinds: a,
         value: v,
     },
 };
@@ -102,8 +106,8 @@ Parameter: Parameter = {
 };
 
 ProjectionTy: ProjectionTy = {
-    "<" <t:TraitRef<"as">> ">" "::" <n:Id> => ProjectionTy {
-        trait_ref: t, name: n
+    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => ProjectionTy {
+        trait_ref: t, name: n, args: a
     },
 };
 
@@ -114,11 +118,13 @@ WhereClauses: Vec<WhereClause> = {
 
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
-    <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> "=" <ty:Ty> ">" => {
+    <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
+        "=" <ty:Ty> ">" =>
+    {
         let mut args = vec![Parameter::Ty(s)];
         if let Some(a) = a { args.extend(a); }
         let trait_ref = TraitRef { trait_name: t, args: args };
-        let projection = ProjectionTy { trait_ref, name };
+        let projection = ProjectionTy { trait_ref, name, args: a2 };
         WhereClause::ProjectionEq { projection, ty }
     }
 };

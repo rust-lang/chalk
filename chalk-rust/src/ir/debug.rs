@@ -94,15 +94,12 @@ impl Debug for ProjectionTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         with_current_program(|p| match p {
             Some(program) => {
-                let associated_ty_data = &program.associated_ty_data[&self.associated_ty_id];
-                let trait_id = associated_ty_data.trait_id;
-                let trait_data = &program.trait_data[&trait_id];
-                let trait_num_params = trait_data.parameter_kinds.len();
-                let (trait_params, other_params) = self.parameters.split_at(trait_num_params);
+                let (associated_ty_data, trait_params, other_params) =
+                    program.split_projection(self);
                 write!(fmt,
                        "<{:?} as {:?}{:?}>::{}{:?}",
                        &trait_params[0],
-                       trait_id,
+                       associated_ty_data.trait_id,
                        Angle(&trait_params[1..]),
                        associated_ty_data.name,
                        Angle(&other_params))
@@ -191,7 +188,7 @@ impl Debug for Goal {
             Goal::Quantified(qkind, ParameterKind::Ty(()), ref g) =>
                 write!(fmt, "{:?}<type> {{ {:?} }}", qkind, g),
             Goal::Quantified(qkind, ParameterKind::Lifetime(()), ref g) =>
-                write!(fmt, "{:?}<type> {{ {:?} }}", qkind, g),
+                write!(fmt, "{:?}<lifetime> {{ {:?} }}", qkind, g),
             Goal::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
             Goal::And(ref g1, ref g2) => write!(fmt, "({:?}, {:?})", g1, g2),
             Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),

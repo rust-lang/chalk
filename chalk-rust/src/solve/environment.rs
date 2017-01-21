@@ -61,13 +61,10 @@ impl Environment {
                     // ----------------------------------------------------------
                     // T: Trait<U>
 
-                    let associated_ty_id = projection.associated_ty_id;
-                    let associated_ty_data = &program.associated_ty_data[&associated_ty_id];
-                    let trait_data = &program.trait_data[&associated_ty_data.trait_id];
-                    let trait_num_params = trait_data.parameter_kinds.len();
+                    let (associated_ty_data, trait_params, _) = program.split_projection(projection);
                     let trait_ref = TraitRef {
                         trait_id: associated_ty_data.trait_id,
-                        parameters: projection.parameters[..trait_num_params].to_owned(),
+                        parameters: trait_params.to_owned()
                     };
                     push_clause(trait_ref.cast());
                 }

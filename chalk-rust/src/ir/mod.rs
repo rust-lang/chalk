@@ -21,6 +21,19 @@ pub struct Program {
     pub associated_ty_data: HashMap<ItemId, AssociatedTyData>,
 }
 
+impl Program {
+    pub fn split_projection<'p>(&self, projection: &'p ProjectionTy)
+                            -> (&AssociatedTyData, &'p [Parameter], &'p [Parameter]) {
+        let ProjectionTy { associated_ty_id, ref parameters } = *projection;
+        let associated_ty_data = &self.associated_ty_data[&associated_ty_id];
+        let trait_data = &self.trait_data[&associated_ty_data.trait_id];
+        let trait_num_params = trait_data.parameter_kinds.len();
+        let split_point = parameters.len() - trait_num_params;
+        let (other_params, trait_params) = parameters.split_at(split_point);
+        (associated_ty_data, trait_params, other_params)
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeName {
     /// a type like `Vec<T>`

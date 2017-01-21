@@ -38,6 +38,7 @@ pub struct TraitDefn {
 
 pub struct AssocTyDefn {
     pub name: Identifier,
+    pub parameter_kinds: Vec<ParameterKind>,
 }
 
 pub struct CrateDefn {
@@ -64,6 +65,7 @@ pub struct Impl {
 
 pub struct AssocTyValue {
     pub name: Identifier,
+    pub parameter_kinds: Vec<ParameterKind>,
     pub value: Ty,
 }
 
@@ -93,6 +95,7 @@ pub enum Lifetime {
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
+    pub args: Vec<Parameter>,
 }
 
 pub struct TraitRef {

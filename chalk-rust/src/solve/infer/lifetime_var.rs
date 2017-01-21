@@ -1,4 +1,5 @@
 use ir;
+use std::fmt;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LifetimeInferenceVariable {
@@ -16,5 +17,11 @@ impl LifetimeInferenceVariable {
 
     pub fn to_lifetime(&self) -> ir::Lifetime {
         ir::Lifetime::Var(self.index)
+    }
+}
+
+impl fmt::Debug for LifetimeInferenceVariable {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "'?{}", self.index)
     }
 }
