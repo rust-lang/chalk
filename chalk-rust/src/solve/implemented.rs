@@ -3,7 +3,6 @@ use ir::*;
 use solve::environment::InEnvironment;
 use solve::implemented_with_impl::ImplementedWithImpl;
 use solve::match_clause::MatchClause;
-use solve::match_elaborate_clause::MatchElaborateClause;
 use solve::solver::Solver;
 use solve::Solution;
 
@@ -13,8 +12,7 @@ pub struct Implemented<'s> {
 }
 
 enum Technique {
-    WithClause(usize),
-    WithElaboratedClause(usize),
+    WithClause(WhereClause),
     WithImpl(ItemId),
 }
 
@@ -31,20 +29,15 @@ impl<'s> Implemented<'s> {
         let program = solver.program.clone();
 
         let environment = &env_goal.value.environment;
-        let num_clauses = environment.clauses.len();
-
-        let techniques = (0..num_clauses)
-            .map(Technique::WithClause)
-            .chain((0..num_clauses).map(Technique::WithElaboratedClause))
-            .chain(program.impl_data.keys().map(|&impl_id| Technique::WithImpl(impl_id)));
+        let techniques =
+            environment.elaborated_clauses(&program)
+                       .map(Technique::WithClause)
+                       .chain(program.impl_data.keys().map(|&impl_id| Technique::WithImpl(impl_id)));
 
         let result = solver.solve_any(techniques, &env_goal, |solver, technique| {
             match technique {
-                Technique::WithClause(clause_index) => {
-                    MatchClause::new(solver, &env_goal, &environment.clauses[clause_index]).solve()
-                }
-                Technique::WithElaboratedClause(clause_index) => {
-                    MatchElaborateClause::new(solver, &env_goal, &environment.clauses[clause_index]).solve()
+                Technique::WithClause(clause) => {
+                    MatchClause::new(solver, &env_goal, &clause).solve()
                 }
                 Technique::WithImpl(impl_id) => {
                     ImplementedWithImpl::new(solver, env_goal.clone(), impl_id).solve()

@@ -40,6 +40,7 @@ impl Solver {
         self.stack.push(wc_env.clone());
 
         let Quantified { value: InEnvironment { environment, goal: wc }, binders } = wc_env;
+
         let result = match wc {
             WhereClauseGoal::Implemented(trait_ref) => {
                 let q = Quantified {

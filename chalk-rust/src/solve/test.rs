@@ -847,8 +847,18 @@ fn elaborate_transitive() {
                 }
             }
         } yields {
-            // FIXME this should work
-            "`PartialEq` is not implemented for `!1`"
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            !1: PartialEq
+                        ],
+                        constraints: []
+                    },
+                    binders: []
+                }
+            }"
         }
     }
 }

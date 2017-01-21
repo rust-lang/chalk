@@ -13,7 +13,7 @@ pub struct SolveNormalize<'s> {
 }
 
 enum Technique {
-    WithClause(usize),
+    WithClause(WhereClause),
     WithImpl(ItemId),
 }
 
@@ -31,15 +31,14 @@ impl<'s> SolveNormalize<'s> {
 
         // First try to find a solution in the environment.
         let environment = env_goal.value.environment.clone();
-        let num_clauses = environment.clauses.len();
-        let techniques = (0..num_clauses)
-            .map(Technique::WithClause)
-            .chain(program.impl_data.keys().map(|&impl_id| Technique::WithImpl(impl_id)));
-
+        let techniques =
+            environment.elaborated_clauses(&program)
+                       .map(Technique::WithClause)
+                       .chain(program.impl_data.keys().map(|&impl_id| Technique::WithImpl(impl_id)));
         let result = solver.solve_any(techniques, &env_goal, |solver, technique| {
             match technique {
-                Technique::WithClause(clause_index) => {
-                    MatchClause::new(solver, &env_goal, &environment.clauses[clause_index]).solve()
+                Technique::WithClause(clause) => {
+                    MatchClause::new(solver, &env_goal, &clause).solve()
                 }
                 Technique::WithImpl(impl_id) => {
                     NormalizeWithImpl::new(solver, env_goal.clone(), impl_id).solve()
