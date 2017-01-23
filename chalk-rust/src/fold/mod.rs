@@ -207,3 +207,4 @@ struct_fold!(Environment[] { universe, clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(Unify[T] { a, b } where T: Fold);
 struct_fold!(Constrained[F] { value, constraints } where F: Fold);
+struct_fold!(ProgramClauseImplication[] { consequence, conditions });
