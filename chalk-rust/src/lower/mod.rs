@@ -78,6 +78,16 @@ impl<'k> Env<'k> {
                               .collect();
         Env { parameter_map, ..*self }
     }
+
+    fn in_binders<I, T, OP>(&self, binders: I, op: OP) -> Result<ir::Binders<T>>
+        where I: IntoIterator<Item = ir::ParameterKind<ir::Identifier>>,
+              I::IntoIter: ExactSizeIterator,
+              OP: FnOnce(&Self) -> Result<T>,
+    {
+        let binders: Vec<_> = binders.into_iter().collect();
+        let env = self.introduce(binders.iter().cloned());
+        Ok(ir::Binders { binders: binders, value: op(&env)? })
+    }
 }
 
 pub trait LowerProgram {
@@ -186,15 +196,8 @@ impl LowerProgram for Program {
                             parameters: {
                                 trait_data.parameter_kinds
                                           .iter()
-                                          .enumerate()
-                                          .map(|(index, k)| match *k {
-                                              ir::ParameterKind::Lifetime(_) =>
-                                                  ir::ParameterKind::Lifetime(
-                                                      ir::Lifetime::Var(offset + index)),
-                                              ir::ParameterKind::Ty(_) =>
-                                                  ir::ParameterKind::Ty(
-                                                      ir::Ty::Var(offset + index)),
-                                          })
+                                          .zip(offset..)
+                                          .map(|p| p.to_parameter())
                                           .collect()
                             },
                         };
@@ -216,7 +219,21 @@ impl LowerProgram for Program {
             }
         }
 
-        Ok(ir::Program { type_ids, type_kinds, trait_data, impl_data, associated_ty_data })
+        // Construct the set of *clauses*; these are sort of a compiled form
+        // of the data above that always has the form:
+        //
+        //       forall P0...Pn. Something :- Conditions
+        let mut program_clauses = vec![];
+
+        for impl_datum in impl_data.values() {
+            program_clauses.push(impl_datum.to_program_clause());
+
+            for atv in &impl_datum.assoc_ty_values {
+                program_clauses.push(atv.to_program_clause(impl_datum));
+            }
+        }
+
+        Ok(ir::Program { type_ids, type_kinds, trait_data, impl_data, associated_ty_data, program_clauses })
     }
 }
 
@@ -546,27 +563,32 @@ trait LowerImpl {
 
 impl LowerImpl for Impl {
     fn lower_impl(&self, crate_name: ir::Identifier, env: &Env) -> Result<ir::ImplData> {
+        let trait_ref = self.trait_ref.lower(env)?;
+        let trait_id = trait_ref.trait_id;
         Ok(ir::ImplData {
             crate_name: crate_name,
-            trait_ref: self.trait_ref.lower(env)?,
+            trait_ref: trait_ref,
             parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
-            assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(env)).collect()),
+            assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(trait_id, env)).collect()),
             where_clauses: self.lower_where_clauses(&env)?,
         })
     }
 }
 
 trait LowerAssocTyValue {
-    fn lower(&self, env: &Env) -> Result<ir::AssocTyValue>;
+    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssocTyValue>;
 }
 
 impl LowerAssocTyValue for AssocTyValue {
-    fn lower(&self, env: &Env) -> Result<ir::AssocTyValue> {
-        let quantified_env = env.introduce(self.all_parameters());
-        Ok(ir::AssocTyValue {
-            name: self.name.str,
-            value: self.value.lower(&quantified_env)?,
-        })
+    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssocTyValue> {
+        let info = &env.associated_ty_infos[&(trait_id, self.name.str)];
+        let value = env.in_binders(self.all_parameters(), |env| {
+            Ok(ir::AssocTyValueData {
+                ty: self.value.lower(env)?,
+                where_clauses: self.where_clauses.lower(env)?,
+            })
+        })?;
+        Ok(ir::AssocTyValue { associated_ty_id: info.id, value: value })
     }
 }
 
@@ -659,5 +681,104 @@ impl LowerQuantifiedGoal for Goal {
             ParameterKind::Lifetime(_) => ir::ParameterKind::Lifetime(()),
         };
         Ok(Box::new(ir::Goal::Quantified(quantifier_kind, parameter_kind, subgoal)))
+    }
+}
+
+impl ir::ImplData {
+    /// Given `impl<T: Clone> Clone for Vec<T>`, generate:
+    ///
+    /// ```notrust
+    /// forall<T> { (Vec<T>: Clone) :- (T: Clone) }
+    /// ```
+    fn to_program_clause(&self) -> ir::ProgramClause {
+        ir::ProgramClause {
+            implication: ir::Binders {
+                binders: self.parameter_kinds.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: self.trait_ref.clone().cast(),
+                    conditions: self.where_clauses.clone().cast(),
+                },
+            }
+        }
+    }
+}
+
+impl ir::AssocTyValue {
+    /// Given:
+    ///
+    /// ```notrust
+    /// impl<T> Iterable for Vec<T> {
+    ///     type IntoIter<'a> where T: 'a = Iter<'a, T>;
+    /// }
+    /// ```
+    ///
+    /// generate:
+    ///
+    /// ```notrust
+    /// forall<'a, T> {
+    ///     (Vec<T>: Iterable<IntoIter<'a> = Iter<'a, T>>) :-
+    ///         (Vec<T>: Iterable),  // (1)
+    ///         (T: 'a)              // (2)
+    /// }
+    /// ```
+    fn to_program_clause(&self, impl_datum: &ir::ImplData) -> ir::ProgramClause {
+        // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
+        let all_binders: Vec<_> =
+            self.value.binders
+                      .iter()
+                      .cloned()
+                      .chain(impl_datum.parameter_kinds.iter().cloned())
+                      .collect();
+
+        // Assemble the full list of conditions for projection to be valid.
+        // This comes in two parts, marked as (1) and (2) in example above:
+        //
+        // 1. require that the trait is implemented
+        // 2. any where-clauses from the `type` declaration in the impl
+        let conditions: Vec<ir::Goal> =
+            Some(impl_datum.trait_ref.up_shift(self.value.binders.len()).cast())
+            .into_iter()
+            .chain(self.value.value.where_clauses.clone().cast())
+            .collect();
+
+        // The consequence is that the normalization holds.
+        let consequence = ir::Normalize {
+            projection: ir::ProjectionTy {
+                associated_ty_id: self.associated_ty_id,
+                parameters: all_binders.iter().zip(0..).map(|p| p.to_parameter()).collect(),
+            },
+            ty: self.value.value.ty.clone()
+        };
+
+        ir::ProgramClause {
+            implication: ir::Binders {
+                binders: all_binders,
+                value: ir::ProgramClauseImplication {
+                    consequence: consequence.cast(),
+                    conditions: conditions,
+                }
+            }
+        }
+    }
+}
+
+trait ToParameter {
+    /// Utility for converting a list of all the binders into scope
+    /// into references to those binders. Simply pair the binders with
+    /// the indices, and invoke `to_parameter()` on the `(binder,
+    /// index)` pair. The result will be a reference to a bound
+    /// variable of appropriate kind at the corresponding index.
+    fn to_parameter(&self) -> ir::Parameter;
+}
+
+impl<'a> ToParameter for (&'a ir::ParameterKind<ir::Identifier>, usize) {
+    fn to_parameter(&self) -> ir::Parameter {
+        let &(binder, index) = self;
+        match *binder {
+            ir::ParameterKind::Lifetime(_) =>
+                ir::ParameterKind::Lifetime(ir::Lifetime::Var(index)),
+            ir::ParameterKind::Ty(_) =>
+                ir::ParameterKind::Ty(ir::Ty::Var(index)),
+        }
     }
 }

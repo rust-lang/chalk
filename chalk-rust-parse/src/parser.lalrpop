@@ -79,10 +79,11 @@ ParameterKind: ParameterKind = {
 };
 
 AssocTyValue: AssocTyValue = {
-    "type" <n:Id> <a:Angle<ParameterKind>> "=" <v:Ty> ";" => AssocTyValue {
+    "type" <n:Id> <a:Angle<ParameterKind>> <wc:WhereClauses> "=" <v:Ty> ";" => AssocTyValue {
         name: n,
         parameter_kinds: a,
         value: v,
+        where_clauses: wc,
     },
 };
 

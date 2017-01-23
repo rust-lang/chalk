@@ -35,6 +35,21 @@ impl<'s> Fulfill<'s> {
         self.infer.instantiate(universes, arg)
     }
 
+    /// Instantiates `arg` with fresh variables in the given universe;
+    /// the kinds of the variables are implied by `binders`. This is
+    /// used to apply a universally quantified clause like `forall X,
+    /// 'Y. P => Q`. Here the `binders` argument is referring to `X,
+    /// 'Y`.
+    pub fn instantiate_in<U, T>(&mut self,
+                                universe: UniverseIndex,
+                                binders: U,
+                                arg: &T) -> T::Result
+        where T: Fold,
+              U: IntoIterator<Item = ParameterKind<Identifier>>
+    {
+        self.instantiate(binders.into_iter().map(|pk| pk.map(|_| universe)), arg)
+    }
+
     /// Unifies `a` and `b` in the given environment.
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalzations are

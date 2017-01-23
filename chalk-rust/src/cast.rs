@@ -32,15 +32,15 @@ impl Cast<WhereClause> for TraitRef {
     }
 }
 
-impl Cast<WhereClause> for Normalize {
-    fn cast(self) -> WhereClause {
-        WhereClause::Normalize(self)
-    }
-}
-
 impl Cast<WhereClauseGoal> for TraitRef {
     fn cast(self) -> WhereClauseGoal {
         WhereClauseGoal::Implemented(self)
+    }
+}
+
+impl Cast<WhereClause> for Normalize {
+    fn cast(self) -> WhereClause {
+        WhereClause::Normalize(self)
     }
 }
 
@@ -56,6 +56,18 @@ impl Cast<WhereClauseGoal> for WhereClause {
             WhereClause::Implemented(a) => a.cast(),
             WhereClause::Normalize(a) => a.cast(),
         }
+    }
+}
+
+impl Cast<Goal> for TraitRef {
+    fn cast(self) -> Goal {
+        Goal::Leaf(self.cast())
+    }
+}
+
+impl Cast<Goal> for WhereClause {
+    fn cast(self) -> Goal {
+        Goal::Leaf(self.cast())
     }
 }
 

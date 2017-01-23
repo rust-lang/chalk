@@ -35,6 +35,7 @@ impl<'s> NormalizeWithImpl<'s> {
         let environment = self.environment.clone();
         let program = self.fulfill.program();
         let goal_projection = &self.goal.projection;
+        let associated_ty_id = goal_projection.associated_ty_id;
         let (associated_ty_data, goal_trait_params, goal_other_params) =
             program.split_projection(goal_projection);
 
@@ -67,7 +68,7 @@ impl<'s> NormalizeWithImpl<'s> {
             // the program)
             let assoc_ty_value = impl_data.assoc_ty_values
                                           .iter()
-                                          .find(|v| v.name == associated_ty_data.name)
+                                          .find(|v| v.associated_ty_id == associated_ty_id)
                                           .map(|v| &v.value)
                                           .unwrap_or_else(|| {
                                               panic!("impl `{:?}` has no definition for `{}`",
@@ -91,6 +92,7 @@ impl<'s> NormalizeWithImpl<'s> {
             // trait-ref/where-clauses by 1 (when they say index 0,
             // they mean `A`, which is now at index 1).
             let num_addl_binders = goal_other_params.len();
+            assert_eq!(num_addl_binders, assoc_ty_value.binders.len());
             debug!("associated_ty_data.parameter_kinds = {:?}", associated_ty_data.parameter_kinds);
             debug!("impl_data.parameter_kinds = {:?}", impl_data.parameter_kinds);
             let parameter_kinds =
@@ -101,7 +103,7 @@ impl<'s> NormalizeWithImpl<'s> {
                                   .map(|k| k.as_ref().map(|_| environment.universe));
             let value_to_fold = {
                 let impl_values = (&impl_data.trait_ref, &impl_data.where_clauses);
-                (Shifted::new(num_addl_binders, impl_values), assoc_ty_value)
+                (Shifted::new(num_addl_binders, impl_values), &assoc_ty_value.value.ty)
             };
 
             // instantiate the trait-ref, where-clause, and assoc-ty-value all together,

@@ -115,6 +115,17 @@ impl Fold for QuantifiedTy {
     }
 }
 
+impl<T> Fold for Binders<T>
+    where T: Fold
+{
+    type Result = Binders<T::Result>;
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+        let Binders { binders: ref self_binders, value: ref self_value } = *self;
+        let value = self_value.fold_with(folder, binders + self_binders.len())?;
+        Ok(Binders { binders: self_binders.clone(), value: value })
+    }
+}
+
 impl Fold for Lifetime {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
@@ -188,7 +199,8 @@ struct_fold!(ApplicationTy[] { name, parameters });
 struct_fold!(ProjectionTy[] { associated_ty_id, parameters });
 struct_fold!(TraitRef[] { trait_id, parameters });
 struct_fold!(Normalize[] { projection, ty });
-struct_fold!(AssocTyValue[] { name, value });
+struct_fold!(AssocTyValue[] { associated_ty_id, value });
+struct_fold!(AssocTyValueData[] { ty, where_clauses });
 struct_fold!(Environment[] { universe, clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(Unify[T] { a, b } where T: Fold);

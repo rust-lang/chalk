@@ -92,8 +92,16 @@ fn atc_accounting() {
     where_clauses: [],
     assoc_ty_values: [
         AssocTyValue {
-            name: "Iter",
-            value: Iter<'?0, ?1>
+            associated_ty_id: (Iterable::Iter),
+            value: Binders {
+                binders: [
+                    "\'a"
+                ],
+                value: AssocTyValueData {
+                    ty: Iter<'?0, ?1>,
+                    where_clauses: []
+                }
+            }
         }
     ]
 }"#);

@@ -19,6 +19,9 @@ pub struct Program {
 
     /// For each trait:
     pub associated_ty_data: HashMap<ItemId, AssociatedTyData>,
+
+    /// Compiled forms of the above:
+    pub program_clauses: Vec<ProgramClause>,
 }
 
 impl Program {
@@ -110,8 +113,21 @@ pub struct AssociatedTyData {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssocTyValue {
-    pub name: Identifier,
-    pub value: Ty,
+    pub associated_ty_id: ItemId,
+
+    // the for-all encodes add'l binders, beyond those in the impl;
+    // free variables reference the enclosing impl
+    pub value: Binders<AssocTyValueData>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AssocTyValueData {
+    /// Type that we normalize to. The X in `type Foo<'a> = X`.
+    pub ty: Ty,
+
+    /// Where-clauses that must hold for projection to be valid. The
+    /// WC in `type Foo<'a> = X where WC`.
+    pub where_clauses: Vec<WhereClause>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -224,6 +240,31 @@ pub struct Unify<T> {
 pub struct Normalize {
     pub projection: ProjectionTy,
     pub ty: Ty,
+}
+
+/// Indicates that the `value` is universally quantified over `N`
+/// parameters of the given kinds, where `N == self.binders.len()`. A
+/// variable with depth `i < N` refers to the value at
+/// `self.binders[i]`. Variables with depth `>= N` are free.
+///
+/// (IOW, we use deBruijn indices, where binders are introduced in
+/// reverse order of `self.binders`.)
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Binders<T> {
+    pub binders: Vec<ParameterKind<Identifier>>,
+    pub value: T,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ProgramClause {
+    pub implication: Binders<ProgramClauseImplication>
+}
+
+/// Represents one clause of the form `consequence :- conditions`.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ProgramClauseImplication {
+    pub consequence: WhereClauseGoal,
+    pub conditions: Vec<Goal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

@@ -16,25 +16,23 @@ impl Shifter {
     }
 }
 
-impl Ty {
-    pub fn up_shift(&self, adjustment: usize) -> Ty {
-        if adjustment == 0 {
-            self.clone()
-        } else {
-            Shifter::up_shift(adjustment, self)
+macro_rules! up_shift_method {
+    ($t:ty) => {
+        impl $t {
+            pub fn up_shift(&self, adjustment: usize) -> Self {
+                if adjustment == 0 {
+                    self.clone()
+                } else {
+                    Shifter::up_shift(adjustment, self)
+                }
+            }
         }
     }
 }
 
-impl Lifetime {
-    pub fn up_shift(&self, adjustment: usize) -> Lifetime {
-        if adjustment == 0 {
-            self.clone()
-        } else {
-            Shifter::up_shift(adjustment, self)
-        }
-    }
-}
+up_shift_method!(Ty);
+up_shift_method!(Lifetime);
+up_shift_method!(TraitRef);
 
 impl Folder for Shifter {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
