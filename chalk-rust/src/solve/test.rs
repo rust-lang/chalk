@@ -638,8 +638,8 @@ fn forall_equality() {
             // Note: this equality is false, but we get back successful;
             // this is because the region constraints are unsolvable.
             //
-            // Note that `?0` (in universe 4) must be equal to both
-            // `!3` and `!4`, which of course it cannot be.
+            // Note that `?0` (in universe 2) must be equal to both
+            // `!1` and `!2`, which of course it cannot be.
             for<'a, 'b> Ref<'a, Ref<'b, Ref<'a, Unit>>>: Eq<
                 for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
         } yields {
@@ -664,12 +664,12 @@ fn forall_equality() {
                                 '?2
                             ),
                             LifetimeEq(
-                                '!1,
-                                '?3
+                                '!2,
+                                '?0
                             ),
                             LifetimeEq(
                                 '!2,
-                                '?0
+                                '?3
                             ),
                             LifetimeEq(
                                 '!2,

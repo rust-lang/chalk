@@ -251,7 +251,7 @@ pub struct Normalize {
 /// reverse order of `self.binders`.)
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Binders<T> {
-    pub binders: Vec<ParameterKind<Identifier>>,
+    pub binders: Vec<ParameterKind<()>>,
     pub value: T,
 }
 
@@ -299,7 +299,7 @@ impl<T> Constrained<T> {
 pub enum Goal {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
-    Quantified(QuantifierKind, ParameterKind<()>, Box<Goal>),
+    Quantified(QuantifierKind, Binders<Box<Goal>>),
     Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
     Leaf(WhereClauseGoal),

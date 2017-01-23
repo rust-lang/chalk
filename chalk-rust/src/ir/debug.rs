@@ -185,10 +185,19 @@ impl<T: Debug> Debug for Unify<T> {
 impl Debug for Goal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
-            Goal::Quantified(qkind, ParameterKind::Ty(()), ref g) =>
-                write!(fmt, "{:?}<type> {{ {:?} }}", qkind, g),
-            Goal::Quantified(qkind, ParameterKind::Lifetime(()), ref g) =>
-                write!(fmt, "{:?}<lifetime> {{ {:?} }}", qkind, g),
+            Goal::Quantified(qkind, ref subgoal) => {
+                write!(fmt, "{:?}<", qkind)?;
+                for (index, binder) in subgoal.binders.iter().enumerate() {
+                    if index > 0  {
+                        write!(fmt, ", ")?;
+                    }
+                    match *binder {
+                        ParameterKind::Ty(()) => write!(fmt, "type")?,
+                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+                    }
+                }
+                write!(fmt, "> {{ {:?} }}", subgoal.value)
+            }
             Goal::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
             Goal::And(ref g1, ref g2) => write!(fmt, "({:?}, {:?})", g1, g2),
             Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),

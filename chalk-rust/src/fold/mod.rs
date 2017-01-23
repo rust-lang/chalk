@@ -159,6 +159,7 @@ copy_fold!(UniverseIndex);
 copy_fold!(ItemId);
 copy_fold!(TypeName);
 copy_fold!(usize);
+copy_fold!(QuantifierKind);
 
 macro_rules! enum_fold {
     ($s:ident [$($n:ident),*] { $($variant:ident($($name:ident),*)),* } $($w:tt)*) => {
@@ -181,6 +182,7 @@ enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
 enum_fold!(WhereClause[] { Implemented(a), Normalize(a) });
 enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a), WellFormed(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
+enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Leaf(wc) });
 
 macro_rules! struct_fold {
     ($s:ident [$($n:ident),*] { $($name:ident),* } $($w:tt)*) => {

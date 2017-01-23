@@ -26,12 +26,10 @@ struct Instantiator {
 
 impl Folder for Instantiator {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        assert_eq!(binders, 0);
-        Ok(self.vars[depth].as_ref().ty().unwrap().to_ty())
+        Ok(self.vars[depth].as_ref().ty().unwrap().to_ty().up_shift(binders))
     }
 
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
-        assert_eq!(binders, 0);
-        Ok(self.vars[depth].as_ref().lifetime().unwrap().to_lifetime())
+        Ok(self.vars[depth].as_ref().lifetime().unwrap().to_lifetime().up_shift(binders))
     }
 }

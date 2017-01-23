@@ -95,7 +95,7 @@ fn atc_accounting() {
             associated_ty_id: (Iterable::Iter),
             value: Binders {
                 binders: [
-                    "\'a"
+                    ()
                 ],
                 value: AssocTyValueData {
                     ty: Iter<'?0, ?1>,

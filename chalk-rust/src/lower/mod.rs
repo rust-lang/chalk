@@ -86,7 +86,7 @@ impl<'k> Env<'k> {
     {
         let binders: Vec<_> = binders.into_iter().collect();
         let env = self.introduce(binders.iter().cloned());
-        Ok(ir::Binders { binders: binders, value: op(&env)? })
+        Ok(ir::Binders { binders: binders.anonymize(), value: op(&env)? })
     }
 }
 
@@ -195,6 +195,7 @@ impl LowerProgram for Program {
                             trait_id: item_id,
                             parameters: {
                                 trait_data.parameter_kinds
+                                          .anonymize()
                                           .iter()
                                           .zip(offset..)
                                           .map(|p| p.to_parameter())
@@ -674,13 +675,9 @@ impl LowerQuantifiedGoal for Goal {
             return self.lower(env);
         }
 
-        let quantified_env = &env.introduce(Some(parameter_kinds[0].lower()));
-        let subgoal = self.lower_quantified(quantified_env, quantifier_kind, &parameter_kinds[1..])?;
-        let parameter_kind = match parameter_kinds[0] {
-            ParameterKind::Ty(_) => ir::ParameterKind::Ty(()),
-            ParameterKind::Lifetime(_) => ir::ParameterKind::Lifetime(()),
-        };
-        Ok(Box::new(ir::Goal::Quantified(quantifier_kind, parameter_kind, subgoal)))
+        let parameter_kinds = parameter_kinds.iter().map(|pk| pk.lower());
+        let subgoal = env.in_binders(parameter_kinds, |env| self.lower(env))?;
+        Ok(Box::new(ir::Goal::Quantified(quantifier_kind, subgoal)))
     }
 }
 
@@ -693,7 +690,7 @@ impl ir::ImplData {
     fn to_program_clause(&self) -> ir::ProgramClause {
         ir::ProgramClause {
             implication: ir::Binders {
-                binders: self.parameter_kinds.clone(),
+                binders: self.parameter_kinds.anonymize(),
                 value: ir::ProgramClauseImplication {
                     consequence: self.trait_ref.clone().cast(),
                     conditions: self.where_clauses.clone().cast(),
@@ -727,7 +724,7 @@ impl ir::AssocTyValue {
             self.value.binders
                       .iter()
                       .cloned()
-                      .chain(impl_datum.parameter_kinds.iter().cloned())
+                      .chain(impl_datum.parameter_kinds.anonymize())
                       .collect();
 
         // Assemble the full list of conditions for projection to be valid.
@@ -771,7 +768,7 @@ trait ToParameter {
     fn to_parameter(&self) -> ir::Parameter;
 }
 
-impl<'a> ToParameter for (&'a ir::ParameterKind<ir::Identifier>, usize) {
+impl<'a> ToParameter for (&'a ir::ParameterKind<()>, usize) {
     fn to_parameter(&self) -> ir::Parameter {
         let &(binder, index) = self;
         match *binder {
@@ -780,5 +777,15 @@ impl<'a> ToParameter for (&'a ir::ParameterKind<ir::Identifier>, usize) {
             ir::ParameterKind::Ty(_) =>
                 ir::ParameterKind::Ty(ir::Ty::Var(index)),
         }
+    }
+}
+
+trait Anonymize {
+    fn anonymize(&self) -> Vec<ir::ParameterKind<()>>;
+}
+
+impl Anonymize for [ir::ParameterKind<ir::Identifier>] {
+    fn anonymize(&self) -> Vec<ir::ParameterKind<()>> {
+        self.iter().map(|pk| pk.map(|_| ())).collect()
     }
 }

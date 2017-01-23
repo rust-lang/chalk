@@ -45,7 +45,7 @@ impl<'s> Fulfill<'s> {
                                 binders: U,
                                 arg: &T) -> T::Result
         where T: Fold,
-              U: IntoIterator<Item = ParameterKind<Identifier>>
+              U: IntoIterator<Item = ParameterKind<()>>
     {
         self.instantiate(binders.into_iter().map(|pk| pk.map(|_| universe)), arg)
     }
@@ -79,6 +79,59 @@ impl<'s> Fulfill<'s> {
         where WC: IntoIterator<Item=InEnvironment<WhereClauseGoal>>
     {
         self.obligations.extend(wc);
+    }
+
+    /// Return current list of pending obligations; used for unit testing primarily
+    pub fn pending_obligations(&self) -> &[InEnvironment<WhereClauseGoal>] {
+        &self.obligations
+    }
+
+    /// Create obligations for the given goal in the given
+    /// environment. This may ultimately create any number of
+    /// obligations.
+    pub fn push_goal(&mut self, goal: Goal, environment: &Arc<Environment>) {
+        debug!("push_goal({:?}, {:?})", goal, environment);
+        match goal {
+            Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
+                let mut new_environment = environment.clone();
+                let parameters: Vec<_> =
+                    subgoal.binders
+                           .iter()
+                           .map(|pk| {
+                               new_environment = new_environment.new_universe();
+                               match *pk {
+                                   ParameterKind::Lifetime(()) =>
+                                       ParameterKind::Lifetime(Lifetime::ForAll(new_environment.universe)),
+
+                                   ParameterKind::Ty(()) =>
+                                       ParameterKind::Ty(Ty::Apply(ApplicationTy {
+                                           name: TypeName::ForAll(new_environment.universe),
+                                           parameters: vec![]
+                                       })),
+                               }
+                           })
+                           .collect();
+                let subgoal = subgoal.value.subst(&parameters);
+                self.push_goal(subgoal, &new_environment);
+            }
+            Goal::Quantified(QuantifierKind::Exists, subgoal) => {
+                let subgoal = self.instantiate_in(environment.universe,
+                                                  subgoal.binders.iter().cloned(),
+                                                  &subgoal.value);
+                self.push_goal(*subgoal, environment);
+            }
+            Goal::Implies(wc, subgoal) => {
+                let new_environment = &environment.add_clauses(wc);
+                self.push_goal(*subgoal, new_environment);
+            }
+            Goal::And(subgoal1, subgoal2) => {
+                self.push_goal(*subgoal1, environment);
+                self.push_goal(*subgoal2, environment);
+            }
+            Goal::Leaf(wc) => {
+                self.obligations.push(InEnvironment::new(environment, wc));
+            }
+        }
     }
 
     /// As the final step in process a goal, we always have to deliver
