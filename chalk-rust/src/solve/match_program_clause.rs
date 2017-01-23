@@ -36,16 +36,19 @@ impl<'s, G> MatchProgramClause<'s, G>
         MatchProgramClause { fulfill, environment, goal, program_clause_data }
     }
 
-    pub fn solve(mut self) -> Result<Solution<InEnvironment<G>>> {
-        let environment = self.environment.clone();
-        self.fulfill.unify(&environment,
-                           &self.goal.clone().cast(),
-                           &self.program_clause_data.consequence)?;
-        for condition in self.program_clause_data.conditions {
-            self.fulfill.push_goal(condition, &environment);
+    pub fn solve(self) -> Result<Solution<InEnvironment<G>>> {
+        let MatchProgramClause { mut fulfill, environment, goal, program_clause_data } = self;
+        debug_heading!("MatchProgramClause::solve(program_clause_data={:?})",
+                       &program_clause_data);
+        let environment = environment.clone();
+        fulfill.unify(&environment,
+                           &goal.clone().cast(),
+                           &program_clause_data.consequence)?;
+        for condition in program_clause_data.conditions {
+            fulfill.push_goal(condition, &environment);
         }
-        let successful = self.fulfill.solve_all()?;
-        let refined_goal = self.fulfill.refine_goal(InEnvironment::new(&environment, &self.goal));
+        let successful = fulfill.solve_all()?;
+        let refined_goal = fulfill.refine_goal(InEnvironment::new(&environment, &goal));
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

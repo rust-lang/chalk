@@ -5,6 +5,7 @@ pub mod fulfill;
 pub mod infer;
 pub mod implemented;
 pub mod implemented_with_impl;
+pub mod match_any;
 pub mod match_clause;
 pub mod match_program_clause;
 pub mod normalize;

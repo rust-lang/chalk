@@ -739,12 +739,23 @@ impl ir::AssocTyValue {
             .collect();
 
         // The consequence is that the normalization holds.
-        let consequence = ir::Normalize {
-            projection: ir::ProjectionTy {
-                associated_ty_id: self.associated_ty_id,
-                parameters: all_binders.iter().zip(0..).map(|p| p.to_parameter()).collect(),
-            },
-            ty: self.value.value.ty.clone()
+        let consequence = {
+            // First add refs to the bound parameters (`'a`, in above example)
+            let parameters = self.value.binders.iter().zip(0..).map(|p| p.to_parameter());
+
+            // Then add the trait-ref parameters (`Vec<T>`, in above example)
+            let parameters = parameters.chain(impl_datum.trait_ref.parameters
+                                              .iter()
+                                              .map(|p| p.up_shift(self.value.binders.len())));
+
+            // Construct normalization predicate
+            ir::Normalize {
+                projection: ir::ProjectionTy {
+                    associated_ty_id: self.associated_ty_id,
+                    parameters: parameters.collect(),
+                },
+                ty: self.value.value.ty.clone()
+            }
         };
 
         ir::ProgramClause {

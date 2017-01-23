@@ -729,48 +729,120 @@ fn forall_projection() {
                                 '?1
                             ),
                             LifetimeEq(
-                                '?2,
-                                '?3
-                            ),
-                            LifetimeEq(
-                                '?2,
-                                '?4
+                                '?1,
+                                '?2
                             ),
                             LifetimeEq(
                                 '?3,
-                                '?5
-                            ),
-                            LifetimeEq(
-                                '?1,
-                                '?6
+                                '?4
                             ),
                             LifetimeEq(
                                 '?4,
+                                '?5
+                            ),
+                            LifetimeEq(
+                                '?6,
                                 '?7
                             ),
                             LifetimeEq(
-                                '!1,
+                                '?7,
                                 '?8
                             ),
                             LifetimeEq(
-                                '!1,
-                                '?9
-                            ),
-                            LifetimeEq(
-                                '!1,
+                                '?9,
                                 '?10
                             ),
                             LifetimeEq(
-                                '!1,
-                                '?11
-                            ),
-                            LifetimeEq(
-                                '!1,
+                                '?11,
                                 '?12
                             ),
                             LifetimeEq(
-                                '!1,
+                                '?11,
                                 '?13
+                            ),
+                            LifetimeEq(
+                                '?12,
+                                '?14
+                            ),
+                            LifetimeEq(
+                                '?15,
+                                '?16
+                            ),
+                            LifetimeEq(
+                                '?16,
+                                '?17
+                            ),
+                            LifetimeEq(
+                                '?14,
+                                '?18
+                            ),
+                            LifetimeEq(
+                                '?18,
+                                '?19
+                            ),
+                            LifetimeEq(
+                                '?20,
+                                '?21
+                            ),
+                            LifetimeEq(
+                                '?21,
+                                '?22
+                            ),
+                            LifetimeEq(
+                                '?23,
+                                '?24
+                            ),
+                            LifetimeEq(
+                                '?24,
+                                '?25
+                            ),
+                            LifetimeEq(
+                                '?10,
+                                '?26
+                            ),
+                            LifetimeEq(
+                                '?26,
+                                '?27
+                            ),
+                            LifetimeEq(
+                                '?27,
+                                '?28
+                            ),
+                            LifetimeEq(
+                                '?13,
+                                '?29
+                            ),
+                            LifetimeEq(
+                                '?29,
+                                '?30
+                            ),
+                            LifetimeEq(
+                                '?30,
+                                '?31
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?0
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?3
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?6
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?15
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?20
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?23
                             ),
                             LifetimeEq(
                                 '!1,
@@ -779,6 +851,24 @@ fn forall_projection() {
                         ]
                     },
                     binders: [
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
+                        U1,
                         U1,
                         U1,
                         U1,
@@ -946,6 +1036,10 @@ fn atc1() {
                             <Vec<!1> as Iterable>::Iter<'!2> ==> Iter<'?0, !1>
                         ],
                         constraints: [
+                            LifetimeEq(
+                                '!2,
+                                '?0
+                            ),
                             LifetimeEq(
                                 '!2,
                                 '!2

@@ -31,6 +31,7 @@ macro_rules! up_shift_method {
 }
 
 up_shift_method!(Ty);
+up_shift_method!(Parameter);
 up_shift_method!(Lifetime);
 up_shift_method!(TraitRef);
 
