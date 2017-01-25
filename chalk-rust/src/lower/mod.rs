@@ -516,6 +516,11 @@ impl LowerTraitRef for TraitRef {
 
         let parameters = self.args.iter().map(|a| Ok(a.lower(env)?)).collect::<Result<Vec<_>>>()?;
 
+        if parameters.len() != k.binders.len() + 1 {
+            bail!("wrong number of parameters, expected `{:?}`, got `{:?}`",
+                  k.binders.len() + 1, parameters.len())
+        }
+
         Ok(ir::TraitRef {
             trait_id: id,
             parameters: parameters,

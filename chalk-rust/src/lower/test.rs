@@ -57,7 +57,7 @@ fn assoc_tys() {
 
 #[test]
 fn goal_quantifiers() {
-    let program = Arc::new(parse_and_lower("trait Foo { }").unwrap());
+    let program = Arc::new(parse_and_lower("trait Foo<A, B> { }").unwrap());
     let goal = parse_and_lower_goal(&program, "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}")
         .unwrap();
     set_current_program(&program, || {
