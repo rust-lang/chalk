@@ -59,7 +59,7 @@ impl Cast<WhereClauseGoal> for LocalTo {
 
 impl Cast<WhereClauseGoal> for Ty {
     fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::WellFormed(self)
+        WhereClauseGoal::TyWellFormed(self)
     }
 }
 

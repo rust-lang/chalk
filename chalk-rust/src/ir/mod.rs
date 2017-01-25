@@ -244,7 +244,7 @@ pub enum WhereClauseGoal {
     Implemented(TraitRef),
     Normalize(Normalize),
     UnifyTys(Unify<Ty>),
-    WellFormed(Ty),
+    TyWellFormed(Ty),
     LocalTo(LocalTo),
 }
 

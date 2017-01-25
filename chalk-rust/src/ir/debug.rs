@@ -171,7 +171,7 @@ impl Debug for WhereClauseGoal {
                        Angle(&n.parameters[1..]))
             }
             WhereClauseGoal::UnifyTys(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::WellFormed(ref n) => write!(fmt, "WF({:?})", n),
+            WhereClauseGoal::TyWellFormed(ref n) => write!(fmt, "TyWellFormed({:?})", n),
             WhereClauseGoal::LocalTo(ref n) => write!(fmt, "{:?}", n),
         }
     }

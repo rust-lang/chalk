@@ -114,7 +114,7 @@ pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
     NotImplemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
-    WellFormed { ty: Ty },
+    TyWellFormed { ty: Ty },
     LocalTo { ty: Ty, crate_id: Identifier },
 }
 

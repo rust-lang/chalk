@@ -423,7 +423,7 @@ impl LowerWhereClause<ir::WhereClause> for WhereClause {
                     ty: ty.lower(env)?,
                 })
             }
-            WhereClause::WellFormed { .. } |
+            WhereClause::TyWellFormed { .. } |
             WhereClause::LocalTo { .. } |
             WhereClause::NotImplemented { .. } => {
                 bail!("this form of where-clause not allowed here")
@@ -443,8 +443,8 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
                 let wc: ir::WhereClause = self.lower(env)?;
                 wc.cast()
             }
-            WhereClause::WellFormed { ref ty } => {
-                ir::WhereClauseGoal::WellFormed(ty.lower(env)?)
+            WhereClause::TyWellFormed { ref ty } => {
+                ir::WhereClauseGoal::TyWellFormed(ty.lower(env)?)
             }
             WhereClause::LocalTo { ref ty, ref crate_id } => {
                 let crate_id = ir::CrateId { name: crate_id.str };
