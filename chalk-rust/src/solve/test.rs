@@ -1097,20 +1097,20 @@ fn struct_wf() {
         }
 
         goal {
-            TyWellFormed(Foo<Bar>)
+            WellFormed(Foo<Bar>)
         } yields {
             "no applicable candidates"
         }
 
         goal {
-            TyWellFormed(Foo<Baz>)
+            WellFormed(Foo<Baz>)
         } yields {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: Constrained {
                         value: [
-                            TyWellFormed(Foo<Baz>)
+                            WellFormed(Foo<Baz>)
                         ],
                         constraints: []
                     },
@@ -1120,14 +1120,14 @@ fn struct_wf() {
         }
 
         goal {
-            TyWellFormed(Foo<Foo<Baz>>)
+            WellFormed(Foo<Foo<Baz>>)
         } yields {
             "Solution {
                 successful: Yes,
                 refined_goal: Quantified {
                     value: Constrained {
                         value: [
-                            TyWellFormed(Foo<Foo<Baz>>)
+                            WellFormed(Foo<Foo<Baz>>)
                         ],
                         constraints: []
                     },

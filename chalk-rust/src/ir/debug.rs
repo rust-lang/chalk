@@ -172,10 +172,7 @@ impl Debug for WhereClauseGoal {
                        Angle(&n.parameters[1..]))
             }
             WhereClauseGoal::UnifyTys(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::TyWellFormed(ref n) => write!(fmt, "TyWellFormed({:?})", n),
-            WhereClauseGoal::TraitRefWellFormed(ref n) => {
-                write!(fmt, "TraitRefWellFormed({:?})", n)
-            }
+            WhereClauseGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::LocalTo(ref n) => write!(fmt, "{:?}", n),
         }
     }
@@ -185,6 +182,16 @@ impl Debug for LocalTo {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         let LocalTo { ref ty, ref crate_id } = *self;
         write!(fmt, "LocalTo({:?}, {:?})", ty, crate_id)
+    }
+}
+
+impl Debug for WellFormed {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let value: &Debug = match *self {
+            WellFormed::Ty(ref t) => t,
+            WellFormed::TraitRef(ref t) => t,
+        };
+        write!(fmt, "WellFormed({:?})", value)
     }
 }
 

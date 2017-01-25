@@ -120,9 +120,9 @@ WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
     <t:TraitRef<(":" "!")>> => WhereClause::NotImplemented { trait_ref: t },
 
-    "TyWellFormed" "(" <t:Ty> ")" => WhereClause::TyWellFormed { ty: t },
+    "WellFormed" "(" <t:Ty> ")" => WhereClause::TyWellFormed { ty: t },
 
-    "TraitRefWellFormed" "(" <t:TraitRef<":">> ")" => WhereClause::TraitRefWellFormed {
+    "WellFormed" "(" <t:TraitRef<":">> ")" => WhereClause::TraitRefWellFormed {
              trait_ref: t
     },
 

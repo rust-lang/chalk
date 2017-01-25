@@ -166,10 +166,7 @@ impl Zip for WhereClauseGoal {
             (&WhereClauseGoal::UnifyTys(ref a), &WhereClauseGoal::UnifyTys(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
-            (&WhereClauseGoal::TyWellFormed(ref a), &WhereClauseGoal::TyWellFormed(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WhereClauseGoal::TraitRefWellFormed(ref a), &WhereClauseGoal::TraitRefWellFormed(ref b)) => {
+            (&WhereClauseGoal::WellFormed(ref a), &WhereClauseGoal::WellFormed(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
             (&WhereClauseGoal::LocalTo(ref a), &WhereClauseGoal::LocalTo(ref b)) => {
@@ -179,13 +176,30 @@ impl Zip for WhereClauseGoal {
             (&WhereClauseGoal::Normalize(_), _) |
             (&WhereClauseGoal::UnifyTys(_), _) |
             (&WhereClauseGoal::LocalTo(_), _) |
-            (&WhereClauseGoal::TyWellFormed(_), _) |
-            (&WhereClauseGoal::TraitRefWellFormed(_), _) => {
+            (&WhereClauseGoal::WellFormed(_), _) => {
                 bail!("cannot zip where-clause-goals `{:?}` and `{:?}`", a, b)
             }
         }
     }
 }
+
+impl Zip for WellFormed {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        match (a, b) {
+            (&WellFormed::Ty(ref a), &WellFormed::Ty(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
+            (&WellFormed::TraitRef(ref a), &WellFormed::TraitRef(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
+            (&WellFormed::Ty(_), _) |
+            (&WellFormed::TraitRef(_), _) => {
+                bail!("cannot zip `{:?}` and `{:?}`", a, b)
+            }
+        }
+    }
+}
+
 
 impl<T: Zip> Zip for Unify<T> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {

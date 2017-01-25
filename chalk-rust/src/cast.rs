@@ -57,16 +57,9 @@ impl Cast<WhereClauseGoal> for LocalTo {
     }
 }
 
-impl Cast<WhereClauseGoal> for Ty {
+impl Cast<WhereClauseGoal> for WellFormed {
     fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::TyWellFormed(self)
-    }
-}
-
-impl Cast<WhereClauseGoal> for ApplicationTy {
-    fn cast(self) -> WhereClauseGoal {
-        let t: Ty = self.cast();
-        t.cast()
+        WhereClauseGoal::WellFormed(self)
     }
 }
 

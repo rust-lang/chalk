@@ -252,9 +252,14 @@ pub enum WhereClauseGoal {
     Implemented(TraitRef),
     Normalize(Normalize),
     UnifyTys(Unify<Ty>),
-    TyWellFormed(Ty),
-    TraitRefWellFormed(TraitRef),
+    WellFormed(WellFormed),
     LocalTo(LocalTo),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum WellFormed {
+    Ty(Ty),
+    TraitRef(TraitRef),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

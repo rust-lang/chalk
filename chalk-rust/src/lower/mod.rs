@@ -443,10 +443,10 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
                 wc.cast()
             }
             WhereClause::TyWellFormed { ref ty } => {
-                ir::WhereClauseGoal::TyWellFormed(ty.lower(env)?)
+                ir::WellFormed::Ty(ty.lower(env)?).cast()
             }
             WhereClause::TraitRefWellFormed { ref trait_ref } => {
-                ir::WhereClauseGoal::TraitRefWellFormed(trait_ref.lower(env)?)
+                ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
             }
             WhereClause::LocalTo { ref ty, ref crate_id } => {
                 let crate_id = ir::CrateId { name: crate_id.str };
@@ -928,7 +928,7 @@ impl ir::StructDatum {
         let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound_datum| {
                 ir::ProgramClauseImplication {
-                    consequence: bound_datum.self_ty.clone().cast(),
+                    consequence: ir::WellFormed::Ty(bound_datum.self_ty.clone().cast()).cast(),
 
                     conditions: bound_datum.where_clauses.iter()
                                                          .cloned()
@@ -961,7 +961,6 @@ impl ir::TraitDatum {
         //    for<?Self, ?T> LocalTo(?Self: Foo<?T>, A).
         //    for<?Self, ?T, ?C> LocalTo(?Self: Foo<?T>, ?C) :- LocalTo(?Self, ?C).
         //    for<?Self, ?T, ?C> LocalTo(?Self: Foo<?T>, ?C) :- LocalTo(?T, ?C).
-
         vec![]
     }
 }
