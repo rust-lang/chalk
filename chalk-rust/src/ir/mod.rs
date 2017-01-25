@@ -100,11 +100,11 @@ pub struct ImplDatumBound {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatum {
     pub crate_id: CrateId,
-    pub binders: Binders<StructBoundDatum>,
+    pub binders: Binders<StructDatumBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StructBoundDatum {
+pub struct StructDatumBound {
     pub self_ty: ApplicationTy,
     pub where_clauses: Vec<WhereClause>,
 }

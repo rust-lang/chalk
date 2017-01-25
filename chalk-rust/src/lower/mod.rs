@@ -490,7 +490,7 @@ impl LowerStructDefn for StructDefn {
 
             let where_clauses = self.lower_where_clauses(env)?;
 
-            Ok(ir::StructBoundDatum { self_ty, where_clauses })
+            Ok(ir::StructDatumBound { self_ty, where_clauses })
         })?;
 
         Ok(ir::StructDatum { crate_id, binders })
