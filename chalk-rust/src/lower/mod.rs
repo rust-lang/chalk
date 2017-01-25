@@ -397,11 +397,13 @@ impl LowerWhereClauseVec for [WhereClause] {
     }
 }
 
-trait LowerWhereClause {
-    fn lower(&self, env: &Env) -> Result<ir::WhereClause>;
+trait LowerWhereClause<T> {
+    fn lower(&self, env: &Env) -> Result<T>;
 }
 
-impl LowerWhereClause for WhereClause {
+/// Lowers a where-clause in the context of a clause; this is limited
+/// to the kinds of where-clauses users can actually type in Rust.
+impl LowerWhereClause<ir::WhereClause> for WhereClause {
     fn lower(&self, env: &Env) -> Result<ir::WhereClause> {
         Ok(match *self {
             WhereClause::Implemented { ref trait_ref } => {
@@ -413,9 +415,31 @@ impl LowerWhereClause for WhereClause {
                     ty: ty.lower(env)?,
                 })
             }
+            WhereClause::NotImplemented { .. } => {
+                bail!("negative trait refs cannot be where-clauses")
+            }
         })
     }
 }
+
+/// Lowers a where-clause in the context of a goal; this is richer in
+/// terms of the legal sorts of where-clauses that can appear, because
+/// it includes all the sorts of things that the compiler must verify.
+impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
+    fn lower(&self, env: &Env) -> Result<ir::WhereClauseGoal> {
+        Ok(match *self {
+            WhereClause::Implemented { .. } |
+            WhereClause::ProjectionEq { .. } => {
+                let wc: ir::WhereClause = self.lower(env)?;
+                wc.cast()
+            }
+            WhereClause::NotImplemented { .. } => {
+                unimplemented!() // oh the irony
+            }
+        })
+    }
+}
+
 
 trait LowerTraitRef {
     fn lower(&self, env: &Env) -> Result<ir::TraitRef>;
@@ -649,7 +673,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
             Goal::And(ref g1, ref g2) =>
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
             Goal::Leaf(ref wc) =>
-                Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?.cast()))),
+                Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
             Goal::WellFormed(ref ty) =>
                 Ok(Box::new(ir::Goal::Leaf(ir::WhereClauseGoal::WellFormed(ty.lower(env)?)))),
         }

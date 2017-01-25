@@ -119,6 +119,7 @@ WhereClauses: Vec<WhereClause> = {
 
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
+    <t:TraitRef<(":" "!")>> => WhereClause::NotImplemented { trait_ref: t },
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
         "=" <ty:Ty> ">" =>
     {

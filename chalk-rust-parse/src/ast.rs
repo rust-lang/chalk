@@ -112,6 +112,7 @@ pub struct Identifier {
 
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
+    NotImplemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
 }
 
