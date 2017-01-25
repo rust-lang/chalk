@@ -233,6 +233,13 @@ pub enum WhereClauseGoal {
     Normalize(Normalize),
     UnifyTys(Unify<Ty>),
     WellFormed(Ty),
+    LocalTo(LocalTo),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct LocalTo {
+    pub ty: Ty,
+    pub crate_id: CrateId,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

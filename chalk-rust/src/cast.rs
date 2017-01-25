@@ -25,6 +25,7 @@ macro_rules! reflexive_impl {
 
 reflexive_impl!(TraitRef);
 reflexive_impl!(WhereClause);
+reflexive_impl!(WhereClauseGoal);
 
 impl Cast<WhereClause> for TraitRef {
     fn cast(self) -> WhereClause {

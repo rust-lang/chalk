@@ -1,6 +1,7 @@
 use cast::Cast;
 use errors::*;
 use solve::environment::InEnvironment;
+use solve::match_program_clause::MatchProgramClause;
 use solve::normalize::SolveNormalize;
 use solve::implemented::Implemented;
 use solve::unify::SolveUnify;
@@ -63,8 +64,19 @@ impl Solver {
                 };
                 SolveUnify::new(self, q).solve().cast()
             }
-            WhereClauseGoal::WellFormed(_ty) => {
-                unimplemented!()
+            WhereClauseGoal::LocalTo(_) |
+            WhereClauseGoal::WellFormed(_) => {
+                // Currently, we don't allow `LocalTo` or `WF` types
+                // into the environment, there we just have to search
+                // for program clauses.
+                let program = self.program.clone();
+                let q = Quantified {
+                    value: InEnvironment::new(&environment, wc),
+                    binders: binders
+                }; // reconstruct `wc_env`
+                self.solve_any(program.program_clauses.iter(), &q, |this, program_clause| {
+                    MatchProgramClause::new(this, &q, &program_clause).solve()
+                })
             }
         };
 

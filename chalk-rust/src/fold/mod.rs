@@ -155,6 +155,7 @@ macro_rules! copy_fold {
 }
 
 copy_fold!(Identifier);
+copy_fold!(CrateId);
 copy_fold!(UniverseIndex);
 copy_fold!(ItemId);
 copy_fold!(TypeName);
@@ -180,14 +181,15 @@ macro_rules! enum_fold {
 
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
 enum_fold!(WhereClause[] { Implemented(a), Normalize(a) });
-enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a), WellFormed(a) });
+enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a),
+                               WellFormed(a), LocalTo(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Leaf(wc) });
 
 macro_rules! struct_fold {
-    ($s:ident [$($n:ident),*] { $($name:ident),* } $($w:tt)*) => {
-        impl<$($n),*> Fold for $s<$($n),*> $($w)* {
-            type Result = $s<$($n :: Result),*>;
+    ($s:ident $([$($n:ident),*])* { $($name:ident),* } $($w:tt)*) => {
+        impl $(<$($n),*>)* Fold for $s $(<$($n),*>)* $($w)* {
+            type Result = $s $(<$($n :: Result),*>)* ;
             fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
                 Ok($s {
                     $($name: self.$name.fold_with(folder, binders)?),*
@@ -197,14 +199,15 @@ macro_rules! struct_fold {
     }
 }
 
-struct_fold!(ApplicationTy[] { name, parameters });
-struct_fold!(ProjectionTy[] { associated_ty_id, parameters });
-struct_fold!(TraitRef[] { trait_id, parameters });
-struct_fold!(Normalize[] { projection, ty });
-struct_fold!(AssocTyValue[] { associated_ty_id, value });
-struct_fold!(AssocTyValueData[] { ty, where_clauses });
-struct_fold!(Environment[] { universe, clauses });
+struct_fold!(ApplicationTy { name, parameters });
+struct_fold!(ProjectionTy { associated_ty_id, parameters });
+struct_fold!(TraitRef { trait_id, parameters });
+struct_fold!(Normalize { projection, ty });
+struct_fold!(AssocTyValue { associated_ty_id, value });
+struct_fold!(AssocTyValueData { ty, where_clauses });
+struct_fold!(Environment { universe, clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(Unify[T] { a, b } where T: Fold);
 struct_fold!(Constrained[F] { value, constraints } where F: Fold);
-struct_fold!(ProgramClauseImplication[] { consequence, conditions });
+struct_fold!(ProgramClauseImplication { consequence, conditions });
+struct_fold!(LocalTo { ty, crate_id });

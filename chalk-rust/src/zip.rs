@@ -88,72 +88,45 @@ impl Zip for Lifetime {
     }
 }
 
-impl Zip for ItemId {
-    fn zip_with<Z: Zipper>(_zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        if a != b {
-            bail!("cannot zip `{:?}` and `{:?}`", a, b)
+macro_rules! eq_zip {
+    ($t:ty) => {
+        impl Zip for $t {
+            fn zip_with<Z: Zipper>(_zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+                if a != b {
+                    bail!("cannot zip `{:?}` and `{:?}`", a, b)
+                }
+                Ok(())
+            }
         }
-        Ok(())
     }
 }
 
-impl Zip for TypeName {
-    fn zip_with<Z: Zipper>(_zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        if a != b {
-            bail!("cannot zip `{:?}` and `{:?}`", a, b)
+eq_zip!(ItemId);
+eq_zip!(TypeName);
+eq_zip!(CrateId);
+eq_zip!(Identifier);
+
+macro_rules! struct_zip {
+    ($t:ident$([$($param:tt)*])* { $($field:ident),* } $($w:tt)*) => {
+        impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
+            fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+                // Validate that we have indeed listed all fields
+                let $t { $($field: _),* } = *a;
+                $(
+                    Zip::zip_with(zipper, &a.$field, &b.$field)?;
+                )*
+                Ok(())
+            }
         }
-        Ok(())
     }
 }
 
-impl Zip for Identifier {
-    fn zip_with<Z: Zipper>(_zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        if a != b {
-            bail!("cannot zip `{:?}` and `{:?}`", a, b)
-        }
-        Ok(())
-    }
-}
-
-impl Zip for TraitRef {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &a.trait_id, &b.trait_id)?;
-        Zip::zip_with(zipper, &a.parameters, &b.parameters)?;
-        Ok(())
-    }
-}
-
-impl<T: Zip> Zip for InEnvironment<T> {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &a.environment, &b.environment)?;
-        Zip::zip_with(zipper, &a.goal, &b.goal)?;
-        Ok(())
-    }
-}
-
-impl Zip for ApplicationTy {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &a.name, &b.name)?;
-        Zip::zip_with(zipper, &a.parameters, &b.parameters)?;
-        Ok(())
-    }
-}
-
-impl Zip for ProjectionTy {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &a.associated_ty_id, &b.associated_ty_id)?;
-        Zip::zip_with(zipper, &a.parameters, &b.parameters)?;
-        Ok(())
-    }
-}
-
-impl Zip for Normalize {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        Zip::zip_with(zipper, &a.projection, &b.projection)?;
-        Zip::zip_with(zipper, &a.ty, &b.ty)?;
-        Ok(())
-    }
-}
+struct_zip!(TraitRef { trait_id, parameters });
+struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
+struct_zip!(ApplicationTy { name, parameters });
+struct_zip!(ProjectionTy { associated_ty_id, parameters });
+struct_zip!(Normalize { projection, ty });
+struct_zip!(LocalTo { ty, crate_id });
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
@@ -196,9 +169,13 @@ impl Zip for WhereClauseGoal {
             (&WhereClauseGoal::WellFormed(ref a), &WhereClauseGoal::WellFormed(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
+            (&WhereClauseGoal::LocalTo(ref a), &WhereClauseGoal::LocalTo(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
             (&WhereClauseGoal::Implemented(_), _) |
             (&WhereClauseGoal::Normalize(_), _) |
             (&WhereClauseGoal::UnifyTys(_), _) |
+            (&WhereClauseGoal::LocalTo(_), _) |
             (&WhereClauseGoal::WellFormed(_), _) => {
                 bail!("cannot zip where-clause-goals `{:?}` and `{:?}`", a, b)
             }

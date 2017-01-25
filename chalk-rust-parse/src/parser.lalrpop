@@ -119,7 +119,10 @@ WhereClauses: Vec<WhereClause> = {
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
     <t:TraitRef<(":" "!")>> => WhereClause::NotImplemented { trait_ref: t },
+
     "WF" "(" <t:Ty> ")" => WhereClause::WellFormed { ty: t },
+
+    "LocalTo" "(" <t:Ty> "," <c:Id> ")" => WhereClause::LocalTo { ty: t, crate_id: c },
 
     // `T: Foo<U = Bar>` -- a normalization
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
