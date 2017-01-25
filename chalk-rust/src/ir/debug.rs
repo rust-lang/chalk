@@ -204,3 +204,9 @@ impl Debug for Goal {
         }
     }
 }
+
+impl Debug for CrateId {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{}", self.name)
+    }
+}

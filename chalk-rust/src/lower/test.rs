@@ -84,7 +84,7 @@ fn atc_accounting() {
         let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
         println!("{}", impl_text);
         assert_eq!(&impl_text[..], r#"ImplData {
-    crate_name: "crate",
+    crate_id: crate,
     parameter_kinds: [
         "T"
     ],
