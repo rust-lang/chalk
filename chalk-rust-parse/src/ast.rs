@@ -114,6 +114,7 @@ pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
     NotImplemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
+    WellFormed { ty: Ty },
 }
 
 pub enum Goal {
@@ -124,5 +125,4 @@ pub enum Goal {
 
     // Additional kinds of goals:
     Leaf(WhereClause),
-    WellFormed(Ty),
 }

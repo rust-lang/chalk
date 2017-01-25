@@ -31,7 +31,6 @@ Goal1: Box<Goal> = {
     "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
     "if" "(" <w:Comma<WhereClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
     <w:WhereClause> => Box::new(Goal::Leaf(w)),
-    "WF" "(" <t:Ty> ")" => Box::new(Goal::WellFormed(t)),
 };
 
 StructDefn: StructDefn = {
@@ -120,6 +119,9 @@ WhereClauses: Vec<WhereClause> = {
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
     <t:TraitRef<(":" "!")>> => WhereClause::NotImplemented { trait_ref: t },
+    "WF" "(" <t:Ty> ")" => WhereClause::WellFormed { ty: t },
+
+    // `T: Foo<U = Bar>` -- a normalization
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
         "=" <ty:Ty> ">" =>
     {

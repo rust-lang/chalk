@@ -415,8 +415,9 @@ impl LowerWhereClause<ir::WhereClause> for WhereClause {
                     ty: ty.lower(env)?,
                 })
             }
+            WhereClause::WellFormed { .. } |
             WhereClause::NotImplemented { .. } => {
-                bail!("negative trait refs cannot be where-clauses")
+                bail!("this form of where-clause not allowed here")
             }
         })
     }
@@ -432,6 +433,9 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
             WhereClause::ProjectionEq { .. } => {
                 let wc: ir::WhereClause = self.lower(env)?;
                 wc.cast()
+            }
+            WhereClause::WellFormed { ref ty } => {
+                ir::WhereClauseGoal::WellFormed(ty.lower(env)?)
             }
             WhereClause::NotImplemented { .. } => {
                 unimplemented!() // oh the irony
@@ -674,8 +678,6 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
             Goal::Leaf(ref wc) =>
                 Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
-            Goal::WellFormed(ref ty) =>
-                Ok(Box::new(ir::Goal::Leaf(ir::WhereClauseGoal::WellFormed(ty.lower(env)?)))),
         }
     }
 }
