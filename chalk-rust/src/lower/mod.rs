@@ -350,7 +350,10 @@ impl LowerTypeKind for StructDefn {
             sort: ir::TypeSort::Struct,
             name: self.name.str,
             crate_id: crate_id,
-            parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
+            binders: ir::Binders {
+                binders: self.all_parameters().anonymize(),
+                value: (),
+            },
         })
     }
 }
@@ -363,13 +366,16 @@ impl LowerWhereClauses for StructDefn {
 
 impl LowerTypeKind for TraitDefn {
     fn lower_type_kind(&self, crate_id: ir::CrateId) -> Result<ir::TypeKind> {
+        let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Trait,
             name: self.name.str,
             crate_id: crate_id,
-
-            // for the purposes of the *type*, ignore `Self`:
-            parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
+            binders: ir::Binders {
+                // for the purposes of the *type*, ignore `Self`:
+                binders: binders.anonymize(),
+                value: (),
+            },
         })
     }
 }
@@ -554,9 +560,9 @@ impl LowerTy for Ty {
                 match env.lookup(name)? {
                     NameLookup::Type(id) => {
                         let k = env.type_kind(id);
-                        if k.parameter_kinds.len() > 0 {
+                        if k.binders.len() > 0 {
                             bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
-                                                                             k.parameter_kinds.len(),
+                                                                             k.binders.len(),
                                                                              0))
                         }
 
@@ -576,9 +582,9 @@ impl LowerTy for Ty {
                 };
 
                 let k = env.type_kind(id);
-                if k.parameter_kinds.len() != args.len() {
+                if k.binders.len() != args.len() {
                     bail!(ErrorKind::IncorrectNumberOfTypeParameters(name,
-                                                                     k.parameter_kinds.len(),
+                                                                     k.binders.len(),
                                                                      args.len()))
                 }
 

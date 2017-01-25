@@ -75,7 +75,7 @@ pub struct TypeKind {
     pub sort: TypeSort,
     pub crate_id: CrateId,
     pub name: Identifier,
-    pub parameter_kinds: Vec<ParameterKind<Identifier>>,
+    pub binders: Binders<()>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
