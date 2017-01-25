@@ -176,7 +176,7 @@ impl LowerProgram for Program {
                     let env = empty_env.introduce(d.all_parameters());
                     trait_data.insert(item_id, d.lower_trait(crate_id, &env)?);
 
-                    let trait_data = &trait_data[&item_id];
+                    let trait_datum = &trait_data[&item_id];
                     for defn in &d.assoc_ty_defns {
                         let info = &associated_ty_infos[&(item_id, defn.name.str)];
 
@@ -197,7 +197,7 @@ impl LowerProgram for Program {
                         let trait_ref = ir::TraitRef {
                             trait_id: item_id,
                             parameters: {
-                                trait_data.parameter_kinds
+                                trait_datum.parameter_kinds
                                           .anonymize()
                                           .iter()
                                           .zip(offset..)
@@ -207,7 +207,7 @@ impl LowerProgram for Program {
                         };
 
                         let mut parameter_kinds = defn.all_parameters();
-                        parameter_kinds.extend(trait_data.parameter_kinds.iter().cloned());
+                        parameter_kinds.extend(trait_datum.parameter_kinds.iter().cloned());
 
                         associated_ty_data.insert(info.id, ir::AssociatedTyData {
                             trait_id: item_id,
@@ -673,12 +673,12 @@ impl LowerAssocTyValue for AssocTyValue {
 }
 
 trait LowerTrait {
-    fn lower_trait(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::TraitData>;
+    fn lower_trait(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::TraitDatum>;
 }
 
 impl LowerTrait for TraitDefn {
-    fn lower_trait(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::TraitData> {
-        Ok(ir::TraitData {
+    fn lower_trait(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::TraitDatum> {
+        Ok(ir::TraitDatum {
             crate_id: crate_id,
             parameter_kinds: self.all_parameters(),
             where_clauses: self.lower_where_clauses(&env)?,
@@ -696,8 +696,8 @@ impl LowerGoal<ir::Program> for Goal {
             program.associated_ty_data
                    .iter()
                    .map(|(&associated_ty_id, datum)| {
-                       let trait_data = &program.trait_data[&datum.trait_id];
-                       let num_trait_params = trait_data.parameter_kinds.len();
+                       let trait_datum = &program.trait_data[&datum.trait_id];
+                       let num_trait_params = trait_datum.parameter_kinds.len();
                        let num_addl_params = datum.parameter_kinds.len() - num_trait_params;
                        let addl_parameter_kinds = datum.parameter_kinds[..num_addl_params].to_owned();
                        let info = AssociatedTyInfo { id: associated_ty_id, addl_parameter_kinds };
