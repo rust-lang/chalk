@@ -122,6 +122,10 @@ WhereClause: WhereClause = {
 
     "TyWellFormed" "(" <t:Ty> ")" => WhereClause::TyWellFormed { ty: t },
 
+    "TraitRefWellFormed" "(" <t:TraitRef<":">> ")" => WhereClause::TraitRefWellFormed {
+             trait_ref: t
+    },
+
     "LocalTo" "(" <t:Ty> "," <c:Id> ")" => WhereClause::LocalTo { ty: t, crate_id: c },
 
     // `T: Foo<U = Bar>` -- a normalization

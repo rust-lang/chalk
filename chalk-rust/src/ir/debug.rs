@@ -14,9 +14,7 @@ impl Debug for ItemId {
                     fmt.debug_struct("ItemId").field("index", &self.index).finish()
                 }
             }
-            None => {
-                fmt.debug_struct("ItemId").field("index", &self.index).finish()
-            }
+            None => fmt.debug_struct("ItemId").field("index", &self.index).finish(),
         })
     }
 }
@@ -105,7 +103,10 @@ impl Debug for ProjectionTy {
                        Angle(&other_params))
             }
             None => {
-                write!(fmt, "({:?}){:?}", self.associated_ty_id, Angle(&self.parameters))
+                write!(fmt,
+                       "({:?}){:?}",
+                       self.associated_ty_id,
+                       Angle(&self.parameters))
             }
         })
     }
@@ -172,6 +173,9 @@ impl Debug for WhereClauseGoal {
             }
             WhereClauseGoal::UnifyTys(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::TyWellFormed(ref n) => write!(fmt, "TyWellFormed({:?})", n),
+            WhereClauseGoal::TraitRefWellFormed(ref n) => {
+                write!(fmt, "TraitRefWellFormed({:?})", n)
+            }
             WhereClauseGoal::LocalTo(ref n) => write!(fmt, "{:?}", n),
         }
     }
@@ -196,7 +200,7 @@ impl Debug for Goal {
             Goal::Quantified(qkind, ref subgoal) => {
                 write!(fmt, "{:?}<", qkind)?;
                 for (index, binder) in subgoal.binders.iter().enumerate() {
-                    if index > 0  {
+                    if index > 0 {
                         write!(fmt, ", ")?;
                     }
                     match *binder {
@@ -225,7 +229,7 @@ impl<T: Debug> Debug for Binders<T> {
         if !binders.is_empty() {
             write!(fmt, "for<")?;
             for (index, binder) in binders.iter().enumerate() {
-                if index > 0  {
+                if index > 0 {
                     write!(fmt, ", ")?;
                 }
                 match *binder {

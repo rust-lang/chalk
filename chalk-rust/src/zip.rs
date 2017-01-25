@@ -169,6 +169,9 @@ impl Zip for WhereClauseGoal {
             (&WhereClauseGoal::TyWellFormed(ref a), &WhereClauseGoal::TyWellFormed(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
+            (&WhereClauseGoal::TraitRefWellFormed(ref a), &WhereClauseGoal::TraitRefWellFormed(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
             (&WhereClauseGoal::LocalTo(ref a), &WhereClauseGoal::LocalTo(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
@@ -176,7 +179,8 @@ impl Zip for WhereClauseGoal {
             (&WhereClauseGoal::Normalize(_), _) |
             (&WhereClauseGoal::UnifyTys(_), _) |
             (&WhereClauseGoal::LocalTo(_), _) |
-            (&WhereClauseGoal::TyWellFormed(_), _) => {
+            (&WhereClauseGoal::TyWellFormed(_), _) |
+            (&WhereClauseGoal::TraitRefWellFormed(_), _) => {
                 bail!("cannot zip where-clause-goals `{:?}` and `{:?}`", a, b)
             }
         }

@@ -30,7 +30,7 @@ impl Program {
         let ProjectionTy { associated_ty_id, ref parameters } = *projection;
         let associated_ty_data = &self.associated_ty_data[&associated_ty_id];
         let trait_datum = &self.trait_data[&associated_ty_data.trait_id];
-        let trait_num_params = trait_datum.parameter_kinds.len();
+        let trait_num_params = trait_datum.binders.len();
         let split_point = parameters.len() - trait_num_params;
         let (other_params, trait_params) = parameters.split_at(split_point);
         (associated_ty_data, trait_params, other_params)
@@ -108,7 +108,12 @@ pub struct StructBoundDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum {
     pub crate_id: CrateId,
-    pub parameter_kinds: Vec<ParameterKind<Identifier>>, // including the implicit `Self` as param 0
+    pub binders: Binders<TraitDatumBound>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TraitDatumBound {
+    pub trait_ref: TraitRef,
     pub where_clauses: Vec<WhereClause>,
 }
 
@@ -245,6 +250,7 @@ pub enum WhereClauseGoal {
     Normalize(Normalize),
     UnifyTys(Unify<Ty>),
     TyWellFormed(Ty),
+    TraitRefWellFormed(TraitRef),
     LocalTo(LocalTo),
 }
 
@@ -288,6 +294,10 @@ impl<T> Binders<T> {
             binders: self.binders.clone(),
             value: value,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.binders.len()
     }
 }
 

@@ -65,6 +65,7 @@ impl Solver {
                 SolveUnify::new(self, q).solve().cast()
             }
             WhereClauseGoal::LocalTo(_) |
+            WhereClauseGoal::TraitRefWellFormed(_) |
             WhereClauseGoal::TyWellFormed(_) => {
                 // Currently, we don't allow `LocalTo` or `WF` types
                 // into the environment, there we just have to search

@@ -51,7 +51,7 @@ impl Environment {
                     // T: Bar<U>
 
                     let trait_datum = &program.trait_data[&trait_ref.trait_id];
-                    for where_clause in &trait_datum.where_clauses {
+                    for where_clause in &trait_datum.binders.value.where_clauses {
                         let where_clause = Subst::apply(&trait_ref.parameters, where_clause);
                         push_clause(where_clause);
                     }

@@ -173,41 +173,21 @@ impl LowerProgram for Program {
                     struct_data.insert(item_id, d.lower_struct(crate_id, item_id, &empty_env)?);
                 }
                 Item::TraitDefn(ref d) => {
-                    let env = empty_env.introduce(d.all_parameters());
-                    trait_data.insert(item_id, d.lower_trait(crate_id, &env)?);
+                    trait_data.insert(item_id, d.lower_trait(crate_id, item_id, &empty_env)?);
 
                     let trait_datum = &trait_data[&item_id];
                     for defn in &d.assoc_ty_defns {
                         let info = &associated_ty_infos[&(item_id, defn.name.str)];
 
-                        // Given `trait Foo<'a, T>`, produce a trait ref like
-                        //
-                        //     <Ty::Var(0): Foo<Lifetime::Var(1), Ty::Var(2)>
-                        //
-                        // Note that within a set of binders (i.e.,
-                        // the things declared on the impl), we don't
-                        // use "deBruijn" indexing but rather just
-                        // straight-up indexing.
-                        //
-                        // This will be the where-clause for the
-                        // associated type. (IOW, to project this
-                        // associated type, one must prove that the
-                        // trait applies.)
+                        // `trait_ref` is the trait ref defined by
+                        // this impl, but shifted to account for the
+                        // add'l bindings that are in scope w/in the
+                        // assoc-ty-value.
                         let offset = info.addl_parameter_kinds.len();
-                        let trait_ref = ir::TraitRef {
-                            trait_id: item_id,
-                            parameters: {
-                                trait_datum.parameter_kinds
-                                          .anonymize()
-                                          .iter()
-                                          .zip(offset..)
-                                          .map(|p| p.to_parameter())
-                                          .collect()
-                            },
-                        };
+                        let trait_ref = trait_datum.binders.value.trait_ref.up_shift(offset);
 
                         let mut parameter_kinds = defn.all_parameters();
-                        parameter_kinds.extend(trait_datum.parameter_kinds.iter().cloned());
+                        parameter_kinds.extend(d.all_parameters());
 
                         associated_ty_data.insert(info.id, ir::AssociatedTyDatum {
                             trait_id: item_id,
@@ -234,6 +214,10 @@ impl LowerProgram for Program {
             program_clauses.extend(struct_datum.to_program_clauses());
         }
 
+        for trait_datum in trait_data.values() {
+            program_clauses.extend(trait_datum.to_program_clauses());
+        }
+
         for impl_datum in impl_data.values() {
             program_clauses.push(impl_datum.to_program_clause());
 
@@ -258,6 +242,15 @@ trait LowerParameterMap {
             .iter()
             .map(|id| id.lower())
             .chain(self.synthetic_parameters()) // (*) see above
+            .collect()
+    }
+
+    fn parameter_refs(&self) -> Vec<ir::Parameter> {
+        self.all_parameters()
+            .anonymize()
+            .iter()
+            .zip(0..)
+            .map(|p| p.to_parameter())
             .collect()
     }
 
@@ -424,6 +417,7 @@ impl LowerWhereClause<ir::WhereClause> for WhereClause {
                 })
             }
             WhereClause::TyWellFormed { .. } |
+            WhereClause::TraitRefWellFormed { .. } |
             WhereClause::LocalTo { .. } |
             WhereClause::NotImplemented { .. } => {
                 bail!("this form of where-clause not allowed here")
@@ -445,6 +439,9 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
             }
             WhereClause::TyWellFormed { ref ty } => {
                 ir::WhereClauseGoal::TyWellFormed(ty.lower(env)?)
+            }
+            WhereClause::TraitRefWellFormed { ref trait_ref } => {
+                ir::WhereClauseGoal::TraitRefWellFormed(trait_ref.lower(env)?)
             }
             WhereClause::LocalTo { ref ty, ref crate_id } => {
                 let crate_id = ir::CrateId { name: crate_id.str };
@@ -673,15 +670,31 @@ impl LowerAssocTyValue for AssocTyValue {
 }
 
 trait LowerTrait {
-    fn lower_trait(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::TraitDatum>;
+    fn lower_trait(&self, crate_id: ir::CrateId,
+                   trait_id: ir::ItemId,
+                   env: &Env)
+                   -> Result<ir::TraitDatum>;
 }
 
 impl LowerTrait for TraitDefn {
-    fn lower_trait(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::TraitDatum> {
+    fn lower_trait(&self, crate_id: ir::CrateId,
+                   trait_id: ir::ItemId,
+                   env: &Env)
+                   -> Result<ir::TraitDatum> {
+        let binders = env.in_binders(self.all_parameters(), |env| {
+            let trait_ref = ir::TraitRef {
+                trait_id: trait_id,
+                parameters: self.parameter_refs()
+            };
+            Ok(ir::TraitDatumBound {
+                trait_ref: trait_ref,
+                where_clauses: self.lower_where_clauses(env)?,
+            })
+        })?;
+
         Ok(ir::TraitDatum {
             crate_id: crate_id,
-            parameter_kinds: self.all_parameters(),
-            where_clauses: self.lower_where_clauses(&env)?,
+            binders: binders,
         })
     }
 }
@@ -697,7 +710,7 @@ impl LowerGoal<ir::Program> for Goal {
                    .iter()
                    .map(|(&associated_ty_id, datum)| {
                        let trait_datum = &program.trait_data[&datum.trait_id];
-                       let num_trait_params = trait_datum.parameter_kinds.len();
+                       let num_trait_params = trait_datum.binders.len();
                        let num_addl_params = datum.parameter_kinds.len() - num_trait_params;
                        let addl_parameter_kinds = datum.parameter_kinds[..num_addl_params].to_owned();
                        let info = AssociatedTyInfo { id: associated_ty_id, addl_parameter_kinds };
@@ -918,5 +931,29 @@ impl ir::StructDatum {
         };
 
         vec![local_to, wf]
+    }
+}
+
+impl ir::TraitDatum {
+    fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
+        // Given:
+        //
+        //    crate A {
+        //        trait Ord<T> where Self: Eq<T> { ... }
+        //    }
+        //
+        // we generate the following clauses:
+        //
+        //    for<?Self, ?T> WF(?Self: Foo<?T>) :- (?Self: Eq<?T>).
+        //
+        // we don't currently generate `LocalTo` clauses, but if we
+        // did it would look something like this (the problem is that
+        // we don't allow quantification over a crate-id like ?C):
+        //
+        //    for<?Self, ?T> LocalTo(?Self: Foo<?T>, A).
+        //    for<?Self, ?T, ?C> LocalTo(?Self: Foo<?T>, ?C) :- LocalTo(?Self, ?C).
+        //    for<?Self, ?T, ?C> LocalTo(?Self: Foo<?T>, ?C) :- LocalTo(?T, ?C).
+
+        vec![]
     }
 }
