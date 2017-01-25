@@ -239,6 +239,6 @@ impl<T: Debug> Debug for Binders<T> {
             }
             write!(fmt, "> ")?;
         }
-        write!(fmt, "{:?}", value)
+        Debug::fmt(value, fmt)
     }
 }

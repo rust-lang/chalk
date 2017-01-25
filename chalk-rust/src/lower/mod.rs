@@ -198,8 +198,7 @@ impl LowerProgram for Program {
                     }
                 }
                 Item::Impl(ref d) => {
-                    let env = empty_env.introduce(d.all_parameters());
-                    impl_data.insert(item_id, d.lower_impl(crate_id, &env)?);
+                    impl_data.insert(item_id, d.lower_impl(crate_id, &empty_env)?);
                 }
             }
         }
@@ -221,7 +220,7 @@ impl LowerProgram for Program {
         for impl_datum in impl_data.values() {
             program_clauses.push(impl_datum.to_program_clause());
 
-            for atv in &impl_datum.assoc_ty_values {
+            for atv in &impl_datum.binders.value.associated_ty_values {
                 program_clauses.push(atv.to_program_clause(impl_datum));
             }
         }
@@ -641,37 +640,42 @@ impl LowerLifetime for Lifetime {
 }
 
 trait LowerImpl {
-    fn lower_impl(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::ImplDatum>;
+    fn lower_impl(&self, crate_id: ir::CrateId, empty_env: &Env) -> Result<ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::ImplDatum> {
-        let trait_ref = self.trait_ref.lower(env)?;
-        let trait_id = trait_ref.trait_id;
+    fn lower_impl(&self, crate_id: ir::CrateId, empty_env: &Env) -> Result<ir::ImplDatum> {
+        let binders = empty_env.in_binders(self.all_parameters(), |env| {
+            let trait_ref = self.trait_ref.lower(env)?;
+            let trait_id = trait_ref.trait_id;
+            let where_clauses = self.lower_where_clauses(&env)?;
+            let associated_ty_values = try!(self.assoc_ty_values.iter()
+                                            .map(|v| v.lower(trait_id, env))
+                                            .collect());
+            Ok(ir::ImplDatumBound { trait_ref, where_clauses, associated_ty_values })
+        })?;
+
         Ok(ir::ImplDatum {
             crate_id: crate_id,
-            trait_ref: trait_ref,
-            parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
-            assoc_ty_values: try!(self.assoc_ty_values.iter().map(|v| v.lower(trait_id, env)).collect()),
-            where_clauses: self.lower_where_clauses(&env)?,
+            binders: binders,
         })
     }
 }
 
 trait LowerAssocTyValue {
-    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssocTyValue>;
+    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssociatedTyValue>;
 }
 
 impl LowerAssocTyValue for AssocTyValue {
-    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssocTyValue> {
+    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssociatedTyValue> {
         let info = &env.associated_ty_infos[&(trait_id, self.name.str)];
         let value = env.in_binders(self.all_parameters(), |env| {
-            Ok(ir::AssocTyValueBound {
+            Ok(ir::AssociatedTyValueBound {
                 ty: self.value.lower(env)?,
                 where_clauses: self.where_clauses.lower(env)?,
             })
         })?;
-        Ok(ir::AssocTyValue { associated_ty_id: info.id, value: value })
+        Ok(ir::AssociatedTyValue { associated_ty_id: info.id, value: value })
     }
 }
 
@@ -785,18 +789,17 @@ impl ir::ImplDatum {
     /// ```
     fn to_program_clause(&self) -> ir::ProgramClause {
         ir::ProgramClause {
-            implication: ir::Binders {
-                binders: self.parameter_kinds.anonymize(),
-                value: ir::ProgramClauseImplication {
-                    consequence: self.trait_ref.clone().cast(),
-                    conditions: self.where_clauses.clone().cast(),
-                },
-            }
+            implication: self.binders.map_ref(|bound| {
+                ir::ProgramClauseImplication {
+                    consequence: bound.trait_ref.clone().cast(),
+                    conditions: bound.where_clauses.clone().cast(),
+                }
+            })
         }
     }
 }
 
-impl ir::AssocTyValue {
+impl ir::AssociatedTyValue {
     /// Given:
     ///
     /// ```notrust
@@ -820,7 +823,7 @@ impl ir::AssocTyValue {
             self.value.binders
                       .iter()
                       .cloned()
-                      .chain(impl_datum.parameter_kinds.anonymize())
+                      .chain(impl_datum.binders.binders.iter().cloned())
                       .collect();
 
         // Assemble the full list of conditions for projection to be valid.
@@ -828,8 +831,9 @@ impl ir::AssocTyValue {
         //
         // 1. require that the trait is implemented
         // 2. any where-clauses from the `type` declaration in the impl
+        let impl_trait_ref = impl_datum.binders.value.trait_ref.up_shift(self.value.len());
         let conditions: Vec<ir::Goal> =
-            Some(impl_datum.trait_ref.up_shift(self.value.binders.len()).cast())
+            Some(impl_trait_ref.clone().cast())
             .into_iter()
             .chain(self.value.value.where_clauses.clone().cast())
             .collect();
@@ -840,9 +844,7 @@ impl ir::AssocTyValue {
             let parameters = self.value.binders.iter().zip(0..).map(|p| p.to_parameter());
 
             // Then add the trait-ref parameters (`Vec<T>`, in above example)
-            let parameters = parameters.chain(impl_datum.trait_ref.parameters
-                                              .iter()
-                                              .map(|p| p.up_shift(self.value.binders.len())));
+            let parameters = parameters.chain(impl_trait_ref.parameters);
 
             // Construct normalization predicate
             ir::Normalize {

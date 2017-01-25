@@ -85,17 +85,19 @@ fn atc_accounting() {
         println!("{}", impl_text);
         assert_eq!(&impl_text[..], r#"ImplDatum {
     crate_id: crate,
-    parameter_kinds: [
-        "T"
-    ],
-    trait_ref: Vec<?0> as Iterable,
-    where_clauses: [],
-    assoc_ty_values: [
-        AssocTyValue {
-            associated_ty_id: (Iterable::Iter),
-            value: for<lifetime> AssocTyValueBound { ty: Iter<'?0, ?1>, where_clauses: [] }
-        }
-    ]
+    binders: for<type> ImplDatumBound {
+        trait_ref: Vec<?0> as Iterable,
+        where_clauses: [],
+        associated_ty_values: [
+            AssociatedTyValue {
+                associated_ty_id: (Iterable::Iter),
+                value: for<lifetime> AssociatedTyValueBound {
+                    ty: Iter<'?0, ?1>,
+                    where_clauses: []
+                }
+            }
+        ]
+    }
 }"#);
         let goal = parse_and_lower_goal(&program, "forall<X> { forall<'a> { forall<Y> { \
                                                    X: Iterable<Iter<'a> = Y> } } }")

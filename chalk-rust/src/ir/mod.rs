@@ -87,10 +87,14 @@ pub enum TypeSort {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum {
     pub crate_id: CrateId,
-    pub parameter_kinds: Vec<ParameterKind<Identifier>>,
+    pub binders: Binders<ImplDatumBound>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplDatumBound {
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<WhereClause>,
-    pub assoc_ty_values: Vec<AssocTyValue>,
+    pub associated_ty_values: Vec<AssociatedTyValue>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -134,16 +138,15 @@ pub struct AssociatedTyDatum {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AssocTyValue {
+pub struct AssociatedTyValue {
     pub associated_ty_id: ItemId,
 
-    // the for-all encodes add'l binders, beyond those in the impl;
-    // free variables reference the enclosing impl
-    pub value: Binders<AssocTyValueBound>,
+    // note: these binders are in addition to those from the impl
+    pub value: Binders<AssociatedTyValueBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AssocTyValueBound {
+pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty,
 
