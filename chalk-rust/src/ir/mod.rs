@@ -94,6 +94,18 @@ pub struct ImplData {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct StructDatum {
+    pub crate_id: CrateId,
+    pub binders: Binders<StructBoundDatum>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct StructBoundDatum {
+    pub self_ty: ApplicationTy,
+    pub where_clauses: Vec<WhereClause>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitData {
     pub crate_id: CrateId,
     pub parameter_kinds: Vec<ParameterKind<Identifier>>, // including the implicit `Self` as param 0
@@ -265,6 +277,18 @@ pub struct Normalize {
 pub struct Binders<T> {
     pub binders: Vec<ParameterKind<()>>,
     pub value: T,
+}
+
+impl<T> Binders<T> {
+    pub fn map_ref<U, OP>(&self, op: OP) -> Binders<U>
+        where OP: FnOnce(&T) -> U
+    {
+        let value = op(&self.value);
+        Binders {
+            binders: self.binders.clone(),
+            value: value,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

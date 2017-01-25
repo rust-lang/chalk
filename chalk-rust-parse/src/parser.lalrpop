@@ -120,7 +120,7 @@ WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
     <t:TraitRef<(":" "!")>> => WhereClause::NotImplemented { trait_ref: t },
 
-    "WF" "(" <t:Ty> ")" => WhereClause::WellFormed { ty: t },
+    "WellFormed" "(" <t:Ty> ")" => WhereClause::WellFormed { ty: t },
 
     "LocalTo" "(" <t:Ty> "," <c:Id> ")" => WhereClause::LocalTo { ty: t, crate_id: c },
 

@@ -1054,3 +1054,92 @@ fn atc1() {
         }
     }
 }
+
+#[test]
+fn struct_local() {
+    test! {
+        program {
+            crate A {
+                struct Foo { }
+            }
+
+            crate B {
+                struct Bar { }
+            }
+        }
+
+        goal {
+            LocalTo(Foo, A)
+        } yields {
+            "Solution { successful: Yes"
+        }
+
+        goal {
+            LocalTo(Bar, A)
+        } yields {
+            "no applicable candidates"
+        }
+
+        goal {
+            LocalTo(Bar, B)
+        } yields {
+            "Solution { successful: Yes"
+        }
+    }
+}
+
+#[test]
+fn struct_wf() {
+    test! {
+        program {
+            struct Foo<T> where T: Eq { }
+            struct Bar { }
+            struct Baz { }
+
+            trait Eq { }
+
+            impl Eq for Baz { }
+            impl<T> Eq for Foo<T> where T: Eq { }
+        }
+
+        goal {
+            WellFormed(Foo<Bar>)
+        } yields {
+            "no applicable candidates"
+        }
+
+        goal {
+            WellFormed(Foo<Baz>)
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            WF(Foo<Baz>)
+                        ],
+                        constraints: []
+                    },
+                    binders: []
+                }
+            }"
+        }
+
+        goal {
+            WellFormed(Foo<Foo<Baz>>)
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            WF(Foo<Foo<Baz>>)
+                        ],
+                        constraints: []
+                    },
+                    binders: []
+                }
+            }"
+        }
+    }
+}

@@ -155,6 +155,7 @@ impl LowerProgram for Program {
             type_kinds.insert(item_id, k);
         }
 
+        let mut struct_data = HashMap::new();
         let mut trait_data = HashMap::new();
         let mut impl_data = HashMap::new();
         let mut associated_ty_data = HashMap::new();
@@ -168,11 +169,11 @@ impl LowerProgram for Program {
 
             match *item {
                 Item::CrateDefn(_) => { }
-                Item::StructDefn(ref _d) => {
-                    // where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
+                Item::StructDefn(ref d) => {
+                    struct_data.insert(item_id, d.lower_struct(crate_id, item_id, &empty_env)?);
                 }
                 Item::TraitDefn(ref d) => {
-                    let env = empty_env.introduce(item.all_parameters());
+                    let env = empty_env.introduce(d.all_parameters());
                     trait_data.insert(item_id, d.lower_trait(crate_id, &env)?);
 
                     let trait_data = &trait_data[&item_id];
@@ -217,7 +218,7 @@ impl LowerProgram for Program {
                     }
                 }
                 Item::Impl(ref d) => {
-                    let env = empty_env.introduce(item.all_parameters());
+                    let env = empty_env.introduce(d.all_parameters());
                     impl_data.insert(item_id, d.lower_impl(crate_id, &env)?);
                 }
             }
@@ -228,6 +229,10 @@ impl LowerProgram for Program {
         //
         //       forall P0...Pn. Something :- Conditions
         let mut program_clauses = vec![];
+
+        for struct_datum in struct_data.values() {
+            program_clauses.extend(struct_datum.to_program_clauses());
+        }
 
         for impl_datum in impl_data.values() {
             program_clauses.push(impl_datum.to_program_clause());
@@ -274,23 +279,23 @@ trait LowerParameterMap {
     }
 }
 
-impl LowerParameterMap for Item {
+impl LowerParameterMap for StructDefn {
     fn synthetic_parameters(&self) -> Option<ir::ParameterKind<ir::Identifier>> {
-        match *self {
-            Item::TraitDefn(ref d) => d.synthetic_parameters(),
-            Item::StructDefn(..) |
-            Item::CrateDefn(..) |
-            Item::Impl(..) => None,
-        }
+        None
     }
 
     fn declared_parameters(&self) -> &[ParameterKind] {
-        match *self {
-            Item::TraitDefn(ref d) => d.declared_parameters(),
-            Item::StructDefn(ref d) => &d.parameter_kinds,
-            Item::Impl(ref d) => &d.parameter_kinds,
-            Item::CrateDefn(_) => &[],
-        }
+        &self.parameter_kinds
+    }
+}
+
+impl LowerParameterMap for Impl {
+    fn synthetic_parameters(&self) -> Option<ir::ParameterKind<ir::Identifier>> {
+        None
+    }
+
+    fn declared_parameters(&self) -> &[ParameterKind] {
+        &self.parameter_kinds
     }
 }
 
@@ -452,6 +457,41 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
                 unimplemented!() // oh the irony
             }
         })
+    }
+}
+
+trait LowerStructDefn {
+    fn lower_struct(&self,
+                    crate_id: ir::CrateId,
+                    item_id: ir::ItemId,
+                    env: &Env)
+                    -> Result<ir::StructDatum>;
+}
+
+impl LowerStructDefn for StructDefn {
+    fn lower_struct(&self,
+                    crate_id: ir::CrateId,
+                    item_id: ir::ItemId,
+                    env: &Env)
+                    -> Result<ir::StructDatum>
+    {
+        let binders = env.in_binders(self.all_parameters(), |env| {
+            let self_ty = ir::ApplicationTy {
+                name: ir::TypeName::ItemId(item_id),
+                parameters: self.all_parameters()
+                                .anonymize()
+                                .iter()
+                                .zip(0..)
+                                .map(|p| p.to_parameter())
+                                .collect()
+            };
+
+            let where_clauses = self.lower_where_clauses(env)?;
+
+            Ok(ir::StructBoundDatum { self_ty, where_clauses })
+        })?;
+
+        Ok(ir::StructDatum { crate_id, binders })
     }
 }
 
@@ -835,5 +875,48 @@ trait Anonymize {
 impl Anonymize for [ir::ParameterKind<ir::Identifier>] {
     fn anonymize(&self) -> Vec<ir::ParameterKind<()>> {
         self.iter().map(|pk| pk.map(|_| ())).collect()
+    }
+}
+
+impl ir::StructDatum {
+    fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
+        // Given:
+        //
+        //    crate A {
+        //        struct Foo<T: Eq> { ... }
+        //    }
+        //
+        // we generate the following clauses:
+        //
+        //    for<?T> LocalTo(Foo<?T>, A).
+        //    for<?T> WF(Foo<?T>) :- (?T: Eq).
+
+        let local_to = ir::ProgramClause {
+            implication: self.binders.map_ref(|bound_datum| {
+                ir::ProgramClauseImplication {
+                    consequence: ir::LocalTo {
+                        ty: bound_datum.self_ty.clone().cast(),
+                        crate_id: self.crate_id,
+                    }.cast(),
+
+                    conditions: vec![]
+                }
+            })
+        };
+
+        let wf = ir::ProgramClause {
+            implication: self.binders.map_ref(|bound_datum| {
+                ir::ProgramClauseImplication {
+                    consequence: bound_datum.self_ty.clone().cast(),
+
+                    conditions: bound_datum.where_clauses.iter()
+                                                         .cloned()
+                                                         .map(|wc| wc.cast())
+                                                         .collect(),
+                }
+            })
+        };
+
+        vec![local_to, wf]
     }
 }

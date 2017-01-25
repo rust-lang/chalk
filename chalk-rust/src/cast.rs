@@ -51,6 +51,25 @@ impl Cast<WhereClauseGoal> for Normalize {
     }
 }
 
+impl Cast<WhereClauseGoal> for LocalTo {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::LocalTo(self)
+    }
+}
+
+impl Cast<WhereClauseGoal> for Ty {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::WellFormed(self)
+    }
+}
+
+impl Cast<WhereClauseGoal> for ApplicationTy {
+    fn cast(self) -> WhereClauseGoal {
+        let t: Ty = self.cast();
+        t.cast()
+    }
+}
+
 impl Cast<WhereClauseGoal> for WhereClause {
     fn cast(self) -> WhereClauseGoal {
         match self {
@@ -75,6 +94,12 @@ impl Cast<Goal> for WhereClause {
 impl Cast<WhereClauseGoal> for Unify<Ty> {
     fn cast(self) -> WhereClauseGoal {
         WhereClauseGoal::UnifyTys(self)
+    }
+}
+
+impl Cast<Ty> for ApplicationTy {
+    fn cast(self) -> Ty {
+        Ty::Apply(self)
     }
 }
 

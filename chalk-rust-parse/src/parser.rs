@@ -21,7 +21,7 @@ mod __parse__Goal {
         Term_22_3d_22(&'input str),
         Term_22_3e_22(&'input str),
         Term_22LocalTo_22(&'input str),
-        Term_22WF_22(&'input str),
+        Term_22WellFormed_22(&'input str),
         Term_22as_22(&'input str),
         Term_22crate_22(&'input str),
         Term_22exists_22(&'input str),
@@ -1760,7 +1760,7 @@ mod __parse__Goal {
                             _ => unreachable!(),
                         },
                         11 => match __lookahead.1 {
-                            (11, __tok0) => __Symbol::Term_22WF_22(__tok0),
+                            (11, __tok0) => __Symbol::Term_22WellFormed_22(__tok0),
                             _ => unreachable!(),
                         },
                         12 => match __lookahead.1 {
@@ -2895,11 +2895,11 @@ mod __parse__Goal {
                 46
             }
             86 => {
-                // WhereClause = "WF", "(", Ty, ")" => ActionFn(34);
+                // WhereClause = "WellFormed", "(", Ty, ")" => ActionFn(34);
                 let __sym3 = __pop_Term_22_29_22(__symbols);
                 let __sym2 = __pop_NtTy(__symbols);
                 let __sym1 = __pop_Term_22_28_22(__symbols);
-                let __sym0 = __pop_Term_22WF_22(__symbols);
+                let __sym0 = __pop_Term_22WellFormed_22(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym3.2.clone();
                 let __nt = super::__action34::<>(input, __sym0, __sym1, __sym2, __sym3);
@@ -3133,13 +3133,13 @@ mod __parse__Goal {
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_Term_22WF_22<
+    fn __pop_Term_22WellFormed_22<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, &'input str, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::Term_22WF_22(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::Term_22WellFormed_22(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -3835,7 +3835,7 @@ mod __parse__Program {
         Term_22_3d_22(&'input str),
         Term_22_3e_22(&'input str),
         Term_22LocalTo_22(&'input str),
-        Term_22WF_22(&'input str),
+        Term_22WellFormed_22(&'input str),
         Term_22as_22(&'input str),
         Term_22crate_22(&'input str),
         Term_22exists_22(&'input str),
@@ -5924,7 +5924,7 @@ mod __parse__Program {
                             _ => unreachable!(),
                         },
                         11 => match __lookahead.1 {
-                            (11, __tok0) => __Symbol::Term_22WF_22(__tok0),
+                            (11, __tok0) => __Symbol::Term_22WellFormed_22(__tok0),
                             _ => unreachable!(),
                         },
                         12 => match __lookahead.1 {
@@ -7059,11 +7059,11 @@ mod __parse__Program {
                 46
             }
             86 => {
-                // WhereClause = "WF", "(", Ty, ")" => ActionFn(34);
+                // WhereClause = "WellFormed", "(", Ty, ")" => ActionFn(34);
                 let __sym3 = __pop_Term_22_29_22(__symbols);
                 let __sym2 = __pop_NtTy(__symbols);
                 let __sym1 = __pop_Term_22_28_22(__symbols);
-                let __sym0 = __pop_Term_22WF_22(__symbols);
+                let __sym0 = __pop_Term_22WellFormed_22(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym3.2.clone();
                 let __nt = super::__action34::<>(input, __sym0, __sym1, __sym2, __sym3);
@@ -7297,13 +7297,13 @@ mod __parse__Program {
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_Term_22WF_22<
+    fn __pop_Term_22WellFormed_22<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, &'input str, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::Term_22WF_22(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::Term_22WellFormed_22(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -7999,7 +7999,7 @@ mod __parse__Ty {
         Term_22_3d_22(&'input str),
         Term_22_3e_22(&'input str),
         Term_22LocalTo_22(&'input str),
-        Term_22WF_22(&'input str),
+        Term_22WellFormed_22(&'input str),
         Term_22as_22(&'input str),
         Term_22crate_22(&'input str),
         Term_22exists_22(&'input str),
@@ -8588,7 +8588,7 @@ mod __parse__Ty {
                             _ => unreachable!(),
                         },
                         11 => match __lookahead.1 {
-                            (11, __tok0) => __Symbol::Term_22WF_22(__tok0),
+                            (11, __tok0) => __Symbol::Term_22WellFormed_22(__tok0),
                             _ => unreachable!(),
                         },
                         12 => match __lookahead.1 {
@@ -9723,11 +9723,11 @@ mod __parse__Ty {
                 46
             }
             86 => {
-                // WhereClause = "WF", "(", Ty, ")" => ActionFn(34);
+                // WhereClause = "WellFormed", "(", Ty, ")" => ActionFn(34);
                 let __sym3 = __pop_Term_22_29_22(__symbols);
                 let __sym2 = __pop_NtTy(__symbols);
                 let __sym1 = __pop_Term_22_28_22(__symbols);
-                let __sym0 = __pop_Term_22WF_22(__symbols);
+                let __sym0 = __pop_Term_22WellFormed_22(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym3.2.clone();
                 let __nt = super::__action34::<>(input, __sym0, __sym1, __sym2, __sym3);
@@ -9961,13 +9961,13 @@ mod __parse__Ty {
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_Term_22WF_22<
+    fn __pop_Term_22WellFormed_22<
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, &'input str, usize) {
         match __symbols.pop().unwrap() {
-            (__l, __Symbol::Term_22WF_22(__v), __r) => (__l, __v, __r),
+            (__l, __Symbol::Term_22WellFormed_22(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -10997,17 +10997,7 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        65 ... 69 => {
-                            __current_match = Some((26, __index + __ch.len_utf8()));
-                            __current_state = 11;
-                            continue;
-                        }
-                        70 => /* 'F' */ {
-                            __current_match = Some((11, __index + 1));
-                            __current_state = 28;
-                            continue;
-                        }
-                        71 ... 90 => {
+                        65 ... 90 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -11017,7 +11007,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 122 => {
+                        97 ... 100 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        101 => /* 'e' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 28;
+                            continue;
+                        }
+                        102 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -11467,7 +11467,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 122 => {
+                        97 ... 107 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        108 => /* 'l' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 40;
+                            continue;
+                        }
+                        109 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -11525,7 +11535,7 @@ mod __intern_token {
                         }
                         97 => /* 'a' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 40;
+                            __current_state = 41;
                             continue;
                         }
                         98 ... 122 => {
@@ -11563,7 +11573,7 @@ mod __intern_token {
                         }
                         105 => /* 'i' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 41;
+                            __current_state = 42;
                             continue;
                         }
                         106 ... 122 => {
@@ -11601,7 +11611,7 @@ mod __intern_token {
                         }
                         114 => /* 'r' */ {
                             __current_match = Some((15, __index + 1));
-                            __current_state = 42;
+                            __current_state = 43;
                             continue;
                         }
                         115 ... 122 => {
@@ -11667,7 +11677,7 @@ mod __intern_token {
                         }
                         112 => /* 'p' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 43;
+                            __current_state = 44;
                             continue;
                         }
                         113 ... 122 => {
@@ -11705,7 +11715,7 @@ mod __intern_token {
                         }
                         114 => /* 'r' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 44;
+                            __current_state = 45;
                             continue;
                         }
                         115 ... 122 => {
@@ -11738,7 +11748,7 @@ mod __intern_token {
                         }
                         97 => /* 'a' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 45;
+                            __current_state = 46;
                             continue;
                         }
                         98 ... 122 => {
@@ -11776,7 +11786,7 @@ mod __intern_token {
                         }
                         112 => /* 'p' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 46;
+                            __current_state = 47;
                             continue;
                         }
                         113 ... 122 => {
@@ -11814,7 +11824,7 @@ mod __intern_token {
                         }
                         101 => /* 'e' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 47;
+                            __current_state = 48;
                             continue;
                         }
                         102 ... 122 => {
@@ -11847,7 +11857,7 @@ mod __intern_token {
                         }
                         97 => /* 'a' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 48;
+                            __current_state = 49;
                             continue;
                         }
                         98 ... 122 => {
@@ -11878,17 +11888,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 115 => {
+                        97 ... 107 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        116 => /* 't' */ {
+                        108 => /* 'l' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 49;
+                            __current_state = 50;
                             continue;
                         }
-                        117 ... 122 => {
+                        109 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -11916,17 +11926,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 114 => {
+                        97 ... 115 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        115 => /* 's' */ {
+                        116 => /* 't' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 50;
+                            __current_state = 51;
                             continue;
                         }
-                        116 ... 122 => {
+                        117 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -11954,12 +11964,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 => /* 'a' */ {
-                            __current_match = Some((26, __index + 1));
-                            __current_state = 51;
+                        97 ... 114 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
                             continue;
                         }
-                        98 ... 122 => {
+                        115 => /* 's' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 52;
+                            continue;
+                        }
+                        116 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -11987,17 +12002,12 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 107 => {
-                            __current_match = Some((26, __index + __ch.len_utf8()));
-                            __current_state = 11;
+                        97 => /* 'a' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 53;
                             continue;
                         }
-                        108 => /* 'l' */ {
-                            __current_match = Some((18, __index + 1));
-                            __current_state = 52;
-                            continue;
-                        }
-                        109 ... 122 => {
+                        98 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12025,17 +12035,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 116 => {
+                        97 ... 107 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        117 => /* 'u' */ {
-                            __current_match = Some((26, __index + 1));
-                            __current_state = 53;
+                        108 => /* 'l' */ {
+                            __current_match = Some((18, __index + 1));
+                            __current_state = 54;
                             continue;
                         }
-                        118 ... 122 => {
+                        109 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12063,17 +12073,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 104 => {
+                        97 ... 116 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        105 => /* 'i' */ {
+                        117 => /* 'u' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 54;
+                            __current_state = 55;
                             continue;
                         }
-                        106 ... 122 => {
+                        118 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12101,17 +12111,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 100 => {
+                        97 ... 104 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        101 => /* 'e' */ {
-                            __current_match = Some((21, __index + 1));
-                            __current_state = 55;
+                        105 => /* 'i' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 56;
                             continue;
                         }
-                        102 ... 122 => {
+                        106 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12139,17 +12149,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 113 => {
+                        97 ... 100 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        114 => /* 'r' */ {
-                            __current_match = Some((26, __index + 1));
-                            __current_state = 56;
+                        101 => /* 'e' */ {
+                            __current_match = Some((21, __index + 1));
+                            __current_state = 57;
                             continue;
                         }
-                        115 ... 122 => {
+                        102 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12177,17 +12187,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 107 => {
+                        97 ... 113 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        108 => /* 'l' */ {
+                        114 => /* 'r' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 57;
+                            __current_state = 58;
                             continue;
                         }
-                        109 ... 122 => {
+                        115 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12215,17 +12225,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 100 => {
+                        97 ... 107 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        101 => /* 'e' */ {
-                            __current_match = Some((13, __index + 1));
-                            __current_state = 58;
+                        108 => /* 'l' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 59;
                             continue;
                         }
-                        102 ... 122 => {
+                        109 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12243,7 +12253,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        65 ... 90 => {
+                        65 ... 69 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        70 => /* 'F' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 60;
+                            continue;
+                        }
+                        71 ... 90 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12253,17 +12273,7 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 115 => {
-                            __current_match = Some((26, __index + __ch.len_utf8()));
-                            __current_state = 11;
-                            continue;
-                        }
-                        116 => /* 't' */ {
-                            __current_match = Some((26, __index + 1));
-                            __current_state = 59;
-                            continue;
-                        }
-                        117 ... 122 => {
+                        97 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12291,17 +12301,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 107 => {
+                        97 ... 100 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        108 => /* 'l' */ {
-                            __current_match = Some((26, __index + 1));
-                            __current_state = 60;
+                        101 => /* 'e' */ {
+                            __current_match = Some((13, __index + 1));
+                            __current_state = 61;
                             continue;
                         }
-                        109 ... 122 => {
+                        102 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12329,7 +12339,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 122 => {
+                        97 ... 115 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        116 => /* 't' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 62;
+                            continue;
+                        }
+                        117 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12357,17 +12377,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 98 => {
+                        97 ... 107 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        99 => /* 'c' */ {
+                        108 => /* 'l' */ {
                             __current_match = Some((26, __index + 1));
-                            __current_state = 61;
+                            __current_state = 63;
                             continue;
                         }
-                        100 ... 122 => {
+                        109 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12395,17 +12415,7 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 115 => {
-                            __current_match = Some((26, __index + __ch.len_utf8()));
-                            __current_state = 11;
-                            continue;
-                        }
-                        116 => /* 't' */ {
-                            __current_match = Some((20, __index + 1));
-                            __current_state = 62;
-                            continue;
-                        }
-                        117 ... 122 => {
+                        97 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12433,7 +12443,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 122 => {
+                        97 ... 98 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        99 => /* 'c' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 64;
+                            continue;
+                        }
+                        100 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12461,17 +12481,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 100 => {
+                        97 ... 115 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        101 => /* 'e' */ {
-                            __current_match = Some((22, __index + 1));
-                            __current_state = 63;
+                        116 => /* 't' */ {
+                            __current_match = Some((20, __index + 1));
+                            __current_state = 65;
                             continue;
                         }
-                        102 ... 122 => {
+                        117 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12489,17 +12509,7 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        65 ... 83 => {
-                            __current_match = Some((26, __index + __ch.len_utf8()));
-                            __current_state = 11;
-                            continue;
-                        }
-                        84 => /* 'T' */ {
-                            __current_match = Some((26, __index + 1));
-                            __current_state = 64;
-                            continue;
-                        }
-                        85 ... 90 => {
+                        65 ... 90 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12537,7 +12547,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 122 => {
+                        97 ... 100 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        101 => /* 'e' */ {
+                            __current_match = Some((22, __index + 1));
+                            __current_state = 66;
+                            continue;
+                        }
+                        102 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12555,7 +12575,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        65 ... 90 => {
+                        65 ... 83 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        84 => /* 'T' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 67;
+                            continue;
+                        }
+                        85 ... 90 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12565,17 +12595,7 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 114 => {
-                            __current_match = Some((26, __index + __ch.len_utf8()));
-                            __current_state = 11;
-                            continue;
-                        }
-                        115 => /* 's' */ {
-                            __current_match = Some((14, __index + 1));
-                            __current_state = 65;
-                            continue;
-                        }
-                        116 ... 122 => {
+                        97 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12603,17 +12623,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 107 => {
+                        97 ... 110 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        108 => /* 'l' */ {
-                            __current_match = Some((16, __index + 1));
-                            __current_state = 66;
+                        111 => /* 'o' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 68;
                             continue;
                         }
-                        109 ... 122 => {
+                        112 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12641,17 +12661,7 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 115 => {
-                            __current_match = Some((26, __index + __ch.len_utf8()));
-                            __current_state = 11;
-                            continue;
-                        }
-                        116 => /* 't' */ {
-                            __current_match = Some((19, __index + 1));
-                            __current_state = 67;
-                            continue;
-                        }
-                        117 ... 122 => {
+                        97 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12679,7 +12689,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 122 => {
+                        97 ... 114 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        115 => /* 's' */ {
+                            __current_match = Some((14, __index + 1));
+                            __current_state = 69;
+                            continue;
+                        }
+                        116 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12707,7 +12727,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 122 => {
+                        97 ... 107 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        108 => /* 'l' */ {
+                            __current_match = Some((16, __index + 1));
+                            __current_state = 70;
+                            continue;
+                        }
+                        109 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12735,17 +12765,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 110 => {
+                        97 ... 115 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
                         }
-                        111 => /* 'o' */ {
-                            __current_match = Some((10, __index + 1));
-                            __current_state = 68;
+                        116 => /* 't' */ {
+                            __current_match = Some((19, __index + 1));
+                            __current_state = 71;
                             continue;
                         }
-                        112 ... 122 => {
+                        117 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12829,7 +12859,17 @@ mod __intern_token {
                             __current_state = 11;
                             continue;
                         }
-                        97 ... 122 => {
+                        97 ... 110 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        111 => /* 'o' */ {
+                            __current_match = Some((10, __index + 1));
+                            __current_state = 72;
+                            continue;
+                        }
+                        112 ... 122 => {
                             __current_match = Some((26, __index + __ch.len_utf8()));
                             __current_state = 11;
                             continue;
@@ -12840,6 +12880,270 @@ mod __intern_token {
                     }
                 }
                 68 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 11;
+                            continue;
+                        }
+                        97 ... 113 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        114 => /* 'r' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 73;
+                            continue;
+                        }
+                        115 ... 122 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                69 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 11;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                70 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 11;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                71 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 11;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                72 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 11;
+                            continue;
+                        }
+                        97 ... 122 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                73 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 11;
+                            continue;
+                        }
+                        97 ... 108 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        109 => /* 'm' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 74;
+                            continue;
+                        }
+                        110 ... 122 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                74 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 11;
+                            continue;
+                        }
+                        97 ... 100 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        101 => /* 'e' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 75;
+                            continue;
+                        }
+                        102 ... 122 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                75 => {
+                    let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
+                    match __ch as u32 {
+                        48 ... 57 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        65 ... 90 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        95 => /* '_' */ {
+                            __current_match = Some((26, __index + 1));
+                            __current_state = 11;
+                            continue;
+                        }
+                        97 ... 99 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        100 => /* 'd' */ {
+                            __current_match = Some((11, __index + 1));
+                            __current_state = 76;
+                            continue;
+                        }
+                        101 ... 122 => {
+                            __current_match = Some((26, __index + __ch.len_utf8()));
+                            __current_state = 11;
+                            continue;
+                        }
+                        _ => {
+                            return __current_match;
+                        }
+                    }
+                }
+                76 => {
                     let (__index, __ch) = match __chars.next() { Some(p) => p, None => return __current_match };
                     match __ch as u32 {
                         48 ... 57 => {
