@@ -218,3 +218,23 @@ impl Debug for CrateId {
         write!(fmt, "{}", self.name)
     }
 }
+
+impl<T: Debug> Debug for Binders<T> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let Binders { ref binders, ref value } = *self;
+        if !binders.is_empty() {
+            write!(fmt, "for<")?;
+            for (index, binder) in binders.iter().enumerate() {
+                if index > 0  {
+                    write!(fmt, ", ")?;
+                }
+                match *binder {
+                    ParameterKind::Ty(()) => write!(fmt, "type")?,
+                    ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+                }
+            }
+            write!(fmt, "> ")?;
+        }
+        write!(fmt, "{:?}", value)
+    }
+}

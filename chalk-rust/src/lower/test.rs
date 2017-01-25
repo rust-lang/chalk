@@ -83,7 +83,7 @@ fn atc_accounting() {
     set_current_program(&program, || {
         let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
         println!("{}", impl_text);
-        assert_eq!(&impl_text[..], r#"ImplData {
+        assert_eq!(&impl_text[..], r#"ImplDatum {
     crate_id: crate,
     parameter_kinds: [
         "T"
@@ -93,15 +93,7 @@ fn atc_accounting() {
     assoc_ty_values: [
         AssocTyValue {
             associated_ty_id: (Iterable::Iter),
-            value: Binders {
-                binders: [
-                    ()
-                ],
-                value: AssocTyValueData {
-                    ty: Iter<'?0, ?1>,
-                    where_clauses: []
-                }
-            }
+            value: for<lifetime> AssocTyValueBound { ty: Iter<'?0, ?1>, where_clauses: [] }
         }
     ]
 }"#);

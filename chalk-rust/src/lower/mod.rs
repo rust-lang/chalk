@@ -209,7 +209,7 @@ impl LowerProgram for Program {
                         let mut parameter_kinds = defn.all_parameters();
                         parameter_kinds.extend(trait_datum.parameter_kinds.iter().cloned());
 
-                        associated_ty_data.insert(info.id, ir::AssociatedTyData {
+                        associated_ty_data.insert(info.id, ir::AssociatedTyDatum {
                             trait_id: item_id,
                             name: defn.name.str,
                             parameter_kinds: parameter_kinds,
@@ -638,14 +638,14 @@ impl LowerLifetime for Lifetime {
 }
 
 trait LowerImpl {
-    fn lower_impl(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::ImplData>;
+    fn lower_impl(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::ImplData> {
+    fn lower_impl(&self, crate_id: ir::CrateId, env: &Env) -> Result<ir::ImplDatum> {
         let trait_ref = self.trait_ref.lower(env)?;
         let trait_id = trait_ref.trait_id;
-        Ok(ir::ImplData {
+        Ok(ir::ImplDatum {
             crate_id: crate_id,
             trait_ref: trait_ref,
             parameter_kinds: self.parameter_kinds.iter().map(|p| p.lower()).collect(),
@@ -663,7 +663,7 @@ impl LowerAssocTyValue for AssocTyValue {
     fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssocTyValue> {
         let info = &env.associated_ty_infos[&(trait_id, self.name.str)];
         let value = env.in_binders(self.all_parameters(), |env| {
-            Ok(ir::AssocTyValueData {
+            Ok(ir::AssocTyValueBound {
                 ty: self.value.lower(env)?,
                 where_clauses: self.where_clauses.lower(env)?,
             })
@@ -758,7 +758,7 @@ impl LowerQuantifiedGoal for Goal {
     }
 }
 
-impl ir::ImplData {
+impl ir::ImplDatum {
     /// Given `impl<T: Clone> Clone for Vec<T>`, generate:
     ///
     /// ```notrust
@@ -795,7 +795,7 @@ impl ir::AssocTyValue {
     ///         (T: 'a)              // (2)
     /// }
     /// ```
-    fn to_program_clause(&self, impl_datum: &ir::ImplData) -> ir::ProgramClause {
+    fn to_program_clause(&self, impl_datum: &ir::ImplDatum) -> ir::ProgramClause {
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
         let all_binders: Vec<_> =
             self.value.binders

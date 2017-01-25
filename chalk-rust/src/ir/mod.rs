@@ -12,13 +12,13 @@ pub struct Program {
     pub type_kinds: HashMap<ItemId, TypeKind>,
 
     /// For each impl:
-    pub impl_data: HashMap<ItemId, ImplData>,
+    pub impl_data: HashMap<ItemId, ImplDatum>,
 
     /// For each trait:
     pub trait_data: HashMap<ItemId, TraitDatum>,
 
     /// For each trait:
-    pub associated_ty_data: HashMap<ItemId, AssociatedTyData>,
+    pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
 
     /// Compiled forms of the above:
     pub program_clauses: Vec<ProgramClause>,
@@ -26,7 +26,7 @@ pub struct Program {
 
 impl Program {
     pub fn split_projection<'p>(&self, projection: &'p ProjectionTy)
-                            -> (&AssociatedTyData, &'p [Parameter], &'p [Parameter]) {
+                            -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
         let ProjectionTy { associated_ty_id, ref parameters } = *projection;
         let associated_ty_data = &self.associated_ty_data[&associated_ty_id];
         let trait_datum = &self.trait_data[&associated_ty_data.trait_id];
@@ -85,7 +85,7 @@ pub enum TypeSort {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplData {
+pub struct ImplDatum {
     pub crate_id: CrateId,
     pub parameter_kinds: Vec<ParameterKind<Identifier>>,
     pub trait_ref: TraitRef,
@@ -113,7 +113,7 @@ pub struct TraitDatum {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AssociatedTyData {
+pub struct AssociatedTyDatum {
     /// The trait this associated type is defined in.
     pub trait_id: ItemId,
 
@@ -134,11 +134,11 @@ pub struct AssocTyValue {
 
     // the for-all encodes add'l binders, beyond those in the impl;
     // free variables reference the enclosing impl
-    pub value: Binders<AssocTyValueData>,
+    pub value: Binders<AssocTyValueBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AssocTyValueData {
+pub struct AssocTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty,
 
@@ -273,7 +273,7 @@ pub struct Normalize {
 ///
 /// (IOW, we use deBruijn indices, where binders are introduced in
 /// reverse order of `self.binders`.)
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Binders<T> {
     pub binders: Vec<ParameterKind<()>>,
     pub value: T,
