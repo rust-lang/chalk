@@ -1137,3 +1137,110 @@ fn struct_wf() {
         }
     }
 }
+
+#[test]
+fn generic_trait() {
+    test! {
+        program {
+            struct Int { }
+            struct Uint { }
+
+            trait Eq<T> { }
+
+            impl Eq<Int> for Int { }
+            impl Eq<Uint> for Uint { }
+        }
+
+        goal {
+            Int: Eq<Int>
+        } yields {
+            "Solution { successful: Yes,"
+        }
+
+        goal {
+            Uint: Eq<Uint>
+        } yields {
+            "Solution { successful: Yes,"
+        }
+
+        goal {
+            Int: Eq<Uint>
+        } yields {
+            "`Eq<Uint>` is not implemented for `Int`"
+        }
+    }
+}
+
+#[test]
+fn trait_wf() {
+    test! {
+        program {
+            struct Vec<T> where T: Sized { }
+            struct Slice<T> where T: Sized { }
+            struct Int { }
+
+            trait Sized { }
+            trait Eq<T> { }
+            trait Ord<T> where Self: Eq<T> { }
+
+            impl<T> Sized for Vec<T> where T: Sized { }
+            impl Sized for Int { }
+
+            impl Eq<Int> for Int { }
+            impl<T> Eq<Vec<T>> for Vec<T> where T: Eq<T> { }
+
+            impl Ord<Int> for Int { }
+            impl<T> Ord<Vec<T>> for Vec<T> where T: Ord<T> { }
+        }
+
+        goal {
+            WellFormed(Slice<Int>)
+        } yields {
+            "Solution { successful: Yes,"
+        }
+
+        goal {
+            Slice<Int>: Sized
+        } yields {
+            "`Sized` is not implemented for `Slice<Int>`"
+        }
+
+        goal {
+            WellFormed(Slice<Int>: Sized)
+        } yields {
+            "Solution { successful: Yes,"
+        }
+
+        goal {
+            WellFormed(Slice<Int>: Eq<Slice<Int>>)
+        } yields {
+            "Solution { successful: Yes"
+        }
+
+        goal {
+            Slice<Int>: Eq<Slice<Int>>
+        } yields {
+            "`Eq<Slice<Int>>` is not implemented for `Slice<Int>`"
+        }
+
+        // not WF because previous equation doesn't hold
+        goal {
+            WellFormed(Slice<Int>: Ord<Slice<Int>>)
+        } yields {
+            "no applicable candidates"
+        }
+
+        goal {
+            Vec<Int>: Eq<Vec<Int>>
+        } yields {
+            "Solution { successful: Yes,"
+        }
+
+        // WF because previous equation does hold
+        goal {
+            WellFormed(Vec<Int>: Ord<Vec<Int>>)
+        } yields {
+            "Solution { successful: Yes,"
+        }
+    }
+}

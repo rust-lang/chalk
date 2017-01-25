@@ -63,6 +63,13 @@ impl Cast<WhereClauseGoal> for WellFormed {
     }
 }
 
+impl Cast<Goal> for WellFormed {
+    fn cast(self) -> Goal {
+        let wcg: WhereClauseGoal = self.cast();
+        wcg.cast()
+    }
+}
+
 impl Cast<WhereClauseGoal> for WhereClause {
     fn cast(self) -> WhereClauseGoal {
         match self {
@@ -81,6 +88,12 @@ impl Cast<Goal> for TraitRef {
 impl Cast<Goal> for WhereClause {
     fn cast(self) -> Goal {
         Goal::Leaf(self.cast())
+    }
+}
+
+impl Cast<Goal> for WhereClauseGoal {
+    fn cast(self) -> Goal {
+        Goal::Leaf(self)
     }
 }
 

@@ -957,7 +957,12 @@ impl ir::TraitDatum {
         //
         // we generate the following clauses:
         //
-        //    for<?Self, ?T> WF(?Self: Foo<?T>) :- (?Self: Eq<?T>).
+        //    for<?Self, ?T> WF(?Self: Foo<?T>) :-
+        //        // types are well-formed:
+        //        WF(?Self),
+        //        WF(?T),
+        //        // where clauses declared on the trait are met:
+        //        (?Self: Eq<?T>),
         //
         // we don't currently generate `LocalTo` clauses, but if we
         // did it would look something like this (the problem is that
@@ -966,6 +971,31 @@ impl ir::TraitDatum {
         //    for<?Self, ?T> LocalTo(?Self: Foo<?T>, A).
         //    for<?Self, ?T, ?C> LocalTo(?Self: Foo<?T>, ?C) :- LocalTo(?Self, ?C).
         //    for<?Self, ?T, ?C> LocalTo(?Self: Foo<?T>, ?C) :- LocalTo(?T, ?C).
-        vec![]
+
+        let wf = ir::ProgramClause {
+            implication: self.binders.map_ref(|bound| {
+                ir::ProgramClauseImplication {
+                    consequence: ir::WellFormed::TraitRef(bound.trait_ref.clone()).cast(),
+
+                    conditions: {
+                        let tys = bound.trait_ref.parameters
+                                                 .iter()
+                                                 .filter_map(|pk| match *pk {
+                                                     ir::ParameterKind::Ty(ref t) => Some(t),
+                                                     ir::ParameterKind::Lifetime(_) => None,
+                                                 })
+                                                 .map(|ty| ir::WellFormed::Ty(ty.clone()).cast());
+
+                        let where_clauses = bound.where_clauses.iter()
+                                                               .cloned()
+                                                               .map(|wc| wc.cast());
+
+                        tys.chain(where_clauses).collect()
+                    }
+                }
+            })
+        };
+
+        vec![wf]
     }
 }
