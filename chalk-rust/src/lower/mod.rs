@@ -159,19 +159,20 @@ impl LowerProgram for Program {
         let mut impl_data = HashMap::new();
         let mut associated_ty_data = HashMap::new();
         for (&(crate_id, item), &item_id) in flat_items.iter().zip(&item_ids) {
-            let parameter_map = item.parameter_map();
-            let env = Env {
+            let empty_env = Env {
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
                 associated_ty_infos: &associated_ty_infos,
-                parameter_map: parameter_map,
+                parameter_map: HashMap::new(),
             };
+
             match *item {
                 Item::CrateDefn(_) => { }
                 Item::StructDefn(ref _d) => {
                     // where_clauses.insert(item_id, d.lower_where_clauses(&env)?);
                 }
                 Item::TraitDefn(ref d) => {
+                    let env = empty_env.introduce(item.all_parameters());
                     trait_data.insert(item_id, d.lower_trait(crate_id, &env)?);
 
                     let trait_data = &trait_data[&item_id];
@@ -216,6 +217,7 @@ impl LowerProgram for Program {
                     }
                 }
                 Item::Impl(ref d) => {
+                    let env = empty_env.introduce(item.all_parameters());
                     impl_data.insert(item_id, d.lower_impl(crate_id, &env)?);
                 }
             }
