@@ -987,12 +987,6 @@ fn elaborate_normalize() {
     }
 }
 
-// FIXME -- this test is broken. The final result:
-//
-//     <Vec<!1> as Iterable>::Iter<'!2> ==> Iter<'?0, !1>
-//
-// ought not to include `'?0` but rather `'!2`, or at least something
-// equated with `'!2`.
 #[test]
 fn atc1() {
     test! {
