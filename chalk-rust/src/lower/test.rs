@@ -107,3 +107,15 @@ fn atc_accounting() {
         assert_eq!(goal_text, "ForAll<type> { ForAll<lifetime> { ForAll<type> { <?2 as Iterable>::Iter<'?1> ==> ?0 } } }");
     });
 }
+
+#[test]
+#[ignore]
+fn check_struct_kinds() {
+    let error = parse_and_lower("
+struct Foo<'a> { }
+struct i32 { }
+trait Bar { }
+impl Bar for Foo<i32> { }
+").unwrap_err();
+    assert_eq!(format!("{:?}", error), "blah blah blah");
+}
