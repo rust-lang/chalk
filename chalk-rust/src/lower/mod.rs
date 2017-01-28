@@ -535,6 +535,16 @@ impl LowerTraitRef for TraitRef {
                   k.binders.len() + 1, parameters.len())
         }
 
+        for (binder, param) in k.binders.binders.iter().zip(parameters.iter().skip(1)) {
+            match (binder, param) {
+                (&ir::ParameterKind::Ty(_), &ir::ParameterKind::Lifetime(_)) =>
+                    bail!("type parameter to trait has wrong kind: expected type, found lifetime"),
+                (&ir::ParameterKind::Lifetime(_), &ir::ParameterKind::Ty(_)) =>
+                    bail!("type parameter to trait has wrong kind: expected lifetime, found type"),
+                _ => {}
+            }
+        }
+
         Ok(ir::TraitRef {
             trait_id: id,
             parameters: parameters,
@@ -559,6 +569,16 @@ impl LowerProjectionTy for ProjectionTy {
         if args.len() != info.addl_parameter_kinds.len() {
             bail!("wrong number of parameters for associated type (expected {}, got {})",
                   info.addl_parameter_kinds.len(), args.len())
+        }
+
+        for (param, arg) in info.addl_parameter_kinds.iter().zip(args.iter()) {
+            match (param, arg) {
+                (&ir::ParameterKind::Ty(_), &ir::ParameterKind::Lifetime(_)) =>
+                    bail!("associated type parameter has wrong kind: expected type, found lifetime"),
+                (&ir::ParameterKind::Lifetime(_), &ir::ParameterKind::Ty(_)) =>
+                    bail!("associated type parameter has wrong kind: expected lifetime, found type"),
+                _ => {}
+            }
         }
 
         args.extend(trait_parameters);
@@ -607,6 +627,16 @@ impl LowerTy for Ty {
                 }
 
                 let parameters = args.iter().map(|t| Ok(t.lower(env)?)).collect::<Result<Vec<_>>>()?;
+
+                for (param, arg) in k.binders.binders.iter().zip(args.iter()) {
+                    match (param, arg) {
+                        (&ir::ParameterKind::Ty(_), &Parameter::Lifetime(_)) =>
+                            bail!("type parameter has wrong kind: expected type, found lifetime"),
+                        (&ir::ParameterKind::Lifetime(_), &Parameter::Ty(_)) =>
+                            bail!("type parameter has wrong kind: expected lifetime, found type"),
+                        _ => {}
+                    };
+                }
 
                 Ok(ir::Ty::Apply(ir::ApplicationTy {
                     name: ir::TypeName::ItemId(id),

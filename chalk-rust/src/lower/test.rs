@@ -108,14 +108,87 @@ fn atc_accounting() {
     });
 }
 
+macro_rules! lowering_error {
+    (program $program:tt error_msg { $expected:expr }) => {
+        let program_text = stringify!($program);
+        assert!(program_text.starts_with("{"));
+        assert!(program_text.ends_with("}"));
+        let error = parse_and_lower(&program_text[1..program_text.len()-1]).unwrap_err();
+        let expected = Error::from($expected);
+        assert_eq!(
+            error.to_string(),
+            expected.to_string()
+        );
+    }
+}
+
 #[test]
-#[ignore]
-fn check_struct_kinds() {
-    let error = parse_and_lower("
-struct Foo<'a> { }
-struct i32 { }
-trait Bar { }
-impl Bar for Foo<i32> { }
-").unwrap_err();
-    assert_eq!(format!("{:?}", error), "blah blah blah");
+fn check_parameter_kinds() {
+
+    lowering_error! {
+        program {
+            struct Foo<'a> { }
+            struct i32 { }
+            trait Bar { }
+            impl Bar for Foo<i32> { }
+        }
+        error_msg {
+            "type parameter has wrong kind: expected lifetime, found type"
+        }
+    };
+
+    lowering_error! {
+        program {
+            struct Foo<T> { }
+            trait Bar { }
+            impl<'a> Bar for Foo<'a> { }
+        }
+        error_msg {
+            "type parameter has wrong kind: expected type, found lifetime"
+        }
+    };
+
+    lowering_error! {
+        program {
+            trait Iterator { type Item<'a>; }
+            trait Foo { }
+            impl<X, T> Foo for <X as Iterator>::Item<T> where X: Iterator { }
+        }
+        error_msg {
+            "associated type parameter has wrong kind: expected lifetime, found type"
+        }
+    };
+
+    lowering_error! {
+        program {
+            trait Iterator { type Item<T>; }
+            trait Foo { }
+            impl<X, 'a> Foo for <X as Iterator>::Item<'a> where X: Iterator { }
+        }
+        error_msg {
+            "associated type parameter has wrong kind: expected type, found lifetime"
+        }
+    };
+
+    lowering_error! {
+        program {
+            trait Into<T> {}
+            struct Foo {}
+            impl<'a> Into<'a> for Foo {}
+        }
+        error_msg {
+            "type parameter to trait has wrong kind: expected type, found lifetime"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait IntoTime<'a> {}
+            struct Foo {}
+            impl<T> IntoTime<T> for Foo {}
+        }
+        error_msg {
+            "type parameter to trait has wrong kind: expected lifetime, found type"
+        }
+    }
 }
