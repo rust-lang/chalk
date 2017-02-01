@@ -51,9 +51,9 @@ impl Cast<WhereClauseGoal> for Normalize {
     }
 }
 
-impl Cast<WhereClauseGoal> for LocalTo {
+impl Cast<WhereClauseGoal> for LocalTo<Ty> {
     fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::LocalTo(self)
+        WhereClauseGoal::TyLocalTo(self)
     }
 }
 

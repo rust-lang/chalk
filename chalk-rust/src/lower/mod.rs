@@ -450,8 +450,8 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
             }
             WhereClause::LocalTo { ref ty, ref crate_id } => {
                 let crate_id = ir::CrateId { name: crate_id.str };
-                ir::WhereClauseGoal::LocalTo(ir::LocalTo {
-                    ty: ty.lower(env)?,
+                ir::WhereClauseGoal::TyLocalTo(ir::LocalTo {
+                    value: ty.lower(env)?,
                     crate_id: crate_id
                 })
             }
@@ -921,7 +921,7 @@ impl ir::StructDatum {
             implication: self.binders.map_ref(|bound_datum| {
                 ir::ProgramClauseImplication {
                     consequence: ir::LocalTo {
-                        ty: bound_datum.self_ty.clone().cast(),
+                        value: bound_datum.self_ty.clone().cast(),
                         crate_id: self.crate_id,
                     }.cast(),
 

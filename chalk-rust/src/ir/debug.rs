@@ -173,15 +173,15 @@ impl Debug for WhereClauseGoal {
             }
             WhereClauseGoal::UnifyTys(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::LocalTo(ref n) => write!(fmt, "{:?}", n),
+            WhereClauseGoal::TyLocalTo(ref n) => write!(fmt, "{:?}", n),
         }
     }
 }
 
-impl Debug for LocalTo {
+impl<T: Debug> Debug for LocalTo<T> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let LocalTo { ref ty, ref crate_id } = *self;
-        write!(fmt, "LocalTo({:?}, {:?})", ty, crate_id)
+        let LocalTo { ref value, ref crate_id } = *self;
+        write!(fmt, "LocalTo({:?}, {:?})", value, crate_id)
     }
 }
 

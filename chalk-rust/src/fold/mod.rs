@@ -183,7 +183,7 @@ enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
 enum_fold!(WhereClause[] { Implemented(a), Normalize(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
 enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a),
-                               WellFormed(a), LocalTo(a) });
+                               WellFormed(a), TyLocalTo(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Leaf(wc) });
 
@@ -211,4 +211,4 @@ struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(Unify[T] { a, b } where T: Fold);
 struct_fold!(Constrained[F] { value, constraints } where F: Fold);
 struct_fold!(ProgramClauseImplication { consequence, conditions });
-struct_fold!(LocalTo { ty, crate_id });
+struct_fold!(LocalTo[T] { value, crate_id } where T: Fold);

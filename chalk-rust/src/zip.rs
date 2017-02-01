@@ -126,7 +126,7 @@ struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
 struct_zip!(ApplicationTy { name, parameters });
 struct_zip!(ProjectionTy { associated_ty_id, parameters });
 struct_zip!(Normalize { projection, ty });
-struct_zip!(LocalTo { ty, crate_id });
+struct_zip!(LocalTo[T] { value, crate_id } where T: Zip);
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
@@ -169,13 +169,13 @@ impl Zip for WhereClauseGoal {
             (&WhereClauseGoal::WellFormed(ref a), &WhereClauseGoal::WellFormed(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
-            (&WhereClauseGoal::LocalTo(ref a), &WhereClauseGoal::LocalTo(ref b)) => {
+            (&WhereClauseGoal::TyLocalTo(ref a), &WhereClauseGoal::TyLocalTo(ref b)) => {
                 Zip::zip_with(zipper, a, b)
             }
             (&WhereClauseGoal::Implemented(_), _) |
             (&WhereClauseGoal::Normalize(_), _) |
             (&WhereClauseGoal::UnifyTys(_), _) |
-            (&WhereClauseGoal::LocalTo(_), _) |
+            (&WhereClauseGoal::TyLocalTo(_), _) |
             (&WhereClauseGoal::WellFormed(_), _) => {
                 bail!("cannot zip where-clause-goals `{:?}` and `{:?}`", a, b)
             }
