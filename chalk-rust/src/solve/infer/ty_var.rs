@@ -5,18 +5,18 @@ use std::fmt;
 use std::u32;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub struct InferenceVariable {
+pub struct TyInferenceVariable {
     index: u32,
 }
 
-impl InferenceVariable {
-    pub fn from_depth(depth: usize) -> InferenceVariable {
+impl TyInferenceVariable {
+    pub fn from_depth(depth: usize) -> TyInferenceVariable {
         assert!(depth < u32::MAX as usize);
-        InferenceVariable { index: depth as u32 }
+        TyInferenceVariable { index: depth as u32 }
     }
 
-    pub fn from_u32(depth: u32) -> InferenceVariable {
-        InferenceVariable { index: depth }
+    pub fn from_u32(depth: u32) -> TyInferenceVariable {
+        TyInferenceVariable { index: depth }
     }
 
     pub fn to_ty(&self) -> ir::Ty {
@@ -24,19 +24,19 @@ impl InferenceVariable {
     }
 }
 
-impl UnifyKey for InferenceVariable {
-    type Value = InferenceValue;
+impl UnifyKey for TyInferenceVariable {
+    type Value = TyInferenceValue;
 
     fn index(&self) -> u32 {
         self.index
     }
 
     fn from_index(u: u32) -> Self {
-        InferenceVariable { index: u }
+        TyInferenceVariable { index: u }
     }
 
     fn tag() -> &'static str {
-        "InferenceVariable"
+        "TyInferenceVariable"
     }
 }
 
@@ -45,23 +45,23 @@ impl UnifyKey for InferenceVariable {
 /// it becomes bound and refers to an entry in the
 /// `InferenceTable.value` vector.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum InferenceValue {
+pub enum TyInferenceValue {
     Unbound(ir::UniverseIndex),
     Bound(ValueIndex),
 }
 
-impl UnifyValue for InferenceValue {
-    fn unify_values(a: &InferenceValue, b: &InferenceValue)
-                    -> Result<InferenceValue, (InferenceValue, InferenceValue)> {
+impl UnifyValue for TyInferenceValue {
+    fn unify_values(a: &TyInferenceValue, b: &TyInferenceValue)
+                    -> Result<TyInferenceValue, (TyInferenceValue, TyInferenceValue)> {
         match (*a, *b) {
-            (InferenceValue::Unbound(ui_a), InferenceValue::Unbound(ui_b)) => {
-                Ok(InferenceValue::Unbound(min(ui_a, ui_b)))
+            (TyInferenceValue::Unbound(ui_a), TyInferenceValue::Unbound(ui_b)) => {
+                Ok(TyInferenceValue::Unbound(min(ui_a, ui_b)))
             }
-            (bound @ InferenceValue::Bound(_), InferenceValue::Unbound(_)) |
-            (InferenceValue::Unbound(_), bound @ InferenceValue::Bound(_)) => {
+            (bound @ TyInferenceValue::Bound(_), TyInferenceValue::Unbound(_)) |
+            (TyInferenceValue::Unbound(_), bound @ TyInferenceValue::Bound(_)) => {
                 Ok(bound)
             }
-            (InferenceValue::Bound(_), InferenceValue::Bound(_)) => {
+            (TyInferenceValue::Bound(_), TyInferenceValue::Bound(_)) => {
                 // we don't even try to allow unifying things that are
                 // already bound; that is handled at a higher-level by
                 // the `InferenceTable`; this could probably just be a
@@ -88,7 +88,7 @@ impl ValueIndex {
     }
 }
 
-impl fmt::Debug for InferenceVariable {
+impl fmt::Debug for TyInferenceVariable {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(fmt, "?{}", self.index)
     }

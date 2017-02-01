@@ -2,9 +2,9 @@ use errors::*;
 use fold::{Fold, Folder, Shifter};
 use ir::*;
 
-use super::{InferenceTable, InferenceVariable,
+use super::{InferenceTable, TyInferenceVariable,
             LifetimeInferenceVariable, ParameterInferenceVariable};
-use super::var::InferenceValue;
+use super::ty_var::TyInferenceValue;
 
 impl InferenceTable {
     /// Given a value `value` with variables in it, replaces those
@@ -48,8 +48,8 @@ impl<'q> Quantifier<'q> {
                      ParameterKind::Ty(v) => {
                          debug_assert!(table.unify.find(v) == v);
                          match table.unify.probe_value(v) {
-                             InferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
-                             InferenceValue::Bound(_) => panic!("free var now bound"),
+                             TyInferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
+                             TyInferenceValue::Bound(_) => panic!("free var now bound"),
                          }
                      },
 
@@ -74,7 +74,7 @@ impl<'q> Quantifier<'q> {
 
 impl<'q> Folder for Quantifier<'q> {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        let var = InferenceVariable::from_depth(depth);
+        let var = TyInferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {
             Some(ty) => {
                 // If this variable is bound, we want to replace it
@@ -91,7 +91,7 @@ impl<'q> Folder for Quantifier<'q> {
                 // unique to this quantification.
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
                 let position = self.add(free_var) + binders;
-                Ok(InferenceVariable::from_depth(position).to_ty())
+                Ok(TyInferenceVariable::from_depth(position).to_ty())
             }
         }
     }

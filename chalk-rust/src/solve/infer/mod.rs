@@ -7,18 +7,18 @@ mod instantiate;
 mod lifetime_var;
 mod quantify;
 mod unify;
-mod var;
+mod ty_var;
 #[cfg(test)] mod test;
 
 pub use self::unify::UnificationResult;
-use self::var::InferenceVariable;
+use self::ty_var::TyInferenceVariable;
 use self::lifetime_var::LifetimeInferenceVariable;
 
-use self::var::InferenceValue;
+use self::ty_var::TyInferenceValue;
 
 #[derive(Clone)]
 pub struct InferenceTable {
-    unify: ena::UnificationTable<InferenceVariable>,
+    unify: ena::UnificationTable<TyInferenceVariable>,
     values: Vec<Arc<Ty>>,
 
     /// Unlike normal variables, we don't unify lifetime variables.
@@ -28,11 +28,11 @@ pub struct InferenceTable {
 }
 
 pub struct InferenceSnapshot {
-    unify_snapshot: ena::Snapshot<InferenceVariable>,
+    unify_snapshot: ena::Snapshot<TyInferenceVariable>,
     values_len: usize,
 }
 
-pub type ParameterInferenceVariable = ParameterKind<InferenceVariable, LifetimeInferenceVariable>;
+pub type ParameterInferenceVariable = ParameterKind<TyInferenceVariable, LifetimeInferenceVariable>;
 
 impl InferenceTable {
     pub fn new() -> Self {
@@ -51,8 +51,8 @@ impl InferenceTable {
         table
     }
 
-    pub fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
-        self.unify.new_key(InferenceValue::Unbound(ui))
+    pub fn new_variable(&mut self, ui: UniverseIndex) -> TyInferenceVariable {
+        self.unify.new_key(TyInferenceValue::Unbound(ui))
     }
 
     pub fn new_lifetime_variable(&mut self, ui: UniverseIndex) -> LifetimeInferenceVariable {
@@ -111,24 +111,24 @@ impl InferenceTable {
         leaf.inference_var()
             .and_then(|var| {
                 match self.unify.probe_value(var) {
-                    InferenceValue::Unbound(_) => None,
-                    InferenceValue::Bound(val) => Some(self.values[val.as_usize()].clone()),
+                    TyInferenceValue::Unbound(_) => None,
+                    TyInferenceValue::Bound(val) => Some(self.values[val.as_usize()].clone()),
                 }
             })
     }
 
-    fn probe_var(&mut self, var: InferenceVariable) -> Option<Arc<Ty>> {
+    fn probe_var(&mut self, var: TyInferenceVariable) -> Option<Arc<Ty>> {
         match self.unify.probe_value(var) {
-            InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(val) => Some(self.values[val.as_usize()].clone()),
+            TyInferenceValue::Unbound(_) => None,
+            TyInferenceValue::Bound(val) => Some(self.values[val.as_usize()].clone()),
         }
     }
 }
 
 impl Ty {
-    pub fn inference_var(&self) -> Option<InferenceVariable> {
+    pub fn inference_var(&self) -> Option<TyInferenceVariable> {
         if let Ty::Var(depth) = *self {
-            Some(InferenceVariable::from_depth(depth))
+            Some(TyInferenceVariable::from_depth(depth))
         } else {
             None
         }

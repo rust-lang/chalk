@@ -69,7 +69,7 @@ struct Normalizer<'a> {
 impl<'q> Folder for Normalizer<'q> {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         assert_eq!(binders, 0);
-        let var = InferenceVariable::from_depth(depth);
+        let var = TyInferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {
             Some(ty) => (*ty).fold_with(self, 0),
             None => Ok(var.to_ty()),

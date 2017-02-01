@@ -6,8 +6,8 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
-use super::{InferenceSnapshot, InferenceTable, InferenceVariable};
-use super::var::{InferenceValue, ValueIndex};
+use super::{InferenceSnapshot, InferenceTable, TyInferenceVariable};
+use super::ty_var::{TyInferenceValue, ValueIndex};
 
 impl InferenceTable {
     pub fn unify<T>(&mut self,
@@ -81,8 +81,8 @@ impl<'t> Unifier<'t> {
 
         match (a, b) {
             (&Ty::Var(depth1), &Ty::Var(depth2)) => {
-                let var1 = InferenceVariable::from_depth(depth1);
-                let var2 = InferenceVariable::from_depth(depth2);
+                let var1 = TyInferenceVariable::from_depth(depth1);
+                let var2 = TyInferenceVariable::from_depth(depth2);
                 debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
                 Ok(self.table
                     .unify
@@ -94,7 +94,7 @@ impl<'t> Unifier<'t> {
             (ty @ &Ty::Apply(_), &Ty::Var(depth)) |
             (&Ty::Var(depth), ty @ &Ty::ForAll(_)) |
             (ty @ &Ty::ForAll(_), &Ty::Var(depth)) => {
-                self.unify_var_ty(InferenceVariable::from_depth(depth), ty)
+                self.unify_var_ty(TyInferenceVariable::from_depth(depth), ty)
             }
 
             (&Ty::ForAll(ref quantified_ty1), &Ty::ForAll(ref quantified_ty2)) => {
@@ -193,7 +193,7 @@ impl<'t> Unifier<'t> {
         Ok(())
     }
 
-    fn unify_var_ty(&mut self, var: InferenceVariable, ty: &Ty) -> Result<()> {
+    fn unify_var_ty(&mut self, var: TyInferenceVariable, ty: &Ty) -> Result<()> {
         debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
 
         // Determine the universe index associated with this
@@ -202,15 +202,15 @@ impl<'t> Unifier<'t> {
         // this variable was created -- though it may change over time
         // as the variable is unified.
         let universe_index = match self.table.unify.probe_value(var) {
-            InferenceValue::Unbound(ui) => ui,
-            InferenceValue::Bound(_) => panic!("`unify_var_apply` invoked on bound var"),
+            TyInferenceValue::Unbound(ui) => ui,
+            TyInferenceValue::Bound(_) => panic!("`unify_var_apply` invoked on bound var"),
         };
 
         OccursCheck::new(self, var, universe_index).check_ty(ty)?;
 
         let value_index = ValueIndex::new(self.table.values.len());
         self.table.values.push(Arc::new(ty.clone()));
-        self.table.unify.unify_var_value(var, InferenceValue::Bound(value_index)).unwrap();
+        self.table.unify.unify_var_value(var, TyInferenceValue::Bound(value_index)).unwrap();
         debug!("unify_var_ty: var {:?} set to {:?}", var, ty);
 
         Ok(())
@@ -251,13 +251,13 @@ impl TypeName {
 struct OccursCheck<'u, 't: 'u> {
     unifier: &'u mut Unifier<'t>,
     binders: usize,
-    var: InferenceVariable,
+    var: TyInferenceVariable,
     universe_index: UniverseIndex,
 }
 
 impl<'u, 't> OccursCheck<'u, 't> {
     fn new(unifier: &'u mut Unifier<'t>,
-           var: InferenceVariable,
+           var: TyInferenceVariable,
            universe_index: UniverseIndex)
            -> Self {
         OccursCheck { unifier, binders: 0, var, universe_index }
@@ -300,10 +300,10 @@ impl<'u, 't> OccursCheck<'u, 't> {
             }
 
             Ty::Var(depth) => {
-                let v = InferenceVariable::from_depth(depth - self.binders);
+                let v = TyInferenceVariable::from_depth(depth - self.binders);
                 let ui = match self.unifier.table.unify.probe_value(v) {
-                    InferenceValue::Unbound(ui) => ui,
-                    InferenceValue::Bound(_) => {
+                    TyInferenceValue::Unbound(ui) => ui,
+                    TyInferenceValue::Bound(_) => {
                         unreachable!("expected `parameter` to be normalized")
                     }
                 };
@@ -322,7 +322,7 @@ impl<'u, 't> OccursCheck<'u, 't> {
                     self.unifier
                         .table
                         .unify
-                        .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
+                        .unify_var_value(v, TyInferenceValue::Unbound(self.universe_index))
                         .unwrap();
                 }
             }
