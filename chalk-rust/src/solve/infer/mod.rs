@@ -11,8 +11,8 @@ mod var;
 #[cfg(test)] mod test;
 
 pub use self::unify::UnificationResult;
-pub use self::var::InferenceVariable;
-pub use self::lifetime_var::LifetimeInferenceVariable;
+use self::var::InferenceVariable;
+use self::lifetime_var::LifetimeInferenceVariable;
 
 use self::var::InferenceValue;
 
