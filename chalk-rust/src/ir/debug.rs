@@ -35,11 +35,12 @@ impl Debug for TypeName {
     }
 }
 
-impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
+impl<T: Debug, L: Debug, C: Debug> Debug for ParameterKind<T, L, C> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             ParameterKind::Ty(ref n) => write!(fmt, "{:?}", n),
             ParameterKind::Lifetime(ref n) => write!(fmt, "{:?}", n),
+            ParameterKind::Krate(ref n) => write!(fmt, "{:?}", n),
         }
     }
 }
@@ -172,6 +173,7 @@ impl Debug for WhereClauseGoal {
                        Angle(&n.parameters[1..]))
             }
             WhereClauseGoal::UnifyTys(ref n) => write!(fmt, "{:?}", n),
+            WhereClauseGoal::UnifyKrates(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::TyLocalTo(ref n) => write!(fmt, "{:?}", n),
         }
@@ -180,8 +182,8 @@ impl Debug for WhereClauseGoal {
 
 impl<T: Debug> Debug for LocalTo<T> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let LocalTo { ref value, ref crate_id } = *self;
-        write!(fmt, "LocalTo({:?}, {:?})", value, crate_id)
+        let LocalTo { ref value, ref krate } = *self;
+        write!(fmt, "LocalTo({:?}, {:?})", value, krate)
     }
 }
 
@@ -213,6 +215,7 @@ impl Debug for Goal {
                     match *binder {
                         ParameterKind::Ty(()) => write!(fmt, "type")?,
                         ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+                        ParameterKind::Krate(()) => write!(fmt, "krate")?,
                     }
                 }
                 write!(fmt, "> {{ {:?} }}", subgoal.value)
@@ -224,7 +227,7 @@ impl Debug for Goal {
     }
 }
 
-impl Debug for CrateId {
+impl Debug for KrateId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "{}", self.name)
     }
@@ -242,6 +245,7 @@ impl<T: Debug> Debug for Binders<T> {
                 match *binder {
                     ParameterKind::Ty(()) => write!(fmt, "type")?,
                     ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+                    ParameterKind::Krate(()) => write!(fmt, "krate")?,
                 }
             }
             write!(fmt, "> ")?;

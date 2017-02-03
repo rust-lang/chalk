@@ -20,7 +20,7 @@ pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
     Impl(Impl),
-    CrateDefn(CrateDefn),
+    KrateDefn(KrateDefn),
 }
 
 pub struct StructDefn {
@@ -41,7 +41,7 @@ pub struct AssocTyDefn {
     pub parameter_kinds: Vec<ParameterKind>,
 }
 
-pub struct CrateDefn {
+pub struct KrateDefn {
     pub name: Identifier,
     pub items: Vec<Item>
 }
@@ -49,11 +49,13 @@ pub struct CrateDefn {
 pub enum ParameterKind {
     Ty(Identifier),
     Lifetime(Identifier),
+    Krate(Identifier),
 }
 
 pub enum Parameter {
     Ty(Ty),
     Lifetime(Lifetime),
+    Krate(Krate),
 }
 
 pub struct Impl {
@@ -93,6 +95,12 @@ pub enum Lifetime {
     }
 }
 
+pub enum Krate {
+    Id {
+        name: Identifier,
+    }
+}
+
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
@@ -116,7 +124,7 @@ pub enum WhereClause {
     ProjectionEq { projection: ProjectionTy, ty: Ty },
     TyWellFormed { ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
-    LocalTo { ty: Ty, crate_id: Identifier },
+    LocalTo { ty: Ty, krate: Krate },
 }
 
 pub enum Goal {

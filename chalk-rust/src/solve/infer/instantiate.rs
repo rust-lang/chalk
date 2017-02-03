@@ -32,4 +32,8 @@ impl Folder for Instantiator {
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         Ok(self.vars[depth].as_ref().lifetime().unwrap().to_lifetime().up_shift(binders))
     }
+
+    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
+        Ok(self.vars[depth].as_ref().krate().unwrap().to_krate().up_shift(binders))
+    }
 }

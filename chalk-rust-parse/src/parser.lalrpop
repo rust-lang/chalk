@@ -11,11 +11,11 @@ Item: Item = {
     StructDefn => Item::StructDefn(<>),
     TraitDefn => Item::TraitDefn(<>),
     Impl => Item::Impl(<>),
-    Crate => Item::CrateDefn(<>),
+    KrateDefn => Item::KrateDefn(<>),
 };
 
-Crate: CrateDefn = {
-    "crate" <name:Id> "{" <items:Item*> "}" => CrateDefn {
+KrateDefn: KrateDefn = {
+    <name:KrateId> "{" <items:Item*> "}" => KrateDefn {
         name: name,
         items: items,
     },
@@ -75,6 +75,7 @@ Impl: Impl = {
 ParameterKind: ParameterKind = {
     Id => ParameterKind::Ty(<>),
     LifetimeId => ParameterKind::Lifetime(<>),
+    KrateId => ParameterKind::Krate(<>),
 };
 
 AssocTyValue: AssocTyValue = {
@@ -100,9 +101,14 @@ Lifetime: Lifetime = {
     <n:LifetimeId> => Lifetime::Id { name: n },
 };
 
+Krate: Krate = {
+    <n:KrateId> => Krate::Id { name: n },
+};
+
 Parameter: Parameter = {
     Ty => Parameter::Ty(<>),
     Lifetime => Parameter::Lifetime(<>),
+    Krate => Parameter::Krate(<>),
 };
 
 ProjectionTy: ProjectionTy = {
@@ -126,7 +132,7 @@ WhereClause: WhereClause = {
              trait_ref: t
     },
 
-    "LocalTo" "(" <t:Ty> "," <c:Id> ")" => WhereClause::LocalTo { ty: t, crate_id: c },
+    "LocalTo" "(" <t:Ty> "," <c:Krate> ")" => WhereClause::LocalTo { ty: t, krate: c },
 
     // `T: Foo<U = Bar>` -- a normalization
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
@@ -178,6 +184,13 @@ Id: Identifier = {
 
 LifetimeId: Identifier = {
     <l:@L> <s:r"'([:alpha:]|_)([:alnum:]|_)*"> <r:@R> => Identifier {
+        str: intern(s),
+        span: Span::new(l, r),
+    }
+};
+
+KrateId: Identifier = {
+    <l:@L> "crate" <s:r"([:alpha:]|_)([:alnum:]|_)*"> <r:@R> => Identifier {
         str: intern(s),
         span: Span::new(l, r),
     }

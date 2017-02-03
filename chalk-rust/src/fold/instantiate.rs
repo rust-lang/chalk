@@ -46,7 +46,7 @@ impl<'b> Folder for Subst<'b> {
         } else {
             match self.parameters[depth] {
                 ParameterKind::Ty(ref t) => Ok(t.up_shift(binders)),
-                ParameterKind::Lifetime(_) => panic!("mismatched kinds in substitution"),
+                _ => panic!("mismatched kinds in substitution"),
             }
         }
     }
@@ -57,7 +57,18 @@ impl<'b> Folder for Subst<'b> {
         } else {
             match self.parameters[depth] {
                 ParameterKind::Lifetime(ref l) => Ok(l.up_shift(binders)),
-                ParameterKind::Ty(_) => panic!("mismatched kinds in substitution"),
+                _ => panic!("mismatched kinds in substitution"),
+            }
+        }
+    }
+
+    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
+        if depth >= self.parameters.len() {
+            Ok(Krate::Var(depth - self.parameters.len() + binders))
+        } else {
+            match self.parameters[depth] {
+                ParameterKind::Krate(ref l) => Ok(l.up_shift(binders)),
+                _ => panic!("mismatched kinds in substitution"),
             }
         }
     }

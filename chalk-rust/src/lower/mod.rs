@@ -35,6 +35,11 @@ enum LifetimeLookup {
     Parameter(usize),
 }
 
+enum KrateLookup {
+    Parameter(usize),
+    Id(ir::KrateId),
+}
+
 const SELF: &str = "Self";
 
 impl<'k> Env<'k> {
@@ -56,6 +61,15 @@ impl<'k> Env<'k> {
         }
 
         bail!("invalid lifetime name: {:?}", name.str);
+    }
+
+    // krate lookup is infallible because we assume free identifiers are just krate ids
+    fn lookup_krate(&self, name: Identifier) -> KrateLookup {
+        if let Some(k) = self.parameter_map.get(&ir::ParameterKind::Krate(name.str)) {
+            return KrateLookup::Parameter(*k);
+        }
+
+        KrateLookup::Id(ir::KrateId { name: name.str })
     }
 
     fn type_kind(&self, id: ir::ItemId) -> &ir::TypeKind {
@@ -97,20 +111,20 @@ pub trait LowerProgram {
 impl LowerProgram for Program {
     fn lower(&self) -> Result<ir::Program> {
         let mut flat_items = vec![];
-        let default_crate_id = ir::CrateId { name: intern("crate") };
-        flatten(default_crate_id, &self.items, &mut flat_items);
+        let default_krate_id = ir::KrateId { name: intern("krate") };
+        flatten(default_krate_id, &self.items, &mut flat_items);
 
-        fn flatten<'a>(crate_id: ir::CrateId,
+        fn flatten<'a>(krate_id: ir::KrateId,
                        items: &'a [Item],
-                       into: &mut Vec<(ir::CrateId, &'a Item)>) {
+                       into: &mut Vec<(ir::KrateId, &'a Item)>) {
             for item in items {
                 match *item {
                     Item::StructDefn(_) |
                     Item::TraitDefn(_) |
                     Item::Impl(_) =>
-                        into.push((crate_id, item)),
-                    Item::CrateDefn(ref defn) =>
-                        flatten(ir::CrateId { name: defn.name.str }, &defn.items, into),
+                        into.push((krate_id, item)),
+                    Item::KrateDefn(ref defn) =>
+                        flatten(ir::KrateId { name: defn.name.str }, &defn.items, into),
                 }
             }
         }
@@ -144,12 +158,12 @@ impl LowerProgram for Program {
 
         let mut type_ids = HashMap::new();
         let mut type_kinds = HashMap::new();
-        for (&(crate_id, item), &item_id) in flat_items.iter().zip(&item_ids) {
+        for (&(krate_id, item), &item_id) in flat_items.iter().zip(&item_ids) {
             let k = match *item {
-                Item::StructDefn(ref d) => d.lower_type_kind(crate_id)?,
-                Item::TraitDefn(ref d) => d.lower_type_kind(crate_id)?,
+                Item::StructDefn(ref d) => d.lower_type_kind(krate_id)?,
+                Item::TraitDefn(ref d) => d.lower_type_kind(krate_id)?,
                 Item::Impl(_) => continue,
-                Item::CrateDefn(_) => continue,
+                Item::KrateDefn(_) => continue,
             };
             type_ids.insert(k.name, item_id);
             type_kinds.insert(item_id, k);
@@ -159,7 +173,7 @@ impl LowerProgram for Program {
         let mut trait_data = HashMap::new();
         let mut impl_data = HashMap::new();
         let mut associated_ty_data = HashMap::new();
-        for (&(crate_id, item), &item_id) in flat_items.iter().zip(&item_ids) {
+        for (&(krate_id, item), &item_id) in flat_items.iter().zip(&item_ids) {
             let empty_env = Env {
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
@@ -168,12 +182,12 @@ impl LowerProgram for Program {
             };
 
             match *item {
-                Item::CrateDefn(_) => { }
+                Item::KrateDefn(_) => { }
                 Item::StructDefn(ref d) => {
-                    struct_data.insert(item_id, d.lower_struct(crate_id, item_id, &empty_env)?);
+                    struct_data.insert(item_id, d.lower_struct(krate_id, item_id, &empty_env)?);
                 }
                 Item::TraitDefn(ref d) => {
-                    trait_data.insert(item_id, d.lower_trait(crate_id, item_id, &empty_env)?);
+                    trait_data.insert(item_id, d.lower_trait(krate_id, item_id, &empty_env)?);
 
                     let trait_datum = &trait_data[&item_id];
                     for defn in &d.assoc_ty_defns {
@@ -198,7 +212,7 @@ impl LowerProgram for Program {
                     }
                 }
                 Item::Impl(ref d) => {
-                    impl_data.insert(item_id, d.lower_impl(crate_id, &empty_env)?);
+                    impl_data.insert(item_id, d.lower_impl(krate_id, &empty_env)?);
                 }
             }
         }
@@ -230,7 +244,7 @@ impl LowerProgram for Program {
 }
 
 trait LowerTypeKind {
-    fn lower_type_kind(&self, crate_id: ir::CrateId) -> Result<ir::TypeKind>;
+    fn lower_type_kind(&self, krate_id: ir::KrateId) -> Result<ir::TypeKind>;
 }
 
 trait LowerParameterMap {
@@ -331,6 +345,7 @@ impl LowerParameterKind for ParameterKind {
         match *self {
             ParameterKind::Ty(ref n) => ir::ParameterKind::Ty(n.str),
             ParameterKind::Lifetime(ref n) => ir::ParameterKind::Lifetime(n.str),
+            ParameterKind::Krate(ref n) => ir::ParameterKind::Krate(n.str),
         }
     }
 }
@@ -344,11 +359,11 @@ trait LowerWhereClauses {
 }
 
 impl LowerTypeKind for StructDefn {
-    fn lower_type_kind(&self, crate_id: ir::CrateId) -> Result<ir::TypeKind> {
+    fn lower_type_kind(&self, krate_id: ir::KrateId) -> Result<ir::TypeKind> {
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Struct,
             name: self.name.str,
-            crate_id: crate_id,
+            krate_id: krate_id,
             binders: ir::Binders {
                 binders: self.all_parameters().anonymize(),
                 value: (),
@@ -364,12 +379,12 @@ impl LowerWhereClauses for StructDefn {
 }
 
 impl LowerTypeKind for TraitDefn {
-    fn lower_type_kind(&self, crate_id: ir::CrateId) -> Result<ir::TypeKind> {
+    fn lower_type_kind(&self, krate_id: ir::KrateId) -> Result<ir::TypeKind> {
         let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Trait,
             name: self.name.str,
-            crate_id: crate_id,
+            krate_id: krate_id,
             binders: ir::Binders {
                 // for the purposes of the *type*, ignore `Self`:
                 binders: binders.anonymize(),
@@ -448,11 +463,10 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
             WhereClause::TraitRefWellFormed { ref trait_ref } => {
                 ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
             }
-            WhereClause::LocalTo { ref ty, ref crate_id } => {
-                let crate_id = ir::CrateId { name: crate_id.str };
+            WhereClause::LocalTo { ref ty, ref krate } => {
                 ir::WhereClauseGoal::TyLocalTo(ir::LocalTo {
                     value: ty.lower(env)?,
-                    crate_id: crate_id
+                    krate: krate.lower(env)?,
                 })
             }
             WhereClause::NotImplemented { .. } => {
@@ -464,7 +478,7 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
 
 trait LowerStructDefn {
     fn lower_struct(&self,
-                    crate_id: ir::CrateId,
+                    krate_id: ir::KrateId,
                     item_id: ir::ItemId,
                     env: &Env)
                     -> Result<ir::StructDatum>;
@@ -472,7 +486,7 @@ trait LowerStructDefn {
 
 impl LowerStructDefn for StructDefn {
     fn lower_struct(&self,
-                    crate_id: ir::CrateId,
+                    krate_id: ir::KrateId,
                     item_id: ir::ItemId,
                     env: &Env)
                     -> Result<ir::StructDatum>
@@ -493,7 +507,7 @@ impl LowerStructDefn for StructDefn {
             Ok(ir::StructDatumBound { self_ty, where_clauses })
         })?;
 
-        Ok(ir::StructDatum { crate_id, binders })
+        Ok(ir::StructDatum { krate_id, binders })
     }
 }
 
@@ -624,6 +638,7 @@ impl LowerParameter for Parameter {
         match *self {
             Parameter::Ty(ref t) => Ok(ir::ParameterKind::Ty(t.lower(env)?)),
             Parameter::Lifetime(ref l) => Ok(ir::ParameterKind::Lifetime(l.lower(env)?)),
+            Parameter::Krate(ref c) => Ok(ir::ParameterKind::Krate(c.lower(env)?)),
         }
     }
 }
@@ -644,12 +659,29 @@ impl LowerLifetime for Lifetime {
     }
 }
 
+trait LowerKrate {
+    fn lower(&self, env: &Env) -> Result<ir::Krate>;
+}
+
+impl LowerKrate for Krate {
+    fn lower(&self, env: &Env) -> Result<ir::Krate> {
+        match *self {
+            Krate::Id { name } => {
+                match env.lookup_krate(name) {
+                    KrateLookup::Parameter(d) => Ok(ir::Krate::Var(d)),
+                    KrateLookup::Id(d) => Ok(ir::Krate::Id(d)),
+                }
+            }
+        }
+    }
+}
+
 trait LowerImpl {
-    fn lower_impl(&self, crate_id: ir::CrateId, empty_env: &Env) -> Result<ir::ImplDatum>;
+    fn lower_impl(&self, krate_id: ir::KrateId, empty_env: &Env) -> Result<ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, crate_id: ir::CrateId, empty_env: &Env) -> Result<ir::ImplDatum> {
+    fn lower_impl(&self, krate_id: ir::KrateId, empty_env: &Env) -> Result<ir::ImplDatum> {
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
             let trait_id = trait_ref.trait_id;
@@ -661,7 +693,7 @@ impl LowerImpl for Impl {
         })?;
 
         Ok(ir::ImplDatum {
-            crate_id: crate_id,
+            krate_id: krate_id,
             binders: binders,
         })
     }
@@ -685,14 +717,14 @@ impl LowerAssocTyValue for AssocTyValue {
 }
 
 trait LowerTrait {
-    fn lower_trait(&self, crate_id: ir::CrateId,
+    fn lower_trait(&self, krate_id: ir::KrateId,
                    trait_id: ir::ItemId,
                    env: &Env)
                    -> Result<ir::TraitDatum>;
 }
 
 impl LowerTrait for TraitDefn {
-    fn lower_trait(&self, crate_id: ir::CrateId,
+    fn lower_trait(&self, krate_id: ir::KrateId,
                    trait_id: ir::ItemId,
                    env: &Env)
                    -> Result<ir::TraitDatum> {
@@ -708,7 +740,7 @@ impl LowerTrait for TraitDefn {
         })?;
 
         Ok(ir::TraitDatum {
-            crate_id: crate_id,
+            krate_id: krate_id,
             binders: binders,
         })
     }
@@ -890,6 +922,8 @@ impl<'a> ToParameter for (&'a ir::ParameterKind<()>, usize) {
                 ir::ParameterKind::Lifetime(ir::Lifetime::Var(index)),
             ir::ParameterKind::Ty(_) =>
                 ir::ParameterKind::Ty(ir::Ty::Var(index)),
+            ir::ParameterKind::Krate(_) =>
+                ir::ParameterKind::Krate(ir::Krate::Var(index)),
         }
     }
 }
@@ -916,13 +950,16 @@ impl ir::StructDatum {
         //
         //    for<?T> LocalTo(Foo<?T>, A).
         //    for<?T> WF(Foo<?T>) :- (?T: Eq).
+        //
+        // if the struct were fundamental, we might
+        // generate different `LocalTo` clauses
 
         let local_to = ir::ProgramClause {
             implication: self.binders.map_ref(|bound_datum| {
                 ir::ProgramClauseImplication {
                     consequence: ir::LocalTo {
                         value: bound_datum.self_ty.clone().cast(),
-                        crate_id: self.crate_id,
+                        krate: ir::Krate::Id(self.krate_id),
                     }.cast(),
 
                     conditions: vec![]
@@ -980,10 +1017,7 @@ impl ir::TraitDatum {
                     conditions: {
                         let tys = bound.trait_ref.parameters
                                                  .iter()
-                                                 .filter_map(|pk| match *pk {
-                                                     ir::ParameterKind::Ty(ref t) => Some(t),
-                                                     ir::ParameterKind::Lifetime(_) => None,
-                                                 })
+                                                 .filter_map(|pk| pk.as_ref().ty())
                                                  .map(|ty| ir::WellFormed::Ty(ty.clone()).cast());
 
                         let where_clauses = bound.where_clauses.iter()

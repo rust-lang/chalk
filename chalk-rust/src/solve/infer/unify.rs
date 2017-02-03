@@ -1,4 +1,5 @@
 use cast::Cast;
+use ena::unify::UnifyValue;
 use errors::*;
 use ir::*;
 use solve::environment::{Environment, InEnvironment};
@@ -6,8 +7,9 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
-use super::{InferenceSnapshot, InferenceTable, TyInferenceVariable};
-use super::ty_var::{TyInferenceValue, ValueIndex};
+use super::{InferenceSnapshot, InferenceTable};
+use super::ty_var::{TyInferenceVariable, TyInferenceValue, ValueIndex};
+use super::krate_var::{KrateInferenceVariable, KrateInferenceValue};
 
 impl InferenceTable {
     pub fn unify<T>(&mut self,
@@ -215,6 +217,38 @@ impl<'t> Unifier<'t> {
 
         Ok(())
     }
+
+    fn unify_krate_krate(&mut self, a: &Krate, b: &Krate) -> Result<()> {
+        debug_heading!("unify_krate_krate({:?}, {:?})", a, b);
+        let result = match (a, b) {
+            (&Krate::Var(depth_a), &Krate::Var(depth_b)) => {
+                let var_a = KrateInferenceVariable::from_depth(depth_a);
+                let var_b = KrateInferenceVariable::from_depth(depth_b);
+                self.table.krate_unify.unify_var_var(var_a, var_b)
+            }
+
+            (&Krate::Var(depth), &Krate::Id(id)) |
+            (&Krate::Id(id), &Krate::Var(depth)) => {
+                let var = KrateInferenceVariable::from_depth(depth);
+                let value = KrateInferenceValue::Bound(id);
+                self.table.krate_unify.unify_var_value(var, value)
+            }
+
+            (&Krate::Id(a_id), &Krate::Id(b_id)) => {
+                let a_value = KrateInferenceValue::Bound(a_id);
+                let b_value = KrateInferenceValue::Bound(b_id);
+                KrateInferenceValue::unify_values(&a_value, &b_value).map(|_| ())
+            }
+        };
+
+        match result {
+            Ok(()) => Ok(()),
+            Err((value_a, value_b)) => {
+                debug!("error: {:?} vs {:?}", value_a, value_b);
+                bail!("cannot unify `{:?}` with `{:?}`", value_a, value_b)
+            }
+        }
+    }
 }
 
 impl<'t> Zipper for Unifier<'t> {
@@ -224,6 +258,10 @@ impl<'t> Zipper for Unifier<'t> {
 
     fn zip_lifetimes(&mut self, &a: &Lifetime, &b: &Lifetime) -> Result<()> {
         Ok(self.constraints.push(Constraint::LifetimeEq(a, b)))
+    }
+
+    fn zip_krates(&mut self, a: &Krate, b: &Krate) -> Result<()> {
+        self.unify_krate_krate(a, b)
     }
 }
 
@@ -282,6 +320,7 @@ impl<'u, 't> OccursCheck<'u, 't> {
         match *arg {
             ParameterKind::Ty(ref t) => self.check_ty(t),
             ParameterKind::Lifetime(_) => Ok(()),
+            ParameterKind::Krate(_) => panic!("krate used as parameter to a type"),
         }
     }
 

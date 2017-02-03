@@ -103,6 +103,12 @@ impl Cast<WhereClauseGoal> for Unify<Ty> {
     }
 }
 
+impl Cast<WhereClauseGoal> for Unify<Krate> {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::UnifyKrates(self)
+    }
+}
+
 impl Cast<Ty> for ApplicationTy {
     fn cast(self) -> Ty {
         Ty::Apply(self)

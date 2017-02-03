@@ -66,14 +66,20 @@ pub struct ItemId {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct CrateId {
+pub struct KrateId {
     pub name: Identifier
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub enum Krate {
+    Var(usize),
+    Id(KrateId),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {
     pub sort: TypeSort,
-    pub crate_id: CrateId,
+    pub krate_id: KrateId,
     pub name: Identifier,
     pub binders: Binders<()>,
 }
@@ -86,7 +92,7 @@ pub enum TypeSort {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum {
-    pub crate_id: CrateId,
+    pub krate_id: KrateId,
     pub binders: Binders<ImplDatumBound>,
 }
 
@@ -99,7 +105,7 @@ pub struct ImplDatumBound {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatum {
-    pub crate_id: CrateId,
+    pub krate_id: KrateId,
     pub binders: Binders<StructDatumBound>,
 }
 
@@ -111,7 +117,7 @@ pub struct StructDatumBound {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum {
-    pub crate_id: CrateId,
+    pub krate_id: KrateId,
     pub binders: Binders<TraitDatumBound>,
 }
 
@@ -188,27 +194,30 @@ pub struct ApplicationTy {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub enum ParameterKind<T, L = T> {
+pub enum ParameterKind<T, L = T, C = T> {
     Ty(T),
     Lifetime(L),
+    Krate(C),
 }
 
-impl<T> ParameterKind<T, T> {
+impl<T> ParameterKind<T> {
     pub fn map<OP, U>(self, op: OP) -> ParameterKind<U>
         where OP: FnOnce(T) -> U
     {
         match self {
             ParameterKind::Ty(t) => ParameterKind::Ty(op(t)),
             ParameterKind::Lifetime(t) => ParameterKind::Lifetime(op(t)),
+            ParameterKind::Krate(t) => ParameterKind::Krate(op(t)),
         }
     }
 }
 
-impl<T, L> ParameterKind<T, L> {
-    pub fn as_ref(&self) -> ParameterKind<&T, &L> {
+impl<T, L, C> ParameterKind<T, L, C> {
+    pub fn as_ref(&self) -> ParameterKind<&T, &L, &C> {
         match *self {
             ParameterKind::Ty(ref t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(ref l) => ParameterKind::Lifetime(l),
+            ParameterKind::Krate(ref c) => ParameterKind::Krate(c),
         }
     }
 
@@ -225,9 +234,16 @@ impl<T, L> ParameterKind<T, L> {
             _ => None,
         }
     }
+
+    pub fn krate(self) -> Option<C> {
+        match self {
+            ParameterKind::Krate(t) => Some(t),
+            _ => None,
+        }
+    }
 }
 
-pub type Parameter = ParameterKind<Ty, Lifetime>;
+pub type Parameter = ParameterKind<Ty, Lifetime, Krate>;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ProjectionTy {
@@ -252,6 +268,7 @@ pub enum WhereClauseGoal {
     Implemented(TraitRef),
     Normalize(Normalize),
     UnifyTys(Unify<Ty>),
+    UnifyKrates(Unify<Krate>),
     WellFormed(WellFormed),
     TyLocalTo(LocalTo<Ty>),
 }
@@ -265,7 +282,7 @@ pub enum WellFormed {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct LocalTo<F> {
     pub value: F,
-    pub crate_id: CrateId,
+    pub krate: Krate,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

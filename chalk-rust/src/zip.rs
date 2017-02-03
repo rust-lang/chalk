@@ -6,6 +6,7 @@ use std::sync::Arc;
 pub trait Zipper {
     fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()>;
     fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()>;
+    fn zip_krates(&mut self, a: &Krate, b: &Krate) -> Result<()>;
 }
 
 impl<'f, Z: Zipper> Zipper for &'f mut Z {
@@ -15,6 +16,10 @@ impl<'f, Z: Zipper> Zipper for &'f mut Z {
 
     fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
         (**self).zip_lifetimes(a, b)
+    }
+
+    fn zip_krates(&mut self, a: &Krate, b: &Krate) -> Result<()> {
+        (**self).zip_krates(a, b)
     }
 }
 
@@ -63,13 +68,15 @@ impl<T: Zip, U: Zip> Zip for (T, U) {
     }
 }
 
-impl<T: Zip, L: Zip> Zip for ParameterKind<T, L> {
+impl<T: Zip, L: Zip, C: Zip> Zip for ParameterKind<T, L, C> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         match (a, b) {
             (&ParameterKind::Ty(ref a), &ParameterKind::Ty(ref b)) => Zip::zip_with(zipper, a, b),
             (&ParameterKind::Lifetime(ref a), &ParameterKind::Lifetime(ref b)) => Zip::zip_with(zipper, a, b),
-            (&ParameterKind::Ty(_), &ParameterKind::Lifetime(_)) |
-            (&ParameterKind::Lifetime(_), &ParameterKind::Ty(_)) => {
+            (&ParameterKind::Krate(ref a), &ParameterKind::Krate(ref b)) => Zip::zip_with(zipper, a, b),
+            (&ParameterKind::Ty(_), _) |
+            (&ParameterKind::Lifetime(_), _) |
+            (&ParameterKind::Krate(_), _) => {
                 panic!("zipping things of mixed kind")
             }
         }
@@ -88,6 +95,12 @@ impl Zip for Lifetime {
     }
 }
 
+impl Zip for Krate {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        zipper.zip_krates(a, b)
+    }
+}
+
 macro_rules! eq_zip {
     ($t:ty) => {
         impl Zip for $t {
@@ -103,7 +116,7 @@ macro_rules! eq_zip {
 
 eq_zip!(ItemId);
 eq_zip!(TypeName);
-eq_zip!(CrateId);
+eq_zip!(KrateId);
 eq_zip!(Identifier);
 
 macro_rules! struct_zip {
@@ -126,7 +139,8 @@ struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
 struct_zip!(ApplicationTy { name, parameters });
 struct_zip!(ProjectionTy { associated_ty_id, parameters });
 struct_zip!(Normalize { projection, ty });
-struct_zip!(LocalTo[T] { value, crate_id } where T: Zip);
+struct_zip!(LocalTo[T] { value, krate } where T: Zip);
+struct_zip!(Unify[T] { a, b } where T: Zip);
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
@@ -137,76 +151,27 @@ impl Zip for Environment {
     }
 }
 
-impl Zip for WhereClause {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        match (a, b) {
-            (&WhereClause::Implemented(ref a), &WhereClause::Implemented(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WhereClause::Normalize(ref a), &WhereClause::Normalize(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WhereClause::Implemented(_), &WhereClause::Normalize(_)) |
-            (&WhereClause::Normalize(_), &WhereClause::Implemented(_)) => {
-                bail!("cannot zip where-clauses `{:?}` and `{:?}`", a, b)
+macro_rules! enum_zip {
+    ($t:ident$([$($param:tt)*])* { $( $variant:ident ),* } $($w:tt)*) => {
+        impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
+            fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+                match (a, b) {
+                    $(
+                        (&$t :: $variant (ref f_a), &$t :: $variant (ref f_b)) => {
+                            Zip::zip_with(zipper, f_a, f_b)
+                        }
+                    )*
+
+                    $((&$t :: $variant ( .. ), _))|* => {
+                        bail!("cannot zip `{:?}` and `{:?}`", a, b)
+                    }
+                }
             }
         }
     }
 }
 
-impl Zip for WhereClauseGoal {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        match (a, b) {
-            (&WhereClauseGoal::Implemented(ref a), &WhereClauseGoal::Implemented(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WhereClauseGoal::Normalize(ref a), &WhereClauseGoal::Normalize(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WhereClauseGoal::UnifyTys(ref a), &WhereClauseGoal::UnifyTys(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WhereClauseGoal::WellFormed(ref a), &WhereClauseGoal::WellFormed(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WhereClauseGoal::TyLocalTo(ref a), &WhereClauseGoal::TyLocalTo(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WhereClauseGoal::Implemented(_), _) |
-            (&WhereClauseGoal::Normalize(_), _) |
-            (&WhereClauseGoal::UnifyTys(_), _) |
-            (&WhereClauseGoal::TyLocalTo(_), _) |
-            (&WhereClauseGoal::WellFormed(_), _) => {
-                bail!("cannot zip where-clause-goals `{:?}` and `{:?}`", a, b)
-            }
-        }
-    }
-}
+enum_zip!(WhereClause { Implemented, Normalize });
+enum_zip!(WhereClauseGoal { Implemented, Normalize, UnifyTys, UnifyKrates, WellFormed, TyLocalTo });
+enum_zip!(WellFormed { Ty, TraitRef });
 
-impl Zip for WellFormed {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        match (a, b) {
-            (&WellFormed::Ty(ref a), &WellFormed::Ty(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WellFormed::TraitRef(ref a), &WellFormed::TraitRef(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&WellFormed::Ty(_), _) |
-            (&WellFormed::TraitRef(_), _) => {
-                bail!("cannot zip `{:?}` and `{:?}`", a, b)
-            }
-        }
-    }
-}
-
-
-impl<T: Zip> Zip for Unify<T> {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        let Unify { a: ref a_a, b: ref a_b } = *a;
-        let Unify { a: ref b_a, b: ref b_b } = *b;
-        Zip::zip_with(zipper, &a_a, &b_a)?;
-        Zip::zip_with(zipper, &a_b, &b_b)?;
-        Ok(())
-    }
-}

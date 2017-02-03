@@ -15,6 +15,7 @@ pub use self::instantiate::Subst;
 pub trait Folder {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty>;
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime>;
+    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate>;
 }
 
 impl<'f, F: Folder + ?Sized> Folder for &'f mut F {
@@ -25,6 +26,10 @@ impl<'f, F: Folder + ?Sized> Folder for &'f mut F {
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         (**self).fold_free_lifetime_var(depth, binders)
     }
+
+    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
+        (**self).fold_free_krate_var(depth, binders)
+    }
 }
 
 impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
@@ -34,6 +39,10 @@ impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
 
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         self.0.fold_free_lifetime_var(depth, binders)?.fold_with(&mut self.1, binders)
+    }
+
+    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
+        self.0.fold_free_krate_var(depth, binders)?.fold_with(&mut self.1, binders)
     }
 }
 
@@ -140,6 +149,20 @@ impl Fold for Lifetime {
     }
 }
 
+impl Fold for Krate {
+    type Result = Self;
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+        match *self {
+            Krate::Var(depth) => if depth >= binders {
+                folder.fold_free_krate_var(depth - binders, binders)
+            } else {
+                Ok(Krate::Var(depth))
+            },
+            Krate::Id(i) => Ok(Krate::Id(i)),
+        }
+    }
+}
+
 macro_rules! copy_fold {
     ($t:ty) => {
         impl Fold for $t {
@@ -155,7 +178,7 @@ macro_rules! copy_fold {
 }
 
 copy_fold!(Identifier);
-copy_fold!(CrateId);
+copy_fold!(KrateId);
 copy_fold!(UniverseIndex);
 copy_fold!(ItemId);
 copy_fold!(TypeName);
@@ -179,10 +202,10 @@ macro_rules! enum_fold {
     }
 }
 
-enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
+enum_fold!(ParameterKind[T,L, C] { Ty(a), Lifetime(a), Krate(a) } where T: Fold, L: Fold, C: Fold);
 enum_fold!(WhereClause[] { Implemented(a), Normalize(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
-enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a),
+enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a), UnifyKrates(a),
                                WellFormed(a), TyLocalTo(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Leaf(wc) });
@@ -211,4 +234,4 @@ struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(Unify[T] { a, b } where T: Fold);
 struct_fold!(Constrained[F] { value, constraints } where F: Fold);
 struct_fold!(ProgramClauseImplication { consequence, conditions });
-struct_fold!(LocalTo[T] { value, crate_id } where T: Fold);
+struct_fold!(LocalTo[T] { value, krate } where T: Fold);

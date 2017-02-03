@@ -1063,19 +1063,19 @@ fn struct_local() {
         }
 
         goal {
-            LocalTo(Foo, A)
+            LocalTo(Foo, crate A)
         } yields {
             "Solution { successful: Yes"
         }
 
         goal {
-            LocalTo(Bar, A)
+            LocalTo(Bar, crate A)
         } yields {
             "no applicable candidates"
         }
 
         goal {
-            LocalTo(Bar, B)
+            LocalTo(Bar, crate B)
         } yields {
             "Solution { successful: Yes"
         }
@@ -1241,6 +1241,34 @@ fn trait_wf() {
             WellFormed(Vec<Int>: Ord<Vec<Int>>)
         } yields {
             "Solution { successful: Yes,"
+        }
+    }
+}
+
+#[test]
+fn crate_variable() {
+    test! {
+        program {
+            crate foo {
+                struct Int { }
+            }
+        }
+
+        goal {
+            exists<crate C> { LocalTo(Int, crate C) }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            LocalTo(Int, Id(foo))
+                        ],
+                        constraints: []
+                    },
+                    binders: []
+                }
+            }"
         }
     }
 }

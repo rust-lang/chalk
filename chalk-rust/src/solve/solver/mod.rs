@@ -64,6 +64,13 @@ impl Solver {
                 };
                 SolveUnify::new(self, q).solve().cast()
             }
+            WhereClauseGoal::UnifyKrates(unify) => {
+                let q = Quantified {
+                    value: InEnvironment::new(&environment, unify),
+                    binders: binders,
+                };
+                SolveUnify::new(self, q).solve().cast()
+            }
             WhereClauseGoal::TyLocalTo(_) |
             WhereClauseGoal::WellFormed(_) => {
                 // Currently, we don't allow `LocalTo` or `WF` types

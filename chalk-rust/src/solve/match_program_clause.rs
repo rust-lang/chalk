@@ -42,13 +42,15 @@ impl<'s, G> MatchProgramClause<'s, G>
                        &program_clause_data);
         let environment = environment.clone();
         fulfill.unify(&environment,
-                           &goal.clone().cast(),
-                           &program_clause_data.consequence)?;
+                      &goal.clone().cast(),
+                      &program_clause_data.consequence)?;
         for condition in program_clause_data.conditions {
             fulfill.push_goal(condition, &environment);
         }
+        debug!("unification succeeded, attempting to solve all sub-goals");
         let successful = fulfill.solve_all()?;
         let refined_goal = fulfill.refine_goal(InEnvironment::new(&environment, &goal));
+        debug!("success, refined goal = {:?}", refined_goal);
         Ok(Solution {
             successful: successful,
             refined_goal: refined_goal,

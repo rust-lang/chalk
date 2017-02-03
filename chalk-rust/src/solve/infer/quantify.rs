@@ -3,8 +3,9 @@ use fold::{Fold, Folder, Shifter};
 use ir::*;
 
 use super::{InferenceTable, TyInferenceVariable,
-            LifetimeInferenceVariable, ParameterInferenceVariable};
+            KrateInferenceVariable, LifetimeInferenceVariable, ParameterInferenceVariable};
 use super::ty_var::TyInferenceValue;
+use super::krate_var::KrateInferenceValue;
 
 impl InferenceTable {
     /// Given a value `value` with variables in it, replaces those
@@ -56,6 +57,13 @@ impl<'q> Quantifier<'q> {
                      ParameterKind::Lifetime(v) => {
                          ParameterKind::Lifetime(table.lifetime_universe(v))
                      },
+
+                     ParameterKind::Krate(c) => {
+                         match table.krate_unify.probe_value(c) {
+                             KrateInferenceValue::Unbound(ui) => ParameterKind::Krate(ui),
+                             KrateInferenceValue::Bound(_) => panic!("free var now bound")
+                         }
+                     },
                  })
                  .collect()
     }
@@ -100,5 +108,20 @@ impl<'q> Folder for Quantifier<'q> {
         let free_var = ParameterKind::Lifetime(LifetimeInferenceVariable::from_depth(depth));
         let position = self.add(free_var) + binders;
         Ok(LifetimeInferenceVariable::from_depth(position).to_lifetime())
+    }
+
+    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
+        let var = KrateInferenceVariable::from_depth(depth);
+        match self.table.probe_krate_var(var) {
+            Some(k) => {
+                let mut folder = (self, Shifter::new(binders));
+                k.fold_with(&mut folder, 0)
+            }
+            None => {
+                let free_var = ParameterKind::Krate(KrateInferenceVariable::from_depth(depth));
+                let position = self.add(free_var) + binders;
+                Ok(KrateInferenceVariable::from_depth(position).to_krate())
+            }
+        }
     }
 }
