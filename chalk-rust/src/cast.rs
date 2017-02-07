@@ -63,6 +63,24 @@ impl Cast<WhereClauseGoal> for WellFormed {
     }
 }
 
+impl Cast<WhereClauseGoal> for Not<Normalize> {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::NotNormalize(self)
+    }
+}
+
+impl Cast<WhereClauseGoal> for Not<TraitRef> {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::NotImplemented(self)
+    }
+}
+
+impl Cast<WhereClauseGoal> for Not<Unify<Ty>> {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::NotUnifyTys(self)
+    }
+}
+
 impl Cast<Goal> for WellFormed {
     fn cast(self) -> Goal {
         let wcg: WhereClauseGoal = self.cast();

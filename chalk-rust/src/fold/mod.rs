@@ -65,6 +65,13 @@ impl<T: Fold> Fold for Vec<T> {
     }
 }
 
+impl<T: Fold> Fold for Not<T> {
+    type Result = Not<T::Result>;
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+        Ok(Not(self.0.fold_with(folder, binders)?))
+    }
+}
+
 impl<T: Fold> Fold for Box<T> {
     type Result = Box<T::Result>;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
@@ -206,7 +213,8 @@ enum_fold!(ParameterKind[T,L, C] { Ty(a), Lifetime(a), Krate(a) } where T: Fold,
 enum_fold!(WhereClause[] { Implemented(a), Normalize(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
 enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a), UnifyKrates(a),
-                               WellFormed(a), TyLocalTo(a) });
+                               WellFormed(a), TyLocalTo(a), NotImplemented(a),
+                               NotNormalize(a), NotUnifyTys(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Leaf(wc) });
 
@@ -235,3 +243,4 @@ struct_fold!(Unify[T] { a, b } where T: Fold);
 struct_fold!(Constrained[F] { value, constraints } where F: Fold);
 struct_fold!(ProgramClauseImplication { consequence, conditions });
 struct_fold!(LocalTo[T] { value, krate } where T: Fold);
+

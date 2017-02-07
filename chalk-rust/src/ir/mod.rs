@@ -271,6 +271,10 @@ pub enum WhereClauseGoal {
     UnifyKrates(Unify<Krate>),
     WellFormed(WellFormed),
     TyLocalTo(LocalTo<Ty>),
+
+    NotImplemented(Not<TraitRef>),
+    NotNormalize(Not<Normalize>),
+    NotUnifyTys(Not<Unify<Ty>>),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -290,6 +294,9 @@ pub struct Unify<T> {
     pub a: T,
     pub b: T,
 }
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Not<T>(pub T);
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Normalize {

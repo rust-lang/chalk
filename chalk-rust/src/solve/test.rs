@@ -1272,3 +1272,44 @@ fn crate_variable() {
         }
     }
 }
+
+#[test]
+fn unify_unequal() {
+    test! {
+        program {
+            struct Int { }
+
+            struct Vec<T> { }
+        }
+
+        goal {
+            Int != Vec<Int>
+        } yields {
+            "Solution { successful: Yes"
+        }
+
+        goal {
+            exists<C> { C != Vec<Int> }
+        } yields {
+            "Solution { successful: Maybe"
+        }
+
+        goal {
+            forall<C> { C != Vec<Int> }
+        } yields {
+            "`!1 != Vec<Int>` is unprovable"
+        }
+
+        goal {
+            exists<C> { Vec<C> != Vec<C> }
+        } yields {
+            "`Vec<?0> != Vec<?0>` is unprovable"
+        }
+
+        goal {
+            exists<C, D> { Vec<C> != Vec<D> }
+        } yields {
+            "Solution { successful: Maybe"
+        }
+    }
+}

@@ -9,6 +9,7 @@ pub mod match_clause;
 pub mod match_program_clause;
 pub mod normalize;
 pub mod normalize_application;
+pub mod not_unify;
 pub mod goal;
 pub mod solver;
 pub mod unify;

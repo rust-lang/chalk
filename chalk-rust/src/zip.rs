@@ -142,6 +142,13 @@ struct_zip!(Normalize { projection, ty });
 struct_zip!(LocalTo[T] { value, krate } where T: Zip);
 struct_zip!(Unify[T] { a, b } where T: Zip);
 
+impl<T: Zip> Zip for Not<T> {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        Zip::zip_with(zipper, &a.0, &b.0)?;
+        Ok(())
+    }
+}
+
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         assert_eq!(a.universe, b.universe); // it's wrong to zip 2 env's with distinct universes!
@@ -172,6 +179,7 @@ macro_rules! enum_zip {
 }
 
 enum_zip!(WhereClause { Implemented, Normalize });
-enum_zip!(WhereClauseGoal { Implemented, Normalize, UnifyTys, UnifyKrates, WellFormed, TyLocalTo });
+enum_zip!(WhereClauseGoal { Implemented, Normalize, UnifyTys, UnifyKrates, WellFormed, TyLocalTo,
+                            NotImplemented, NotNormalize, NotUnifyTys });
 enum_zip!(WellFormed { Ty, TraitRef });
 

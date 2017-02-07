@@ -430,15 +430,18 @@ impl LowerWhereClause<ir::WhereClause> for WhereClause {
             WhereClause::Implemented { ref trait_ref } => {
                 ir::WhereClause::Implemented(trait_ref.lower(env)?)
             }
-            WhereClause::ProjectionEq { ref projection, ref ty } => {
+            WhereClause::ProjectionEq { ref projection, ref ty, eq: true } => {
                 ir::WhereClause::Normalize(ir::Normalize {
                     projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
                 })
             }
+            WhereClause::ProjectionEq { eq: false, .. } |
             WhereClause::TyWellFormed { .. } |
             WhereClause::TraitRefWellFormed { .. } |
             WhereClause::LocalTo { .. } |
+            WhereClause::UnifyTys { .. } |
+            WhereClause::UnifyKrates { .. } |
             WhereClause::NotImplemented { .. } => {
                 bail!("this form of where-clause not allowed here")
             }
@@ -464,10 +467,28 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
                 ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
             }
             WhereClause::LocalTo { ref ty, ref krate } => {
-                ir::WhereClauseGoal::TyLocalTo(ir::LocalTo {
+                ir::LocalTo {
                     value: ty.lower(env)?,
                     krate: krate.lower(env)?,
-                })
+                }.cast()
+            }
+            WhereClause::UnifyTys { ref a, ref b, eq: true } => {
+                ir::Unify {
+                    a: a.lower(env)?,
+                    b: b.lower(env)?,
+                }.cast()
+            }
+            WhereClause::UnifyTys { ref a, ref b, eq: false } => {
+                ir::Not(ir::Unify {
+                    a: a.lower(env)?,
+                    b: b.lower(env)?,
+                }).cast()
+            }
+            WhereClause::UnifyKrates { ref a, ref b } => {
+                ir::Unify {
+                    a: a.lower(env)?,
+                    b: b.lower(env)?,
+                }.cast()
             }
             WhereClause::NotImplemented { .. } => {
                 unimplemented!() // oh the irony

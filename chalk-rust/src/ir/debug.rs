@@ -89,6 +89,12 @@ impl Debug for TraitRef {
     }
 }
 
+impl<T: Debug> Debug for Not<T> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "Not({:?})", self.0)
+    }
+}
+
 impl Debug for ProjectionTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         with_current_program(|p| match p {
@@ -176,6 +182,9 @@ impl Debug for WhereClauseGoal {
             WhereClauseGoal::UnifyKrates(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::TyLocalTo(ref n) => write!(fmt, "{:?}", n),
+            WhereClauseGoal::NotUnifyTys(ref n) => write!(fmt, "{:?}", n),
+            WhereClauseGoal::NotNormalize(ref n) => write!(fmt, "{:?}", n),
+            WhereClauseGoal::NotImplemented(ref n) => write!(fmt, "{:?}", n),
         }
     }
 }

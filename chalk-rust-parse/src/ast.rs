@@ -121,10 +121,12 @@ pub struct Identifier {
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
     NotImplemented { trait_ref: TraitRef },
-    ProjectionEq { projection: ProjectionTy, ty: Ty },
+    ProjectionEq { projection: ProjectionTy, ty: Ty, eq: bool},
     TyWellFormed { ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
     LocalTo { ty: Ty, krate: Krate },
+    UnifyTys { a: Ty, b: Ty, eq: bool },
+    UnifyKrates { a: Krate, b: Krate },
 }
 
 pub enum Goal {

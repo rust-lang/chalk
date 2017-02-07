@@ -127,6 +127,13 @@ impl InferenceTable {
             })
     }
 
+    fn normalize_krate(&mut self, leaf: &Krate) -> Option<Krate> {
+        match *leaf {
+            Krate::Var(v) => self.probe_krate_var(KrateInferenceVariable::from_depth(v)),
+            Krate::Id(_) => None,
+        }
+    }
+
     fn probe_var(&mut self, var: TyInferenceVariable) -> Option<Arc<Ty>> {
         match self.unify.probe_value(var) {
             TyInferenceValue::Unbound(_) => None,
