@@ -133,7 +133,7 @@ fn check_parameter_kinds() {
             impl Bar for Foo<i32> { }
         }
         error_msg {
-            "type parameter has wrong kind: expected lifetime, found type"
+            "incorrect parameter kind: expected lifetime, found type"
         }
     };
 
@@ -144,7 +144,7 @@ fn check_parameter_kinds() {
             impl<'a> Bar for Foo<'a> { }
         }
         error_msg {
-            "type parameter has wrong kind: expected type, found lifetime"
+            "incorrect parameter kind: expected type, found lifetime"
         }
     };
 
@@ -155,7 +155,7 @@ fn check_parameter_kinds() {
             impl<X, T> Foo for <X as Iterator>::Item<T> where X: Iterator { }
         }
         error_msg {
-            "associated type parameter has wrong kind: expected lifetime, found type"
+            "incorrect kind for associated type parameter: expected lifetime, found type"
         }
     };
 
@@ -166,7 +166,7 @@ fn check_parameter_kinds() {
             impl<X, 'a> Foo for <X as Iterator>::Item<'a> where X: Iterator { }
         }
         error_msg {
-            "associated type parameter has wrong kind: expected type, found lifetime"
+            "incorrect kind for associated type parameter: expected type, found lifetime"
         }
     };
 
@@ -177,7 +177,7 @@ fn check_parameter_kinds() {
             impl<'a> Into<'a> for Foo {}
         }
         error_msg {
-            "type parameter to trait has wrong kind: expected type, found lifetime"
+            "incorrect kind for trait parameter: expected type, found lifetime"
         }
     }
 
@@ -188,7 +188,7 @@ fn check_parameter_kinds() {
             impl<T> IntoTime<T> for Foo {}
         }
         error_msg {
-            "type parameter to trait has wrong kind: expected lifetime, found type"
+            "incorrect kind for trait parameter: expected lifetime, found type"
         }
     }
 }

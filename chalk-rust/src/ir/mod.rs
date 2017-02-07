@@ -1,5 +1,6 @@
 use lalrpop_intern::InternedString;
 use std::collections::HashMap;
+use chalk_rust_parse::ast;
 
 pub type Identifier = InternedString;
 
@@ -239,6 +240,16 @@ impl<T, L, C> ParameterKind<T, L, C> {
         match self {
             ParameterKind::Krate(t) => Some(t),
             _ => None,
+        }
+    }
+}
+
+impl<T, L, C> ast::Kinded for ParameterKind<T, L, C> {
+    fn kind(&self) -> ast::Kind {
+        match *self {
+            ParameterKind::Ty(_) => ast::Kind::Ty,
+            ParameterKind::Lifetime(_) => ast::Kind::Lifetime,
+            ParameterKind::Krate(_) => ast::Kind::Krate,
         }
     }
 }

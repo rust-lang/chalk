@@ -511,6 +511,15 @@ impl LowerStructDefn for StructDefn {
     }
 }
 
+fn check_type_kinds<A: Kinded, B: Kinded>(msg: &str, expected: &A, actual: &B) -> Result<()> {
+    let expected_kind = expected.kind();
+    let actual_kind = actual.kind();
+    if expected_kind != actual_kind {
+        bail!("{}: expected {}, found {}", msg, expected_kind, actual_kind);
+    } else {
+        Ok(())
+    }
+}
 
 trait LowerTraitRef {
     fn lower(&self, env: &Env) -> Result<ir::TraitRef>;
@@ -536,13 +545,7 @@ impl LowerTraitRef for TraitRef {
         }
 
         for (binder, param) in k.binders.binders.iter().zip(parameters.iter().skip(1)) {
-            match (binder, param) {
-                (&ir::ParameterKind::Ty(_), &ir::ParameterKind::Lifetime(_)) =>
-                    bail!("type parameter to trait has wrong kind: expected type, found lifetime"),
-                (&ir::ParameterKind::Lifetime(_), &ir::ParameterKind::Ty(_)) =>
-                    bail!("type parameter to trait has wrong kind: expected lifetime, found type"),
-                _ => {}
-            }
+            check_type_kinds("incorrect kind for trait parameter", binder, param)?;
         }
 
         Ok(ir::TraitRef {
@@ -572,13 +575,7 @@ impl LowerProjectionTy for ProjectionTy {
         }
 
         for (param, arg) in info.addl_parameter_kinds.iter().zip(args.iter()) {
-            match (param, arg) {
-                (&ir::ParameterKind::Ty(_), &ir::ParameterKind::Lifetime(_)) =>
-                    bail!("associated type parameter has wrong kind: expected type, found lifetime"),
-                (&ir::ParameterKind::Lifetime(_), &ir::ParameterKind::Ty(_)) =>
-                    bail!("associated type parameter has wrong kind: expected lifetime, found type"),
-                _ => {}
-            }
+            check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
         }
 
         args.extend(trait_parameters);
@@ -629,13 +626,7 @@ impl LowerTy for Ty {
                 let parameters = args.iter().map(|t| Ok(t.lower(env)?)).collect::<Result<Vec<_>>>()?;
 
                 for (param, arg) in k.binders.binders.iter().zip(args.iter()) {
-                    match (param, arg) {
-                        (&ir::ParameterKind::Ty(_), &Parameter::Lifetime(_)) =>
-                            bail!("type parameter has wrong kind: expected type, found lifetime"),
-                        (&ir::ParameterKind::Lifetime(_), &Parameter::Ty(_)) =>
-                            bail!("type parameter has wrong kind: expected lifetime, found type"),
-                        _ => {}
-                    };
+                    check_type_kinds("incorrect parameter kind", param, arg)?;
                 }
 
                 Ok(ir::Ty::Apply(ir::ApplicationTy {

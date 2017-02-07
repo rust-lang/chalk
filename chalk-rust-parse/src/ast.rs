@@ -1,4 +1,5 @@
 use lalrpop_intern::InternedString;
+use std::fmt;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Span {
@@ -56,6 +57,49 @@ pub enum Parameter {
     Ty(Ty),
     Lifetime(Lifetime),
     Krate(Krate),
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Kind {
+    Ty,
+    Lifetime,
+    Krate,
+}
+
+impl fmt::Display for Kind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(
+            match *self {
+                Kind::Ty => "type",
+                Kind::Lifetime => "lifetime",
+                Kind::Krate => "crate",
+            }
+        )
+    }
+}
+
+pub trait Kinded {
+    fn kind(&self) -> Kind;
+}
+
+impl Kinded for ParameterKind {
+    fn kind(&self) -> Kind {
+        match *self {
+            ParameterKind::Ty(_) => Kind::Ty,
+            ParameterKind::Lifetime(_) => Kind::Lifetime,
+            ParameterKind::Krate(_) => Kind::Krate,
+        }
+    }
+}
+
+impl Kinded for Parameter {
+    fn kind(&self) -> Kind {
+        match *self {
+            Parameter::Ty(_) => Kind::Ty,
+            Parameter::Lifetime(_) => Kind::Lifetime,
+            Parameter::Krate(_) => Kind::Krate,
+        }
+    }
 }
 
 pub struct Impl {
