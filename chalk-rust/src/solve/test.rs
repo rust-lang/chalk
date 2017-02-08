@@ -1280,6 +1280,8 @@ fn unify_unequal() {
             struct Int { }
 
             struct Vec<T> { }
+
+            trait Iterator { type Item; }
         }
 
         goal {
@@ -1310,6 +1312,28 @@ fn unify_unequal() {
             exists<C, D> { Vec<C> != Vec<D> }
         } yields {
             "Solution { successful: Maybe"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Iterator) {
+                    <T as Iterator>::Item != Int
+                }
+            }
+        } yields {
+            "Solution { successful: Maybe"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Iterator) {
+                    if (T: Iterator<Item = Int>) {
+                        <T as Iterator>::Item != Vec<Int>
+                    }
+                }
+            }
+        } yields {
+            "Solution { successful: Yes"
         }
     }
 }

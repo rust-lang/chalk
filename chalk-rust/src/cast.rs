@@ -88,6 +88,20 @@ impl Cast<Goal> for WellFormed {
     }
 }
 
+impl Cast<Goal> for Normalize {
+    fn cast(self) -> Goal {
+        let wcg: WhereClauseGoal = self.cast();
+        wcg.cast()
+    }
+}
+
+impl Cast<Goal> for Not<Unify<Ty>> {
+    fn cast(self) -> Goal {
+        let wcg: WhereClauseGoal = self.cast();
+        wcg.cast()
+    }
+}
+
 impl Cast<WhereClauseGoal> for WhereClause {
     fn cast(self) -> WhereClauseGoal {
         match self {

@@ -1,3 +1,4 @@
+use cast::Cast;
 use errors::*;
 use ir::*;
 use solve::environment::{Environment, InEnvironment};
@@ -180,9 +181,16 @@ impl<'s> SolveNotUnify<'s> {
         unimplemented!()
     }
 
-    fn projection_ty(&mut self, _proj: &ProjectionTy, _ty: &Ty) {
-        // should generate a `Not(Normalize)` goal
-        unimplemented!()
+    fn projection_ty(&mut self, proj: &ProjectionTy, ty: &Ty) {
+        let goal = Quantified {
+            binders: self.binders.clone(),
+            value: InEnvironment::new(&self.environment,
+                                      Not(Normalize {
+                                          projection: proj.clone(),
+                                          ty: ty.clone(),
+                                      }).cast())
+        };
+        self.if_goal_met(goal)
     }
 
     fn forall_apply(&mut self, _ty1: &QuantifiedTy, _ty2: &Ty) {

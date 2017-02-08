@@ -231,11 +231,15 @@ impl LowerProgram for Program {
             program_clauses.extend(trait_datum.to_program_clauses());
         }
 
+        for (&id, associated_ty_datum) in &associated_ty_data {
+            program_clauses.extend(associated_ty_datum.to_program_clauses(id));
+        }
+
         for impl_datum in impl_data.values() {
             program_clauses.push(impl_datum.to_program_clause());
 
             for atv in &impl_datum.binders.value.associated_ty_values {
-                program_clauses.push(atv.to_program_clause(impl_datum));
+                program_clauses.extend(atv.to_program_clauses(impl_datum));
             }
         }
 
@@ -875,7 +879,7 @@ impl ir::AssociatedTyValue {
     ///         (T: 'a)              // (2)
     /// }
     /// ```
-    fn to_program_clause(&self, impl_datum: &ir::ImplDatum) -> ir::ProgramClause {
+    fn to_program_clauses(&self, impl_datum: &ir::ImplDatum) -> Vec<ir::ProgramClause> {
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
         let all_binders: Vec<_> =
             self.value.binders
@@ -902,7 +906,7 @@ impl ir::AssociatedTyValue {
             let parameters = self.value.binders.iter().zip(0..).map(|p| p.to_parameter());
 
             // Then add the trait-ref parameters (`Vec<T>`, in above example)
-            let parameters = parameters.chain(impl_trait_ref.parameters);
+            let parameters = parameters.chain(impl_trait_ref.parameters.clone());
 
             // Construct normalization predicate
             ir::Normalize {
@@ -914,15 +918,17 @@ impl ir::AssociatedTyValue {
             }
         };
 
-        ir::ProgramClause {
+        let pos_clause = ir::ProgramClause {
             implication: ir::Binders {
-                binders: all_binders,
+                binders: all_binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: consequence.cast(),
+                    consequence: consequence.clone().cast(),
                     conditions: conditions,
                 }
             }
-        }
+        };
+
+        vec![pos_clause]
     }
 }
 
@@ -1052,5 +1058,102 @@ impl ir::TraitDatum {
         };
 
         vec![wf]
+    }
+}
+
+impl ir::AssociatedTyDatum {
+    fn to_program_clauses(&self, id: ir::ItemId) -> Vec<ir::ProgramClause> {
+        /// Given:
+        ///
+        /// ```notrust
+        /// trait Iterable {
+        ///     type IntoIter<'a> where T: 'a = Iter<'a, T>;
+        /// }
+        /// ```
+        ///
+        /// generate:
+        ///
+        /// ```
+        /// forall<'a, Self, U, V> {
+        ///     (Vec<T>: Iterable<IntoIter<'a> != U>) :-
+        ///         (Vec<T>: Iterable<IntoIter<'a> = V>),
+        ///         (U != V)
+        /// }
+        ///
+        /// forall<'a, Self, U> {
+        ///     (Vec<T>: Iterable<IntoIter<'a> != U>) :-
+        ///         (Vec<T>: !Iterable)
+        /// }
+        /// ```
+
+        /// forall<'a, Self, U, V>
+        ///
+        /// We put the `U, V` binders at the end of the list so that
+        /// the indices of references to `'a` and `T` are not
+        /// disturbed.
+        let neg_clause = {
+            let tuv_binders: Vec<_> =
+                self.parameter_kinds
+                    .anonymize()
+                    .into_iter()
+                    .chain(vec![ir::ParameterKind::Ty(()),
+                                ir::ParameterKind::Ty(())])
+                    .collect();
+
+            let u = ir::Ty::Var(self.parameter_kinds.len());
+            let v = ir::Ty::Var(self.parameter_kinds.len() + 1);
+
+            // a list of refs to `'a` and `Self`
+            let parameters: Vec<_> = self.parameter_kinds
+                                         .anonymize()
+                                         .iter()
+                                         .zip(0..)
+                                         .map(|p| p.to_parameter())
+                                         .collect();
+
+            /// (Vec<T>: Iterable<IntoIter<'a> != U>) :-
+            let proj_not_eq_u = {
+                // Construct normalization predicate
+                ir::Not(ir::Normalize {
+                    projection: ir::ProjectionTy {
+                        associated_ty_id: id,
+                        parameters: parameters.clone(),
+                    },
+                    ty: u.clone(),
+                })
+            };
+
+            /// (Vec<T>: Iterable<IntoIter<'a> = V>) :-
+            let proj_eq_v = {
+                // Construct normalization predicate
+                ir::Normalize {
+                    projection: ir::ProjectionTy {
+                        associated_ty_id: id,
+                        parameters: parameters,
+                    },
+                    ty: v.clone(),
+                }
+            };
+
+            /// `U != V`
+            let u_not_eq_v = {
+                ir::Not(ir::Unify {
+                    a: u.clone(),
+                    b: v.clone(),
+                })
+            };
+
+            ir::ProgramClause {
+                implication: ir::Binders {
+                    binders: tuv_binders,
+                    value: ir::ProgramClauseImplication {
+                        consequence: proj_not_eq_u.cast(),
+                        conditions: vec![proj_eq_v.cast(), u_not_eq_v.cast()]
+                    }
+                }
+            }
+        };
+
+        vec![neg_clause]
     }
 }
