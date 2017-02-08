@@ -1335,5 +1335,19 @@ fn unify_unequal() {
         } yields {
             "Solution { successful: Yes"
         }
+
+        goal {
+            forall<T> {
+                if (T: Iterator) {
+                    if (T: Iterator<Item = Int>) {
+                        forall<U> {
+                            <T as Iterator>::Item != U
+                        }
+                    }
+                }
+            }
+        } yields {
+            "Solution { successful: Maybe"
+        }
     }
 }
