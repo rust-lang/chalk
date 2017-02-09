@@ -141,7 +141,7 @@ struct_zip!(ProjectionTy { associated_ty_id, parameters });
 struct_zip!(Normalize { projection, ty });
 struct_zip!(LocalTo[T] { value, krate } where T: Zip);
 struct_zip!(Unify[T] { a, b } where T: Zip);
-struct_zip!(Not[T] { predicate } where T: Zip);
+struct_zip!(Not[T] { predicate, krate } where T: Zip);
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {

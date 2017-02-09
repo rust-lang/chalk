@@ -12,8 +12,9 @@ type TypeKinds = HashMap<ir::ItemId, ir::TypeKind>;
 type AssociatedTyInfos = HashMap<(ir::ItemId, ir::Identifier), AssociatedTyInfo>;
 type ParameterMap = HashMap<ir::ParameterKind<ir::Identifier>, usize>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Env<'k> {
+    krate: ir::Krate,
     type_ids: &'k TypeIds,
     type_kinds: &'k TypeKinds,
     associated_ty_infos: &'k AssociatedTyInfos,
@@ -102,16 +103,22 @@ impl<'k> Env<'k> {
         let env = self.introduce(binders.iter().cloned());
         Ok(ir::Binders { binders: binders.anonymize(), value: op(&env)? })
     }
+
+    fn in_krate(&self, krate: ir::Krate) -> Self {
+        Env { krate: krate, ..self.clone() }
+    }
 }
 
 pub trait LowerProgram {
     fn lower(&self) -> Result<ir::Program>;
 }
 
+const DEFAULT_KRATE_NAME: &str = "krate";
+
 impl LowerProgram for Program {
     fn lower(&self) -> Result<ir::Program> {
         let mut flat_items = vec![];
-        let default_krate_id = ir::KrateId { name: intern("krate") };
+        let default_krate_id = ir::KrateId { name: intern(DEFAULT_KRATE_NAME) };
         flatten(default_krate_id, &self.items, &mut flat_items);
 
         fn flatten<'a>(krate_id: ir::KrateId,
@@ -175,6 +182,7 @@ impl LowerProgram for Program {
         let mut associated_ty_data = HashMap::new();
         for (&(krate_id, item), &item_id) in flat_items.iter().zip(&item_ids) {
             let empty_env = Env {
+                krate: ir::Krate::Id(default_krate_id),
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
                 associated_ty_infos: &associated_ty_infos,
@@ -487,7 +495,8 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
                     predicate: ir::Unify {
                         a: a.lower(env)?,
                         b: b.lower(env)?,
-                    }
+                    },
+                    krate: env.krate,
                 }.cast()
             }
             WhereClause::UnifyKrates { ref a, ref b } => {
@@ -792,7 +801,9 @@ impl LowerGoal<ir::Program> for Goal {
                    })
                    .collect();
 
+        let default_krate_id = ir::KrateId { name: intern(DEFAULT_KRATE_NAME) };
         let env = Env {
+            krate: ir::Krate::Id(default_krate_id),
             type_ids: &program.type_ids,
             type_kinds: &program.type_kinds,
             associated_ty_infos: &associated_ty_infos,
@@ -816,6 +827,11 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
             Goal::Leaf(ref wc) =>
                 Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
+            Goal::Krate(ref k, ref g) => {
+                let k = k.lower(env)?;
+                let krate_env = env.in_krate(k);
+                Ok(g.lower(&krate_env)?)
+            }
         }
     }
 }
@@ -1076,15 +1092,10 @@ impl ir::AssociatedTyDatum {
         /// generate:
         ///
         /// ```
-        /// forall<'a, Self, U, V> {
-        ///     (Vec<T>: Iterable<IntoIter<'a> != U>) :-
+        /// forall<'a, Self, U, V, crate C> {
+        ///     (Vec<T>: Iterable<IntoIter<'a> != U> in C) :-
         ///         (Vec<T>: Iterable<IntoIter<'a> = V>),
-        ///         (U != V)
-        /// }
-        ///
-        /// forall<'a, Self, U> {
-        ///     (Vec<T>: Iterable<IntoIter<'a> != U>) :-
-        ///         (Vec<T>: !Iterable)
+        ///         (U != V in C)
         /// }
         /// ```
 
@@ -1099,11 +1110,13 @@ impl ir::AssociatedTyDatum {
                     .anonymize()
                     .into_iter()
                     .chain(vec![ir::ParameterKind::Ty(()),
-                                ir::ParameterKind::Ty(())])
+                                ir::ParameterKind::Ty(()),
+                                ir::ParameterKind::Krate(())])
                     .collect();
 
             let u = ir::Ty::Var(self.parameter_kinds.len());
             let v = ir::Ty::Var(self.parameter_kinds.len() + 1);
+            let c = ir::Krate::Var(self.parameter_kinds.len() + 2);
 
             // a list of refs to `'a` and `Self`
             let parameters: Vec<_> = self.parameter_kinds
@@ -1123,7 +1136,8 @@ impl ir::AssociatedTyDatum {
                             parameters: parameters.clone(),
                         },
                         ty: u.clone(),
-                    }
+                    },
+                    krate: c,
                 }
             };
 
@@ -1145,7 +1159,8 @@ impl ir::AssociatedTyDatum {
                     predicate: ir::Unify {
                         a: u.clone(),
                         b: v.clone(),
-                    }
+                    },
+                    krate: c,
                 }
             };
 

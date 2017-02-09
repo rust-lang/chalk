@@ -298,6 +298,7 @@ pub struct Unify<T> {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Not<T> {
     pub predicate: T,
+    pub krate: Krate,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

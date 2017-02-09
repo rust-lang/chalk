@@ -236,4 +236,4 @@ struct_fold!(Unify[T] { a, b } where T: Fold);
 struct_fold!(Constrained[F] { value, constraints } where F: Fold);
 struct_fold!(ProgramClauseImplication { consequence, conditions });
 struct_fold!(LocalTo[T] { value, krate } where T: Fold);
-struct_fold!(Not[T] { predicate } where T: Fold);
+struct_fold!(Not[T] { predicate, krate } where T: Fold);
