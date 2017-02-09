@@ -483,10 +483,12 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
                 }.cast()
             }
             WhereClause::UnifyTys { ref a, ref b, eq: false } => {
-                ir::Not(ir::Unify {
-                    a: a.lower(env)?,
-                    b: b.lower(env)?,
-                }).cast()
+                ir::Not {
+                    predicate: ir::Unify {
+                        a: a.lower(env)?,
+                        b: b.lower(env)?,
+                    }
+                }.cast()
             }
             WhereClause::UnifyKrates { ref a, ref b } => {
                 ir::Unify {
@@ -1114,13 +1116,15 @@ impl ir::AssociatedTyDatum {
             /// (Vec<T>: Iterable<IntoIter<'a> != U>) :-
             let proj_not_eq_u = {
                 // Construct normalization predicate
-                ir::Not(ir::Normalize {
-                    projection: ir::ProjectionTy {
-                        associated_ty_id: id,
-                        parameters: parameters.clone(),
-                    },
-                    ty: u.clone(),
-                })
+                ir::Not {
+                    predicate: ir::Normalize {
+                        projection: ir::ProjectionTy {
+                            associated_ty_id: id,
+                            parameters: parameters.clone(),
+                        },
+                        ty: u.clone(),
+                    }
+                }
             };
 
             /// (Vec<T>: Iterable<IntoIter<'a> = V>) :-
@@ -1137,10 +1141,12 @@ impl ir::AssociatedTyDatum {
 
             /// `U != V`
             let u_not_eq_v = {
-                ir::Not(ir::Unify {
-                    a: u.clone(),
-                    b: v.clone(),
-                })
+                ir::Not {
+                    predicate: ir::Unify {
+                        a: u.clone(),
+                        b: v.clone(),
+                    }
+                }
             };
 
             ir::ProgramClause {

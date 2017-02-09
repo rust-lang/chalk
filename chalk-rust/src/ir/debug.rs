@@ -91,7 +91,7 @@ impl Debug for TraitRef {
 
 impl<T: Debug> Debug for Not<T> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "Not({:?})", self.0)
+        write!(fmt, "Not({:?})", self.predicate)
     }
 }
 

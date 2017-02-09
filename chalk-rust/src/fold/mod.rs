@@ -65,13 +65,6 @@ impl<T: Fold> Fold for Vec<T> {
     }
 }
 
-impl<T: Fold> Fold for Not<T> {
-    type Result = Not<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        Ok(Not(self.0.fold_with(folder, binders)?))
-    }
-}
-
 impl<T: Fold> Fold for Box<T> {
     type Result = Box<T::Result>;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
@@ -243,4 +236,4 @@ struct_fold!(Unify[T] { a, b } where T: Fold);
 struct_fold!(Constrained[F] { value, constraints } where F: Fold);
 struct_fold!(ProgramClauseImplication { consequence, conditions });
 struct_fold!(LocalTo[T] { value, krate } where T: Fold);
-
+struct_fold!(Not[T] { predicate } where T: Fold);

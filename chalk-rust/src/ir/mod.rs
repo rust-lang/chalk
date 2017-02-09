@@ -296,7 +296,9 @@ pub struct Unify<T> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Not<T>(pub T);
+pub struct Not<T> {
+    pub predicate: T,
+}
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Normalize {

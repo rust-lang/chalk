@@ -49,7 +49,7 @@ impl<'s> SolveNotUnify<'s> {
     }
 
     fn solve_tys(&mut self) -> Result<Successful> {
-        let Not(Unify { a, b }) = self.goal.clone();
+        let Not { predicate: Unify { a, b } } = self.goal.clone();
         self.tys(&a, &b);
         match mem::replace(&mut self.state, Unprovable) {
             Unprovable => {
@@ -185,10 +185,12 @@ impl<'s> SolveNotUnify<'s> {
         let goal = Quantified {
             binders: self.binders.clone(),
             value: InEnvironment::new(&self.environment,
-                                      Not(Normalize {
-                                          projection: proj.clone(),
-                                          ty: ty.clone(),
-                                      }).cast())
+                                      Not {
+                                          predicate: Normalize {
+                                              projection: proj.clone(),
+                                              ty: ty.clone(),
+                                          }
+                                      }.cast())
         };
         self.if_goal_met(goal)
     }
