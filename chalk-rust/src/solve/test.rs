@@ -1351,3 +1351,132 @@ fn unify_unequal() {
         }
     }
 }
+
+#[test]
+fn normalize_under_binder() {
+    test! {
+        program {
+            struct Ref<'a, T> { }
+            struct I32 { }
+
+            trait Deref<'a> {
+                type Item;
+            }
+
+            trait Id<'a> {
+                type Item;
+            }
+
+            impl<'a, T> Deref<'a> for Ref<'a, T> {
+                type Item = T;
+            }
+
+            impl<'a, T> Id<'a> for Ref<'a, T> {
+                type Item = Ref<'a, T>;
+            }
+        }
+
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Ref<'a, I32>: Deref<'a, Item = U>
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            <Ref<'!1, I32> as Deref<'!1>>::Item ==> I32
+                        ],"
+        }
+
+        goal {
+            forall<'a> {
+                exists<U> {
+                    Ref<'a, I32>: Id<'a, Item = U>
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'?0, I32>
+                        ],
+                        constraints: [
+                            LifetimeEq(
+                                '?0,
+                                '?1
+                            ),
+                            LifetimeEq(
+                                '?1,
+                                '?2
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?0
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '!1
+                            )
+                        ]
+                    },
+                    binders: [
+                        U1,
+                        U1,
+                        U1
+                    ]
+                }
+            }"
+        }
+
+        // FIXME: Mildly dubious, in that the lifetime name from
+        // universe 1 is being used in the value for an existential
+        // from universe 0.
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Ref<'a, I32>: Id<'a, Item = U>
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Quantified {
+                    value: Constrained {
+                        value: [
+                            <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'?0, I32>
+                        ],
+                        constraints: [
+                            LifetimeEq(
+                                '?0,
+                                '?1
+                            ),
+                            LifetimeEq(
+                                '?1,
+                                '?2
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '?0
+                            ),
+                            LifetimeEq(
+                                '!1,
+                                '!1
+                            )
+                        ]
+                    },
+                    binders: [
+                        U1,
+                        U1,
+                        U1
+                    ]
+                }
+            }"
+        }
+    }
+}

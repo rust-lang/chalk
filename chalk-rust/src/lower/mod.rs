@@ -1046,6 +1046,9 @@ impl ir::TraitDatum {
         //        // where clauses declared on the trait are met:
         //        (?Self: Eq<?T>),
         //
+        //    for<?Self, ?T> ?Self: !Foo<?T> in A :-
+        //        (?Self: Eq<?T>),
+        //
         // we don't currently generate `LocalTo` clauses, but if we
         // did it would look something like this (the problem is that
         // we don't allow quantification over a crate-id like ?C):
