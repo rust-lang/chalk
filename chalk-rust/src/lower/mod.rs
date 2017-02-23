@@ -547,6 +547,15 @@ impl LowerStructDefn for StructDefn {
     }
 }
 
+fn check_type_kinds<A: Kinded, B: Kinded>(msg: &str, expected: &A, actual: &B) -> Result<()> {
+    let expected_kind = expected.kind();
+    let actual_kind = actual.kind();
+    if expected_kind != actual_kind {
+        bail!("{}: expected {}, found {}", msg, expected_kind, actual_kind);
+    } else {
+        Ok(())
+    }
+}
 
 trait LowerTraitRef {
     fn lower(&self, env: &Env) -> Result<ir::TraitRef>;
@@ -569,6 +578,10 @@ impl LowerTraitRef for TraitRef {
         if parameters.len() != k.binders.len() + 1 {
             bail!("wrong number of parameters, expected `{:?}`, got `{:?}`",
                   k.binders.len() + 1, parameters.len())
+        }
+
+        for (binder, param) in k.binders.binders.iter().zip(parameters.iter().skip(1)) {
+            check_type_kinds("incorrect kind for trait parameter", binder, param)?;
         }
 
         Ok(ir::TraitRef {
@@ -595,6 +608,10 @@ impl LowerProjectionTy for ProjectionTy {
         if args.len() != info.addl_parameter_kinds.len() {
             bail!("wrong number of parameters for associated type (expected {}, got {})",
                   info.addl_parameter_kinds.len(), args.len())
+        }
+
+        for (param, arg) in info.addl_parameter_kinds.iter().zip(args.iter()) {
+            check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
         }
 
         args.extend(trait_parameters);
@@ -643,6 +660,10 @@ impl LowerTy for Ty {
                 }
 
                 let parameters = args.iter().map(|t| Ok(t.lower(env)?)).collect::<Result<Vec<_>>>()?;
+
+                for (param, arg) in k.binders.binders.iter().zip(args.iter()) {
+                    check_type_kinds("incorrect parameter kind", param, arg)?;
+                }
 
                 Ok(ir::Ty::Apply(ir::ApplicationTy {
                     name: ir::TypeName::ItemId(id),
