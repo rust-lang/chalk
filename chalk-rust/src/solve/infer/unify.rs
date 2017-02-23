@@ -149,8 +149,8 @@ impl<'t> Unifier<'t> {
             .map(|_| self.table.new_lifetime_variable(environment.universe).to_lifetime().cast())
             .collect();
 
-        let ty1 = ty1.instantiate(&lifetimes1);
-        let ty2 = ty2.instantiate(&lifetimes2);
+        let ty1 = ty1.subst(&lifetimes1);
+        let ty2 = ty2.subst(&lifetimes2);
         debug!("unify_forall_tys: ty1 = {:?}", ty1);
         debug!("unify_forall_tys: ty2 = {:?}", ty2);
 
@@ -187,7 +187,7 @@ impl<'t> Unifier<'t> {
             })
             .collect();
 
-        let ty1 = ty1.instantiate(&lifetimes1);
+        let ty1 = ty1.subst(&lifetimes1);
         let ty2 = ty2.clone();
 
         self.goals.push(InEnvironment::new(&environment, Unify { a: ty1, b: ty2 }).cast());

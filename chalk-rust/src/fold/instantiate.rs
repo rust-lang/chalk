@@ -20,7 +20,7 @@ impl<'s> Subst<'s> {
 }
 
 impl QuantifiedTy {
-    pub fn instantiate(&self, parameters: &[Parameter]) -> Ty {
+    pub fn subst(&self, parameters: &[Parameter]) -> Ty {
         assert_eq!(self.num_binders, parameters.len());
         self.ty.subst(parameters)
     }
