@@ -1,8 +1,6 @@
 #![recursion_limit = "1024"]
 #![feature(conservative_impl_trait)]
-#![feature(field_init_shorthand)]
 #![feature(pub_restricted)]
-#![feature(static_in_const)]
 
 #![allow(dead_code)] // FIXME- while iterating
 
