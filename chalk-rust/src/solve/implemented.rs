@@ -7,7 +7,7 @@ use solve::Solution;
 
 pub struct Implemented<'s> {
     solver: &'s mut Solver,
-    env_goal: Quantified<InEnvironment<TraitRef>>,
+    env_goal: Query<InEnvironment<TraitRef>>,
 }
 
 enum Technique {
@@ -16,7 +16,7 @@ enum Technique {
 }
 
 impl<'s> Implemented<'s> {
-    pub fn new(solver: &'s mut Solver, env_goal: Quantified<InEnvironment<TraitRef>>) -> Self {
+    pub fn new(solver: &'s mut Solver, env_goal: Query<InEnvironment<TraitRef>>) -> Self {
         Implemented {
             solver: solver,
             env_goal: env_goal,

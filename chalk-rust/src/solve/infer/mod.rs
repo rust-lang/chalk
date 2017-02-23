@@ -6,7 +6,7 @@ use std::sync::Arc;
 mod krate_var;
 mod instantiate;
 mod lifetime_var;
-mod quantify;
+mod query;
 mod unify;
 mod ty_var;
 #[cfg(test)] mod test;

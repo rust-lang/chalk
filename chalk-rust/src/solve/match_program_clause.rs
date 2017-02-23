@@ -20,7 +20,7 @@ impl<'s, G> MatchProgramClause<'s, G>
     where G: Clone + Cast<WhereClauseGoal> + Fold<Result = G>
 {
     pub fn new(solver: &'s mut Solver,
-               q: &'s Quantified<InEnvironment<G>>,
+               q: &'s Query<InEnvironment<G>>,
                program_clause: &'s ProgramClause)
                -> Self {
         let InEnvironment { ref environment, ref goal } = q.value;

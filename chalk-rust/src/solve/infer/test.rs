@@ -205,8 +205,8 @@ fn quantify_simple() {
     ]);
 
     assert_eq!(
-        table.quantify(&ty!(apply (item 0) (var 2) (var 1) (var 0))),
-        Quantified {
+        table.make_query(&ty!(apply (item 0) (var 2) (var 1) (var 0))),
+        Query {
             value: ty!(apply (item 0) (var 0) (var 1) (var 2)),
             binders: vec![ParameterKind::Ty(U2), ParameterKind::Ty(U1), ParameterKind::Ty(U0)],
         });
@@ -231,8 +231,8 @@ fn quantify_bound() {
         .unwrap();
 
     assert_eq!(
-        table.quantify(&ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0))),
-        Quantified {
+        table.make_query(&ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0))),
+        Query {
             value: ty!(apply (item 0) (apply (item 1) (var 0) (var 1)) (var 2) (var 0) (var 1)),
             binders: vec![ParameterKind::Ty(U1), ParameterKind::Ty(U0), ParameterKind::Ty(U2)],
         });

@@ -8,7 +8,7 @@ use solve::Solution;
 
 pub struct SolveNormalize<'s> {
     solver: &'s mut Solver,
-    env_goal: Quantified<InEnvironment<Normalize>>,
+    env_goal: Query<InEnvironment<Normalize>>,
 }
 
 enum Technique {
@@ -17,7 +17,7 @@ enum Technique {
 }
 
 impl<'s> SolveNormalize<'s> {
-    pub fn new(solver: &'s mut Solver, env_goal: Quantified<InEnvironment<Normalize>>) -> Self {
+    pub fn new(solver: &'s mut Solver, env_goal: Query<InEnvironment<Normalize>>) -> Self {
         SolveNormalize {
             solver: solver,
             env_goal: env_goal,

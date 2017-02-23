@@ -15,7 +15,7 @@ pub struct NormalizeApplication<'s> {
 
 impl<'s> NormalizeApplication<'s> {
     pub fn new(solver: &'s mut Solver,
-               q: Quantified<InEnvironment<Normalize>>)
+               q: Query<InEnvironment<Normalize>>)
                -> Self {
         let InEnvironment { environment, goal } = q.value;
         let infer = InferenceTable::new_with_vars(&q.binders);

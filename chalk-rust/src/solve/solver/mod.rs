@@ -15,7 +15,7 @@ use super::*;
 pub struct Solver {
     pub(super) program: Arc<Program>,
     overflow_depth: usize,
-    stack: Vec<Quantified<InEnvironment<WhereClauseGoal>>>,
+    stack: Vec<Query<InEnvironment<WhereClauseGoal>>>,
 }
 
 impl Solver {
@@ -26,7 +26,7 @@ impl Solver {
     /// Tries to solve one **closed** where-clause `wc` (in the given
     /// environment).
     pub fn solve(&mut self,
-                 wc_env: Quantified<InEnvironment<WhereClauseGoal>>)
+                 wc_env: Query<InEnvironment<WhereClauseGoal>>)
                  -> Result<Solution<InEnvironment<WhereClauseGoal>>> {
         debug_heading!("Solver::solve({:?})", wc_env);
 
@@ -41,39 +41,39 @@ impl Solver {
 
         self.stack.push(wc_env.clone());
 
-        let Quantified { value: InEnvironment { environment, goal: wc }, binders } = wc_env;
+        let Query { value: InEnvironment { environment, goal: wc }, binders } = wc_env;
 
         let result = match wc {
             WhereClauseGoal::Implemented(trait_ref) => {
-                let q = Quantified {
+                let q = Query {
                     value: InEnvironment::new(&environment, trait_ref),
                     binders: binders,
                 };
                 Implemented::new(self, q).solve().cast()
             }
             WhereClauseGoal::Normalize(normalize_to) => {
-                let q = Quantified {
+                let q = Query {
                     value: InEnvironment::new(&environment, normalize_to),
                     binders: binders,
                 };
                 SolveNormalize::new(self, q).solve().cast()
             }
             WhereClauseGoal::UnifyTys(unify) => {
-                let q = Quantified {
+                let q = Query {
                     value: InEnvironment::new(&environment, unify),
                     binders: binders,
                 };
                 SolveUnify::new(self, q).solve().cast()
             }
             WhereClauseGoal::NotUnifyTys(not_unify) => {
-                let q = Quantified {
+                let q = Query {
                     value: InEnvironment::new(&environment, not_unify),
                     binders: binders,
                 };
                 SolveNotUnify::new(self, q).solve().cast()
             }
             WhereClauseGoal::UnifyKrates(unify) => {
-                let q = Quantified {
+                let q = Query {
                     value: InEnvironment::new(&environment, unify),
                     binders: binders,
                 };
@@ -87,7 +87,7 @@ impl Solver {
                 // into the environment, there we just have to search
                 // for program clauses.
                 let program = self.program.clone();
-                let q = Quantified {
+                let q = Query {
                     value: InEnvironment::new(&environment, wc),
                     binders: binders
                 }; // reconstruct `wc_env`
@@ -115,7 +115,7 @@ impl Solver {
     /// because multiple possibilities resulted in the same solution.
     pub fn solve_any<P,Ps,E,R>(&mut self,
                                possibilities: Ps,
-                               start_goal: &Quantified<R>,
+                               start_goal: &Query<R>,
                                mut evaluate_possibility: E)
                                -> Result<Solution<R>>
         where Ps: IntoIterator<Item = P>,

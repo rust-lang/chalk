@@ -21,8 +21,8 @@ pub struct SolveUnify<'s, T>
 impl<'s, T> SolveUnify<'s, T>
     where T: Zip + Debug + Fold<Result = T>
 {
-    pub fn new(solver: &'s mut Solver, env_goal: Quantified<InEnvironment<Unify<T>>>) -> Self {
-        let Quantified { binders, value: InEnvironment { environment, goal } } = env_goal;
+    pub fn new(solver: &'s mut Solver, env_goal: Query<InEnvironment<Unify<T>>>) -> Self {
+        let Query { binders, value: InEnvironment { environment, goal } } = env_goal;
         let infer = InferenceTable::new_with_vars(&binders);
         let fulfill = Fulfill::new(solver, infer);
         SolveUnify { fulfill, environment, goal }

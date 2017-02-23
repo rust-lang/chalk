@@ -72,7 +72,7 @@ fn prove_clone() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             Vec<Foo>: Clone
@@ -89,7 +89,7 @@ fn prove_clone() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             Foo: Clone
@@ -131,7 +131,7 @@ fn prove_infer() {
         } yields {
             "Solution {
                 successful: Maybe,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             ?0: Map<?1>
@@ -151,7 +151,7 @@ fn prove_infer() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             Foo: Map<Bar>
@@ -168,7 +168,7 @@ fn prove_infer() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             Foo: Map<Bar>
@@ -208,7 +208,7 @@ fn prove_forall() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             !1: Marker
@@ -227,7 +227,7 @@ fn prove_forall() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             Vec<!1>: Marker
@@ -257,7 +257,7 @@ fn prove_forall() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             Vec<!1>: Clone
@@ -290,7 +290,7 @@ fn higher_ranked() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             SomeType<!1>: Foo<u8>
@@ -347,7 +347,7 @@ fn max_depth() {
         } yields {
             "Solution {
                 successful: Maybe,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             S<S<S<S<?0>>>>: Foo
@@ -384,7 +384,7 @@ fn normalize() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             <Vec<!1> as Iterator>::Item ==> !1
@@ -403,7 +403,7 @@ fn normalize() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             <Vec<!1> as Iterator>::Item ==> !1
@@ -426,7 +426,7 @@ fn normalize() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             <!1 as Iterator>::Item ==> u32
@@ -449,7 +449,7 @@ fn normalize() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             <!1 as Iterator>::Item ==> (Iterator::Item)<!1>
@@ -483,7 +483,7 @@ fn normalize_rev_infer() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             <u32 as Identity>::Item ==> u32
@@ -517,7 +517,7 @@ fn region_equality() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             Ref<'!1, Unit>: Eq<Ref<'!2, Unit>>
@@ -543,7 +543,7 @@ fn region_equality() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             Ref<'!1, Unit>: Eq<Ref<'?0, Unit>>
@@ -590,7 +590,7 @@ fn forall_equality() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             for<2> Ref<'?0, Ref<'?1, Unit>>: Eq<for<2> Ref<'?0, Ref<'?1, Unit>>>
@@ -645,7 +645,7 @@ fn forall_equality() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             for<2> Ref<'?0, Ref<'?1, Ref<'?0, Unit>>>: Eq<for<2> Ref<'?0, Ref<'?1, Ref<'?1, Unit>>>>
@@ -718,7 +718,7 @@ fn forall_projection() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             for<1> <Unit as DropLt<'?0>>::Item: Eq<Unit>
@@ -907,7 +907,7 @@ fn elaborate_eq() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             !1: PartialEq
@@ -939,7 +939,7 @@ fn elaborate_transitive() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             !1: PartialEq
@@ -973,7 +973,7 @@ fn elaborate_normalize() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             !2: Eq
@@ -1024,7 +1024,7 @@ fn atc1() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             <Vec<!1> as Iterable>::Iter<'!2> ==> Iter<'?0, !1>
@@ -1107,7 +1107,7 @@ fn struct_wf() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             WellFormed(Foo<Baz>)
@@ -1124,7 +1124,7 @@ fn struct_wf() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             WellFormed(Foo<Foo<Baz>>)
@@ -1259,7 +1259,7 @@ fn crate_variable() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             LocalTo(Int, Id(foo))
@@ -1385,7 +1385,7 @@ fn normalize_under_binder() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             <Ref<'!1, I32> as Deref<'!1>>::Item ==> I32
@@ -1401,7 +1401,7 @@ fn normalize_under_binder() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'?0, I32>
@@ -1446,7 +1446,7 @@ fn normalize_under_binder() {
         } yields {
             "Solution {
                 successful: Yes,
-                refined_goal: Quantified {
+                refined_goal: Query {
                     value: Constrained {
                         value: [
                             <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'?0, I32>

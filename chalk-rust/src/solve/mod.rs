@@ -19,7 +19,7 @@ pub mod unify;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Solution<G> {
     successful: Successful,
-    refined_goal: Quantified<Constrained<G>>,
+    refined_goal: Query<Constrained<G>>,
 }
 
 impl<G> Solution<G> {

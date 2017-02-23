@@ -18,16 +18,16 @@ pub struct SolveNotUnify<'s> {
 enum State {
     Unprovable,
     Ambiguous,
-    IfGoalsMet(Vec<Quantified<InEnvironment<WhereClauseGoal>>>),
+    IfGoalsMet(Vec<Query<InEnvironment<WhereClauseGoal>>>),
     NotUnifiable,
 }
 use self::State::*;
 
 impl<'s> SolveNotUnify<'s> {
     pub fn new(solver: &'s mut Solver,
-               env_goal: Quantified<InEnvironment<Not<Unify<Ty>>>>)
+               env_goal: Query<InEnvironment<Not<Unify<Ty>>>>)
                -> Self {
-        let Quantified { value: InEnvironment { environment, goal }, binders } = env_goal;
+        let Query { value: InEnvironment { environment, goal }, binders } = env_goal;
         SolveNotUnify { solver, binders, environment, goal, state: Unprovable }
     }
 
@@ -35,7 +35,7 @@ impl<'s> SolveNotUnify<'s> {
         let successful = self.solve_tys()?;
         Ok(Solution {
             successful: successful,
-            refined_goal: Quantified {
+            refined_goal: Query {
                 binders: self.binders,
                 value: Constrained {
                     value: InEnvironment {
@@ -88,7 +88,7 @@ impl<'s> SolveNotUnify<'s> {
         }
     }
 
-    fn if_goal_met(&mut self, goal: Quantified<InEnvironment<WhereClauseGoal>>) {
+    fn if_goal_met(&mut self, goal: Query<InEnvironment<WhereClauseGoal>>) {
         debug!("not_unifiable");
         match self.state {
             Unprovable | Ambiguous => self.state = IfGoalsMet(vec![goal]),
@@ -182,7 +182,7 @@ impl<'s> SolveNotUnify<'s> {
     }
 
     fn projection_ty(&mut self, proj: &ProjectionTy, ty: &Ty) {
-        let goal = Quantified {
+        let goal = Query {
             binders: self.binders.clone(),
             value: InEnvironment::new(&self.environment,
                                       Not {

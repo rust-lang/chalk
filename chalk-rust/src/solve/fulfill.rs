@@ -141,7 +141,7 @@ impl<'s> Fulfill<'s> {
     /// back a "refined goal" that shows what we learned. This refined
     /// goal combines any lifetime constraints with the final results
     /// of inference. It is produced by this method.
-    pub fn refine_goal<G: Fold>(mut self, goal: G) -> Quantified<Constrained<G::Result>> {
+    pub fn refine_goal<G: Fold>(mut self, goal: G) -> Query<Constrained<G::Result>> {
         let mut constraints: Vec<_> = self.constraints.into_iter().collect();
         constraints.sort();
         debug!("refine_goal: constraints = {:?}", constraints);
@@ -149,7 +149,7 @@ impl<'s> Fulfill<'s> {
             value: goal,
             constraints: constraints,
         };
-        self.infer.quantify(&constrained_goal)
+        self.infer.make_query(&constrained_goal)
     }
 
     /// Try to solve all of `where_clauses`, which may contain
@@ -208,7 +208,7 @@ impl<'s> Fulfill<'s> {
                  -> Result<Successful> {
         debug!("fulfill::solve_one(wc={:?})", wc);
 
-        let quantified_wc = self.infer.quantify(&wc);
+        let quantified_wc = self.infer.make_query(&wc);
         let solution = self.solver.solve(quantified_wc.clone())?;
 
         // Regardless of whether the result is ambiguous or not,

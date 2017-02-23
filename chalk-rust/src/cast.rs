@@ -158,7 +158,7 @@ macro_rules! map_impl {
 }
 
 map_impl!(impl[T: Cast<U>, U] Cast<Option<U>> for Option<T>);
-map_impl!(impl[T: Cast<U>, U] Cast<Quantified<U>> for Quantified<T>);
+map_impl!(impl[T: Cast<U>, U] Cast<Query<U>> for Query<T>);
 map_impl!(impl[T: Cast<U>, U] Cast<Solution<U>> for Solution<T>);
 map_impl!(impl[T: Cast<U>, U] Cast<InEnvironment<U>> for InEnvironment<T>);
 map_impl!(impl[T: Cast<U>, U] Cast<Constrained<U>> for Constrained<T>);

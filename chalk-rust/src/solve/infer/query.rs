@@ -24,26 +24,26 @@ impl InferenceTable {
     ///
     /// where `ui(?22)` and `ui(?23)` are the universe indices of
     /// `?22` and `?23` respectively.
-    pub fn quantify<T>(&mut self, value: &T) -> Quantified<T::Result>
+    pub fn make_query<T>(&mut self, value: &T) -> Query<T::Result>
         where T: Fold
     {
-        let mut q = Quantifier { table: self, free_vars: Vec::new() };
+        let mut q = Querifier { table: self, free_vars: Vec::new() };
         let r = value.fold_with(&mut q, 0).unwrap();
-        Quantified {
+        Query {
             value: r,
             binders: q.into_binders(),
         }
     }
 }
 
-struct Quantifier<'q> {
+struct Querifier<'q> {
     table: &'q mut InferenceTable,
     free_vars: Vec<ParameterInferenceVariable>,
 }
 
-impl<'q> Quantifier<'q> {
+impl<'q> Querifier<'q> {
     fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
-        let Quantifier { table, free_vars } = self;
+        let Querifier { table, free_vars } = self;
         free_vars.into_iter()
                  .map(|p_v| match p_v {
                      ParameterKind::Ty(v) => {
@@ -80,7 +80,7 @@ impl<'q> Quantifier<'q> {
     }
 }
 
-impl<'q> Folder for Quantifier<'q> {
+impl<'q> Folder for Querifier<'q> {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         let var = TyInferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {

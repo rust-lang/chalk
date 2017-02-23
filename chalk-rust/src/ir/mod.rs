@@ -359,17 +359,22 @@ pub struct ProgramClauseImplication {
     pub conditions: Vec<Goal>,
 }
 
+/// Wraps a "canonicalized query". Queries are canonicalized as follows:
+///
+/// - All unresolved existential variables are "renumbered" according
+///   to their first appearance; the kind/universe of the variable is
+///   recorded in the `binders` field.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Quantified<T> {
+pub struct Query<T> {
     pub value: T,
     pub binders: Vec<ParameterKind<UniverseIndex>>,
 }
 
-impl<T> Quantified<T> {
-    pub fn map<OP, U>(self, op: OP) -> Quantified<U>
+impl<T> Query<T> {
+    pub fn map<OP, U>(self, op: OP) -> Query<U>
         where OP: FnOnce(T) -> U
     {
-        Quantified { value: op(self.value), binders: self.binders }
+        Query { value: op(self.value), binders: self.binders }
     }
 }
 
