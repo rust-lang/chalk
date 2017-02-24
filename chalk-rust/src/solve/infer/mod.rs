@@ -40,6 +40,22 @@ pub type ParameterInferenceVariable = ParameterKind<TyInferenceVariable,
                                                     LifetimeInferenceVariable,
                                                     KrateInferenceVariable>;
 
+/// An index into the `InferenceTable.values` vector.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct ValueIndex {
+    index: u32
+}
+
+impl ValueIndex {
+    pub fn new(value: usize) -> ValueIndex {
+        ValueIndex { index: value as u32 }
+    }
+
+    pub fn as_usize(&self) -> usize {
+        self.index as usize
+    }
+}
+
 impl InferenceTable {
     pub fn new() -> Self {
         InferenceTable {
