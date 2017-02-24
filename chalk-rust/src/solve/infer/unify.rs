@@ -87,7 +87,7 @@ impl<'t> Unifier<'t> {
                 let var2 = TyInferenceVariable::from_depth(depth2);
                 debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
                 Ok(self.table
-                    .unify
+                    .ty_unify
                     .unify_var_var(var1, var2)
                     .expect("unification of two unbound variables cannot fail"))
             }
@@ -203,16 +203,16 @@ impl<'t> Unifier<'t> {
         // `forall` binders that had been introduced at the point
         // this variable was created -- though it may change over time
         // as the variable is unified.
-        let universe_index = match self.table.unify.probe_value(var) {
+        let universe_index = match self.table.ty_unify.probe_value(var) {
             TyInferenceValue::Unbound(ui) => ui,
             TyInferenceValue::Bound(_) => panic!("`unify_var_apply` invoked on bound var"),
         };
 
         OccursCheck::new(self, var, universe_index).check_ty(ty)?;
 
-        let value_index = ValueIndex::new(self.table.values.len());
-        self.table.values.push(Arc::new(ty.clone()));
-        self.table.unify.unify_var_value(var, TyInferenceValue::Bound(value_index)).unwrap();
+        let value_index = ValueIndex::new(self.table.ty_values.len());
+        self.table.ty_values.push(Arc::new(ty.clone()));
+        self.table.ty_unify.unify_var_value(var, TyInferenceValue::Bound(value_index)).unwrap();
         debug!("unify_var_ty: var {:?} set to {:?}", var, ty);
 
         Ok(())
@@ -340,14 +340,14 @@ impl<'u, 't> OccursCheck<'u, 't> {
 
             Ty::Var(depth) => {
                 let v = TyInferenceVariable::from_depth(depth - self.binders);
-                let ui = match self.unifier.table.unify.probe_value(v) {
+                let ui = match self.unifier.table.ty_unify.probe_value(v) {
                     TyInferenceValue::Unbound(ui) => ui,
                     TyInferenceValue::Bound(_) => {
                         unreachable!("expected `parameter` to be normalized")
                     }
                 };
 
-                if self.unifier.table.unify.unioned(v, self.var) {
+                if self.unifier.table.ty_unify.unioned(v, self.var) {
                     bail!("cycle during unification");
                 }
 
@@ -360,7 +360,7 @@ impl<'u, 't> OccursCheck<'u, 't> {
                     // This is OK, if ?B is promoted to universe 0.
                     self.unifier
                         .table
-                        .unify
+                        .ty_unify
                         .unify_var_value(v, TyInferenceValue::Unbound(self.universe_index))
                         .unwrap();
                 }

@@ -47,8 +47,8 @@ impl<'q> Querifier<'q> {
         free_vars.into_iter()
                  .map(|p_v| match p_v {
                      ParameterKind::Ty(v) => {
-                         debug_assert!(table.unify.find(v) == v);
-                         match table.unify.probe_value(v) {
+                         debug_assert!(table.ty_unify.find(v) == v);
+                         match table.ty_unify.probe_value(v) {
                              TyInferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
                              TyInferenceValue::Bound(_) => panic!("free var now bound"),
                          }
@@ -97,7 +97,7 @@ impl<'q> Folder for Querifier<'q> {
                 // canonical index `root_var` in the union-find table,
                 // and then map `root_var` to a fresh index that is
                 // unique to this quantification.
-                let free_var = ParameterKind::Ty(self.table.unify.find(var));
+                let free_var = ParameterKind::Ty(self.table.ty_unify.find(var));
                 let position = self.add(free_var) + binders;
                 Ok(TyInferenceVariable::from_depth(position).to_ty())
             }
