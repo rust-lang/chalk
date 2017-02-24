@@ -1,15 +1,12 @@
 use cast::Cast;
-use ena::unify::UnifyValue;
-use errors::*;
 use ir::*;
 use solve::environment::{Environment, InEnvironment};
 use std::fmt::Debug;
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
-use super::{InferenceSnapshot, InferenceTable};
-use super::ty_var::{TyInferenceVariable, TyInferenceValue, ValueIndex};
-use super::krate_var::{KrateInferenceVariable, KrateInferenceValue};
+use super::*;
+use super::var::*;
 
 impl InferenceTable {
     pub fn unify<T>(&mut self,
@@ -204,22 +201,29 @@ impl<'t> Unifier<'t> {
         // this variable was created -- though it may change over time
         // as the variable is unified.
         let universe_index = match self.table.ty_unify.probe_value(var) {
-            TyInferenceValue::Unbound(ui) => ui,
-            TyInferenceValue::Bound(_) => panic!("`unify_var_apply` invoked on bound var"),
+            InferenceValue::Unbound(ui) => ui,
+            InferenceValue::Bound(_) => panic!("`unify_var_apply` invoked on bound var"),
         };
 
         OccursCheck::new(self, var, universe_index).check_ty(ty)?;
 
         let value_index = ValueIndex::new(self.table.ty_values.len());
         self.table.ty_values.push(Arc::new(ty.clone()));
-        self.table.ty_unify.unify_var_value(var, TyInferenceValue::Bound(value_index)).unwrap();
+        self.table.ty_unify.unify_var_value(var, InferenceValue::Bound(value_index)).unwrap();
         debug!("unify_var_ty: var {:?} set to {:?}", var, ty);
 
         Ok(())
     }
 
     fn unify_krate_krate(&mut self, a: &Krate, b: &Krate) -> Result<()> {
+        if let Some(n_a) = self.table.normalize_krate(a) {
+            return self.unify_krate_krate(&n_a, b);
+        } else if let Some(n_b) = self.table.normalize_krate(b) {
+            return self.unify_krate_krate(a, &n_b);
+        }
+
         debug_heading!("unify_krate_krate({:?}, {:?})", a, b);
+
         let result = match (a, b) {
             (&Krate::Var(depth_a), &Krate::Var(depth_b)) => {
                 let var_a = KrateInferenceVariable::from_depth(depth_a);
@@ -230,14 +234,17 @@ impl<'t> Unifier<'t> {
             (&Krate::Var(depth), &Krate::Id(id)) |
             (&Krate::Id(id), &Krate::Var(depth)) => {
                 let var = KrateInferenceVariable::from_depth(depth);
-                let value = KrateInferenceValue::Bound(id);
-                self.table.krate_unify.unify_var_value(var, value)
+                let value_index = ValueIndex::new(self.table.krate_values.len());
+                self.table.krate_values.push(Krate::Id(id));
+                self.table.krate_unify.unify_var_value(var, InferenceValue::Bound(value_index))
             }
 
             (&Krate::Id(a_id), &Krate::Id(b_id)) => {
-                let a_value = KrateInferenceValue::Bound(a_id);
-                let b_value = KrateInferenceValue::Bound(b_id);
-                KrateInferenceValue::unify_values(&a_value, &b_value).map(|_| ())
+                if a_id == b_id {
+                    Ok(())
+                } else {
+                    bail!("krate `{:?}` not equal to `{:?}`", a_id, b_id)
+                }
             }
         };
 
@@ -341,8 +348,8 @@ impl<'u, 't> OccursCheck<'u, 't> {
             Ty::Var(depth) => {
                 let v = TyInferenceVariable::from_depth(depth - self.binders);
                 let ui = match self.unifier.table.ty_unify.probe_value(v) {
-                    TyInferenceValue::Unbound(ui) => ui,
-                    TyInferenceValue::Bound(_) => {
+                    InferenceValue::Unbound(ui) => ui,
+                    InferenceValue::Bound(_) => {
                         unreachable!("expected `parameter` to be normalized")
                     }
                 };
@@ -361,7 +368,7 @@ impl<'u, 't> OccursCheck<'u, 't> {
                     self.unifier
                         .table
                         .ty_unify
-                        .unify_var_value(v, TyInferenceValue::Unbound(self.universe_index))
+                        .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
                         .unwrap();
                 }
             }

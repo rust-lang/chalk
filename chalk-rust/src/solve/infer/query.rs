@@ -4,8 +4,7 @@ use ir::*;
 
 use super::{InferenceTable, TyInferenceVariable,
             KrateInferenceVariable, LifetimeInferenceVariable, ParameterInferenceVariable};
-use super::ty_var::TyInferenceValue;
-use super::krate_var::KrateInferenceValue;
+use super::var::InferenceValue;
 
 impl InferenceTable {
     /// Given a value `value` with variables in it, replaces those
@@ -49,8 +48,8 @@ impl<'q> Querifier<'q> {
                      ParameterKind::Ty(v) => {
                          debug_assert!(table.ty_unify.find(v) == v);
                          match table.ty_unify.probe_value(v) {
-                             TyInferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
-                             TyInferenceValue::Bound(_) => panic!("free var now bound"),
+                             InferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
+                             InferenceValue::Bound(_) => panic!("free var now bound"),
                          }
                      },
 
@@ -60,8 +59,8 @@ impl<'q> Querifier<'q> {
 
                      ParameterKind::Krate(c) => {
                          match table.krate_unify.probe_value(c) {
-                             KrateInferenceValue::Unbound(ui) => ParameterKind::Krate(ui),
-                             KrateInferenceValue::Bound(_) => panic!("free var now bound")
+                             InferenceValue::Unbound(ui) => ParameterKind::Krate(ui),
+                             InferenceValue::Bound(_) => panic!("free var now bound")
                          }
                      },
                  })
