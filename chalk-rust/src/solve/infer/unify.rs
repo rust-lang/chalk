@@ -207,9 +207,7 @@ impl<'t> Unifier<'t> {
 
         OccursCheck::new(self, var, universe_index).check_ty(ty)?;
 
-        let value_index = ValueIndex::new(self.table.ty_values.len());
-        self.table.ty_values.push(Arc::new(ty.clone()));
-        self.table.ty_unify.unify_var_value(var, InferenceValue::Bound(value_index)).unwrap();
+        self.table.ty_unify.unify_var_value(var, InferenceValue::Bound(ty.clone())).unwrap();
         debug!("unify_var_ty: var {:?} set to {:?}", var, ty);
 
         Ok(())
@@ -234,9 +232,7 @@ impl<'t> Unifier<'t> {
             (&Krate::Var(depth), &Krate::Id(id)) |
             (&Krate::Id(id), &Krate::Var(depth)) => {
                 let var = KrateInferenceVariable::from_depth(depth);
-                let value_index = ValueIndex::new(self.table.krate_values.len());
-                self.table.krate_values.push(Krate::Id(id));
-                self.table.krate_unify.unify_var_value(var, InferenceValue::Bound(value_index))
+                self.table.krate_unify.unify_var_value(var, InferenceValue::Bound(Krate::Id(id)))
             }
 
             (&Krate::Id(a_id), &Krate::Id(b_id)) => {

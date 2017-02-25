@@ -1,7 +1,6 @@
 use ena::unify as ena;
 use errors::*;
 use ir::*;
-use std::sync::Arc;
 
 mod instantiate;
 mod lifetime_var;
@@ -17,10 +16,8 @@ use self::lifetime_var::LifetimeInferenceVariable;
 #[derive(Clone)]
 pub struct InferenceTable {
     ty_unify: ena::UnificationTable<TyInferenceVariable>,
-    ty_values: Vec<Arc<Ty>>,
 
     krate_unify: ena::UnificationTable<KrateInferenceVariable>,
-    krate_values: Vec<Krate>,
 
     /// Unlike normal variables, we don't unify lifetime variables.
     /// Instead, we just keep track of the universe in which they were
@@ -30,7 +27,6 @@ pub struct InferenceTable {
 
 pub struct InferenceSnapshot {
     ty_unify_snapshot: ena::Snapshot<TyInferenceVariable>,
-    ty_values_len: usize,
 
     krate_unify_snapshot: ena::Snapshot<KrateInferenceVariable>,
 }
@@ -44,8 +40,6 @@ impl InferenceTable {
         InferenceTable {
             ty_unify: ena::UnificationTable::new(),
             krate_unify: ena::UnificationTable::new(),
-            ty_values: vec![],
-            krate_values: vec![],
             lifetime_vars: vec![],
         }
     }
@@ -91,13 +85,12 @@ impl InferenceTable {
         InferenceSnapshot {
             ty_unify_snapshot,
             krate_unify_snapshot,
-            ty_values_len: self.ty_values.len(),
         }
     }
 
     pub fn rollback_to(&mut self, snapshot: InferenceSnapshot) {
         self.ty_unify.rollback_to(snapshot.ty_unify_snapshot);
-        self.ty_values.truncate(snapshot.ty_values_len);
+        self.krate_unify.rollback_to(snapshot.krate_unify_snapshot);
     }
 
     fn commit(&mut self, snapshot: InferenceSnapshot) {
@@ -121,12 +114,12 @@ impl InferenceTable {
         }
     }
 
-    fn normalize_shallow(&mut self, leaf: &Ty) -> Option<Arc<Ty>> {
+    fn normalize_shallow(&mut self, leaf: &Ty) -> Option<Ty> {
         leaf.inference_var()
             .and_then(|var| {
                 match self.ty_unify.probe_value(var) {
                     InferenceValue::Unbound(_) => None,
-                    InferenceValue::Bound(val) => Some(self.ty_values[val.as_usize()].clone()),
+                    InferenceValue::Bound(ref val) => Some(val.clone()),
                 }
             })
     }
@@ -138,17 +131,17 @@ impl InferenceTable {
         }
     }
 
-    fn probe_var(&mut self, var: TyInferenceVariable) -> Option<Arc<Ty>> {
+    fn probe_var(&mut self, var: TyInferenceVariable) -> Option<Ty> {
         match self.ty_unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(val) => Some(self.ty_values[val.as_usize()].clone()),
+            InferenceValue::Bound(ref val) => Some(val.clone()),
         }
     }
 
     fn probe_krate_var(&mut self, var: KrateInferenceVariable) -> Option<Krate> {
         match self.krate_unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(val) => Some(self.krate_values[val.as_usize()]),
+            InferenceValue::Bound(val) => Some(val.clone()),
         }
     }
 }

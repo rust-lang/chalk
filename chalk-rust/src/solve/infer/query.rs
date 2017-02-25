@@ -89,7 +89,7 @@ impl<'q> Folder for Querifier<'q> {
                 // also have to shift *that* into the correct binder
                 // depth.
                 let mut folder = (self, Shifter::new(binders));
-                (*ty).fold_with(&mut folder, 0)
+                ty.fold_with(&mut folder, 0)
             }
             None => {
                 // If this variable is not yet bound, find its

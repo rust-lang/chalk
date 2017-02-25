@@ -71,7 +71,7 @@ impl<'q> Folder for Normalizer<'q> {
         assert_eq!(binders, 0);
         let var = TyInferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {
-            Some(ty) => (*ty).fold_with(self, 0),
+            Some(ty) => ty.fold_with(self, 0),
             None => Ok(var.to_ty()),
         }
     }
