@@ -1,11 +1,9 @@
 use errors::*;
 use ir::*;
-use solve::environment::{Environment, InEnvironment};
 use solve::fulfill::Fulfill;
 use solve::infer::{InferenceTable};
 use solve::solver::Solver;
 use solve::Solution;
-
 
 pub struct Prove<'s> {
     fulfill: Fulfill<'s>,

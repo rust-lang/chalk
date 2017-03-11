@@ -2,7 +2,6 @@ use errors::*;
 use fold::Fold;
 use ir::*;
 use solve::Successful;
-use solve::environment::{Environment, InEnvironment};
 use solve::infer::{InferenceTable, UnificationResult, ParameterInferenceVariable};
 use solve::solver::Solver;
 use std::collections::HashSet;

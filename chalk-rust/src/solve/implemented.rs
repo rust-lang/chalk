@@ -1,6 +1,5 @@
 use errors::*;
 use ir::*;
-use solve::environment::InEnvironment;
 use solve::match_any::MatchAny;
 use solve::solver::Solver;
 use solve::Solution;

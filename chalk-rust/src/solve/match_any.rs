@@ -2,7 +2,6 @@ use cast::Cast;
 use errors::*;
 use fold::Fold;
 use ir::*;
-use solve::environment::InEnvironment;
 use solve::match_clause::MatchClause;
 use solve::match_program_clause::MatchProgramClause;
 use solve::solver::Solver;

@@ -1,6 +1,5 @@
 use ir::*;
 use solve::Solution;
-use solve::environment::InEnvironment;
 
 pub trait Cast<T>: Sized {
     fn cast(self) -> T;

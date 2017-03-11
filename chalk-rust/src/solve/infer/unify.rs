@@ -1,6 +1,5 @@
 use cast::Cast;
 use ir::*;
-use solve::environment::{Environment, InEnvironment};
 use std::fmt::Debug;
 use std::sync::Arc;
 use zip::{Zip, Zipper};

@@ -2,7 +2,6 @@ use errors::*;
 use fold::Fold;
 use ir::*;
 use solve::infer::InferenceTable;
-use solve::environment::{Environment, InEnvironment};
 use solve::fulfill::Fulfill;
 use solve::solver::Solver;
 use solve::Solution;

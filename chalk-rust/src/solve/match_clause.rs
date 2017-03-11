@@ -3,7 +3,6 @@ use errors::*;
 use fold::Fold;
 use ir::*;
 use solve::Solution;
-use solve::environment::{Environment, InEnvironment};
 use solve::fulfill::Fulfill;
 use solve::infer::InferenceTable;
 use solve::solver::Solver;

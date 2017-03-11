@@ -1,6 +1,5 @@
 use errors::*;
 use ir::*;
-use solve::environment::{Environment, InEnvironment};
 use std::fmt::Debug;
 use std::sync::Arc;
 

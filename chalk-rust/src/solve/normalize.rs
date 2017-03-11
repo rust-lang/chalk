@@ -1,6 +1,5 @@
 use errors::*;
 use ir::*;
-use solve::environment::InEnvironment;
 use solve::match_any::MatchAny;
 use solve::normalize_application::NormalizeApplication;
 use solve::solver::Solver;

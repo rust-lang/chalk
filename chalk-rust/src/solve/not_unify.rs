@@ -1,7 +1,6 @@
 use cast::Cast;
 use errors::*;
 use ir::*;
-use solve::environment::{Environment, InEnvironment};
 use solve::solver::Solver;
 use solve::{Solution, Successful};
 use std::mem;

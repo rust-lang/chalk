@@ -1,6 +1,5 @@
 use cast::Cast;
 use errors::*;
-use solve::environment::InEnvironment;
 use solve::match_program_clause::MatchProgramClause;
 use solve::normalize::SolveNormalize;
 use solve::not_unify::SolveNotUnify;

@@ -1,5 +1,4 @@
 use fold::*;
-use solve::environment::Environment;
 use super::*;
 
 macro_rules! ty {
