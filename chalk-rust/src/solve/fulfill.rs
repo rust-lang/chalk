@@ -14,7 +14,7 @@ pub struct Fulfill<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
     obligations: Vec<InEnvironment<WhereClauseGoal>>,
-    constraints: HashSet<Constraint>,
+    constraints: HashSet<InEnvironment<Constraint>>,
 }
 
 impl<'s> Fulfill<'s> {

@@ -262,3 +262,15 @@ impl<T: Debug> Debug for Binders<T> {
         Debug::fmt(value, fmt)
     }
 }
+
+impl Debug for Environment {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "Env({:?}, {:?})", self.universe, self.clauses)
+    }
+}
+
+impl<G: Debug> Debug for InEnvironment<G> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "({:?} |- {:?})", self.environment, self.goal)
+    }
+}

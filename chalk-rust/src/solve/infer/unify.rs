@@ -33,13 +33,13 @@ struct Unifier<'t> {
     environment: &'t Arc<Environment>,
     snapshot: InferenceSnapshot,
     goals: Vec<InEnvironment<WhereClauseGoal>>,
-    constraints: Vec<Constraint>,
+    constraints: Vec<InEnvironment<Constraint>>,
 }
 
 #[derive(Debug)]
 pub struct UnificationResult {
     pub goals: Vec<InEnvironment<WhereClauseGoal>>,
-    pub constraints: Vec<Constraint>,
+    pub constraints: Vec<InEnvironment<Constraint>>,
 }
 
 impl<'t> Unifier<'t> {
@@ -259,7 +259,8 @@ impl<'t> Zipper for Unifier<'t> {
     }
 
     fn zip_lifetimes(&mut self, &a: &Lifetime, &b: &Lifetime) -> Result<()> {
-        Ok(self.constraints.push(Constraint::LifetimeEq(a, b)))
+        Ok(self.constraints.push(InEnvironment::new(self.environment,
+                                                    Constraint::LifetimeEq(a, b))))
     }
 
     fn zip_krates(&mut self, a: &Krate, b: &Krate) -> Result<()> {
