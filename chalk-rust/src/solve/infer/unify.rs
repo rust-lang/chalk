@@ -251,6 +251,17 @@ impl<'t> Unifier<'t> {
             }
         }
     }
+
+    fn unify_lifetime_lifetime(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
+        if let Some(n_a) = self.table.normalize_lifetime(a) {
+            return self.unify_lifetime_lifetime(&n_a, b);
+        } else if let Some(n_b) = self.table.normalize_lifetime(b) {
+            return self.unify_lifetime_lifetime(a, &n_b);
+        }
+
+        Ok(self.constraints.push(InEnvironment::new(self.environment,
+                                                    Constraint::LifetimeEq(*a, *b))))
+    }
 }
 
 impl<'t> Zipper for Unifier<'t> {
@@ -258,9 +269,8 @@ impl<'t> Zipper for Unifier<'t> {
         self.unify_ty_ty(a, b)
     }
 
-    fn zip_lifetimes(&mut self, &a: &Lifetime, &b: &Lifetime) -> Result<()> {
-        Ok(self.constraints.push(InEnvironment::new(self.environment,
-                                                    Constraint::LifetimeEq(a, b))))
+    fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
+        self.unify_lifetime_lifetime(a, b)
     }
 
     fn zip_krates(&mut self, a: &Krate, b: &Krate) -> Result<()> {

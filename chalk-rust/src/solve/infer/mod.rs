@@ -118,6 +118,13 @@ impl InferenceTable {
         }
     }
 
+    fn normalize_lifetime(&mut self, leaf: &Lifetime) -> Option<Lifetime> {
+        match *leaf {
+            Lifetime::Var(v) => self.probe_lifetime_var(LifetimeInferenceVariable::from_depth(v)),
+            Lifetime::ForAll(_) => None,
+        }
+    }
+
     fn probe_var(&mut self, var: TyInferenceVariable) -> Option<Ty> {
         match self.ty_unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
@@ -127,6 +134,13 @@ impl InferenceTable {
 
     fn probe_krate_var(&mut self, var: KrateInferenceVariable) -> Option<Krate> {
         match self.krate_unify.probe_value(var) {
+            InferenceValue::Unbound(_) => None,
+            InferenceValue::Bound(val) => Some(val.clone()),
+        }
+    }
+
+    fn probe_lifetime_var(&mut self, var: LifetimeInferenceVariable) -> Option<Lifetime> {
+        match self.lifetime_unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(val) => Some(val.clone()),
         }
