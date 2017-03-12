@@ -6,7 +6,7 @@ authors = ["Niko Matsakis <niko@alum.mit.edu>"]
 [workspace]
 
 [dependencies]
-chalk-parse = { path = "../chalk-parse" }
+chalk-parse = { path = "chalk-parse" }
 ena = "0.4"
 error-chain = "0.7.2"
 lalrpop-intern = "0.12.1"
