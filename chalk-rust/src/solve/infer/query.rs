@@ -54,7 +54,10 @@ impl<'q> Querifier<'q> {
                      },
 
                      ParameterKind::Lifetime(v) => {
-                         ParameterKind::Lifetime(table.lifetime_universe(v))
+                         match table.lifetime_unify.probe_value(v) {
+                             InferenceValue::Unbound(ui) => ParameterKind::Lifetime(ui),
+                             InferenceValue::Bound(_) => panic!("free var now bound"),
+                         }
                      },
 
                      ParameterKind::Krate(c) => {

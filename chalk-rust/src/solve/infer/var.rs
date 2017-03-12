@@ -76,6 +76,47 @@ impl UnifyKey for KrateInferenceVariable {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub struct LifetimeInferenceVariable {
+    index: u32,
+}
+
+impl LifetimeInferenceVariable {
+    pub fn from_depth(depth: usize) -> LifetimeInferenceVariable {
+        LifetimeInferenceVariable { index: depth as u32 }
+    }
+
+    pub fn to_usize(&self) -> usize {
+        self.index as usize
+    }
+
+    pub fn to_lifetime(&self) -> Lifetime {
+        Lifetime::Var(self.to_usize())
+    }
+}
+
+impl fmt::Debug for LifetimeInferenceVariable {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "'?{}", self.index)
+    }
+}
+
+impl UnifyKey for LifetimeInferenceVariable {
+    type Value = InferenceValue<Lifetime>;
+
+    fn index(&self) -> u32 {
+        self.index
+    }
+
+    fn from_index(u: u32) -> Self {
+        LifetimeInferenceVariable { index: u }
+    }
+
+    fn tag() -> &'static str {
+        "LifetimeInferenceVariable"
+    }
+}
+
 /// The value of an inference variable. We start out as `Unbound` with
 /// a universe index; when the inference variable is assigned a value,
 /// it becomes bound and refers to an entry in the

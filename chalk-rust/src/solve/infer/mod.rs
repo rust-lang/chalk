@@ -3,26 +3,19 @@ use errors::*;
 use ir::*;
 
 mod instantiate;
-mod lifetime_var;
 mod query;
 mod unify;
 mod var;
 #[cfg(test)] mod test;
 
 pub use self::unify::UnificationResult;
-use self::var::{TyInferenceVariable, KrateInferenceVariable, InferenceValue};
-use self::lifetime_var::LifetimeInferenceVariable;
+use self::var::*;
 
 #[derive(Clone)]
 pub struct InferenceTable {
     ty_unify: ena::UnificationTable<TyInferenceVariable>,
-
     krate_unify: ena::UnificationTable<KrateInferenceVariable>,
-
-    /// Unlike normal variables, we don't unify lifetime variables.
-    /// Instead, we just keep track of the universe in which they were
-    /// created.
-    lifetime_vars: Vec<UniverseIndex>,
+    lifetime_unify: ena::UnificationTable<LifetimeInferenceVariable>,
 }
 
 pub struct InferenceSnapshot {
@@ -40,7 +33,7 @@ impl InferenceTable {
         InferenceTable {
             ty_unify: ena::UnificationTable::new(),
             krate_unify: ena::UnificationTable::new(),
-            lifetime_vars: vec![],
+            lifetime_unify: ena::UnificationTable::new(),
         }
     }
 
@@ -57,9 +50,7 @@ impl InferenceTable {
     }
 
     pub fn new_lifetime_variable(&mut self, ui: UniverseIndex) -> LifetimeInferenceVariable {
-        let index = self.lifetime_vars.len();
-        self.lifetime_vars.push(ui);
-        LifetimeInferenceVariable::from_depth(index)
+        self.lifetime_unify.new_key(InferenceValue::Unbound(ui))
     }
 
     pub fn new_krate_variable(&mut self, ui: UniverseIndex) -> KrateInferenceVariable {
@@ -73,10 +64,6 @@ impl InferenceTable {
             ParameterKind::Lifetime(ui) => ParameterKind::Lifetime(self.new_lifetime_variable(ui)),
             ParameterKind::Krate(ui) => ParameterKind::Krate(self.new_krate_variable(ui)),
         }
-    }
-
-    fn lifetime_universe(&mut self, var: LifetimeInferenceVariable) -> UniverseIndex {
-        self.lifetime_vars[var.to_usize()]
     }
 
     pub fn snapshot(&mut self) -> InferenceSnapshot {
