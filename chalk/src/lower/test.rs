@@ -1,17 +1,17 @@
 #![cfg(test)]
 
-use chalk_rust_parse;
+use chalk_parse;
 use errors::*;
 use ir::*;
 use std::sync::Arc;
 use super::{LowerProgram, LowerGoal};
 
 fn parse_and_lower(text: &str) -> Result<Program> {
-    chalk_rust_parse::parse_program(text)?.lower()
+    chalk_parse::parse_program(text)?.lower()
 }
 
 fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
-    chalk_rust_parse::parse_goal(text)?.lower(program)
+    chalk_parse::parse_goal(text)?.lower(program)
 }
 
 #[test]

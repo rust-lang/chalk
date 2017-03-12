@@ -1,5 +1,5 @@
 use cast::Cast;
-use chalk_rust_parse::ast::*;
+use chalk_parse::ast::*;
 use lalrpop_intern::intern;
 use errors::*;
 use ir;

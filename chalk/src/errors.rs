@@ -1,8 +1,8 @@
-use chalk_rust_parse::{self, ast};
+use chalk_parse::{self, ast};
 
 error_chain! {
     links {
-        Parse(chalk_rust_parse::errors::Error, chalk_rust_parse::errors::ErrorKind);
+        Parse(chalk_parse::errors::Error, chalk_parse::errors::ErrorKind);
     }
 
     errors {

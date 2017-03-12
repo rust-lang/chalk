@@ -1,4 +1,4 @@
-use chalk_rust_parse;
+use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
@@ -7,11 +7,11 @@ use solve::solver::Solver;
 use std::sync::Arc;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
-    chalk_rust_parse::parse_program(text)?.lower()
+    chalk_parse::parse_program(text)?.lower()
 }
 
 fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goal>> {
-    chalk_rust_parse::parse_goal(text)?.lower(program)
+    chalk_parse::parse_goal(text)?.lower(program)
 }
 
 macro_rules! test {

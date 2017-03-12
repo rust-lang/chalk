@@ -1,5 +1,5 @@
 use cast::Cast;
-use chalk_rust_parse::ast;
+use chalk_parse::ast;
 use fold::Subst;
 use lalrpop_intern::InternedString;
 use std::collections::{HashSet, HashMap};
