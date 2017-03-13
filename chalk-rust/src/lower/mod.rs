@@ -225,33 +225,7 @@ impl LowerProgram for Program {
             }
         }
 
-        // Construct the set of *clauses*; these are sort of a compiled form
-        // of the data above that always has the form:
-        //
-        //       forall P0...Pn. Something :- Conditions
-        let mut program_clauses = vec![];
-
-        for struct_datum in struct_data.values() {
-            program_clauses.extend(struct_datum.to_program_clauses());
-        }
-
-        for trait_datum in trait_data.values() {
-            program_clauses.extend(trait_datum.to_program_clauses());
-        }
-
-        for (&id, associated_ty_datum) in &associated_ty_data {
-            program_clauses.extend(associated_ty_datum.to_program_clauses(id));
-        }
-
-        for impl_datum in impl_data.values() {
-            program_clauses.push(impl_datum.to_program_clause());
-
-            for atv in &impl_datum.binders.value.associated_ty_values {
-                program_clauses.extend(atv.to_program_clauses(impl_datum));
-            }
-        }
-
-        Ok(ir::Program { type_ids, type_kinds, trait_data, impl_data, associated_ty_data, program_clauses })
+        Ok(ir::Program { type_ids, type_kinds, struct_data, trait_data, impl_data, associated_ty_data, })
     }
 }
 
@@ -879,6 +853,34 @@ impl LowerQuantifiedGoal for Goal {
         let parameter_kinds = parameter_kinds.iter().map(|pk| pk.lower());
         let subgoal = env.in_binders(parameter_kinds, |env| self.lower(env))?;
         Ok(Box::new(ir::Goal::Quantified(quantifier_kind, subgoal)))
+    }
+}
+
+impl ir::Program {
+    pub fn environment(&self) -> ir::ProgramEnvironment {
+        // Construct the set of *clauses*; these are sort of a compiled form
+        // of the data above that always has the form:
+        //
+        //       forall P0...Pn. Something :- Conditions
+        let mut program_clauses = vec![];
+
+        program_clauses.extend(self.struct_data.values().flat_map(|d| d.to_program_clauses()));
+        program_clauses.extend(self.trait_data.values().flat_map(|d| d.to_program_clauses()));
+        program_clauses.extend(self.associated_ty_data.iter().flat_map(|(&id, d)| {
+            d.to_program_clauses(id)
+        }));
+
+        for datum in self.impl_data.values() {
+            program_clauses.push(datum.to_program_clause());
+            program_clauses.extend(datum.binders.value.associated_ty_values.iter().flat_map(|atv| {
+                atv.to_program_clauses(datum)
+            }));
+        }
+
+        let trait_data = self.trait_data.clone();
+        let associated_ty_data = self.associated_ty_data.clone();
+
+        ir::ProgramEnvironment { trait_data, associated_ty_data, program_clauses }
     }
 }
 

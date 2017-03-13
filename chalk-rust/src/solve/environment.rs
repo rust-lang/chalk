@@ -29,7 +29,7 @@ impl Environment {
         Arc::new(env)
     }
 
-    pub fn elaborated_clauses(&self, program: &Program) -> impl Iterator<Item = WhereClause> {
+    pub fn elaborated_clauses(&self, program: &ProgramEnvironment) -> impl Iterator<Item = WhereClause> {
         let mut set = HashSet::new();
         set.extend(self.clauses.iter().cloned());
 

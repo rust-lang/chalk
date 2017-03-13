@@ -23,7 +23,7 @@ impl<'s> Fulfill<'s> {
         Fulfill { solver, infer, obligations: vec![], constraints: HashSet::new() }
     }
 
-    pub fn program(&self) -> Arc<Program> {
+    pub fn program(&self) -> Arc<ProgramEnvironment> {
         self.solver.program.clone()
     }
 

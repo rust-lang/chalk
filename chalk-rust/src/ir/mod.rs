@@ -12,9 +12,34 @@ pub struct Program {
     /// For each struct/trait:
     pub type_kinds: HashMap<ItemId, TypeKind>,
 
+    /// For each struct:
+    pub struct_data: HashMap<ItemId, StructDatum>,
+
     /// For each impl:
     pub impl_data: HashMap<ItemId, ImplDatum>,
 
+    /// For each trait:
+    pub trait_data: HashMap<ItemId, TraitDatum>,
+
+    /// For each trait:
+    pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
+}
+
+impl Program {
+    pub fn split_projection<'p>(&self, projection: &'p ProjectionTy)
+                            -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
+        let ProjectionTy { associated_ty_id, ref parameters } = *projection;
+        let associated_ty_data = &self.associated_ty_data[&associated_ty_id];
+        let trait_datum = &self.trait_data[&associated_ty_data.trait_id];
+        let trait_num_params = trait_datum.binders.len();
+        let split_point = parameters.len() - trait_num_params;
+        let (other_params, trait_params) = parameters.split_at(split_point);
+        (associated_ty_data, trait_params, other_params)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProgramEnvironment {
     /// For each trait:
     pub trait_data: HashMap<ItemId, TraitDatum>,
 
@@ -25,7 +50,7 @@ pub struct Program {
     pub program_clauses: Vec<ProgramClause>,
 }
 
-impl Program {
+impl ProgramEnvironment {
     pub fn split_projection<'p>(&self, projection: &'p ProjectionTy)
                             -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
         let ProjectionTy { associated_ty_id, ref parameters } = *projection;
