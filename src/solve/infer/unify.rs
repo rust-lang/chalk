@@ -204,10 +204,10 @@ impl<'t> Unifier<'t> {
             InferenceValue::Bound(_) => panic!("`unify_var_apply` invoked on bound var"),
         };
 
-        OccursCheck::new(self, var, universe_index).check_ty(ty)?;
+        let ty1 = OccursCheck::new(self, var, universe_index).check_ty(ty)?;
 
-        self.table.ty_unify.unify_var_value(var, InferenceValue::Bound(ty.clone())).unwrap();
-        debug!("unify_var_ty: var {:?} set to {:?}", var, ty);
+        self.table.ty_unify.unify_var_value(var, InferenceValue::Bound(ty1.clone())).unwrap();
+        debug!("unify_var_ty: var {:?} set to {:?}", var, ty1);
 
         Ok(())
     }
@@ -350,41 +350,43 @@ impl<'u, 't> OccursCheck<'u, 't> {
         OccursCheck { unifier, binders: 0, var, universe_index }
     }
 
-    fn check_apply(&mut self, apply: &ApplicationTy) -> Result<()> {
-        self.universe_check(apply.universe_index())?;
-        for parameter in &apply.parameters {
-            self.check_parameter(parameter)?;
-        }
-        Ok(())
+    fn check_apply(&mut self, apply: &ApplicationTy) -> Result<ApplicationTy> {
+        let ApplicationTy { name, ref parameters } = *apply;
+        self.universe_check(name.universe_index())?;
+        let parameters = parameters.iter()
+                                   .map(|p| self.check_parameter(p))
+                                   .collect::<Result<Vec<_>>>()?;
+        Ok(ApplicationTy { name, parameters })
     }
 
-    fn check_quantified(&mut self, quantified_ty: &QuantifiedTy) -> Result<()> {
-        self.binders += quantified_ty.num_binders;
-        self.check_ty(&quantified_ty.ty)?;
-        self.binders -= quantified_ty.num_binders;
-        Ok(())
+    fn check_quantified(&mut self, quantified_ty: &QuantifiedTy) -> Result<QuantifiedTy> {
+        let QuantifiedTy { num_binders, ref ty } = *quantified_ty;
+        self.binders += num_binders;
+        let ty = self.check_ty(ty)?;
+        self.binders -= num_binders;
+        Ok(QuantifiedTy { num_binders, ty })
     }
 
-    fn check_parameter(&mut self, arg: &Parameter) -> Result<()> {
+    fn check_parameter(&mut self, arg: &Parameter) -> Result<Parameter> {
         match *arg {
-            ParameterKind::Ty(ref t) => self.check_ty(t),
-            ParameterKind::Lifetime(_) => Ok(()),
+            ParameterKind::Ty(ref t) => Ok(ParameterKind::Ty(self.check_ty(t)?)),
+            ParameterKind::Lifetime(_) => Ok(arg.clone()), // FIXME
             ParameterKind::Krate(_) => panic!("krate used as parameter to a type"),
         }
     }
 
-    fn check_ty(&mut self, parameter: &Ty) -> Result<()> {
+    fn check_ty(&mut self, parameter: &Ty) -> Result<Ty> {
         if let Some(n_parameter) = self.unifier.table.normalize_shallow(parameter) {
             return self.check_ty(&n_parameter);
         }
 
         match *parameter {
             Ty::Apply(ref parameter_apply) => {
-                self.check_apply(parameter_apply)?;
+                Ok(Ty::Apply(self.check_apply(parameter_apply)?))
             }
 
             Ty::ForAll(ref quantified_ty) => {
-                self.check_quantified(quantified_ty)?;
+                Ok(Ty::ForAll(Box::new(self.check_quantified(quantified_ty)?)))
             }
 
             Ty::Var(depth) => {
@@ -413,18 +415,21 @@ impl<'u, 't> OccursCheck<'u, 't> {
                         .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
                         .unwrap();
                 }
+
+                Ok(Ty::Var(depth))
             }
 
-            Ty::Projection(ref proj) => {
+            Ty::Projection(ProjectionTy { associated_ty_id, ref parameters }) => {
                 // FIXME(#6) -- this rejects constraints like
                 // `exists(A -> A = Item0<<A as Item1>::foo>)`, which
                 // is probably too conservative.
-                for parameter in &proj.parameters {
-                    self.check_parameter(parameter)?;
-                }
+                let parameters =
+                    parameters.iter()
+                              .map(|p| self.check_parameter(p))
+                              .collect::<Result<Vec<_>>>()?;
+                Ok(Ty::Projection(ProjectionTy { associated_ty_id, parameters }))
             }
         }
-        Ok(())
     }
 
     fn universe_check(&mut self,
