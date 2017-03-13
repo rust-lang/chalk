@@ -24,16 +24,33 @@ struct Instantiator {
     vars: Vec<ParameterInferenceVariable>,
 }
 
+/// Folder: when we encounter a free variable (of any kind) with index
+/// `i`, we want to map anything in the first N binders to
+/// `self.vars[i]`. Everything else stays intact, but we have to
+/// subtract `self.vars.len()` to account for the binders we are
+/// instantiating.
 impl Folder for Instantiator {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        Ok(self.vars[depth].as_ref().ty().unwrap().to_ty().up_shift(binders))
+        if depth < self.vars.len() {
+            Ok(self.vars[depth].as_ref().ty().unwrap().to_ty().up_shift(binders))
+        } else {
+            Ok(Ty::Var(depth + binders - self.vars.len())) // see comment above
+        }
     }
 
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
-        Ok(self.vars[depth].as_ref().lifetime().unwrap().to_lifetime().up_shift(binders))
+        if depth < self.vars.len() {
+            Ok(self.vars[depth].as_ref().lifetime().unwrap().to_lifetime().up_shift(binders))
+        } else {
+            Ok(Lifetime::Var(depth + binders - self.vars.len())) // see comment above
+        }
     }
 
     fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
-        Ok(self.vars[depth].as_ref().krate().unwrap().to_krate().up_shift(binders))
+        if depth < self.vars.len() {
+            Ok(self.vars[depth].as_ref().krate().unwrap().to_krate().up_shift(binders))
+        } else {
+            Ok(Krate::Var(depth + binders - self.vars.len())) // see comment above
+        }
     }
 }

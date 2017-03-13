@@ -1227,5 +1227,35 @@ fn unify_quantified_lifetimes() {
                 }
             }"
         }
+
+        // Similar to the previous test, but indirect.
+        goal {
+            exists<'a> {
+                forall<'b> {
+                    exists<'c> {
+                        'a = 'c,
+                        'c = 'b
+                    }
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Query {
+                    value: Constrained {
+                        value: [
+                            ('?0 = '!1),
+                            ('!1 = '!1)
+                        ],
+                        constraints: [
+                            (Env(U1, []) |- LifetimeEq('?0, '!1))
+                        ]
+                    },
+                    binders: [
+                        U0
+                    ]
+                }
+            }"
+        }
     }
 }
