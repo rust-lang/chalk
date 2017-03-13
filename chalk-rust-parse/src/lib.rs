@@ -1,5 +1,4 @@
 #![recursion_limit = "1024"]
-#![feature(field_init_shorthand)]
 
 #[macro_use]
 extern crate error_chain;
