@@ -2,8 +2,8 @@ use errors::*;
 use fold::{Fold, Folder, Shifter};
 use ir::*;
 
-use super::{InferenceTable, TyInferenceVariable,
-            KrateInferenceVariable, LifetimeInferenceVariable, ParameterInferenceVariable};
+use super::{InferenceTable, TyInferenceVariable, KrateInferenceVariable, LifetimeInferenceVariable,
+            ParameterInferenceVariable};
 use super::var::InferenceValue;
 
 impl InferenceTable {
@@ -26,7 +26,10 @@ impl InferenceTable {
     pub fn make_query<T>(&mut self, value: &T) -> Query<T::Result>
         where T: Fold
     {
-        let mut q = Querifier { table: self, free_vars: Vec::new() };
+        let mut q = Querifier {
+            table: self,
+            free_vars: Vec::new(),
+        };
         let r = value.fold_with(&mut q, 0).unwrap();
         Query {
             value: r,
@@ -44,30 +47,30 @@ impl<'q> Querifier<'q> {
     fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
         let Querifier { table, free_vars } = self;
         free_vars.into_iter()
-                 .map(|p_v| match p_v {
+            .map(|p_v| match p_v {
                      ParameterKind::Ty(v) => {
-                         debug_assert!(table.ty_unify.find(v) == v);
-                         match table.ty_unify.probe_value(v) {
-                             InferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
-                             InferenceValue::Bound(_) => panic!("free var now bound"),
-                         }
-                     },
+                debug_assert!(table.ty_unify.find(v) == v);
+                match table.ty_unify.probe_value(v) {
+                    InferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
+                    InferenceValue::Bound(_) => panic!("free var now bound"),
+                }
+            }
 
                      ParameterKind::Lifetime(v) => {
                          match table.lifetime_unify.probe_value(v) {
                              InferenceValue::Unbound(ui) => ParameterKind::Lifetime(ui),
                              InferenceValue::Bound(_) => panic!("free var now bound"),
                          }
-                     },
+                     }
 
                      ParameterKind::Krate(c) => {
                          match table.krate_unify.probe_value(c) {
                              InferenceValue::Unbound(ui) => ParameterKind::Krate(ui),
-                             InferenceValue::Bound(_) => panic!("free var now bound")
+                             InferenceValue::Bound(_) => panic!("free var now bound"),
                          }
-                     },
+                     }
                  })
-                 .collect()
+            .collect()
     }
 
     fn add(&mut self, free_var: ParameterInferenceVariable) -> usize {
@@ -107,9 +110,19 @@ impl<'q> Folder for Querifier<'q> {
     }
 
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
-        let free_var = ParameterKind::Lifetime(LifetimeInferenceVariable::from_depth(depth));
-        let position = self.add(free_var) + binders;
-        Ok(LifetimeInferenceVariable::from_depth(position).to_lifetime())
+        let var = LifetimeInferenceVariable::from_depth(depth);
+        match self.table.probe_lifetime_var(var) {
+            Some(l) => {
+                let mut folder = (self, Shifter::new(binders));
+                l.fold_with(&mut folder, 0)
+            }
+            None => {
+                let free_var =
+                    ParameterKind::Lifetime(LifetimeInferenceVariable::from_depth(depth));
+                let position = self.add(free_var) + binders;
+                Ok(LifetimeInferenceVariable::from_depth(position).to_lifetime())
+            }
+        }
     }
 
     fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {

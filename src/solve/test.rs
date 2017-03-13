@@ -544,16 +544,13 @@ fn region_equality() {
                 refined_goal: Query {
                     value: Constrained {
                         value: [
-                            Ref<'!1, Unit>: Eq<Ref<'?0, Unit>>
+                            Ref<'!1, Unit>: Eq<Ref<'!1, Unit>>
                         ],
                         constraints: [
-                            (Env(U1, []) |- LifetimeEq('?1, '!1))
+                            (Env(U1, []) |- LifetimeEq('!1, '!1))
                         ]
                     },
-                    binders: [
-                        U1,
-                        U1
-                    ]
+                    binders: []
                 }
             }"
         }
@@ -591,22 +588,11 @@ fn forall_equality() {
                             for<2> Ref<'?0, Ref<'?1, Unit>>: Eq<for<2> Ref<'?0, Ref<'?1, Unit>>>
                         ],
                         constraints: [
-                            (Env(U2, []) |- LifetimeEq('!1, '?0)),
-                            (Env(U2, []) |- LifetimeEq('!1, '?1)),
-                            (Env(U2, []) |- LifetimeEq('!1, '?2)),
-                            (Env(U2, []) |- LifetimeEq('!2, '?3)),
-                            (Env(U2, []) |- LifetimeEq('!2, '?4)),
-                            (Env(U2, []) |- LifetimeEq('!2, '?5))
+                            (Env(U2, []) |- LifetimeEq('!1, '!1)),
+                            (Env(U2, []) |- LifetimeEq('!2, '!2))
                         ]
                     },
-                    binders: [
-                        U2,
-                        U2,
-                        U2,
-                        U2,
-                        U2,
-                        U2
-                    ]
+                    binders: []
                 }
             }"
         }
@@ -628,23 +614,12 @@ fn forall_equality() {
                             for<2> Ref<'?0, Ref<'?1, Ref<'?0, Unit>>>: Eq<for<2> Ref<'?0, Ref<'?1, Ref<'?1, Unit>>>>
                         ],
                         constraints: [
-                            (Env(U2, []) |- LifetimeEq('!1, '?0)),
-                            (Env(U2, []) |- LifetimeEq('!1, '?1)),
-                            (Env(U2, []) |- LifetimeEq('!1, '?2)),
-                            (Env(U2, []) |- LifetimeEq('!2, '?0)),
-                            (Env(U2, []) |- LifetimeEq('!2, '?3)),
-                            (Env(U2, []) |- LifetimeEq('!2, '?4)),
-                            (Env(U2, []) |- LifetimeEq('!2, '?5))
+                            (Env(U2, []) |- LifetimeEq('!1, '!1)),
+                            (Env(U2, []) |- LifetimeEq('!2, '!1)),
+                            (Env(U2, []) |- LifetimeEq('!2, '!2))
                         ]
                     },
-                    binders: [
-                        U2,
-                        U2,
-                        U2,
-                        U2,
-                        U2,
-                        U2
-                    ]
+                    binders: []
                 }
             }"
         }
@@ -676,77 +651,12 @@ fn forall_projection() {
                 successful: Yes,
                 refined_goal: Query {
                     value: Constrained {
-                        value: [
-                            for<1> <Unit as DropLt<'?0>>::Item: Eq<Unit>
-                        ],
-                        constraints: [
-                            (Env(U1, []) |- LifetimeEq('?0, '?1)),
-                            (Env(U1, []) |- LifetimeEq('?1, '?2)),
-                            (Env(U1, []) |- LifetimeEq('?3, '?4)),
-                            (Env(U1, []) |- LifetimeEq('?4, '?5)),
-                            (Env(U1, []) |- LifetimeEq('?6, '?7)),
-                            (Env(U1, []) |- LifetimeEq('?7, '?8)),
-                            (Env(U1, []) |- LifetimeEq('?9, '?10)),
-                            (Env(U1, []) |- LifetimeEq('?11, '?12)),
-                            (Env(U1, []) |- LifetimeEq('?11, '?13)),
-                            (Env(U1, []) |- LifetimeEq('?12, '?14)),
-                            (Env(U1, []) |- LifetimeEq('?15, '?16)),
-                            (Env(U1, []) |- LifetimeEq('?16, '?17)),
-                            (Env(U1, []) |- LifetimeEq('?14, '?18)),
-                            (Env(U1, []) |- LifetimeEq('?18, '?19)),
-                            (Env(U1, []) |- LifetimeEq('?20, '?21)),
-                            (Env(U1, []) |- LifetimeEq('?21, '?22)),
-                            (Env(U1, []) |- LifetimeEq('?23, '?24)),
-                            (Env(U1, []) |- LifetimeEq('?24, '?25)),
-                            (Env(U1, []) |- LifetimeEq('?10, '?26)),
-                            (Env(U1, []) |- LifetimeEq('?26, '?27)),
-                            (Env(U1, []) |- LifetimeEq('?27, '?28)),
-                            (Env(U1, []) |- LifetimeEq('?13, '?29)),
-                            (Env(U1, []) |- LifetimeEq('?29, '?30)),
-                            (Env(U1, []) |- LifetimeEq('?30, '?31)),
-                            (Env(U1, []) |- LifetimeEq('!1, '?0)),
-                            (Env(U1, []) |- LifetimeEq('!1, '?3)),
-                            (Env(U1, []) |- LifetimeEq('!1, '?6)),
-                            (Env(U1, []) |- LifetimeEq('!1, '?15)),
-                            (Env(U1, []) |- LifetimeEq('!1, '?20)),
-                            (Env(U1, []) |- LifetimeEq('!1, '?23)),
-                            (Env(U1, []) |- LifetimeEq('!1, '!1))
-                        ]
+                         value: [
+                             for<1> <Unit as DropLt<'?0>>::Item: Eq<Unit>
+                         ],
+                         constraints: []
                     },
-                    binders: [
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1,
-                        U1
-                    ]
+                    binders: []
                 }
             }"
         }
@@ -890,16 +800,13 @@ fn atc1() {
                 refined_goal: Query {
                     value: Constrained {
                         value: [
-                            <Vec<!1> as Iterable>::Iter<'!2> ==> Iter<'?0, !1>
+                            <Vec<!1> as Iterable>::Iter<'!2> ==> Iter<'!2, !1>
                         ],
                         constraints: [
-                            (Env(U2, []) |- LifetimeEq('!2, '?0)),
                             (Env(U2, []) |- LifetimeEq('!2, '!2))
                         ]
                     },
-                    binders: [
-                        U2
-                    ]
+                    binders: []
                 }
             }"
         }
@@ -1261,20 +1168,13 @@ fn normalize_under_binder() {
                 refined_goal: Query {
                     value: Constrained {
                         value: [
-                            <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'?0, I32>
+                            <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'!1, I32>
                         ],
                         constraints: [
-                            (Env(U1, []) |- LifetimeEq('?0, '?1)),
-                            (Env(U1, []) |- LifetimeEq('?1, '?2)),
-                            (Env(U1, []) |- LifetimeEq('!1, '?0)),
                             (Env(U1, []) |- LifetimeEq('!1, '!1))
                         ]
                     },
-                    binders: [
-                        U1,
-                        U1,
-                        U1
-                    ]
+                    binders: []
                 }
             }"
         }
@@ -1294,20 +1194,13 @@ fn normalize_under_binder() {
                 refined_goal: Query {
                     value: Constrained {
                         value: [
-                            <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'?0, I32>
+                            <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'!1, I32>
                         ],
                         constraints: [
-                            (Env(U1, []) |- LifetimeEq('?0, '?1)),
-                            (Env(U1, []) |- LifetimeEq('?1, '?2)),
-                            (Env(U1, []) |- LifetimeEq('!1, '?0)),
                             (Env(U1, []) |- LifetimeEq('!1, '!1))
                         ]
                     },
-                    binders: [
-                        U1,
-                        U1,
-                        U1
-                    ]
+                    binders: []
                 }
             }"
         }

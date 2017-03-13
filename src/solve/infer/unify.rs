@@ -259,8 +259,39 @@ impl<'t> Unifier<'t> {
             return self.unify_lifetime_lifetime(a, &n_b);
         }
 
-        Ok(self.constraints.push(InEnvironment::new(self.environment,
-                                                    Constraint::LifetimeEq(*a, *b))))
+        debug!("unify_lifetime_lifetime({:?}, {:?})", a, b);
+
+        match (a, b) {
+            (&Lifetime::Var(depth_a), &Lifetime::Var(depth_b)) => {
+                let var_a = LifetimeInferenceVariable::from_depth(depth_a);
+                let var_b = LifetimeInferenceVariable::from_depth(depth_b);
+                self.table.lifetime_unify.unify_var_var(var_a, var_b).unwrap();
+                Ok(())
+            }
+
+            (&Lifetime::Var(depth), &Lifetime::ForAll(ui)) |
+            (&Lifetime::ForAll(ui), &Lifetime::Var(depth)) => {
+                let var = LifetimeInferenceVariable::from_depth(depth);
+                let var_ui = match self.table.lifetime_unify.probe_value(var) {
+                    InferenceValue::Unbound(ui) => ui,
+                    InferenceValue::Bound(_) => panic!("bound var survived normalization"),
+                };
+                if var_ui.can_see(ui) {
+                    let v = Lifetime::ForAll(ui);
+                    self.table.lifetime_unify.unify_var_value(var, InferenceValue::Bound(v))
+                                             .unwrap();
+                    Ok(())
+                } else {
+                    Ok(self.constraints.push(InEnvironment::new(self.environment,
+                                                                Constraint::LifetimeEq(*a, *b))))
+                }
+            }
+
+            (&Lifetime::ForAll(_), &Lifetime::ForAll(_)) => {
+                Ok(self.constraints.push(InEnvironment::new(self.environment,
+                                                            Constraint::LifetimeEq(*a, *b))))
+            }
+        }
     }
 }
 

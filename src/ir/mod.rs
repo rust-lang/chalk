@@ -179,6 +179,10 @@ impl UniverseIndex {
     pub fn root() -> UniverseIndex {
         UniverseIndex { counter: 0 }
     }
+
+    pub fn can_see(self, ui: UniverseIndex) -> bool {
+        self.counter >= ui.counter
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
