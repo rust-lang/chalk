@@ -180,6 +180,7 @@ impl Debug for WhereClauseGoal {
             }
             WhereClauseGoal::UnifyTys(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::UnifyKrates(ref n) => write!(fmt, "{:?}", n),
+            WhereClauseGoal::UnifyLifetimes(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::TyLocalTo(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::NotUnifyTys(ref n) => write!(fmt, "{:?}", n),

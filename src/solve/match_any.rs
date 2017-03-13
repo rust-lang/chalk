@@ -13,6 +13,7 @@ pub struct MatchAny<'s, G: 's> {
     env_goal: &'s Query<InEnvironment<G>>,
 }
 
+#[derive(Debug)]
 enum Technique<'t> {
     WithClause(WhereClause),
     WithProgramClause(&'t ProgramClause),

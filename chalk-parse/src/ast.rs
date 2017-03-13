@@ -171,6 +171,7 @@ pub enum WhereClause {
     LocalTo { ty: Ty, krate: Krate },
     UnifyTys { a: Ty, b: Ty, eq: bool },
     UnifyKrates { a: Krate, b: Krate },
+    UnifyLifetimes { a: Lifetime, b: Lifetime },
 }
 
 pub enum Goal {

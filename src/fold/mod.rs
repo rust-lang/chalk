@@ -205,7 +205,7 @@ enum_fold!(ParameterKind[T,L, C] { Ty(a), Lifetime(a), Krate(a) } where T: Fold,
 enum_fold!(WhereClause[] { Implemented(a), Normalize(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
 enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a), UnifyKrates(a),
-                               WellFormed(a), TyLocalTo(a), NotImplemented(a),
+                               UnifyLifetimes(a), WellFormed(a), TyLocalTo(a), NotImplemented(a),
                                NotNormalize(a), NotUnifyTys(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Leaf(wc) });

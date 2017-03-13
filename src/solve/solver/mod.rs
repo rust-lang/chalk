@@ -6,6 +6,7 @@ use solve::not_unify::SolveNotUnify;
 use solve::implemented::Implemented;
 use solve::unify::SolveUnify;
 use std::collections::HashSet;
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
 
@@ -78,6 +79,13 @@ impl Solver {
                 };
                 SolveUnify::new(self, q).solve().cast()
             }
+            WhereClauseGoal::UnifyLifetimes(unify) => {
+                let q = Query {
+                    value: InEnvironment::new(&environment, unify),
+                    binders: binders,
+                };
+                SolveUnify::new(self, q).solve().cast()
+            }
             WhereClauseGoal::NotImplemented(_) |
             WhereClauseGoal::NotNormalize(_) |
             WhereClauseGoal::TyLocalTo(_) |
@@ -119,14 +127,20 @@ impl Solver {
                                -> Result<Solution<R>>
         where Ps: IntoIterator<Item = P>,
               E: FnMut(&mut Solver, P) -> Result<Solution<R>>,
-              R: Clone + Hash + Eq
+              R: Clone + Hash + Eq + Debug,
+              P: Debug,
     {
+        debug_heading!("solve_any()");
+
         // For each impl, recursively apply it. Note that all we need
         // to verify is that `T: Foo` **is implemented**. We don't
         // actually need to know *which impl* implified with.
         let mut candidates = HashSet::new();
         for possibility in possibilities {
+            debug_heading!("possibility={:?}", possibility);
             if let Ok(solution) = evaluate_possibility(self, possibility) {
+                debug!("ok: solution={:?}", solution);
+
                 // If we found an impl which definitively applies
                 // **without unifying anything in the goal**, then we
                 // know that the type is indeed implemented (though
@@ -153,6 +167,8 @@ impl Solver {
                 }
 
                 candidates.insert(solution);
+            } else {
+                debug!("error");
             }
         }
 

@@ -6,7 +6,6 @@ use solve::infer::{InferenceTable, UnificationResult, ParameterInferenceVariable
 use solve::solver::Solver;
 use std::collections::HashSet;
 use std::fmt::Debug;
-use std::mem;
 use std::sync::Arc;
 use zip::Zip;
 
@@ -158,7 +157,7 @@ impl<'s> Fulfill<'s> {
     /// all cases, the side-effects are only things that must be true
     /// for `where_clauses` to be true.
     pub fn solve_all(&mut self) -> Result<Successful> {
-        debug!("solve_all(where_clauses={:#?})", self.obligations);
+        debug_heading!("solve_all(where_clauses={:#?})", self.obligations);
 
         // Try to solve all the where-clauses. We do this via a
         // fixed-point iteration. We try to solve each where-clause in
@@ -171,6 +170,8 @@ impl<'s> Fulfill<'s> {
         while progress {
             progress = false;
 
+            debug_heading!("start of round, {:?} obligations", self.obligations.len());
+
             // Take the list of `obligations` to solve this round and
             // replace it with an empty vector. Iterate through each
             // obligation to solve and solve it if we can. If not
@@ -178,13 +179,18 @@ impl<'s> Fulfill<'s> {
             // `self.obligations` for next round. Note that
             // `solve_one` may also push onto the list.
             assert!(obligations.is_empty());
-            mem::swap(&mut obligations, &mut self.obligations);
-            for wc in obligations.drain(..) {
+            while let Some(wc) = self.obligations.pop() {
                 match self.solve_one(&wc, &mut progress)? {
                     Successful::Yes => (),
-                    Successful::Maybe => self.obligations.push(wc),
+                    Successful::Maybe => {
+                        debug!("ambiguous result: {:?}", wc);
+                        obligations.push(wc);
+                    }
                 }
             }
+
+            self.obligations.extend(obligations.drain(..));
+            debug!("end of round, {:?} obligations left", self.obligations.len());
         }
 
         // At the end of this process, `self.obligations` should have
@@ -197,6 +203,8 @@ impl<'s> Fulfill<'s> {
         if self.obligations.is_empty() {
             Ok(Successful::Yes)
         } else {
+            debug!("still have {} ambiguous obligations: {:#?}",
+                   self.obligations.len(), self.obligations);
             Ok(Successful::Maybe)
         }
     }
@@ -245,9 +253,10 @@ impl<'s> Fulfill<'s> {
             debug!("fulfill::solve_one: adding constraints {:?}", constraints);
             self.constraints.extend(constraints);
 
+            debug!("fulfill::solve_one: unifying original and refined goal");
+            self.unify(&wc.environment, wc, &refined_goal)?;
+
             if new_type_info {
-                debug!("fulfill::solve_one: unifying original and refined goal");
-                self.unify(&wc.environment, wc, &refined_goal)?;
                 *inference_progress = true;
             }
         }

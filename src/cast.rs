@@ -140,6 +140,12 @@ impl Cast<WhereClauseGoal> for Unify<Krate> {
     }
 }
 
+impl Cast<WhereClauseGoal> for Unify<Lifetime> {
+    fn cast(self) -> WhereClauseGoal {
+        WhereClauseGoal::UnifyLifetimes(self)
+    }
+}
+
 impl Cast<Ty> for ApplicationTy {
     fn cast(self) -> Ty {
         Ty::Apply(self)

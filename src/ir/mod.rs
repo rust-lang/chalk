@@ -404,6 +404,7 @@ pub enum WhereClauseGoal {
     Normalize(Normalize),
     UnifyTys(Unify<Ty>),
     UnifyKrates(Unify<Krate>),
+    UnifyLifetimes(Unify<Lifetime>),
     WellFormed(WellFormed),
     TyLocalTo(LocalTo<Ty>),
 

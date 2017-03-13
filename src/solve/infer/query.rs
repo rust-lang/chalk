@@ -26,6 +26,7 @@ impl InferenceTable {
     pub fn make_query<T>(&mut self, value: &T) -> Query<T::Result>
         where T: Fold
     {
+        debug!("make_query({:#?})", value);
         let mut q = Querifier {
             table: self,
             free_vars: Vec::new(),
@@ -110,15 +111,17 @@ impl<'q> Folder for Querifier<'q> {
     }
 
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+        debug!("fold_free_lifetime_var(depth={:?}, binders={:?})", depth, binders);
         let var = LifetimeInferenceVariable::from_depth(depth);
         match self.table.probe_lifetime_var(var) {
             Some(l) => {
+                debug!("fold_free_lifetime_var: {:?} mapped to {:?}", var, l);
                 let mut folder = (self, Shifter::new(binders));
                 l.fold_with(&mut folder, 0)
             }
             None => {
-                let free_var =
-                    ParameterKind::Lifetime(LifetimeInferenceVariable::from_depth(depth));
+                debug!("fold_free_lifetime_var: {:?} not unified", var);
+                let free_var = ParameterKind::Lifetime(self.table.lifetime_unify.find(var));
                 let position = self.add(free_var) + binders;
                 Ok(LifetimeInferenceVariable::from_depth(position).to_lifetime())
             }
@@ -133,7 +136,7 @@ impl<'q> Folder for Querifier<'q> {
                 k.fold_with(&mut folder, 0)
             }
             None => {
-                let free_var = ParameterKind::Krate(KrateInferenceVariable::from_depth(depth));
+                let free_var = ParameterKind::Krate(self.table.krate_unify.find(var));
                 let position = self.add(free_var) + binders;
                 Ok(KrateInferenceVariable::from_depth(position).to_krate())
             }

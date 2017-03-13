@@ -140,6 +140,8 @@ WhereClause: WhereClause = {
 
     <a:Krate> "=" <b:Krate> => WhereClause::UnifyKrates { a, b },
 
+    <a:Lifetime> "=" <b:Lifetime> => WhereClause::UnifyLifetimes { a, b },
+
     // `T: Foo<U = Bar>` -- a normalization
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
         <e:Equal> <ty:Ty> ">" =>

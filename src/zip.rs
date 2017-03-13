@@ -172,7 +172,7 @@ macro_rules! enum_zip {
 }
 
 enum_zip!(WhereClause { Implemented, Normalize });
-enum_zip!(WhereClauseGoal { Implemented, Normalize, UnifyTys, UnifyKrates, WellFormed, TyLocalTo,
-                            NotImplemented, NotNormalize, NotUnifyTys });
+enum_zip!(WhereClauseGoal { Implemented, Normalize, UnifyTys, UnifyKrates, UnifyLifetimes,
+                            WellFormed, TyLocalTo, NotImplemented, NotNormalize, NotUnifyTys });
 enum_zip!(WellFormed { Ty, TraitRef });
 

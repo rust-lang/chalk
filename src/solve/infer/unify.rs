@@ -265,6 +265,7 @@ impl<'t> Unifier<'t> {
             (&Lifetime::Var(depth_a), &Lifetime::Var(depth_b)) => {
                 let var_a = LifetimeInferenceVariable::from_depth(depth_a);
                 let var_b = LifetimeInferenceVariable::from_depth(depth_b);
+                debug!("unify_lifetime_lifetime: var_a={:?} var_b={:?}", var_a, var_b);
                 self.table.lifetime_unify.unify_var_var(var_a, var_b).unwrap();
                 Ok(())
             }
@@ -288,8 +289,12 @@ impl<'t> Unifier<'t> {
             }
 
             (&Lifetime::ForAll(_), &Lifetime::ForAll(_)) => {
-                Ok(self.constraints.push(InEnvironment::new(self.environment,
-                                                            Constraint::LifetimeEq(*a, *b))))
+                if a != b {
+                    Ok(self.constraints.push(InEnvironment::new(self.environment,
+                                                                Constraint::LifetimeEq(*a, *b))))
+                } else {
+                    Ok(())
+                }
             }
         }
     }
