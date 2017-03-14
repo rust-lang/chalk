@@ -1260,3 +1260,40 @@ fn unify_quantified_lifetimes() {
         }
     }
 }
+
+#[test]
+fn equality_binder() {
+    test! {
+        program {
+            struct Ref<'a, T> { }
+        }
+
+        // Check that `'a` (here, `'?0`) is not unified
+        // with `'!1`, because they belong to incompatible
+        // universes.
+        goal {
+            forall<T> {
+                exists<'a> {
+                    for<'c> Ref<'c, T> = Ref<'a, T>
+                }
+            }
+        } yields {
+            "Solution {
+                successful: Yes,
+                refined_goal: Query {
+                    value: Constrained {
+                        value: [
+                            (for<1> Ref<'?0, !1> = Ref<'?0, !1>)
+                        ],
+                        constraints: [
+                            (Env(U2, []) |- LifetimeEq('!2, '?0))
+                        ]
+                    },
+                    binders: [
+                        U1
+                    ]
+                }
+            }"
+        }
+    }
+}
