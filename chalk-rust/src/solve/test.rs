@@ -27,6 +27,7 @@ fn solve_goal(program_text: &str,
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
     let program = Arc::new(parse_and_lower_program(&program_text[1..program_text.len()-1]).unwrap());
+    let env = Arc::new(program.environment());
     ir::set_current_program(&program, || {
         for (goal_text, expected) in goals {
             println!("----------------------------------------------------------------------");
@@ -39,7 +40,7 @@ fn solve_goal(program_text: &str,
             // tests don't require a higher one.
             let overflow_depth = 3;
 
-            let mut solver = Solver::new(&program, overflow_depth);
+            let mut solver = Solver::new(&env, overflow_depth);
             let result = match Prove::new(&mut solver, goal).solve() {
                 Ok(v) => format!("{:#?}", v),
                 Err(e) => format!("{}", e),

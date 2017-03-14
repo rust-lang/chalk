@@ -13,13 +13,13 @@ use std::sync::Arc;
 use super::*;
 
 pub struct Solver {
-    pub(super) program: Arc<Program>,
+    pub(super) program: Arc<ProgramEnvironment>,
     overflow_depth: usize,
     stack: Vec<Query<InEnvironment<WhereClauseGoal>>>,
 }
 
 impl Solver {
-    pub fn new(program: &Arc<Program>, overflow_depth: usize) -> Self {
+    pub fn new(program: &Arc<ProgramEnvironment>, overflow_depth: usize) -> Self {
         Solver { program: program.clone(), stack: vec![], overflow_depth, }
     }
 
