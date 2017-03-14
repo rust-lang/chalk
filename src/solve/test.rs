@@ -1168,9 +1168,6 @@ fn normalize_under_binder() {
             }"
         }
 
-        // FIXME: Mildly dubious, in that the lifetime name from
-        // universe 1 is being used in the value for an existential
-        // from universe 0.
         goal {
             exists<U> {
                 forall<'a> {
@@ -1183,11 +1180,15 @@ fn normalize_under_binder() {
                 refined_goal: Query {
                     value: Constrained {
                         value: [
-                            <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'!1, I32>
+                            <Ref<'!1, I32> as Id<'!1>>::Item ==> Ref<'?0, I32>
                         ],
-                        constraints: []
+                        constraints: [
+                            (Env(U1, []) |- LifetimeEq('?0, '!1))
+                        ]
                     },
-                    binders: []
+                    binders: [
+                        U0
+                    ]
                 }
             }"
         }

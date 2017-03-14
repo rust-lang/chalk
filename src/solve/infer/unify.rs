@@ -283,20 +283,22 @@ impl<'t> Unifier<'t> {
                                              .unwrap();
                     Ok(())
                 } else {
-                    Ok(self.constraints.push(InEnvironment::new(self.environment,
-                                                                Constraint::LifetimeEq(*a, *b))))
+                    Ok(self.push_lifetime_eq_constraint(*a, *b))
                 }
             }
 
             (&Lifetime::ForAll(_), &Lifetime::ForAll(_)) => {
                 if a != b {
-                    Ok(self.constraints.push(InEnvironment::new(self.environment,
-                                                                Constraint::LifetimeEq(*a, *b))))
+                    Ok(self.push_lifetime_eq_constraint(*a, *b))
                 } else {
                     Ok(())
                 }
             }
         }
+    }
+
+    fn push_lifetime_eq_constraint(&mut self, a: Lifetime, b: Lifetime) {
+        self.constraints.push(InEnvironment::new(self.environment, Constraint::LifetimeEq(a, b)));
     }
 }
 
@@ -370,8 +372,69 @@ impl<'u, 't> OccursCheck<'u, 't> {
     fn check_parameter(&mut self, arg: &Parameter) -> Result<Parameter> {
         match *arg {
             ParameterKind::Ty(ref t) => Ok(ParameterKind::Ty(self.check_ty(t)?)),
-            ParameterKind::Lifetime(_) => Ok(arg.clone()), // FIXME
+            ParameterKind::Lifetime(ref lt) => Ok(ParameterKind::Lifetime(self.check_lifetime(lt)?)),
             ParameterKind::Krate(_) => panic!("krate used as parameter to a type"),
+        }
+    }
+
+    fn check_lifetime(&mut self, lifetime: &Lifetime) -> Result<Lifetime> {
+        match *lifetime {
+            Lifetime::Var(depth) => {
+                if depth >= self.binders {
+                    // a free existentially bound region; find the
+                    // inference variable it corresponds to
+                    let v = LifetimeInferenceVariable::from_depth(depth - self.binders);
+                    match self.unifier.table.lifetime_unify.probe_value(v) {
+                        InferenceValue::Unbound(ui) => {
+                            if self.universe_index < ui {
+                                // Scenario is like:
+                                //
+                                // exists<T> forall<'b> exists<'a> ?T = Foo<'a>
+                                //
+                                // where ?A is in universe 0 and `'b` is in universe 1.
+                                // This is OK, if `'b` is promoted to universe 0.
+                                self.unifier
+                                    .table
+                                    .lifetime_unify
+                                    .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
+                                    .unwrap();
+                            }
+                            Ok(Lifetime::Var(depth))
+                        }
+
+                        InferenceValue::Bound(l) => {
+                            Ok(l.up_shift(self.binders))
+                        }
+                    }
+                } else {
+                    // a bound region like `'a` in `for<'a> fn(&'a i32)`
+                    Ok(Lifetime::Var(depth))
+                }
+            }
+            Lifetime::ForAll(ui) => {
+                if self.universe_index < ui {
+                    // Scenario is like:
+                    //
+                    // exists<T> forall<'b> ?T = Foo<'b>
+                    //
+                    // unlike with a type variable, this **might** be
+                    // ok.  Ultimately it depends on whether the
+                    // `forall` also introduced relations to lifetimes
+                    // nameable in T. To handle that, we introduce a
+                    // fresh region variable `'x` in same universe as `T`
+                    // and add a side-constraint that `'x = 'b`:
+                    //
+                    // exists<'x> forall<'b> ?T = Foo<'x>, where 'x = 'b
+
+                    let tick_x = self.unifier.table.new_lifetime_variable(self.universe_index);
+                    self.unifier.push_lifetime_eq_constraint(tick_x.to_lifetime(), *lifetime);
+                    Ok(tick_x.to_lifetime())
+                } else {
+                    // If the `ui` is higher than `self.universe_index`, then we can name
+                    // this lifetime, no problem.
+                    Ok(Lifetime::ForAll(ui))
+                }
+            }
         }
     }
 
@@ -391,12 +454,7 @@ impl<'u, 't> OccursCheck<'u, 't> {
 
             Ty::Var(depth) => {
                 let v = TyInferenceVariable::from_depth(depth - self.binders);
-                let ui = match self.unifier.table.ty_unify.probe_value(v) {
-                    InferenceValue::Unbound(ui) => ui,
-                    InferenceValue::Bound(_) => {
-                        unreachable!("expected `parameter` to be normalized")
-                    }
-                };
+                let ui = self.unifier.table.ty_unify.probe_value(v).unbound().unwrap();
 
                 if self.unifier.table.ty_unify.unioned(v, self.var) {
                     bail!("cycle during unification");

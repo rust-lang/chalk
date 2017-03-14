@@ -127,6 +127,15 @@ pub enum InferenceValue<V: Clone + Debug> {
     Bound(V),
 }
 
+impl<V: Clone + Debug> InferenceValue<V> {
+    pub fn unbound(&self) -> Option<UniverseIndex> {
+        match *self {
+            InferenceValue::Unbound(ui) => Some(ui),
+            _ => None,
+        }
+    }
+}
+
 impl<V: Clone + Debug> UnifyValue for InferenceValue<V> {
     fn unify_values(a: &InferenceValue<V>, b: &InferenceValue<V>)
                     -> Result<InferenceValue<V>, (InferenceValue<V>, InferenceValue<V>)> {
