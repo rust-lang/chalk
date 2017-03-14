@@ -2210,6 +2210,45 @@ mod __parse__Goal {
         // State 421
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
+    fn __expected_tokens(__state: usize) -> Vec<::std::string::String> {
+        const __TERMINAL: &'static [&'static str] = &[
+            r###""!""###,
+            r###""!=""###,
+            r###""(""###,
+            r###"")""###,
+            r###"",""###,
+            r###"":""###,
+            r###""::""###,
+            r###"";""###,
+            r###""<""###,
+            r###""=""###,
+            r###"">""###,
+            r###""LocalTo""###,
+            r###""WellFormed""###,
+            r###""as""###,
+            r###""crate""###,
+            r###""exists""###,
+            r###""for""###,
+            r###""forall""###,
+            r###""if""###,
+            r###""impl""###,
+            r###""struct""###,
+            r###""trait""###,
+            r###""type""###,
+            r###""where""###,
+            r###""{""###,
+            r###""}""###,
+            r###"r#"\'([:alpha:]|_)([:alnum:]|_)*"#"###,
+            r###"r#"([:alpha:]|_)([:alnum:]|_)*"#"###,
+        ];
+        __ACTION[(__state * 29)..].iter().zip(__TERMINAL).filter_map(|(&state, terminal)| {
+            if state == 0 {
+                None
+            } else {
+                Some(terminal.to_string())
+            }
+        }).collect()
+    }
     pub fn parse_Goal<
         'input,
     >(
@@ -2259,10 +2298,12 @@ mod __parse__Goal {
                 (26, _) if true => 26,
                 (27, _) if true => 27,
                 _ => {
-                    return Err(__lalrpop_util::ParseError::UnrecognizedToken {
+                    let __state = *__states.last().unwrap() as usize;
+                    let __error = __lalrpop_util::ParseError::UnrecognizedToken {
                         token: Some(__lookahead),
-                        expected: vec![],
-                    });
+                        expected: __expected_tokens(__state),
+                    };
+                    return Err(__error);
                 }
             };
             '__inner: loop {
@@ -2392,10 +2433,12 @@ mod __parse__Goal {
                         return r;
                     }
                 } else {
-                    return Err(__lalrpop_util::ParseError::UnrecognizedToken {
+                    let __state = *__states.last().unwrap() as usize;
+                    let __error = __lalrpop_util::ParseError::UnrecognizedToken {
                         token: Some(__lookahead),
-                        expected: vec![],
-                    });
+                        expected: __expected_tokens(__state),
+                    };
+                    return Err(__error)
                 }
             }
         }
@@ -2407,9 +2450,10 @@ mod __parse__Goal {
                     return r;
                 }
             } else {
+                let __state = *__states.last().unwrap() as usize;
                 let __error = __lalrpop_util::ParseError::UnrecognizedToken {
                     token: None,
-                    expected: vec![],
+                    expected: __expected_tokens(__state),
                 };
                 return Err(__error);
             }
@@ -6893,6 +6937,45 @@ mod __parse__Program {
         // State 451
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
+    fn __expected_tokens(__state: usize) -> Vec<::std::string::String> {
+        const __TERMINAL: &'static [&'static str] = &[
+            r###""!""###,
+            r###""!=""###,
+            r###""(""###,
+            r###"")""###,
+            r###"",""###,
+            r###"":""###,
+            r###""::""###,
+            r###"";""###,
+            r###""<""###,
+            r###""=""###,
+            r###"">""###,
+            r###""LocalTo""###,
+            r###""WellFormed""###,
+            r###""as""###,
+            r###""crate""###,
+            r###""exists""###,
+            r###""for""###,
+            r###""forall""###,
+            r###""if""###,
+            r###""impl""###,
+            r###""struct""###,
+            r###""trait""###,
+            r###""type""###,
+            r###""where""###,
+            r###""{""###,
+            r###""}""###,
+            r###"r#"\'([:alpha:]|_)([:alnum:]|_)*"#"###,
+            r###"r#"([:alpha:]|_)([:alnum:]|_)*"#"###,
+        ];
+        __ACTION[(__state * 29)..].iter().zip(__TERMINAL).filter_map(|(&state, terminal)| {
+            if state == 0 {
+                None
+            } else {
+                Some(terminal.to_string())
+            }
+        }).collect()
+    }
     pub fn parse_Program<
         'input,
     >(
@@ -6942,10 +7025,12 @@ mod __parse__Program {
                 (26, _) if true => 26,
                 (27, _) if true => 27,
                 _ => {
-                    return Err(__lalrpop_util::ParseError::UnrecognizedToken {
+                    let __state = *__states.last().unwrap() as usize;
+                    let __error = __lalrpop_util::ParseError::UnrecognizedToken {
                         token: Some(__lookahead),
-                        expected: vec![],
-                    });
+                        expected: __expected_tokens(__state),
+                    };
+                    return Err(__error);
                 }
             };
             '__inner: loop {
@@ -7075,10 +7160,12 @@ mod __parse__Program {
                         return r;
                     }
                 } else {
-                    return Err(__lalrpop_util::ParseError::UnrecognizedToken {
+                    let __state = *__states.last().unwrap() as usize;
+                    let __error = __lalrpop_util::ParseError::UnrecognizedToken {
                         token: Some(__lookahead),
-                        expected: vec![],
-                    });
+                        expected: __expected_tokens(__state),
+                    };
+                    return Err(__error)
                 }
             }
         }
@@ -7090,9 +7177,10 @@ mod __parse__Program {
                     return r;
                 }
             } else {
+                let __state = *__states.last().unwrap() as usize;
                 let __error = __lalrpop_util::ParseError::UnrecognizedToken {
                     token: None,
-                    expected: vec![],
+                    expected: __expected_tokens(__state),
                 };
                 return Err(__error);
             }
@@ -9746,6 +9834,45 @@ mod __parse__Ty {
         // State 85
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
+    fn __expected_tokens(__state: usize) -> Vec<::std::string::String> {
+        const __TERMINAL: &'static [&'static str] = &[
+            r###""!""###,
+            r###""!=""###,
+            r###""(""###,
+            r###"")""###,
+            r###"",""###,
+            r###"":""###,
+            r###""::""###,
+            r###"";""###,
+            r###""<""###,
+            r###""=""###,
+            r###"">""###,
+            r###""LocalTo""###,
+            r###""WellFormed""###,
+            r###""as""###,
+            r###""crate""###,
+            r###""exists""###,
+            r###""for""###,
+            r###""forall""###,
+            r###""if""###,
+            r###""impl""###,
+            r###""struct""###,
+            r###""trait""###,
+            r###""type""###,
+            r###""where""###,
+            r###""{""###,
+            r###""}""###,
+            r###"r#"\'([:alpha:]|_)([:alnum:]|_)*"#"###,
+            r###"r#"([:alpha:]|_)([:alnum:]|_)*"#"###,
+        ];
+        __ACTION[(__state * 29)..].iter().zip(__TERMINAL).filter_map(|(&state, terminal)| {
+            if state == 0 {
+                None
+            } else {
+                Some(terminal.to_string())
+            }
+        }).collect()
+    }
     pub fn parse_Ty<
         'input,
     >(
@@ -9795,10 +9922,12 @@ mod __parse__Ty {
                 (26, _) if true => 26,
                 (27, _) if true => 27,
                 _ => {
-                    return Err(__lalrpop_util::ParseError::UnrecognizedToken {
+                    let __state = *__states.last().unwrap() as usize;
+                    let __error = __lalrpop_util::ParseError::UnrecognizedToken {
                         token: Some(__lookahead),
-                        expected: vec![],
-                    });
+                        expected: __expected_tokens(__state),
+                    };
+                    return Err(__error);
                 }
             };
             '__inner: loop {
@@ -9928,10 +10057,12 @@ mod __parse__Ty {
                         return r;
                     }
                 } else {
-                    return Err(__lalrpop_util::ParseError::UnrecognizedToken {
+                    let __state = *__states.last().unwrap() as usize;
+                    let __error = __lalrpop_util::ParseError::UnrecognizedToken {
                         token: Some(__lookahead),
-                        expected: vec![],
-                    });
+                        expected: __expected_tokens(__state),
+                    };
+                    return Err(__error)
                 }
             }
         }
@@ -9943,9 +10074,10 @@ mod __parse__Ty {
                     return r;
                 }
             } else {
+                let __state = *__states.last().unwrap() as usize;
                 let __error = __lalrpop_util::ParseError::UnrecognizedToken {
                     token: None,
-                    expected: vec![],
+                    expected: __expected_tokens(__state),
                 };
                 return Err(__error);
             }
