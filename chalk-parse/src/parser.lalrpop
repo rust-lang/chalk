@@ -35,10 +35,11 @@ Goal1: Box<Goal> = {
 };
 
 StructDefn: StructDefn = {
-    "struct" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{" "}" => StructDefn {
+    "struct" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{" <f:Fields> "}" => StructDefn {
         name: n,
         parameter_kinds: p,
-        where_clauses: w
+        where_clauses: w,
+        fields: f,
     }
 };
 
@@ -116,6 +117,17 @@ ProjectionTy: ProjectionTy = {
     "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => ProjectionTy {
         trait_ref: t, name: n, args: a
     },
+};
+
+Fields: Vec<Field> = {
+    <Comma<Field>>,
+};
+
+Field: Field = {
+    <n:Id> ":" <t: Ty> => Field {
+        name: n,
+        ty: t,
+    }
 };
 
 WhereClauses: Vec<WhereClause> = {

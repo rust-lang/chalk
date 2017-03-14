@@ -16,7 +16,7 @@ fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
 
 #[test]
 fn lower() {
-    parse_and_lower("struct Foo { } trait Bar { } impl Bar for Foo { }").unwrap();
+    parse_and_lower("struct Foo { field: Foo } trait Bar { } impl Bar for Foo { }").unwrap();
 }
 
 #[test]
