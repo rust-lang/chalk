@@ -28,6 +28,7 @@ pub struct StructDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
     pub where_clauses: Vec<WhereClause>,
+    pub fields: Vec<Field>,
 }
 
 pub struct TraitDefn {
@@ -172,6 +173,11 @@ pub enum WhereClause {
     UnifyTys { a: Ty, b: Ty, eq: bool },
     UnifyKrates { a: Krate, b: Krate },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
+}
+
+pub struct Field {
+    pub name: Identifier,
+    pub ty: Ty,
 }
 
 pub enum Goal {
