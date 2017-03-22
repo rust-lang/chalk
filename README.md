@@ -3,7 +3,7 @@
 # chalk
 
 A [Prolog-ish][Prolog] interpreter written in Rust, intended perhaps for use in
-the compiler, but also for experimentation. 
+the compiler, but also for experimentation.
 
 ## Origin of the name
 

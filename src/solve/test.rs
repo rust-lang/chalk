@@ -2,7 +2,7 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::goal::Prove;
+use solve::prove::Prove;
 use solve::solver::Solver;
 use std::sync::Arc;
 
