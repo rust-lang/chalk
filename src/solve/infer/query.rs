@@ -50,12 +50,12 @@ impl<'q> Querifier<'q> {
         free_vars.into_iter()
             .map(|p_v| match p_v {
                      ParameterKind::Ty(v) => {
-                debug_assert!(table.ty_unify.find(v) == v);
-                match table.ty_unify.probe_value(v) {
-                    InferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
-                    InferenceValue::Bound(_) => panic!("free var now bound"),
-                }
-            }
+                         debug_assert!(table.ty_unify.find(v) == v);
+                         match table.ty_unify.probe_value(v) {
+                             InferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
+                             InferenceValue::Bound(_) => panic!("free var now bound"),
+                         }
+                     }
 
                      ParameterKind::Lifetime(v) => {
                          match table.lifetime_unify.probe_value(v) {

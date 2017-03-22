@@ -150,21 +150,19 @@ impl<'s> Fulfill<'s> {
         self.infer.make_query(&constrained_goal)
     }
 
-    /// Try to solve all of `where_clauses`, which may contain
-    /// inference variables registered in the table `infer`. This can
-    /// have side-effects on the inference state (regardless of
-    /// whether it returns success, failure, or ambiguity). But, in
-    /// all cases, the side-effects are only things that must be true
-    /// for `where_clauses` to be true.
+    /// Try to solve all `obligations`, which may contain inference variables
+    /// registered in the table `infer`. This can have side-effects on the
+    /// inference state (regardless of whether it returns success, failure, or
+    /// ambiguity). But, in all cases, the side-effects are only things that
+    /// must be true for `obligations` to be true.
     pub fn solve_all(&mut self) -> Result<Successful> {
         debug_heading!("solve_all(where_clauses={:#?})", self.obligations);
 
-        // Try to solve all the where-clauses. We do this via a
-        // fixed-point iteration. We try to solve each where-clause in
-        // turn. Anything which is successful, we drop; anything
-        // ambiguous, we retain in the `where_clauses` array. This
-        // process is repeated so long as we are learning new things
-        // about our inference state.
+        // Try to solve all the obligations. We do this via a fixed-point
+        // iteration. We try to solve each obligation in turn. Anything which is
+        // successful, we drop; anything ambiguous, we retain in the
+        // `obligations` array. This process is repeated so long as we are
+        // learning new things about our inference state.
         let mut obligations = Vec::with_capacity(self.obligations.len());
         let mut progress = true;
         while progress {
@@ -172,12 +170,12 @@ impl<'s> Fulfill<'s> {
 
             debug_heading!("start of round, {:?} obligations", self.obligations.len());
 
-            // Take the list of `obligations` to solve this round and
-            // replace it with an empty vector. Iterate through each
-            // obligation to solve and solve it if we can. If not
-            // (because of ambiguity), then push it back onto
-            // `self.obligations` for next round. Note that
-            // `solve_one` may also push onto the list.
+            // Take the list of `obligations` to solve this round and replace it
+            // with an empty vector. Iterate through each obligation to solve
+            // and solve it if we can. If not (because of ambiguity), then push
+            // it back onto `self.obligations` for next round. Note that
+            // `solve_one` may also push onto the `self.obligations` list
+            // directly.
             assert!(obligations.is_empty());
             while let Some(wc) = self.obligations.pop() {
                 match self.solve_one(&wc, &mut progress)? {
@@ -198,7 +196,7 @@ impl<'s> Fulfill<'s> {
         // be empty.
         assert!(obligations.is_empty());
 
-        // If we still have ambiguous where-clauses, then we have an
+        // If we still have ambiguous obligations, then we have an
         // ambiguous overall result.
         if self.obligations.is_empty() {
             Ok(Successful::Yes)

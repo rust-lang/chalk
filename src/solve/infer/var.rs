@@ -117,10 +117,9 @@ impl UnifyKey for LifetimeInferenceVariable {
     }
 }
 
-/// The value of an inference variable. We start out as `Unbound` with
-/// a universe index; when the inference variable is assigned a value,
-/// it becomes bound and refers to an entry in the
-/// `InferenceTable.value` vector.
+/// The value of an inference variable. We start out as `Unbound` with a
+/// universe index; when the inference variable is assigned a value, it becomes
+/// bound and records that value.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InferenceValue<V: Clone + Debug> {
     Unbound(UniverseIndex),
@@ -165,4 +164,3 @@ impl fmt::Debug for KrateInferenceVariable {
         write!(fmt, "crate ?{}", self.index)
     }
 }
-
