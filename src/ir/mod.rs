@@ -492,7 +492,7 @@ pub struct ProgramClauseImplication {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Query<T> {
     pub value: T,
-    pub binders: Vec<ParameterKind<UniverseIndex>>,
+    pub binders: QueryBinders,
 }
 
 impl<T> Query<T> {
@@ -501,6 +501,13 @@ impl<T> Query<T> {
     {
         Query { value: op(self.value), binders: self.binders }
     }
+}
+
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct QueryBinders {
+    pub tys: Vec<UniverseIndex>,
+    pub lifetimes: Vec<UniverseIndex>,
+    pub krates: Vec<UniverseIndex>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

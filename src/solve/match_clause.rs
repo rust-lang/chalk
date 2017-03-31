@@ -23,7 +23,7 @@ impl<'s, G> MatchClause<'s, G>
                clause: &'s WhereClause)
                -> Self {
         let InEnvironment { ref environment, ref goal } = q.value;
-        let infer = InferenceTable::new_with_vars(&q.binders);
+        let infer = InferenceTable::new_from_binders(&q.binders);
         let environment = environment.clone();
         let fulfill = Fulfill::new(solver, infer);
         MatchClause { fulfill, environment, goal, clause }

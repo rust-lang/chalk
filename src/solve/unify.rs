@@ -22,7 +22,7 @@ impl<'s, T> SolveUnify<'s, T>
 {
     pub fn new(solver: &'s mut Solver, env_goal: Query<InEnvironment<Unify<T>>>) -> Self {
         let Query { binders, value: InEnvironment { environment, goal } } = env_goal;
-        let infer = InferenceTable::new_with_vars(&binders);
+        let infer = InferenceTable::new_from_binders(&binders);
         let fulfill = Fulfill::new(solver, infer);
         SolveUnify { fulfill, environment, goal }
     }

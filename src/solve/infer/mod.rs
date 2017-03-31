@@ -37,6 +37,14 @@ impl InferenceTable {
         }
     }
 
+    pub fn new_from_binders(binders: &QueryBinders) -> Self {
+        let mut table = InferenceTable::new();
+        for &ui in &binders.tys { table.new_variable(ui); }
+        for &ui in &binders.lifetimes { table.new_lifetime_variable(ui); }
+        for &ui in &binders.krates { table.new_krate_variable(ui); }
+        table
+    }
+
     pub fn new_with_vars(vars: &[ParameterKind<UniverseIndex>]) -> Self {
         let mut table = InferenceTable::new();
         for &ui in vars {

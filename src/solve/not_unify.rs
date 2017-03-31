@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 pub struct SolveNotUnify<'s> {
     solver: &'s mut Solver,
-    binders: Vec<ParameterKind<UniverseIndex>>,
+    binders: QueryBinders,
     environment: Arc<Environment>,
     goal: Not<Unify<Ty>>,
     state: State,

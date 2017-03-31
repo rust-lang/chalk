@@ -45,33 +45,34 @@ struct Querifier<'q> {
 }
 
 impl<'q> Querifier<'q> {
-    fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
+    fn into_binders(self) -> QueryBinders {
         let Querifier { table, free_vars } = self;
-        free_vars.into_iter()
-            .map(|p_v| match p_v {
-                     ParameterKind::Ty(v) => {
-                debug_assert!(table.ty_unify.find(v) == v);
-                match table.ty_unify.probe_value(v) {
-                    InferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
-                    InferenceValue::Bound(_) => panic!("free var now bound"),
+        let mut binders = QueryBinders::default();
+        for p_v in free_vars {
+            match p_v {
+                ParameterKind::Ty(v) => {
+                    debug_assert!(table.ty_unify.find(v) == v);
+                    match table.ty_unify.probe_value(v) {
+                        InferenceValue::Unbound(ui) => binders.tys.push(ui),
+                        InferenceValue::Bound(_) => panic!("free var now bound"),
+                    }
+                }
+                ParameterKind::Lifetime(v) => {
+                    match table.lifetime_unify.probe_value(v) {
+                        InferenceValue::Unbound(ui) => binders.lifetimes.push(ui),
+                        InferenceValue::Bound(_) => panic!("free var now bound"),
+                    }
+                }
+
+                ParameterKind::Krate(c) => {
+                    match table.krate_unify.probe_value(c) {
+                        InferenceValue::Unbound(ui) => binders.krates.push(ui),
+                        InferenceValue::Bound(_) => panic!("free var now bound"),
+                    }
                 }
             }
-
-                     ParameterKind::Lifetime(v) => {
-                         match table.lifetime_unify.probe_value(v) {
-                             InferenceValue::Unbound(ui) => ParameterKind::Lifetime(ui),
-                             InferenceValue::Bound(_) => panic!("free var now bound"),
-                         }
-                     }
-
-                     ParameterKind::Krate(c) => {
-                         match table.krate_unify.probe_value(c) {
-                             InferenceValue::Unbound(ui) => ParameterKind::Krate(ui),
-                             InferenceValue::Bound(_) => panic!("free var now bound"),
-                         }
-                     }
-                 })
-            .collect()
+        }
+        binders
     }
 
     fn add(&mut self, free_var: ParameterInferenceVariable) -> usize {
