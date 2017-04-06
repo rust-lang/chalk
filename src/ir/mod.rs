@@ -503,11 +503,21 @@ impl<T> Query<T> {
     }
 }
 
-#[derive(Default, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct QueryBinders {
-    pub tys: Vec<UniverseIndex>,
-    pub lifetimes: Vec<UniverseIndex>,
-    pub krates: Vec<UniverseIndex>,
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct QueryBinders<T = UniverseIndex, L = T, C = T> {
+    pub tys: Vec<T>,
+    pub lifetimes: Vec<L>,
+    pub krates: Vec<C>,
+}
+
+impl<T, L, C> Default for QueryBinders<T, L, C> {
+    fn default() -> Self {
+        Self {
+            tys: vec![],
+            lifetimes: vec![],
+            krates: vec![],
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
