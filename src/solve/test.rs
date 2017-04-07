@@ -80,7 +80,11 @@ fn prove_clone() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -97,7 +101,11 @@ fn prove_clone() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -139,10 +147,11 @@ fn prove_infer() {
                         ],
                         constraints: []
                     },
-                    binders: [
-                        U0,
-                        U0
-                    ]
+                    binders: QueryBinders {
+                        tys: [U0, U0],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -159,7 +168,11 @@ fn prove_infer() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -176,7 +189,11 @@ fn prove_infer() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -216,7 +233,11 @@ fn prove_forall() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -235,7 +256,11 @@ fn prove_forall() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -265,7 +290,11 @@ fn prove_forall() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -298,7 +327,11 @@ fn higher_ranked() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -355,9 +388,11 @@ fn max_depth() {
                         ],
                         constraints: []
                     },
-                    binders: [
-                        U0
-                    ]
+                    binders: QueryBinders {
+                        tys: [U0],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -392,7 +427,11 @@ fn normalize() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -411,7 +450,11 @@ fn normalize() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -434,7 +477,11 @@ fn normalize() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -457,7 +504,11 @@ fn normalize() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -491,7 +542,11 @@ fn normalize_rev_infer() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -527,7 +582,11 @@ fn region_equality() {
                             (Env(U2, []) |- LifetimeEq('!2, '!1))
                         ]
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -548,7 +607,11 @@ fn region_equality() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -587,7 +650,11 @@ fn forall_equality() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -612,7 +679,11 @@ fn forall_equality() {
                             (Env(U2, []) |- LifetimeEq('!2, '!1))
                         ]
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -649,7 +720,11 @@ fn forall_projection() {
                          ],
                          constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -680,7 +755,11 @@ fn elaborate_eq() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -712,7 +791,11 @@ fn elaborate_transitive() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -746,7 +829,11 @@ fn elaborate_normalize() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -797,7 +884,11 @@ fn atc1() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -869,7 +960,11 @@ fn struct_wf() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -886,7 +981,11 @@ fn struct_wf() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -1021,7 +1120,11 @@ fn crate_variable() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -1163,7 +1266,11 @@ fn normalize_under_binder() {
                         ],
                         constraints: []
                     },
-                    binders: []
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -1186,9 +1293,11 @@ fn normalize_under_binder() {
                             (Env(U1, []) |- LifetimeEq('?0, '!1))
                         ]
                     },
-                    binders: [
-                        U0
-                    ]
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [U0],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -1222,9 +1331,11 @@ fn unify_quantified_lifetimes() {
                             (Env(U1, []) |- LifetimeEq('?0, '!1))
                         ]
                     },
-                    binders: [
-                        U0
-                    ]
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [U0],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -1252,9 +1363,11 @@ fn unify_quantified_lifetimes() {
                             (Env(U1, []) |- LifetimeEq('?0, '!1))
                         ]
                     },
-                    binders: [
-                        U0
-                    ]
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [U0],
+                        krates: []
+                    }
                 }
             }"
         }
@@ -1289,9 +1402,11 @@ fn equality_binder() {
                             (Env(U2, []) |- LifetimeEq('!2, '?0))
                         ]
                     },
-                    binders: [
-                        U1
-                    ]
+                    binders: QueryBinders {
+                        tys: [],
+                        lifetimes: [U1],
+                        krates: []
+                    }
                 }
             }"
         }
