@@ -72,7 +72,7 @@ impl<'q> Querifier<'q> {
     }
 
     fn add(&mut self, free_var: ParameterInferenceVariable) -> usize {
-        fn find_idx<T: Eq>(vars: &mut Vec<T>, free_var: T) -> usize {
+        fn find_idx<T: Copy + Eq>(vars: &mut Vec<T>, free_var: T) -> usize {
             match vars.iter().position(|&v| v == free_var) {
                 Some(i) => i,
                 None    => {
