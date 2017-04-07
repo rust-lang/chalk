@@ -1412,3 +1412,25 @@ fn equality_binder() {
         }
     }
 }
+#[test]
+fn mixed_indices() {
+    test! {
+        program {
+            struct Ref<'a, T> { }
+        }
+        // Check that `'a` (here, `'?0`) is not unified
+        // with `'!1`, because they belong to incompatible
+        // universes.
+        goal {
+            exists<T> {
+                exists<'a> {
+                    exists<U> {
+                        Ref<'a, T> = Ref<'a, U>
+                    }
+                }
+            }
+        } yields {
+            ""
+        }
+    }
+}
