@@ -29,7 +29,7 @@ impl InferenceTable {
         debug!("make_query({:#?})", value);
         let mut q = Querifier {
             table: self,
-            free_vars: Vec::new(),
+            free_vars: QueryBinders::default(),
         };
         let r = value.fold_with(&mut q, 0).unwrap();
         Query {
@@ -41,47 +41,51 @@ impl InferenceTable {
 
 struct Querifier<'q> {
     table: &'q mut InferenceTable,
-    free_vars: Vec<ParameterInferenceVariable>,
+    free_vars: QueryBinders<TyInferenceVariable, LifetimeInferenceVariable, KrateInferenceVariable>,
 }
 
 impl<'q> Querifier<'q> {
-    fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
+    fn into_binders(self) -> QueryBinders {
         let Querifier { table, free_vars } = self;
-        free_vars.into_iter()
-            .map(|p_v| match p_v {
-                     ParameterKind::Ty(v) => {
-                debug_assert!(table.ty_unify.find(v) == v);
-                match table.ty_unify.probe_value(v) {
-                    InferenceValue::Unbound(ui) => ParameterKind::Ty(ui),
-                    InferenceValue::Bound(_) => panic!("free var now bound"),
-                }
+        let mut binders = QueryBinders::default();
+        for ty in free_vars.tys {
+            debug_assert!(table.ty_unify.find(ty) == ty);
+            match table.ty_unify.probe_value(ty) {
+                InferenceValue::Unbound(ui) => binders.tys.push(ui),
+                InferenceValue::Bound(_) => panic!("free var now bound"),
             }
+        }
 
-                     ParameterKind::Lifetime(v) => {
-                         match table.lifetime_unify.probe_value(v) {
-                             InferenceValue::Unbound(ui) => ParameterKind::Lifetime(ui),
-                             InferenceValue::Bound(_) => panic!("free var now bound"),
-                         }
-                     }
-
-                     ParameterKind::Krate(c) => {
-                         match table.krate_unify.probe_value(c) {
-                             InferenceValue::Unbound(ui) => ParameterKind::Krate(ui),
-                             InferenceValue::Bound(_) => panic!("free var now bound"),
-                         }
-                     }
-                 })
-            .collect()
+        for lifetime in free_vars.lifetimes {
+            match table.lifetime_unify.probe_value(lifetime) {
+                InferenceValue::Unbound(ui) => binders.lifetimes.push(ui),
+                InferenceValue::Bound(_) => panic!("free var now bound"),
+            }
+        }
+        for krate in free_vars.krates {
+            match table.krate_unify.probe_value(krate) {
+                InferenceValue::Unbound(ui) => binders.krates.push(ui),
+                InferenceValue::Bound(_) => panic!("free var now bound"),
+            }
+        }
+        binders
     }
 
     fn add(&mut self, free_var: ParameterInferenceVariable) -> usize {
-        match self.free_vars.iter().position(|&v| v == free_var) {
-            Some(i) => i,
-            None => {
-                let next_index = self.free_vars.len();
-                self.free_vars.push(free_var);
-                next_index
+        fn find_idx<T: Copy + Eq>(vars: &mut Vec<T>, free_var: T) -> usize {
+            match vars.iter().position(|&v| v == free_var) {
+                Some(i) => i,
+                None    => {
+                    let next_index = vars.len();
+                    vars.push(free_var);
+                    next_index
+                }
             }
+        }
+        match free_var {
+            ParameterKind::Ty(t)        => find_idx(&mut self.free_vars.tys, t),
+            ParameterKind::Lifetime(l)  => find_idx(&mut self.free_vars.lifetimes, l),
+            ParameterKind::Krate(k)     => find_idx(&mut self.free_vars.krates, k),
         }
     }
 }

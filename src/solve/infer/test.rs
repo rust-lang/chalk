@@ -207,7 +207,10 @@ fn quantify_simple() {
         table.make_query(&ty!(apply (item 0) (var 2) (var 1) (var 0))),
         Query {
             value: ty!(apply (item 0) (var 0) (var 1) (var 2)),
-            binders: vec![ParameterKind::Ty(U2), ParameterKind::Ty(U1), ParameterKind::Ty(U0)],
+            binders: QueryBinders {
+                tys: vec![U2, U1, U0],
+                ..QueryBinders::default()
+            },
         });
 }
 
@@ -233,6 +236,9 @@ fn quantify_bound() {
         table.make_query(&ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0))),
         Query {
             value: ty!(apply (item 0) (apply (item 1) (var 0) (var 1)) (var 2) (var 0) (var 1)),
-            binders: vec![ParameterKind::Ty(U1), ParameterKind::Ty(U0), ParameterKind::Ty(U2)],
+            binders: QueryBinders {
+                tys: vec![U1, U0, U2],
+                ..QueryBinders::default()
+            },
         });
 }

@@ -245,9 +245,10 @@ impl<'s> Fulfill<'s> {
 
         debug!("fulfill::solve_one: new_type_info={}", new_type_info);
 
+
         if new_type_info || !solution.refined_goal.value.constraints.is_empty() {
             let Constrained { constraints, value: refined_goal } =
-                self.instantiate(solution.refined_goal.binders.iter().cloned(),
+                self.instantiate(universes_from_binders(&solution.refined_goal.binders),
                                  &solution.refined_goal.value);
 
             debug!("fulfill::solve_one: adding constraints {:?}", constraints);
@@ -263,4 +264,11 @@ impl<'s> Fulfill<'s> {
 
         Ok(solution.successful)
     }
+}
+
+fn universes_from_binders<'a>(binders: &'a QueryBinders) -> impl Iterator<Item = ParameterKind<UniverseIndex>> + 'a {
+    let tys = binders.tys.iter().cloned().map(ParameterKind::Ty);
+    let lifetimes = binders.lifetimes.iter().cloned().map(ParameterKind::Lifetime);
+    let krates = binders.krates.iter().cloned().map(ParameterKind::Krate);
+    tys.chain(lifetimes).chain(krates)
 }

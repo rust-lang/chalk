@@ -492,7 +492,7 @@ pub struct ProgramClauseImplication {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Query<T> {
     pub value: T,
-    pub binders: Vec<ParameterKind<UniverseIndex>>,
+    pub binders: QueryBinders,
 }
 
 impl<T> Query<T> {
@@ -500,6 +500,23 @@ impl<T> Query<T> {
         where OP: FnOnce(T) -> U
     {
         Query { value: op(self.value), binders: self.binders }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct QueryBinders<T = UniverseIndex, L = T, C = T> {
+    pub tys: Vec<T>,
+    pub lifetimes: Vec<L>,
+    pub krates: Vec<C>,
+}
+
+impl<T, L, C> Default for QueryBinders<T, L, C> {
+    fn default() -> Self {
+        Self {
+            tys: vec![],
+            lifetimes: vec![],
+            krates: vec![],
+        }
     }
 }
 
