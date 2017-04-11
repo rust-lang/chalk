@@ -37,14 +37,6 @@ impl InferenceTable {
         }
     }
 
-    pub fn new_with_vars(vars: &[ParameterKind<UniverseIndex>]) -> Self {
-        let mut table = InferenceTable::new();
-        for &ui in vars {
-            table.new_parameter_variable(ui);
-        }
-        table
-    }
-
     pub fn new_variable(&mut self, ui: UniverseIndex) -> TyInferenceVariable {
         self.ty_unify.new_key(InferenceValue::Unbound(ui))
     }

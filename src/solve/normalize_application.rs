@@ -2,7 +2,6 @@ use errors::*;
 use ir::*;
 use solve::Solution;
 use solve::fulfill::Fulfill;
-use solve::infer::InferenceTable;
 use solve::solver::Solver;
 use std::sync::Arc;
 
@@ -17,8 +16,8 @@ impl<'s> NormalizeApplication<'s> {
                q: Query<InEnvironment<Normalize>>)
                -> Self {
         let InEnvironment { environment, goal } = q.value;
-        let infer = InferenceTable::new_with_vars(&q.binders);
-        let fulfill = Fulfill::new(solver, infer);
+        let mut fulfill = Fulfill::new(solver);
+        let goal = fulfill.instantiate(q.binders.iter().cloned(), &goal);
         NormalizeApplication { fulfill, environment, goal }
     }
 

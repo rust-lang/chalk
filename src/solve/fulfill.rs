@@ -17,8 +17,13 @@ pub struct Fulfill<'s> {
 }
 
 impl<'s> Fulfill<'s> {
-    pub fn new(solver: &'s mut Solver, infer: InferenceTable) -> Self {
-        Fulfill { solver, infer, obligations: vec![], constraints: HashSet::new() }
+    pub fn new(solver: &'s mut Solver) -> Self {
+        Fulfill {
+            solver,
+            infer: InferenceTable::new(),
+            obligations: vec![],
+            constraints: HashSet::new(),
+        }
     }
 
     pub fn program(&self) -> Arc<ProgramEnvironment> {

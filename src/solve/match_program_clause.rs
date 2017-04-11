@@ -4,14 +4,13 @@ use fold::Fold;
 use ir::*;
 use solve::Solution;
 use solve::fulfill::Fulfill;
-use solve::infer::InferenceTable;
 use solve::solver::Solver;
 use std::sync::Arc;
 
 pub struct MatchProgramClause<'s, G: 's> {
     fulfill: Fulfill<'s>,
     environment: Arc<Environment>,
-    goal: &'s G,
+    goal: G,
     program_clause_data: ProgramClauseImplication,
 }
 
@@ -23,10 +22,10 @@ impl<'s, G> MatchProgramClause<'s, G>
                program_clause: &'s ProgramClause)
                -> Self {
         let InEnvironment { ref environment, ref goal } = q.value;
-        let infer = InferenceTable::new_with_vars(&q.binders);
         let environment = environment.clone();
-        let mut fulfill = Fulfill::new(solver, infer);
+        let mut fulfill = Fulfill::new(solver);
 
+        let goal = fulfill.instantiate(q.binders.iter().cloned(), goal);
         let program_clause_data =
             fulfill.instantiate_in(environment.universe,
                                    program_clause.implication.binders.iter().cloned(),
