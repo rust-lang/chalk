@@ -1,7 +1,6 @@
 use errors::*;
 use ir::*;
 use solve::fulfill::Fulfill;
-use solve::infer::{InferenceTable};
 use solve::solver::Solver;
 use solve::Solution;
 
@@ -13,7 +12,7 @@ pub struct Prove<'s> {
 impl<'s> Prove<'s> {
     pub fn new(solver: &'s mut Solver, goal: Box<Goal>) -> Self {
         let mut prove = Prove {
-            fulfill: Fulfill::new(solver, InferenceTable::new()),
+            fulfill: Fulfill::new(solver),
             goals: vec![],
         };
         let environment = &Environment::new();
@@ -32,4 +31,3 @@ impl<'s> Prove<'s> {
         })
     }
 }
-

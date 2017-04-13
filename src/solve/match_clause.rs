@@ -4,14 +4,13 @@ use fold::Fold;
 use ir::*;
 use solve::Solution;
 use solve::fulfill::Fulfill;
-use solve::infer::InferenceTable;
 use solve::solver::Solver;
 use std::sync::Arc;
 
 pub struct MatchClause<'s, G: 's> {
     fulfill: Fulfill<'s>,
     environment: Arc<Environment>,
-    goal: &'s G,
+    goal: G,
     clause: &'s WhereClause,
 }
 
@@ -23,9 +22,9 @@ impl<'s, G> MatchClause<'s, G>
                clause: &'s WhereClause)
                -> Self {
         let InEnvironment { ref environment, ref goal } = q.value;
-        let infer = InferenceTable::new_with_vars(&q.binders);
         let environment = environment.clone();
-        let fulfill = Fulfill::new(solver, infer);
+        let mut fulfill = Fulfill::new(solver);
+        let goal = fulfill.instantiate(q.binders.iter().cloned(), &goal);
         MatchClause { fulfill, environment, goal, clause }
     }
 

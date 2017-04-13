@@ -197,11 +197,10 @@ const U2: UniverseIndex = UniverseIndex { counter: 2 };
 
 #[test]
 fn quantify_simple() {
-    let mut table = InferenceTable::new_with_vars(&[
-        ParameterKind::Ty(U0),
-        ParameterKind::Ty(U1),
-        ParameterKind::Ty(U2),
-    ]);
+    let mut table = InferenceTable::new();
+    let _ = table.new_parameter_variable(ParameterKind::Ty(U0));
+    let _ = table.new_parameter_variable(ParameterKind::Ty(U1));
+    let _ = table.new_parameter_variable(ParameterKind::Ty(U2));
 
     assert_eq!(
         table.make_query(&ty!(apply (item 0) (var 2) (var 1) (var 0))),

@@ -29,7 +29,7 @@ impl<'s> SolveNormalize<'s> {
             Ok(v) => Ok(v),
             Err(_) => {
                 // If we can't find anything better, the fallback is to
-                // normalize into an application of `Iterator::Item`.
+                // normalize into the original application.
                 NormalizeApplication::new(solver, env_goal).solve()
             }
         }

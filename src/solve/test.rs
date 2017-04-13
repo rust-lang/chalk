@@ -2,7 +2,7 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::goal::Prove;
+use solve::prove::Prove;
 use solve::solver::Solver;
 use std::sync::Arc;
 
@@ -1294,6 +1294,75 @@ fn equality_binder() {
                     ]
                 }
             }"
+        }
+    }
+}
+
+#[test]
+fn mixed_indices_unify() {
+    test! {
+        program {
+            struct Ref<'a, T> { }
+        }
+
+        goal {
+            exists<T> {
+                exists<'a> {
+                    exists<U> {
+                        Ref<'a, T> = Ref<'a, U>
+                    }
+                }
+            }
+        } yields {
+            "Solution { successful: Yes"
+        }
+    }
+}
+
+#[test]
+fn mixed_indices_match_program() {
+    test! {
+        program {
+            struct S { }
+            struct Bar<'a, T, U> { }
+            trait Foo {}
+            impl<'a> Foo for Bar<'a, S, S> {}
+        }
+
+        goal {
+            exists<T> {
+                exists<'a> {
+                    exists<U> {
+                        Bar<'a, T, U>: Foo
+                    }
+                }
+            }
+        } yields {
+            "Solution { successful: Yes"
+        }
+    }
+}
+
+#[test]
+fn mixed_indices_normalize_application() {
+    test! {
+        program {
+            struct Ref<'a, T> { }
+            trait Foo {
+                type T;
+            }
+        }
+
+        goal {
+            exists<T> {
+                exists<'a> {
+                    exists<U> {
+                        <Ref<'a, T> as Foo>::T = U
+                    }
+                }
+            }
+        } yields {
+            "Solution { successful: Yes"
         }
     }
 }
