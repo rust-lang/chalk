@@ -14,10 +14,10 @@ extern crate lazy_static;
 #[macro_use]
 mod macros;
 
-mod cast;
-mod errors;
-mod fold;
-mod ir;
-mod lower;
-mod solve;
-mod zip;
+pub mod cast;
+pub mod errors;
+pub mod fold;
+pub mod ir;
+pub mod lower;
+pub mod solve;
+pub mod zip;
