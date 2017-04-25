@@ -23,4 +23,7 @@ Here are some blog posts talking about chalk:
     - Explains the basic concepts at play
 - [Unification in Chalk, Part 1](http://smallcultfollowing.com/babysteps/blog/2017/03/25/unification-in-chalk-part-1/)
     - An introduction to unification
-    
+- [Unification in Chalk, Part 2](http://smallcultfollowing.com/babysteps/blog/2017/04/23/unification-in-chalk-part-2/)
+    - Extending the system for associated types
+- [Negative reasoning in Chalk](http://aturon.github.io/blog/2017/04/24/negative-chalk/)
+    - How to prove that something is not true
