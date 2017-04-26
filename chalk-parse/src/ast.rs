@@ -21,7 +21,6 @@ pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
     Impl(Impl),
-    KrateDefn(KrateDefn),
 }
 
 pub struct StructDefn {
@@ -43,28 +42,20 @@ pub struct AssocTyDefn {
     pub parameter_kinds: Vec<ParameterKind>,
 }
 
-pub struct KrateDefn {
-    pub name: Identifier,
-    pub items: Vec<Item>
-}
-
 pub enum ParameterKind {
     Ty(Identifier),
     Lifetime(Identifier),
-    Krate(Identifier),
 }
 
 pub enum Parameter {
     Ty(Ty),
     Lifetime(Lifetime),
-    Krate(Krate),
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Kind {
     Ty,
     Lifetime,
-    Krate,
 }
 
 impl fmt::Display for Kind {
@@ -73,7 +64,6 @@ impl fmt::Display for Kind {
             match *self {
                 Kind::Ty => "type",
                 Kind::Lifetime => "lifetime",
-                Kind::Krate => "crate",
             }
         )
     }
@@ -88,7 +78,6 @@ impl Kinded for ParameterKind {
         match *self {
             ParameterKind::Ty(_) => Kind::Ty,
             ParameterKind::Lifetime(_) => Kind::Lifetime,
-            ParameterKind::Krate(_) => Kind::Krate,
         }
     }
 }
@@ -98,7 +87,6 @@ impl Kinded for Parameter {
         match *self {
             Parameter::Ty(_) => Kind::Ty,
             Parameter::Lifetime(_) => Kind::Lifetime,
-            Parameter::Krate(_) => Kind::Krate,
         }
     }
 }
@@ -140,12 +128,6 @@ pub enum Lifetime {
     }
 }
 
-pub enum Krate {
-    Id {
-        name: Identifier,
-    }
-}
-
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
@@ -165,13 +147,10 @@ pub struct Identifier {
 
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
-    NotImplemented { trait_ref: TraitRef },
-    ProjectionEq { projection: ProjectionTy, ty: Ty, eq: bool},
+    ProjectionEq { projection: ProjectionTy, ty: Ty },
     TyWellFormed { ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
-    LocalTo { ty: Ty, krate: Krate },
-    UnifyTys { a: Ty, b: Ty, eq: bool },
-    UnifyKrates { a: Krate, b: Krate },
+    UnifyTys { a: Ty, b: Ty },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
 }
 
@@ -185,7 +164,6 @@ pub enum Goal {
     Exists(Vec<ParameterKind>, Box<Goal>),
     Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
-    Krate(Krate, Box<Goal>),
 
     // Additional kinds of goals:
     Leaf(WhereClause),

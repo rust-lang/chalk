@@ -84,7 +84,6 @@ fn atc_accounting() {
         let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
         println!("{}", impl_text);
         assert_eq!(&impl_text[..], r#"ImplDatum {
-    krate_id: krate,
     binders: for<type> ImplDatumBound {
         trait_ref: Vec<?0> as Iterable,
         where_clauses: [],

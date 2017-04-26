@@ -61,15 +61,4 @@ impl<'b> Folder for Subst<'b> {
             }
         }
     }
-
-    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
-        if depth >= self.parameters.len() {
-            Ok(Krate::Var(depth - self.parameters.len() + binders))
-        } else {
-            match self.parameters[depth] {
-                ParameterKind::Krate(ref l) => Ok(l.up_shift(binders)),
-                _ => panic!("mismatched kinds in substitution"),
-            }
-        }
-    }
 }

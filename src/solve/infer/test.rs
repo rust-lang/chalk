@@ -79,11 +79,6 @@ impl<'q> Folder for Normalizer<'q> {
         assert_eq!(binders, 0);
         Ok(LifetimeInferenceVariable::from_depth(depth).to_lifetime())
     }
-
-    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
-        assert_eq!(binders, 0);
-        Ok(KrateInferenceVariable::from_depth(depth).to_krate())
-    }
 }
 
 #[test]

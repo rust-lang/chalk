@@ -50,33 +50,9 @@ impl Cast<WhereClauseGoal> for Normalize {
     }
 }
 
-impl Cast<WhereClauseGoal> for LocalTo<Ty> {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::TyLocalTo(self)
-    }
-}
-
 impl Cast<WhereClauseGoal> for WellFormed {
     fn cast(self) -> WhereClauseGoal {
         WhereClauseGoal::WellFormed(self)
-    }
-}
-
-impl Cast<WhereClauseGoal> for Not<Normalize> {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::NotNormalize(self)
-    }
-}
-
-impl Cast<WhereClauseGoal> for Not<TraitRef> {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::NotImplemented(self)
-    }
-}
-
-impl Cast<WhereClauseGoal> for Not<Unify<Ty>> {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::NotUnifyTys(self)
     }
 }
 
@@ -88,13 +64,6 @@ impl Cast<Goal> for WellFormed {
 }
 
 impl Cast<Goal> for Normalize {
-    fn cast(self) -> Goal {
-        let wcg: WhereClauseGoal = self.cast();
-        wcg.cast()
-    }
-}
-
-impl Cast<Goal> for Not<Unify<Ty>> {
     fn cast(self) -> Goal {
         let wcg: WhereClauseGoal = self.cast();
         wcg.cast()
@@ -131,12 +100,6 @@ impl Cast<Goal> for WhereClauseGoal {
 impl Cast<WhereClauseGoal> for Unify<Ty> {
     fn cast(self) -> WhereClauseGoal {
         WhereClauseGoal::UnifyTys(self)
-    }
-}
-
-impl Cast<WhereClauseGoal> for Unify<Krate> {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::UnifyKrates(self)
     }
 }
 

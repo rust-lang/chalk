@@ -14,7 +14,6 @@ type ParameterMap = HashMap<ir::ParameterKind<ir::Identifier>, usize>;
 
 #[derive(Clone, Debug)]
 struct Env<'k> {
-    krate: ir::Krate,
     type_ids: &'k TypeIds,
     type_kinds: &'k TypeKinds,
     associated_ty_infos: &'k AssociatedTyInfos,
@@ -34,11 +33,6 @@ enum NameLookup {
 
 enum LifetimeLookup {
     Parameter(usize),
-}
-
-enum KrateLookup {
-    Parameter(usize),
-    Id(ir::KrateId),
 }
 
 const SELF: &str = "Self";
@@ -62,15 +56,6 @@ impl<'k> Env<'k> {
         }
 
         bail!("invalid lifetime name: {:?}", name.str);
-    }
-
-    // krate lookup is infallible because we assume free identifiers are just krate ids
-    fn lookup_krate(&self, name: Identifier) -> KrateLookup {
-        if let Some(k) = self.parameter_map.get(&ir::ParameterKind::Krate(name.str)) {
-            return KrateLookup::Parameter(*k);
-        }
-
-        KrateLookup::Id(ir::KrateId { name: name.str })
     }
 
     fn type_kind(&self, id: ir::ItemId) -> &ir::TypeKind {
@@ -103,39 +88,14 @@ impl<'k> Env<'k> {
         let env = self.introduce(binders.iter().cloned());
         Ok(ir::Binders { binders: binders.anonymize(), value: op(&env)? })
     }
-
-    fn in_krate(&self, krate: ir::Krate) -> Self {
-        Env { krate: krate, ..self.clone() }
-    }
 }
 
 pub trait LowerProgram {
     fn lower(&self) -> Result<ir::Program>;
 }
 
-const DEFAULT_KRATE_NAME: &str = "krate";
-
 impl LowerProgram for Program {
     fn lower(&self) -> Result<ir::Program> {
-        let mut flat_items = vec![];
-        let default_krate_id = ir::KrateId { name: intern(DEFAULT_KRATE_NAME) };
-        flatten(default_krate_id, &self.items, &mut flat_items);
-
-        fn flatten<'a>(krate_id: ir::KrateId,
-                       items: &'a [Item],
-                       into: &mut Vec<(ir::KrateId, &'a Item)>) {
-            for item in items {
-                match *item {
-                    Item::StructDefn(_) |
-                    Item::TraitDefn(_) |
-                    Item::Impl(_) =>
-                        into.push((krate_id, item)),
-                    Item::KrateDefn(ref defn) =>
-                        flatten(ir::KrateId { name: defn.name.str }, &defn.items, into),
-                }
-            }
-        }
-
         let mut index = 0;
         let mut next_item_id = || -> ir::ItemId {
             let i = index;
@@ -143,17 +103,17 @@ impl LowerProgram for Program {
             ir::ItemId { index: i }
         };
 
-        // Make a vector mapping each thing in `flat_items` to an id,
+        // Make a vector mapping each thing in `items` to an id,
         // based just on its position:
         let item_ids: Vec<_> =
-            flat_items
+            self.items
             .iter()
             .map(|_| next_item_id())
             .collect();
 
         // Create ids for associated types
         let mut associated_ty_infos = HashMap::new();
-        for (&(_, item), &item_id) in flat_items.iter().zip(&item_ids) {
+        for (item, &item_id) in self.items.iter().zip(&item_ids) {
             if let Item::TraitDefn(ref d) = *item {
                 for defn in &d.assoc_ty_defns {
                     let addl_parameter_kinds = defn.all_parameters();
@@ -165,12 +125,11 @@ impl LowerProgram for Program {
 
         let mut type_ids = HashMap::new();
         let mut type_kinds = HashMap::new();
-        for (&(krate_id, item), &item_id) in flat_items.iter().zip(&item_ids) {
+        for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let k = match *item {
-                Item::StructDefn(ref d) => d.lower_type_kind(krate_id)?,
-                Item::TraitDefn(ref d) => d.lower_type_kind(krate_id)?,
+                Item::StructDefn(ref d) => d.lower_type_kind()?,
+                Item::TraitDefn(ref d) => d.lower_type_kind()?,
                 Item::Impl(_) => continue,
-                Item::KrateDefn(_) => continue,
             };
             type_ids.insert(k.name, item_id);
             type_kinds.insert(item_id, k);
@@ -180,9 +139,8 @@ impl LowerProgram for Program {
         let mut trait_data = HashMap::new();
         let mut impl_data = HashMap::new();
         let mut associated_ty_data = HashMap::new();
-        for (&(krate_id, item), &item_id) in flat_items.iter().zip(&item_ids) {
+        for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let empty_env = Env {
-                krate: ir::Krate::Id(default_krate_id),
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
                 associated_ty_infos: &associated_ty_infos,
@@ -190,12 +148,11 @@ impl LowerProgram for Program {
             };
 
             match *item {
-                Item::KrateDefn(_) => { }
                 Item::StructDefn(ref d) => {
-                    struct_data.insert(item_id, d.lower_struct(krate_id, item_id, &empty_env)?);
+                    struct_data.insert(item_id, d.lower_struct(item_id, &empty_env)?);
                 }
                 Item::TraitDefn(ref d) => {
-                    trait_data.insert(item_id, d.lower_trait(krate_id, item_id, &empty_env)?);
+                    trait_data.insert(item_id, d.lower_trait(item_id, &empty_env)?);
 
                     let trait_datum = &trait_data[&item_id];
                     for defn in &d.assoc_ty_defns {
@@ -220,7 +177,7 @@ impl LowerProgram for Program {
                     }
                 }
                 Item::Impl(ref d) => {
-                    impl_data.insert(item_id, d.lower_impl(krate_id, &empty_env)?);
+                    impl_data.insert(item_id, d.lower_impl(&empty_env)?);
                 }
             }
         }
@@ -230,7 +187,7 @@ impl LowerProgram for Program {
 }
 
 trait LowerTypeKind {
-    fn lower_type_kind(&self, krate_id: ir::KrateId) -> Result<ir::TypeKind>;
+    fn lower_type_kind(&self) -> Result<ir::TypeKind>;
 }
 
 trait LowerParameterMap {
@@ -331,7 +288,6 @@ impl LowerParameterKind for ParameterKind {
         match *self {
             ParameterKind::Ty(ref n) => ir::ParameterKind::Ty(n.str),
             ParameterKind::Lifetime(ref n) => ir::ParameterKind::Lifetime(n.str),
-            ParameterKind::Krate(ref n) => ir::ParameterKind::Krate(n.str),
         }
     }
 }
@@ -345,11 +301,10 @@ trait LowerWhereClauses {
 }
 
 impl LowerTypeKind for StructDefn {
-    fn lower_type_kind(&self, krate_id: ir::KrateId) -> Result<ir::TypeKind> {
+    fn lower_type_kind(&self) -> Result<ir::TypeKind> {
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Struct,
             name: self.name.str,
-            krate_id: krate_id,
             binders: ir::Binders {
                 binders: self.all_parameters().anonymize(),
                 value: (),
@@ -365,12 +320,11 @@ impl LowerWhereClauses for StructDefn {
 }
 
 impl LowerTypeKind for TraitDefn {
-    fn lower_type_kind(&self, krate_id: ir::KrateId) -> Result<ir::TypeKind> {
+    fn lower_type_kind(&self) -> Result<ir::TypeKind> {
         let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
         Ok(ir::TypeKind {
             sort: ir::TypeSort::Trait,
             name: self.name.str,
-            krate_id: krate_id,
             binders: ir::Binders {
                 // for the purposes of the *type*, ignore `Self`:
                 binders: binders.anonymize(),
@@ -416,20 +370,16 @@ impl LowerWhereClause<ir::WhereClause> for WhereClause {
             WhereClause::Implemented { ref trait_ref } => {
                 ir::WhereClause::Implemented(trait_ref.lower(env)?)
             }
-            WhereClause::ProjectionEq { ref projection, ref ty, eq: true } => {
+            WhereClause::ProjectionEq { ref projection, ref ty  } => {
                 ir::WhereClause::Normalize(ir::Normalize {
                     projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
                 })
             }
-            WhereClause::ProjectionEq { eq: false, .. } |
             WhereClause::TyWellFormed { .. } |
             WhereClause::TraitRefWellFormed { .. } |
-            WhereClause::LocalTo { .. } |
             WhereClause::UnifyTys { .. } |
-            WhereClause::UnifyKrates { .. } |
-            WhereClause::UnifyLifetimes { .. } |
-            WhereClause::NotImplemented { .. } => {
+            WhereClause::UnifyLifetimes { .. } => {
                 bail!("this form of where-clause not allowed here")
             }
         })
@@ -453,28 +403,7 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
             WhereClause::TraitRefWellFormed { ref trait_ref } => {
                 ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
             }
-            WhereClause::LocalTo { ref ty, ref krate } => {
-                ir::LocalTo {
-                    value: ty.lower(env)?,
-                    krate: krate.lower(env)?,
-                }.cast()
-            }
-            WhereClause::UnifyTys { ref a, ref b, eq: true } => {
-                ir::Unify {
-                    a: a.lower(env)?,
-                    b: b.lower(env)?,
-                }.cast()
-            }
-            WhereClause::UnifyTys { ref a, ref b, eq: false } => {
-                ir::Not {
-                    predicate: ir::Unify {
-                        a: a.lower(env)?,
-                        b: b.lower(env)?,
-                    },
-                    krate: env.krate,
-                }.cast()
-            }
-            WhereClause::UnifyKrates { ref a, ref b } => {
+            WhereClause::UnifyTys { ref a, ref b} => {
                 ir::Unify {
                     a: a.lower(env)?,
                     b: b.lower(env)?,
@@ -486,27 +415,16 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
                     b: b.lower(env)?,
                 }.cast()
             }
-            WhereClause::NotImplemented { .. } => {
-                unimplemented!() // oh the irony
-            }
         })
     }
 }
 
 trait LowerStructDefn {
-    fn lower_struct(&self,
-                    krate_id: ir::KrateId,
-                    item_id: ir::ItemId,
-                    env: &Env)
-                    -> Result<ir::StructDatum>;
+    fn lower_struct(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::StructDatum>;
 }
 
 impl LowerStructDefn for StructDefn {
-    fn lower_struct(&self,
-                    krate_id: ir::KrateId,
-                    item_id: ir::ItemId,
-                    env: &Env)
-                    -> Result<ir::StructDatum>
+    fn lower_struct(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::StructDatum>
     {
         let binders = env.in_binders(self.all_parameters(), |env| {
             let self_ty = ir::ApplicationTy {
@@ -524,7 +442,7 @@ impl LowerStructDefn for StructDefn {
             Ok(ir::StructDatumBound { self_ty, where_clauses })
         })?;
 
-        Ok(ir::StructDatum { krate_id, binders })
+        Ok(ir::StructDatum { binders })
     }
 }
 
@@ -676,7 +594,6 @@ impl LowerParameter for Parameter {
         match *self {
             Parameter::Ty(ref t) => Ok(ir::ParameterKind::Ty(t.lower(env)?)),
             Parameter::Lifetime(ref l) => Ok(ir::ParameterKind::Lifetime(l.lower(env)?)),
-            Parameter::Krate(ref c) => Ok(ir::ParameterKind::Krate(c.lower(env)?)),
         }
     }
 }
@@ -697,29 +614,12 @@ impl LowerLifetime for Lifetime {
     }
 }
 
-trait LowerKrate {
-    fn lower(&self, env: &Env) -> Result<ir::Krate>;
-}
-
-impl LowerKrate for Krate {
-    fn lower(&self, env: &Env) -> Result<ir::Krate> {
-        match *self {
-            Krate::Id { name } => {
-                match env.lookup_krate(name) {
-                    KrateLookup::Parameter(d) => Ok(ir::Krate::Var(d)),
-                    KrateLookup::Id(d) => Ok(ir::Krate::Id(d)),
-                }
-            }
-        }
-    }
-}
-
 trait LowerImpl {
-    fn lower_impl(&self, krate_id: ir::KrateId, empty_env: &Env) -> Result<ir::ImplDatum>;
+    fn lower_impl(&self, empty_env: &Env) -> Result<ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, krate_id: ir::KrateId, empty_env: &Env) -> Result<ir::ImplDatum> {
+    fn lower_impl(&self, empty_env: &Env) -> Result<ir::ImplDatum> {
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
             let trait_id = trait_ref.trait_id;
@@ -730,10 +630,7 @@ impl LowerImpl for Impl {
             Ok(ir::ImplDatumBound { trait_ref, where_clauses, associated_ty_values })
         })?;
 
-        Ok(ir::ImplDatum {
-            krate_id: krate_id,
-            binders: binders,
-        })
+        Ok(ir::ImplDatum { binders: binders })
     }
 }
 
@@ -755,17 +652,11 @@ impl LowerAssocTyValue for AssocTyValue {
 }
 
 trait LowerTrait {
-    fn lower_trait(&self, krate_id: ir::KrateId,
-                   trait_id: ir::ItemId,
-                   env: &Env)
-                   -> Result<ir::TraitDatum>;
+    fn lower_trait(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::TraitDatum>;
 }
 
 impl LowerTrait for TraitDefn {
-    fn lower_trait(&self, krate_id: ir::KrateId,
-                   trait_id: ir::ItemId,
-                   env: &Env)
-                   -> Result<ir::TraitDatum> {
+    fn lower_trait(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::TraitDatum> {
         let binders = env.in_binders(self.all_parameters(), |env| {
             let trait_ref = ir::TraitRef {
                 trait_id: trait_id,
@@ -777,10 +668,7 @@ impl LowerTrait for TraitDefn {
             })
         })?;
 
-        Ok(ir::TraitDatum {
-            krate_id: krate_id,
-            binders: binders,
-        })
+        Ok(ir::TraitDatum { binders: binders })
     }
 }
 
@@ -803,9 +691,7 @@ impl LowerGoal<ir::Program> for Goal {
                    })
                    .collect();
 
-        let default_krate_id = ir::KrateId { name: intern(DEFAULT_KRATE_NAME) };
         let env = Env {
-            krate: ir::Krate::Id(default_krate_id),
             type_ids: &program.type_ids,
             type_kinds: &program.type_kinds,
             associated_ty_infos: &associated_ty_infos,
@@ -829,11 +715,6 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
             Goal::Leaf(ref wc) =>
                 Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
-            Goal::Krate(ref k, ref g) => {
-                let k = k.lower(env)?;
-                let krate_env = env.in_krate(k);
-                Ok(g.lower(&krate_env)?)
-            }
         }
     }
 }
@@ -873,9 +754,6 @@ impl ir::Program {
 
         program_clauses.extend(self.struct_data.values().flat_map(|d| d.to_program_clauses()));
         program_clauses.extend(self.trait_data.values().flat_map(|d| d.to_program_clauses()));
-        program_clauses.extend(self.associated_ty_data.iter().flat_map(|(&id, d)| {
-            d.to_program_clauses(id)
-        }));
 
         for datum in self.impl_data.values() {
             program_clauses.push(datum.to_program_clause());
@@ -997,8 +875,6 @@ impl<'a> ToParameter for (&'a ir::ParameterKind<()>, usize) {
                 ir::ParameterKind::Lifetime(ir::Lifetime::Var(index)),
             ir::ParameterKind::Ty(_) =>
                 ir::ParameterKind::Ty(ir::Ty::Var(index)),
-            ir::ParameterKind::Krate(_) =>
-                ir::ParameterKind::Krate(ir::Krate::Var(index)),
         }
     }
 }
@@ -1017,30 +893,11 @@ impl ir::StructDatum {
     fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
         // Given:
         //
-        //    crate A {
-        //        struct Foo<T: Eq> { ... }
-        //    }
+        //    struct Foo<T: Eq> { ... }
         //
-        // we generate the following clauses:
+        // we generate the following clause:
         //
-        //    for<?T> LocalTo(Foo<?T>, A).
         //    for<?T> WF(Foo<?T>) :- (?T: Eq).
-        //
-        // if the struct were fundamental, we might
-        // generate different `LocalTo` clauses
-
-        let local_to = ir::ProgramClause {
-            implication: self.binders.map_ref(|bound_datum| {
-                ir::ProgramClauseImplication {
-                    consequence: ir::LocalTo {
-                        value: bound_datum.self_ty.clone().cast(),
-                        krate: ir::Krate::Id(self.krate_id),
-                    }.cast(),
-
-                    conditions: vec![]
-                }
-            })
-        };
 
         let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound_datum| {
@@ -1055,7 +912,7 @@ impl ir::StructDatum {
             })
         };
 
-        vec![local_to, wf]
+        vec![wf]
     }
 }
 
@@ -1063,29 +920,16 @@ impl ir::TraitDatum {
     fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
         // Given:
         //
-        //    crate A {
-        //        trait Ord<T> where Self: Eq<T> { ... }
-        //    }
+        //    trait Ord<T> where Self: Eq<T> { ... }
         //
-        // we generate the following clauses:
+        // we generate the following clause:
         //
-        //    for<?Self, ?T> WF(?Self: Foo<?T>) :-
+        //    for<?Self, ?T> WF(?Self: Ord<?T>) :-
         //        // types are well-formed:
         //        WF(?Self),
         //        WF(?T),
         //        // where clauses declared on the trait are met:
         //        (?Self: Eq<?T>),
-        //
-        //    for<?Self, ?T> ?Self: !Foo<?T> in A :-
-        //        (?Self: Eq<?T>),
-        //
-        // we don't currently generate `LocalTo` clauses, but if we
-        // did it would look something like this (the problem is that
-        // we don't allow quantification over a crate-id like ?C):
-        //
-        //    for<?Self, ?T> LocalTo(?Self: Foo<?T>, A).
-        //    for<?Self, ?T, ?C> LocalTo(?Self: Foo<?T>, ?C) :- LocalTo(?Self, ?C).
-        //    for<?Self, ?T, ?C> LocalTo(?Self: Foo<?T>, ?C) :- LocalTo(?T, ?C).
 
         let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
@@ -1109,105 +953,5 @@ impl ir::TraitDatum {
         };
 
         vec![wf]
-    }
-}
-
-impl ir::AssociatedTyDatum {
-    fn to_program_clauses(&self, id: ir::ItemId) -> Vec<ir::ProgramClause> {
-        /// Given:
-        ///
-        /// ```notrust
-        /// trait Iterable {
-        ///     type IntoIter<'a> where T: 'a = Iter<'a, T>;
-        /// }
-        /// ```
-        ///
-        /// generate:
-        ///
-        /// ```
-        /// forall<'a, Self, U, V, crate C> {
-        ///     (Vec<T>: Iterable<IntoIter<'a> != U> in C) :-
-        ///         (Vec<T>: Iterable<IntoIter<'a> = V>),
-        ///         (U != V in C)
-        /// }
-        /// ```
-
-        /// forall<'a, Self, U, V>
-        ///
-        /// We put the `U, V` binders at the end of the list so that
-        /// the indices of references to `'a` and `T` are not
-        /// disturbed.
-        let neg_clause = {
-            let tuv_binders: Vec<_> =
-                self.parameter_kinds
-                    .anonymize()
-                    .into_iter()
-                    .chain(vec![ir::ParameterKind::Ty(()),
-                                ir::ParameterKind::Ty(()),
-                                ir::ParameterKind::Krate(())])
-                    .collect();
-
-            let u = ir::Ty::Var(self.parameter_kinds.len());
-            let v = ir::Ty::Var(self.parameter_kinds.len() + 1);
-            let c = ir::Krate::Var(self.parameter_kinds.len() + 2);
-
-            // a list of refs to `'a` and `Self`
-            let parameters: Vec<_> = self.parameter_kinds
-                                         .anonymize()
-                                         .iter()
-                                         .zip(0..)
-                                         .map(|p| p.to_parameter())
-                                         .collect();
-
-            /// (Vec<T>: Iterable<IntoIter<'a> != U>) :-
-            let proj_not_eq_u = {
-                // Construct normalization predicate
-                ir::Not {
-                    predicate: ir::Normalize {
-                        projection: ir::ProjectionTy {
-                            associated_ty_id: id,
-                            parameters: parameters.clone(),
-                        },
-                        ty: u.clone(),
-                    },
-                    krate: c,
-                }
-            };
-
-            /// (Vec<T>: Iterable<IntoIter<'a> = V>) :-
-            let proj_eq_v = {
-                // Construct normalization predicate
-                ir::Normalize {
-                    projection: ir::ProjectionTy {
-                        associated_ty_id: id,
-                        parameters: parameters,
-                    },
-                    ty: v.clone(),
-                }
-            };
-
-            /// `U != V`
-            let u_not_eq_v = {
-                ir::Not {
-                    predicate: ir::Unify {
-                        a: u.clone(),
-                        b: v.clone(),
-                    },
-                    krate: c,
-                }
-            };
-
-            ir::ProgramClause {
-                implication: ir::Binders {
-                    binders: tuv_binders,
-                    value: ir::ProgramClauseImplication {
-                        consequence: proj_not_eq_u.cast(),
-                        conditions: vec![proj_eq_v.cast(), u_not_eq_v.cast()]
-                    }
-                }
-            }
-        };
-
-        vec![neg_clause]
     }
 }

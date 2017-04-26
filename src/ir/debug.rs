@@ -35,12 +35,11 @@ impl Debug for TypeName {
     }
 }
 
-impl<T: Debug, L: Debug, C: Debug> Debug for ParameterKind<T, L, C> {
+impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             ParameterKind::Ty(ref n) => write!(fmt, "{:?}", n),
             ParameterKind::Lifetime(ref n) => write!(fmt, "{:?}", n),
-            ParameterKind::Krate(ref n) => write!(fmt, "{:?}", n),
         }
     }
 }
@@ -86,12 +85,6 @@ impl Debug for TraitRef {
                self.parameters[0],
                self.trait_id,
                Angle(&self.parameters[1..]))
-    }
-}
-
-impl<T: Debug> Debug for Not<T> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "Not({:?})", self.predicate)
     }
 }
 
@@ -179,21 +172,9 @@ impl Debug for WhereClauseGoal {
                        Angle(&n.parameters[1..]))
             }
             WhereClauseGoal::UnifyTys(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::UnifyKrates(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::UnifyLifetimes(ref n) => write!(fmt, "{:?}", n),
             WhereClauseGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::TyLocalTo(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::NotUnifyTys(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::NotNormalize(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::NotImplemented(ref n) => write!(fmt, "{:?}", n),
         }
-    }
-}
-
-impl<T: Debug> Debug for LocalTo<T> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let LocalTo { ref value, ref krate } = *self;
-        write!(fmt, "LocalTo({:?}, {:?})", value, krate)
     }
 }
 
@@ -225,7 +206,6 @@ impl Debug for Goal {
                     match *binder {
                         ParameterKind::Ty(()) => write!(fmt, "type")?,
                         ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
-                        ParameterKind::Krate(()) => write!(fmt, "krate")?,
                     }
                 }
                 write!(fmt, "> {{ {:?} }}", subgoal.value)
@@ -234,12 +214,6 @@ impl Debug for Goal {
             Goal::And(ref g1, ref g2) => write!(fmt, "({:?}, {:?})", g1, g2),
             Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),
         }
-    }
-}
-
-impl Debug for KrateId {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{}", self.name)
     }
 }
 
@@ -255,7 +229,6 @@ impl<T: Debug> Debug for Binders<T> {
                 match *binder {
                     ParameterKind::Ty(()) => write!(fmt, "type")?,
                     ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
-                    ParameterKind::Krate(()) => write!(fmt, "krate")?,
                 }
             }
             write!(fmt, "> ")?;

@@ -45,12 +45,4 @@ impl Folder for Instantiator {
             Ok(Lifetime::Var(depth + binders - self.vars.len())) // see comment above
         }
     }
-
-    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
-        if depth < self.vars.len() {
-            Ok(self.vars[depth].as_ref().krate().unwrap().to_krate().up_shift(binders))
-        } else {
-            Ok(Krate::Var(depth + binders - self.vars.len())) // see comment above
-        }
-    }
 }

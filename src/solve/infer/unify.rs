@@ -212,46 +212,6 @@ impl<'t> Unifier<'t> {
         Ok(())
     }
 
-    fn unify_krate_krate(&mut self, a: &Krate, b: &Krate) -> Result<()> {
-        if let Some(n_a) = self.table.normalize_krate(a) {
-            return self.unify_krate_krate(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_krate(b) {
-            return self.unify_krate_krate(a, &n_b);
-        }
-
-        debug_heading!("unify_krate_krate({:?}, {:?})", a, b);
-
-        let result = match (a, b) {
-            (&Krate::Var(depth_a), &Krate::Var(depth_b)) => {
-                let var_a = KrateInferenceVariable::from_depth(depth_a);
-                let var_b = KrateInferenceVariable::from_depth(depth_b);
-                self.table.krate_unify.unify_var_var(var_a, var_b)
-            }
-
-            (&Krate::Var(depth), &Krate::Id(id)) |
-            (&Krate::Id(id), &Krate::Var(depth)) => {
-                let var = KrateInferenceVariable::from_depth(depth);
-                self.table.krate_unify.unify_var_value(var, InferenceValue::Bound(Krate::Id(id)))
-            }
-
-            (&Krate::Id(a_id), &Krate::Id(b_id)) => {
-                if a_id == b_id {
-                    Ok(())
-                } else {
-                    bail!("krate `{:?}` not equal to `{:?}`", a_id, b_id)
-                }
-            }
-        };
-
-        match result {
-            Ok(()) => Ok(()),
-            Err((value_a, value_b)) => {
-                debug!("error: {:?} vs {:?}", value_a, value_b);
-                bail!("cannot unify `{:?}` with `{:?}`", value_a, value_b)
-            }
-        }
-    }
-
     fn unify_lifetime_lifetime(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
         if let Some(n_a) = self.table.normalize_lifetime(a) {
             return self.unify_lifetime_lifetime(&n_a, b);
@@ -309,10 +269,6 @@ impl<'t> Zipper for Unifier<'t> {
 
     fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
         self.unify_lifetime_lifetime(a, b)
-    }
-
-    fn zip_krates(&mut self, a: &Krate, b: &Krate) -> Result<()> {
-        self.unify_krate_krate(a, b)
     }
 }
 
@@ -373,7 +329,6 @@ impl<'u, 't> OccursCheck<'u, 't> {
         match *arg {
             ParameterKind::Ty(ref t) => Ok(ParameterKind::Ty(self.check_ty(t)?)),
             ParameterKind::Lifetime(ref lt) => Ok(ParameterKind::Lifetime(self.check_lifetime(lt)?)),
-            ParameterKind::Krate(_) => panic!("krate used as parameter to a type"),
         }
     }
 
