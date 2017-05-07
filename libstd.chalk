@@ -5,18 +5,38 @@
 //     ?- load libstd.chalk
 //     ?- Vec<Box<i32>>: Clone
 
+trait AsRef<T> { }
 trait Clone { }
 trait Copy where Self: Clone { }
+trait Sized { }
 
 struct i32 { }
 impl Copy for i32 { }
 impl Clone for i32 { }
+impl Sized for i32 { }
+
+struct u32 { }
+impl Copy for u32 { }
+impl Clone for u32 { }
+impl Sized for u32 { }
 
 struct Rc<T> { }
 impl<T> Clone for Rc<T> { }
+impl<T> Sized for Rc<T> { }
 
 struct Box<T> { }
+impl<T> AsRef<T> for Box<T> where T: Sized { }
 impl<T> Clone for Box<T> where T: Clone { }
+impl<T> Sized for Box<T> { }
 
-struct Vec<T> { }
-impl<T> Clone for Vec<T> where T: Clone { }
+// Meant to be [T]
+struct Slice<T> where T: Sized { }
+impl<T> Sized for Slice<T> { }
+impl<T> AsRef<Slice<T>> for Slice<T> where T: Sized { }
+
+struct Vec<T> where T: Sized { }
+impl<T> AsRef<Slice<T>> for Vec<T> where T: Sized { }
+impl<T> AsRef<Vec<T>> for Vec<T> where T: Sized { }
+impl<T> Clone for Vec<T> where T: Clone, T: Sized { }
+impl<T> Sized for Vec<T> where T: Sized { }
+
