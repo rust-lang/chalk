@@ -1,3 +1,10 @@
+// Some basic examples you can use with the repl. Try this
+// (you type the parts that go after the `?-`):
+//
+//     cargo run
+//     ?- load libstd.chalk
+//     ?- Vec<Box<i32>>: Clone
+
 trait Clone { }
 trait Copy where Self: Clone { }
 
