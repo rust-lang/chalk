@@ -1,0 +1,15 @@
+trait Clone { }
+trait Copy where Self: Clone { }
+
+struct i32 { }
+impl Copy for i32 { }
+impl Clone for i32 { }
+
+struct Rc<T> { }
+impl<T> Clone for Rc<T> { }
+
+struct Box<T> { }
+impl<T> Clone for Box<T> where T: Clone { }
+
+struct Vec<T> { }
+impl<T> Clone for Vec<T> where T: Clone { }
