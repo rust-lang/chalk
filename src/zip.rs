@@ -5,7 +5,6 @@ use std::sync::Arc;
 pub trait Zipper {
     fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()>;
     fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()>;
-    fn zip_krates(&mut self, a: &Krate, b: &Krate) -> Result<()>;
 }
 
 impl<'f, Z: Zipper> Zipper for &'f mut Z {
@@ -15,10 +14,6 @@ impl<'f, Z: Zipper> Zipper for &'f mut Z {
 
     fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
         (**self).zip_lifetimes(a, b)
-    }
-
-    fn zip_krates(&mut self, a: &Krate, b: &Krate) -> Result<()> {
-        (**self).zip_krates(a, b)
     }
 }
 
@@ -67,15 +62,13 @@ impl<T: Zip, U: Zip> Zip for (T, U) {
     }
 }
 
-impl<T: Zip, L: Zip, C: Zip> Zip for ParameterKind<T, L, C> {
+impl<T: Zip, L: Zip> Zip for ParameterKind<T, L> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         match (a, b) {
             (&ParameterKind::Ty(ref a), &ParameterKind::Ty(ref b)) => Zip::zip_with(zipper, a, b),
             (&ParameterKind::Lifetime(ref a), &ParameterKind::Lifetime(ref b)) => Zip::zip_with(zipper, a, b),
-            (&ParameterKind::Krate(ref a), &ParameterKind::Krate(ref b)) => Zip::zip_with(zipper, a, b),
             (&ParameterKind::Ty(_), _) |
-            (&ParameterKind::Lifetime(_), _) |
-            (&ParameterKind::Krate(_), _) => {
+            (&ParameterKind::Lifetime(_), _) => {
                 panic!("zipping things of mixed kind")
             }
         }
@@ -94,12 +87,6 @@ impl Zip for Lifetime {
     }
 }
 
-impl Zip for Krate {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        zipper.zip_krates(a, b)
-    }
-}
-
 macro_rules! eq_zip {
     ($t:ty) => {
         impl Zip for $t {
@@ -115,7 +102,6 @@ macro_rules! eq_zip {
 
 eq_zip!(ItemId);
 eq_zip!(TypeName);
-eq_zip!(KrateId);
 eq_zip!(Identifier);
 
 macro_rules! struct_zip {
@@ -138,9 +124,7 @@ struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
 struct_zip!(ApplicationTy { name, parameters });
 struct_zip!(ProjectionTy { associated_ty_id, parameters });
 struct_zip!(Normalize { projection, ty });
-struct_zip!(LocalTo[T] { value, krate } where T: Zip);
 struct_zip!(Unify[T] { a, b } where T: Zip);
-struct_zip!(Not[T] { predicate, krate } where T: Zip);
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
@@ -172,7 +156,5 @@ macro_rules! enum_zip {
 }
 
 enum_zip!(WhereClause { Implemented, Normalize });
-enum_zip!(WhereClauseGoal { Implemented, Normalize, UnifyTys, UnifyKrates, UnifyLifetimes,
-                            WellFormed, TyLocalTo, NotImplemented, NotNormalize, NotUnifyTys });
+enum_zip!(WhereClauseGoal { Implemented, Normalize, UnifyTys, UnifyLifetimes, WellFormed });
 enum_zip!(WellFormed { Ty, TraitRef });
-

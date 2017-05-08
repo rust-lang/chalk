@@ -11,14 +11,6 @@ Item: Item = {
     StructDefn => Item::StructDefn(<>),
     TraitDefn => Item::TraitDefn(<>),
     Impl => Item::Impl(<>),
-    KrateDefn => Item::KrateDefn(<>),
-};
-
-KrateDefn: KrateDefn = {
-    <name:KrateId> "{" <items:Item*> "}" => KrateDefn {
-        name: name,
-        items: items,
-    },
 };
 
 pub Goal: Box<Goal> = {
@@ -30,7 +22,6 @@ Goal1: Box<Goal> = {
     "forall" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
     "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
     "if" "(" <w:Comma<WhereClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
-    "crate" <name:Krate> "{" <g:Goal> "}" => Box::new(Goal::Krate(name, g)),
     <w:WhereClause> => Box::new(Goal::Leaf(w)),
 };
 
@@ -77,7 +68,6 @@ Impl: Impl = {
 ParameterKind: ParameterKind = {
     Id => ParameterKind::Ty(<>),
     LifetimeId => ParameterKind::Lifetime(<>),
-    KrateId => ParameterKind::Krate(<>),
 };
 
 AssocTyValue: AssocTyValue = {
@@ -103,14 +93,9 @@ Lifetime: Lifetime = {
     <n:LifetimeId> => Lifetime::Id { name: n },
 };
 
-Krate: Krate = {
-    <n:KrateId> => Krate::Id { name: n },
-};
-
 Parameter: Parameter = {
     Ty => Parameter::Ty(<>),
     Lifetime => Parameter::Lifetime(<>),
-    Krate => Parameter::Krate(<>),
 };
 
 ProjectionTy: ProjectionTy = {
@@ -138,37 +123,26 @@ WhereClauses: Vec<WhereClause> = {
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
 
-    <t:TraitRef<(":" "!")>> => WhereClause::NotImplemented { trait_ref: t },
-
     "WellFormed" "(" <t:Ty> ")" => WhereClause::TyWellFormed { ty: t },
 
     "WellFormed" "(" <t:TraitRef<":">> ")" => WhereClause::TraitRefWellFormed {
              trait_ref: t
     },
 
-    "LocalTo" "(" <t:Ty> "," <c:Krate> ")" => WhereClause::LocalTo { ty: t, krate: c },
-
-    <a:Ty> <e:Equal> <b:Ty> => WhereClause::UnifyTys { a, b, eq: e },
-
-    <a:Krate> "=" <b:Krate> => WhereClause::UnifyKrates { a, b },
+    <a:Ty> "=" <b:Ty> => WhereClause::UnifyTys { a, b },
 
     <a:Lifetime> "=" <b:Lifetime> => WhereClause::UnifyLifetimes { a, b },
 
     // `T: Foo<U = Bar>` -- a normalization
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
-        <e:Equal> <ty:Ty> ">" =>
+        "=" <ty:Ty> ">" =>
     {
         let mut args = vec![Parameter::Ty(s)];
         if let Some(a) = a { args.extend(a); }
         let trait_ref = TraitRef { trait_name: t, args: args };
         let projection = ProjectionTy { trait_ref, name, args: a2 };
-        WhereClause::ProjectionEq { projection, ty, eq: e }
+        WhereClause::ProjectionEq { projection, ty }
     }
-};
-
-Equal: bool = {
-    "=" => true,
-    "!=" => false,
 };
 
 TraitRef<S>: TraitRef = {
@@ -209,13 +183,6 @@ Id: Identifier = {
 
 LifetimeId: Identifier = {
     <l:@L> <s:r"'([:alpha:]|_)([:alnum:]|_)*"> <r:@R> => Identifier {
-        str: intern(s),
-        span: Span::new(l, r),
-    }
-};
-
-KrateId: Identifier = {
-    <l:@L> "crate" <s:r"([:alpha:]|_)([:alnum:]|_)*"> <r:@R> => Identifier {
         str: intern(s),
         span: Span::new(l, r),
     }

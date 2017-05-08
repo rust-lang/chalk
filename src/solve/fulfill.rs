@@ -111,9 +111,6 @@ impl<'s> Fulfill<'s> {
                                            name: TypeName::ForAll(new_environment.universe),
                                            parameters: vec![]
                                        })),
-
-                                   ParameterKind::Krate(()) =>
-                                       panic!("unimplemented: for-all binders with crates"),
                                }
                            })
                            .collect();

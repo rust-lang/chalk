@@ -2,7 +2,7 @@ use errors::*;
 use fold::{Fold, Folder, Shifter};
 use ir::*;
 
-use super::{InferenceTable, TyInferenceVariable, KrateInferenceVariable, LifetimeInferenceVariable,
+use super::{InferenceTable, TyInferenceVariable, LifetimeInferenceVariable,
             ParameterInferenceVariable};
 use super::var::InferenceValue;
 
@@ -63,13 +63,6 @@ impl<'q> Querifier<'q> {
                              InferenceValue::Bound(_) => panic!("free var now bound"),
                          }
                      }
-
-                     ParameterKind::Krate(c) => {
-                         match table.krate_unify.probe_value(c) {
-                             InferenceValue::Unbound(ui) => ParameterKind::Krate(ui),
-                             InferenceValue::Bound(_) => panic!("free var now bound"),
-                         }
-                     }
                  })
             .collect()
     }
@@ -124,21 +117,6 @@ impl<'q> Folder for Querifier<'q> {
                 let free_var = ParameterKind::Lifetime(self.table.lifetime_unify.find(var));
                 let position = self.add(free_var) + binders;
                 Ok(LifetimeInferenceVariable::from_depth(position).to_lifetime())
-            }
-        }
-    }
-
-    fn fold_free_krate_var(&mut self, depth: usize, binders: usize) -> Result<Krate> {
-        let var = KrateInferenceVariable::from_depth(depth);
-        match self.table.probe_krate_var(var) {
-            Some(k) => {
-                let mut folder = (self, Shifter::new(binders));
-                k.fold_with(&mut folder, 0)
-            }
-            None => {
-                let free_var = ParameterKind::Krate(self.table.krate_unify.find(var));
-                let position = self.add(free_var) + binders;
-                Ok(KrateInferenceVariable::from_depth(position).to_krate())
             }
         }
     }

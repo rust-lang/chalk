@@ -2,7 +2,6 @@ use cast::Cast;
 use errors::*;
 use solve::match_program_clause::MatchProgramClause;
 use solve::normalize::SolveNormalize;
-use solve::not_unify::SolveNotUnify;
 use solve::implemented::Implemented;
 use solve::unify::SolveUnify;
 use std::collections::HashSet;
@@ -65,20 +64,6 @@ impl Solver {
                 };
                 SolveUnify::new(self, q).solve().cast()
             }
-            WhereClauseGoal::NotUnifyTys(not_unify) => {
-                let q = Query {
-                    value: InEnvironment::new(&environment, not_unify),
-                    binders: binders,
-                };
-                SolveNotUnify::new(self, q).solve().cast()
-            }
-            WhereClauseGoal::UnifyKrates(unify) => {
-                let q = Query {
-                    value: InEnvironment::new(&environment, unify),
-                    binders: binders,
-                };
-                SolveUnify::new(self, q).solve().cast()
-            }
             WhereClauseGoal::UnifyLifetimes(unify) => {
                 let q = Query {
                     value: InEnvironment::new(&environment, unify),
@@ -86,13 +71,9 @@ impl Solver {
                 };
                 SolveUnify::new(self, q).solve().cast()
             }
-            WhereClauseGoal::NotImplemented(_) |
-            WhereClauseGoal::NotNormalize(_) |
-            WhereClauseGoal::TyLocalTo(_) |
             WhereClauseGoal::WellFormed(_) => {
-                // Currently, we don't allow `LocalTo` or `WF` types
-                // into the environment, there we just have to search
-                // for program clauses.
+                // Currently, we don't allow `WF` types into the environment,
+                // there we just have to search for program clauses.
                 let program = self.program.clone();
                 let q = Query {
                     value: InEnvironment::new(&environment, wc),

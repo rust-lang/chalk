@@ -190,21 +190,9 @@ pub struct ItemId {
     pub index: usize
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct KrateId {
-    pub name: Identifier
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub enum Krate {
-    Var(usize),
-    Id(KrateId),
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {
     pub sort: TypeSort,
-    pub krate_id: KrateId,
     pub name: Identifier,
     pub binders: Binders<()>,
 }
@@ -217,7 +205,6 @@ pub enum TypeSort {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum {
-    pub krate_id: KrateId,
     pub binders: Binders<ImplDatumBound>,
 }
 
@@ -230,7 +217,6 @@ pub struct ImplDatumBound {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatum {
-    pub krate_id: KrateId,
     pub binders: Binders<StructDatumBound>,
 }
 
@@ -242,7 +228,6 @@ pub struct StructDatumBound {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum {
-    pub krate_id: KrateId,
     pub binders: Binders<TraitDatumBound>,
 }
 
@@ -319,10 +304,9 @@ pub struct ApplicationTy {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum ParameterKind<T, L = T, C = T> {
+pub enum ParameterKind<T, L = T> {
     Ty(T),
     Lifetime(L),
-    Krate(C),
 }
 
 impl<T> ParameterKind<T> {
@@ -332,17 +316,15 @@ impl<T> ParameterKind<T> {
         match self {
             ParameterKind::Ty(t) => ParameterKind::Ty(op(t)),
             ParameterKind::Lifetime(t) => ParameterKind::Lifetime(op(t)),
-            ParameterKind::Krate(t) => ParameterKind::Krate(op(t)),
         }
     }
 }
 
-impl<T, L, C> ParameterKind<T, L, C> {
-    pub fn as_ref(&self) -> ParameterKind<&T, &L, &C> {
+impl<T, L> ParameterKind<T, L> {
+    pub fn as_ref(&self) -> ParameterKind<&T, &L> {
         match *self {
             ParameterKind::Ty(ref t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(ref l) => ParameterKind::Lifetime(l),
-            ParameterKind::Krate(ref c) => ParameterKind::Krate(c),
         }
     }
 
@@ -359,26 +341,18 @@ impl<T, L, C> ParameterKind<T, L, C> {
             _ => None,
         }
     }
-
-    pub fn krate(self) -> Option<C> {
-        match self {
-            ParameterKind::Krate(t) => Some(t),
-            _ => None,
-        }
-    }
 }
 
-impl<T, L, C> ast::Kinded for ParameterKind<T, L, C> {
+impl<T, L> ast::Kinded for ParameterKind<T, L> {
     fn kind(&self) -> ast::Kind {
         match *self {
             ParameterKind::Ty(_) => ast::Kind::Ty,
             ParameterKind::Lifetime(_) => ast::Kind::Lifetime,
-            ParameterKind::Krate(_) => ast::Kind::Krate,
         }
     }
 }
 
-pub type Parameter = ParameterKind<Ty, Lifetime, Krate>;
+pub type Parameter = ParameterKind<Ty, Lifetime>;
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ProjectionTy {
@@ -403,14 +377,8 @@ pub enum WhereClauseGoal {
     Implemented(TraitRef),
     Normalize(Normalize),
     UnifyTys(Unify<Ty>),
-    UnifyKrates(Unify<Krate>),
     UnifyLifetimes(Unify<Lifetime>),
     WellFormed(WellFormed),
-    TyLocalTo(LocalTo<Ty>),
-
-    NotImplemented(Not<TraitRef>),
-    NotNormalize(Not<Normalize>),
-    NotUnifyTys(Not<Unify<Ty>>),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -420,21 +388,9 @@ pub enum WellFormed {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct LocalTo<F> {
-    pub value: F,
-    pub krate: Krate,
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Unify<T> {
     pub a: T,
     pub b: T,
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Not<T> {
-    pub predicate: T,
-    pub krate: Krate,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -542,4 +498,3 @@ mod tls;
 
 pub use self::tls::set_current_program;
 pub use self::tls::with_current_program;
-

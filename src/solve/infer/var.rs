@@ -41,42 +41,6 @@ impl UnifyKey for TyInferenceVariable {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub struct KrateInferenceVariable {
-    index: u32,
-}
-
-impl KrateInferenceVariable {
-    pub fn from_depth(depth: usize) -> KrateInferenceVariable {
-        assert!(depth < u32::MAX as usize);
-        KrateInferenceVariable { index: depth as u32 }
-    }
-
-    pub fn from_u32(depth: u32) -> KrateInferenceVariable {
-        KrateInferenceVariable { index: depth }
-    }
-
-    pub fn to_krate(&self) -> Krate {
-        Krate::Var(self.index as usize)
-    }
-}
-
-impl UnifyKey for KrateInferenceVariable {
-    type Value = InferenceValue<Krate>;
-
-    fn index(&self) -> u32 {
-        self.index
-    }
-
-    fn from_index(u: u32) -> Self {
-        KrateInferenceVariable { index: u }
-    }
-
-    fn tag() -> &'static str {
-        "KrateInferenceVariable"
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LifetimeInferenceVariable {
     index: u32,
 }
@@ -156,11 +120,5 @@ impl<V: Clone + Debug> UnifyValue for InferenceValue<V> {
 impl fmt::Debug for TyInferenceVariable {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(fmt, "?{}", self.index)
-    }
-}
-
-impl fmt::Debug for KrateInferenceVariable {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "crate ?{}", self.index)
     }
 }
