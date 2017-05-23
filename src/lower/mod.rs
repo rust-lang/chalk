@@ -172,7 +172,7 @@ impl LowerProgram for Program {
                             trait_id: item_id,
                             name: defn.name.str,
                             parameter_kinds: parameter_kinds,
-                            where_clauses: vec![ir::WhereClause::Implemented(trait_ref)]
+                            where_clauses: vec![ir::DomainGoal::Implemented(trait_ref)]
                         });
                     }
                 }
@@ -295,7 +295,7 @@ impl LowerParameterKind for ParameterKind {
 trait LowerWhereClauses {
     fn where_clauses(&self) -> &[WhereClause];
 
-    fn lower_where_clauses(&self, env: &Env) -> Result<Vec<ir::WhereClause>> {
+    fn lower_where_clauses(&self, env: &Env) -> Result<Vec<ir::DomainGoal>> {
         self.where_clauses().lower(env)
     }
 }
@@ -347,11 +347,11 @@ impl LowerWhereClauses for Impl {
 }
 
 trait LowerWhereClauseVec {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::WhereClause>>;
+    fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>>;
 }
 
 impl LowerWhereClauseVec for [WhereClause] {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::WhereClause>> {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>> {
         self.iter()
             .map(|wc| wc.lower(env))
             .collect()
@@ -364,14 +364,14 @@ trait LowerWhereClause<T> {
 
 /// Lowers a where-clause in the context of a clause; this is limited
 /// to the kinds of where-clauses users can actually type in Rust.
-impl LowerWhereClause<ir::WhereClause> for WhereClause {
-    fn lower(&self, env: &Env) -> Result<ir::WhereClause> {
+impl LowerWhereClause<ir::DomainGoal> for WhereClause {
+    fn lower(&self, env: &Env) -> Result<ir::DomainGoal> {
         Ok(match *self {
             WhereClause::Implemented { ref trait_ref } => {
-                ir::WhereClause::Implemented(trait_ref.lower(env)?)
+                ir::DomainGoal::Implemented(trait_ref.lower(env)?)
             }
             WhereClause::ProjectionEq { ref projection, ref ty  } => {
-                ir::WhereClause::Normalize(ir::Normalize {
+                ir::DomainGoal::Normalize(ir::Normalize {
                     projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
                 })
@@ -389,12 +389,12 @@ impl LowerWhereClause<ir::WhereClause> for WhereClause {
 /// Lowers a where-clause in the context of a goal; this is richer in
 /// terms of the legal sorts of where-clauses that can appear, because
 /// it includes all the sorts of things that the compiler must verify.
-impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
-    fn lower(&self, env: &Env) -> Result<ir::WhereClauseGoal> {
+impl LowerWhereClause<ir::LeafGoal> for WhereClause {
+    fn lower(&self, env: &Env) -> Result<ir::LeafGoal> {
         Ok(match *self {
             WhereClause::Implemented { .. } |
             WhereClause::ProjectionEq { .. } => {
-                let wc: ir::WhereClause = self.lower(env)?;
+                let wc: ir::DomainGoal = self.lower(env)?;
                 wc.cast()
             }
             WhereClause::TyWellFormed { ref ty } => {
@@ -404,15 +404,15 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
                 ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
             }
             WhereClause::UnifyTys { ref a, ref b} => {
-                ir::Unify {
-                    a: a.lower(env)?,
-                    b: b.lower(env)?,
+                ir::EqGoal {
+                    a: ir::ParameterKind::Ty(a.lower(env)?),
+                    b: ir::ParameterKind::Ty(b.lower(env)?),
                 }.cast()
             }
             WhereClause::UnifyLifetimes { ref a, ref b } => {
-                ir::Unify {
-                    a: a.lower(env)?,
-                    b: b.lower(env)?,
+                ir::EqGoal {
+                    a: ir::ParameterKind::Lifetime(a.lower(env)?),
+                    b: ir::ParameterKind::Lifetime(b.lower(env)?)
                 }.cast()
             }
         })

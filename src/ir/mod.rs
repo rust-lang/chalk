@@ -2,7 +2,8 @@ use cast::Cast;
 use chalk_parse::ast;
 use fold::Subst;
 use lalrpop_intern::InternedString;
-use std::collections::{HashSet, HashMap};
+use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
+use std::collections::{HashSet, HashMap, BTreeMap};
 use std::sync::Arc;
 
 pub type Identifier = InternedString;
@@ -29,6 +30,7 @@ pub struct Program {
 }
 
 impl Program {
+    /// Used for debugging output
     pub fn split_projection<'p>(&self, projection: &'p ProjectionTy)
                             -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
         let ProjectionTy { associated_ty_id, ref parameters } = *projection;
@@ -43,10 +45,10 @@ impl Program {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProgramEnvironment {
-    /// For each trait:
+    /// For each trait (used for debugging):
     pub trait_data: HashMap<ItemId, TraitDatum>,
 
-    /// For each trait:
+    /// For each trait (used for debugging):
     pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
 
     /// Compiled forms of the above:
@@ -54,6 +56,7 @@ pub struct ProgramEnvironment {
 }
 
 impl ProgramEnvironment {
+    /// Used for debugging output
     pub fn split_projection<'p>(&self, projection: &'p ProjectionTy)
                             -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
         let ProjectionTy { associated_ty_id, ref parameters } = *projection;
@@ -67,9 +70,11 @@ impl ProgramEnvironment {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// The set of assumptions we've made so far, and the current number of
+/// universal (forall) quantifiers we're within.
 pub struct Environment {
     pub universe: UniverseIndex,
-    pub clauses: Vec<WhereClause>,
+    pub clauses: Vec<DomainGoal>,
 }
 
 impl Environment {
@@ -78,7 +83,7 @@ impl Environment {
     }
 
     pub fn add_clauses<I>(&self, clauses: I) -> Arc<Environment>
-        where I: IntoIterator<Item = WhereClause>
+        where I: IntoIterator<Item = DomainGoal>
     {
         let mut env = self.clone();
         env.clauses.extend(clauses);
@@ -91,14 +96,16 @@ impl Environment {
         Arc::new(env)
     }
 
-    pub fn elaborated_clauses(&self, program: &ProgramEnvironment) -> impl Iterator<Item = WhereClause> {
+    /// Generate the full set of clauses that are "syntactically implied" by the
+    /// clauses in this environment.
+    pub fn elaborated_clauses(&self, program: &ProgramEnvironment) -> impl Iterator<Item = DomainGoal> {
         let mut set = HashSet::new();
         set.extend(self.clauses.iter().cloned());
 
         let mut stack: Vec<_> = set.iter().cloned().collect();
 
         while let Some(clause) = stack.pop() {
-            let mut push_clause = |clause: WhereClause| {
+            let mut push_clause = |clause: DomainGoal| {
                 if !set.contains(&clause) {
                     set.insert(clause.clone());
                     stack.push(clause);
@@ -106,7 +113,7 @@ impl Environment {
             };
 
             match clause {
-                WhereClause::Implemented(ref trait_ref) => {
+                DomainGoal::Implemented(ref trait_ref) => {
                     // trait Foo<A> where Self: Bar<A> { }
                     // T: Foo<U>
                     // ----------------------------------------------------------
@@ -118,7 +125,7 @@ impl Environment {
                         push_clause(where_clause);
                     }
                 }
-                WhereClause::Normalize(Normalize { ref projection, ty: _ }) => {
+                DomainGoal::Normalize(Normalize { ref projection, ty: _ }) => {
                     // <T as Trait<U>>::Foo ===> V
                     // ----------------------------------------------------------
                     // T: Trait<U>
@@ -130,6 +137,7 @@ impl Environment {
                     };
                     push_clause(trait_ref.cast());
                 }
+                _ => {}
             }
         }
 
@@ -211,7 +219,7 @@ pub struct ImplDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
     pub trait_ref: TraitRef,
-    pub where_clauses: Vec<WhereClause>,
+    pub where_clauses: Vec<DomainGoal>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
 }
 
@@ -223,7 +231,7 @@ pub struct StructDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
     pub self_ty: ApplicationTy,
-    pub where_clauses: Vec<WhereClause>,
+    pub where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -234,7 +242,7 @@ pub struct TraitDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
     pub trait_ref: TraitRef,
-    pub where_clauses: Vec<WhereClause>,
+    pub where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -250,7 +258,7 @@ pub struct AssociatedTyDatum {
     pub parameter_kinds: Vec<ParameterKind<Identifier>>,
 
     /// Where clauses that must hold for the projection be well-formed.
-    pub where_clauses: Vec<WhereClause>,
+    pub where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -268,7 +276,7 @@ pub struct AssociatedTyValueBound {
 
     /// Where-clauses that must hold for projection to be valid. The
     /// WC in `type Foo<'a> = X where WC`.
-    pub where_clauses: Vec<WhereClause>,
+    pub where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -367,30 +375,50 @@ pub struct TraitRef {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum WhereClause {
+/// A "domain goal" is a goal that is directly about Rust, rather than a pure
+/// logical statement. As much as possible, the Chalk solver should avoid
+/// decomposing this enum, and instead treat its values opaquely.
+pub enum DomainGoal {
     Implemented(TraitRef),
     Normalize(Normalize),
+    WellFormed(WellFormed),
+}
+
+impl DomainGoal {
+    /// Lift a goal to a corresponding program clause (with a trivial
+    /// antecedent).
+    pub fn into_program_clause(self) -> ProgramClause {
+        ProgramClause {
+            implication: Binders {
+                value: ProgramClauseImplication {
+                    consequence: self,
+                    conditions: vec![],
+                },
+                binders: vec![],
+            }
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum WhereClauseGoal {
-    Implemented(TraitRef),
-    Normalize(Normalize),
-    UnifyTys(Unify<Ty>),
-    UnifyLifetimes(Unify<Lifetime>),
-    WellFormed(WellFormed),
+/// A goal that does not involve any logical connectives. Equality is treated
+/// specially by the logic (as with most first-order logics), since it interacts
+/// with unification etc.
+pub enum LeafGoal {
+    EqGoal(EqGoal),
+    DomainGoal(DomainGoal),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct EqGoal {
+    pub a: Parameter,
+    pub b: Parameter,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum WellFormed {
     Ty(Ty),
     TraitRef(TraitRef),
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Unify<T> {
-    pub a: T,
-    pub b: T,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -404,8 +432,8 @@ pub struct Normalize {
 /// variable with depth `i < N` refers to the value at
 /// `self.binders[i]`. Variables with depth `>= N` are free.
 ///
-/// (IOW, we use deBruijn indices, where binders are introduced in
-/// reverse order of `self.binders`.)
+/// (IOW, we use deBruijn indices, where binders are introduced in reverse order
+/// of `self.binders`.)
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Binders<T> {
     pub binders: Vec<ParameterKind<()>>,
@@ -430,57 +458,68 @@ impl<T> Binders<T> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProgramClause {
-    pub implication: Binders<ProgramClauseImplication>
+    pub implication: Binders<ProgramClauseImplication>,
 }
 
 /// Represents one clause of the form `consequence :- conditions`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProgramClauseImplication {
-    pub consequence: WhereClauseGoal,
+    pub consequence: DomainGoal,
     pub conditions: Vec<Goal>,
 }
 
-/// Wraps a "canonicalized query". Queries are canonicalized as follows:
+/// Wraps a "canonicalized item". Items are canonicalized as follows:
 ///
-/// - All unresolved existential variables are "renumbered" according
-///   to their first appearance; the kind/universe of the variable is
-///   recorded in the `binders` field.
+/// All unresolved existential variables are "renumbered" according to their
+/// first appearance; the kind/universe of the variable is recorded in the
+/// `binders` field.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Query<T> {
+pub struct Canonical<T> {
     pub value: T,
     pub binders: Vec<ParameterKind<UniverseIndex>>,
 }
 
-impl<T> Query<T> {
-    pub fn map<OP, U>(self, op: OP) -> Query<U>
-        where OP: FnOnce(T) -> U
-    {
-        Query { value: op(self.value), binders: self.binders }
+impl Canonical<InEnvironment<LeafGoal>> {
+    pub fn into_reduced_goal(self) -> FullyReducedGoal {
+        let Canonical { value: InEnvironment { goal, environment }, binders } = self;
+        match goal {
+            LeafGoal::EqGoal(goal) => {
+                let canonical = Canonical { value: InEnvironment { goal, environment }, binders };
+                FullyReducedGoal::EqGoal(canonical)
+            }
+            LeafGoal::DomainGoal(goal) => {
+                let canonical = Canonical { value: InEnvironment { goal, environment }, binders };
+                FullyReducedGoal::DomainGoal(canonical)
+            }
+        }
     }
 }
 
+/// A goal that has been fully broken down into leaf form, and canonicalized
+/// with an environment. These are the goals we do "real work" on.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Constrained<T> {
-    pub value: T,
-    pub constraints: Vec<InEnvironment<Constraint>>,
+pub enum FullyReducedGoal {
+    EqGoal(Canonical<InEnvironment<EqGoal>>),
+    DomainGoal(Canonical<InEnvironment<DomainGoal>>),
 }
 
-impl<T> Constrained<T> {
-    pub fn map<OP, U>(self, op: OP) -> Constrained<U>
+impl<T> Canonical<T> {
+    pub fn map<OP, U>(self, op: OP) -> Canonical<U>
         where OP: FnOnce(T) -> U
     {
-        Constrained { value: op(self.value), constraints: self.constraints }
+        Canonical { value: op(self.value), binders: self.binders }
     }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum Goal {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
     Quantified(QuantifierKind, Binders<Box<Goal>>),
-    Implies(Vec<WhereClause>, Box<Goal>),
+    Implies(Vec<DomainGoal>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
-    Leaf(WhereClauseGoal),
+    Leaf(LeafGoal),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -489,8 +528,49 @@ pub enum QuantifierKind {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// A constraint on lifetimes.
+///
+/// When we search for solutions within the trait system, we essentially ignore
+/// lifetime constraints, instead gathering them up to return with our solution
+/// for later checking. This allows for decoupling between type and region
+/// checking in the compiler.
 pub enum Constraint {
     LifetimeEq(Lifetime, Lifetime),
+}
+
+/// A mapping of inference variables to instantiations thereof.
+// Uses BTreeMap for extracting in order (mostly for debugging/testing)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Substitution {
+    pub tys: BTreeMap<TyInferenceVariable, Ty>,
+    pub lifetimes: BTreeMap<LifetimeInferenceVariable, Lifetime>,
+}
+
+impl Substitution {
+    /// Construct an identity substitution given a set of binders
+    pub fn from_binders(binders: &[ParameterKind<UniverseIndex>]) -> Self {
+        let mut tys = BTreeMap::new();
+        let mut lifetimes = BTreeMap::new();
+
+        for (i, kind) in binders.iter().enumerate() {
+            match *kind {
+                ParameterKind::Ty(_) => {
+                    tys.insert(TyInferenceVariable::from_depth(i), Ty::Var(i));
+                }
+                ParameterKind::Lifetime(_) => {
+                    lifetimes.insert(LifetimeInferenceVariable::from_depth(i), Lifetime::Var(i));
+                }
+            }
+        }
+
+        Substitution { tys, lifetimes }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ConstrainedSubst {
+    pub subst: Substitution,
+    pub constraints: Vec<InEnvironment<Constraint>>,
 }
 
 pub mod debug;

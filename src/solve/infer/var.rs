@@ -4,7 +4,7 @@ use std::cmp::min;
 use std::fmt::{self, Debug};
 use std::u32;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TyInferenceVariable {
     index: u32,
 }
@@ -40,7 +40,7 @@ impl UnifyKey for TyInferenceVariable {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LifetimeInferenceVariable {
     index: u32,
 }

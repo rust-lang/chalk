@@ -1,18 +1,28 @@
+use super::*;
 use errors::*;
 use fold::Fold;
-use ir::*;
-use solve::Successful;
 use solve::infer::{InferenceTable, UnificationResult, ParameterInferenceVariable};
+use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
 use solve::solver::Solver;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
 use zip::Zip;
 
+/// A Fulfill is where we actually break down complex goals, instantiate
+/// variables, and perform inference. It's highly stateful. It's generally used
+/// in Chalk to try to solve a goal, and then package up what was learned in a
+/// stateless, canonical way.
+///
+/// In rustc, you can think of there being an outermost Fulfill that's used when
+/// type checking each function body, etc. There, the state reflects the state
+/// of type inference in general. But when solving trait constraints, *fresh*
+/// Fulfill instances will be created to solve canonicalized, free-standing
+/// goals, and transport what was learned back to the outer context.
 pub struct Fulfill<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
-    obligations: Vec<InEnvironment<WhereClauseGoal>>,
+    obligations: Vec<InEnvironment<LeafGoal>>,
     constraints: HashSet<InEnvironment<Constraint>>,
 }
 
@@ -22,12 +32,8 @@ impl<'s> Fulfill<'s> {
             solver,
             infer: InferenceTable::new(),
             obligations: vec![],
-            constraints: HashSet::new(),
+            constraints: HashSet::new()
         }
-    }
-
-    pub fn program(&self) -> Arc<ProgramEnvironment> {
-        self.solver.program.clone()
     }
 
     /// Wraps `InferenceTable::instantiate`
@@ -44,9 +50,9 @@ impl<'s> Fulfill<'s> {
     /// clause like `forall X, 'Y. P => Q`. Here the `binders`
     /// argument is referring to `X, 'Y`.
     pub fn instantiate_in<U, T>(&mut self,
-                                universe: UniverseIndex,
-                                binders: U,
-                                arg: &T) -> T::Result
+                            universe: UniverseIndex,
+                            binders: U,
+                            arg: &T) -> T::Result
         where T: Fold,
               U: IntoIterator<Item = ParameterKind<()>>
     {
@@ -55,9 +61,8 @@ impl<'s> Fulfill<'s> {
 
     /// Unifies `a` and `b` in the given environment.
     ///
-    /// Wraps `InferenceTable::unify`; any resulting normalzations are
-    /// added into our list of pending obligations with the given
-    /// environment.
+    /// Wraps `InferenceTable::unify`; any resulting normalzations are added
+    /// into our list of pending obligations with the given environment.
     pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
         where T: ?Sized + Zip + Debug
     {
@@ -66,33 +71,13 @@ impl<'s> Fulfill<'s> {
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
         self.constraints.extend(constraints);
-        self.extend(goals);
+        self.obligations.extend(goals);
         Ok(())
     }
 
-    /// Wraps `InferenceTable::new_parameter_variable`
-    pub fn new_parameter_variable(&mut self, ui: ParameterKind<UniverseIndex>)
-                                  -> ParameterInferenceVariable {
-        self.infer.new_parameter_variable(ui)
-    }
-
-    /// Adds the given where-clauses to the internal list of
-    /// obligations that must be solved.
-    pub fn extend<WC>(&mut self, wc: WC)
-        where WC: IntoIterator<Item=InEnvironment<WhereClauseGoal>>
-    {
-        self.obligations.extend(wc);
-    }
-
-    /// Return current list of pending obligations; used for unit testing primarily
-    pub fn pending_obligations(&self) -> &[InEnvironment<WhereClauseGoal>] {
-        &self.obligations
-    }
-
-    /// Create obligations for the given goal in the given
-    /// environment. This may ultimately create any number of
-    /// obligations.
-    pub fn push_goal(&mut self, goal: Goal, environment: &Arc<Environment>) {
+    /// Create obligations for the given goal in the given environment. This may
+    /// ultimately create any number of obligations.
+    pub fn push_goal(&mut self, environment: &Arc<Environment>, goal: Goal) {
         debug!("push_goal({:?}, {:?})", goal, environment);
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
@@ -103,9 +88,10 @@ impl<'s> Fulfill<'s> {
                            .map(|pk| {
                                new_environment = new_environment.new_universe();
                                match *pk {
-                                   ParameterKind::Lifetime(()) =>
-                                       ParameterKind::Lifetime(Lifetime::ForAll(new_environment.universe)),
-
+                                   ParameterKind::Lifetime(()) => {
+                                       let lt = Lifetime::ForAll(new_environment.universe);
+                                       ParameterKind::Lifetime(lt)
+                                   }
                                    ParameterKind::Ty(()) =>
                                        ParameterKind::Ty(Ty::Apply(ApplicationTy {
                                            name: TypeName::ForAll(new_environment.universe),
@@ -115,21 +101,21 @@ impl<'s> Fulfill<'s> {
                            })
                            .collect();
                 let subgoal = subgoal.value.subst(&parameters);
-                self.push_goal(subgoal, &new_environment);
+                self.push_goal(&new_environment, subgoal);
             }
             Goal::Quantified(QuantifierKind::Exists, subgoal) => {
                 let subgoal = self.instantiate_in(environment.universe,
                                                   subgoal.binders.iter().cloned(),
                                                   &subgoal.value);
-                self.push_goal(*subgoal, environment);
+                self.push_goal(environment, *subgoal);
             }
             Goal::Implies(wc, subgoal) => {
                 let new_environment = &environment.add_clauses(wc);
-                self.push_goal(*subgoal, new_environment);
+                self.push_goal(new_environment, *subgoal);
             }
             Goal::And(subgoal1, subgoal2) => {
-                self.push_goal(*subgoal1, environment);
-                self.push_goal(*subgoal2, environment);
+                self.push_goal(environment, *subgoal1);
+                self.push_goal(environment, *subgoal2);
             }
             Goal::Leaf(wc) => {
                 self.obligations.push(InEnvironment::new(environment, wc));
@@ -137,28 +123,64 @@ impl<'s> Fulfill<'s> {
         }
     }
 
-    /// As the final step in process a goal, we always have to deliver
-    /// back a "refined goal" that shows what we learned. This refined
-    /// goal combines any lifetime constraints with the final results
-    /// of inference. It is produced by this method.
-    pub fn refine_goal<G: Fold>(mut self, goal: G) -> Query<Constrained<G::Result>> {
-        let mut constraints: Vec<_> = self.constraints.into_iter().collect();
-        constraints.sort();
-        debug!("refine_goal: constraints = {:?}", constraints);
-        let constrained_goal = Constrained {
-            value: goal,
-            constraints: constraints,
-        };
-        self.infer.make_query(&constrained_goal)
+    fn solve_obligation(&mut self, wc: &InEnvironment<LeafGoal>)
+                        -> Result<(Vec<ParameterInferenceVariable>, Solution)>
+    {
+        let canonicalized = self.infer.canonicalize(wc);
+        let reduced_goal = canonicalized.quantified.into_reduced_goal();
+        Ok((canonicalized.free_vars, self.solver.solve_reduced_goal(reduced_goal)?))
     }
 
-    /// Try to solve all `obligations`, which may contain inference variables
-    /// registered in the table `infer`. This can have side-effects on the
-    /// inference state (regardless of whether it returns success, failure, or
-    /// ambiguity). But, in all cases, the side-effects are only things that
-    /// must be true for `obligations` to be true.
-    pub fn solve_all(&mut self) -> Result<Successful> {
-        debug_heading!("solve_all(where_clauses={:#?})", self.obligations);
+    /// Provide all of the type inference variables created so far; used for REPL/debugging.
+    pub fn ty_vars(&self) -> &[TyInferenceVariable] {
+        self.infer.ty_vars()
+    }
+
+    /// Provide all of the type inference variables created so far; used for REPL/debugging.
+    pub fn lifetime_vars(&self) -> &[LifetimeInferenceVariable] {
+        self.infer.lifetime_vars()
+    }
+
+    /// Apply the subsitution `subst` to all the variables of `free_vars`
+    /// (understood in deBruijn style), and add any lifetime constraints.
+    fn apply_solution(&mut self,
+                      free_vars: Vec<ParameterInferenceVariable>,
+                      subst: Canonical<ConstrainedSubst>)
+    {
+        let Canonical { value, binders } = subst;
+        let ConstrainedSubst { subst, constraints } = self.instantiate(binders, &value);
+
+        debug!("fulfill::apply_solution: adding constraints {:?}", constraints);
+        self.constraints.extend(constraints);
+
+        // We use the empty environment for unification here because we're
+        // really just doing a substitution on unconstrained variables, which is
+        // guaranteed to succeed without generating any new constraints.
+        let empty_env = &Environment::new();
+
+        for (i, var) in free_vars.into_iter().enumerate() {
+            match var {
+                ParameterKind::Ty(ty) => {
+                    let new_ty = subst.tys.get(&TyInferenceVariable::from_depth(i))
+                        .expect("apply_solution failed to locate type variable in substitution");
+                    self.unify(empty_env, &ty.to_ty(), &new_ty)
+                        .expect("apply_solution failed to substitute");
+                }
+                ParameterKind::Lifetime(lt) => {
+                    let new_lt = subst.lifetimes.get(&LifetimeInferenceVariable::from_depth(i))
+                        .expect("apply_solution failed to find lifetime variable in substitution");
+                    self.unify(empty_env, &lt.to_lifetime(), &new_lt)
+                        .expect("apply_solution failed to substitute");
+                }
+            }
+        }
+    }
+
+    /// Try to fulfill all pending obligations. The returned solution will
+    /// transform `subst` substitution with the outcome of type inference by
+    /// updating the replacements it provides.
+    pub fn solve(mut self, subst: Substitution) -> Result<Solution> {
+        debug_heading!("fulfill_all(obligations={:#?})", self.obligations);
 
         // Try to solve all the obligations. We do this via a fixed-point
         // iteration. We try to solve each obligation in turn. Anything which is
@@ -167,10 +189,10 @@ impl<'s> Fulfill<'s> {
         // learning new things about our inference state.
         let mut obligations = Vec::with_capacity(self.obligations.len());
         let mut progress = true;
+
         while progress {
             progress = false;
-
-            debug_heading!("start of round, {:?} obligations", self.obligations.len());
+            debug_heading!("start of round, {} obligations", self.obligations.len());
 
             // Take the list of `obligations` to solve this round and replace it
             // with an empty vector. Iterate through each obligation to solve
@@ -180,17 +202,23 @@ impl<'s> Fulfill<'s> {
             // directly.
             assert!(obligations.is_empty());
             while let Some(wc) = self.obligations.pop() {
-                match self.solve_one(&wc, &mut progress)? {
-                    Successful::Yes => (),
-                    Successful::Maybe => {
-                        debug!("ambiguous result: {:?}", wc);
-                        obligations.push(wc);
+                let (free_vars, solution) = self.solve_obligation(&wc)?;
+
+                if solution.has_definite() {
+                    if let Some(constrained_subst) = solution.constrained_subst() {
+                        self.apply_solution(free_vars, constrained_subst);
+                        progress = true;
                     }
+                }
+
+                if solution.is_ambig() {
+                    debug!("ambiguous result: {:?}", wc);
+                    obligations.push(wc);
                 }
             }
 
             self.obligations.extend(obligations.drain(..));
-            debug!("end of round, {:?} obligations left", self.obligations.len());
+            debug!("end of round, {} obligations left", self.obligations.len());
         }
 
         // At the end of this process, `self.obligations` should have
@@ -198,69 +226,58 @@ impl<'s> Fulfill<'s> {
         // be empty.
         assert!(obligations.is_empty());
 
-        // If we still have ambiguous obligations, then we have an
-        // ambiguous overall result.
         if self.obligations.is_empty() {
-            Ok(Successful::Yes)
+            // If no obligations remain, we have definitively solved our goals,
+            // and can return the results of inference as a unique substitution
+            let constraints = self.constraints.into_iter().collect();
+            let constrained = self.infer.canonicalize(&ConstrainedSubst { subst, constraints });
+            Ok(Solution::Unique(constrained.quantified))
         } else {
-            debug!("still have {} ambiguous obligations: {:#?}",
-                   self.obligations.len(), self.obligations);
-            Ok(Successful::Maybe)
-        }
-    }
+            // If we have obligations remaining, we need to determine how to
+            // package up what we learned about type inference as an ambiguous
+            // solution.
 
-    fn solve_one(&mut self,
-                 wc: &InEnvironment<WhereClauseGoal>,
-                 inference_progress: &mut bool)
-                 -> Result<Successful> {
-        debug!("fulfill::solve_one(wc={:?})", wc);
+            if subst.is_trivial(&mut self.infer) {
+                // In this case, we didn't learn *anything* definitively. So
+                // now, we go one last time through the obligations, this time
+                // applying even *tentative* inference suggestions, so that we
+                // can yield these upwards as our own suggestions. In
+                // particular, we yield up the first one we can find.
 
-        let quantified_wc = self.infer.make_query(&wc);
-        let solution = self.solver.solve(quantified_wc.clone())?;
+                while let Some(wc) = self.obligations.pop() {
+                    let (free_vars, solution) = self.solve_obligation(&wc).unwrap();
+                    if let Some(constrained_subst) = solution.constrained_subst() {
+                        self.apply_solution(free_vars, constrained_subst);
+                        let subst = self.infer.canonicalize(&subst);
+                        return Ok(Solution::Ambig(Guidance::Suggested(subst.quantified)));
+                    }
+                }
 
-        // Regardless of whether the result is ambiguous or not,
-        // solving the where-clause may have yielded a refined
-        // goal. For example, if the original where-clause was
-        // something like `Foo<?4>: Borrow<?3>`, we would have
-        // "quantified" that to yield `exists ?0, ?1. Foo<?0>: Borrow<?1>`.
-        // We may now have gotten back a refined goal like `exists ?0. Foo<?0>:
-        // Borrow<Foo<?0>>`. In that case, we can unify `?3` with `Foo<?4>`.
-        //
-        // To make that unification happen, we first instantiate all
-        // the variables on the goal we got back with new inference
-        // variables. So we would thus convert `exists ?0. Foo<?0>:
-        // Borrow<Foo<?0>>` into `Foo<?5>: Borrow<Foo<?5>>`.  We would
-        // then unify this with our original goal (`Foo<?4>:
-        // Borrow<?3>`). This will result in the equations `?4 = ?5`
-        // and `?3 = Foo<?5>`.
-        //
-        // As a potential efficiency improvement, one could imagine a
-        // more algorithm written just for this case instead of
-        // instantiating with variables and applying the standard
-        // unification algorithm. But this is good enough for now.
-        let new_type_info = {
-            solution.refined_goal.binders != quantified_wc.binders ||
-            solution.refined_goal.value.value != quantified_wc.value
-        };
-
-        debug!("fulfill::solve_one: new_type_info={}", new_type_info);
-
-        if new_type_info || !solution.refined_goal.value.constraints.is_empty() {
-            let Constrained { constraints, value: refined_goal } =
-                self.instantiate(solution.refined_goal.binders.iter().cloned(),
-                                 &solution.refined_goal.value);
-
-            debug!("fulfill::solve_one: adding constraints {:?}", constraints);
-            self.constraints.extend(constraints);
-
-            debug!("fulfill::solve_one: unifying original and refined goal");
-            self.unify(&wc.environment, wc, &refined_goal)?;
-
-            if new_type_info {
-                *inference_progress = true;
+                Ok(Solution::Ambig(Guidance::Unknown))
+            } else {
+                // While we failed to prove the goal, we still leared that
+                // something had to hold. Here's an example where this happens:
+                //
+                // ```rust
+                // trait Display {}
+                // trait Debug {}
+                // struct Foo<T> {}
+                // struct Bar {}
+                // struct Baz {}
+                //
+                // impl Display for Bar {}
+                // impl Display for Baz {}
+                //
+                // impl<T> Debug for Foo<T> where T: Display {}
+                // ```
+                //
+                // If we pose the goal `exists<T> { T: Debug }`, we can't say
+                // for sure what `T` must be (it could be either `Foo<Bar>` or
+                // `Foo<Baz>`, but we *can* say for sure that it must be of the
+                // form `Foo<?0>`.
+                let subst = self.infer.canonicalize(&subst);
+                Ok(Solution::Ambig(Guidance::Definite(subst.quantified)))
             }
         }
-
-        Ok(solution.successful)
     }
 }

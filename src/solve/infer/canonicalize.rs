@@ -7,11 +7,10 @@ use super::{InferenceTable, TyInferenceVariable, LifetimeInferenceVariable,
 use super::var::InferenceValue;
 
 impl InferenceTable {
-    /// Given a value `value` with variables in it, replaces those
-    /// variables with their instantiated values; any variables not
-    /// yet instantiated are replaces with a small integer index 0..N
-    /// in order of appearance. The result is a canonicalized
-    /// representation of `value`.
+    /// Given a value `value` with variables in it, replaces those variables
+    /// with their instantiated values; any variables not yet instantiated are
+    /// replaced with a small integer index 0..N in order of appearance. The
+    /// result is a canonicalized representation of `value`.
     ///
     /// Example:
     ///
@@ -19,34 +18,42 @@ impl InferenceTable {
     ///
     /// would be quantified to
     ///
-    ///    Quantified { value: `?0: Foo<?1>`, binders: [ui(?22), ui(?23)] }
+    ///    Canonical { value: `?0: Foo<?1>`, binders: [ui(?22), ui(?23)] }
     ///
-    /// where `ui(?22)` and `ui(?23)` are the universe indices of
-    /// `?22` and `?23` respectively.
-    pub fn make_query<T>(&mut self, value: &T) -> Query<T::Result>
-        where T: Fold
-    {
-        debug!("make_query({:#?})", value);
-        let mut q = Querifier {
+    /// where `ui(?22)` and `ui(?23)` are the universe indices of `?22` and
+    /// `?23` respectively.
+    ///
+    /// A substitution mapping from the free variables to their re-bound form is
+    /// also returned.
+    pub fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T> {
+        debug!("canonicalize({:#?})", value);
+        let mut q = Canonicalizer {
             table: self,
             free_vars: Vec::new(),
         };
-        let r = value.fold_with(&mut q, 0).unwrap();
-        Query {
-            value: r,
-            binders: q.into_binders(),
+        let value = value.fold_with(&mut q, 0).unwrap();
+        let free_vars = q.free_vars.clone();
+
+        Canonicalized {
+            quantified: Canonical { value, binders: q.into_binders() },
+            free_vars
         }
     }
 }
 
-struct Querifier<'q> {
+pub struct Canonicalized<T: Fold> {
+    pub quantified: Canonical<T::Result>,
+    pub free_vars: Vec<ParameterInferenceVariable>,
+}
+
+struct Canonicalizer<'q> {
     table: &'q mut InferenceTable,
     free_vars: Vec<ParameterInferenceVariable>,
 }
 
-impl<'q> Querifier<'q> {
+impl<'q> Canonicalizer<'q> {
     fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
-        let Querifier { table, free_vars } = self;
+        let Canonicalizer { table, free_vars } = self;
         free_vars.into_iter()
             .map(|p_v| match p_v {
                      ParameterKind::Ty(v) => {
@@ -79,7 +86,7 @@ impl<'q> Querifier<'q> {
     }
 }
 
-impl<'q> Folder for Querifier<'q> {
+impl<'q> Folder for Canonicalizer<'q> {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         let var = TyInferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {
