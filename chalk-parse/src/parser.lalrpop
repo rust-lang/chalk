@@ -4,14 +4,21 @@ use lalrpop_intern::intern;
 grammar;
 
 pub Program: Program = {
-    Item* => Program { items: <> }
+    Items => Program { items: <> }
 };
 
-Item: Item = {
-    StructDefn => Item::StructDefn(<>),
-    TraitDefn => Item::TraitDefn(<>),
-    Impl => Item::Impl(<>),
+Items: Vec<Item> = {
+    Item* => <>.into_iter().filter_map(|v| v).collect()
 };
+
+Item: Option<Item> = {
+    Comment => None,
+    StructDefn => Some(Item::StructDefn(<>)),
+    TraitDefn => Some(Item::TraitDefn(<>)),
+    Impl => Some(Item::Impl(<>)),
+};
+
+Comment: () = r"//.*";
 
 pub Goal: Box<Goal> = {
     Goal1,
