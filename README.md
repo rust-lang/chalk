@@ -28,3 +28,5 @@ Here are some blog posts talking about chalk:
     - Extending the system for associated types
 - [Negative reasoning in Chalk](http://aturon.github.io/blog/2017/04/24/negative-chalk/)
     - How to prove that something is not true
+- [Query structure in chalk](http://smallcultfollowing.com/babysteps/blog/2017/05/25/query-structure-in-chalk/)
+    - The basic chalk query structure, with pointers into the chalk implementation
