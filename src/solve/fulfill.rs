@@ -9,6 +9,20 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use zip::Zip;
 
+enum Outcome {
+    Complete,
+    Incomplete,
+}
+
+impl Outcome {
+    fn is_complete(&self) -> bool {
+        match *self {
+            Outcome::Complete => true,
+            _ => false,
+        }
+    }
+}
+
 /// A Fulfill is where we actually break down complex goals, instantiate
 /// variables, and perform inference. It's highly stateful. It's generally used
 /// in Chalk to try to solve a goal, and then package up what was learned in a
@@ -22,7 +36,16 @@ use zip::Zip;
 pub struct Fulfill<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
-    obligations: Vec<InEnvironment<LeafGoal>>,
+
+    /// A flattened list of leaf goals to prove, each one in the given environment
+    to_prove: Vec<InEnvironment<LeafGoal>>,
+
+    /// Goals to refute; these aren't flattened because we want to isolate each
+    /// set of subgoals into a fresh Fulfill
+    to_refute: Vec<InEnvironment<Goal>>,
+
+    /// Lifetime constraints that must be fulfilled for a solution to be fully
+    /// validated.
     constraints: HashSet<InEnvironment<Constraint>>,
 }
 
@@ -31,7 +54,8 @@ impl<'s> Fulfill<'s> {
         Fulfill {
             solver,
             infer: InferenceTable::new(),
-            obligations: vec![],
+            to_prove: vec![],
+            to_refute: vec![],
             constraints: HashSet::new()
         }
     }
@@ -71,7 +95,7 @@ impl<'s> Fulfill<'s> {
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
         self.constraints.extend(constraints);
-        self.obligations.extend(goals);
+        self.to_prove.extend(goals);
         Ok(())
     }
 
@@ -117,8 +141,11 @@ impl<'s> Fulfill<'s> {
                 self.push_goal(environment, *subgoal1);
                 self.push_goal(environment, *subgoal2);
             }
+            Goal::Not(subgoal) => {
+                self.to_refute.push(InEnvironment::new(environment, *subgoal));
+            }
             Goal::Leaf(wc) => {
-                self.obligations.push(InEnvironment::new(environment, wc));
+                self.to_prove.push(InEnvironment::new(environment, wc));
             }
         }
     }
@@ -176,32 +203,29 @@ impl<'s> Fulfill<'s> {
         }
     }
 
-    /// Try to fulfill all pending obligations. The returned solution will
-    /// transform `subst` substitution with the outcome of type inference by
-    /// updating the replacements it provides.
-    pub fn solve(mut self, subst: Substitution) -> Result<Solution> {
-        debug_heading!("fulfill_all(obligations={:#?})", self.obligations);
+    fn fulfill_positive(&mut self) -> Result<Outcome> {
+        debug_heading!("fulfill_positive(to_prove={:#?})", self.to_prove);
 
         // Try to solve all the obligations. We do this via a fixed-point
         // iteration. We try to solve each obligation in turn. Anything which is
         // successful, we drop; anything ambiguous, we retain in the
         // `obligations` array. This process is repeated so long as we are
         // learning new things about our inference state.
-        let mut obligations = Vec::with_capacity(self.obligations.len());
+        let mut obligations = Vec::with_capacity(self.to_prove.len());
         let mut progress = true;
 
         while progress {
             progress = false;
-            debug_heading!("start of round, {} obligations", self.obligations.len());
+            debug_heading!("start of round, {} obligations", self.to_prove.len());
 
             // Take the list of `obligations` to solve this round and replace it
             // with an empty vector. Iterate through each obligation to solve
             // and solve it if we can. If not (because of ambiguity), then push
-            // it back onto `self.obligations` for next round. Note that
-            // `solve_one` may also push onto the `self.obligations` list
+            // it back onto `self.to_prove` for next round. Note that
+            // `solve_one` may also push onto the `self.to_prove` list
             // directly.
             assert!(obligations.is_empty());
-            while let Some(wc) = self.obligations.pop() {
+            while let Some(wc) = self.to_prove.pop() {
                 let (free_vars, solution) = self.solve_obligation(&wc)?;
 
                 if solution.has_definite() {
@@ -217,67 +241,119 @@ impl<'s> Fulfill<'s> {
                 }
             }
 
-            self.obligations.extend(obligations.drain(..));
-            debug!("end of round, {} obligations left", self.obligations.len());
+            self.to_prove.extend(obligations.drain(..));
+            debug!("end of round, {} obligations left", self.to_prove.len());
         }
 
-        // At the end of this process, `self.obligations` should have
+        // At the end of this process, `self.to_prove` should have
         // all of the ambiguous obligations, and `obligations` should
         // be empty.
         assert!(obligations.is_empty());
 
-        if self.obligations.is_empty() {
-            // If no obligations remain, we have definitively solved our goals,
-            // and can return the results of inference as a unique substitution
+        if self.to_prove.is_empty() {
+            Ok(Outcome::Complete)
+        } else {
+            Ok(Outcome::Incomplete)
+        }
+    }
+
+    fn fulfill_negative(&mut self) -> Result<Outcome> {
+        // Attempt to refute each negative obligations by in a fresh Fulfill
+        for goal in self.to_refute.drain(..) {
+            let canonicalized = self.infer.canonicalize(&goal);
+            let goal = canonicalized.quantified.value;
+
+            // Negation cannot be used to resolve existential variables, and do
+            // not have a useful (for us) logial meaning when they contain
+            // existential variables; treat negative goals with free variables
+            // as ambiguous
+            if !canonicalized.free_vars.is_empty() {
+                return Ok(Outcome::Incomplete);
+            }
+
+
+            // Try to *solve* the goal in a fresh Fulfill
+            let mut fulfill = Fulfill::new(self.solver);
+            fulfill.push_goal(&goal.environment, goal.goal);
+
+            // Negate the result
+            if let Ok(solution) =  fulfill.solve(Substitution::empty()) {
+                match solution {
+                    Solution::Unique(_) => Err("refutation failed")?,
+                    Solution::Ambig(_) => return Ok(Outcome::Incomplete),
+                }
+            }
+        }
+
+        Ok(Outcome::Complete)
+    }
+
+    /// Try to fulfill all pending obligations. The returned solution will
+    /// transform `subst` substitution with the outcome of type inference by
+    /// updating the replacements it provides.
+    pub fn solve(mut self, subst: Substitution) -> Result<Solution> {
+        // We first solve all positive (to_prove) goals, since these are the
+        // only goals that can affect inference state or add new obligations.
+        let positive = self.fulfill_positive()?;
+
+        // Next we look at the goals we must refute; doing so cannot create new
+        // obligations of any form
+        let negative = self.fulfill_negative()?;
+
+        if positive.is_complete() && negative.is_complete() {
+            // No obligations remain, so we have definitively solved our goals,
+            // and the current inference state is the unique way to solve them.
+
             let constraints = self.constraints.into_iter().collect();
             let constrained = self.infer.canonicalize(&ConstrainedSubst { subst, constraints });
-            Ok(Solution::Unique(constrained.quantified))
-        } else {
-            // If we have obligations remaining, we need to determine how to
-            // package up what we learned about type inference as an ambiguous
-            // solution.
+            return Ok(Solution::Unique(constrained.quantified))
+        }
 
-            if subst.is_trivial(&mut self.infer) {
-                // In this case, we didn't learn *anything* definitively. So
-                // now, we go one last time through the obligations, this time
-                // applying even *tentative* inference suggestions, so that we
-                // can yield these upwards as our own suggestions. In
-                // particular, we yield up the first one we can find.
+        // Otherwise, we have (positive or negative) obligations remaining, but
+        // haven't proved that it's *impossible* to satisfy out obligations. we
+        // need to determine how to package up what we learned about type
+        // inference as an ambiguous solution.
 
-                while let Some(wc) = self.obligations.pop() {
-                    let (free_vars, solution) = self.solve_obligation(&wc).unwrap();
-                    if let Some(constrained_subst) = solution.constrained_subst() {
-                        self.apply_solution(free_vars, constrained_subst);
-                        let subst = self.infer.canonicalize(&subst);
-                        return Ok(Solution::Ambig(Guidance::Suggested(subst.quantified)));
-                    }
+        if subst.is_trivial(&mut self.infer) {
+            // In this case, we didn't learn *anything* definitively. So now, we
+            // go one last time through the positive obligations, this time
+            // applying even *tentative* inference suggestions, so that we can
+            // yield these upwards as our own suggestions. In particular, we
+            // yield up the first one we can find.
+
+            while let Some(wc) = self.to_prove.pop() {
+                let (free_vars, solution) = self.solve_obligation(&wc).unwrap();
+                if let Some(constrained_subst) = solution.constrained_subst() {
+                    self.apply_solution(free_vars, constrained_subst);
+                    let subst = self.infer.canonicalize(&subst);
+                    return Ok(Solution::Ambig(Guidance::Suggested(subst.quantified)));
                 }
-
-                Ok(Solution::Ambig(Guidance::Unknown))
-            } else {
-                // While we failed to prove the goal, we still leared that
-                // something had to hold. Here's an example where this happens:
-                //
-                // ```rust
-                // trait Display {}
-                // trait Debug {}
-                // struct Foo<T> {}
-                // struct Bar {}
-                // struct Baz {}
-                //
-                // impl Display for Bar {}
-                // impl Display for Baz {}
-                //
-                // impl<T> Debug for Foo<T> where T: Display {}
-                // ```
-                //
-                // If we pose the goal `exists<T> { T: Debug }`, we can't say
-                // for sure what `T` must be (it could be either `Foo<Bar>` or
-                // `Foo<Baz>`, but we *can* say for sure that it must be of the
-                // form `Foo<?0>`.
-                let subst = self.infer.canonicalize(&subst);
-                Ok(Solution::Ambig(Guidance::Definite(subst.quantified)))
             }
+
+            Ok(Solution::Ambig(Guidance::Unknown))
+        } else {
+            // While we failed to prove the goal, we still leared that
+            // something had to hold. Here's an example where this happens:
+            //
+            // ```rust
+            // trait Display {}
+            // trait Debug {}
+            // struct Foo<T> {}
+            // struct Bar {}
+            // struct Baz {}
+            //
+            // impl Display for Bar {}
+            // impl Display for Baz {}
+            //
+            // impl<T> Debug for Foo<T> where T: Display {}
+            // ```
+            //
+            // If we pose the goal `exists<T> { T: Debug }`, we can't say
+            // for sure what `T` must be (it could be either `Foo<Bar>` or
+            // `Foo<Baz>`, but we *can* say for sure that it must be of the
+            // form `Foo<?0>`.
+            let subst = self.infer.canonicalize(&subst);
+            Ok(Solution::Ambig(Guidance::Definite(subst.quantified)))
         }
     }
 }

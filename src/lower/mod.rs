@@ -713,6 +713,8 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(Box::new(ir::Goal::Implies(wc.lower(env)?, g.lower(env)?))),
             Goal::And(ref g1, ref g2) =>
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
+            Goal::Not(ref g) =>
+                Ok(Box::new(ir::Goal::Not(g.lower(env)?))),
             Goal::Leaf(ref wc) =>
                 Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
         }

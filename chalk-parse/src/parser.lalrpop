@@ -29,6 +29,7 @@ Goal1: Box<Goal> = {
     "forall" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
     "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
     "if" "(" <w:Comma<WhereClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
+    "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
     <w:WhereClause> => Box::new(Goal::Leaf(w)),
 };
 

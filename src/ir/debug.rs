@@ -204,6 +204,7 @@ impl Debug for Goal {
             }
             Goal::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
             Goal::And(ref g1, ref g2) => write!(fmt, "({:?}, {:?})", g1, g2),
+            Goal::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),
         }
     }

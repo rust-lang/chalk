@@ -519,6 +519,7 @@ pub enum Goal {
     Quantified(QuantifierKind, Binders<Box<Goal>>),
     Implies(Vec<DomainGoal>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
+    Not(Box<Goal>),
     Leaf(LeafGoal),
 }
 
@@ -547,6 +548,13 @@ pub struct Substitution {
 }
 
 impl Substitution {
+    pub fn empty() -> Substitution {
+        Substitution {
+            tys: BTreeMap::new(),
+            lifetimes: BTreeMap::new(),
+        }
+    }
+
     /// Construct an identity substitution given a set of binders
     pub fn from_binders(binders: &[ParameterKind<UniverseIndex>]) -> Self {
         let mut tys = BTreeMap::new();

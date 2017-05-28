@@ -1068,3 +1068,130 @@ fn test_suggested_subst() {
         }
     }
 }
+
+#[test]
+fn test_simple_negation() {
+    test! {
+        program {
+            struct i32 {}
+            trait Foo {}
+        }
+
+        goal {
+            not { i32: Foo }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            not {
+                not { i32: Foo }
+            }
+        } yields {
+            "No"
+        }
+
+        goal {
+            not {
+                not {
+                    not { i32: Foo }
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            exists<T> {
+                not { T: Foo }
+            }
+        } yields {
+            "Ambiguous"
+        }
+
+        goal {
+            forall<T> {
+                not { T: Foo }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            not {
+                exists<T> { T: Foo }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn test_deep_negation() {
+    test! {
+        program {
+            struct Foo<T> {}
+            trait Bar {}
+            trait Baz {}
+
+            impl<T> Bar for Foo<T> where T: Baz {}
+        }
+
+        goal {
+            not {
+                exists<T> { T: Baz }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            not {
+                exists<T> { Foo<T>: Bar }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn test_negation_quantifiers() {
+    test! {
+        program {
+            struct i32 {}
+            struct u32 {}
+        }
+
+        goal {
+            not {
+                forall<T, U> {
+                    T = U
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            not {
+                exists<T, U> {
+                    T = U
+                }
+            }
+        } yields {
+            "No"
+        }
+
+        goal {
+            forall<T, U> {
+                not {
+                    T = U
+                }
+            }
+        } yields {
+            "No"
+        }
+    }
+}

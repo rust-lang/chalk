@@ -200,7 +200,7 @@ enum_fold!(DomainGoal[] { Implemented(a), Normalize(a), WellFormed(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
-enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Leaf(wc) });
+enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g), Leaf(wc) });
 
 macro_rules! struct_fold {
     ($s:ident $([$($n:ident),*])* { $($name:ident),* } $($w:tt)*) => {
