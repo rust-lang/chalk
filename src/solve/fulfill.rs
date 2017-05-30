@@ -47,6 +47,10 @@ pub struct Fulfill<'s> {
     /// Lifetime constraints that must be fulfilled for a solution to be fully
     /// validated.
     constraints: HashSet<InEnvironment<Constraint>>,
+
+    /// Record that a goal has been processed that can neither be proved nor
+    /// refuted, and thus the overall solution cannot be `Unique`
+    ambiguous: bool,
 }
 
 impl<'s> Fulfill<'s> {
@@ -56,7 +60,8 @@ impl<'s> Fulfill<'s> {
             infer: InferenceTable::new(),
             to_prove: vec![],
             to_refute: vec![],
-            constraints: HashSet::new()
+            constraints: HashSet::new(),
+            ambiguous: false,
         }
     }
 
@@ -90,12 +95,15 @@ impl<'s> Fulfill<'s> {
     pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
         where T: ?Sized + Zip + Debug
     {
-        let UnificationResult { goals, constraints } = self.infer.unify(environment, a, b)?;
+        let UnificationResult { goals, constraints, ambiguous } =
+            self.infer.unify(environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
+        debug!("unify: ambiguous={:?}", ambiguous);
         self.constraints.extend(constraints);
         self.to_prove.extend(goals);
+        self.ambiguous = self.ambiguous || ambiguous;
         Ok(())
     }
 
@@ -300,7 +308,7 @@ impl<'s> Fulfill<'s> {
         // obligations of any form
         let negative = self.fulfill_negative()?;
 
-        if positive.is_complete() && negative.is_complete() {
+        if (positive.is_complete() && negative.is_complete()) && !self.ambiguous {
             // No obligations remain, so we have definitively solved our goals,
             // and the current inference state is the unique way to solve them.
 

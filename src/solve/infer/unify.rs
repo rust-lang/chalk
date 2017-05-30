@@ -34,12 +34,18 @@ struct Unifier<'t> {
     snapshot: InferenceSnapshot,
     goals: Vec<InEnvironment<LeafGoal>>,
     constraints: Vec<InEnvironment<Constraint>>,
+    ambiguous: bool,
 }
 
 #[derive(Debug)]
 pub struct UnificationResult {
     pub goals: Vec<InEnvironment<LeafGoal>>,
     pub constraints: Vec<InEnvironment<Constraint>>,
+
+    /// When unifying two skolemized (forall-quantified) type names, we can
+    /// neither confirm nor deny their equality, so we return an ambiguous
+    /// result.
+    pub ambiguous: bool,
 }
 
 impl<'t> Unifier<'t> {
@@ -51,6 +57,7 @@ impl<'t> Unifier<'t> {
             snapshot: snapshot,
             goals: vec![],
             constraints: vec![],
+            ambiguous: false,
         }
     }
 
@@ -59,6 +66,7 @@ impl<'t> Unifier<'t> {
         Ok(UnificationResult {
             goals: self.goals,
             constraints: self.constraints,
+            ambiguous: self.ambiguous,
         })
     }
 
@@ -105,7 +113,15 @@ impl<'t> Unifier<'t> {
             }
 
             (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
-                Zip::zip_with(self, apply1, apply2)
+                if apply1.name != apply2.name {
+                    if apply1.name.is_for_all() || apply2.name.is_for_all() {
+                        self.ambiguous = true;
+                    } else {
+                        bail!("cannot equate `{:?}` and `{:?}`", apply1.name, apply2.name);
+                    }
+                }
+
+                Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
             }
 
             (&Ty::Projection(ref proj1), &Ty::Projection(ref proj2)) => {

@@ -1171,7 +1171,7 @@ fn test_negation_quantifiers() {
                 }
             }
         } yields {
-            "Unique"
+            "Ambig"
         }
 
         goal {
@@ -1191,7 +1191,7 @@ fn test_negation_quantifiers() {
                 }
             }
         } yields {
-            "No"
+            "Ambig"
         }
     }
 }

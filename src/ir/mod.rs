@@ -178,6 +178,15 @@ pub enum TypeName {
     AssociatedType(ItemId),
 }
 
+impl TypeName {
+    pub fn is_for_all(&self) -> bool {
+        match *self {
+            TypeName::ForAll(_) => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UniverseIndex {
     pub counter: usize,
