@@ -20,7 +20,7 @@ enum Technique<'t> {
 }
 
 impl<'s, G> MatchAny<'s, G>
-    where G: Cast<WhereClause> + Cast<WhereClauseGoal> + Clone + Hash + Eq + Fold<Result = G>
+    where G: Cast<WhereClause> + Clone + Hash + Eq + Fold<Result = G>
 {
     pub fn new(solver: &'s mut Solver, env_goal: &'s Query<InEnvironment<G>>) -> Self {
         MatchAny {

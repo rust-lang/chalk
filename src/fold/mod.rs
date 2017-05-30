@@ -178,9 +178,8 @@ macro_rules! enum_fold {
 }
 
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
-enum_fold!(WhereClause[] { Implemented(a), Normalize(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
-enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a),
+enum_fold!(WhereClause[] { Implemented(a), Normalize(a), UnifyTys(a),
                                UnifyLifetimes(a), WellFormed(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Leaf(wc) });

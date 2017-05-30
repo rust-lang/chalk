@@ -32,13 +32,13 @@ struct Unifier<'t> {
     table: &'t mut InferenceTable,
     environment: &'t Arc<Environment>,
     snapshot: InferenceSnapshot,
-    goals: Vec<InEnvironment<WhereClauseGoal>>,
+    goals: Vec<InEnvironment<WhereClause>>,
     constraints: Vec<InEnvironment<Constraint>>,
 }
 
 #[derive(Debug)]
 pub struct UnificationResult {
-    pub goals: Vec<InEnvironment<WhereClauseGoal>>,
+    pub goals: Vec<InEnvironment<WhereClause>>,
     pub constraints: Vec<InEnvironment<Constraint>>,
 }
 

@@ -130,6 +130,7 @@ impl Environment {
                     };
                     push_clause(trait_ref.cast());
                 }
+                _ => (),
             }
         }
 
@@ -370,12 +371,6 @@ pub struct TraitRef {
 pub enum WhereClause {
     Implemented(TraitRef),
     Normalize(Normalize),
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum WhereClauseGoal {
-    Implemented(TraitRef),
-    Normalize(Normalize),
     UnifyTys(Unify<Ty>),
     UnifyLifetimes(Unify<Lifetime>),
     WellFormed(WellFormed),
@@ -436,7 +431,7 @@ pub struct ProgramClause {
 /// Represents one clause of the form `consequence :- conditions`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProgramClauseImplication {
-    pub consequence: WhereClauseGoal,
+    pub consequence: WhereClause,
     pub conditions: Vec<Goal>,
 }
 
@@ -480,7 +475,7 @@ pub enum Goal {
     Quantified(QuantifierKind, Binders<Box<Goal>>),
     Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
-    Leaf(WhereClauseGoal),
+    Leaf(WhereClause),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
