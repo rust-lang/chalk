@@ -12,7 +12,7 @@ use zip::Zip;
 pub struct Fulfill<'s> {
     solver: &'s mut Solver,
     infer: InferenceTable,
-    obligations: Vec<InEnvironment<WhereClauseGoal>>,
+    obligations: Vec<InEnvironment<WhereClause>>,
     constraints: HashSet<InEnvironment<Constraint>>,
 }
 
@@ -79,13 +79,13 @@ impl<'s> Fulfill<'s> {
     /// Adds the given where-clauses to the internal list of
     /// obligations that must be solved.
     pub fn extend<WC>(&mut self, wc: WC)
-        where WC: IntoIterator<Item=InEnvironment<WhereClauseGoal>>
+        where WC: IntoIterator<Item=InEnvironment<WhereClause>>
     {
         self.obligations.extend(wc);
     }
 
     /// Return current list of pending obligations; used for unit testing primarily
-    pub fn pending_obligations(&self) -> &[InEnvironment<WhereClauseGoal>] {
+    pub fn pending_obligations(&self) -> &[InEnvironment<WhereClause>] {
         &self.obligations
     }
 
@@ -210,7 +210,7 @@ impl<'s> Fulfill<'s> {
     }
 
     fn solve_one(&mut self,
-                 wc: &InEnvironment<WhereClauseGoal>,
+                 wc: &InEnvironment<WhereClause>,
                  inference_progress: &mut bool)
                  -> Result<Successful> {
         debug!("fulfill::solve_one(wc={:?})", wc);

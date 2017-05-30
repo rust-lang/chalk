@@ -24,17 +24,10 @@ macro_rules! reflexive_impl {
 
 reflexive_impl!(TraitRef);
 reflexive_impl!(WhereClause);
-reflexive_impl!(WhereClauseGoal);
 
 impl Cast<WhereClause> for TraitRef {
     fn cast(self) -> WhereClause {
         WhereClause::Implemented(self)
-    }
-}
-
-impl Cast<WhereClauseGoal> for TraitRef {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::Implemented(self)
     }
 }
 
@@ -44,38 +37,23 @@ impl Cast<WhereClause> for Normalize {
     }
 }
 
-impl Cast<WhereClauseGoal> for Normalize {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::Normalize(self)
-    }
-}
-
-impl Cast<WhereClauseGoal> for WellFormed {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::WellFormed(self)
+impl Cast<WhereClause> for WellFormed {
+    fn cast(self) -> WhereClause {
+        WhereClause::WellFormed(self)
     }
 }
 
 impl Cast<Goal> for WellFormed {
     fn cast(self) -> Goal {
-        let wcg: WhereClauseGoal = self.cast();
+        let wcg: WhereClause = self.cast();
         wcg.cast()
     }
 }
 
 impl Cast<Goal> for Normalize {
     fn cast(self) -> Goal {
-        let wcg: WhereClauseGoal = self.cast();
+        let wcg: WhereClause = self.cast();
         wcg.cast()
-    }
-}
-
-impl Cast<WhereClauseGoal> for WhereClause {
-    fn cast(self) -> WhereClauseGoal {
-        match self {
-            WhereClause::Implemented(a) => a.cast(),
-            WhereClause::Normalize(a) => a.cast(),
-        }
     }
 }
 
@@ -87,25 +65,19 @@ impl Cast<Goal> for TraitRef {
 
 impl Cast<Goal> for WhereClause {
     fn cast(self) -> Goal {
-        Goal::Leaf(self.cast())
-    }
-}
-
-impl Cast<Goal> for WhereClauseGoal {
-    fn cast(self) -> Goal {
         Goal::Leaf(self)
     }
 }
 
-impl Cast<WhereClauseGoal> for Unify<Ty> {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::UnifyTys(self)
+impl Cast<WhereClause> for Unify<Ty> {
+    fn cast(self) -> WhereClause {
+        WhereClause::UnifyTys(self)
     }
 }
 
-impl Cast<WhereClauseGoal> for Unify<Lifetime> {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::UnifyLifetimes(self)
+impl Cast<WhereClause> for Unify<Lifetime> {
+    fn cast(self) -> WhereClause {
+        WhereClause::UnifyLifetimes(self)
     }
 }
 

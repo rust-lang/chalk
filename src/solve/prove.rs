@@ -6,7 +6,7 @@ use solve::Solution;
 
 pub struct Prove<'s> {
     fulfill: Fulfill<'s>,
-    goals: Vec<InEnvironment<WhereClauseGoal>>,
+    goals: Vec<InEnvironment<WhereClause>>,
 }
 
 impl<'s> Prove<'s> {
@@ -21,7 +21,7 @@ impl<'s> Prove<'s> {
         prove
     }
 
-    pub fn solve(mut self) -> Result<Solution<Vec<WhereClauseGoal>>> {
+    pub fn solve(mut self) -> Result<Solution<Vec<WhereClause>>> {
         let successful = self.fulfill.solve_all()?;
         let goals: Vec<_> = self.goals.into_iter().map(|g| g.goal).collect();
         let refined_goal = self.fulfill.refine_goal(goals);

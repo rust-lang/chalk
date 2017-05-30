@@ -15,7 +15,7 @@ pub struct MatchProgramClause<'s, G: 's> {
 }
 
 impl<'s, G> MatchProgramClause<'s, G>
-    where G: Clone + Cast<WhereClauseGoal> + Fold<Result = G>
+    where G: Clone + Cast<WhereClause> + Fold<Result = G>
 {
     pub fn new(solver: &'s mut Solver,
                q: &'s Query<InEnvironment<G>>,

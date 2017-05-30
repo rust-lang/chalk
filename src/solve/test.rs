@@ -1226,3 +1226,22 @@ fn mixed_indices_normalize_application() {
         }
     }
 }
+
+#[test]
+fn extended_where_clauses() {
+    test! {
+        program {
+            trait Foo { }
+        }
+
+        goal {
+            forall<T> {
+                if (WellFormed(T: Foo)) {
+                    WellFormed(T: Foo)
+                }
+            }
+        } yields {
+            "Solution { successful: Yes"
+        }
+    }
+}

@@ -362,40 +362,17 @@ trait LowerWhereClause<T> {
     fn lower(&self, env: &Env) -> Result<T>;
 }
 
-/// Lowers a where-clause in the context of a clause; this is limited
-/// to the kinds of where-clauses users can actually type in Rust.
 impl LowerWhereClause<ir::WhereClause> for WhereClause {
     fn lower(&self, env: &Env) -> Result<ir::WhereClause> {
         Ok(match *self {
             WhereClause::Implemented { ref trait_ref } => {
-                ir::WhereClause::Implemented(trait_ref.lower(env)?)
+                trait_ref.lower(env)?.cast()
             }
             WhereClause::ProjectionEq { ref projection, ref ty  } => {
-                ir::WhereClause::Normalize(ir::Normalize {
+                ir::Normalize {
                     projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
-                })
-            }
-            WhereClause::TyWellFormed { .. } |
-            WhereClause::TraitRefWellFormed { .. } |
-            WhereClause::UnifyTys { .. } |
-            WhereClause::UnifyLifetimes { .. } => {
-                bail!("this form of where-clause not allowed here")
-            }
-        })
-    }
-}
-
-/// Lowers a where-clause in the context of a goal; this is richer in
-/// terms of the legal sorts of where-clauses that can appear, because
-/// it includes all the sorts of things that the compiler must verify.
-impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
-    fn lower(&self, env: &Env) -> Result<ir::WhereClauseGoal> {
-        Ok(match *self {
-            WhereClause::Implemented { .. } |
-            WhereClause::ProjectionEq { .. } => {
-                let wc: ir::WhereClause = self.lower(env)?;
-                wc.cast()
+                }.cast()
             }
             WhereClause::TyWellFormed { ref ty } => {
                 ir::WellFormed::Ty(ty.lower(env)?).cast()
@@ -403,7 +380,7 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
             WhereClause::TraitRefWellFormed { ref trait_ref } => {
                 ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
             }
-            WhereClause::UnifyTys { ref a, ref b} => {
+            WhereClause::UnifyTys { ref a, ref b } => {
                 ir::Unify {
                     a: a.lower(env)?,
                     b: b.lower(env)?,
@@ -820,6 +797,7 @@ impl ir::AssociatedTyValue {
         // 1. require that the trait is implemented
         // 2. any where-clauses from the `type` declaration in the impl
         let impl_trait_ref = impl_datum.binders.value.trait_ref.up_shift(self.value.len());
+
         let conditions: Vec<ir::Goal> =
             Some(impl_trait_ref.clone().cast())
             .into_iter()

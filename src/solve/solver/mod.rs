@@ -1,8 +1,8 @@
 use cast::Cast;
 use errors::*;
-use solve::match_program_clause::MatchProgramClause;
 use solve::normalize::SolveNormalize;
 use solve::implemented::Implemented;
+use solve::well_formed::SolveWellFormed;
 use solve::unify::SolveUnify;
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -14,7 +14,7 @@ use super::*;
 pub struct Solver {
     pub(super) program: Arc<ProgramEnvironment>,
     overflow_depth: usize,
-    stack: Vec<Query<InEnvironment<WhereClauseGoal>>>,
+    stack: Vec<Query<InEnvironment<WhereClause>>>,
 }
 
 impl Solver {
@@ -25,8 +25,8 @@ impl Solver {
     /// Tries to solve one **closed** where-clause `wc` (in the given
     /// environment).
     pub fn solve(&mut self,
-                 wc_env: Query<InEnvironment<WhereClauseGoal>>)
-                 -> Result<Solution<InEnvironment<WhereClauseGoal>>> {
+                 wc_env: Query<InEnvironment<WhereClause>>)
+                 -> Result<Solution<InEnvironment<WhereClause>>> {
         debug_heading!("Solver::solve({:?})", wc_env);
 
         if self.stack.contains(&wc_env) || self.stack.len() > self.overflow_depth {
@@ -43,45 +43,40 @@ impl Solver {
         let Query { value: InEnvironment { environment, goal: wc }, binders } = wc_env;
 
         let result = match wc {
-            WhereClauseGoal::Implemented(trait_ref) => {
+            WhereClause::Implemented(trait_ref) => {
                 let q = Query {
                     value: InEnvironment::new(&environment, trait_ref),
                     binders: binders,
                 };
                 Implemented::new(self, q).solve().cast()
             }
-            WhereClauseGoal::Normalize(normalize_to) => {
+            WhereClause::Normalize(normalize_to) => {
                 let q = Query {
                     value: InEnvironment::new(&environment, normalize_to),
                     binders: binders,
                 };
                 SolveNormalize::new(self, q).solve().cast()
             }
-            WhereClauseGoal::UnifyTys(unify) => {
+            WhereClause::UnifyTys(unify) => {
                 let q = Query {
                     value: InEnvironment::new(&environment, unify),
                     binders: binders,
                 };
                 SolveUnify::new(self, q).solve().cast()
             }
-            WhereClauseGoal::UnifyLifetimes(unify) => {
+            WhereClause::UnifyLifetimes(unify) => {
                 let q = Query {
                     value: InEnvironment::new(&environment, unify),
                     binders: binders,
                 };
                 SolveUnify::new(self, q).solve().cast()
             }
-            WhereClauseGoal::WellFormed(_) => {
-                // Currently, we don't allow `WF` types into the environment,
-                // there we just have to search for program clauses.
-                let program = self.program.clone();
+            WhereClause::WellFormed(wf) => {
                 let q = Query {
-                    value: InEnvironment::new(&environment, wc),
-                    binders: binders
-                }; // reconstruct `wc_env`
-                self.solve_any(program.program_clauses.iter(), &q, |this, program_clause| {
-                    MatchProgramClause::new(this, &q, &program_clause).solve()
-                })
+                    value: InEnvironment::new(&environment, wf),
+                    binders: binders,
+                };
+                SolveWellFormed::new(self, q).solve().cast()
             }
         };
 
