@@ -48,7 +48,7 @@ pub struct ProgramEnvironment {
     /// For each trait (used for debugging):
     pub trait_data: HashMap<ItemId, TraitDatum>,
 
-    /// For each trait (used for debugging):
+    /// For each associated type (used for debugging):
     pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
 
     /// Compiled forms of the above:
@@ -97,7 +97,11 @@ impl Environment {
     }
 
     /// Generate the full set of clauses that are "syntactically implied" by the
-    /// clauses in this environment.
+    /// clauses in this environment. Currently this consists of two kinds of expansions:
+    ///
+    /// - Supertraits are added, so `T: Ord` would expand to `T: Ord, T: PartialOrd`
+    /// - Projections imply that a trait is implemented, to `T: Iterator<Item=Foo>` expands to
+    ///   `T: Iterator, T: Iterator<Item=Foo>`
     pub fn elaborated_clauses(&self, program: &ProgramEnvironment) -> impl Iterator<Item = DomainGoal> {
         let mut set = HashSet::new();
         set.extend(self.clauses.iter().cloned());
@@ -391,10 +395,10 @@ pub struct TraitRef {
     pub parameters: Vec<Parameter>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DomainGoal {
     Implemented(TraitRef),
     /// Is the projection something we know definitively from impls?
@@ -547,21 +551,21 @@ pub enum QuantifierKind {
     ForAll, Exists
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A constraint on lifetimes.
 ///
 /// When we search for solutions within the trait system, we essentially ignore
 /// lifetime constraints, instead gathering them up to return with our solution
 /// for later checking. This allows for decoupling between type and region
 /// checking in the compiler.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Constraint {
     LifetimeEq(Lifetime, Lifetime),
 }
 
 /// A mapping of inference variables to instantiations thereof.
-// Uses BTreeMap for extracting in order (mostly for debugging/testing)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Substitution {
+    // Use BTreeMap for extracting in order (mostly for debugging/testing)
     pub tys: BTreeMap<TyInferenceVariable, Ty>,
     pub lifetimes: BTreeMap<LifetimeInferenceVariable, Lifetime>,
 }

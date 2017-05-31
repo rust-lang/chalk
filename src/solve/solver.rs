@@ -25,9 +25,9 @@ impl Solver {
         }
     }
 
-    /// Attempt to solve a *closed* goal. This is primarily used for the
-    /// REPL/tests. The substitutions returned in the solution will be for the
-    /// fully decomposed goal. For example, given the program
+    /// Attempt to solve a *closed*, canonicalized goal. The substitution
+    /// returned in the solution will be for the fully decomposed goal. For
+    /// example, given the program
     ///
     /// ```ignore
     /// struct u8 { }
@@ -39,14 +39,17 @@ impl Solver {
     /// and the goal `exists<V> { forall<U> { SomeType<U>: Foo<V> } }`, a unique
     /// solution is produced with substitution `?0 := u8`. The `?0` is drawn
     /// from the number of the instantiated existential.
-    pub fn solve_goal(&mut self, goal: Goal) -> Result<Solution> {
+    pub fn solve_goal(&mut self, goal: Canonical<InEnvironment<Goal>>) -> Result<Solution> {
         let mut fulfill = Fulfill::new(self);
-        fulfill.push_goal(&Environment::new(), goal);
+        let Canonical { value, binders } = goal;
+        let InEnvironment { environment, goal } = fulfill.instantiate(binders, &value);
+        fulfill.push_goal(&environment, goal);
 
         // We use this somewhat hacky approach to get our hands on the
-        // instantiated variables after pushing our initial goal. This entire
-        // method is jsut used for REPL/debugging purposes anyway; in rustc, the
-        // top-level interaction would happen by manipulating a Fulfill more directly.
+        // instantiated variables after pushing our initial goal. This
+        // substitution is only used for REPL/debugging purposes anyway; in
+        // rustc, the top-level interaction would happen by manipulating a
+        // Fulfill more directly.
         let subst = Substitution {
             tys: fulfill
                 .ty_vars()

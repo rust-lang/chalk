@@ -120,7 +120,11 @@ fn goal(text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let overflow_depth = 10;
     let mut solver = Solver::new(&prog.env, overflow_depth);
-    match solver.solve_goal(*goal) {
+    let goal = ir::Canonical {
+        value: ir::InEnvironment::new(&ir::Environment::new(), *goal),
+        binders: vec![],
+    };
+    match solver.solve_goal(goal) {
         Ok(v) => println!("{}\n", v),
         Err(e) => println!("No possible solution: {}\n", e),
     }

@@ -40,7 +40,11 @@ fn solve_goal(program_text: &str,
             let overflow_depth = 3;
 
             let mut solver = Solver::new(&env, overflow_depth);
-            let result = match solver.solve_goal(*goal) {
+            let goal = ir::Canonical {
+                value: ir::InEnvironment::new(&ir::Environment::new(), *goal),
+                binders: vec![],
+            };
+            let result = match solver.solve_goal(goal) {
                 Ok(v) => format!("{}", v),
                 Err(e) => format!("No possible solution: {}", e),
             };
@@ -1080,7 +1084,7 @@ fn simple_negation() {
                 not { T: Foo }
             }
         } yields {
-            "Ambiguous"
+            "Ambig"
         }
 
         goal {
@@ -1163,6 +1167,27 @@ fn negation_quantifiers() {
                 not {
                     T = U
                 }
+            }
+        } yields {
+            "Ambig"
+        }
+    }
+}
+
+#[test]
+fn negation_free_vars() {
+    test! {
+        program {
+            struct Vec<T> {}
+            struct i32 {}
+            struct u32 {}
+            trait Foo {}
+            impl Foo for Vec<u32> {}
+        }
+
+        goal {
+            exists<T> {
+                not { Vec<T>: Foo }
             }
         } yields {
             "Ambig"
