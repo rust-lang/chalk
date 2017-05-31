@@ -170,6 +170,7 @@ impl LowerProgram for Program {
 
                         associated_ty_data.insert(info.id, ir::AssociatedTyDatum {
                             trait_id: item_id,
+                            id: info.id,
                             name: defn.name.str,
                             parameter_kinds: parameter_kinds,
                             where_clauses: vec![ir::DomainGoal::Implemented(trait_ref)]
@@ -194,11 +195,19 @@ trait LowerParameterMap {
     fn synthetic_parameters(&self) -> Option<ir::ParameterKind<ir::Identifier>>;
     fn declared_parameters(&self) -> &[ParameterKind];
     fn all_parameters(&self) -> Vec<ir::ParameterKind<ir::Identifier>> {
+        self.synthetic_parameters()
+            .into_iter()
+            .chain(self.declared_parameters().iter().map(|id| id.lower()))
+            .collect()
+
+        /* TODO: switch to this ordering, but adjust *all* the code to match
+
         self.declared_parameters()
             .iter()
             .map(|id| id.lower())
-            .chain(self.synthetic_parameters()) // (*) see above
+            .chain(self.synthetic_parameters()) // (*) see below
             .collect()
+         */
     }
 
     fn parameter_refs(&self) -> Vec<ir::Parameter> {
@@ -756,6 +765,7 @@ impl ir::Program {
 
         program_clauses.extend(self.struct_data.values().flat_map(|d| d.to_program_clauses()));
         program_clauses.extend(self.trait_data.values().flat_map(|d| d.to_program_clauses()));
+        program_clauses.extend(self.associated_ty_data.values().flat_map(|d| d.to_program_clauses()));
 
         for datum in self.impl_data.values() {
             program_clauses.push(datum.to_program_clause());
@@ -805,6 +815,10 @@ impl ir::AssociatedTyValue {
     ///     (Vec<T>: Iterable<IntoIter<'a> = Iter<'a, T>>) :-
     ///         (Vec<T>: Iterable),  // (1)
     ///         (T: 'a)              // (2)
+    ///
+    ///     known(Iterable::IntoIter<Vec<T>, 'a>) :-
+    ///         (Vec<T>: Iterable),  // (1)
+    ///         (T: 'a)              // (2)
     /// }
     /// ```
     fn to_program_clauses(&self, impl_datum: &ir::ImplDatum) -> Vec<ir::ProgramClause> {
@@ -828,35 +842,45 @@ impl ir::AssociatedTyValue {
             .chain(self.value.value.where_clauses.clone().cast())
             .collect();
 
-        // The consequence is that the normalization holds.
-        let consequence = {
+        let projection = {
             // First add refs to the bound parameters (`'a`, in above example)
             let parameters = self.value.binders.iter().zip(0..).map(|p| p.to_parameter());
 
             // Then add the trait-ref parameters (`Vec<T>`, in above example)
             let parameters = parameters.chain(impl_trait_ref.parameters.clone());
 
-            // Construct normalization predicate
-            ir::Normalize {
-                projection: ir::ProjectionTy {
-                    associated_ty_id: self.associated_ty_id,
-                    parameters: parameters.collect(),
-                },
-                ty: self.value.value.ty.clone()
+            ir::ProjectionTy {
+                associated_ty_id: self.associated_ty_id,
+                parameters: parameters.collect(),
             }
         };
 
-        let pos_clause = ir::ProgramClause {
+        // Determine the normalization
+        let norm_clause = ir::ProgramClause {
             implication: ir::Binders {
                 binders: all_binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: consequence.clone().cast(),
-                    conditions: conditions,
+                    consequence: ir::DomainGoal::Normalize(ir::Normalize {
+                        projection: projection.clone(),
+                        ty: self.value.value.ty.clone()
+                    }),
+                    conditions: conditions.clone(),
                 }
             }
         };
 
-        vec![pos_clause]
+        // Record that the projection is known
+        let known_clause = ir::ProgramClause {
+            implication: ir::Binders {
+                binders: all_binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::DomainGoal::KnownProjection(projection),
+                    conditions: conditions.clone(),
+                }
+            }
+        };
+
+        vec![norm_clause, known_clause]
     }
 }
 
@@ -955,5 +979,51 @@ impl ir::TraitDatum {
         };
 
         vec![wf]
+    }
+}
+
+impl ir::AssociatedTyDatum {
+    fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
+        // For each associated type, we have a "normalization fallback" clause.
+        //
+        // Given:
+        //
+        //    trait SomeTrait {
+        //        type Assoc;
+        //    }
+        //
+        // we generate:
+        //
+        //    ?T: SomeTrait<Assoc = (SomeTrait::Assoc)<?T>> :-
+        //      // we can't resolve the normalization through an impl clause
+        //      not { known { <?T as SomeTrait>::Assoc } }.
+
+        let binders: Vec<_> = self.parameter_kinds.iter().map(|pk| pk.map(|_| ())).collect();
+        let parameters: Vec<_> = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
+
+        let projection = ir::ProjectionTy {
+            associated_ty_id: self.id,
+            parameters: parameters.clone(),
+        };
+
+        // Construct an application from the projection. So if we have `<T as
+        // Iterator>::Item`, we would produce `(Iterator::Item)<T>`.
+        let app = ir::ApplicationTy { name: ir::TypeName::AssociatedType(self.id), parameters };
+        let fallback_ty = ir::Ty::Apply(app);
+        let norm_fallback = ir::Normalize { projection: projection.clone(), ty: fallback_ty };
+
+        let fallback = ir::ProgramClause {
+            implication: ir::Binders {
+                binders,
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::DomainGoal::Normalize(norm_fallback),
+                    conditions: vec![
+                        ir::Goal::Not(Box::new(ir::DomainGoal::KnownProjection(projection).cast()))
+                    ]
+                }
+            }
+        };
+
+        vec![fallback]
     }
 }

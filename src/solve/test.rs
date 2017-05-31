@@ -290,37 +290,23 @@ fn normalize() {
             "Unique; substitution [?0 := u32], lifetime constraints []"
         }
 
-        // TODO: re-enable this once normalization fallback is reimplemented
-
-        // goal {
-        //     forall<T> {
-        //         if (T: Iterator) {
-        //             exists<U> {
-        //                 T: Iterator<Item = U>
-        //             }
-        //         }
-        //     }
-        // } yields {
-        //     "Solution {
-        //         successful: Yes,
-        //         refined_goal: Query {
-        //             value: Constrained {
-        //                 value: [
-        //                     <!1 as Iterator>::Item ==> (Iterator::Item)<!1>
-        //                 ],
-        //                 constraints: []
-        //             },
-        //             binders: []
-        //         }
-        //     }"
-        // }
+        goal {
+            forall<T> {
+                if (T: Iterator) {
+                    exists<U> {
+                        T: Iterator<Item = U>
+                    }
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := (Iterator::Item)<!1>]"
+        }
     }
 }
 
 /// Demonstrates that, given the expected value of the associated
 /// type, we can use that to narrow down the relevant impls.
-// TODO: re-enable once normalization fallback is reimplemented
-//#[test]
+#[test]
 fn normalize_rev_infer() {
     test! {
         program {
@@ -336,18 +322,7 @@ fn normalize_rev_infer() {
                 T: Identity<Item = u32>
             }
         } yields {
-            "Solution {
-                successful: Yes,
-                refined_goal: Query {
-                    value: Constrained {
-                        value: [
-                            <u32 as Identity>::Item ==> u32
-                        ],
-                        constraints: []
-                    },
-                    binders: []
-                }
-            }"
+            "Unique; substitution [?0 := u32]"
         }
     }
 }
@@ -861,8 +836,7 @@ fn mixed_indices_match_program() {
     }
 }
 
-// TODO: re-enable once normalization fallback is reimplemented
-//#[test]
+#[test]
 fn mixed_indices_normalize_application() {
     test! {
         program {
@@ -881,7 +855,7 @@ fn mixed_indices_normalize_application() {
                 }
             }
         } yields {
-            "Solution { successful: Yes"
+            "Ambig"
         }
     }
 }
@@ -889,7 +863,7 @@ fn mixed_indices_normalize_application() {
 #[test]
 // Test that we properly detect failure even if there are applicable impls at
 // the top level, if we can't find anything to fill in those impls with
-fn test_deep_failure() {
+fn deep_failure() {
     test! {
         program {
             struct Foo<T> {}
@@ -916,7 +890,7 @@ fn test_deep_failure() {
 #[test]
 // Test that we infer a unique solution even if it requires multiple levels of
 // search to do so
-fn test_deep_success() {
+fn deep_success() {
     test! {
         program {
             struct Foo<T> {}
@@ -938,7 +912,7 @@ fn test_deep_success() {
 
 
 #[test]
-fn test_definite_guidance() {
+fn definite_guidance() {
     test! {
         program {
             trait Display {}
@@ -964,7 +938,7 @@ fn test_definite_guidance() {
 }
 
 #[test]
-fn test_suggested_subst() {
+fn suggested_subst() {
     test! {
         program {
             trait SomeTrait<A> {}
@@ -1070,7 +1044,7 @@ fn test_suggested_subst() {
 }
 
 #[test]
-fn test_simple_negation() {
+fn simple_negation() {
     test! {
         program {
             struct i32 {}
@@ -1128,7 +1102,7 @@ fn test_simple_negation() {
 }
 
 #[test]
-fn test_deep_negation() {
+fn deep_negation() {
     test! {
         program {
             struct Foo<T> {}
@@ -1157,7 +1131,7 @@ fn test_deep_negation() {
 }
 
 #[test]
-fn test_negation_quantifiers() {
+fn negation_quantifiers() {
     test! {
         program {
             struct i32 {}

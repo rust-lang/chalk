@@ -155,6 +155,6 @@ macro_rules! enum_zip {
     }
 }
 
-enum_zip!(DomainGoal { Implemented, Normalize, WellFormed });
+enum_zip!(DomainGoal { Implemented, KnownProjection, Normalize, WellFormed });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(WellFormed { Ty, TraitRef });

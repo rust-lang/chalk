@@ -136,6 +136,11 @@ impl Environment {
                         parameters: trait_params.to_owned()
                     };
                     push_clause(trait_ref.cast());
+
+                    // <T as Trait<U>>::Foo ===> V
+                    // ----------------------------------------------------------
+                    // known { Trait<U>::Foo<T> }
+                    push_clause(DomainGoal::KnownProjection(projection.clone()));
                 }
                 _ => {}
             }
@@ -258,6 +263,9 @@ pub struct TraitDatumBound {
 pub struct AssociatedTyDatum {
     /// The trait this associated type is defined in.
     pub trait_id: ItemId,
+
+    /// The ID of this associated type
+    pub id: ItemId,
 
     /// Name of this associated type.
     pub name: Identifier,
@@ -389,6 +397,8 @@ pub struct TraitRef {
 /// decomposing this enum, and instead treat its values opaquely.
 pub enum DomainGoal {
     Implemented(TraitRef),
+    /// Is the projection something we know definitively from impls?
+    KnownProjection(ProjectionTy),
     Normalize(Normalize),
     WellFormed(WellFormed),
 }

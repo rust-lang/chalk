@@ -149,6 +149,7 @@ impl Debug for DomainGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             DomainGoal::Normalize(ref n) => write!(fmt, "{:?}", n),
+            DomainGoal::KnownProjection(ref n) => write!(fmt, "known {{ {:?} }}", n),
             DomainGoal::Implemented(ref n) => {
                 write!(fmt,
                        "{:?}: {:?}{:?}",
