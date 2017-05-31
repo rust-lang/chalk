@@ -129,8 +129,8 @@ impl Environment {
                         push_clause(where_clause);
                     }
                 }
-                DomainGoal::Normalize(Normalize { ref projection, ty: _ }) => {
-                    // <T as Trait<U>>::Foo ===> V
+                DomainGoal::RawNormalize(Normalize { ref projection, ty: _ }) => {
+                    // raw { <T as Trait<U>>::Foo ===> V }
                     // ----------------------------------------------------------
                     // T: Trait<U>
 
@@ -140,11 +140,6 @@ impl Environment {
                         parameters: trait_params.to_owned()
                     };
                     push_clause(trait_ref.cast());
-
-                    // <T as Trait<U>>::Foo ===> V
-                    // ----------------------------------------------------------
-                    // known { Trait<U>::Foo<T> }
-                    push_clause(DomainGoal::KnownProjection(projection.clone()));
                 }
                 _ => {}
             }
@@ -401,8 +396,9 @@ pub struct TraitRef {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DomainGoal {
     Implemented(TraitRef),
-    /// Is the projection something we know definitively from impls?
-    KnownProjection(ProjectionTy),
+    /// A projection we know definitively via an impl or where clause
+    RawNormalize(Normalize),
+    /// A general projection, which might employ fallback
     Normalize(Normalize),
     WellFormed(WellFormed),
 }

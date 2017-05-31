@@ -371,8 +371,9 @@ trait LowerWhereClause<T> {
     fn lower(&self, env: &Env) -> Result<T>;
 }
 
-/// Lowers a where-clause in the context of a clause; this is limited
-/// to the kinds of where-clauses users can actually type in Rust.
+/// Lowers a where-clause in the context of a clause (i.e. in "negative"
+/// position); this is limited to the kinds of where-clauses users can actually
+/// type in Rust.
 impl LowerWhereClause<ir::DomainGoal> for WhereClause {
     fn lower(&self, env: &Env) -> Result<ir::DomainGoal> {
         Ok(match *self {
@@ -380,7 +381,10 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
                 ir::DomainGoal::Implemented(trait_ref.lower(env)?)
             }
             WhereClause::ProjectionEq { ref projection, ref ty  } => {
-                ir::DomainGoal::Normalize(ir::Normalize {
+                // NB: here we generate a RawNormalize, because we want to make
+                // make a maximally-strong assumption (and not allow fallback to
+                // trigger).
+                ir::DomainGoal::RawNormalize(ir::Normalize {
                     projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
                 })
@@ -395,16 +399,24 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
     }
 }
 
-/// Lowers a where-clause in the context of a goal; this is richer in
-/// terms of the legal sorts of where-clauses that can appear, because
-/// it includes all the sorts of things that the compiler must verify.
+/// Lowers a where-clause in the context of a goal (i.e. in "positive"
+/// position); this is richer in terms of the legal sorts of where-clauses that
+/// can appear, because it includes all the sorts of things that the compiler
+/// must verify.
 impl LowerWhereClause<ir::LeafGoal> for WhereClause {
     fn lower(&self, env: &Env) -> Result<ir::LeafGoal> {
         Ok(match *self {
-            WhereClause::Implemented { .. } |
-            WhereClause::ProjectionEq { .. } => {
-                let wc: ir::DomainGoal = self.lower(env)?;
-                wc.cast()
+            WhereClause::Implemented { .. } => {
+                let g: ir::DomainGoal = self.lower(env)?;
+                g.cast()
+            }
+            WhereClause::ProjectionEq { ref projection, ref ty  } => {
+                // NB: here we generate a full Normalize clause, allowing for
+                // fallback to trigger when we're trying to *prove* a goal
+                ir::DomainGoal::Normalize(ir::Normalize {
+                    projection: projection.lower(env)?,
+                    ty: ty.lower(env)?,
+                }).cast()
             }
             WhereClause::TyWellFormed { ref ty } => {
                 ir::WellFormed::Ty(ty.lower(env)?).cast()
@@ -812,11 +824,7 @@ impl ir::AssociatedTyValue {
     ///
     /// ```notrust
     /// forall<'a, T> {
-    ///     (Vec<T>: Iterable<IntoIter<'a> = Iter<'a, T>>) :-
-    ///         (Vec<T>: Iterable),  // (1)
-    ///         (T: 'a)              // (2)
-    ///
-    ///     known(Iterable::IntoIter<Vec<T>, 'a>) :-
+    ///     (Vec<T>: Iterable<IntoIter<'a> =raw Iter<'a, T>>) :-
     ///         (Vec<T>: Iterable),  // (1)
     ///         (T: 'a)              // (2)
     /// }
@@ -856,11 +864,11 @@ impl ir::AssociatedTyValue {
         };
 
         // Determine the normalization
-        let norm_clause = ir::ProgramClause {
+        let normalization = ir::ProgramClause {
             implication: ir::Binders {
                 binders: all_binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: ir::DomainGoal::Normalize(ir::Normalize {
+                    consequence: ir::DomainGoal::RawNormalize(ir::Normalize {
                         projection: projection.clone(),
                         ty: self.value.value.ty.clone()
                     }),
@@ -869,18 +877,7 @@ impl ir::AssociatedTyValue {
             }
         };
 
-        // Record that the projection is known
-        let known_clause = ir::ProgramClause {
-            implication: ir::Binders {
-                binders: all_binders.clone(),
-                value: ir::ProgramClauseImplication {
-                    consequence: ir::DomainGoal::KnownProjection(projection),
-                    conditions: conditions.clone(),
-                }
-            }
-        };
-
-        vec![norm_clause, known_clause]
+        vec![normalization]
     }
 }
 
@@ -984,46 +981,73 @@ impl ir::TraitDatum {
 
 impl ir::AssociatedTyDatum {
     fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
-        // For each associated type, we have a "normalization fallback" clause.
+        // For each associated type, we define normalization including a
+        // "fallback" if we can't resolve a projection using an impl/where clauses.
         //
         // Given:
         //
-        //    trait SomeTrait {
+        //    trait Foo {
         //        type Assoc;
         //    }
         //
         // we generate:
         //
-        //    ?T: SomeTrait<Assoc = (SomeTrait::Assoc)<?T>> :-
-        //      // we can't resolve the normalization through an impl clause
-        //      not { known { <?T as SomeTrait>::Assoc } }.
+        //    ?T: Foo<Assoc = ?U> :- ?T: Foo<Assoc =raw ?U>.
+        //    ?T: Foo<Assoc = (Foo::Assoc)<?T>> :- not { exists<U> { ?T: Foo<Assoc =raw U> } }.
 
         let binders: Vec<_> = self.parameter_kinds.iter().map(|pk| pk.map(|_| ())).collect();
         let parameters: Vec<_> = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
-
         let projection = ir::ProjectionTy {
             associated_ty_id: self.id,
             parameters: parameters.clone(),
         };
 
-        // Construct an application from the projection. So if we have `<T as
-        // Iterator>::Item`, we would produce `(Iterator::Item)<T>`.
-        let app = ir::ApplicationTy { name: ir::TypeName::AssociatedType(self.id), parameters };
-        let fallback_ty = ir::Ty::Apply(app);
-        let norm_fallback = ir::Normalize { projection: projection.clone(), ty: fallback_ty };
+        let raw = {
+            let binders: Vec<_> = binders.iter()
+                .cloned()
+                .chain(Some(ir::ParameterKind::Ty(())))
+                .collect();
+            let ty = ir::Ty::Var(binders.len() - 1);
+            let normalize = ir::Normalize { projection: projection.clone(), ty };
 
-        let fallback = ir::ProgramClause {
-            implication: ir::Binders {
-                binders,
-                value: ir::ProgramClauseImplication {
-                    consequence: ir::DomainGoal::Normalize(norm_fallback),
-                    conditions: vec![
-                        ir::Goal::Not(Box::new(ir::DomainGoal::KnownProjection(projection).cast()))
-                    ]
+            ir::ProgramClause {
+                implication: ir::Binders {
+                    binders,
+                    value: ir::ProgramClauseImplication {
+                        consequence: normalize.clone().cast(),
+                        conditions: vec![ir::DomainGoal::RawNormalize(normalize).cast()],
+                    }
                 }
             }
         };
 
-        vec![fallback]
+        let fallback = {
+            // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
+            // we would produce `(Iterator::Item)<T>`.
+            let app = ir::ApplicationTy { name: ir::TypeName::AssociatedType(self.id), parameters };
+            let ty = ir::Ty::Apply(app);
+
+            let raw = ir::DomainGoal::RawNormalize(ir::Normalize {
+                projection: projection.clone().up_shift(1),
+                ty: ir::Ty::Var(0),
+            });
+            let exists_binders = ir::Binders {
+                binders: vec![ir::ParameterKind::Ty(())],
+                value: Box::new(raw.cast()),
+            };
+            let exists = ir::Goal::Quantified(ir::QuantifierKind::Exists, exists_binders);
+
+            ir::ProgramClause {
+                implication: ir::Binders {
+                    binders,
+                    value: ir::ProgramClauseImplication {
+                        consequence: ir::Normalize { projection: projection.clone(), ty }.cast(),
+                        conditions: vec![ir::Goal::Not(Box::new(exists))]
+                    }
+                }
+            }
+        };
+
+        vec![raw, fallback]
     }
 }

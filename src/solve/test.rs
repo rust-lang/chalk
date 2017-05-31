@@ -859,7 +859,7 @@ fn mixed_indices_normalize_application() {
                 }
             }
         } yields {
-            "Ambig"
+            "Unique" // normalizations exist even if the trait isn't implemented
         }
     }
 }
