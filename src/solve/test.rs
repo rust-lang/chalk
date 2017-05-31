@@ -859,7 +859,7 @@ fn mixed_indices_normalize_application() {
                 }
             }
         } yields {
-            "Unique" // normalizations exist even if the trait isn't implemented
+            "Ambig"
         }
     }
 }
@@ -1191,6 +1191,30 @@ fn negation_free_vars() {
             }
         } yields {
             "Ambig"
+        }
+    }
+}
+
+// TODO: get this test working!
+#[test]
+#[ignore]
+fn where_clause_trumps() {
+    test! {
+        program {
+            struct Foo { }
+
+            trait Marker { }
+            impl Marker for Foo { }
+        }
+
+        goal {
+            forall<T> {
+                if (T: Marker) {
+                    T: Marker
+                }
+            }
+        } yields {
+            "Unique"
         }
     }
 }
