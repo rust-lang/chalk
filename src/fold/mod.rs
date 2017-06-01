@@ -2,6 +2,7 @@ use errors::*;
 use ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
+use std::collections::BTreeMap;
 
 mod instantiate;
 mod shifted;
@@ -139,6 +140,23 @@ impl Fold for Lifetime {
     }
 }
 
+impl Fold for Substitution {
+    type Result = Substitution;
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+        let mut tys = BTreeMap::new();
+        let mut lifetimes = BTreeMap::new();
+
+        for (var, ty) in &self.tys {
+            tys.insert(*var, ty.fold_with(folder, binders)?);
+        }
+        for (var, lt) in &self.lifetimes {
+            lifetimes.insert(*var, lt.fold_with(folder, binders)?);
+        }
+
+        Ok(Substitution { tys, lifetimes })
+    }
+}
+
 macro_rules! copy_fold {
     ($t:ty) => {
         impl Fold for $t {
@@ -178,12 +196,11 @@ macro_rules! enum_fold {
 }
 
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
-enum_fold!(WhereClause[] { Implemented(a), Normalize(a) });
+enum_fold!(DomainGoal[] { Implemented(a), RawNormalize(a), Normalize(a), WellFormed(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
-enum_fold!(WhereClauseGoal[] { Implemented(a), Normalize(a), UnifyTys(a),
-                               UnifyLifetimes(a), WellFormed(a) });
+enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
-enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Leaf(wc) });
+enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g), Leaf(wc) });
 
 macro_rules! struct_fold {
     ($s:ident $([$($n:ident),*])* { $($name:ident),* } $($w:tt)*) => {
@@ -206,6 +223,6 @@ struct_fold!(AssociatedTyValue { associated_ty_id, value });
 struct_fold!(AssociatedTyValueBound { ty, where_clauses });
 struct_fold!(Environment { universe, clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
-struct_fold!(Unify[T] { a, b } where T: Fold);
-struct_fold!(Constrained[F] { value, constraints } where F: Fold);
+struct_fold!(EqGoal { a, b });
 struct_fold!(ProgramClauseImplication { consequence, conditions });
+struct_fold!(ConstrainedSubst { subst, constraints });

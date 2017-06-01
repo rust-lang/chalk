@@ -11,7 +11,6 @@ use std::sync::Arc;
 
 use chalk::ir;
 use chalk::lower::*;
-use chalk::solve::prove::Prove;
 use chalk::solve::solver::Solver;
 
 use rustyline::error::ReadlineError;
@@ -121,9 +120,13 @@ fn goal(text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let overflow_depth = 10;
     let mut solver = Solver::new(&prog.env, overflow_depth);
-    match Prove::new(&mut solver, goal).solve() {
-        Ok(v) => println!("{:#?}", v),
-        Err(e) => println!("{}", e),
+    let goal = ir::Canonical {
+        value: ir::InEnvironment::new(&ir::Environment::new(), *goal),
+        binders: vec![],
+    };
+    match solver.solve_goal(goal) {
+        Ok(v) => println!("{}\n", v),
+        Err(e) => println!("No possible solution: {}\n", e),
     }
     Ok(())
 }

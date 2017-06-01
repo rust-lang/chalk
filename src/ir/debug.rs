@@ -145,35 +145,28 @@ impl Debug for Normalize {
     }
 }
 
-impl Debug for WhereClause {
+impl Debug for DomainGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
-            WhereClause::Normalize(ref n) => write!(fmt, "{:?}", n),
-            WhereClause::Implemented(ref n) => {
+            DomainGoal::Normalize(ref n) => write!(fmt, "{:?}", n),
+            DomainGoal::RawNormalize(ref n) => write!(fmt, "raw {{ {:?} }}", n),
+            DomainGoal::Implemented(ref n) => {
                 write!(fmt,
                        "{:?}: {:?}{:?}",
                        n.parameters[0],
                        n.trait_id,
                        Angle(&n.parameters[1..]))
             }
+            DomainGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
         }
     }
 }
 
-impl Debug for WhereClauseGoal {
+impl Debug for LeafGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
-            WhereClauseGoal::Normalize(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::Implemented(ref n) => {
-                write!(fmt,
-                       "{:?}: {:?}{:?}",
-                       n.parameters[0],
-                       n.trait_id,
-                       Angle(&n.parameters[1..]))
-            }
-            WhereClauseGoal::UnifyTys(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::UnifyLifetimes(ref n) => write!(fmt, "{:?}", n),
-            WhereClauseGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
+            LeafGoal::EqGoal(ref eq) => write!(fmt, "{:?}", eq),
+            LeafGoal::DomainGoal(ref dom) => write!(fmt, "{:?}", dom),
         }
     }
 }
@@ -188,7 +181,7 @@ impl Debug for WellFormed {
     }
 }
 
-impl<T: Debug> Debug for Unify<T> {
+impl Debug for EqGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "({:?} = {:?})", self.a, self.b)
     }
@@ -212,6 +205,7 @@ impl Debug for Goal {
             }
             Goal::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
             Goal::And(ref g1, ref g2) => write!(fmt, "({:?}, {:?})", g1, g2),
+            Goal::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),
         }
     }

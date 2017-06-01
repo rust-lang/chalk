@@ -170,9 +170,10 @@ impl LowerProgram for Program {
 
                         associated_ty_data.insert(info.id, ir::AssociatedTyDatum {
                             trait_id: item_id,
+                            id: info.id,
                             name: defn.name.str,
                             parameter_kinds: parameter_kinds,
-                            where_clauses: vec![ir::WhereClause::Implemented(trait_ref)]
+                            where_clauses: vec![ir::DomainGoal::Implemented(trait_ref)]
                         });
                     }
                 }
@@ -194,11 +195,19 @@ trait LowerParameterMap {
     fn synthetic_parameters(&self) -> Option<ir::ParameterKind<ir::Identifier>>;
     fn declared_parameters(&self) -> &[ParameterKind];
     fn all_parameters(&self) -> Vec<ir::ParameterKind<ir::Identifier>> {
+        self.synthetic_parameters()
+            .into_iter()
+            .chain(self.declared_parameters().iter().map(|id| id.lower()))
+            .collect()
+
+        /* TODO: switch to this ordering, but adjust *all* the code to match
+
         self.declared_parameters()
             .iter()
             .map(|id| id.lower())
-            .chain(self.synthetic_parameters()) // (*) see above
+            .chain(self.synthetic_parameters()) // (*) see below
             .collect()
+         */
     }
 
     fn parameter_refs(&self) -> Vec<ir::Parameter> {
@@ -295,7 +304,7 @@ impl LowerParameterKind for ParameterKind {
 trait LowerWhereClauses {
     fn where_clauses(&self) -> &[WhereClause];
 
-    fn lower_where_clauses(&self, env: &Env) -> Result<Vec<ir::WhereClause>> {
+    fn lower_where_clauses(&self, env: &Env) -> Result<Vec<ir::DomainGoal>> {
         self.where_clauses().lower(env)
     }
 }
@@ -347,11 +356,11 @@ impl LowerWhereClauses for Impl {
 }
 
 trait LowerWhereClauseVec {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::WhereClause>>;
+    fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>>;
 }
 
 impl LowerWhereClauseVec for [WhereClause] {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::WhereClause>> {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>> {
         self.iter()
             .map(|wc| wc.lower(env))
             .collect()
@@ -362,16 +371,20 @@ trait LowerWhereClause<T> {
     fn lower(&self, env: &Env) -> Result<T>;
 }
 
-/// Lowers a where-clause in the context of a clause; this is limited
-/// to the kinds of where-clauses users can actually type in Rust.
-impl LowerWhereClause<ir::WhereClause> for WhereClause {
-    fn lower(&self, env: &Env) -> Result<ir::WhereClause> {
+/// Lowers a where-clause in the context of a clause (i.e. in "negative"
+/// position); this is limited to the kinds of where-clauses users can actually
+/// type in Rust.
+impl LowerWhereClause<ir::DomainGoal> for WhereClause {
+    fn lower(&self, env: &Env) -> Result<ir::DomainGoal> {
         Ok(match *self {
             WhereClause::Implemented { ref trait_ref } => {
-                ir::WhereClause::Implemented(trait_ref.lower(env)?)
+                ir::DomainGoal::Implemented(trait_ref.lower(env)?)
             }
             WhereClause::ProjectionEq { ref projection, ref ty  } => {
-                ir::WhereClause::Normalize(ir::Normalize {
+                // NB: here we generate a RawNormalize, because we want to make
+                // make a maximally-strong assumption (and not allow fallback to
+                // trigger).
+                ir::DomainGoal::RawNormalize(ir::Normalize {
                     projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
                 })
@@ -386,16 +399,24 @@ impl LowerWhereClause<ir::WhereClause> for WhereClause {
     }
 }
 
-/// Lowers a where-clause in the context of a goal; this is richer in
-/// terms of the legal sorts of where-clauses that can appear, because
-/// it includes all the sorts of things that the compiler must verify.
-impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
-    fn lower(&self, env: &Env) -> Result<ir::WhereClauseGoal> {
+/// Lowers a where-clause in the context of a goal (i.e. in "positive"
+/// position); this is richer in terms of the legal sorts of where-clauses that
+/// can appear, because it includes all the sorts of things that the compiler
+/// must verify.
+impl LowerWhereClause<ir::LeafGoal> for WhereClause {
+    fn lower(&self, env: &Env) -> Result<ir::LeafGoal> {
         Ok(match *self {
-            WhereClause::Implemented { .. } |
-            WhereClause::ProjectionEq { .. } => {
-                let wc: ir::WhereClause = self.lower(env)?;
-                wc.cast()
+            WhereClause::Implemented { .. } => {
+                let g: ir::DomainGoal = self.lower(env)?;
+                g.cast()
+            }
+            WhereClause::ProjectionEq { ref projection, ref ty  } => {
+                // NB: here we generate a full Normalize clause, allowing for
+                // fallback to trigger when we're trying to *prove* a goal
+                ir::DomainGoal::Normalize(ir::Normalize {
+                    projection: projection.lower(env)?,
+                    ty: ty.lower(env)?,
+                }).cast()
             }
             WhereClause::TyWellFormed { ref ty } => {
                 ir::WellFormed::Ty(ty.lower(env)?).cast()
@@ -404,15 +425,15 @@ impl LowerWhereClause<ir::WhereClauseGoal> for WhereClause {
                 ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
             }
             WhereClause::UnifyTys { ref a, ref b} => {
-                ir::Unify {
-                    a: a.lower(env)?,
-                    b: b.lower(env)?,
+                ir::EqGoal {
+                    a: ir::ParameterKind::Ty(a.lower(env)?),
+                    b: ir::ParameterKind::Ty(b.lower(env)?),
                 }.cast()
             }
             WhereClause::UnifyLifetimes { ref a, ref b } => {
-                ir::Unify {
-                    a: a.lower(env)?,
-                    b: b.lower(env)?,
+                ir::EqGoal {
+                    a: ir::ParameterKind::Lifetime(a.lower(env)?),
+                    b: ir::ParameterKind::Lifetime(b.lower(env)?)
                 }.cast()
             }
         })
@@ -713,6 +734,8 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(Box::new(ir::Goal::Implies(wc.lower(env)?, g.lower(env)?))),
             Goal::And(ref g1, ref g2) =>
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
+            Goal::Not(ref g) =>
+                Ok(Box::new(ir::Goal::Not(g.lower(env)?))),
             Goal::Leaf(ref wc) =>
                 Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
         }
@@ -754,6 +777,7 @@ impl ir::Program {
 
         program_clauses.extend(self.struct_data.values().flat_map(|d| d.to_program_clauses()));
         program_clauses.extend(self.trait_data.values().flat_map(|d| d.to_program_clauses()));
+        program_clauses.extend(self.associated_ty_data.values().flat_map(|d| d.to_program_clauses()));
 
         for datum in self.impl_data.values() {
             program_clauses.push(datum.to_program_clause());
@@ -800,7 +824,7 @@ impl ir::AssociatedTyValue {
     ///
     /// ```notrust
     /// forall<'a, T> {
-    ///     (Vec<T>: Iterable<IntoIter<'a> = Iter<'a, T>>) :-
+    ///     (Vec<T>: Iterable<IntoIter<'a> =raw Iter<'a, T>>) :-
     ///         (Vec<T>: Iterable),  // (1)
     ///         (T: 'a)              // (2)
     /// }
@@ -826,35 +850,34 @@ impl ir::AssociatedTyValue {
             .chain(self.value.value.where_clauses.clone().cast())
             .collect();
 
-        // The consequence is that the normalization holds.
-        let consequence = {
+        let projection = {
             // First add refs to the bound parameters (`'a`, in above example)
             let parameters = self.value.binders.iter().zip(0..).map(|p| p.to_parameter());
 
             // Then add the trait-ref parameters (`Vec<T>`, in above example)
             let parameters = parameters.chain(impl_trait_ref.parameters.clone());
 
-            // Construct normalization predicate
-            ir::Normalize {
-                projection: ir::ProjectionTy {
-                    associated_ty_id: self.associated_ty_id,
-                    parameters: parameters.collect(),
-                },
-                ty: self.value.value.ty.clone()
+            ir::ProjectionTy {
+                associated_ty_id: self.associated_ty_id,
+                parameters: parameters.collect(),
             }
         };
 
-        let pos_clause = ir::ProgramClause {
+        // Determine the normalization
+        let normalization = ir::ProgramClause {
             implication: ir::Binders {
                 binders: all_binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: consequence.clone().cast(),
-                    conditions: conditions,
+                    consequence: ir::DomainGoal::RawNormalize(ir::Normalize {
+                        projection: projection.clone(),
+                        ty: self.value.value.ty.clone()
+                    }),
+                    conditions: conditions.clone(),
                 }
             }
         };
 
-        vec![pos_clause]
+        vec![normalization]
     }
 }
 
@@ -953,5 +976,78 @@ impl ir::TraitDatum {
         };
 
         vec![wf]
+    }
+}
+
+impl ir::AssociatedTyDatum {
+    fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
+        // For each associated type, we define normalization including a
+        // "fallback" if we can't resolve a projection using an impl/where clauses.
+        //
+        // Given:
+        //
+        //    trait Foo {
+        //        type Assoc;
+        //    }
+        //
+        // we generate:
+        //
+        //    ?T: Foo<Assoc = ?U> :- ?T: Foo<Assoc =raw ?U>.
+        //    ?T: Foo<Assoc = (Foo::Assoc)<?T>> :- not { exists<U> { ?T: Foo<Assoc =raw U> } }.
+
+        let binders: Vec<_> = self.parameter_kinds.iter().map(|pk| pk.map(|_| ())).collect();
+        let parameters: Vec<_> = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
+        let projection = ir::ProjectionTy {
+            associated_ty_id: self.id,
+            parameters: parameters.clone(),
+        };
+
+        let raw = {
+            let binders: Vec<_> = binders.iter()
+                .cloned()
+                .chain(Some(ir::ParameterKind::Ty(())))
+                .collect();
+            let ty = ir::Ty::Var(binders.len() - 1);
+            let normalize = ir::Normalize { projection: projection.clone(), ty };
+
+            ir::ProgramClause {
+                implication: ir::Binders {
+                    binders,
+                    value: ir::ProgramClauseImplication {
+                        consequence: normalize.clone().cast(),
+                        conditions: vec![ir::DomainGoal::RawNormalize(normalize).cast()],
+                    }
+                }
+            }
+        };
+
+        let fallback = {
+            // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
+            // we would produce `(Iterator::Item)<T>`.
+            let app = ir::ApplicationTy { name: ir::TypeName::AssociatedType(self.id), parameters };
+            let ty = ir::Ty::Apply(app);
+
+            let raw = ir::DomainGoal::RawNormalize(ir::Normalize {
+                projection: projection.clone().up_shift(1),
+                ty: ir::Ty::Var(0),
+            });
+            let exists_binders = ir::Binders {
+                binders: vec![ir::ParameterKind::Ty(())],
+                value: Box::new(raw.cast()),
+            };
+            let exists = ir::Goal::Quantified(ir::QuantifierKind::Exists, exists_binders);
+
+            ir::ProgramClause {
+                implication: ir::Binders {
+                    binders,
+                    value: ir::ProgramClauseImplication {
+                        consequence: ir::Normalize { projection: projection.clone(), ty }.cast(),
+                        conditions: vec![ir::Goal::Not(Box::new(exists))]
+                    }
+                }
+            }
+        };
+
+        vec![raw, fallback]
     }
 }

@@ -32,14 +32,20 @@ struct Unifier<'t> {
     table: &'t mut InferenceTable,
     environment: &'t Arc<Environment>,
     snapshot: InferenceSnapshot,
-    goals: Vec<InEnvironment<WhereClauseGoal>>,
+    goals: Vec<InEnvironment<LeafGoal>>,
     constraints: Vec<InEnvironment<Constraint>>,
+    ambiguous: bool,
 }
 
 #[derive(Debug)]
 pub struct UnificationResult {
-    pub goals: Vec<InEnvironment<WhereClauseGoal>>,
+    pub goals: Vec<InEnvironment<LeafGoal>>,
     pub constraints: Vec<InEnvironment<Constraint>>,
+
+    /// When unifying two skolemized (forall-quantified) type names, we can
+    /// neither confirm nor deny their equality, so we return an ambiguous
+    /// result.
+    pub ambiguous: bool,
 }
 
 impl<'t> Unifier<'t> {
@@ -51,6 +57,7 @@ impl<'t> Unifier<'t> {
             snapshot: snapshot,
             goals: vec![],
             constraints: vec![],
+            ambiguous: false,
         }
     }
 
@@ -59,6 +66,7 @@ impl<'t> Unifier<'t> {
         Ok(UnificationResult {
             goals: self.goals,
             constraints: self.constraints,
+            ambiguous: self.ambiguous,
         })
     }
 
@@ -105,7 +113,15 @@ impl<'t> Unifier<'t> {
             }
 
             (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
-                Zip::zip_with(self, apply1, apply2)
+                if apply1.name != apply2.name {
+                    if apply1.name.is_for_all() || apply2.name.is_for_all() {
+                        self.ambiguous = true;
+                    } else {
+                        bail!("cannot equate `{:?}` and `{:?}`", apply1.name, apply2.name);
+                    }
+                }
+
+                Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
             }
 
             (&Ty::Projection(ref proj1), &Ty::Projection(ref proj2)) => {
@@ -150,7 +166,8 @@ impl<'t> Unifier<'t> {
         debug!("unify_forall_tys: ty1 = {:?}", ty1);
         debug!("unify_forall_tys: ty2 = {:?}", ty2);
 
-        let goal = InEnvironment::new(&environment, Unify { a: ty1, b: ty2 }).cast();
+        let eq_goal = EqGoal { a: ParameterKind::Ty(ty1), b: ParameterKind::Ty(ty2) };
+        let goal = InEnvironment::new(&environment, eq_goal).cast();
         debug!("unify_forall_tys: goal = {:?}", goal);
 
         self.goals.push(goal);
@@ -186,7 +203,8 @@ impl<'t> Unifier<'t> {
         let ty1 = ty1.subst(&lifetimes1);
         let ty2 = ty2.clone();
 
-        self.goals.push(InEnvironment::new(&environment, Unify { a: ty1, b: ty2 }).cast());
+        let eq_goal = EqGoal { a: ParameterKind::Ty(ty1), b: ParameterKind::Ty(ty2) };
+        self.goals.push(InEnvironment::new(&environment, eq_goal).cast());
 
         Ok(())
     }

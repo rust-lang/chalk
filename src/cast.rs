@@ -1,5 +1,4 @@
 use ir::*;
-use solve::Solution;
 
 pub trait Cast<T>: Sized {
     fn cast(self) -> T;
@@ -23,59 +22,62 @@ macro_rules! reflexive_impl {
 }
 
 reflexive_impl!(TraitRef);
-reflexive_impl!(WhereClause);
-reflexive_impl!(WhereClauseGoal);
+reflexive_impl!(LeafGoal);
+reflexive_impl!(DomainGoal);
 
-impl Cast<WhereClause> for TraitRef {
-    fn cast(self) -> WhereClause {
-        WhereClause::Implemented(self)
+impl Cast<DomainGoal> for TraitRef {
+    fn cast(self) -> DomainGoal {
+        DomainGoal::Implemented(self)
     }
 }
 
-impl Cast<WhereClauseGoal> for TraitRef {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::Implemented(self)
+impl Cast<LeafGoal> for TraitRef {
+    fn cast(self) -> LeafGoal {
+        LeafGoal::DomainGoal(self.cast())
     }
 }
 
-impl Cast<WhereClause> for Normalize {
-    fn cast(self) -> WhereClause {
-        WhereClause::Normalize(self)
+impl Cast<DomainGoal> for Normalize {
+    fn cast(self) -> DomainGoal {
+        DomainGoal::Normalize(self)
     }
 }
 
-impl Cast<WhereClauseGoal> for Normalize {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::Normalize(self)
+impl Cast<LeafGoal> for Normalize {
+    fn cast(self) -> LeafGoal {
+        LeafGoal::DomainGoal(self.cast())
     }
 }
 
-impl Cast<WhereClauseGoal> for WellFormed {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::WellFormed(self)
+impl Cast<DomainGoal> for WellFormed {
+    fn cast(self) -> DomainGoal {
+        DomainGoal::WellFormed(self)
+    }
+}
+
+impl Cast<LeafGoal> for WellFormed {
+    fn cast(self) -> LeafGoal {
+        LeafGoal::DomainGoal(self.cast())
     }
 }
 
 impl Cast<Goal> for WellFormed {
     fn cast(self) -> Goal {
-        let wcg: WhereClauseGoal = self.cast();
+        let wcg: LeafGoal = self.cast();
         wcg.cast()
     }
 }
 
 impl Cast<Goal> for Normalize {
     fn cast(self) -> Goal {
-        let wcg: WhereClauseGoal = self.cast();
+        let wcg: LeafGoal = self.cast();
         wcg.cast()
     }
 }
 
-impl Cast<WhereClauseGoal> for WhereClause {
-    fn cast(self) -> WhereClauseGoal {
-        match self {
-            WhereClause::Implemented(a) => a.cast(),
-            WhereClause::Normalize(a) => a.cast(),
-        }
+impl Cast<LeafGoal> for DomainGoal {
+    fn cast(self) -> LeafGoal {
+        LeafGoal::DomainGoal(self)
     }
 }
 
@@ -85,27 +87,21 @@ impl Cast<Goal> for TraitRef {
     }
 }
 
-impl Cast<Goal> for WhereClause {
+impl Cast<Goal> for DomainGoal {
     fn cast(self) -> Goal {
         Goal::Leaf(self.cast())
     }
 }
 
-impl Cast<Goal> for WhereClauseGoal {
+impl Cast<Goal> for LeafGoal {
     fn cast(self) -> Goal {
         Goal::Leaf(self)
     }
 }
 
-impl Cast<WhereClauseGoal> for Unify<Ty> {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::UnifyTys(self)
-    }
-}
-
-impl Cast<WhereClauseGoal> for Unify<Lifetime> {
-    fn cast(self) -> WhereClauseGoal {
-        WhereClauseGoal::UnifyLifetimes(self)
+impl Cast<LeafGoal> for EqGoal {
+    fn cast(self) -> LeafGoal {
+        LeafGoal::EqGoal(self)
     }
 }
 
@@ -126,10 +122,8 @@ macro_rules! map_impl {
 }
 
 map_impl!(impl[T: Cast<U>, U] Cast<Option<U>> for Option<T>);
-map_impl!(impl[T: Cast<U>, U] Cast<Query<U>> for Query<T>);
-map_impl!(impl[T: Cast<U>, U] Cast<Solution<U>> for Solution<T>);
+map_impl!(impl[T: Cast<U>, U] Cast<Canonical<U>> for Canonical<T>);
 map_impl!(impl[T: Cast<U>, U] Cast<InEnvironment<U>> for InEnvironment<T>);
-map_impl!(impl[T: Cast<U>, U] Cast<Constrained<U>> for Constrained<T>);
 map_impl!(impl[T: Cast<U>, U, E] Cast<Result<U, E>> for Result<T, E>);
 
 impl<T, U> Cast<Vec<U>> for Vec<T>

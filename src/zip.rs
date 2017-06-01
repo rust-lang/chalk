@@ -124,7 +124,7 @@ struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
 struct_zip!(ApplicationTy { name, parameters });
 struct_zip!(ProjectionTy { associated_ty_id, parameters });
 struct_zip!(Normalize { projection, ty });
-struct_zip!(Unify[T] { a, b } where T: Zip);
+struct_zip!(EqGoal { a, b });
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
@@ -155,6 +155,6 @@ macro_rules! enum_zip {
     }
 }
 
-enum_zip!(WhereClause { Implemented, Normalize });
-enum_zip!(WhereClauseGoal { Implemented, Normalize, UnifyTys, UnifyLifetimes, WellFormed });
+enum_zip!(DomainGoal { Implemented, RawNormalize, Normalize, WellFormed });
+enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(WellFormed { Ty, TraitRef });
