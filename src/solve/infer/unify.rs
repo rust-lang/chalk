@@ -116,6 +116,7 @@ impl<'t> Unifier<'t> {
                 if apply1.name != apply2.name {
                     if apply1.name.is_for_all() || apply2.name.is_for_all() {
                         self.ambiguous = true;
+                        return Ok(());
                     } else {
                         bail!("cannot equate `{:?}` and `{:?}`", apply1.name, apply2.name);
                     }
