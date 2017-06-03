@@ -6,6 +6,30 @@ use ir::*;
 use std::sync::Arc;
 use super::{LowerProgram, LowerGoal};
 
+macro_rules! lowering_success {
+    (program $program:tt) => {
+        let program_text = stringify!($program);
+        assert!(program_text.starts_with("{"));
+        assert!(program_text.ends_with("}"));
+        assert!(parse_and_lower(&program_text[1..program_text.len()-1]).is_ok());
+    }
+}
+
+macro_rules! lowering_error {
+    (program $program:tt error_msg { $expected:expr }) => {
+        let program_text = stringify!($program);
+        assert!(program_text.starts_with("{"));
+        assert!(program_text.ends_with("}"));
+        let error = parse_and_lower(&program_text[1..program_text.len()-1]).unwrap_err();
+        let expected = Error::from($expected);
+        assert_eq!(
+            error.to_string(),
+            expected.to_string()
+        );
+    }
+}
+
+
 fn parse_and_lower(text: &str) -> Result<Program> {
     chalk_parse::parse_program(text)?.lower()
 }
@@ -15,18 +39,42 @@ fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
 }
 
 #[test]
-fn lower() {
-    parse_and_lower("struct Foo { field: Foo } trait Bar { } impl Bar for Foo { }").unwrap();
+fn lower_success() {
+    lowering_success! {
+        program {
+            struct Foo { field: Foo }
+            trait Bar { }
+            impl Bar for Foo { }
+        }
+    }
 }
 
 #[test]
 fn not_trait() {
-    parse_and_lower("struct Foo { } trait Bar { } impl Foo for Bar { }").unwrap_err();
+    lowering_error! {
+        program {
+            struct Foo { }
+            trait Bar { }
+            impl Foo for Bar { }
+        }
+        error_msg {
+            "expected a trait, found `Foo`, which is not a trait"
+        }
+    }
 }
 
 #[test]
 fn invalid_name() {
-    parse_and_lower("struct Foo { } trait Bar { } impl Bar for X { }").unwrap_err();
+    lowering_error! {
+        program {
+            struct Foo { }
+            trait Bar { }
+            impl Bar for X { }
+        }
+        error_msg {
+            "invalid type name `X`"
+        }
+    }
 }
 
 #[test]
@@ -107,20 +155,6 @@ fn atc_accounting() {
     });
 }
 
-macro_rules! lowering_error {
-    (program $program:tt error_msg { $expected:expr }) => {
-        let program_text = stringify!($program);
-        assert!(program_text.starts_with("{"));
-        assert!(program_text.ends_with("}"));
-        let error = parse_and_lower(&program_text[1..program_text.len()-1]).unwrap_err();
-        let expected = Error::from($expected);
-        assert_eq!(
-            error.to_string(),
-            expected.to_string()
-        );
-    }
-}
-
 #[test]
 fn check_parameter_kinds() {
 
@@ -188,6 +222,109 @@ fn check_parameter_kinds() {
         }
         error_msg {
             "incorrect kind for trait parameter: expected lifetime, found type"
+        }
+    }
+}
+
+#[test]
+fn two_impls_for_same_type() {
+    lowering_error! {
+        program {
+            trait Foo { }
+            struct Bar { }
+            impl Foo for Bar { }
+            impl Foo for Bar { }
+        }
+        error_msg {
+            "overlapping impls of trait \"Foo\""
+        }
+    }
+}
+
+#[test]
+fn generic_vec_and_specific_vec() {
+    lowering_error! {
+        program {
+            trait Foo { }
+            struct Vec<T> { }
+            struct Bar { }
+            impl Foo for Vec<Bar> { }
+            impl<T> Foo for Vec<T> { }
+        }
+        error_msg {
+            "overlapping impls of trait \"Foo\""
+        }
+    }
+}
+
+#[test]
+fn concrete_impl_and_blanket_impl() {
+    lowering_error! {
+        program {
+            trait Foo { }
+            struct Bar { }
+            impl Foo for Bar { }
+            impl<T> Foo for T { }
+        }
+        error_msg {
+            "overlapping impls of trait \"Foo\""
+        }
+    }
+}
+
+#[test]
+fn two_blanket_impls() {
+    lowering_error! {
+        program {
+            trait Foo { }
+            trait Bar { }
+            trait Baz { }
+            impl<T> Foo for T where T: Bar { }
+            impl<T> Foo for T where T: Baz { }
+        }
+        error_msg {
+            "overlapping impls of trait \"Foo\""
+        }
+    }
+}
+
+#[test]
+fn multiple_nonoverlapping_impls() {
+    lowering_success! {
+        program {
+            trait Foo { }
+            struct Bar { }
+            struct Baz<T> { }
+            impl Foo for Bar { }
+            impl<T> Foo for Baz<T> { }
+        }
+    }
+}
+
+#[test]
+fn local_negative_reasoning_in_coherence() {
+    lowering_success! {
+        program {
+            trait Foo { }
+            trait Bar { }
+            struct Baz { }
+            impl<T> Foo for T where T: Bar { }
+            impl Foo for Baz { }
+        }
+    }
+}
+
+#[test]
+fn multiple_parameters() {
+    lowering_error! {
+        program {
+            trait Foo<T> { }
+            struct Baz { }
+
+            impl<T> Foo<Baz> for T { }
+            impl<T> Foo<T> for Baz { }
+        } error_msg {
+            "overlapping impls of trait \"Foo\""
         }
     }
 }

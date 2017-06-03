@@ -1,14 +1,17 @@
 [package]
+authors = ["Niko Matsakis <niko@alum.mit.edu>"]
 name = "chalk"
 version = "0.1.0"
-authors = ["Niko Matsakis <niko@alum.mit.edu>"]
-
-[workspace]
 
 [dependencies]
-chalk-parse = { path = "chalk-parse" }
 ena = "0.4"
 error-chain = "0.7.2"
+itertools = "0.6.0"
 lalrpop-intern = "0.12.1"
 lazy_static = "0.2.2"
 rustyline = "1.0"
+
+[dependencies.chalk-parse]
+path = "chalk-parse"
+
+[workspace]

@@ -1,9 +1,11 @@
-use cast::Cast;
+use std::collections::HashMap;
+
 use chalk_parse::ast::*;
 use lalrpop_intern::intern;
+
+use cast::Cast;
 use errors::*;
 use ir;
-use std::collections::HashMap;
 
 mod test;
 
@@ -183,7 +185,9 @@ impl LowerProgram for Program {
             }
         }
 
-        Ok(ir::Program { type_ids, type_kinds, struct_data, trait_data, impl_data, associated_ty_data, })
+        let program = ir::Program { type_ids, type_kinds, struct_data, trait_data, impl_data, associated_ty_data, };
+        program.check_overlapping_impls()?;
+        Ok(program)
     }
 }
 
