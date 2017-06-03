@@ -55,6 +55,9 @@ fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> Canonical<InEnvironment<
     let lhs_params = params(lhs).iter().cloned();
     let rhs_params = params(rhs).iter().map(|param| param.up_shift(lhs.binders.len()));
 
+    let mut where_clauses = lhs.binders.value.where_clauses.clone();
+    where_clauses.extend(rhs.binders.value.where_clauses.clone());
+
     // Create an equality goal of inputs to the trait, attempting to unify
     // the inputs to both impls with each other
     let goal = lhs_params.zip(rhs_params)
@@ -66,7 +69,7 @@ fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> Canonical<InEnvironment<
         value: InEnvironment {
             environment: Environment::new(),
             goal: Goal::Quantified(QuantifierKind::Exists, Binders {
-                value: Box::new(goal),
+                value: Box::new(Goal::Implies(where_clauses, Box::new(goal))),
                 binders: binders,
             }),
         },
