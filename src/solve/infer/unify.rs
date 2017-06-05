@@ -309,8 +309,6 @@ impl TypeName {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////
-
 struct OccursCheck<'u, 't: 'u> {
     unifier: &'u mut Unifier<'t>,
     binders: usize,
