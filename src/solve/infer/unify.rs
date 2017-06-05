@@ -43,8 +43,9 @@ pub struct UnificationResult {
     pub constraints: Vec<InEnvironment<Constraint>>,
 
     /// When unifying two skolemized (forall-quantified) type names, we can
-    /// neither confirm nor deny their equality, so we return an ambiguous
-    /// result.
+    /// neither confirm nor deny their equality, since we interpret the
+    /// unification request as talking about *all possible
+    /// substitutions*. Instead, we return an ambiguous result.
     pub ambiguous: bool,
 }
 
@@ -115,8 +116,16 @@ impl<'t> Unifier<'t> {
             (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
                 if apply1.name != apply2.name {
                     if apply1.name.is_for_all() || apply2.name.is_for_all() {
+                        // we're being asked to prove something like `!0 = !1`
+                        // or `!0 = i32`. We interpret this as being asked
+                        // whether that holds *for all subtitutions*. Thus, the
+                        // answer is always *maybe* (ambiguous). That means we get:
+                        //
+                        //     forall<T, U> { T = U } // Ambig
+                        //     forall<T, U> { not { T = U } } // Ambig
+
                         self.ambiguous = true;
-                        return Ok(());
+                        return Ok(())
                     } else {
                         bail!("cannot equate `{:?}` and `{:?}`", apply1.name, apply2.name);
                     }

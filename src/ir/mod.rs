@@ -129,8 +129,8 @@ impl Environment {
                         push_clause(where_clause);
                     }
                 }
-                DomainGoal::RawNormalize(Normalize { ref projection, ty: _ }) => {
-                    // raw { <T as Trait<U>>::Foo ===> V }
+                DomainGoal::Normalize(Normalize { ref projection, ty: _ }) => {
+                    // <T as Trait<U>>::Foo ===> V
                     // ----------------------------------------------------------
                     // T: Trait<U>
 
@@ -396,9 +396,6 @@ pub struct TraitRef {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DomainGoal {
     Implemented(TraitRef),
-    /// A projection we know definitively via an impl or where clause
-    RawNormalize(Normalize),
-    /// A general projection, which might employ fallback
     Normalize(Normalize),
     WellFormed(WellFormed),
 }
@@ -414,7 +411,8 @@ impl DomainGoal {
                     conditions: vec![],
                 },
                 binders: vec![],
-            }
+            },
+            fallback_clause: false,
         }
     }
 }
@@ -478,6 +476,9 @@ impl<T> Binders<T> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProgramClause {
     pub implication: Binders<ProgramClauseImplication>,
+
+    /// Is this a fallback clause which should get lower priority?
+    pub fallback_clause: bool,
 }
 
 /// Represents one clause of the form `consequence :- conditions`.
@@ -591,6 +592,10 @@ impl Substitution {
         }
 
         Substitution { tys, lifetimes }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.tys.is_empty() && self.lifetimes.is_empty()
     }
 }
 

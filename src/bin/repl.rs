@@ -86,7 +86,7 @@ fn process(command: &str, rl: &mut rustyline::Editor<()>, prog: &mut Option<Prog
         ir::set_current_program(&prog.ir, || -> Result<()> {
             match command {
                 "print" => println!("{}", prog.text),
-                "lowered" => println!("{:?}", prog.ir),
+                "lowered" => println!("{:#?}", prog.env),
                 _ => goal(command, prog)?,
             }
             Ok(())
@@ -120,11 +120,8 @@ fn goal(text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let overflow_depth = 10;
     let mut solver = Solver::new(&prog.env, overflow_depth);
-    let goal = ir::Canonical {
-        value: ir::InEnvironment::new(&ir::Environment::new(), *goal),
-        binders: vec![],
-    };
-    match solver.solve_goal(goal) {
+    let goal = ir::InEnvironment::new(&ir::Environment::new(), *goal);
+    match solver.solve_closed_goal(goal) {
         Ok(v) => println!("{}\n", v),
         Err(e) => println!("No possible solution: {}\n", e),
     }

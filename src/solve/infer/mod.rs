@@ -159,7 +159,7 @@ impl Lifetime {
 impl Substitution {
     /// Check whether this substitution is the identity substitution in the
     /// given inference context.
-    pub fn is_trivial(&self, in_infer: &mut InferenceTable) -> bool {
+    pub fn is_trivial_within(&self, in_infer: &mut InferenceTable) -> bool {
         for ty in self.tys.values() {
             if let Some(var) = ty.inference_var() {
                 if in_infer.probe_var(var).is_some() {
