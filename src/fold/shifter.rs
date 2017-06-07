@@ -35,6 +35,7 @@ up_shift_method!(Parameter);
 up_shift_method!(Lifetime);
 up_shift_method!(TraitRef);
 up_shift_method!(ProjectionTy);
+up_shift_method!(DomainGoal);
 
 impl Folder for Shifter {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {

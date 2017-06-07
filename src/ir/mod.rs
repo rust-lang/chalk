@@ -160,6 +160,10 @@ impl<G> InEnvironment<G> {
         InEnvironment { environment: environment.clone(), goal }
     }
 
+    pub fn empty(goal: G) -> Self {
+        InEnvironment { environment: Environment::new(), goal }
+    }
+
     pub fn map<OP, H>(self, op: OP) -> InEnvironment<H>
         where OP: FnOnce(G) -> H
     {
@@ -541,6 +545,12 @@ pub enum Goal {
     And(Box<Goal>, Box<Goal>),
     Not(Box<Goal>),
     Leaf(LeafGoal),
+}
+
+impl Goal {
+    pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal {
+        Goal::Quantified(kind, Binders { value: Box::new(self), binders })
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]

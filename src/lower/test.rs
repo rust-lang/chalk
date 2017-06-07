@@ -281,6 +281,25 @@ fn two_blanket_impls() {
             trait Baz { }
             impl<T> Foo for T where T: Bar { }
             impl<T> Foo for T where T: Baz { }
+            struct Quux { }
+            impl Bar for Quux { }
+            impl Baz for Quux { }
+        }
+        error_msg {
+            "overlapping impls of trait \"Foo\""
+        }
+    }
+}
+
+#[test]
+fn two_blanket_impls_open_ended() {
+    lowering_error! {
+        program {
+            trait Foo { }
+            trait Bar { }
+            trait Baz { }
+            impl<T> Foo for T where T: Bar { }
+            impl<T> Foo for T where T: Baz { }
         }
         error_msg {
             "overlapping impls of trait \"Foo\""

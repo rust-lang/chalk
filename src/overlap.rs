@@ -47,32 +47,38 @@ fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> Canonical<InEnvironment<
 
     debug_assert!(params(lhs).len() == params(rhs).len());
 
+    let lhs_len = lhs.binders.len();
+
     // Join the two impls' binders together 
     let mut binders = lhs.binders.binders.clone();
     binders.extend(rhs.binders.binders.clone());
 
-    // Upshift the rhs variables to account for the joined binders
+    // Upshift the rhs variables in params to account for the joined binders
     let lhs_params = params(lhs).iter().cloned();
     let rhs_params = params(rhs).iter().map(|param| param.up_shift(lhs.binders.len()));
 
-    let mut where_clauses = lhs.binders.value.where_clauses.clone();
-    where_clauses.extend(rhs.binders.value.where_clauses.clone());
+    // Create an equality goal for every input type the trrait, attempting
+    // to unify the inputs to both impls with one another
+    let params_goals = lhs_params.zip(rhs_params)
+                        .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
 
-    // Create an equality goal of inputs to the trait, attempting to unify
-    // the inputs to both impls with each other
-    let goal = lhs_params.zip(rhs_params)
-                .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })))
+    // Upshift the rhs variables in where clauses
+    let lhs_where_clauses = lhs.binders.value.where_clauses.iter().cloned();
+    let rhs_where_clauses = rhs.binders.value.where_clauses.iter().map(|wc| wc.up_shift(lhs_len));
+
+    // Create a goal for each clause in both where clauses
+    let wc_goals = lhs_where_clauses.chain(rhs_where_clauses)
+                .map(|wc| Goal::Leaf(LeafGoal::DomainGoal(wc)));
+ 
+    // Join all the goals we've created together with And, then quanitfy them
+    // over the joined binders. This is our query.
+    let goal = params_goals.chain(wc_goals)
                 .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-                .expect("Every trait takes at least one input type");
+                .expect("Every trait takes at least one input type")
+                .quantify(QuantifierKind::Exists, binders);
 
     Canonical {
-        value: InEnvironment {
-            environment: Environment::new(),
-            goal: Goal::Quantified(QuantifierKind::Exists, Binders {
-                value: Box::new(Goal::Implies(where_clauses, Box::new(goal))),
-                binders: binders,
-            }),
-        },
+        value: InEnvironment::empty(goal),
         binders: vec![],
     }
 }
