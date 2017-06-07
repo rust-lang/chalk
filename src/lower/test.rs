@@ -292,6 +292,7 @@ fn two_blanket_impls() {
 }
 
 #[test]
+#[ignore] // Ignored until we have the compat modality
 fn two_blanket_impls_open_ended() {
     lowering_error! {
         program {
