@@ -10,14 +10,18 @@ impl Program {
     pub fn check_overlapping_impls(&self) -> Result<()> {
         let mut solver = Solver::new(&Arc::new(self.environment()), 10);
 
+        // Create a vector of references to impl datums, sorted by trait ref
+        let impl_data = self.impl_data.values().sorted_by(|lhs, rhs| {
+            lhs.binders.value.trait_ref.trait_id.cmp(&rhs.binders.value.trait_ref.trait_id)
+        });
+
         // Group impls by trait.
-        let impl_groupings = self.impl_data.iter().group_by(|&(_, impl_datum)| {
+        let impl_groupings = impl_data.into_iter().group_by(|impl_datum| {
             impl_datum.binders.value.trait_ref.trait_id
         });
 
         for (trait_id, impls) in &impl_groupings {
-            // Get all the pairs of impls from this trait
-            let impls: Vec<&ImplDatum> = impls.map(|(_, impl_datum)| impl_datum).collect();
+            let impls: Vec<&ImplDatum> = impls.collect();
 
             // For each pair, check their overlap by generating an "intersection"
             // goal. In this case, success is an error - it means that there is at
