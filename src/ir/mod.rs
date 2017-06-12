@@ -238,6 +238,7 @@ pub struct ImplDatumBound {
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<DomainGoal>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
+    pub specialization_priority: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

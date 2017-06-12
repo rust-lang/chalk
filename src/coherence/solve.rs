@@ -4,33 +4,51 @@ use itertools::Itertools;
 
 use errors::*;
 use ir::*;
+use solve::{Solution, Guidance};
 use solve::solver::{Solver, CycleStrategy};
 
 impl Program {
-    pub fn check_overlapping_impls(&self) -> Result<()> {
+    pub(super) fn find_specializations<F>(&self, mut record_specialization: F) -> Result<()>
+        where F: FnMut(ItemId, ItemId) -> Result<()>
+    {
         let mut solver = Solver::new(&Arc::new(self.environment()), CycleStrategy::Tabling);
 
         // Create a vector of references to impl datums, sorted by trait ref
-        let impl_data = self.impl_data.values().sorted_by(|lhs, rhs| {
+        let impl_data = self.impl_data.iter().sorted_by(|&(_, lhs), &(_, rhs)| {
             lhs.binders.value.trait_ref.trait_id.cmp(&rhs.binders.value.trait_ref.trait_id)
         });
 
         // Group impls by trait.
-        let impl_groupings = impl_data.into_iter().group_by(|impl_datum| {
+        let impl_groupings = impl_data.into_iter().group_by(|&(_, impl_datum)| {
             impl_datum.binders.value.trait_ref.trait_id
         });
 
         for (trait_id, impls) in &impl_groupings {
-            let impls: Vec<&ImplDatum> = impls.collect();
+            let impls: Vec<(&ItemId, &ImplDatum)> = impls.collect();
 
-            // For each pair, check their overlap by generating an "intersection"
-            // goal. In this case, success is an error - it means that there is at
-            // least one type in the intersection of these two impls.
-            for (lhs, rhs) in impls.into_iter().tuple_combinations() {
-                match solver.solve_closed_goal(intersection_of(lhs, rhs)) {
-                    Ok(_)   => {
-                        let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
-                        Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)))
+            // Iterate over every pair of impls for the same trait
+            for ((&l_id, lhs), (&r_id, rhs)) in impls.into_iter().tuple_combinations() {
+
+                // First, determine if they overlap using the "intersection_of" goal.
+                // A successful result means that these two impls are overlapping
+                match intersection_of(&mut solver, lhs, rhs) {
+                    Ok(sol) => {
+
+                        // If they're overlapping, check if each specializes the other.
+                        // One success means this is a specialization, two errors (no
+                        // specialization) or two successes (identical impls) is an
+                        // error.
+                        //
+                        // Successful specializations are recorded using the function
+                        // passed as an argument to this method.
+                        match specializes(&mut solver, lhs, rhs, sol) {
+                            Specialization::LeftToRight     => record_specialization(l_id, r_id),
+                            Specialization::RightToLeft     => record_specialization(r_id, l_id),
+                            Specialization::None            => {
+                                let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
+                                Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)))
+                            }
+                        }
                     }
                     Err(_)  => Ok(())
                 }?;
@@ -41,7 +59,7 @@ impl Program {
     }
 }
 
-// The goal to test overlap.
+// Test for overlap.
 //
 // If this goal succeeds, these two impls overlap.
 //
@@ -71,7 +89,7 @@ impl Program {
 //  Generates:
 //      exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz }
 //
-fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> InEnvironment<Goal> {
+fn intersection_of(solver: &mut Solver, lhs: &ImplDatum, rhs: &ImplDatum) -> Result<Solution> {
     fn params(impl_datum: &ImplDatum) -> &[Parameter] {
         &impl_datum.binders.value.trait_ref.parameters
     }
@@ -108,5 +126,23 @@ fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> InEnvironment<Goal> {
                 .expect("Every trait takes at least one input type")
                 .quantify(QuantifierKind::Exists, binders);
 
-    InEnvironment::empty(goal)
+    solver.solve_closed_goal(InEnvironment::empty(goal))
+}
+
+enum Specialization {
+    LeftToRight,
+    RightToLeft,
+    None,
+}
+
+// Test for specialization.
+fn specializes(
+    solver: &mut Solver,
+    lhs: &ImplDatum,
+    rhs: &ImplDatum,
+    overlap: Solution
+) -> Specialization {
+    if let Guidance::Definite(subst) = overlap.into_guidance() {
+        panic!()
+    } else { Specialization::None }
 }
