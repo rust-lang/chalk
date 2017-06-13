@@ -40,11 +40,8 @@ fn solve_goal(program_text: &str,
             let overflow_depth = 3;
 
             let mut solver = Solver::new(&env, overflow_depth);
-            let goal = ir::Canonical {
-                value: ir::InEnvironment::new(&ir::Environment::new(), *goal),
-                binders: vec![],
-            };
-            let result = match solver.solve_goal(goal) {
+            let goal = ir::InEnvironment::new(&ir::Environment::new(), *goal);
+            let result = match solver.solve_closed_goal(goal) {
                 Ok(v) => format!("{}", v),
                 Err(e) => format!("No possible solution: {}", e),
             };
@@ -145,7 +142,7 @@ fn prove_forall() {
         goal {
             forall<T> { T: Marker }
         } yields {
-            "No possible solution"
+            "Ambiguous; no inference guidance"
         }
 
         // If we assume `T: Marker`, then obviously `T: Marker`.
@@ -168,7 +165,7 @@ fn prove_forall() {
         goal {
             forall<T> { Vec<T>: Clone }
         } yields {
-            "No possible solution"
+            "Ambig"
         }
 
         // Here, we do know that `T: Clone`, so we can.
@@ -253,7 +250,7 @@ fn max_depth() {
 }
 
 #[test]
-fn normalize() {
+fn normalize_basic() {
     test! {
         program {
             trait Iterator { type Item; }
@@ -291,7 +288,7 @@ fn normalize() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := u32], lifetime constraints []"
+            "Ambiguous; suggested substitution [?0 := u32]"
         }
 
         goal {
@@ -304,6 +301,28 @@ fn normalize() {
             }
         } yields {
             "Unique; substitution [?0 := (Iterator::Item)<!1>]"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Iterator) {
+                    <T as Iterator>::Item = <T as Iterator>::Item
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Iterator) {
+                    exists<U> {
+                        <T as Iterator>::Item = <U as Iterator>::Item
+                    }
+                }
+            }
+        } yields {
+            "Unique"
         }
     }
 }
@@ -859,7 +878,7 @@ fn mixed_indices_normalize_application() {
                 }
             }
         } yields {
-            "Ambig"
+            "Unique"
         }
     }
 }
@@ -1195,9 +1214,7 @@ fn negation_free_vars() {
     }
 }
 
-// TODO: get this test working!
 #[test]
-#[ignore]
 fn where_clause_trumps() {
     test! {
         program {
@@ -1211,6 +1228,32 @@ fn where_clause_trumps() {
             forall<T> {
                 if (T: Marker) {
                     T: Marker
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn inapplicable_assumption_does_not_shadow() {
+    test! {
+        program {
+            struct i32 { }
+            struct u32 { }
+
+            trait Foo<T> { }
+
+            impl<T> Foo<i32> for T { }
+        }
+
+        goal {
+            forall<T> {
+                exists<U> {
+                    if (i32: Foo<T>) {
+                        T: Foo<U>
+                    }
                 }
             }
         } yields {

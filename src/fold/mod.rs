@@ -196,7 +196,7 @@ macro_rules! enum_fold {
 }
 
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
-enum_fold!(DomainGoal[] { Implemented(a), RawNormalize(a), Normalize(a), WellFormed(a) });
+enum_fold!(DomainGoal[] { Implemented(a), Normalize(a), WellFormed(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });

@@ -23,6 +23,10 @@ impl Outcome {
     }
 }
 
+pub struct UnifyOutcome {
+    pub ambiguous: bool,
+}
+
 /// A goal that must be resolved
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Obligation {
@@ -115,7 +119,7 @@ impl<'s> Fulfill<'s> {
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
+    pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<UnifyOutcome>
         where T: ?Sized + Zip + Debug
     {
         let UnificationResult { goals, constraints, ambiguous } =
@@ -127,7 +131,7 @@ impl<'s> Fulfill<'s> {
         self.constraints.extend(constraints);
         self.obligations.extend(goals.into_iter().map(Obligation::Prove));
         self.ambiguous = self.ambiguous || ambiguous;
-        Ok(())
+        Ok(UnifyOutcome { ambiguous })
     }
 
     /// Create obligations for the given goal in the given environment. This may
@@ -173,7 +177,8 @@ impl<'s> Fulfill<'s> {
                 self.push_goal(environment, *subgoal2);
             }
             Goal::Not(subgoal) => {
-                self.obligations.push(Obligation::Refute(InEnvironment::new(environment, *subgoal)));
+                let in_env = InEnvironment::new(environment, *subgoal);
+                self.obligations.push(Obligation::Refute(in_env));
             }
             Goal::Leaf(wc) => {
                 self.obligations.push(Obligation::Prove(InEnvironment::new(environment, wc)));
@@ -218,7 +223,7 @@ impl<'s> Fulfill<'s> {
         }
 
         // Negate the result
-        if let Ok(solution) =  self.solver.solve_goal(canonicalized.quantified) {
+        if let Ok(solution) =  self.solver.solve_closed_goal(canonicalized.quantified.value) {
             match solution {
                 Solution::Unique(_) => Err("refutation failed")?,
                 Solution::Ambig(_) => Ok(NegativeSolution::Ambiguous),
@@ -355,7 +360,7 @@ impl<'s> Fulfill<'s> {
         // need to determine how to package up what we learned about type
         // inference as an ambiguous solution.
 
-        if subst.is_trivial(&mut self.infer) {
+        if subst.is_trivial_within(&mut self.infer) {
             // In this case, we didn't learn *anything* definitively. So now, we
             // go one last time through the positive obligations, this time
             // applying even *tentative* inference suggestions, so that we can

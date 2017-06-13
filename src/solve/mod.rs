@@ -66,8 +66,10 @@ impl Solution {
         use self::Guidance::*;
 
         if self == other { return self }
+        if self.is_empty_unique() { return self }
+        if other.is_empty_unique() { return other }
 
-        // unless we have two matching Unique solutions, we always downgrade to Ambig:
+        // Otherwise, always downgrade to Ambig:
 
         let guidance = match (self.into_guidance(), other.into_guidance()) {
             (Definite(ref subst1), Definite(ref subst2)) if subst1 == subst2 =>
@@ -91,14 +93,34 @@ impl Solution {
         use self::Guidance::*;
 
         if self == other { return self }
+        if self.is_empty_unique() { return self }
+        if other.is_empty_unique() { return other }
 
-        // unless we have two matching Unique solutions, we always downgrade to Ambig:
+        // Otherwise, always downgrade to Ambig:
 
         let guidance = match (self.into_guidance(), other.into_guidance()) {
             (Definite(subst), _) | (Suggested(subst), _) => Suggested(subst),
             _ => Unknown,
         };
         Solution::Ambig(guidance)
+    }
+
+    /// Implements Prolog-style failure: if we see no hope of reaching a
+    /// definite solution from `self` -- even if there might in principle be one
+    /// -- and there *is* an option by falling back to `other`, we go with
+    /// `other`.
+    pub fn fallback_to(self, other: Solution) -> Solution {
+        use self::Guidance::*;
+
+        if self == other { return self }
+        if let Solution::Ambig(guidance) = self {
+            match guidance {
+                Definite(subst) | Suggested(subst) => Solution::Ambig(Suggested(subst)),
+                Unknown => other,
+            }
+        } else {
+            self
+        }
     }
 
     /// View this solution purely in terms of type inference guidance
@@ -143,6 +165,17 @@ impl Solution {
     pub fn is_ambig(&self) -> bool {
         match *self {
             Solution::Ambig(_) => true,
+            _ => false,
+        }
+    }
+
+    /// We use emptiness, rather than triviality, to deduce that alternative
+    /// solutions **cannot meaningfully differ**
+    pub fn is_empty_unique(&self) -> bool {
+        match *self {
+            Solution::Unique(ref subst) => {
+                subst.binders.is_empty() && subst.value.subst.is_empty()
+            }
             _ => false,
         }
     }

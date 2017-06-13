@@ -16,6 +16,24 @@ pub struct Solver {
     stack: Vec<FullyReducedGoal>,
 }
 
+/// An extension trait for merging `Result`s
+trait MergeWith<T> {
+    fn merge_with<F>(self, other: Self, f: F) -> Self where F: FnOnce(T, T) -> T;
+}
+
+impl<T> MergeWith<T> for Result<T> {
+    fn merge_with<F>(self: Result<T>, other: Result<T>, f: F) -> Result<T>
+        where F: FnOnce(T, T) -> T
+    {
+        match (self, other) {
+            (Err(_), Ok(v)) |
+            (Ok(v), Err(_)) => Ok(v),
+            (Ok(v1), Ok(v2)) => Ok(f(v1, v2)),
+            (Err(_), Err(e)) => Err(e)
+        }
+    }
+}
+
 impl Solver {
     pub fn new(program: &Arc<ProgramEnvironment>, overflow_depth: usize) -> Self {
         Solver {
@@ -25,9 +43,9 @@ impl Solver {
         }
     }
 
-    /// Attempt to solve a *closed*, canonicalized goal. The substitution
-    /// returned in the solution will be for the fully decomposed goal. For
-    /// example, given the program
+    /// Attempt to solve a *closed* goal. The substitution returned in the
+    /// solution will be for the fully decomposed goal. For example, given the
+    /// program
     ///
     /// ```ignore
     /// struct u8 { }
@@ -39,11 +57,9 @@ impl Solver {
     /// and the goal `exists<V> { forall<U> { SomeType<U>: Foo<V> } }`, a unique
     /// solution is produced with substitution `?0 := u8`. The `?0` is drawn
     /// from the number of the instantiated existential.
-    pub fn solve_goal(&mut self, goal: Canonical<InEnvironment<Goal>>) -> Result<Solution> {
+    pub fn solve_closed_goal(&mut self, goal: InEnvironment<Goal>) -> Result<Solution> {
         let mut fulfill = Fulfill::new(self);
-        let Canonical { value, binders } = goal;
-        let InEnvironment { environment, goal } = fulfill.instantiate(binders, &value);
-        fulfill.push_goal(&environment, goal);
+        fulfill.push_goal(&goal.environment, goal.goal);
 
         // We use this somewhat hacky approach to get our hands on the
         // instantiated variables after pushing our initial goal. This
@@ -92,19 +108,30 @@ impl Solver {
                 // "Domain" goals (i.e., leaf goals that are Rust-specific) are
                 // always solved via some form of implication. We can either
                 // apply assumptions from our environment (i.e. where clauses),
-                // or from the lowered program. We try each approach in turn:
+                // or from the lowered program, which includes fallback
+                // clauses. We try each approach in turn:
 
                 let env_clauses = value
                     .environment
                     .elaborated_clauses(&self.program)
                     .map(DomainGoal::into_program_clause);
-                let env_solution = self.solve_from_clauses(&binders, &value, env_clauses);
+                let env_solution = self.solve_from_clauses(&binders, &value, env_clauses, true);
 
-                let prog_clauses = self.program.program_clauses.clone();
-                let prog_solution =
-                    self.solve_from_clauses(&binders, &value, prog_clauses.into_iter());
+                let prog_clauses: Vec<_> = self.program.program_clauses.iter()
+                    .cloned()
+                    .filter(|clause| !clause.fallback_clause)
+                    .collect();
+                let prog_solution = self.solve_from_clauses(&binders, &value, prog_clauses, false);
 
-                // Now that we have both outcomes, we attempt to combine
+                // These fallback clauses are used when we're sure we'll never
+                // reach Unique via another route
+                let fallback: Vec<_> = self.program.program_clauses.iter()
+                    .cloned()
+                    .filter(|clause| clause.fallback_clause)
+                    .collect();
+                let fallback_solution = self.solve_from_clauses(&binders, &value, fallback, false);
+
+                // Now that we have all the outcomes, we attempt to combine
                 // them. Here, we apply a heuristic (also found in rustc): if we
                 // have possible solutions via both the environment *and* the
                 // program, we favor the environment; this only impacts type
@@ -112,12 +139,9 @@ impl Solver {
                 // made in a given context are more likely to be relevant than
                 // general `impl`s.
 
-                match (env_solution, prog_solution) {
-                    (Err(_), Ok(solution)) |
-                    (Ok(solution), Err(_)) => Ok(solution),
-                    (Ok(env), Ok(prog)) => Ok(env.favor_over(prog)),
-                    (Err(_), Err(e)) => Err(e)
-                }
+                env_solution
+                    .merge_with(prog_solution, |env, prog| env.favor_over(prog))
+                    .merge_with(fallback_solution, |merged, fallback| merged.fallback_to(fallback))
             }
         };
 
@@ -149,15 +173,17 @@ impl Solver {
         binders: &[ParameterKind<UniverseIndex>],
         goal: &InEnvironment<DomainGoal>,
         clauses: C,
+        from_env: bool,
     ) -> Result<Solution>
     where
-        C: Iterator<Item = ProgramClause>,
+        C: IntoIterator<Item = ProgramClause>,
     {
         let mut cur_solution = None;
-        for ProgramClause { implication } in clauses {
+        for ProgramClause { implication, .. } in clauses {
             debug_heading!("clause={:?}", implication);
 
-            if let Ok(solution) = self.solve_via_implication(binders, goal.clone(), implication) {
+            let res = self.solve_via_implication(binders, goal.clone(), implication, from_env);
+            if let Ok(solution) = res {
                 debug!("ok: solution={:?}", solution);
                 cur_solution = Some(
                     match cur_solution {
@@ -178,19 +204,54 @@ impl Solver {
         binders: &[ParameterKind<UniverseIndex>],
         goal: InEnvironment<DomainGoal>,
         clause: Binders<ProgramClauseImplication>,
+        from_env: bool,
     ) -> Result<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = Substitution::from_binders(&binders);
         let (goal, (clause, subst)) =
             fulfill.instantiate(binders.iter().cloned(), &(goal, (clause, subst)));
-        let implication =
+        let ProgramClauseImplication { consequence, conditions} =
             fulfill.instantiate_in(goal.environment.universe, clause.binders, &clause.value);
 
         // first, see if the implication's conclusion might solve our goal
-        fulfill.unify(&goal.environment, &goal.goal, &implication.consequence)?;
+        if fulfill.unify(&goal.environment, &goal.goal, &consequence)?.ambiguous && from_env {
+            // here, using this environmental assumption would require unifying a skolemized
+            // variable, which can only appear in an *environment*, never the
+            // program. We view the program as providing a "closed world" of
+            // possible types and impls, and thus we can safely abandon this
+            // route of proving our goal.
+            //
+            // You can see this at work in the following example, where the
+            // assumption in the `if` is ignored since it cannot actually be applied.
+            //
+            // ```
+            // program {
+            //     struct i32 { }
+            //     struct u32 { }
+            //
+            //     trait Foo<T> { }
+            //
+            //     impl<T> Foo<i32> for T { }
+            // }
+            //
+            // goal {
+            //     forall<T> {
+            //         exists<U> {
+            //             if (i32: Foo<T>) {
+            //                 T: Foo<U>
+            //             }
+            //         }
+            //     }
+            // } yields {
+            //     "Unique"
+            // }
+            // ```
+
+            Err("using the implication would require changing a forall variable")?;
+        }
 
         // if so, toss in all of its premises
-        for condition in implication.conditions {
+        for condition in conditions {
             fulfill.push_goal(&goal.environment, condition);
         }
 
