@@ -292,18 +292,20 @@ fn two_blanket_impls() {
 }
 
 #[test]
-#[ignore] // Ignored until we have the compat modality
+// FIXME This should be an error
+// We currently assume a closed universe always, but overlaps checking should
+// assume an open universe - what if a client implemented both Bar and Baz
+//
+// In other words, this should have the same behavior as the two_blanket_impls
+// test.
 fn two_blanket_impls_open_ended() {
-    lowering_error! {
+    lowering_success! {
         program {
             trait Foo { }
             trait Bar { }
             trait Baz { }
             impl<T> Foo for T where T: Bar { }
             impl<T> Foo for T where T: Baz { }
-        }
-        error_msg {
-            "overlapping impls of trait \"Foo\""
         }
     }
 }
