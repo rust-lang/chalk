@@ -326,6 +326,7 @@ impl<'s> Fulfill<'s> {
             }
 
             self.obligations.extend(obligations.drain(..));
+            debug!("end of round, {} obligations left", self.obligations.len());
         }
 
         // At the end of this process, `self.obligations` should have
