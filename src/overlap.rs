@@ -44,6 +44,33 @@ impl Program {
 // The goal to test overlap.
 //
 // If this goal succeeds, these two impls overlap.
+//
+// We combine the binders of the two impls & treat them as existential
+// quantifiers. Then we attempt to unify the input types to treat provided
+// by each impl, as well as prove that the where clauses from both impls all
+// hold.
+//
+// Examples:
+//
+//  Impls:
+//      impl<T> Foo for T { }
+//      impl Foo for i32 { }
+//  Generates:
+//      exists<T> { T = i32 }
+//
+//  Impls:
+//      impl<T1, U> Foo<T1> for Vec<U> { }
+//      impl<T2> Foo<T2> for Vec<i32> { }
+//  Generates:
+//      exists<T1, U, T2> { U = i32, T1 = T2 }
+//
+//
+//  Impls:
+//      impl<T> Foo for Vec<T> where T: Bar { }
+//      impl<U> Foo for Vec<U> where U: Baz { }
+//  Generates:
+//      exists<T, U> { T = U, T: Bar, U: Baz }
+//
 fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> Canonical<InEnvironment<Goal>> {
     fn params(impl_datum: &ImplDatum) -> &[Parameter] {
         &impl_datum.binders.value.trait_ref.parameters
@@ -59,9 +86,9 @@ fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> Canonical<InEnvironment<
 
     // Upshift the rhs variables in params to account for the joined binders
     let lhs_params = params(lhs).iter().cloned();
-    let rhs_params = params(rhs).iter().map(|param| param.up_shift(lhs.binders.len()));
+    let rhs_params = params(rhs).iter().map(|param| param.up_shift(lhs_len));
 
-    // Create an equality goal for every input type the trrait, attempting
+    // Create an equality goal for every input type the trait, attempting
     // to unify the inputs to both impls with one another
     let params_goals = lhs_params.zip(rhs_params)
                         .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
@@ -74,7 +101,7 @@ fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> Canonical<InEnvironment<
     let wc_goals = lhs_where_clauses.chain(rhs_where_clauses)
                 .map(|wc| Goal::Leaf(LeafGoal::DomainGoal(wc)));
  
-    // Join all the goals we've created together with And, then quanitfy them
+    // Join all the goals we've created together with And, then quantify them
     // over the joined binders. This is our query.
     let goal = params_goals.chain(wc_goals)
                 .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
