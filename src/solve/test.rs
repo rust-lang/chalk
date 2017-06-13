@@ -142,7 +142,13 @@ fn prove_forall() {
         goal {
             forall<T> { T: Marker }
         } yields {
-            "Ambiguous; no inference guidance"
+            "CannotProve"
+        }
+
+        goal {
+            forall<T> { not { T: Marker } }
+        } yields {
+            "CannotProve"
         }
 
         // If we assume `T: Marker`, then obviously `T: Marker`.
@@ -165,7 +171,7 @@ fn prove_forall() {
         goal {
             forall<T> { Vec<T>: Clone }
         } yields {
-            "Ambig"
+            "CannotProve"
         }
 
         // Here, we do know that `T: Clone`, so we can.
@@ -288,7 +294,7 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            "Ambiguous; suggested substitution [?0 := u32]"
+            "Unique; substitution [?0 := u32]"
         }
 
         goal {
@@ -1168,7 +1174,7 @@ fn negation_quantifiers() {
                 }
             }
         } yields {
-            "Ambig"
+            "CannotProve"
         }
 
         goal {
@@ -1188,7 +1194,7 @@ fn negation_quantifiers() {
                 }
             }
         } yields {
-            "Ambig"
+            "CannotProve"
         }
     }
 }

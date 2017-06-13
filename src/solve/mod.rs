@@ -16,11 +16,16 @@ pub enum Solution {
     /// which must also hold for the goal to be valid.
     Unique(Canonical<ConstrainedSubst>),
 
-    /// The goal may or may not hold, but regardless we may have some guidance
+    /// The goal may be provable in multiple ways, but regardless we may have some guidance
     /// for type inference. In this case, we don't return any lifetime
     /// constraints, since we have not "committed" to any particular solution
     /// yet.
     Ambig(Guidance),
+
+    /// There is no instantiation of the existentials for which we could prove this goal
+    /// to be true. Nonetheless, the goal may yet be true for some instantiations of the
+    /// universals. In other words, this goal is neither true nor false.
+    CannotProve,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -66,8 +71,8 @@ impl Solution {
         use self::Guidance::*;
 
         if self == other { return self }
-        if self.is_empty_unique() { return self }
-        if other.is_empty_unique() { return other }
+        if other.cannot_be_proven() { return self }
+        if self.cannot_be_proven() { return other }
 
         // Otherwise, always downgrade to Ambig:
 
@@ -93,8 +98,8 @@ impl Solution {
         use self::Guidance::*;
 
         if self == other { return self }
-        if self.is_empty_unique() { return self }
-        if other.is_empty_unique() { return other }
+        if other.cannot_be_proven() { return self }
+        if self.cannot_be_proven() { return other }
 
         // Otherwise, always downgrade to Ambig:
 
@@ -113,6 +118,9 @@ impl Solution {
         use self::Guidance::*;
 
         if self == other { return self }
+        if other.cannot_be_proven() { return self }
+        if self.cannot_be_proven() { return other }
+
         if let Solution::Ambig(guidance) = self {
             match guidance {
                 Definite(subst) | Suggested(subst) => Solution::Ambig(Suggested(subst)),
@@ -132,7 +140,8 @@ impl Solution {
                     binders: constrained.binders,
                 })
             }
-            Solution::Ambig(guidance) => guidance
+            Solution::Ambig(guidance) => guidance,
+            Solution::CannotProve => Guidance::Unknown,
         }
     }
 
@@ -148,7 +157,7 @@ impl Solution {
                 };
                 Some(Canonical { value, binders: canonical.binders.clone() })
             }
-            Solution::Ambig(_) => None,
+            Solution::Ambig(_) | Solution::CannotProve => None,
         }
     }
 
@@ -169,13 +178,9 @@ impl Solution {
         }
     }
 
-    /// We use emptiness, rather than triviality, to deduce that alternative
-    /// solutions **cannot meaningfully differ**
-    pub fn is_empty_unique(&self) -> bool {
+    pub fn cannot_be_proven(&self) -> bool {
         match *self {
-            Solution::Unique(ref subst) => {
-                subst.binders.is_empty() && subst.value.subst.is_empty()
-            }
+            Solution::CannotProve => true,
             _ => false,
         }
     }
@@ -197,6 +202,9 @@ impl fmt::Display for Solution {
             }
             Solution::Ambig(Guidance::Unknown) => {
                 write!(f, "Ambiguous; no inference guidance")
+            }
+            Solution::CannotProve => {
+                write!(f, "CannotProve")
             }
         }
     }
