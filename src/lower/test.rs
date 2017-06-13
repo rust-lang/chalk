@@ -348,3 +348,47 @@ fn multiple_parameters() {
         }
     }
 }
+
+#[test]
+fn nonoverlapping_assoc_types() {
+    lowering_success! {
+        program {
+            trait Iterator {
+                type Item;
+            }
+            struct Bar { }
+            impl Iterator for Bar {
+                type Item = Bar;
+            }
+            struct Baz<T> { }
+            impl<T> Iterator for Baz<T> {
+                type Item = Baz<T>;
+            }
+
+            trait Foo { }
+            impl Foo for <Bar as Iterator>::Item { }
+            impl<T> Foo for <Baz<T> as Iterator>::Item { }
+        }
+    }
+}
+
+#[test]
+fn overlapping_assoc_types() {
+    lowering_error! {
+        program {
+            trait Foo<T> { }
+
+            trait Iterator { type Item; }
+
+
+            struct Vec<T> { }
+            impl<T> Iterator for Vec<T> { type Item = T; }
+
+            impl<T> Foo<<T as Iterator>::Item> for T where T: Iterator { }
+
+            impl<A, B> Foo<A> for B { }
+        } error_msg {
+            "overlapping impls of trait \"Foo\""
+        }
+    }
+}
