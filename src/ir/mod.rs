@@ -481,7 +481,7 @@ pub struct ProgramClause {
 }
 
 /// Represents one clause of the form `consequence :- conditions` where
-/// `conditions = cond_1 || cond_2 || ...` is the disjunction of the individual
+/// `conditions = cond_1 || cond_2 || ...` is the conjunction of the individual
 /// conditions.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProgramClauseImplication {
