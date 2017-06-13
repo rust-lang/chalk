@@ -4,6 +4,24 @@ use std::sync::Arc;
 use super::*;
 use solve::fulfill::Fulfill;
 
+/// We use a stack for detecting cycles. Each stack slot contains:
+/// - a goal which is being processed
+/// - a flag indicating the presence of a cycle during the processing of this goal
+/// - in case a cycle has been found, the latest previous answer to the same goal
+#[derive(Debug)]
+struct StackSlot {
+    goal: FullyReducedGoal,
+    cycle: bool,
+    answer: Option<Solution>,
+}
+
+/// For debugging purpose only: choose whether to apply a tabling strategy for cycles or
+/// treat them as hard errors (the latter can possibly reduce debug output)
+pub enum CycleStrategy {
+    Tabling,
+    Error,
+}
+
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
@@ -12,8 +30,8 @@ use solve::fulfill::Fulfill;
 /// as to avoid unbounded search.
 pub struct Solver {
     pub(super) program: Arc<ProgramEnvironment>,
-    overflow_depth: usize,
-    stack: Vec<FullyReducedGoal>,
+    stack: Vec<StackSlot>,
+    cycle_strategy: CycleStrategy,
 }
 
 /// An extension trait for merging `Result`s
@@ -35,11 +53,11 @@ impl<T> MergeWith<T> for Result<T> {
 }
 
 impl Solver {
-    pub fn new(program: &Arc<ProgramEnvironment>, overflow_depth: usize) -> Self {
+    pub fn new(program: &Arc<ProgramEnvironment>, cycle_strategy: CycleStrategy) -> Self {
         Solver {
             program: program.clone(),
             stack: vec![],
-            overflow_depth,
+            cycle_strategy,
         }
     }
 
@@ -88,67 +106,83 @@ impl Solver {
     pub fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Result<Solution> {
         debug_heading!("Solver::solve({:?})", goal);
 
-        // First we cut off runaway recursion
-        if self.stack.contains(&goal) || self.stack.len() > self.overflow_depth {
-            // Recursive invocation or overflow
-            debug!(
-                "solve: {:?} already on the stack or overflowed max depth",
-                goal
-            );
-            return Ok(Solution::Ambig(Guidance::Unknown));
+        if let Some(slot) = self.stack.iter_mut().find(|s| { s.goal == goal }) {
+            slot.cycle = true;
+            debug!("cycle detected: previous solution {:?}", slot.answer);
+            return slot.answer.clone().ok_or("cycle".into());
         }
-        self.stack.push(goal.clone());
 
-        let result = match goal {
-            FullyReducedGoal::EqGoal(g) => {
-                // Equality goals are understood "natively" by the logic, via unification:
-                self.solve_via_unification(g)
-            }
-            FullyReducedGoal::DomainGoal(Canonical { value, binders }) => {
-                // "Domain" goals (i.e., leaf goals that are Rust-specific) are
-                // always solved via some form of implication. We can either
-                // apply assumptions from our environment (i.e. where clauses),
-                // or from the lowered program, which includes fallback
-                // clauses. We try each approach in turn:
 
-                let env_clauses = value
-                    .environment
-                    .elaborated_clauses(&self.program)
-                    .map(DomainGoal::into_program_clause);
-                let env_solution = self.solve_from_clauses(&binders, &value, env_clauses);
+        let mut answer = None;
+        loop {
+            self.stack.push(StackSlot {
+                goal: goal.clone(),
+                cycle: false,
+                answer: answer.clone(),
+            });
 
-                let prog_clauses: Vec<_> = self.program.program_clauses.iter()
-                    .cloned()
-                    .filter(|clause| !clause.fallback_clause)
-                    .collect();
-                let prog_solution = self.solve_from_clauses(&binders, &value, prog_clauses);
+            debug!("Solver::solve: new loop iteration");
+            let result = match goal.clone() {
+                FullyReducedGoal::EqGoal(g) => {
+                    // Equality goals are understood "natively" by the logic, via unification:
+                    self.solve_via_unification(g)
+                }
+                FullyReducedGoal::DomainGoal(Canonical { value, binders }) => {
+                    // "Domain" goals (i.e., leaf goals that are Rust-specific) are
+                    // always solved via some form of implication. We can either
+                    // apply assumptions from our environment (i.e. where clauses),
+                    // or from the lowered program, which includes fallback
+                    // clauses. We try each approach in turn:
 
-                // These fallback clauses are used when we're sure we'll never
-                // reach Unique via another route
-                let fallback: Vec<_> = self.program.program_clauses.iter()
-                    .cloned()
-                    .filter(|clause| clause.fallback_clause)
-                    .collect();
-                let fallback_solution = self.solve_from_clauses(&binders, &value, fallback);
+                    let env_clauses = value
+                        .environment
+                        .elaborated_clauses(&self.program)
+                        .map(DomainGoal::into_program_clause);
+                    let env_solution = self.solve_from_clauses(&binders, &value, env_clauses);
 
-                // Now that we have all the outcomes, we attempt to combine
-                // them. Here, we apply a heuristic (also found in rustc): if we
-                // have possible solutions via both the environment *and* the
-                // program, we favor the environment; this only impacts type
-                // inference. The idea is that the assumptions you've explicitly
-                // made in a given context are more likely to be relevant than
-                // general `impl`s.
+                    let prog_clauses: Vec<_> = self.program.program_clauses.iter()
+                        .cloned()
+                        .filter(|clause| !clause.fallback_clause)
+                        .collect();
+                    let prog_solution = self.solve_from_clauses(&binders, &value, prog_clauses);
 
-                env_solution
-                    .merge_with(prog_solution, |env, prog| env.favor_over(prog))
-                    .merge_with(fallback_solution, |merged, fallback| merged.fallback_to(fallback))
-            }
-        };
+                    // These fallback clauses are used when we're sure we'll never
+                    // reach Unique via another route
+                    let fallback: Vec<_> = self.program.program_clauses.iter()
+                        .cloned()
+                        .filter(|clause| clause.fallback_clause)
+                        .collect();
+                    let fallback_solution = self.solve_from_clauses(&binders, &value, fallback);
 
-        self.stack.pop().unwrap();
+                    // Now that we have all the outcomes, we attempt to combine
+                    // them. Here, we apply a heuristic (also found in rustc): if we
+                    // have possible solutions via both the environment *and* the
+                    // program, we favor the environment; this only impacts type
+                    // inference. The idea is that the assumptions you've explicitly
+                    // made in a given context are more likely to be relevant than
+                    // general `impl`s.
 
-        debug!("Solver::solve: result={:?}", result);
-        result
+                    env_solution
+                        .merge_with(prog_solution, |env, prog| env.favor_over(prog))
+                        .merge_with(fallback_solution, |merged, fallback| merged.fallback_to(fallback))
+                }
+            };
+
+            debug!("Solver::solve: loop iteration result = {:?}", result);
+
+            let slot = self.stack.pop().unwrap();
+            match self.cycle_strategy {
+                CycleStrategy::Tabling if slot.cycle => {
+                    let actual_answer = result.as_ref().ok().map(|s| s.clone());
+                    if actual_answer == answer {
+                        return result;
+                    } else {
+                        answer = actual_answer;
+                    }
+                }
+                _ => return result,
+            };
+        }
     }
 
     fn solve_via_unification(

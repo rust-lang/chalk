@@ -2,7 +2,7 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::solver::Solver;
+use solve::solver::{Solver, CycleStrategy};
 use std::sync::Arc;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
@@ -35,11 +35,7 @@ fn solve_goal(program_text: &str,
             assert!(goal_text.ends_with("}"));
             let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len()-1]).unwrap();
 
-            // Pick a low overflow depth just because the existing
-            // tests don't require a higher one.
-            let overflow_depth = 3;
-
-            let mut solver = Solver::new(&env, overflow_depth);
+            let mut solver = Solver::new(&env, CycleStrategy::Tabling);
             let goal = ir::InEnvironment::new(&ir::Environment::new(), *goal);
             let result = match solver.solve_closed_goal(goal) {
                 Ok(v) => format!("{}", v),
@@ -136,6 +132,8 @@ fn prove_forall() {
             impl<T> Marker for Vec<T> { }
 
             trait Clone { }
+            impl Clone for Foo { }
+
             impl<T> Clone for Vec<T> where T: Clone { }
         }
 
@@ -158,7 +156,7 @@ fn prove_forall() {
             "Unique; substitution [], lifetime constraints []"
         }
 
-        // We don't have know to anything about `T` to know that
+        // We don't have to know anything about `T` to know that
         // `Vec<T>: Marker`.
         goal {
             forall<T> { Vec<T>: Marker }
@@ -229,15 +227,9 @@ fn ordering() {
     }
 }
 
-/// This test forces the solver into an overflow scenario: `Foo` is
-/// only implemented for `S<S<S<...>>>` ad infinitum. So when asked to
-/// compute the type for which `Foo` is implemented, we wind up
-/// recursing for a while before we overflow. You can see that our
-/// final result is "Maybe" (i.e., either multiple proof trees or an
-/// infinite proof tree) and that we do conclude that, if a definite
-/// proof tree exists, it must begin with `S<S<S<S<...>>>>`.
 #[test]
-fn max_depth() {
+fn cycles() {
+    // only solution: infinite type S<S<S<...
     test! {
         program {
             trait Foo { }
@@ -250,7 +242,45 @@ fn max_depth() {
                 T: Foo
             }
         } yields {
-            "Ambiguous; definite substitution [?0 := S<S<S<S<?0>>>>]"
+            "No possible solution: no applicable candidates"
+        }
+    }
+
+    // infinite family of solutions: {i32, S<i32>, S<S<i32>>, ... }
+    test! {
+        program {
+            trait Foo { }
+            struct S<T> { }
+            struct i32 { }
+            impl<T> Foo for S<T> where T: Foo { }
+            impl Foo for i32 { }
+        }
+
+        goal {
+            exists<T> {
+                T: Foo
+            }
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+    }
+
+    test! {
+        program {
+            trait Foo { }
+            trait Bar { }
+            struct S<T> { }
+            struct i32 { }
+            impl<T> Foo for S<T> where T: Foo, T: Bar { }
+            impl Foo for i32 { }
+        }
+
+        goal {
+            exists<T> {
+                T: Foo
+            }
+        } yields {
+            "Unique; substitution [?0 := i32]"
         }
     }
 }
