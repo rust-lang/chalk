@@ -27,7 +27,7 @@ impl Program {
             // goal. In this case, success is an error - it means that there is at
             // least one type in the intersection of these two impls.
             for (lhs, rhs) in impls.into_iter().tuple_combinations() {
-                match solver.solve_goal(intersection_of(lhs, rhs)) {
+                match solver.solve_closed_goal(intersection_of(lhs, rhs)) {
                     Ok(_)   => {
                         let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
                         Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)))
@@ -46,7 +46,7 @@ impl Program {
 // If this goal succeeds, these two impls overlap.
 //
 // We combine the binders of the two impls & treat them as existential
-// quantifiers. Then we attempt to unify the input types to treat provided
+// quantifiers. Then we attempt to unify the input types to the trait provided
 // by each impl, as well as prove that the where clauses from both impls all
 // hold.
 //
@@ -62,16 +62,16 @@ impl Program {
 //      impl<T1, U> Foo<T1> for Vec<U> { }
 //      impl<T2> Foo<T2> for Vec<i32> { }
 //  Generates:
-//      exists<T1, U, T2> { U = i32, T1 = T2 }
+//      exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 }
 //
 //
 //  Impls:
 //      impl<T> Foo for Vec<T> where T: Bar { }
 //      impl<U> Foo for Vec<U> where U: Baz { }
 //  Generates:
-//      exists<T, U> { T = U, T: Bar, U: Baz }
+//      exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz }
 //
-fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> Canonical<InEnvironment<Goal>> {
+fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> InEnvironment<Goal> {
     fn params(impl_datum: &ImplDatum) -> &[Parameter] {
         &impl_datum.binders.value.trait_ref.parameters
     }
@@ -108,8 +108,5 @@ fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> Canonical<InEnvironment<
                 .expect("Every trait takes at least one input type")
                 .quantify(QuantifierKind::Exists, binders);
 
-    Canonical {
-        value: InEnvironment::empty(goal),
-        binders: vec![],
-    }
+    InEnvironment::empty(goal)
 }
