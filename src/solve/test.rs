@@ -175,7 +175,7 @@ fn prove_forall() {
         // Here, we do know that `T: Clone`, so we can.
         goal {
             forall<T> {
-                if (T: Clone) {
+                if (WellFormed(T: Clone), T: Clone) {
                     Vec<T>: Clone
                 }
             }
@@ -546,7 +546,7 @@ fn elaborate_eq() {
 
         goal {
             forall<T> {
-                if (T: Eq) {
+                if (WellFormed(T: Eq)) {
                     T: PartialEq
                 }
             }
@@ -567,7 +567,7 @@ fn elaborate_transitive() {
 
         goal {
             forall<T> {
-                if (T: StrictEq) {
+                if (WellFormed(T: StrictEq)) {
                     T: PartialEq
                 }
             }
@@ -582,20 +582,36 @@ fn elaborate_normalize() {
     test! {
         program {
             trait Eq { }
+            struct i32 { }
 
             trait Item where <Self as Item>::Out: Eq {
                 type Out;
+            }
+
+            impl Eq for i32 { }
+            impl Item for i32 {
+                type Out = i32;
             }
         }
 
         goal {
             forall<T, U> {
-                if (T: Item<Out = U>) {
+                if (WellFormed(T: Item), T: Item<Out = U>) {
                     U: Eq
                 }
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<T, U> {
+                if (T: Item<Out = U>) {
+                    T: Item
+                }
+            }
+        } yields {
+            "Unique"
         }
     }
 }
@@ -954,6 +970,10 @@ fn mixed_indices_normalize_application() {
             struct Ref<'a, T> { }
             trait Foo {
                 type T;
+            }
+
+            impl<U, 'a> Foo for Ref<'a, U> {
+                type T = U;
             }
         }
 
