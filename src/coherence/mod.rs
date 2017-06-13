@@ -23,7 +23,6 @@ impl Program {
 
         self.find_specializations(|less_special, more_special| {
             forest.add_edge(less_special, more_special, ());
-            Ok(())
         })?;
 
         Ok(forest.into_graph())

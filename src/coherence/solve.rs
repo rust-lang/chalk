@@ -9,7 +9,7 @@ use solve::solver::{Solver, CycleStrategy};
 
 impl Program {
     pub(super) fn find_specializations<F>(&self, mut record_specialization: F) -> Result<()>
-        where F: FnMut(ItemId, ItemId) -> Result<()>
+        where F: FnMut(ItemId, ItemId)
     {
         let mut solver = Solver::new(&Arc::new(self.environment()), CycleStrategy::Tabling);
 
@@ -31,27 +31,23 @@ impl Program {
 
                 // First, determine if they overlap using the "intersection_of" goal.
                 // A successful result means that these two impls are overlapping
-                match intersection_of(&mut solver, lhs, rhs) {
-                    Ok(sol) => {
-
-                        // If they're overlapping, check if each specializes the other.
-                        // One success means this is a specialization, two errors (no
-                        // specialization) or two successes (identical impls) is an
-                        // error.
-                        //
-                        // Successful specializations are recorded using the function
-                        // passed as an argument to this method.
-                        match specializes(&mut solver, lhs, rhs, sol) {
-                            Specialization::LeftToRight     => record_specialization(l_id, r_id),
-                            Specialization::RightToLeft     => record_specialization(r_id, l_id),
-                            Specialization::None            => {
-                                let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
-                                Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)))
-                            }
+                if let Ok(sol) = intersection_of(&mut solver, lhs, rhs) {
+                    // If they're overlapping, check if each specializes the other.
+                    // One success means this is a specialization, two errors (no
+                    // specialization) or two successes (identical impls) is an
+                    // error.
+                    //
+                    // Successful specializations are recorded using the function
+                    // passed as an argument to this method.
+                    match specializes(&mut solver, lhs, rhs, sol) {
+                        Specialization::LeftToRight     => record_specialization(l_id, r_id),
+                        Specialization::RightToLeft     => record_specialization(r_id, l_id),
+                        Specialization::None            => {
+                            let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
+                            return Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)))
                         }
                     }
-                    Err(_)  => Ok(())
-                }?;
+                }
             }
         }
 
