@@ -23,10 +23,6 @@ impl Outcome {
     }
 }
 
-pub struct UnifyOutcome {
-    pub ambiguous: bool,
-}
-
 /// A goal that must be resolved
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Obligation {
@@ -53,6 +49,7 @@ struct PositiveSolution {
 enum NegativeSolution {
     Refuted,
     Ambiguous,
+    CannotProve,
 }
 
 /// A `Fulfill` is where we actually break down complex goals, instantiate
@@ -75,10 +72,7 @@ pub struct Fulfill<'s> {
     /// Lifetime constraints that must be fulfilled for a solution to be fully
     /// validated.
     constraints: HashSet<InEnvironment<Constraint>>,
-
-    /// Record that a goal has been processed that can neither be proved nor
-    /// refuted, and thus the overall solution cannot be `Unique`
-    ambiguous: bool,
+    cannot_prove: bool,
 }
 
 impl<'s> Fulfill<'s> {
@@ -88,7 +82,7 @@ impl<'s> Fulfill<'s> {
             infer: InferenceTable::new(),
             obligations: vec![],
             constraints: HashSet::new(),
-            ambiguous: false,
+            cannot_prove: false,
         }
     }
 
@@ -119,19 +113,19 @@ impl<'s> Fulfill<'s> {
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<UnifyOutcome>
+    pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
         where T: ?Sized + Zip + Debug
     {
-        let UnificationResult { goals, constraints, ambiguous } =
+        let UnificationResult { goals, constraints, cannot_prove } =
             self.infer.unify(environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
-        debug!("unify: ambiguous={:?}", ambiguous);
+        debug!("unify: cannot_prove={:?}", cannot_prove);
         self.constraints.extend(constraints);
         self.obligations.extend(goals.into_iter().map(Obligation::Prove));
-        self.ambiguous = self.ambiguous || ambiguous;
-        Ok(UnifyOutcome { ambiguous })
+        self.cannot_prove = self.cannot_prove || cannot_prove;
+        Ok(())
     }
 
     /// Create obligations for the given goal in the given environment. This may
@@ -223,10 +217,11 @@ impl<'s> Fulfill<'s> {
         }
 
         // Negate the result
-        if let Ok(solution) =  self.solver.solve_closed_goal(canonicalized.quantified.value) {
+        if let Ok(solution) = self.solver.solve_closed_goal(canonicalized.quantified.value) {
             match solution {
                 Solution::Unique(_) => Err("refutation failed")?,
                 Solution::Ambig(_) => Ok(NegativeSolution::Ambiguous),
+                Solution::CannotProve => Ok(NegativeSolution::CannotProve),
             }
         } else {
             Ok(NegativeSolution::Refuted)
@@ -301,7 +296,7 @@ impl<'s> Fulfill<'s> {
             // directly.
             assert!(obligations.is_empty());
             while let Some(obligation) = self.obligations.pop() {
-                let ambiguous = match obligation {
+                let (ambiguous, cannot_prove) = match obligation {
                     Obligation::Prove(ref wc) => {
                         let PositiveSolution { free_vars, solution } = self.prove(wc)?;
 
@@ -312,10 +307,11 @@ impl<'s> Fulfill<'s> {
                             }
                         }
 
-                        solution.is_ambig()
+                        (solution.is_ambig(), solution.cannot_be_proven())
                     }
                     Obligation::Refute(ref goal) => {
-                        self.refute(goal)? == NegativeSolution::Ambiguous
+                        let answer = self.refute(goal)?;
+                        (answer == NegativeSolution::Ambiguous, answer == NegativeSolution::CannotProve)
                     }
                 };
 
@@ -323,13 +319,16 @@ impl<'s> Fulfill<'s> {
                     debug!("ambiguous result: {:?}", obligation);
                     obligations.push(obligation);
                 }
+
+                // If one of the obligations cannot be proven, then the whole goal
+                // cannot be proven either.
+                self.cannot_prove = self.cannot_prove || cannot_prove;
             }
 
             self.obligations.extend(obligations.drain(..));
-            debug!("end of round, {} obligations left", self.obligations.len());
         }
 
-        // At the end of this process, `self.to_prove` should have
+        // At the end of this process, `self.obligations` should have
         // all of the ambiguous obligations, and `obligations` should
         // be empty.
         assert!(obligations.is_empty());
@@ -346,7 +345,12 @@ impl<'s> Fulfill<'s> {
     /// the outcome of type inference by updating the replacements it provides.
     pub fn solve(mut self, subst: Substitution) -> Result<Solution> {
         let outcome = self.fulfill()?;
-        if outcome.is_complete() && !self.ambiguous {
+
+        if self.cannot_prove {
+            return Ok(Solution::CannotProve);
+        }
+
+        if outcome.is_complete() {
             // No obligations remain, so we have definitively solved our goals,
             // and the current inference state is the unique way to solve them.
 

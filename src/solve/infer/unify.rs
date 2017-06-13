@@ -34,7 +34,7 @@ struct Unifier<'t> {
     snapshot: InferenceSnapshot,
     goals: Vec<InEnvironment<LeafGoal>>,
     constraints: Vec<InEnvironment<Constraint>>,
-    ambiguous: bool,
+    cannot_prove: bool,
 }
 
 #[derive(Debug)]
@@ -46,7 +46,7 @@ pub struct UnificationResult {
     /// neither confirm nor deny their equality, since we interpret the
     /// unification request as talking about *all possible
     /// substitutions*. Instead, we return an ambiguous result.
-    pub ambiguous: bool,
+    pub cannot_prove: bool,
 }
 
 impl<'t> Unifier<'t> {
@@ -58,7 +58,7 @@ impl<'t> Unifier<'t> {
             snapshot: snapshot,
             goals: vec![],
             constraints: vec![],
-            ambiguous: false,
+            cannot_prove: false,
         }
     }
 
@@ -67,7 +67,7 @@ impl<'t> Unifier<'t> {
         Ok(UnificationResult {
             goals: self.goals,
             constraints: self.constraints,
-            ambiguous: self.ambiguous,
+            cannot_prove: self.cannot_prove,
         })
     }
 
@@ -118,13 +118,13 @@ impl<'t> Unifier<'t> {
                     if apply1.name.is_for_all() || apply2.name.is_for_all() {
                         // we're being asked to prove something like `!0 = !1`
                         // or `!0 = i32`. We interpret this as being asked
-                        // whether that holds *for all subtitutions*. Thus, the
-                        // answer is always *maybe* (ambiguous). That means we get:
+                        // whether that holds *for all subtitutions*. Thus, we
+                        // cannot prove the goal. That means we get:
                         //
-                        //     forall<T, U> { T = U } // Ambig
-                        //     forall<T, U> { not { T = U } } // Ambig
+                        //     forall<T, U> { T = U } // CannotProve
+                        //     forall<T, U> { not { T = U } } // CannotProve
 
-                        self.ambiguous = true;
+                        self.cannot_prove = true;
                         return Ok(())
                     } else {
                         bail!("cannot equate `{:?}` and `{:?}`", apply1.name, apply2.name);

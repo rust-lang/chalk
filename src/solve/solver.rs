@@ -115,13 +115,13 @@ impl Solver {
                     .environment
                     .elaborated_clauses(&self.program)
                     .map(DomainGoal::into_program_clause);
-                let env_solution = self.solve_from_clauses(&binders, &value, env_clauses, true);
+                let env_solution = self.solve_from_clauses(&binders, &value, env_clauses);
 
                 let prog_clauses: Vec<_> = self.program.program_clauses.iter()
                     .cloned()
                     .filter(|clause| !clause.fallback_clause)
                     .collect();
-                let prog_solution = self.solve_from_clauses(&binders, &value, prog_clauses, false);
+                let prog_solution = self.solve_from_clauses(&binders, &value, prog_clauses);
 
                 // These fallback clauses are used when we're sure we'll never
                 // reach Unique via another route
@@ -129,7 +129,7 @@ impl Solver {
                     .cloned()
                     .filter(|clause| clause.fallback_clause)
                     .collect();
-                let fallback_solution = self.solve_from_clauses(&binders, &value, fallback, false);
+                let fallback_solution = self.solve_from_clauses(&binders, &value, fallback);
 
                 // Now that we have all the outcomes, we attempt to combine
                 // them. Here, we apply a heuristic (also found in rustc): if we
@@ -172,8 +172,7 @@ impl Solver {
         &mut self,
         binders: &[ParameterKind<UniverseIndex>],
         goal: &InEnvironment<DomainGoal>,
-        clauses: C,
-        from_env: bool,
+        clauses: C
     ) -> Result<Solution>
     where
         C: IntoIterator<Item = ProgramClause>,
@@ -182,7 +181,7 @@ impl Solver {
         for ProgramClause { implication, .. } in clauses {
             debug_heading!("clause={:?}", implication);
 
-            let res = self.solve_via_implication(binders, goal.clone(), implication, from_env);
+            let res = self.solve_via_implication(binders, goal.clone(), implication);
             if let Ok(solution) = res {
                 debug!("ok: solution={:?}", solution);
                 cur_solution = Some(
@@ -203,8 +202,7 @@ impl Solver {
         &mut self,
         binders: &[ParameterKind<UniverseIndex>],
         goal: InEnvironment<DomainGoal>,
-        clause: Binders<ProgramClauseImplication>,
-        from_env: bool,
+        clause: Binders<ProgramClauseImplication>
     ) -> Result<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = Substitution::from_binders(&binders);
@@ -213,42 +211,7 @@ impl Solver {
         let ProgramClauseImplication { consequence, conditions} =
             fulfill.instantiate_in(goal.environment.universe, clause.binders, &clause.value);
 
-        // first, see if the implication's conclusion might solve our goal
-        if fulfill.unify(&goal.environment, &goal.goal, &consequence)?.ambiguous && from_env {
-            // here, using this environmental assumption would require unifying a skolemized
-            // variable, which can only appear in an *environment*, never the
-            // program. We view the program as providing a "closed world" of
-            // possible types and impls, and thus we can safely abandon this
-            // route of proving our goal.
-            //
-            // You can see this at work in the following example, where the
-            // assumption in the `if` is ignored since it cannot actually be applied.
-            //
-            // ```
-            // program {
-            //     struct i32 { }
-            //     struct u32 { }
-            //
-            //     trait Foo<T> { }
-            //
-            //     impl<T> Foo<i32> for T { }
-            // }
-            //
-            // goal {
-            //     forall<T> {
-            //         exists<U> {
-            //             if (i32: Foo<T>) {
-            //                 T: Foo<U>
-            //             }
-            //         }
-            //     }
-            // } yields {
-            //     "Unique"
-            // }
-            // ```
-
-            Err("using the implication would require changing a forall variable")?;
-        }
+        fulfill.unify(&goal.environment, &goal.goal, &consequence)?;
 
         // if so, toss in all of its premises
         for condition in conditions {
