@@ -72,6 +72,10 @@ pub struct Fulfill<'s> {
     /// Lifetime constraints that must be fulfilled for a solution to be fully
     /// validated.
     constraints: HashSet<InEnvironment<Constraint>>,
+
+    /// Record that a goal has been processed that can neither be proved nor
+    /// refuted. In such a case the solution will be either `CannotProve`, or `Err`
+    /// in the case where some other goal leads to an error.
     cannot_prove: bool,
 }
 
@@ -320,8 +324,9 @@ impl<'s> Fulfill<'s> {
                     obligations.push(obligation);
                 }
 
-                // If one of the obligations cannot be proven, then the whole goal
-                // cannot be proven either.
+                // If one of the obligations cannot be proven then the whole goal
+                // cannot be proven either, unless another obligation leads to an error
+                // in which case the function will bail out normally.
                 self.cannot_prove = self.cannot_prove || cannot_prove;
             }
 
