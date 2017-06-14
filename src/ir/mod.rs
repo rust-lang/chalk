@@ -485,7 +485,9 @@ pub struct ProgramClause {
     pub fallback_clause: bool,
 }
 
-/// Represents one clause of the form `consequence :- conditions`.
+/// Represents one clause of the form `consequence :- conditions` where
+/// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
+/// conditions.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProgramClauseImplication {
     pub consequence: DomainGoal,

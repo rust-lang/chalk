@@ -15,7 +15,7 @@ impl InferenceTable {
             .map(|u| self.new_parameter_variable(u))
             .collect();
         debug!("instantiate: vars={:?}", vars);
-        let mut instantiator = Instantiator { vars: vars };
+        let mut instantiator = Instantiator { vars };
         arg.fold_with(&mut instantiator, 0).expect("")
     }
 }
