@@ -417,7 +417,7 @@ impl DomainGoal {
                 },
                 binders: vec![],
             },
-            fallback_clause: false,
+            priority: 1,
         }
     }
 }
@@ -483,7 +483,7 @@ pub struct ProgramClause {
     pub implication: Binders<ProgramClauseImplication>,
 
     /// Is this a fallback clause which should get lower priority?
-    pub fallback_clause: bool,
+    pub priority: usize,
 }
 
 /// Represents one clause of the form `consequence :- conditions` where

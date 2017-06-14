@@ -152,7 +152,7 @@ impl Solver {
 
                     let prog_clauses: Vec<_> = self.program.program_clauses.iter()
                         .cloned()
-                        .filter(|clause| !clause.fallback_clause)
+                        .filter(|clause| clause.priority != 0)
                         .collect();
                     let prog_solution = self.solve_from_clauses(&binders, &value, prog_clauses);
 
@@ -160,7 +160,7 @@ impl Solver {
                     // reach Unique via another route
                     let fallback: Vec<_> = self.program.program_clauses.iter()
                         .cloned()
-                        .filter(|clause| clause.fallback_clause)
+                        .filter(|clause| clause.priority == 0)
                         .collect();
                     let fallback_solution = self.solve_from_clauses(&binders, &value, fallback);
 

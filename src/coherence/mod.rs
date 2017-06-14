@@ -13,7 +13,7 @@ impl Program {
         // Visit every root in the forest & set specialization
         // priority for the tree that is the root of.
         for root_idx in forest.externals(Direction::Incoming) {
-            self.set_priorities(root_idx, &forest, 0);
+            self.set_priorities(root_idx, &forest, 1);
         }
 
         Ok(())
