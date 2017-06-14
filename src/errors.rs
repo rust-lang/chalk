@@ -1,4 +1,5 @@
 use chalk_parse::{self, ast};
+use ir;
 
 error_chain! {
     links {
@@ -26,6 +27,11 @@ error_chain! {
         NotTrait(identifier: ast::Identifier) {
             description("not a trait")
             display("expected a trait, found `{}`, which is not a trait", identifier.str)
+        }
+
+        OverlappingImpls(trait_id: ir::Identifier) {
+            description("overlapping impls")
+            display("overlapping impls of trait {:?}", trait_id)
         }
     }
 }
