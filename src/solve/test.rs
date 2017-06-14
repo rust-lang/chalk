@@ -228,8 +228,7 @@ fn ordering() {
 }
 
 #[test]
-fn cycles() {
-    // only solution: infinite type S<S<S<...
+fn cycle_no_solution() {
     test! {
         program {
             trait Foo { }
@@ -237,6 +236,7 @@ fn cycles() {
             impl<T> Foo for S<T> where T: Foo { }
         }
 
+        // only solution: infinite type S<S<S<...
         goal {
             exists<T> {
                 T: Foo
@@ -245,8 +245,10 @@ fn cycles() {
             "No possible solution: no applicable candidates"
         }
     }
+}
 
-    // infinite family of solutions: {i32, S<i32>, S<S<i32>>, ... }
+#[test]
+fn cycle_many_solutions() {
     test! {
         program {
             trait Foo { }
@@ -256,6 +258,7 @@ fn cycles() {
             impl Foo for i32 { }
         }
 
+        // infinite family of solutions: {i32, S<i32>, S<S<i32>>, ... }
         goal {
             exists<T> {
                 T: Foo
@@ -264,7 +267,10 @@ fn cycles() {
             "Ambiguous; no inference guidance"
         }
     }
+}
 
+#[test]
+fn cycle_unique_solution() {
     test! {
         program {
             trait Foo { }
