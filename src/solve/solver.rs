@@ -26,8 +26,7 @@ pub enum CycleStrategy {
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
 /// allows for better caching, and simplifies management of the inference
-/// context. Solvers do, however, maintain a stack of questions being posed, so
-/// as to avoid unbounded search.
+/// context.
 pub struct Solver {
     pub(super) program: Arc<ProgramEnvironment>,
     stack: Vec<StackSlot>,
@@ -106,13 +105,24 @@ impl Solver {
     pub fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Result<Solution> {
         debug_heading!("Solver::solve({:?})", goal);
 
+        // If the goal is already on the stack, we found a cycle and indicate it by setting
+        // `slot.cycle = true`. If there is no cached answer, we can't make any more progress
+        // and return `Err`. If there is one, use this answer.
         if let Some(slot) = self.stack.iter_mut().find(|s| { s.goal == goal }) {
             slot.cycle = true;
             debug!("cycle detected: previous solution {:?}", slot.answer);
             return slot.answer.clone().ok_or("cycle".into());
         }
 
-
+        // We start with `answer = None` and try to solve the goal. At the end of the iteration,
+        // `answer` will be updated with the result of the solving process. If we detect a cycle
+        // during the solving process, we cache `answer` and try to solve the goal again. We repeat
+        // until we reach a fixed point for `answer`.
+        // Considering the partial order:
+        // - None < Some(Unique) < Some(Ambiguous)
+        // - None < Some(CannotProve)
+        // the function which maps the loop iteration to `answer` is a nondecreasing function
+        // so this function will eventually be constant and the loop terminates.
         let mut answer = None;
         loop {
             self.stack.push(StackSlot {
@@ -167,7 +177,6 @@ impl Solver {
                         .merge_with(fallback_solution, |merged, fallback| merged.fallback_to(fallback))
                 }
             };
-
             debug!("Solver::solve: loop iteration result = {:?}", result);
 
             let slot = self.stack.pop().unwrap();
@@ -175,6 +184,7 @@ impl Solver {
                 CycleStrategy::Tabling if slot.cycle => {
                     let actual_answer = result.as_ref().ok().map(|s| s.clone());
                     if actual_answer == answer {
+                        // Fixed point: break
                         return result;
                     } else {
                         answer = actual_answer;

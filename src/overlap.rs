@@ -4,11 +4,11 @@ use itertools::Itertools;
 
 use errors::*;
 use ir::*;
-use solve::solver::Solver;
+use solve::solver::{Solver, CycleStrategy};
 
 impl Program {
     pub fn check_overlapping_impls(&self) -> Result<()> {
-        let mut solver = Solver::new(&Arc::new(self.environment()), 10);
+        let mut solver = Solver::new(&Arc::new(self.environment()), CycleStrategy::Tabling);
 
         // Create a vector of references to impl datums, sorted by trait ref
         let impl_data = self.impl_data.values().sorted_by(|lhs, rhs| {
@@ -80,7 +80,7 @@ fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> InEnvironment<Goal> {
 
     let lhs_len = lhs.binders.len();
 
-    // Join the two impls' binders together 
+    // Join the two impls' binders together
     let mut binders = lhs.binders.binders.clone();
     binders.extend(rhs.binders.binders.clone());
 
@@ -100,7 +100,7 @@ fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> InEnvironment<Goal> {
     // Create a goal for each clause in both where clauses
     let wc_goals = lhs_where_clauses.chain(rhs_where_clauses)
                 .map(|wc| Goal::Leaf(LeafGoal::DomainGoal(wc)));
- 
+
     // Join all the goals we've created together with And, then quantify them
     // over the joined binders. This is our query.
     let goal = params_goals.chain(wc_goals)
