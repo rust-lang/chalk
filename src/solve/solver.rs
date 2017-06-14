@@ -183,12 +183,14 @@ impl Solver {
             match self.cycle_strategy {
                 CycleStrategy::Tabling if slot.cycle => {
                     let actual_answer = result.as_ref().ok().map(|s| s.clone());
-                    if actual_answer == answer {
-                        // Fixed point: break
-                        return result;
-                    } else {
-                        answer = actual_answer;
-                    }
+                    let fixed_point = actual_answer == answer;
+                    match (fixed_point, &actual_answer) {
+                        (_, &Some(Solution::Ambig(Guidance::Unknown))) | (true, _) =>
+                            return result,
+                        _ => ()
+                    };
+
+                    answer = actual_answer;
                 }
                 _ => return result,
             };
