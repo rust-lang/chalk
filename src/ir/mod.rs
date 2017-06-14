@@ -196,6 +196,7 @@ pub struct StructDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
     pub self_ty: ApplicationTy,
+    pub fields: Vec<Ty>,
     pub where_clauses: Vec<DomainGoal>,
 }
 
@@ -224,9 +225,6 @@ pub struct AssociatedTyDatum {
     /// Parameters on this associated type, beginning with those from the trait,
     /// but possibly including more.
     pub parameter_kinds: Vec<ParameterKind<Identifier>>,
-
-    /// Where clauses that must hold for the projection be well-formed.
-    pub where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

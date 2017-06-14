@@ -167,7 +167,6 @@ impl LowerProgram for Program {
                             id: info.id,
                             name: defn.name.str,
                             parameter_kinds: parameter_kinds,
-                            where_clauses: vec![] // TODO: where clauses on associated types
                         });
                     }
                 }
@@ -448,9 +447,10 @@ impl LowerStructDefn for StructDefn {
                                 .collect()
             };
 
+            let fields: Result<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
             let where_clauses = self.lower_where_clauses(env)?;
 
-            Ok(ir::StructDatumBound { self_ty, where_clauses })
+            Ok(ir::StructDatumBound { self_ty, fields: fields?, where_clauses })
         })?;
 
         Ok(ir::StructDatum { binders })
@@ -918,11 +918,13 @@ impl ir::StructDatum {
     fn to_program_clauses(&self, program: &ir::Program) -> Vec<ir::ProgramClause> {
         // Given:
         //
-        //    struct Foo<T: Eq> { ... }
+        //    struct Foo<T: Eq> {
+        //        field: Bar
+        //    }
         //
         // we generate the following clause:
         //
-        //    for<?T> WF(Foo<?T>) :- WF(?T), (?T: Eq), WF(?T: Eq).
+        //    for<?T> WF(Foo<?T>) :- WF(?T), WF(Bar), (?T: Eq), WF(?T: Eq).
 
         let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound_datum| {
@@ -934,14 +936,20 @@ impl ir::StructDatum {
                                              .parameters
                                              .iter()
                                              .filter_map(|pk| pk.as_ref().ty())
-                                             .map(|ty| ir::WellFormed::Ty(ty.clone()).cast());
+                                             .cloned()
+                                             .map(|ty| ir::WellFormed::Ty(ty).cast());
+
+                        let fields = bound_datum.fields
+                                                .iter()
+                                                .cloned()
+                                                .map(|ty| ir::WellFormed::Ty(ty).cast());
 
                         let where_clauses = bound_datum.where_clauses.iter()
                                                        .cloned()
                                                        .flat_map(|wc| wc.expanded(program))
                                                        .map(|wc| wc.cast());
 
-                        tys.chain(where_clauses).collect()
+                        tys.chain(fields).chain(where_clauses).collect()
                     }
                 }
             }),
@@ -985,7 +993,8 @@ impl ir::TraitDatum {
                         let tys = bound.trait_ref.parameters
                                                  .iter()
                                                  .filter_map(|pk| pk.as_ref().ty())
-                                                 .map(|ty| ir::WellFormed::Ty(ty.clone()).cast());
+                                                 .cloned()
+                                                 .map(|ty| ir::WellFormed::Ty(ty).cast());
 
                         tys.chain(where_clauses.iter().cloned().map(|wc| wc.cast())).collect()
                     }
@@ -1056,13 +1065,7 @@ impl ir::AssociatedTyDatum {
                     binders: binders.clone(),
                     value: ir::ProgramClauseImplication {
                         consequence: ir::Normalize { projection: projection.clone(), ty }.cast(),
-                        conditions: self.where_clauses
-                                        .iter()
-                                        .cloned()
-                                        .flat_map(|wc| wc.expanded(program))
-                                        .map(|wc| wc.cast())
-                                        .chain(Some(trait_ref.clone().cast()))
-                                        .collect()
+                        conditions: vec![trait_ref.clone().cast()],
                     }
                 },
                 fallback_clause: true,
