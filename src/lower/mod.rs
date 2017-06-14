@@ -167,7 +167,7 @@ impl LowerProgram for Program {
                             id: info.id,
                             name: defn.name.str,
                             parameter_kinds: parameter_kinds,
-                            where_clauses: vec![]
+                            where_clauses: vec![] // TODO: where clauses on associated types
                         });
                     }
                 }
@@ -369,7 +369,7 @@ trait LowerWhereClause<T> {
 
 /// Lowers a where-clause in the context of a clause (i.e. in "negative"
 /// position); this is limited to the kinds of where-clauses users can actually
-/// type in Rust.
+/// type in Rust and well-formedness checks.
 impl LowerWhereClause<ir::DomainGoal> for WhereClause {
     fn lower(&self, env: &Env) -> Result<ir::DomainGoal> {
         Ok(match *self {
@@ -792,7 +792,7 @@ impl ir::ImplDatum {
     /// Given `impl<T: Clone> Clone for Vec<T>`, generate:
     ///
     /// ```notrust
-    /// forall<T> { (Vec<T>: Clone) :- (T: Clone) }
+    /// forall<T> { (Vec<T>: Clone) :- (T: Clone), WF(T: Clone) }
     /// ```
     fn to_program_clause(&self, program: &ir::Program) -> ir::ProgramClause {
         ir::ProgramClause {
@@ -1036,6 +1036,7 @@ impl ir::AssociatedTyDatum {
             parameters: parameters.clone(),
         };
 
+        // Retrieve the trait ref embedding the associated type
         let trait_ref = {
             let (associated_ty_data, trait_params, _) = program.split_projection(&projection);
             ir::TraitRef {
@@ -1069,14 +1070,6 @@ impl ir::AssociatedTyDatum {
         };
 
         let elaborate = {
-            let trait_ref = {
-                let (associated_ty_data, trait_params, _) = program.split_projection(&projection);
-                ir::TraitRef {
-                    trait_id: associated_ty_data.trait_id,
-                    parameters: trait_params.to_owned()
-                }
-            };
-
             // add new type parameter U
             let mut binders = binders;
             binders.push(ir::ParameterKind::Ty(()));

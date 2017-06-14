@@ -368,6 +368,8 @@ impl DomainGoal {
         }
     }
 
+    /// A clause of the form (T: Foo) expands to (T: Foo), WF(T: Foo).
+    /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), (T: Foo), WF(T: Foo).
     pub fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
         let mut expanded = vec![];
         match self {
