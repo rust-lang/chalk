@@ -7,7 +7,7 @@ version = "0.1.0"
 ena = "0.4"
 error-chain = "0.7.2"
 itertools = "0.6.0"
-lalrpop-intern = "0.12.1"
+lalrpop-intern = "0.13.0"
 lazy_static = "0.2.2"
 rustyline = "1.0"
 
