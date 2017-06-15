@@ -183,12 +183,20 @@ impl Solver {
             match self.cycle_strategy {
                 CycleStrategy::Tabling if slot.cycle => {
                     let actual_answer = result.as_ref().ok().map(|s| s.clone());
-                    if actual_answer == answer {
-                        // Fixed point: break
-                        return result;
-                    } else {
-                        answer = actual_answer;
-                    }
+                    let fixed_point = answer == actual_answer;
+
+                    // If we reach a fixed point, we can break.
+                    // If the answer is `Ambig`, then we know that we already have multiple
+                    // solutions, and we *must* break because an `Ambig` solution may not perform
+                    // any unification and thus fail to correctly reach a fixed point. See test
+                    // `multiple_ambiguous_cycles`.
+                    match (fixed_point, &actual_answer) {
+                        (_, &Some(Solution::Ambig(_))) | (true, _) =>
+                            return result,
+                        _ => ()
+                    };
+
+                    answer = actual_answer;
                 }
                 _ => return result,
             };
