@@ -6,6 +6,7 @@ dependencies = [
  "lalrpop 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop-intern 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop-util 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
