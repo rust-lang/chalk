@@ -2,6 +2,5 @@ language: rust
 rust:
   - nightly
 script:
-  - ( cd chalk-rust; cargo test )
-  - ( cd chalk-rust-parse; cargo test )
+  - cargo test --all
 
