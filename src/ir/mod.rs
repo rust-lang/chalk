@@ -554,6 +554,10 @@ impl Goal {
     pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal {
         Goal::Quantified(kind, Binders { value: Box::new(self), binders })
     }
+
+    pub fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
+        Goal::Implies(predicates, Box::new(self))
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]

@@ -143,7 +143,8 @@ fn atc_accounting() {
                     where_clauses: []
                 }
             }
-        ]
+        ],
+        specialization_priority: 0
     }
 }"#);
         let goal = parse_and_lower_goal(&program, "forall<X> { forall<'a> { forall<Y> { \
