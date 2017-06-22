@@ -646,7 +646,7 @@ impl LowerImpl for Impl {
                 trait_ref,
                 where_clauses,
                 associated_ty_values,
-                specialization_priority: 1,
+                specialization_priority: 0,
             })
         })?;
 
@@ -806,7 +806,7 @@ impl ir::ImplDatum {
                     conditions: bound.where_clauses.clone().cast(),
                 }
             }),
-            priority: self.binders.value.specialization_priority,
+            fallback_clause: false,
         }
     }
 }
@@ -875,7 +875,7 @@ impl ir::AssociatedTyValue {
                     conditions: conditions.clone(),
                 }
             },
-            priority: 1,
+            fallback_clause: false,
         };
 
         vec![normalization]
@@ -934,7 +934,7 @@ impl ir::StructDatum {
                                                          .collect(),
                 }
             }),
-            priority: 1,
+            fallback_clause: false,
         };
 
         vec![wf]
@@ -975,7 +975,7 @@ impl ir::TraitDatum {
                     }
                 }
             }),
-            priority: 1,
+            fallback_clause: false,
         };
 
         vec![wf]
@@ -1020,7 +1020,7 @@ impl ir::AssociatedTyDatum {
                         conditions: vec![],
                     }
                 },
-                priority: 0,
+                fallback_clause: true,
             }
         };
 
