@@ -1,8 +1,5 @@
-use itertools::Itertools;
-
 use cast::Cast;
 use chalk_parse::ast;
-use ena::unify::UnifyKey;
 use fold::Subst;
 use lalrpop_intern::InternedString;
 use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
@@ -612,21 +609,6 @@ impl Substitution {
 
     pub fn is_empty(&self) -> bool {
         self.tys.is_empty() && self.lifetimes.is_empty()
-    }
-
-    pub fn into_parameters(self) -> Vec<Parameter> {
-        let ty_params = self.tys.into_iter().map(|(var, ty)| {
-            (var.index(), ParameterKind::Ty(ty))
-        });
-
-        let lifetime_params = self.lifetimes.into_iter().map(|(var, lifetime)| {
-            (var.index(), ParameterKind::Lifetime(lifetime))
-        });
-
-        ty_params.chain(lifetime_params).sorted_by(|&(lhs, _), &(rhs, _)| lhs.cmp(&rhs))
-                                        .into_iter()
-                                        .map(|(_, param)| param)
-                                        .collect()
     }
 }
 

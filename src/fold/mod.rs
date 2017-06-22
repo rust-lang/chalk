@@ -226,5 +226,3 @@ struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(EqGoal { a, b });
 struct_fold!(ProgramClauseImplication { consequence, conditions });
 struct_fold!(ConstrainedSubst { subst, constraints });
-struct_fold!(ImplDatum { binders });
-struct_fold!(ImplDatumBound { trait_ref, where_clauses, associated_ty_values, specialization_priority });

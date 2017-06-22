@@ -38,7 +38,6 @@ macro_rules! subst_method {
 
 subst_method!(Goal);
 subst_method!(Ty);
-subst_method!(ImplDatum);
 
 impl<'b> Folder for Subst<'b> {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
