@@ -28,6 +28,9 @@ impl Program {
 
             // Iterate over every pair of impls for the same trait
             for ((&l_id, lhs), (&r_id, rhs)) in impls.into_iter().tuple_combinations() {
+                // Upshift the bindings in the RHS impl to not overlap with the LHS impl
+                let rhs = rhs.up_shift(lhs.binders.len());
+                let rhs = &rhs;
 
                 // First, determine if they overlap using the "intersection_of" goal.
                 // A successful result means that these two impls are overlapping
@@ -92,26 +95,20 @@ fn intersection_of(solver: &mut Solver, lhs: &ImplDatum, rhs: &ImplDatum) -> Res
 
     debug_assert!(params(lhs).len() == params(rhs).len());
 
-    let lhs_len = lhs.binders.len();
-
     // Join the two impls' binders together
     let mut binders = lhs.binders.binders.clone();
     binders.extend(rhs.binders.binders.clone());
 
-    // Upshift the rhs variables in params to account for the joined binders
-    let lhs_params = params(lhs).iter().cloned();
-    let rhs_params = params(rhs).iter().map(|param| param.up_shift(lhs_len));
-
     // Create an equality goal for every input type the trait, attempting
     // to unify the inputs to both impls with one another
+    let lhs_params = params(lhs).iter().cloned();
+    let rhs_params = params(rhs).iter().cloned();
     let params_goals = lhs_params.zip(rhs_params)
                         .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
 
-    // Upshift the rhs variables in where clauses
-    let lhs_where_clauses = lhs.binders.value.where_clauses.iter().cloned();
-    let rhs_where_clauses = rhs.binders.value.where_clauses.iter().map(|wc| wc.up_shift(lhs_len));
-
     // Create a goal for each clause in both where clauses
+    let lhs_where_clauses = lhs.binders.value.where_clauses.iter().cloned();
+    let rhs_where_clauses = rhs.binders.value.where_clauses.iter().cloned();
     let wc_goals = lhs_where_clauses.chain(rhs_where_clauses)
                 .map(|wc| Goal::Leaf(LeafGoal::DomainGoal(wc)));
 
@@ -139,6 +136,21 @@ fn specializes(
     overlap: Solution
 ) -> Specialization {
     if let Guidance::Definite(subst) = overlap.into_guidance() {
-        panic!()
+        let params = subst.value.into_parameters();
+        let lhs_specialized = one_way_specializes(solver, lhs.subst(&params), rhs);
+        let rhs_specialized = one_way_specializes(solver, rhs.subst(&params), lhs);
+        
+        match (lhs_specialized, rhs_specialized) {
+            (true, false)   => Specialization::LeftToRight,
+            (false, true)   => Specialization::RightToLeft,
+            _               => Specialization::None,
+        }
     } else { Specialization::None }
+}
+
+fn one_way_specializes(solver: &mut Solver, greater: ImplDatum, lesser: &ImplDatum)
+    -> bool
+{
+    // TODO perform query
+    false
 }
