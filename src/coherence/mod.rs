@@ -29,6 +29,7 @@ impl Program {
         // Record them in the forest by adding an edge from the less special
         // to the more special.
         self.find_specializations(|less_special, more_special| {
+            println!("found edge");
             forest.add_edge(less_special, more_special, ());
         })?;
 

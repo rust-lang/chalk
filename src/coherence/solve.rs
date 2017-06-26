@@ -35,7 +35,8 @@ impl Program {
                     match (solver.specializes(lhs, rhs), solver.specializes(rhs, lhs)) {
                         (true, false)   => record_specialization(l_id, r_id),
                         (false, true)   => record_specialization(r_id, l_id),
-                        (_, _)          => {
+                        (x, y)          => {
+                            println!("{}, {}", x, y);
                             let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
                             return Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)))
                         }
@@ -110,7 +111,7 @@ impl Solver {
                     .expect("Every trait takes at least one input type")
                     .quantify(QuantifierKind::Exists, binders);
 
-        self.solve_closed_goal(InEnvironment::empty(goal)).is_ok()
+        self.solve_closed_goal(InEnvironment::empty(goal)).ok().map_or(false, |sol| !sol.cannot_be_proven())
     }
 
     fn specializes(&mut self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
@@ -133,7 +134,7 @@ impl Solver {
                     .implied_by(more_special_wc)
                     .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
-        self.solve_closed_goal(InEnvironment::empty(goal)).is_ok()
+        self.solve_closed_goal(InEnvironment::empty(goal)).ok().map_or(false, |sol| sol.is_unique())
     }
 }
 

@@ -184,6 +184,13 @@ impl Solution {
             _ => false,
         }
     }
+
+    pub fn is_unique(&self) -> bool {
+        match *self {
+            Solution::Unique(..)    => true,
+            _                       => false,
+        }
+    }
 }
 
 impl fmt::Display for Solution {
