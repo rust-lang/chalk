@@ -183,14 +183,14 @@ Angle<T>: Vec<T> = {
 };
 
 Id: Identifier = {
-    <l:@L> <s:r"([:alpha:]|_)([:alnum:]|_)*"> <r:@R> => Identifier {
+    <l:@L> <s:r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
         str: intern(s),
         span: Span::new(l, r),
     }
 };
 
 LifetimeId: Identifier = {
-    <l:@L> <s:r"'([:alpha:]|_)([:alnum:]|_)*"> <r:@R> => Identifier {
+    <l:@L> <s:r"'([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
         str: intern(s),
         span: Span::new(l, r),
     }
