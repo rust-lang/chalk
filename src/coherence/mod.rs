@@ -28,8 +28,7 @@ impl Program {
         // Find all specializations (implemented in coherence/solve)
         // Record them in the forest by adding an edge from the less special
         // to the more special.
-        self.find_specializations(|less_special, more_special| {
-            println!("found edge");
+        self.visit_specializations(|less_special, more_special| {
             forest.add_edge(less_special, more_special, ());
         })?;
 
@@ -41,8 +40,8 @@ impl Program {
     
         // Get the impl datum recorded at this node and reset its priority
         {
-            let impl_id = forest.node_weight(idx).expect("received valid node index");
-            let impl_datum = self.impl_data.get_mut(impl_id).expect("node is valid impl id");
+            let impl_id = forest.node_weight(idx).expect("index should be a valid index into graph");
+            let impl_datum = self.impl_data.get_mut(impl_id).expect("node should be valid impl id");
             impl_datum.binders.value.specialization_priority = p;
         }
 

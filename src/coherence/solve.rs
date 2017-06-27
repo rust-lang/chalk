@@ -7,7 +7,7 @@ use ir::*;
 use solve::solver::{Solver, CycleStrategy};
 
 impl Program {
-    pub(super) fn find_specializations<F>(&self, mut record_specialization: F) -> Result<()>
+    pub(super) fn visit_specializations<F>(&self, mut record_specialization: F) -> Result<()>
         where F: FnMut(ItemId, ItemId)
     {
         let mut solver = Solver::new(&Arc::new(self.environment()), CycleStrategy::Tabling);
