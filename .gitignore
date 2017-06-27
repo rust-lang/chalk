@@ -8,3 +8,4 @@ TAGS
 /*/target/
 *~
 target
+chalk-parse/src/parser.rs
