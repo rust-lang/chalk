@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use itertools::Itertools;
-
 use errors::*;
 use ir::*;
 use solve::solver::{Solver, CycleStrategy};
@@ -35,8 +34,7 @@ impl Program {
                     match (solver.specializes(lhs, rhs), solver.specializes(rhs, lhs)) {
                         (true, false)   => record_specialization(l_id, r_id),
                         (false, true)   => record_specialization(r_id, l_id),
-                        (x, y)          => {
-                            println!("{}, {}", x, y);
+                        (_, _)          => {
                             let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
                             return Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)))
                         }
@@ -52,7 +50,7 @@ impl Program {
 impl Solver {
     // Test for overlap.
     //
-    // If this goal succeeds, these two impls overlap.
+    // If this test succeeds, these two impls overlap.
     //
     // We combine the binders of the two impls & treat them as existential
     // quantifiers. Then we attempt to unify the input types to the trait provided
@@ -114,19 +112,38 @@ impl Solver {
         self.solve_closed_goal(InEnvironment::empty(goal)).ok().map_or(false, |sol| !sol.cannot_be_proven())
     }
 
+    // Test for specialization.
+    //
+    // If this test suceeds, the second impl specializes the first.
+    //
+    // Example lowering:
+    //
+    // more: impl<T: Clone> Foo for Vec<T>
+    // less: impl<U: Clone> Foo for U
+    //
+    // forall<T> {
+    //  if (T: Clone) {
+    //    exists<U> {
+    //      Vec<T> = U, U: Clone
+    //    }
+    //  }
+    // }
     fn specializes(&mut self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
         let more_len = more_special.binders.len();
 
+        // Create parameter equality goals.
         let more_special_params = params(more_special).iter().cloned();
         let less_special_params = params(less_special).iter().map(|p| p.up_shift(more_len));
         let params_goals = more_special_params.zip(less_special_params)
                             .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
 
+        // Create the where clause goals.
         let more_special_wc = more_special.binders.value.where_clauses.clone();
         let less_special_wc = less_special.binders.value.where_clauses.iter().map(|wc| {
             Goal::Leaf(LeafGoal::DomainGoal(wc.up_shift(more_len)))
         });
 
+        // Join all of the goals together.
         let goal = params_goals.chain(less_special_wc)
                     .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
                     .expect("Every trait takes at least one input type")
