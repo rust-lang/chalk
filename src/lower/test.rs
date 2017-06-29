@@ -483,7 +483,10 @@ fn overlapping_negative_positive_impls() {
             "overlapping impls of trait \"Send\""
         }
     }
+}
 
+#[test]
+fn coherence_rules() {
     lowering_success! {
         program {
             trait Send { }

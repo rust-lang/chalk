@@ -431,6 +431,13 @@ impl PolarizedTraitRef {
             PolarizedTraitRef::Negative(ref tr) => tr
         }
     }
+
+    pub fn flip(self) -> PolarizedTraitRef {
+        match self {
+            PolarizedTraitRef::Positive(tr) => PolarizedTraitRef::Negative(tr),
+            PolarizedTraitRef::Negative(tr) => PolarizedTraitRef::Positive(tr),
+        }
+    }
 }
 
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
@@ -566,6 +573,30 @@ impl Canonical<InEnvironment<LeafGoal>> {
 pub enum FullyReducedGoal {
     EqGoal(Canonical<InEnvironment<EqGoal>>),
     DomainGoal(Canonical<InEnvironment<DomainGoal>>),
+}
+
+impl FullyReducedGoal {
+    pub fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
+        match self {
+            FullyReducedGoal::EqGoal(Canonical { binders, .. }) |
+            FullyReducedGoal::DomainGoal(Canonical { binders, ..}) => binders,
+        }
+    }
+
+    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+        if let FullyReducedGoal::DomainGoal(Canonical {
+                value: InEnvironment {
+                    goal: DomainGoal::Implemented(ref tr),
+                    ..
+                },
+                ..
+        }) = *self {
+            let trait_datum = &program.trait_data[&tr.trait_ref().trait_id];
+            return trait_datum.binders.value.auto;
+        }
+
+        false
+    }
 }
 
 impl<T> Canonical<T> {

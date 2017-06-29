@@ -1529,7 +1529,7 @@ fn negative_trait_bounds() {
         }
 
         goal {
-            Vec<f32>: Foo
+            Vec<f32>: !Foo
         } yields {
             "Unique"
         }

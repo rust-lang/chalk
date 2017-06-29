@@ -284,6 +284,21 @@ impl<'s> Fulfill<'s> {
         let mut obligations = Vec::with_capacity(self.obligations.len());
         let mut progress = true;
 
+        // Coherence rules: we traverse all the obligations and we check
+        // if we found both `Something: Foo` and `Something: !Foo`. If yes,
+        // the set of obligations cannot be fulfilled.
+        let mut impls = HashSet::new();
+        for obligation in &self.obligations {
+            if let Obligation::Prove(ref wc) = *obligation {
+                if let LeafGoal::DomainGoal(DomainGoal::Implemented(ref tr)) = wc.goal {
+                    if impls.contains(&self.infer.canonicalize(&tr.clone().flip()).quantified.value) {
+                        bail!("both positive and negative impls found in obligations");
+                    }
+                    impls.insert(self.infer.canonicalize(&tr).quantified.value);
+                }
+            }
+        }
+
         while progress {
             progress = false;
             debug_heading!("start of round, {} obligations", self.obligations.len());

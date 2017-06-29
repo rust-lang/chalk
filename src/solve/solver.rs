@@ -105,31 +105,21 @@ impl Solver {
     pub fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Result<Solution> {
         debug_heading!("Solver::solve({:?})", goal);
 
-        // If the goal is already on the stack, we found a cycle and indicate it by setting
-        // `slot.cycle = true`. If there is no cached answer, we can't make any more progress
-        // and return `Err`. If there is one, use this answer.
         if let Some(slot) = self.stack.iter_mut().find(|s| { s.goal == goal }) {
-
             // If we are facing a goal of the form `?0: AutoTrait`, we apply coinductive semantics:
             // we accept the cycle `(?0: AutoTrait) :- (?0: AutoTrait)` as an infinite proof for
             // `?0: AutoTrait` and we do not perform any substitution.
-            if let FullyReducedGoal::DomainGoal(Canonical {
-                value: InEnvironment {
-                    goal: DomainGoal::Implemented(ref tr),
-                    ..
-                },
-                ref binders,
-            }) = goal {
-                let trait_datum = &self.program.trait_data[&tr.trait_ref().trait_id];
-                if trait_datum.binders.value.auto {
-                    let value = ConstrainedSubst {
-                        subst: Substitution::empty(),
-                        constraints: vec![],
-                    };
-                    return Ok(Solution::Unique(Canonical { value, binders: binders.clone() }));
-                }
+            if goal.is_coinductive(&*self.program) {
+                let value = ConstrainedSubst {
+                    subst: Substitution::empty(),
+                    constraints: vec![],
+                };
+                return Ok(Solution::Unique(Canonical { value, binders: goal.into_binders() }));
             }
 
+            // If the goal is already on the stack, we found a cycle and indicate it by setting
+            // `slot.cycle = true`. If there is no cached answer, we can't make any more progress
+            // and return `Err`. If there is one, use this answer.
             slot.cycle = true;
             debug!("cycle detected: previous solution {:?}", slot.answer);
             return slot.answer.clone().ok_or("cycle".into());
