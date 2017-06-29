@@ -150,11 +150,13 @@ impl Debug for DomainGoal {
         match *self {
             DomainGoal::Normalize(ref n) => write!(fmt, "{:?}", n),
             DomainGoal::Implemented(ref n) => {
+                let trait_ref = n.trait_ref();
                 write!(fmt,
-                       "{:?}: {:?}{:?}",
-                       n.parameters[0],
-                       n.trait_id,
-                       Angle(&n.parameters[1..]))
+                       "{:?}: {}{:?}{:?}",
+                       trait_ref.parameters[0],
+                       if n.is_positive() { "" } else { "!" },
+                       trait_ref.trait_id,
+                       Angle(&trait_ref.parameters[1..]))
             }
             DomainGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
         }

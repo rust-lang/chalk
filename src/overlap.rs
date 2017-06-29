@@ -12,12 +12,12 @@ impl Program {
 
         // Create a vector of references to impl datums, sorted by trait ref
         let impl_data = self.impl_data.values().sorted_by(|lhs, rhs| {
-            lhs.binders.value.trait_ref.trait_id.cmp(&rhs.binders.value.trait_ref.trait_id)
+            lhs.binders.value.trait_ref.trait_ref().trait_id.cmp(&rhs.binders.value.trait_ref.trait_ref().trait_id)
         });
 
         // Group impls by trait.
         let impl_groupings = impl_data.into_iter().group_by(|impl_datum| {
-            impl_datum.binders.value.trait_ref.trait_id
+            impl_datum.binders.value.trait_ref.trait_ref().trait_id
         });
 
         for (trait_id, impls) in &impl_groupings {
@@ -27,6 +27,12 @@ impl Program {
             // goal. In this case, success is an error - it means that there is at
             // least one type in the intersection of these two impls.
             for (lhs, rhs) in impls.into_iter().tuple_combinations() {
+
+                // Two negative impls never overlap.
+                if !lhs.binders.value.trait_ref.is_positive() && !rhs.binders.value.trait_ref.is_positive() {
+                    continue;
+                }
+
                 match solver.solve_closed_goal(intersection_of(lhs, rhs)) {
                     Ok(_)   => {
                         let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
@@ -73,7 +79,7 @@ impl Program {
 //
 fn intersection_of(lhs: &ImplDatum, rhs: &ImplDatum) -> InEnvironment<Goal> {
     fn params(impl_datum: &ImplDatum) -> &[Parameter] {
-        &impl_datum.binders.value.trait_ref.parameters
+        &impl_datum.binders.value.trait_ref.trait_ref().parameters
     }
 
     debug_assert!(params(lhs).len() == params(rhs).len());

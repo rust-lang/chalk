@@ -35,6 +35,7 @@ pub struct TraitDefn {
     pub parameter_kinds: Vec<ParameterKind>,
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_defns: Vec<AssocTyDefn>,
+    pub auto: bool,
 }
 
 pub struct AssocTyDefn {
@@ -93,7 +94,7 @@ impl Kinded for Parameter {
 
 pub struct Impl {
     pub parameter_kinds: Vec<ParameterKind>,
-    pub trait_ref: TraitRef,
+    pub trait_ref: PolarizedTraitRef,
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
 }
@@ -139,6 +140,21 @@ pub struct TraitRef {
     pub args: Vec<Parameter>,
 }
 
+pub enum PolarizedTraitRef {
+    Positive(TraitRef),
+    Negative(TraitRef),
+}
+
+impl PolarizedTraitRef {
+    pub fn from_bool(polarity: bool, trait_ref: TraitRef) -> PolarizedTraitRef {
+        if polarity {
+            PolarizedTraitRef::Positive(trait_ref)
+        } else {
+            PolarizedTraitRef::Negative(trait_ref)
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct Identifier {
     pub str: InternedString,
@@ -146,7 +162,7 @@ pub struct Identifier {
 }
 
 pub enum WhereClause {
-    Implemented { trait_ref: TraitRef },
+    Implemented { trait_ref: PolarizedTraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
     TyWellFormed { ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },

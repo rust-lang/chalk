@@ -25,8 +25,11 @@ pub struct Program {
     /// For each trait:
     pub trait_data: HashMap<ItemId, TraitDatum>,
 
-    /// For each trait:
+    /// For each associated ty:
     pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
+
+    /// For each default impl:
+    pub default_impl_data: Vec<DefaultImplDatum>,
 }
 
 impl Program {
@@ -86,7 +89,8 @@ impl Environment {
         where I: IntoIterator<Item = DomainGoal>
     {
         let mut env = self.clone();
-        env.clauses.extend(clauses);
+        let env_clauses: HashSet<_> = env.clauses.into_iter().chain(clauses).collect();
+        env.clauses = env_clauses.into_iter().collect();
         Arc::new(env)
     }
 
@@ -117,12 +121,12 @@ impl Environment {
             };
 
             match clause {
-                DomainGoal::Implemented(ref trait_ref) => {
+                DomainGoal::Implemented(ref polarized) => {
                     // trait Foo<A> where Self: Bar<A> { }
                     // T: Foo<U>
                     // ----------------------------------------------------------
                     // T: Bar<U>
-
+                    let trait_ref = polarized.trait_ref();
                     let trait_datum = &program.trait_data[&trait_ref.trait_id];
                     for where_clause in &trait_datum.binders.value.where_clauses {
                         let where_clause = Subst::apply(&trait_ref.parameters, where_clause);
@@ -139,7 +143,7 @@ impl Environment {
                         trait_id: associated_ty_data.trait_id,
                         parameters: trait_params.to_owned()
                     };
-                    push_clause(trait_ref.cast());
+                    push_clause(PolarizedTraitRef::Positive(trait_ref).cast());
                 }
                 _ => {}
             }
@@ -235,9 +239,20 @@ pub struct ImplDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
-    pub trait_ref: TraitRef,
+    pub trait_ref: PolarizedTraitRef,
     pub where_clauses: Vec<DomainGoal>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DefaultImplDatum {
+    pub binders: Binders<DefaultImplDatumBound>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DefaultImplDatumBound {
+    pub trait_ref: TraitRef,
+    pub accessible_tys: Vec<Ty>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -248,6 +263,7 @@ pub struct StructDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
     pub self_ty: ApplicationTy,
+    pub fields: Vec<Ty>,
     pub where_clauses: Vec<DomainGoal>,
 }
 
@@ -260,6 +276,7 @@ pub struct TraitDatum {
 pub struct TraitDatumBound {
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<DomainGoal>,
+    pub auto: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -394,12 +411,34 @@ pub struct TraitRef {
     pub parameters: Vec<Parameter>,
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub enum PolarizedTraitRef {
+    Positive(TraitRef),
+    Negative(TraitRef),
+}
+
+impl PolarizedTraitRef {
+    pub fn is_positive(&self) -> bool {
+        match *self {
+            PolarizedTraitRef::Positive(_) => true,
+            PolarizedTraitRef::Negative(_) => false,
+        }
+    }
+
+    pub fn trait_ref(&self) -> &TraitRef {
+        match *self {
+            PolarizedTraitRef::Positive(ref tr) |
+            PolarizedTraitRef::Negative(ref tr) => tr
+        }
+    }
+}
+
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DomainGoal {
-    Implemented(TraitRef),
+    Implemented(PolarizedTraitRef),
     Normalize(Normalize),
     WellFormed(WellFormed),
 }

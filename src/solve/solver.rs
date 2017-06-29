@@ -109,6 +109,22 @@ impl Solver {
         // `slot.cycle = true`. If there is no cached answer, we can't make any more progress
         // and return `Err`. If there is one, use this answer.
         if let Some(slot) = self.stack.iter_mut().find(|s| { s.goal == goal }) {
+            if let FullyReducedGoal::DomainGoal(Canonical {
+                value: InEnvironment {
+                    goal: DomainGoal::Implemented(ref tr),
+                    ..
+                },
+                ref binders,
+            }) = goal {
+                let trait_datum = &self.program.trait_data[&tr.trait_ref().trait_id];
+                if trait_datum.binders.value.auto {
+                    let value = ConstrainedSubst {
+                        subst: Substitution::empty(),
+                        constraints: vec![],
+                    };
+                    return Ok(Solution::Unique(Canonical { value, binders: binders.clone() }));
+                }
+            }
             slot.cycle = true;
             debug!("cycle detected: previous solution {:?}", slot.answer);
             return slot.answer.clone().ok_or("cycle".into());
@@ -260,7 +276,7 @@ impl Solver {
         let subst = Substitution::from_binders(&binders);
         let (goal, (clause, subst)) =
             fulfill.instantiate(binders.iter().cloned(), &(goal, (clause, subst)));
-        let ProgramClauseImplication { consequence, conditions} =
+        let ProgramClauseImplication { consequence, conditions } =
             fulfill.instantiate_in(goal.environment.universe, clause.binders, &clause.value);
 
         fulfill.unify(&goal.environment, &goal.goal, &consequence)?;

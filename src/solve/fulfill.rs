@@ -98,11 +98,7 @@ impl<'s> Fulfill<'s> {
         self.infer.instantiate(universes, arg)
     }
 
-    /// Instantiates `arg` with fresh existential variables in the
-    /// given universe; the kinds of the variables are implied by
-    /// `binders`. This is used to apply a universally quantified
-    /// clause like `forall X, 'Y. P => Q`. Here the `binders`
-    /// argument is referring to `X, 'Y`.
+    /// Wraps `InferenceTable::instantiate_in`
     pub fn instantiate_in<U, T>(&mut self,
                                 universe: UniverseIndex,
                                 binders: U,
@@ -110,7 +106,7 @@ impl<'s> Fulfill<'s> {
         where T: Fold,
               U: IntoIterator<Item = ParameterKind<()>>
     {
-        self.instantiate(binders.into_iter().map(|pk| pk.map(|_| universe)), arg)
+        self.infer.instantiate_in(universe, binders, arg)
     }
 
     /// Unifies `a` and `b` in the given environment.
@@ -262,16 +258,16 @@ impl<'s> Fulfill<'s> {
         for (i, var) in free_vars.into_iter().enumerate() {
             match var {
                 ParameterKind::Ty(ty) => {
-                    let new_ty = subst.tys.get(&TyInferenceVariable::from_depth(i))
-                        .expect("apply_solution failed to locate type variable in substitution");
-                    self.unify(empty_env, &ty.to_ty(), &new_ty)
-                        .expect("apply_solution failed to substitute");
+                    if let Some(new_ty) = subst.tys.get(&TyInferenceVariable::from_depth(i)) {
+                        self.unify(empty_env, &ty.to_ty(), &new_ty)
+                            .expect("apply_solution failed to substitute");
+                    }
                 }
                 ParameterKind::Lifetime(lt) => {
-                    let new_lt = subst.lifetimes.get(&LifetimeInferenceVariable::from_depth(i))
-                        .expect("apply_solution failed to find lifetime variable in substitution");
-                    self.unify(empty_env, &lt.to_lifetime(), &new_lt)
-                        .expect("apply_solution failed to substitute");
+                    if let Some(new_lt) = subst.lifetimes.get(&LifetimeInferenceVariable::from_depth(i)) {
+                        self.unify(empty_env, &lt.to_lifetime(), &new_lt)
+                            .expect("apply_solution failed to substitute");
+                    }
                 }
             }
         }

@@ -18,6 +18,21 @@ impl InferenceTable {
         let mut instantiator = Instantiator { vars };
         arg.fold_with(&mut instantiator, 0).expect("")
     }
+
+    /// Instantiates `arg` with fresh existential variables in the
+    /// given universe; the kinds of the variables are implied by
+    /// `binders`. This is used to apply a universally quantified
+    /// clause like `forall X, 'Y. P => Q`. Here the `binders`
+    /// argument is referring to `X, 'Y`.
+    pub fn instantiate_in<U, T>(&mut self,
+                                universe: UniverseIndex,
+                                binders: U,
+                                arg: &T) -> T::Result
+        where T: Fold,
+              U: IntoIterator<Item = ParameterKind<()>>
+    {
+        self.instantiate(binders.into_iter().map(|pk| pk.map(|_| universe)), arg)
+    }
 }
 
 struct Instantiator {
