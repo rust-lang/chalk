@@ -483,6 +483,21 @@ fn overlapping_negative_positive_impls() {
             "overlapping impls of trait \"Send\""
         }
     }
+
+    lowering_success! {
+        program {
+            trait Send { }
+            struct Vec<T> { }
+            struct i32 { }
+            struct f32 { }
+
+            impl Send for i32 { }
+            impl !Send for f32 { }
+
+            impl<T> Send for Vec<T> where T: Send { }
+            impl<T> !Send for Vec<T> where T: !Send { }
+        }
+    }
 }
 
 #[test]

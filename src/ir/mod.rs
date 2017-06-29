@@ -28,7 +28,7 @@ pub struct Program {
     /// For each associated ty:
     pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
 
-    /// For each default impl:
+    /// For each default impl (automatically generated for auto traits):
     pub default_impl_data: Vec<DefaultImplDatum>,
 }
 

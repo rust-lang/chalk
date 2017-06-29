@@ -856,12 +856,6 @@ impl ir::DefaultImplDatum {
                         });
 
                         wc.collect()
-                        /*let goal = wc.fold1(|goal, leaf| ir::Goal::And(Box::new(goal), Box::new(leaf)));
-                        match goal {
-                            Some(goal) =>
-                                vec![ir::Goal::Implies(vec![trait_ref.cast()], Box::new(goal))],
-                            None => vec![],
-                        }*/
                     },
                 }
             }),

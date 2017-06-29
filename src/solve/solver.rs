@@ -109,6 +109,10 @@ impl Solver {
         // `slot.cycle = true`. If there is no cached answer, we can't make any more progress
         // and return `Err`. If there is one, use this answer.
         if let Some(slot) = self.stack.iter_mut().find(|s| { s.goal == goal }) {
+
+            // If we are facing a goal of the form `?0: AutoTrait`, we apply coinductive semantics:
+            // we accept the cycle `(?0: AutoTrait) :- (?0: AutoTrait)` as an infinite proof for
+            // `?0: AutoTrait` and we do not perform any substitution.
             if let FullyReducedGoal::DomainGoal(Canonical {
                 value: InEnvironment {
                     goal: DomainGoal::Implemented(ref tr),
@@ -125,6 +129,7 @@ impl Solver {
                     return Ok(Solution::Unique(Canonical { value, binders: binders.clone() }));
                 }
             }
+
             slot.cycle = true;
             debug!("cycle detected: previous solution {:?}", slot.answer);
             return slot.answer.clone().ok_or("cycle".into());
