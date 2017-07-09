@@ -225,6 +225,9 @@ pub struct AssociatedTyDatum {
     /// Parameters on this associated type, beginning with those from the trait,
     /// but possibly including more.
     pub parameter_kinds: Vec<ParameterKind<Identifier>>,
+
+    /// Where clauses that must hold for the projection be well-formed.
+    pub where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -367,7 +370,7 @@ impl DomainGoal {
     }
 
     /// A clause of the form (T: Foo) expands to (T: Foo), WF(T: Foo).
-    /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), (T: Foo), WF(T: Foo).
+    /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), WF(T: Foo).
     pub fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
         let mut expanded = vec![];
         match self {
@@ -380,7 +383,6 @@ impl DomainGoal {
                     trait_id: associated_ty_data.trait_id,
                     parameters: trait_params.to_owned()
                 };
-                expanded.push(trait_ref.clone().cast());
                 expanded.push(WellFormed::TraitRef(trait_ref).cast());
             }
             _ => ()

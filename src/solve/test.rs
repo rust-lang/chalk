@@ -175,12 +175,22 @@ fn prove_forall() {
         // Here, we do know that `T: Clone`, so we can.
         goal {
             forall<T> {
-                if (WellFormed(T: Clone), T: Clone) {
+                if (T: Clone) {
                     Vec<T>: Clone
                 }
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<T> {
+                if_raw (T: Clone) {
+                    Vec<T>: Clone
+                }
+            }
+        } yields {
+            "CannotProve"
         }
     }
 }
@@ -546,7 +556,7 @@ fn elaborate_eq() {
 
         goal {
             forall<T> {
-                if (WellFormed(T: Eq)) {
+                if (T: Eq) {
                     T: PartialEq
                 }
             }
@@ -567,7 +577,7 @@ fn elaborate_transitive() {
 
         goal {
             forall<T> {
-                if (WellFormed(T: StrictEq)) {
+                if (T: StrictEq) {
                     T: PartialEq
                 }
             }
@@ -596,7 +606,7 @@ fn elaborate_normalize() {
 
         goal {
             forall<T, U> {
-                if (WellFormed(T: Item), T: Item<Out = U>) {
+                if (T: Item<Out = U>) {
                     U: Eq
                 }
             }
@@ -753,6 +763,8 @@ fn trait_wf() {
 
             impl Ord<Int> for Int { }
             impl<T> Ord<Vec<T>> for Vec<T> where T: Ord<T> { }
+
+            impl<T> Ord<Slice<T>> for Slice<T> { }
         }
 
         goal {
@@ -780,12 +792,18 @@ fn trait_wf() {
         }
 
         goal {
+            Slice<Int>: Ord<Slice<Int>>
+        } yields {
+            "Unique"
+        }
+
+        goal {
             Slice<Int>: Eq<Slice<Int>>
         } yields {
             "No possible solution"
         }
 
-        // not WF because previous equation doesn't hold
+        // not WF because previous equation doesn't hold, despite Slice<Int> having an impl for Ord<Int> 
         goal {
             WellFormed(Slice<Int>: Ord<Slice<Int>>)
         } yields {

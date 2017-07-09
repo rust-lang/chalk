@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chalk_parse::ast::*;
 use lalrpop_intern::intern;
 
-use cast::Cast;
+use cast::{Cast, Caster};
 use errors::*;
 use ir;
 
@@ -167,6 +167,7 @@ impl LowerProgram for Program {
                             id: info.id,
                             name: defn.name.str,
                             parameter_kinds: parameter_kinds,
+                            where_clauses: vec![],
                         });
                     }
                 }
@@ -725,8 +726,19 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 g.lower_quantified(env, ir::QuantifierKind::ForAll, ids),
             Goal::Exists(ref ids, ref g) =>
                 g.lower_quantified(env, ir::QuantifierKind::Exists, ids),
-            Goal::Implies(ref wc, ref g) =>
-                Ok(Box::new(ir::Goal::Implies(wc.lower(env)?, g.lower(env)?))),
+            Goal::Implies(ref wc, ref g, elaborate) => {
+                let mut where_clauses = wc.lower(env)?;
+                if elaborate {
+                    where_clauses = ir::with_current_program(|program| {
+                        let program = program.expect("cannot elaborate without a program");
+                        where_clauses.into_iter()
+                                     .flat_map(|wc| wc.expanded(program))
+                                     .casted()
+                                     .collect()
+                    });
+                }
+                Ok(Box::new(ir::Goal::Implies(where_clauses, g.lower(env)?)))
+            }
             Goal::And(ref g1, ref g2) =>
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?))),
             Goal::Not(ref g) =>
@@ -803,7 +815,7 @@ impl ir::ImplDatum {
                                      .iter()
                                      .cloned()
                                      .flat_map(|wc| wc.expanded(program))
-                                     .map(|wc| wc.cast())
+                                     .casted()
                                      .collect(),
                 }
             }),
@@ -935,12 +947,13 @@ impl ir::StructDatum {
                                              .iter()
                                              .filter_map(|pk| pk.as_ref().ty())
                                              .cloned()
-                                             .map(|ty| ir::WellFormed::Ty(ty).cast());
+                                             .map(|ty| ir::WellFormed::Ty(ty))
+                                             .casted();
 
                         let where_clauses = bound_datum.where_clauses.iter()
                                                        .cloned()
                                                        .flat_map(|wc| wc.expanded(program))
-                                                       .map(|wc| wc.cast());
+                                                       .casted();
 
                         tys.chain(where_clauses).collect()
                     }
@@ -987,9 +1000,10 @@ impl ir::TraitDatum {
                                                  .iter()
                                                  .filter_map(|pk| pk.as_ref().ty())
                                                  .cloned()
-                                                 .map(|ty| ir::WellFormed::Ty(ty).cast());
+                                                 .map(|ty| ir::WellFormed::Ty(ty))
+                                                 .casted();
 
-                        tys.chain(where_clauses.iter().cloned().map(|wc| wc.cast())).collect()
+                        tys.chain(where_clauses.iter().cloned().casted()).collect()
                     }
                 }
             }),
