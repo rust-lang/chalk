@@ -701,47 +701,6 @@ fn struct_wf() {
 }
 
 #[test]
-fn struct_with_fields_wf() {
-    test! {
-        program {
-            struct Foo { }
-
-            struct Bar {
-                f: Foo
-            }
-
-            trait Clone { }
-            struct Dummy<T> where T: Clone { }
-            impl Clone for Foo { }
-
-            struct Baz<T> {
-                f: Dummy<T>
-            }
-        }
-
-        goal {
-            WellFormed(Bar)
-        } yields {
-            "Unique"
-        }
-
-        // `Bar` does not implement `Clone` so `Dummy<Bar>` is ill-formed
-        goal {
-            WellFormed(Baz<Bar>)
-        } yields {
-            "No possible solution"
-        }
-
-        // This time `Foo` does implement `Clone`
-        goal {
-            WellFormed(Baz<Foo>)
-        } yields {
-            "Unique"
-        }
-    }
-}
-
-#[test]
 fn generic_trait() {
     test! {
         program {

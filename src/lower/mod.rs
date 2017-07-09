@@ -918,13 +918,11 @@ impl ir::StructDatum {
     fn to_program_clauses(&self, program: &ir::Program) -> Vec<ir::ProgramClause> {
         // Given:
         //
-        //    struct Foo<T: Eq> {
-        //        field: Bar
-        //    }
+        //    struct Foo<T: Eq> { }
         //
         // we generate the following clause:
         //
-        //    for<?T> WF(Foo<?T>) :- WF(?T), WF(Bar), (?T: Eq), WF(?T: Eq).
+        //    for<?T> WF(Foo<?T>) :- WF(?T), (?T: Eq), WF(?T: Eq).
 
         let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound_datum| {
@@ -939,17 +937,12 @@ impl ir::StructDatum {
                                              .cloned()
                                              .map(|ty| ir::WellFormed::Ty(ty).cast());
 
-                        let fields = bound_datum.fields
-                                                .iter()
-                                                .cloned()
-                                                .map(|ty| ir::WellFormed::Ty(ty).cast());
-
                         let where_clauses = bound_datum.where_clauses.iter()
                                                        .cloned()
                                                        .flat_map(|wc| wc.expanded(program))
                                                        .map(|wc| wc.cast());
 
-                        tys.chain(fields).chain(where_clauses).collect()
+                        tys.chain(where_clauses).collect()
                     }
                 }
             }),
