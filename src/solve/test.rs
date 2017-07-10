@@ -1501,7 +1501,7 @@ fn coinductive_semantics() {
 
         goal {
             forall<T> {
-                if (T: Send) {
+                if (WellFormed(T), T: Send) {
                     List<T>: Send
                 }
             }
@@ -1538,7 +1538,9 @@ fn mixed_semantics() {
 
         goal {
             forall<T> {
-                T: Send
+                if (WellFormed(T)) {
+                    T: Send
+                }
             }
         } yields {
             "Unique"

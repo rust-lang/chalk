@@ -1,4 +1,4 @@
-use cast::Cast;
+use cast::{Cast, Caster};
 use chalk_parse::ast;
 use lalrpop_intern::InternedString;
 use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
@@ -425,8 +425,17 @@ impl DomainGoal {
                 match *trait_ref {
                     PolarizedTraitRef::Positive(ref trait_ref) =>
                         expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast()),
-                    PolarizedTraitRef::Negative(_) =>
-                        (),
+                    PolarizedTraitRef::Negative(ref trait_ref) => {
+                        // Whenever a negative trait ref `A: !Foo<B, C>` is found, just expand to:
+                        // `WF(A), WF(B), WF(C)`
+                        let tys = trait_ref.parameters
+                                           .iter()
+                                           .filter_map(|pk| pk.as_ref().ty())
+                                           .cloned()
+                                           .map(|ty| WellFormed::Ty(ty))
+                                           .casted();
+                        expanded.extend(tys);
+                    }
                 }
             }
             DomainGoal::Normalize(Normalize { ref projection, .. }) => {
