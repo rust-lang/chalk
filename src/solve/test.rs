@@ -2,7 +2,7 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::solver::{Solver, CycleStrategy};
+use solve::solver::{self, Solver, CycleStrategy};
 use std::sync::Arc;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
@@ -35,7 +35,9 @@ fn solve_goal(program_text: &str,
             assert!(goal_text.ends_with("}"));
             let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len()-1]).unwrap();
 
-            let mut solver = Solver::new(&env, CycleStrategy::Tabling);
+            let overflow_depth = 5;
+            solver::set_overflow_depth(overflow_depth);
+            let mut solver = Solver::new(&env, CycleStrategy::Tabling, solver::get_overflow_depth());
             let goal = ir::InEnvironment::new(&ir::Environment::new(), *goal);
             let result = match solver.solve_closed_goal(goal) {
                 Ok(v) => format!("{}", v),
@@ -333,6 +335,29 @@ fn multiple_ambiguous_cycles() {
             }
         } yields {
             "Ambig"
+        }
+    }
+}
+
+#[test]
+#[should_panic]
+fn overflow() {
+    test! {
+        program {
+            trait Q { }
+            struct Z { }
+            struct G<X>
+            struct S<X>
+
+            impl Q for Z { }
+            impl<X> Q for G<X> where X: Q { }
+            impl<X> Q for S<X> where X: Q, S<G<X>>: Q { }
+        }
+
+        goal {
+            S<Z>: Q
+        } yields {
+            ""
         }
     }
 }

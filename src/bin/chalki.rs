@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use chalk::ir;
 use chalk::lower::*;
-use chalk::solve::solver::{Solver, CycleStrategy};
+use chalk::solve::solver::{self, Solver, CycleStrategy};
 
 use rustyline::error::ReadlineError;
 
@@ -118,7 +118,9 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 
 fn goal(text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
-    let mut solver = Solver::new(&prog.env, CycleStrategy::Tabling);
+    let overflow_depth = 10;
+    solver::set_overflow_depth(overflow_depth);
+    let mut solver = Solver::new(&prog.env, CycleStrategy::Tabling, solver::get_overflow_depth());
     let goal = ir::InEnvironment::new(&ir::Environment::new(), *goal);
     match solver.solve_closed_goal(goal) {
         Ok(v) => println!("{}\n", v),

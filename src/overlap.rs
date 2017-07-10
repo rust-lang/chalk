@@ -4,11 +4,15 @@ use itertools::Itertools;
 
 use errors::*;
 use ir::*;
-use solve::solver::{Solver, CycleStrategy};
+use solve::solver::{self, Solver, CycleStrategy};
 
 impl Program {
     pub fn check_overlapping_impls(&self) -> Result<()> {
-        let mut solver = Solver::new(&Arc::new(self.environment()), CycleStrategy::Tabling);
+        let mut solver = Solver::new(
+            &Arc::new(self.environment()),
+            CycleStrategy::Tabling,
+            solver::get_overflow_depth()
+        );
 
         // Create a vector of references to impl datums, sorted by trait ref
         let impl_data = self.impl_data.values().sorted_by(|lhs, rhs| {
