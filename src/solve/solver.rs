@@ -6,6 +6,7 @@ use solve::fulfill::Fulfill;
 use std::cell::Cell;
 
 thread_local! {
+    // Default overflow depth which will be used in tests
     static OVERFLOW_DEPTH: Cell<usize> = Cell::new(10);
 }
 
