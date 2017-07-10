@@ -185,8 +185,8 @@ impl LowerProgram for Program {
             }
         }
 
-        let program = ir::Program { type_ids, type_kinds, struct_data, trait_data, impl_data, associated_ty_data, };
-        program.check_overlapping_impls()?;
+        let mut program = ir::Program { type_ids, type_kinds, struct_data, trait_data, impl_data, associated_ty_data, };
+        program.record_specialization_priorities()?;
         Ok(program)
     }
 }
@@ -642,7 +642,12 @@ impl LowerImpl for Impl {
             let associated_ty_values = try!(self.assoc_ty_values.iter()
                                             .map(|v| v.lower(trait_id, env))
                                             .collect());
-            Ok(ir::ImplDatumBound { trait_ref, where_clauses, associated_ty_values })
+            Ok(ir::ImplDatumBound {
+                trait_ref,
+                where_clauses,
+                associated_ty_values,
+                specialization_priority: 0,
+            })
         })?;
 
         Ok(ir::ImplDatum { binders: binders })

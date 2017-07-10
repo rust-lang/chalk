@@ -238,6 +238,7 @@ pub struct ImplDatumBound {
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<DomainGoal>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
+    pub specialization_priority: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -552,6 +553,10 @@ pub enum Goal {
 impl Goal {
     pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal {
         Goal::Quantified(kind, Binders { value: Box::new(self), binders })
+    }
+
+    pub fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
+        Goal::Implies(predicates, Box::new(self))
     }
 }
 

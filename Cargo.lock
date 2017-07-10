@@ -91,6 +91,7 @@ dependencies = [
  "itertools 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop-intern 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "petgraph 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustyline 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
