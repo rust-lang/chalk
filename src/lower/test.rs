@@ -218,7 +218,8 @@ fn atc_accounting() {
                     where_clauses: []
                 }
             }
-        ]
+        ],
+        specialization_priority: 0
     }
 }"#);
         let goal = parse_and_lower_goal(&program, "forall<X> { forall<'a> { forall<Y> { \
@@ -318,7 +319,7 @@ fn two_impls_for_same_type() {
 
 #[test]
 fn generic_vec_and_specific_vec() {
-    lowering_error! {
+    lowering_success! {
         program {
             trait Foo { }
             struct Vec<T> { }
@@ -326,23 +327,17 @@ fn generic_vec_and_specific_vec() {
             impl Foo for Vec<Bar> { }
             impl<T> Foo for Vec<T> { }
         }
-        error_msg {
-            "overlapping impls of trait \"Foo\""
-        }
     }
 }
 
 #[test]
 fn concrete_impl_and_blanket_impl() {
-    lowering_error! {
+    lowering_success! {
         program {
             trait Foo { }
             struct Bar { }
             impl Foo for Bar { }
             impl<T> Foo for T { }
-        }
-        error_msg {
-            "overlapping impls of trait \"Foo\""
         }
     }
 }

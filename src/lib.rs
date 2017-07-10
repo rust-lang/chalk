@@ -8,6 +8,7 @@ extern crate chalk_parse;
 extern crate error_chain;
 extern crate ena;
 extern crate itertools;
+extern crate petgraph;
 extern crate lalrpop_intern;
 #[macro_use]
 extern crate lazy_static;
@@ -16,10 +17,10 @@ extern crate lazy_static;
 mod macros;
 
 pub mod cast;
+pub mod coherence;
 pub mod errors;
 pub mod fold;
 pub mod ir;
 pub mod lower;
-pub mod overlap;
 pub mod solve;
 pub mod zip;

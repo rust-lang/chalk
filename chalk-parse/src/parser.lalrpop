@@ -28,9 +28,14 @@ pub Goal: Box<Goal> = {
 Goal1: Box<Goal> = {
     "forall" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
     "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
-    "if" "(" <w:Comma<WhereClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
+    <i:IfKeyword> "(" <w:Comma<WhereClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g, i)),
     "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
     <w:WhereClause> => Box::new(Goal::Leaf(w)),
+};
+
+IfKeyword: bool = {
+    "if" => true,
+    "if_raw" => false,
 };
 
 StructDefn: StructDefn = {

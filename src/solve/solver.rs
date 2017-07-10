@@ -155,9 +155,8 @@ impl Solver {
                     // or from the lowered program, which includes fallback
                     // clauses. We try each approach in turn:
 
-                    let env_clauses = value
-                        .environment
-                        .elaborated_clauses(&self.program)
+                    let env_clauses = value.environment.clauses.iter()
+                        .cloned()
                         .map(DomainGoal::into_program_clause);
                     let env_solution = self.solve_from_clauses(&binders, &value, env_clauses);
 

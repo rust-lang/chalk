@@ -1,4 +1,5 @@
 use ir::*;
+use std::marker::PhantomData;
 
 pub trait Cast<T>: Sized {
     fn cast(self) -> T;
@@ -130,7 +131,7 @@ impl<T, U> Cast<Vec<U>> for Vec<T>
     where T: Cast<U>
 {
     fn cast(self) -> Vec<U> {
-        self.into_iter().map(|v| v.cast()).collect()
+        self.into_iter().casted().collect()
     }
 }
 
@@ -143,5 +144,35 @@ impl Cast<Parameter> for Ty {
 impl Cast<Parameter> for Lifetime {
     fn cast(self) -> Parameter {
         ParameterKind::Lifetime(self)
+    }
+}
+
+pub struct Casted<I, U> {
+    iterator: I,
+    _cast: PhantomData<U>,
+}
+
+impl<I: Iterator, U> Iterator for Casted<I, U> where I::Item: Cast<U> {
+    type Item = U;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator.next().map(|item| item.cast())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iterator.size_hint()
+    }
+}
+
+pub trait Caster<U>: Sized {
+    fn casted(self) -> Casted<Self, U>;
+}
+
+impl<I: Iterator, U> Caster<U> for I {
+    fn casted(self) -> Casted<Self, U> {
+        Casted {
+            iterator: self,
+            _cast: PhantomData,
+        }
     }
 }
