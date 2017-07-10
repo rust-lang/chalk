@@ -35,7 +35,7 @@ fn solve_goal(program_text: &str,
             assert!(goal_text.ends_with("}"));
             let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len()-1]).unwrap();
 
-            let overflow_depth = 5;
+            let overflow_depth = 10;
             solver::set_overflow_depth(overflow_depth);
             let mut solver = Solver::new(&env, CycleStrategy::Tabling, solver::get_overflow_depth());
             let goal = ir::InEnvironment::new(&ir::Environment::new(), *goal);
@@ -366,6 +366,7 @@ fn overflow() {
             impl<X> Q for S<X> where X: Q, S<G<X>>: Q { }
         }
 
+        // Will try to prove S<G<Z>>: Q then S<G<G<Z>>>: Q etc ad infinitum
         goal {
             S<Z>: Q
         } yields {
