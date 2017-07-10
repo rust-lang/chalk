@@ -183,6 +183,8 @@ fn prove_forall() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+        // This fails because we used `if_raw`, and hence we do not
+        // know that `WF(T: Clone)` holds.
         goal {
             forall<T> {
                 if_raw (T: Clone) {
