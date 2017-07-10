@@ -184,6 +184,18 @@ fn prove_forall() {
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
+
+        // This fails because we used `if_raw`, and hence we do not
+        // know that `WF(T: Clone)` holds.
+        goal {
+            forall<T> {
+                if_raw (T: Clone) {
+                    Vec<T>: Clone
+                }
+            }
+        } yields {
+            "CannotProve"
+        }
     }
 }
 
@@ -607,9 +619,15 @@ fn elaborate_normalize() {
     test! {
         program {
             trait Eq { }
+            struct i32 { }
 
             trait Item where <Self as Item>::Out: Eq {
                 type Out;
+            }
+
+            impl Eq for i32 { }
+            impl Item for i32 {
+                type Out = i32;
             }
         }
 
@@ -621,6 +639,26 @@ fn elaborate_normalize() {
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<T, U> {
+                if (T: Item<Out = U>) {
+                    T: Item
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Item<Out = i32>) {
+                    T: Item
+                }
+            }
+        } yields {
+            "Unique"
         }
     }
 }
@@ -752,6 +790,8 @@ fn trait_wf() {
 
             impl Ord<Int> for Int { }
             impl<T> Ord<Vec<T>> for Vec<T> where T: Ord<T> { }
+
+            impl<T> Ord<Slice<T>> for Slice<T> { }
         }
 
         goal {
@@ -779,12 +819,18 @@ fn trait_wf() {
         }
 
         goal {
+            Slice<Int>: Ord<Slice<Int>>
+        } yields {
+            "Unique"
+        }
+
+        goal {
             Slice<Int>: Eq<Slice<Int>>
         } yields {
             "No possible solution"
         }
 
-        // not WF because previous equation doesn't hold
+        // not WF because previous equation doesn't hold, despite Slice<Int> having an impl for Ord<Int> 
         goal {
             WellFormed(Slice<Int>: Ord<Slice<Int>>)
         } yields {
@@ -979,6 +1025,10 @@ fn mixed_indices_normalize_application() {
             struct Ref<'a, T> { }
             trait Foo {
                 type T;
+            }
+
+            impl<U, 'a> Foo for Ref<'a, U> {
+                type T = U;
             }
         }
 

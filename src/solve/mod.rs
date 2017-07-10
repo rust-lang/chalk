@@ -132,7 +132,7 @@ impl Solution {
     }
 
     /// View this solution purely in terms of type inference guidance
-    fn into_guidance(self) -> Guidance {
+    pub fn into_guidance(self) -> Guidance {
         match self {
             Solution::Unique(constrained) => {
                 Guidance::Definite(Canonical {
@@ -182,6 +182,13 @@ impl Solution {
         match *self {
             Solution::CannotProve => true,
             _ => false,
+        }
+    }
+
+    pub fn is_unique(&self) -> bool {
+        match *self {
+            Solution::Unique(..)    => true,
+            _                       => false,
         }
     }
 }

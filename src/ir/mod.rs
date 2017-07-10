@@ -1,9 +1,8 @@
 use cast::Cast;
 use chalk_parse::ast;
-use fold::Subst;
 use lalrpop_intern::InternedString;
 use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
-use std::collections::{HashSet, HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 use std::sync::Arc;
 
 pub type Identifier = InternedString;
@@ -94,58 +93,6 @@ impl Environment {
         let mut env = self.clone();
         env.universe = UniverseIndex { counter: self.universe.counter + 1 };
         Arc::new(env)
-    }
-
-    /// Generate the full set of clauses that are "syntactically implied" by the
-    /// clauses in this environment. Currently this consists of two kinds of expansions:
-    ///
-    /// - Supertraits are added, so `T: Ord` would expand to `T: Ord, T: PartialOrd`
-    /// - Projections imply that a trait is implemented, to `T: Iterator<Item=Foo>` expands to
-    ///   `T: Iterator, T: Iterator<Item=Foo>`
-    pub fn elaborated_clauses(&self, program: &ProgramEnvironment) -> impl Iterator<Item = DomainGoal> {
-        let mut set = HashSet::new();
-        set.extend(self.clauses.iter().cloned());
-
-        let mut stack: Vec<_> = set.iter().cloned().collect();
-
-        while let Some(clause) = stack.pop() {
-            let mut push_clause = |clause: DomainGoal| {
-                if !set.contains(&clause) {
-                    set.insert(clause.clone());
-                    stack.push(clause);
-                }
-            };
-
-            match clause {
-                DomainGoal::Implemented(ref trait_ref) => {
-                    // trait Foo<A> where Self: Bar<A> { }
-                    // T: Foo<U>
-                    // ----------------------------------------------------------
-                    // T: Bar<U>
-
-                    let trait_datum = &program.trait_data[&trait_ref.trait_id];
-                    for where_clause in &trait_datum.binders.value.where_clauses {
-                        let where_clause = Subst::apply(&trait_ref.parameters, where_clause);
-                        push_clause(where_clause);
-                    }
-                }
-                DomainGoal::Normalize(Normalize { ref projection, ty: _ }) => {
-                    // <T as Trait<U>>::Foo ===> V
-                    // ----------------------------------------------------------
-                    // T: Trait<U>
-
-                    let (associated_ty_data, trait_params, _) = program.split_projection(projection);
-                    let trait_ref = TraitRef {
-                        trait_id: associated_ty_data.trait_id,
-                        parameters: trait_params.to_owned()
-                    };
-                    push_clause(trait_ref.cast());
-                }
-                _ => {}
-            }
-        }
-
-        set.into_iter()
     }
 }
 
@@ -238,6 +185,7 @@ pub struct ImplDatumBound {
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<DomainGoal>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
+    pub specialization_priority: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -248,6 +196,7 @@ pub struct StructDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
     pub self_ty: ApplicationTy,
+    pub fields: Vec<Ty>,
     pub where_clauses: Vec<DomainGoal>,
 }
 
@@ -419,6 +368,28 @@ impl DomainGoal {
             fallback_clause: false,
         }
     }
+
+    /// A clause of the form (T: Foo) expands to (T: Foo), WF(T: Foo).
+    /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), WF(T: Foo).
+    pub fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
+        let mut expanded = vec![];
+        match self {
+            DomainGoal::Implemented(ref trait_ref) => {
+                expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast());
+            }
+            DomainGoal::Normalize(Normalize { ref projection, .. }) => {
+                let (associated_ty_data, trait_params, _) = program.split_projection(&projection);
+                let trait_ref = TraitRef {
+                    trait_id: associated_ty_data.trait_id,
+                    parameters: trait_params.to_owned()
+                };
+                expanded.push(WellFormed::TraitRef(trait_ref).cast());
+            }
+            _ => ()
+        };
+        expanded.push(self.cast());
+        expanded.into_iter()
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -552,6 +523,10 @@ pub enum Goal {
 impl Goal {
     pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal {
         Goal::Quantified(kind, Binders { value: Box::new(self), binders })
+    }
+
+    pub fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
+        Goal::Implies(predicates, Box::new(self))
     }
 }
 

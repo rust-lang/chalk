@@ -162,7 +162,10 @@ pub struct Field {
 pub enum Goal {
     ForAll(Vec<ParameterKind>, Box<Goal>),
     Exists(Vec<ParameterKind>, Box<Goal>),
-    Implies(Vec<WhereClause>, Box<Goal>),
+
+    // The `bool` flag indicates whether we should elaborate where clauses or not
+    Implies(Vec<WhereClause>, Box<Goal>, bool),
+
     And(Box<Goal>, Box<Goal>),
     Not(Box<Goal>),
 
