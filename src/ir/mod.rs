@@ -418,6 +418,7 @@ impl DomainGoal {
 
     /// A clause of the form (T: Foo) expands to (T: Foo), WF(T: Foo).
     /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), WF(T: Foo).
+    /// A clause of the form (T: !Foo<U, V>) expands to (T: !Foo<U, V>), WF(T), WF(U), WF(V).
     pub fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
         let mut expanded = vec![];
         match self {
@@ -426,8 +427,6 @@ impl DomainGoal {
                     PolarizedTraitRef::Positive(ref trait_ref) =>
                         expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast()),
                     PolarizedTraitRef::Negative(ref trait_ref) => {
-                        // Whenever a negative trait ref `A: !Foo<B, C>` is found, just expand to:
-                        // `WF(A), WF(B), WF(C)`
                         let tys = trait_ref.parameters
                                            .iter()
                                            .filter_map(|pk| pk.as_ref().ty())

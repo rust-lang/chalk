@@ -1401,7 +1401,7 @@ fn inapplicable_assumption_does_not_shadow() {
 }
 
 #[test]
-fn auto_trait_with_no_impls() {
+fn auto_trait_without_impls() {
     test! {
         program {
             auto trait Send { }
@@ -1536,14 +1536,14 @@ fn mixed_semantics() {
             impl<T> Foo for T where T: Send { }
         }
 
+        // We have a cycle `(T: Send) :- (T: Foo) :- (T: Send)` with a non-coinductive
+        // inner component `T: Foo` so we reject it.
         goal {
-            forall<T> {
-                if (WellFormed(T)) {
-                    T: Send
-                }
+            exists<T> {
+                T: Send
             }
         } yields {
-            "Unique"
+            "No possible solution"
         }
 
         goal {

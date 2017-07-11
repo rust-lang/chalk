@@ -105,11 +105,12 @@ impl Solver {
     pub fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Result<Solution> {
         debug_heading!("Solver::solve({:?})", goal);
 
-        if let Some(slot) = self.stack.iter_mut().find(|s| { s.goal == goal }) {
+        if let Some(index) = self.stack.iter().position(|s| { s.goal == goal }) {
             // If we are facing a goal of the form `?0: AutoTrait`, we apply coinductive semantics:
-            // we accept the cycle `(?0: AutoTrait) :- (?0: AutoTrait)` as an infinite proof for
+            // if all the components of the cycle also have coinductive semantics, we accept
+            // the cycle `(?0: AutoTrait) :- ... :- (?0: AutoTrait)` as an infinite proof for
             // `?0: AutoTrait` and we do not perform any substitution.
-            if goal.is_coinductive(&*self.program) {
+            if self.stack.iter().skip(index).all(|s| s.goal.is_coinductive(&*self.program)) {
                 let value = ConstrainedSubst {
                     subst: Substitution::empty(),
                     constraints: vec![],
@@ -120,6 +121,7 @@ impl Solver {
             // If the goal is already on the stack, we found a cycle and indicate it by setting
             // `slot.cycle = true`. If there is no cached answer, we can't make any more progress
             // and return `Err`. If there is one, use this answer.
+            let slot = &mut self.stack[index];
             slot.cycle = true;
             debug!("cycle detected: previous solution {:?}", slot.answer);
             return slot.answer.clone().ok_or("cycle".into());
