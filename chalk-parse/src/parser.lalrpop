@@ -47,8 +47,10 @@ StructDefn: StructDefn = {
     }
 };
 
+AutoKeyword: () = "#" "[" "auto" "]";
+
 TraitDefn: TraitDefn = {
-    <auto:"auto"?> "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{"
+    <auto:AutoKeyword?> "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{"
         <a:AssocTyDefn*> "}" =>
     TraitDefn {
         name: n,

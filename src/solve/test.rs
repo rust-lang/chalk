@@ -1404,7 +1404,7 @@ fn inapplicable_assumption_does_not_shadow() {
 fn auto_trait_without_impls() {
     test! {
         program {
-            auto trait Send { }
+            #[auto] trait Send { }
 
             struct i32 { }
             struct Vec<T> { }
@@ -1430,7 +1430,7 @@ fn auto_trait_without_impls() {
 fn auto_trait_with_impls() {
     test! {
         program {
-            auto trait Send { }
+            #[auto] trait Send { }
 
             struct i32 { }
             struct f32 { }
@@ -1478,7 +1478,7 @@ fn auto_trait_with_impls() {
 fn coinductive_semantics() {
     test! {
         program {
-            auto trait Send { }
+            #[auto] trait Send { }
 
             struct i32 { }
 
@@ -1529,7 +1529,7 @@ fn coinductive_semantics() {
 fn mixed_semantics() {
     test! {
         program {
-            auto trait Send { }
+            #[auto] trait Send { }
             trait Foo { }
 
             impl<T> Send for T where T: Foo { }

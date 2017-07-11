@@ -876,7 +876,7 @@ impl ir::DefaultImplDatum {
     /// is then expanded with `WF(T: Foo)`). For example, given:
     ///
     /// ```notrust
-    /// auto trait Send { }
+    /// #[auto] trait Send { }
     ///
     /// struct MyList<T> {
     ///     data: T,

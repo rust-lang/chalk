@@ -67,7 +67,7 @@ fn not_trait() {
 fn auto_trait() {
     lowering_error! {
         program {
-            auto trait Foo<T> { }
+            #[auto] trait Foo<T> { }
         }
         error_msg {
             "auto trait cannot have parameters"
@@ -77,7 +77,7 @@ fn auto_trait() {
     lowering_error! {
         program {
             trait Bar { }
-            auto trait Foo where Self: Bar { }
+            #[auto] trait Foo where Self: Bar { }
         }
         error_msg {
             "auto trait cannot have where clauses"
@@ -86,7 +86,7 @@ fn auto_trait() {
 
     lowering_error! {
         program {
-            auto trait Foo {
+            #[auto] trait Foo {
                 type Item;
             }
         }
@@ -97,7 +97,7 @@ fn auto_trait() {
 
     lowering_success! {
         program {
-            auto trait Send { }
+            #[auto] trait Send { }
         }
     }
 }
