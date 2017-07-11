@@ -105,7 +105,9 @@ impl Solver {
     pub fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Result<Solution> {
         debug_heading!("Solver::solve({:?})", goal);
 
+        // The goal was already on the stack: we found a cycle.
         if let Some(index) = self.stack.iter().position(|s| { s.goal == goal }) {
+
             // If we are facing a goal of the form `?0: AutoTrait`, we apply coinductive semantics:
             // if all the components of the cycle also have coinductive semantics, we accept
             // the cycle `(?0: AutoTrait) :- ... :- (?0: AutoTrait)` as an infinite proof for
@@ -115,12 +117,13 @@ impl Solver {
                     subst: Substitution::empty(),
                     constraints: vec![],
                 };
+                debug!("applying coinductive semantics");
                 return Ok(Solution::Unique(Canonical { value, binders: goal.into_binders() }));
             }
 
-            // If the goal is already on the stack, we found a cycle and indicate it by setting
-            // `slot.cycle = true`. If there is no cached answer, we can't make any more progress
-            // and return `Err`. If there is one, use this answer.
+            // Else we indicate that we found a cycle by setting `slot.cycle = true`.
+            // If there is no cached answer, we can't make any more progress and return `Err`.
+            // If there is one, use this answer.
             let slot = &mut self.stack[index];
             slot.cycle = true;
             debug!("cycle detected: previous solution {:?}", slot.answer);

@@ -867,6 +867,29 @@ impl ir::ImplDatum {
 }
 
 impl ir::DefaultImplDatum {
+    /// For each accessible type `T` in a struct which needs a default implementation for the auto
+    /// trait `Foo` (accessible types are the struct fields types), we add a bound `T: Foo` (which
+    /// is then expanded with `WF(T: Foo)`). For example, given:
+    ///
+    /// ```notrust
+    /// auto trait Send { }
+    ///
+    /// struct MyList<T> {
+    ///     data: T,
+    ///     next: Box<Option<MyList<T>>>,
+    /// }
+    ///
+    /// ```
+    ///
+    /// generate:
+    ///
+    /// ```notrust
+    /// forall<T> {
+    ///     (MyList<T>: Send) :-
+    ///         (T: Send), WF(T: Send),
+    ///         (Box<Option<MyList<T>>>: Send), WF(Box<Option<MyList<T>>>: Send)
+    /// }
+    /// ```
     fn to_program_clause(&self, program: &ir::Program) -> ir::ProgramClause {
         ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {

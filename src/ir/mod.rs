@@ -568,6 +568,7 @@ impl FullyReducedGoal {
         }
     }
 
+    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
     pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
         if let FullyReducedGoal::DomainGoal(Canonical {
                 value: InEnvironment {
