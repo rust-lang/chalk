@@ -140,7 +140,7 @@ WhereClauses: Vec<WhereClause> = {
 };
 
 WhereClause: WhereClause = {
-    <t:PolarizedTraitRef> => WhereClause::Implemented { trait_ref: t },
+    <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
 
     "WellFormed" "(" <t:Ty> ")" => WhereClause::TyWellFormed { ty: t },
 
@@ -172,17 +172,6 @@ TraitRef<S>: TraitRef = {
             trait_name: t,
             args: args,
         }
-    },
-};
-
-PolarizedTraitRef: PolarizedTraitRef = {
-    <s:Ty> ":" <mark:"!"?> <t:Id> <a:Angle<Parameter>> => {
-        let mut args = vec![Parameter::Ty(s)];
-        args.extend(a);
-        PolarizedTraitRef::from_bool(mark.is_none(), TraitRef {
-            trait_name: t,
-            args: args,
-        })
     },
 };
 

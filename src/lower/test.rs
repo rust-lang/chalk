@@ -481,24 +481,6 @@ fn overlapping_negative_positive_impls() {
 }
 
 #[test]
-fn coherence_rules() {
-    lowering_success! {
-        program {
-            trait Send { }
-            struct Vec<T> { }
-            struct i32 { }
-            struct f32 { }
-
-            impl Send for i32 { }
-            impl !Send for f32 { }
-
-            impl<T> Send for Vec<T> where T: Send { }
-            impl<T> !Send for Vec<T> where T: !Send { }
-        }
-    }
-}
-
-#[test]
 fn overlapping_negative_impls() {
     lowering_success! {
         program {

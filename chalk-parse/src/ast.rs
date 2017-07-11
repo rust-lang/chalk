@@ -162,7 +162,7 @@ pub struct Identifier {
 }
 
 pub enum WhereClause {
-    Implemented { trait_ref: PolarizedTraitRef },
+    Implemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
     TyWellFormed { ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },

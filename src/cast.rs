@@ -22,17 +22,17 @@ macro_rules! reflexive_impl {
     };
 }
 
-reflexive_impl!(PolarizedTraitRef);
+reflexive_impl!(TraitRef);
 reflexive_impl!(LeafGoal);
 reflexive_impl!(DomainGoal);
 
-impl Cast<DomainGoal> for PolarizedTraitRef {
+impl Cast<DomainGoal> for TraitRef {
     fn cast(self) -> DomainGoal {
         DomainGoal::Implemented(self)
     }
 }
 
-impl Cast<LeafGoal> for PolarizedTraitRef {
+impl Cast<LeafGoal> for TraitRef {
     fn cast(self) -> LeafGoal {
         LeafGoal::DomainGoal(self.cast())
     }
@@ -82,7 +82,7 @@ impl Cast<LeafGoal> for DomainGoal {
     }
 }
 
-impl Cast<Goal> for PolarizedTraitRef {
+impl Cast<Goal> for TraitRef {
     fn cast(self) -> Goal {
         Goal::Leaf(self.cast())
     }

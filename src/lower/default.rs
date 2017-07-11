@@ -18,8 +18,7 @@ impl Program {
 
                 // If a positive or negative impl is already provided for a type family
                 // which includes `MyStruct`, we do not generate a default impl.
-                if self.provide_impl_for(PolarizedTraitRef::Positive(trait_ref.clone()), struct_datum) ||
-                   self.provide_impl_for(PolarizedTraitRef::Negative(trait_ref.clone()), struct_datum) {
+                if self.provide_impl_for(trait_ref.clone(), struct_datum) {
                     continue;
                 }
 
@@ -36,7 +35,7 @@ impl Program {
         }
     }
 
-    fn provide_impl_for(&self, trait_ref: PolarizedTraitRef, struct_datum: &StructDatum) -> bool {
+    fn provide_impl_for(&self, trait_ref: TraitRef, struct_datum: &StructDatum) -> bool {
         let goal: DomainGoal = trait_ref.cast();
 
         let env = Environment::new();
@@ -45,7 +44,9 @@ impl Program {
         let goal = infer.instantiate_in(env.universe, struct_datum.binders.binders.clone(), &goal);
 
         for impl_datum in self.impl_data.values() {
-            let impl_goal: DomainGoal = impl_datum.binders.value.trait_ref.clone().cast();
+            // We retrieve the trait ref given by the positive impl (even if the actual impl is negative)
+            let impl_goal: DomainGoal = impl_datum.binders.value.trait_ref.trait_ref().clone().cast();
+
             let impl_goal = infer.instantiate_in(env.universe, impl_datum.binders.binders.clone(), &impl_goal);
 
             // We check whether the impl `MyStruct: (!)MyAutoTrait` unifies with an existing impl.
@@ -55,19 +56,20 @@ impl Program {
             // struct MyStruct;
             // impl<T> Send for T where T: Foo { }
             // ```
-            // No default impl is generated for `MyStruct`.
+            // `MyStruct: Send` unifies with `T: Send` so no default impl is generated for `MyStruct`.
             //
             // ```
             // struct MyStruct;
             // impl<T> Send for Vec<T> where T: Foo { }
             // ```
-            // No default impl is generated for `Vec<i32>`, but a default impl is generated for `MyStruct`.
+            // `Vec<i32>: Send` unifies with `Vec<T>: Send` so no default impl is generated for `Vec<i32>`.
+            // But a default impl is generated for `MyStruct`.
             //
             // ```
             // struct MyStruct;
             // impl<T> !Send for T where T: Foo { }
             // ```
-            // No default impl is generated for `MyStruct`.
+            // `MyStruct: !Send` unifies with `T: !Send` so no default impl is generated for `MyStruct`.
             if infer.unify(&Environment::new(), &goal, &impl_goal).is_ok() {
                 return true;
             }

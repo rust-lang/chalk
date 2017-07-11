@@ -829,10 +829,14 @@ impl ir::Program {
         program_clauses.extend(self.default_impl_data.iter().map(|d| d.to_program_clause(self)));
 
         for datum in self.impl_data.values() {
-            program_clauses.push(datum.to_program_clause(self));
-            program_clauses.extend(datum.binders.value.associated_ty_values.iter().flat_map(|atv| {
-                atv.to_program_clauses(datum)
-            }));
+            // If we encounter a negative impl, do not generate any rule. Negative impls
+            // are currently just there to deactivate default impls for auto traits.
+            if datum.binders.value.trait_ref.is_positive() {
+                program_clauses.push(datum.to_program_clause(self));
+                program_clauses.extend(datum.binders.value.associated_ty_values.iter().flat_map(|atv| {
+                    atv.to_program_clauses(datum)
+                }));
+            }
         }
 
         let trait_data = self.trait_data.clone();
@@ -852,7 +856,7 @@ impl ir::ImplDatum {
         ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
-                    consequence: bound.trait_ref.clone().cast(),
+                    consequence: bound.trait_ref.trait_ref().clone().cast(),
                     conditions: bound.where_clauses
                                      .iter()
                                      .cloned()
@@ -894,15 +898,13 @@ impl ir::DefaultImplDatum {
         ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
-                    consequence: ir::PolarizedTraitRef::Positive(bound.trait_ref.clone()).cast(),
+                    consequence: bound.trait_ref.clone().cast(),
                     conditions: {
                         let wc = bound.accessible_tys.iter().cloned().flat_map(|ty| {
-                            let goal: ir::DomainGoal = ir::PolarizedTraitRef::Positive(
-                                ir::TraitRef {
-                                    trait_id: bound.trait_ref.trait_id,
-                                    parameters: vec![ir::ParameterKind::Ty(ty)],
-                                }
-                            ).cast();
+                            let goal: ir::DomainGoal = ir::TraitRef {
+                                trait_id: bound.trait_ref.trait_id,
+                                parameters: vec![ir::ParameterKind::Ty(ty)],
+                            }.cast();
                             goal.expanded(program)
                         });
 
@@ -949,7 +951,7 @@ impl ir::AssociatedTyValue {
         // 2. any where-clauses from the `type` declaration in the impl
         let impl_trait_ref = impl_datum.binders.value.trait_ref.trait_ref().up_shift(self.value.len());
         let conditions: Vec<ir::Goal> =
-            Some(ir::PolarizedTraitRef::Positive(impl_trait_ref.clone()).cast())
+            Some(impl_trait_ref.clone().cast())
             .into_iter()
             .chain(self.value.value.where_clauses.clone().cast())
             .collect();
@@ -1145,13 +1147,13 @@ impl ir::AssociatedTyDatum {
         };
 
         // Retrieve the trait ref embedding the associated type
-        let trait_ref = ir::PolarizedTraitRef::Positive({
+        let trait_ref = {
             let (associated_ty_data, trait_params, _) = program.split_projection(&projection);
             ir::TraitRef {
                 trait_id: associated_ty_data.trait_id,
                 parameters: trait_params.to_owned()
             }
-        });
+        };
 
         let fallback = {
             // Construct an application from the projection. So if we have `<T as Iterator>::Item`,

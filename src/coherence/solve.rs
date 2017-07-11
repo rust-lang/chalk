@@ -134,6 +134,11 @@ impl Solver {
     //  }
     // }
     fn specializes(&mut self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
+        // Negative impls cannot specialize.
+        if !less_special.binders.value.trait_ref.is_positive() || !more_special.binders.value.trait_ref.is_positive() {
+            return false;
+        }
+
         let more_len = more_special.binders.len();
 
         // Create parameter equality goals.

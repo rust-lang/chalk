@@ -1,4 +1,4 @@
-use cast::{Cast, Caster};
+use cast::Cast;
 use chalk_parse::ast;
 use lalrpop_intern::InternedString;
 use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
@@ -381,13 +381,6 @@ impl PolarizedTraitRef {
             PolarizedTraitRef::Negative(ref tr) => tr
         }
     }
-
-    pub fn flip(self) -> PolarizedTraitRef {
-        match self {
-            PolarizedTraitRef::Positive(tr) => PolarizedTraitRef::Negative(tr),
-            PolarizedTraitRef::Negative(tr) => PolarizedTraitRef::Positive(tr),
-        }
-    }
 }
 
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
@@ -395,7 +388,7 @@ impl PolarizedTraitRef {
 /// decomposing this enum, and instead treat its values opaquely.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DomainGoal {
-    Implemented(PolarizedTraitRef),
+    Implemented(TraitRef),
     Normalize(Normalize),
     WellFormed(WellFormed),
 }
@@ -418,25 +411,11 @@ impl DomainGoal {
 
     /// A clause of the form (T: Foo) expands to (T: Foo), WF(T: Foo).
     /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), WF(T: Foo).
-    /// A clause of the form (T: !Foo<U, V>) expands to (T: !Foo<U, V>), WF(T), WF(U), WF(V).
     pub fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
         let mut expanded = vec![];
         match self {
-            DomainGoal::Implemented(ref trait_ref) => {
-                match *trait_ref {
-                    PolarizedTraitRef::Positive(ref trait_ref) =>
-                        expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast()),
-                    PolarizedTraitRef::Negative(ref trait_ref) => {
-                        let tys = trait_ref.parameters
-                                           .iter()
-                                           .filter_map(|pk| pk.as_ref().ty())
-                                           .cloned()
-                                           .map(|ty| WellFormed::Ty(ty))
-                                           .casted();
-                        expanded.extend(tys);
-                    }
-                }
-            }
+            DomainGoal::Implemented(ref trait_ref) =>
+                expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast()),
             DomainGoal::Normalize(Normalize { ref projection, .. }) => {
                 let (associated_ty_data, trait_params, _) = program.split_projection(&projection);
                 let trait_ref = TraitRef {
@@ -577,7 +556,7 @@ impl FullyReducedGoal {
                 },
                 ..
         }) = *self {
-            let trait_datum = &program.trait_data[&tr.trait_ref().trait_id];
+            let trait_datum = &program.trait_data[&tr.trait_id];
             return trait_datum.binders.value.auto;
         }
 
