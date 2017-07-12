@@ -3,6 +3,20 @@ use std::sync::Arc;
 
 use super::*;
 use solve::fulfill::Fulfill;
+use std::cell::Cell;
+
+thread_local! {
+    // Default overflow depth which will be used in tests
+    static OVERFLOW_DEPTH: Cell<usize> = Cell::new(10);
+}
+
+pub fn set_overflow_depth(overflow_depth: usize) {
+    OVERFLOW_DEPTH.with(|depth| depth.set(overflow_depth));
+}
+
+pub fn get_overflow_depth() -> usize {
+    OVERFLOW_DEPTH.with(|depth| depth.get())
+}
 
 /// We use a stack for detecting cycles. Each stack slot contains:
 /// - a goal which is being processed
@@ -31,6 +45,7 @@ pub struct Solver {
     pub(super) program: Arc<ProgramEnvironment>,
     stack: Vec<StackSlot>,
     cycle_strategy: CycleStrategy,
+    overflow_depth: usize,
 }
 
 /// An extension trait for merging `Result`s
@@ -52,11 +67,16 @@ impl<T> MergeWith<T> for Result<T> {
 }
 
 impl Solver {
-    pub fn new(program: &Arc<ProgramEnvironment>, cycle_strategy: CycleStrategy) -> Self {
+    pub fn new(
+        program: &Arc<ProgramEnvironment>,
+        cycle_strategy: CycleStrategy,
+        overflow_depth: usize
+    ) -> Self {
         Solver {
             program: program.clone(),
             stack: vec![],
             cycle_strategy,
+            overflow_depth,
         }
     }
 
@@ -104,6 +124,10 @@ impl Solver {
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
     pub fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Result<Solution> {
         debug_heading!("Solver::solve({:?})", goal);
+
+        if self.stack.len() > self.overflow_depth {
+            panic!("overflow depth reached");
+        }
 
         // The goal was already on the stack: we found a cycle.
         if let Some(index) = self.stack.iter().position(|s| { s.goal == goal }) {
