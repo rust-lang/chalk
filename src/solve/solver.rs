@@ -136,7 +136,12 @@ impl Solver {
             // if all the components of the cycle also have coinductive semantics, we accept
             // the cycle `(?0: AutoTrait) :- ... :- (?0: AutoTrait)` as an infinite proof for
             // `?0: AutoTrait` and we do not perform any substitution.
-            if self.stack.iter().skip(index).all(|s| s.goal.is_coinductive(&*self.program)) {
+            if self.stack.iter()
+                         .skip(index)
+                         .map(|s| &s.goal)
+                         .chain(Some(&goal))
+                         .all(|g| g.is_coinductive(&*self.program))
+            {
                 let value = ConstrainedSubst {
                     subst: Substitution::empty(),
                     constraints: vec![],
