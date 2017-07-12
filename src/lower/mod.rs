@@ -1018,6 +1018,51 @@ impl Anonymize for [ir::ParameterKind<ir::Identifier>] {
     }
 }
 
+macro_rules! well_formed {
+    ($self: ident, $value: expr, $constructor: expr, $program: expr) => {{
+        let where_clauses = $self.binders.value.where_clauses
+                  .iter()
+                  .cloned()
+                  .flat_map(|wc| wc.expanded($program));
+
+        let where_clauses: Vec<ir::DomainGoal> = where_clauses.collect();
+
+        let wf = ir::ProgramClause {
+            implication: $self.binders.map_ref(|_| {
+                ir::ProgramClauseImplication {
+                    consequence: $constructor($value.clone().cast()).cast(),
+                    conditions: {
+                        let tys = $value.parameters
+                                        .iter()
+                                        .filter_map(|pk| pk.as_ref().ty())
+                                        .cloned()
+                                        .map(|ty| ir::WellFormed::Ty(ty))
+                                        .casted();
+
+                        tys.chain(where_clauses.iter().cloned().casted()).collect()
+                    }
+                }
+            }),
+            fallback_clause: false,
+        };
+
+        let mut clauses = vec![wf];
+        for cond in where_clauses {
+            clauses.push(ir::ProgramClause {
+                implication: $self.binders.map_ref(|_| {
+                    ir::ProgramClauseImplication {
+                        consequence: cond,
+                        conditions: vec![$constructor($value.clone().cast()).cast()]
+                    }
+                }),
+                fallback_clause: false,
+            });
+        }
+
+        clauses
+    }};
+}
+
 impl ir::StructDatum {
     fn to_program_clauses(&self, program: &ir::Program) -> Vec<ir::ProgramClause> {
         // Given:
@@ -1027,34 +1072,10 @@ impl ir::StructDatum {
         // we generate the following clause:
         //
         //    for<?T> WF(Foo<?T>) :- WF(?T), (?T: Eq), WF(?T: Eq).
+        //    for<?T> (?T: Eq) :- WF(Foo<?T>).
+        //    for<?T> WF(?T: Eq) :- WF(Foo<?T>).
 
-        let wf = ir::ProgramClause {
-            implication: self.binders.map_ref(|bound_datum| {
-                ir::ProgramClauseImplication {
-                    consequence: ir::WellFormed::Ty(bound_datum.self_ty.clone().cast()).cast(),
-
-                    conditions: {
-                        let tys = bound_datum.self_ty
-                                             .parameters
-                                             .iter()
-                                             .filter_map(|pk| pk.as_ref().ty())
-                                             .cloned()
-                                             .map(|ty| ir::WellFormed::Ty(ty))
-                                             .casted();
-
-                        let where_clauses = bound_datum.where_clauses.iter()
-                                                       .cloned()
-                                                       .flat_map(|wc| wc.expanded(program))
-                                                       .casted();
-
-                        tys.chain(where_clauses).collect()
-                    }
-                }
-            }),
-            fallback_clause: false,
-        };
-
-        vec![wf]
+        well_formed!(self, self.binders.value.self_ty, ir::WellFormed::Ty, program)
     }
 }
 
@@ -1076,48 +1097,7 @@ impl ir::TraitDatum {
         //    for<?Self, ?T> (?Self: Eq<T>) :- WF(?Self: Ord<T>)
         //    for<?Self, ?T> WF(?Self: Ord<?T>) :- WF(?Self: Ord<T>)
 
-        let where_clauses = self.binders.value.where_clauses
-            .iter()
-            .cloned()
-            .flat_map(|wc| wc.expanded(program))
-            .collect::<Vec<_>>();
-        
-        let wf = ir::WellFormed::TraitRef(self.binders.value.trait_ref.clone());
-
-        let clauses = ir::ProgramClause {
-            implication: self.binders.map_ref(|bound| {
-                ir::ProgramClauseImplication {
-                    consequence: wf.clone().cast(),
-
-                    conditions: {
-                        let tys = bound.trait_ref.parameters
-                                                 .iter()
-                                                 .filter_map(|pk| pk.as_ref().ty())
-                                                 .cloned()
-                                                 .map(|ty| ir::WellFormed::Ty(ty))
-                                                 .casted();
-
-                        tys.chain(where_clauses.iter().cloned().casted()).collect()
-                    }
-                }
-            }),
-            fallback_clause: false,
-        };
-
-        let mut clauses = vec![clauses];
-        for wc in where_clauses {
-            clauses.push(ir::ProgramClause {
-                implication: self.binders.map_ref(|_| {
-                    ir::ProgramClauseImplication {
-                        consequence: wc,
-                        conditions: vec![wf.clone().cast()]
-                    }
-                }),
-                fallback_clause: false,
-            });
-        }
-
-        clauses
+        well_formed!(self, self.binders.value.trait_ref, ir::WellFormed::TraitRef, program)
     }
 }
 

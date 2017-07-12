@@ -1596,3 +1596,67 @@ fn mixed_semantics() {
         }
     }
 }
+
+#[test]
+fn implied_bounds() {
+    test! {
+        program {
+            trait Hash { }
+            struct Set<K> where K: Hash { }
+
+            struct NotHash<T> { }
+
+            struct i32 { }
+            impl Hash for i32 { }
+
+            trait Eq<T> { }
+            trait Ord<T> where Self: Eq<T> { }
+
+            struct Ordered<U> where U: Ord<U> { }
+        }
+
+        // We know that `Set<K>` is well-formed so `K` must implement `Hash`.
+        goal {
+            forall<K> {
+                if (WellFormed(Set<K>)) {
+                    K: Hash
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        // The following function:
+        // ```
+        // fn foo<T>(arg: Set<NotHash<T>>) {
+        //     /* assume that WellFormed(Set<NotHash<T>>) inside here */
+        // }
+        // ```
+        // cannot be called whatever the value of `T` is because
+        // there is no `Hash` impl for `NotHash<T>` hence `Set<NotHash<T>>`
+        // cannot be well-formed.
+        //
+        // Since both `Hash` and `NotHash<T>` are local types, a local negative
+        // reasoning is allowed and the following query fails (it should be run in
+        // `compat` mode). We can then issue a warning saying that the function cannot be
+        // called.
+        goal {
+            exists<T> {
+                WellFormed(Set<NotHash<T>>)
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        // Transitive implied bounds
+        goal {
+            forall<U> {
+                if (WellFormed(Ordered<U>)) {
+                    U: Eq<U>
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
