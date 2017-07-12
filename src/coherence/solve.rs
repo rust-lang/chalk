@@ -3,13 +3,17 @@ use std::sync::Arc;
 use itertools::Itertools;
 use errors::*;
 use ir::*;
-use solve::solver::{Solver, CycleStrategy};
+use solve::solver::{self, Solver, CycleStrategy};
 
 impl Program {
     pub(super) fn visit_specializations<F>(&self, mut record_specialization: F) -> Result<()>
         where F: FnMut(ItemId, ItemId)
     {
-        let mut solver = Solver::new(&Arc::new(self.environment()), CycleStrategy::Tabling);
+        let mut solver = Solver::new(
+            &Arc::new(self.environment()),
+            CycleStrategy::Tabling,
+            solver::get_overflow_depth()
+        );
 
         // Create a vector of references to impl datums, sorted by trait ref
         let impl_data = self.impl_data.iter().sorted_by(|&(_, lhs), &(_, rhs)| {
