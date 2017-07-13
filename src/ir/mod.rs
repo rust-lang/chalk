@@ -2,7 +2,7 @@ use cast::Cast;
 use chalk_parse::ast;
 use lalrpop_intern::InternedString;
 use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{HashSet, HashMap, BTreeMap};
 use std::sync::Arc;
 
 pub type Identifier = InternedString;
@@ -87,8 +87,6 @@ impl Environment {
     pub fn add_clauses<I>(&self, clauses: I) -> Arc<Environment>
         where I: IntoIterator<Item = DomainGoal>
     {
-        use std::collections::HashSet;
-
         let mut env = self.clone();
         let env_clauses: HashSet<_> = env.clauses.into_iter().chain(clauses).collect();
         env.clauses = env_clauses.into_iter().collect();

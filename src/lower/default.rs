@@ -18,7 +18,7 @@ impl Program {
 
                 // If a positive or negative impl is already provided for a type family
                 // which includes `MyStruct`, we do not generate a default impl.
-                if self.provide_impl_for(trait_ref.clone(), struct_datum) {
+                if self.impl_provided_for(trait_ref.clone(), struct_datum) {
                     continue;
                 }
 
@@ -35,7 +35,7 @@ impl Program {
         }
     }
 
-    fn provide_impl_for(&self, trait_ref: TraitRef, struct_datum: &StructDatum) -> bool {
+    fn impl_provided_for(&self, trait_ref: TraitRef, struct_datum: &StructDatum) -> bool {
         let goal: DomainGoal = trait_ref.cast();
 
         let env = Environment::new();
