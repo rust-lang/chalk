@@ -1539,13 +1539,7 @@ fn coinductive_semantics() {
             "CannotProve"
         }
 
-        // `WellFormed(T)` is needed here because of the expanded bound `WellFormed(Ptr<List<T>>: Send)`
-        // on the default `List<T>: Send` impl, which will need that `List<T>` is well-formed in order to be
-        // proven, which will in turn need that `T` is well-formed.
-        //
-        // In fact, as soon as there is a field which is referencing `T` with an indirection like `Foo<Bar<T>>`,
-        // we need to add the `WellFormed(T)` because the `if (T: Send)` elaborates `WellFormed(T: Send)` but not
-        // `WellFormed(T)`. This is not an issue, but is maybe a bit inconsistent.
+        // `WellFormed(T)` because of the hand-written impl for `Ptr<T>`.
         goal {
             forall<T> {
                 if (WellFormed(T), T: Send) {

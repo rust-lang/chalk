@@ -826,7 +826,7 @@ impl ir::Program {
         program_clauses.extend(self.struct_data.values().flat_map(|d| d.to_program_clauses(self)));
         program_clauses.extend(self.trait_data.values().flat_map(|d| d.to_program_clauses(self)));
         program_clauses.extend(self.associated_ty_data.values().flat_map(|d| d.to_program_clauses(self)));
-        program_clauses.extend(self.default_impl_data.iter().map(|d| d.to_program_clause(self)));
+        program_clauses.extend(self.default_impl_data.iter().map(|d| d.to_program_clause()));
 
         for datum in self.impl_data.values() {
             // If we encounter a negative impl, do not generate any rule. Negative impls
@@ -894,18 +894,17 @@ impl ir::DefaultImplDatum {
     ///         (Box<Option<MyList<T>>>: Send), WF(Box<Option<MyList<T>>>: Send)
     /// }
     /// ```
-    fn to_program_clause(&self, program: &ir::Program) -> ir::ProgramClause {
+    fn to_program_clause(&self) -> ir::ProgramClause {
         ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
                     consequence: bound.trait_ref.clone().cast(),
                     conditions: {
-                        let wc = bound.accessible_tys.iter().cloned().flat_map(|ty| {
-                            let goal: ir::DomainGoal = ir::TraitRef {
+                        let wc = bound.accessible_tys.iter().cloned().map(|ty| {
+                            ir::TraitRef {
                                 trait_id: bound.trait_ref.trait_id,
                                 parameters: vec![ir::ParameterKind::Ty(ty)],
-                            }.cast();
-                            goal.expanded(program)
+                            }
                         });
 
                         wc.casted().collect()
