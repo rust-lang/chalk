@@ -2,7 +2,7 @@ use cast::Cast;
 use chalk_parse::ast;
 use lalrpop_intern::InternedString;
 use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{HashSet, HashMap, BTreeMap};
 use std::sync::Arc;
 
 pub type Identifier = InternedString;
@@ -24,8 +24,11 @@ pub struct Program {
     /// For each trait:
     pub trait_data: HashMap<ItemId, TraitDatum>,
 
-    /// For each trait:
+    /// For each associated ty:
     pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
+
+    /// For each default impl (automatically generated for auto traits):
+    pub default_impl_data: Vec<DefaultImplDatum>,
 }
 
 impl Program {
@@ -85,7 +88,8 @@ impl Environment {
         where I: IntoIterator<Item = DomainGoal>
     {
         let mut env = self.clone();
-        env.clauses.extend(clauses);
+        let env_clauses: HashSet<_> = env.clauses.into_iter().chain(clauses).collect();
+        env.clauses = env_clauses.into_iter().collect();
         Arc::new(env)
     }
 
@@ -182,10 +186,21 @@ pub struct ImplDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
-    pub trait_ref: TraitRef,
+    pub trait_ref: PolarizedTraitRef,
     pub where_clauses: Vec<DomainGoal>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
     pub specialization_priority: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DefaultImplDatum {
+    pub binders: Binders<DefaultImplDatumBound>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DefaultImplDatumBound {
+    pub trait_ref: TraitRef,
+    pub accessible_tys: Vec<Ty>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -209,6 +224,7 @@ pub struct TraitDatum {
 pub struct TraitDatumBound {
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<DomainGoal>,
+    pub auto: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -343,6 +359,28 @@ pub struct TraitRef {
     pub parameters: Vec<Parameter>,
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub enum PolarizedTraitRef {
+    Positive(TraitRef),
+    Negative(TraitRef),
+}
+
+impl PolarizedTraitRef {
+    pub fn is_positive(&self) -> bool {
+        match *self {
+            PolarizedTraitRef::Positive(_) => true,
+            PolarizedTraitRef::Negative(_) => false,
+        }
+    }
+
+    pub fn trait_ref(&self) -> &TraitRef {
+        match *self {
+            PolarizedTraitRef::Positive(ref tr) |
+            PolarizedTraitRef::Negative(ref tr) => tr
+        }
+    }
+}
+
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
@@ -374,9 +412,8 @@ impl DomainGoal {
     pub fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
         let mut expanded = vec![];
         match self {
-            DomainGoal::Implemented(ref trait_ref) => {
-                expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast());
-            }
+            DomainGoal::Implemented(ref trait_ref) =>
+                expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast()),
             DomainGoal::Normalize(Normalize { ref projection, .. }) => {
                 let (associated_ty_data, trait_params, _) = program.split_projection(&projection);
                 let trait_ref = TraitRef {
@@ -498,6 +535,31 @@ impl Canonical<InEnvironment<LeafGoal>> {
 pub enum FullyReducedGoal {
     EqGoal(Canonical<InEnvironment<EqGoal>>),
     DomainGoal(Canonical<InEnvironment<DomainGoal>>),
+}
+
+impl FullyReducedGoal {
+    pub fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
+        match self {
+            FullyReducedGoal::EqGoal(Canonical { binders, .. }) |
+            FullyReducedGoal::DomainGoal(Canonical { binders, ..}) => binders,
+        }
+    }
+
+    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
+    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+        if let FullyReducedGoal::DomainGoal(Canonical {
+                value: InEnvironment {
+                    goal: DomainGoal::Implemented(ref tr),
+                    ..
+                },
+                ..
+        }) = *self {
+            let trait_datum = &program.trait_data[&tr.trait_id];
+            return trait_datum.binders.value.auto;
+        }
+
+        false
+    }
 }
 
 impl<T> Canonical<T> {

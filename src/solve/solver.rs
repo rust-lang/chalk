@@ -129,10 +129,31 @@ impl Solver {
             panic!("overflow depth reached");
         }
 
-        // If the goal is already on the stack, we found a cycle and indicate it by setting
-        // `slot.cycle = true`. If there is no cached answer, we can't make any more progress
-        // and return `Err`. If there is one, use this answer.
-        if let Some(slot) = self.stack.iter_mut().find(|s| { s.goal == goal }) {
+        // The goal was already on the stack: we found a cycle.
+        if let Some(index) = self.stack.iter().position(|s| { s.goal == goal }) {
+
+            // If we are facing a goal of the form `?0: AutoTrait`, we apply coinductive semantics:
+            // if all the components of the cycle also have coinductive semantics, we accept
+            // the cycle `(?0: AutoTrait) :- ... :- (?0: AutoTrait)` as an infinite proof for
+            // `?0: AutoTrait` and we do not perform any substitution.
+            if self.stack.iter()
+                         .skip(index)
+                         .map(|s| &s.goal)
+                         .chain(Some(&goal))
+                         .all(|g| g.is_coinductive(&*self.program))
+            {
+                let value = ConstrainedSubst {
+                    subst: Substitution::empty(),
+                    constraints: vec![],
+                };
+                debug!("applying coinductive semantics");
+                return Ok(Solution::Unique(Canonical { value, binders: goal.into_binders() }));
+            }
+
+            // Else we indicate that we found a cycle by setting `slot.cycle = true`.
+            // If there is no cached answer, we can't make any more progress and return `Err`.
+            // If there is one, use this answer.
+            let slot = &mut self.stack[index];
             slot.cycle = true;
             debug!("cycle detected: previous solution {:?}", slot.answer);
             return slot.answer.clone().ok_or("cycle".into());
@@ -283,7 +304,7 @@ impl Solver {
         let subst = Substitution::from_binders(&binders);
         let (goal, (clause, subst)) =
             fulfill.instantiate(binders.iter().cloned(), &(goal, (clause, subst)));
-        let ProgramClauseImplication { consequence, conditions} =
+        let ProgramClauseImplication { consequence, conditions } =
             fulfill.instantiate_in(goal.environment.universe, clause.binders, &clause.value);
 
         fulfill.unify(&goal.environment, &goal.goal, &consequence)?;

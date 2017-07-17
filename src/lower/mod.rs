@@ -8,6 +8,7 @@ use errors::*;
 use ir;
 
 mod test;
+mod default;
 
 type TypeIds = HashMap<ir::Identifier, ir::ItemId>;
 type TypeKinds = HashMap<ir::ItemId, ir::TypeKind>;
@@ -117,6 +118,9 @@ impl LowerProgram for Program {
         let mut associated_ty_infos = HashMap::new();
         for (item, &item_id) in self.items.iter().zip(&item_ids) {
             if let Item::TraitDefn(ref d) = *item {
+                if d.auto && !d.assoc_ty_defns.is_empty() {
+                    bail!("auto trait cannot define associated types");
+                }
                 for defn in &d.assoc_ty_defns {
                     let addl_parameter_kinds = defn.all_parameters();
                     let info = AssociatedTyInfo { id: next_item_id(), addl_parameter_kinds };
@@ -177,7 +181,16 @@ impl LowerProgram for Program {
             }
         }
 
-        let mut program = ir::Program { type_ids, type_kinds, struct_data, trait_data, impl_data, associated_ty_data, };
+        let mut program = ir::Program {
+            type_ids,
+            type_kinds,
+            struct_data,
+            trait_data,
+            impl_data,
+            associated_ty_data,
+            default_impl_data: Vec::new(),
+        };
+        program.add_default_impls();
         program.record_specialization_priorities()?;
         Ok(program)
     }
@@ -435,8 +448,7 @@ trait LowerStructDefn {
 }
 
 impl LowerStructDefn for StructDefn {
-    fn lower_struct(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::StructDatum>
-    {
+    fn lower_struct(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::StructDatum> {
         let binders = env.in_binders(self.all_parameters(), |env| {
             let self_ty = ir::ApplicationTy {
                 name: ir::TypeName::ItemId(item_id),
@@ -498,6 +510,19 @@ impl LowerTraitRef for TraitRef {
         Ok(ir::TraitRef {
             trait_id: id,
             parameters: parameters,
+        })
+    }
+}
+
+trait LowerPolarizedTraitRef {
+    fn lower(&self, env: &Env) -> Result<ir::PolarizedTraitRef>;
+}
+
+impl LowerPolarizedTraitRef for PolarizedTraitRef {
+    fn lower(&self, env: &Env) -> Result<ir::PolarizedTraitRef> {
+        Ok(match *self {
+            PolarizedTraitRef::Positive(ref tr) => ir::PolarizedTraitRef::Positive(tr.lower(env)?),
+            PolarizedTraitRef::Negative(ref tr) => ir::PolarizedTraitRef::Negative(tr.lower(env)?),
         })
     }
 }
@@ -634,7 +659,12 @@ impl LowerImpl for Impl {
     fn lower_impl(&self, empty_env: &Env) -> Result<ir::ImplDatum> {
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
-            let trait_id = trait_ref.trait_id;
+
+            if !trait_ref.is_positive() && !self.assoc_ty_values.is_empty() {
+                bail!("negative impls cannot define associated values");
+            }
+
+            let trait_id = trait_ref.trait_ref().trait_id;
             let where_clauses = self.lower_where_clauses(&env)?;
             let associated_ty_values = try!(self.assoc_ty_values.iter()
                                             .map(|v| v.lower(trait_id, env))
@@ -679,9 +709,20 @@ impl LowerTrait for TraitDefn {
                 trait_id: trait_id,
                 parameters: self.parameter_refs()
             };
+
+            if self.auto {
+                if trait_ref.parameters.len() > 1 {
+                    bail!("auto trait cannot have parameters");
+                }
+                if !self.where_clauses.is_empty() {
+                    bail!("auto trait cannot have where clauses");
+                }
+            }
+
             Ok(ir::TraitDatumBound {
                 trait_ref: trait_ref,
                 where_clauses: self.lower_where_clauses(env)?,
+                auto: self.auto,
             })
         })?;
 
@@ -785,12 +826,17 @@ impl ir::Program {
         program_clauses.extend(self.struct_data.values().flat_map(|d| d.to_program_clauses(self)));
         program_clauses.extend(self.trait_data.values().flat_map(|d| d.to_program_clauses(self)));
         program_clauses.extend(self.associated_ty_data.values().flat_map(|d| d.to_program_clauses(self)));
+        program_clauses.extend(self.default_impl_data.iter().map(|d| d.to_program_clause()));
 
         for datum in self.impl_data.values() {
-            program_clauses.push(datum.to_program_clause(self));
-            program_clauses.extend(datum.binders.value.associated_ty_values.iter().flat_map(|atv| {
-                atv.to_program_clauses(datum)
-            }));
+            // If we encounter a negative impl, do not generate any rule. Negative impls
+            // are currently just there to deactivate default impls for auto traits.
+            if datum.binders.value.trait_ref.is_positive() {
+                program_clauses.push(datum.to_program_clause(self));
+                program_clauses.extend(datum.binders.value.associated_ty_values.iter().flat_map(|atv| {
+                    atv.to_program_clauses(datum)
+                }));
+            }
         }
 
         let trait_data = self.trait_data.clone();
@@ -810,13 +856,59 @@ impl ir::ImplDatum {
         ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
-                    consequence: bound.trait_ref.clone().cast(),
+                    consequence: bound.trait_ref.trait_ref().clone().cast(),
                     conditions: bound.where_clauses
                                      .iter()
                                      .cloned()
                                      .flat_map(|wc| wc.expanded(program))
                                      .casted()
                                      .collect(),
+                }
+            }),
+            fallback_clause: false,
+        }
+    }
+}
+
+impl ir::DefaultImplDatum {
+    /// For each accessible type `T` in a struct which needs a default implementation for the auto
+    /// trait `Foo` (accessible types are the struct fields types), we add a bound `T: Foo` (which
+    /// is then expanded with `WF(T: Foo)`). For example, given:
+    ///
+    /// ```notrust
+    /// #[auto] trait Send { }
+    ///
+    /// struct MyList<T> {
+    ///     data: T,
+    ///     next: Box<Option<MyList<T>>>,
+    /// }
+    ///
+    /// ```
+    ///
+    /// generate:
+    ///
+    /// ```notrust
+    /// forall<T> {
+    ///     (MyList<T>: Send) :-
+    ///         (T: Send), WF(T: Send),
+    ///         (Box<Option<MyList<T>>>: Send), WF(Box<Option<MyList<T>>>: Send)
+    /// }
+    /// ```
+    fn to_program_clause(&self) -> ir::ProgramClause {
+        ir::ProgramClause {
+            implication: self.binders.map_ref(|bound| {
+                ir::ProgramClauseImplication {
+                    consequence: bound.trait_ref.clone().cast(),
+                    conditions: {
+                        let wc = bound.accessible_tys.iter().cloned().map(|ty| {
+                            ir::TraitRef {
+                                trait_id: bound.trait_ref.trait_id,
+                                parameters: vec![ir::ParameterKind::Ty(ty)],
+                            }
+                        });
+
+                        wc.casted().collect()
+                    },
                 }
             }),
             fallback_clause: false,
@@ -856,7 +948,7 @@ impl ir::AssociatedTyValue {
         //
         // 1. require that the trait is implemented
         // 2. any where-clauses from the `type` declaration in the impl
-        let impl_trait_ref = impl_datum.binders.value.trait_ref.up_shift(self.value.len());
+        let impl_trait_ref = impl_datum.binders.value.trait_ref.trait_ref().up_shift(self.value.len());
         let conditions: Vec<ir::Goal> =
             Some(impl_trait_ref.clone().cast())
             .into_iter()
@@ -989,11 +1081,13 @@ impl ir::TraitDatum {
             .cloned()
             .flat_map(|wc| wc.expanded(program))
             .collect::<Vec<_>>();
+        
+        let wf = ir::WellFormed::TraitRef(self.binders.value.trait_ref.clone());
 
-        let wf = ir::ProgramClause {
+        let clauses = ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
-                    consequence: ir::WellFormed::TraitRef(bound.trait_ref.clone()).cast(),
+                    consequence: wf.clone().cast(),
 
                     conditions: {
                         let tys = bound.trait_ref.parameters
@@ -1010,14 +1104,13 @@ impl ir::TraitDatum {
             fallback_clause: false,
         };
 
-        let mut clauses = vec![wf];
-
+        let mut clauses = vec![clauses];
         for wc in where_clauses {
             clauses.push(ir::ProgramClause {
-                implication: self.binders.map_ref(|bound| {
+                implication: self.binders.map_ref(|_| {
                     ir::ProgramClauseImplication {
                         consequence: wc,
-                        conditions: vec![ir::WellFormed::TraitRef(bound.trait_ref.clone()).cast()]
+                        conditions: vec![wf.clone().cast()]
                     }
                 }),
                 fallback_clause: false,

@@ -17,12 +17,12 @@ impl Program {
 
         // Create a vector of references to impl datums, sorted by trait ref
         let impl_data = self.impl_data.iter().sorted_by(|&(_, lhs), &(_, rhs)| {
-            lhs.binders.value.trait_ref.trait_id.cmp(&rhs.binders.value.trait_ref.trait_id)
+            lhs.binders.value.trait_ref.trait_ref().trait_id.cmp(&rhs.binders.value.trait_ref.trait_ref().trait_id)
         });
 
         // Group impls by trait.
         let impl_groupings = impl_data.into_iter().group_by(|&(_, impl_datum)| {
-            impl_datum.binders.value.trait_ref.trait_id
+            impl_datum.binders.value.trait_ref.trait_ref().trait_id
         });
 
 
@@ -31,6 +31,11 @@ impl Program {
             let impls: Vec<(&ItemId, &ImplDatum)> = impls.collect();
 
             for ((&l_id, lhs), (&r_id, rhs)) in impls.into_iter().tuple_combinations() {
+                // Two negative impls never overlap.
+                if !lhs.binders.value.trait_ref.is_positive() && !rhs.binders.value.trait_ref.is_positive() {
+                    continue;
+                }
+
                 // Check if the impls overlap, then if they do, check if one specializes
                 // the other. Note that specialization can only run one way - if both
                 // specialization checks return *either* true or false, that's an error.
@@ -133,6 +138,11 @@ impl Solver {
     //  }
     // }
     fn specializes(&mut self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
+        // Negative impls cannot specialize.
+        if !less_special.binders.value.trait_ref.is_positive() || !more_special.binders.value.trait_ref.is_positive() {
+            return false;
+        }
+
         let more_len = more_special.binders.len();
 
         // Create parameter equality goals.
@@ -160,5 +170,5 @@ impl Solver {
 }
 
 fn params(impl_datum: &ImplDatum) -> &[Parameter] {
-    &impl_datum.binders.value.trait_ref.parameters
+    &impl_datum.binders.value.trait_ref.trait_ref().parameters
 }

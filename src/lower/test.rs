@@ -64,6 +64,79 @@ fn not_trait() {
 }
 
 #[test]
+fn auto_trait() {
+    lowering_error! {
+        program {
+            #[auto] trait Foo<T> { }
+        }
+        error_msg {
+            "auto trait cannot have parameters"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Bar { }
+            #[auto] trait Foo where Self: Bar { }
+        }
+        error_msg {
+            "auto trait cannot have where clauses"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[auto] trait Foo {
+                type Item;
+            }
+        }
+        error_msg {
+            "auto trait cannot define associated types"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[auto] trait Send { }
+        }
+    }
+}
+
+#[test]
+fn negative_impl() {
+    lowering_error! {
+        program {
+            trait Foo {
+                type Item;
+            }
+
+            struct i32 { }
+
+            impl !Foo for i32 {
+                type Item = i32;
+            }
+        }
+        error_msg {
+            "negative impls cannot define associated values"
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Foo { }
+
+            trait Iterator {
+                type Item;
+            }
+
+            struct i32 { }
+
+            impl<T> !Foo for T where T: Iterator<Item = i32> { }
+        }
+    }
+}
+
+#[test]
 fn invalid_name() {
     lowering_error! {
         program {
@@ -133,7 +206,9 @@ fn atc_accounting() {
         println!("{}", impl_text);
         assert_eq!(&impl_text[..], r#"ImplDatum {
     binders: for<type> ImplDatumBound {
-        trait_ref: Vec<?0> as Iterable,
+        trait_ref: Positive(
+            Vec<?0> as Iterable
+        ),
         where_clauses: [],
         associated_ty_values: [
             AssociatedTyValue {
@@ -386,6 +461,41 @@ fn overlapping_assoc_types() {
             impl<A, B> Foo<A> for B { }
         } error_msg {
             "overlapping impls of trait \"Foo\""
+        }
+    }
+}
+
+#[test]
+fn overlapping_negative_positive_impls() {
+    lowering_error! {
+        program {
+            trait Send { }
+            struct i32 { }
+
+            impl Send for i32 { }
+            impl !Send for i32 { }
+        } error_msg {
+            "overlapping impls of trait \"Send\""
+        }
+    }
+}
+
+#[test]
+fn overlapping_negative_impls() {
+    lowering_success! {
+        program {
+            trait Send { }
+            trait Foo { }
+            trait Bar { }
+
+            struct Vec<T> { }
+            struct i32 { }
+
+            impl Foo for i32 { }
+            impl Bar for i32 { }
+
+            impl<T> !Send for Vec<T> where T: Foo { }
+            impl<T> !Send for Vec<T> where T: Bar { }
         }
     }
 }

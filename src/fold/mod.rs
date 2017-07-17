@@ -195,6 +195,7 @@ macro_rules! enum_fold {
     }
 }
 
+enum_fold!(PolarizedTraitRef[] { Positive(a), Negative(a) });
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
 enum_fold!(DomainGoal[] { Implemented(a), Normalize(a), WellFormed(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });

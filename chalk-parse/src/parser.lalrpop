@@ -47,12 +47,17 @@ StructDefn: StructDefn = {
     }
 };
 
+AutoKeyword: () = "#" "[" "auto" "]";
+
 TraitDefn: TraitDefn = {
-    "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn {
+    <auto:AutoKeyword?> "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{"
+        <a:AssocTyDefn*> "}" =>
+    TraitDefn {
         name: n,
         parameter_kinds: p,
         where_clauses: w,
         assoc_ty_defns: a,
+        auto: auto.is_some(),
     }
 };
 
@@ -64,14 +69,17 @@ AssocTyDefn: AssocTyDefn = {
 };
 
 Impl: Impl = {
-    "impl" <p:Angle<ParameterKind>> <t:Id> <a:Angle<Parameter>> "for" <s:Ty> <w:WhereClauses> "{"
-        <assoc:AssocTyValue*>"}" =>
+    "impl" <p:Angle<ParameterKind>> <mark:"!"?> <t:Id> <a:Angle<Parameter>> "for" <s:Ty> <w:WhereClauses> "{"
+        <assoc:AssocTyValue*> "}" =>
     {
         let mut args = vec![Parameter::Ty(s)];
         args.extend(a);
         Impl {
             parameter_kinds: p,
-            trait_ref: TraitRef { trait_name: t, args: args },
+            trait_ref: PolarizedTraitRef::from_bool(mark.is_none(), TraitRef {
+                trait_name: t,
+                args: args,
+            }),
             where_clauses: w,
             assoc_ty_values: assoc,
         }

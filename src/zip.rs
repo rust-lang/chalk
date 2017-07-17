@@ -155,6 +155,7 @@ macro_rules! enum_zip {
     }
 }
 
+enum_zip!(PolarizedTraitRef { Positive, Negative });
 enum_zip!(DomainGoal { Implemented, Normalize, WellFormed });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(WellFormed { Ty, TraitRef });
