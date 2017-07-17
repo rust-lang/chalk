@@ -131,10 +131,11 @@ fn prove_forall() {
             trait Marker { }
             impl<T> Marker for Vec<T> { }
 
-            trait Clone { }
-            impl Clone for Foo { }
+            trait Eq<T> { }
+            trait Ord<T> where Self: Eq<T> { }
 
-            impl<T> Clone for Vec<T> where T: Clone { }
+            impl<T> Eq<Vec<T>> for Vec<T> where T: Eq<T> { }
+            impl<T> Ord<Vec<T>> for Vec<T> where T: Ord<T> { }
         }
 
         goal {
@@ -164,19 +165,19 @@ fn prove_forall() {
             "Unique; substitution [], lifetime constraints []"
         }
 
-        // Here, we don't know that `T: Clone`, so we can't prove that
-        // `Vec<T>: Clone`.
+        // Here, we don't know that `T: Eq<T>`, so we can't prove that
+        // `Vec<T>: Eq<Vec<T>>`.
         goal {
-            forall<T> { Vec<T>: Clone }
+            forall<T> { Vec<T>: Eq<Vec<T>> }
         } yields {
-            "CannotProve"
+            "No possible solution"
         }
 
-        // Here, we do know that `T: Clone`, so we can.
+        // Here, we do know that `T: Eq`, so we can.
         goal {
             forall<T> {
-                if (T: Clone) {
-                    Vec<T>: Clone
+                if (T: Eq<T>) {
+                    Vec<T>: Eq<Vec<T>>
                 }
             }
         } yields {
@@ -184,15 +185,25 @@ fn prove_forall() {
         }
 
         // This fails because we used `if_raw`, and hence we do not
-        // know that `WF(T: Clone)` holds.
+        // know that `WF(T: Ord<T>)` hence `T: Eq<T>` holds.
         goal {
             forall<T> {
-                if_raw (T: Clone) {
-                    Vec<T>: Clone
+                if_raw (T: Ord<T>) {
+                    Vec<T>: Ord<Vec<T>>
                 }
             }
         } yields {
             "CannotProve"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Ord<T>) {
+                    Vec<T>: Ord<Vec<T>>
+                }
+            }
+        } yields {
+            "Unique"
         }
     }
 }
@@ -1539,10 +1550,9 @@ fn coinductive_semantics() {
             "CannotProve"
         }
 
-        // `WellFormed(T)` because of the hand-written impl for `Ptr<T>`.
         goal {
             forall<T> {
-                if (WellFormed(T), T: Send) {
+                if (T: Send) {
                     List<T>: Send
                 }
             }
@@ -1636,10 +1646,9 @@ fn implied_bounds() {
         // there is no `Hash` impl for `NotHash<T>` hence `Set<NotHash<T>>`
         // cannot be well-formed.
         //
-        // Since both `Hash` and `NotHash<T>` are local types, a local negative
-        // reasoning is allowed and the following query fails (it should be run in
-        // `compat` mode). We can then issue a warning saying that the function cannot be
-        // called.
+        // Since `NotHash<T>` is a local type, a local negative
+        // reasoning is allowed and the following query fails. We can then issue
+        // a warning saying that the function cannot be called.
         goal {
             exists<T> {
                 WellFormed(Set<NotHash<T>>)

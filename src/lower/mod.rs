@@ -1018,29 +1018,46 @@ impl Anonymize for [ir::ParameterKind<ir::Identifier>] {
     }
 }
 
-macro_rules! well_formed {
-    ($self: ident, $value: expr, $constructor: expr, $program: expr) => {{
-        let where_clauses = $self.binders.value.where_clauses
-                  .iter()
-                  .cloned()
-                  .flat_map(|wc| wc.expanded($program));
+trait ExpandWhereClauses {
+    fn expanded_where_clauses(&self, program: &ir::Program) -> Vec<ir::DomainGoal>;
+}
 
-        let where_clauses: Vec<ir::DomainGoal> = where_clauses.collect();
+impl ExpandWhereClauses for ir::StructDatumBound {
+    fn expanded_where_clauses(&self, program: &ir::Program) -> Vec<ir::DomainGoal> {
+        self.where_clauses
+            .iter()
+            .cloned()
+            .flat_map(|wc| wc.expanded(program))
+            .collect()
+    }
+}
+
+impl ExpandWhereClauses for ir::TraitDatumBound {
+    fn expanded_where_clauses(&self, program: &ir::Program) -> Vec<ir::DomainGoal> {
+        self.where_clauses
+            .iter()
+            .cloned()
+            .flat_map(|wc| wc.expanded(program))
+            .collect()
+    }
+}
+
+trait WellFormed {
+    fn wf_clauses(&self, wf_predicate: ir::WellFormed, program: &ir::Program)
+        -> Vec<ir::ProgramClause>;
+}
+
+impl<T: ExpandWhereClauses> WellFormed for ir::Binders<T> {
+    fn wf_clauses(&self, wf_predicate: ir::WellFormed, program: &ir::Program)
+        -> Vec<ir::ProgramClause>
+    {
+        let where_clauses = self.value.expanded_where_clauses(program);
 
         let wf = ir::ProgramClause {
-            implication: $self.binders.map_ref(|_| {
+            implication: self.map_ref(|_| {
                 ir::ProgramClauseImplication {
-                    consequence: $constructor($value.clone().cast()).cast(),
-                    conditions: {
-                        let tys = $value.parameters
-                                        .iter()
-                                        .filter_map(|pk| pk.as_ref().ty())
-                                        .cloned()
-                                        .map(|ty| ir::WellFormed::Ty(ty))
-                                        .casted();
-
-                        tys.chain(where_clauses.iter().cloned().casted()).collect()
-                    }
+                    consequence: wf_predicate.clone().cast(),
+                    conditions: where_clauses.iter().cloned().casted().collect(),
                 }
             }),
             fallback_clause: false,
@@ -1049,10 +1066,10 @@ macro_rules! well_formed {
         let mut clauses = vec![wf];
         for cond in where_clauses {
             clauses.push(ir::ProgramClause {
-                implication: $self.binders.map_ref(|_| {
+                implication: self.map_ref(|_| {
                     ir::ProgramClauseImplication {
                         consequence: cond,
-                        conditions: vec![$constructor($value.clone().cast()).cast()]
+                        conditions: vec![wf_predicate.clone().cast()]
                     }
                 }),
                 fallback_clause: false,
@@ -1060,7 +1077,7 @@ macro_rules! well_formed {
         }
 
         clauses
-    }};
+    }
 }
 
 impl ir::StructDatum {
@@ -1075,7 +1092,10 @@ impl ir::StructDatum {
         //    for<?T> (?T: Eq) :- WF(Foo<?T>).
         //    for<?T> WF(?T: Eq) :- WF(Foo<?T>).
 
-        well_formed!(self, self.binders.value.self_ty, ir::WellFormed::Ty, program)
+        self.binders.wf_clauses(
+            ir::WellFormed::Ty(self.binders.value.self_ty.clone().cast()),
+            program
+        )
     }
 }
 
@@ -1097,7 +1117,10 @@ impl ir::TraitDatum {
         //    for<?Self, ?T> (?Self: Eq<T>) :- WF(?Self: Ord<T>)
         //    for<?Self, ?T> WF(?Self: Ord<?T>) :- WF(?Self: Ord<T>)
 
-        well_formed!(self, self.binders.value.trait_ref, ir::WellFormed::TraitRef, program)
+        self.binders.wf_clauses(
+            ir::WellFormed::TraitRef(self.binders.value.trait_ref.clone().cast()),
+            program
+        )
     }
 }
 
