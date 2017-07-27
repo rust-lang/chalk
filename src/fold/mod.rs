@@ -22,17 +22,6 @@ pub trait Folder {
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime>;
 }
 
-fn fold_parameter(f: &mut GeneralFolder, binders: usize, arg: &Parameter)
-    -> Result<Parameter> {
-    match *arg {
-        ParameterKind::Ty(ref t) =>
-            Ok(ParameterKind::Ty(f.fold_ty(t, binders)?)),
-
-        ParameterKind::Lifetime(ref lt) =>
-            Ok(ParameterKind::Lifetime(f.fold_lifetime(lt, binders)?)),
-    }
-}
-
 impl<T: FolderVar> Folder for T {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
         ty.fold_with(self, binders)
