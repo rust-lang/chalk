@@ -1,5 +1,5 @@
 use errors::*;
-use fold::{Fold, Folder, Shifter};
+use fold::{Fold, FolderVar, Shifter};
 use ir::*;
 
 use super::{InferenceTable, TyInferenceVariable, LifetimeInferenceVariable,
@@ -86,7 +86,7 @@ impl<'q> Canonicalizer<'q> {
     }
 }
 
-impl<'q> Folder for Canonicalizer<'q> {
+impl<'q> FolderVar for Canonicalizer<'q> {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         let var = TyInferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {

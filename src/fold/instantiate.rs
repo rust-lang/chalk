@@ -39,7 +39,7 @@ macro_rules! subst_method {
 subst_method!(Goal);
 subst_method!(Ty);
 
-impl<'b> Folder for Subst<'b> {
+impl<'b> FolderVar for Subst<'b> {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         if depth >= self.parameters.len() {
             Ok(Ty::Var(depth - self.parameters.len() + binders))

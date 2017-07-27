@@ -1,5 +1,5 @@
 use errors::*;
-use super::{Fold, Folder, Shifter};
+use super::{Fold, FolderVar, Shifter};
 
 /// Sometimes we wish to fold two values with a distinct deBruijn
 /// depth (i.e., you want to fold `(A, B)` where A is defined under N
@@ -22,7 +22,7 @@ impl<T: Fold> Shifted<T> {
 impl<T: Fold> Fold for Shifted<T> {
     type Result = T::Result;
 
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut FolderVar, binders: usize) -> Result<Self::Result> {
         // I... think this is right if binders is not zero, but not sure,
         // and don't care to think about it.
         assert_eq!(binders, 0);
