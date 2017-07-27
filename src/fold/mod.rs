@@ -52,13 +52,13 @@ impl<T: FolderVar> Folder for T {
     }
 }
 
-impl<'f, F: FolderVar + ?Sized> FolderVar for &'f mut F {
-    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        (**self).fold_free_var(depth, binders)
+impl<'f, F: Folder + ?Sized> Folder for &'f mut F {
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
+        self.fold_ty(ty, binders)
     }
 
-    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
-        (**self).fold_free_lifetime_var(depth, binders)
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
+        self.fold_lifetime(lifetime, binders)
     }
 }
 
