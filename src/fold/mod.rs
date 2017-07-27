@@ -35,45 +35,12 @@ fn fold_parameter(f: &mut GeneralFolder, binders: usize, arg: &Parameter)
 
 impl<T: Folder> GeneralFolder for T {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
-        match *ty {
-            Ty::Apply(ApplicationTy { name, ref parameters }) => {
-                let parameters =
-                    parameters.iter()
-                              .map(|p| fold_parameter(self, binders, p))
-                              .collect::<Result<Vec<_>>>()?;
-                Ok(Ty::Apply(ApplicationTy { name, parameters }))
-            },
-
-            Ty::ForAll(ref quantified_ty) => {
-                let QuantifiedTy { num_binders, ref ty } = **quantified_ty;
-                let ty = self.fold_ty(ty, binders + num_binders)?;
-                Ok(Ty::ForAll(Box::new(QuantifiedTy { num_binders, ty })))
-            },
-
-            Ty::Projection(ProjectionTy { associated_ty_id, ref parameters }) => {
-                let parameters =
-                    parameters.iter()
-                              .map(|p| fold_parameter(self, binders, p))
-                              .collect::<Result<Vec<_>>>()?;
-                Ok(Ty::Projection(ProjectionTy { associated_ty_id, parameters }))
-            },
-
-            Ty::Var(ref var) => {
-                self.fold_free_var(*var, binders)
-            },
-        }
+        ty.fold_with(self, binders)
     }
 
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize)
         -> Result<Lifetime> {
-        match *lifetime {
-            Lifetime::Var(ref var) => {
-                self.fold_free_lifetime_var(*var, binders)
-            },
-            Lifetime::ForAll(universe_index) => {
-                unimplemented!();
-            },
-        }
+        lifetime.fold_with(self, binders)
     }
 }
 
