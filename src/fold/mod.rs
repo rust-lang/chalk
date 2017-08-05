@@ -52,13 +52,25 @@ impl<T: FolderVar> Folder for T {
     }
 }
 
-impl<'f, F: Folder + ?Sized> Folder for &'f mut F {
+pub struct FolderRef<'f, F> where F: 'f + ?Sized {
+    folder: &'f mut F,
+}
+
+impl<'f, F: ?Sized> FolderRef<'f, F> {
+    pub fn new(folder: &'f mut F) -> Self {
+        FolderRef {
+            folder,
+        }
+    }
+}
+
+impl<'f, F: Folder + ?Sized> Folder for FolderRef<'f, F> {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
-        self.fold_ty(ty, binders)
+        self.folder.fold_ty(ty, binders)
     }
 
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
-        self.fold_lifetime(lifetime, binders)
+        self.folder.fold_lifetime(lifetime, binders)
     }
 }
 

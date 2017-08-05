@@ -1,5 +1,5 @@
 use errors::*;
-use fold::{Fold, FolderVar, Shifter};
+use fold::{Fold, FolderVar, FolderRef, Shifter};
 use ir::*;
 
 use super::{InferenceTable, TyInferenceVariable, LifetimeInferenceVariable,
@@ -95,7 +95,7 @@ impl<'q> FolderVar for Canonicalizer<'q> {
                 // with a quantified version of its bound value; we
                 // also have to shift *that* into the correct binder
                 // depth.
-                let mut folder = (self, Shifter::new(binders));
+                let mut folder = (FolderRef::new(self), Shifter::new(binders));
                 ty.fold_with(&mut folder, 0)
             }
             None => {
@@ -116,7 +116,7 @@ impl<'q> FolderVar for Canonicalizer<'q> {
         match self.table.probe_lifetime_var(var) {
             Some(l) => {
                 debug!("fold_free_lifetime_var: {:?} mapped to {:?}", var, l);
-                let mut folder = (self, Shifter::new(binders));
+                let mut folder = (FolderRef::new(self), Shifter::new(binders));
                 l.fold_with(&mut folder, 0)
             }
             None => {
