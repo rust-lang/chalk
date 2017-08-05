@@ -353,11 +353,12 @@ impl<'u, 't> OccursCheck<'u, 't> {
     }
 
     fn check_parameter(&mut self, arg: &Parameter) -> Result<Parameter> {
+        let binders = self.binders;
         match *arg {
             ParameterKind::Ty(ref t) =>
-                Ok(ParameterKind::Ty(self.fold_ty(t, self.binders)?)),
+                Ok(ParameterKind::Ty(self.fold_ty(t, binders)?)),
             ParameterKind::Lifetime(ref lt) =>
-                Ok(ParameterKind::Lifetime(self.fold_lifetime(lt, self.binders)?)),
+                Ok(ParameterKind::Lifetime(self.fold_lifetime(lt, binders)?)),
         }
     }
 
