@@ -335,23 +335,6 @@ impl<'u, 't> OccursCheck<'u, 't> {
         OccursCheck { unifier, binders: 0, var, universe_index }
     }
 
-    fn check_apply(&mut self, apply: &ApplicationTy) -> Result<ApplicationTy> {
-        let ApplicationTy { name, ref parameters } = *apply;
-        self.universe_check(name.universe_index())?;
-        let parameters = parameters.iter()
-                                   .map(|p| self.check_parameter(p))
-                                   .collect::<Result<Vec<_>>>()?;
-        Ok(ApplicationTy { name, parameters })
-    }
-
-    fn check_quantified(&mut self, quantified_ty: &QuantifiedTy) -> Result<QuantifiedTy> {
-        let QuantifiedTy { num_binders, ref ty } = *quantified_ty;
-        self.binders += num_binders;
-        let ty = self.fold_ty(ty, 0)?;
-        self.binders -= num_binders;
-        Ok(QuantifiedTy { num_binders, ty })
-    }
-
     fn check_parameter(&mut self, arg: &Parameter) -> Result<Parameter> {
         let binders = self.binders;
         match *arg {
@@ -360,6 +343,24 @@ impl<'u, 't> OccursCheck<'u, 't> {
             ParameterKind::Lifetime(ref lt) =>
                 Ok(ParameterKind::Lifetime(self.fold_lifetime(lt, binders)?)),
         }
+    }
+
+    fn check_ty_apply(&mut self, apply: &ApplicationTy) -> Result<Ty> {
+        let ApplicationTy { name, ref parameters } = *apply;
+        self.universe_check(name.universe_index())?;
+        let parameters = parameters.iter()
+                                   .map(|p| self.check_parameter(p))
+                                   .collect::<Result<Vec<_>>>()?;
+        let at = ApplicationTy { name, parameters };
+        Ok(Ty::Apply(at))
+    }
+
+    fn check_ty_forall(&mut self, quantified_ty: &QuantifiedTy) -> Result<Ty> {
+        let QuantifiedTy { num_binders, ref ty } = *quantified_ty;
+        self.binders += num_binders;
+        let ty = self.fold_ty(ty, 0)?;
+        self.binders -= num_binders;
+        Ok(Ty::ForAll(Box::new(QuantifiedTy { num_binders, ty })))
     }
 
     fn universe_check(&mut self,
@@ -376,6 +377,102 @@ impl<'u, 't> OccursCheck<'u, 't> {
             Ok(())
         }
     }
+
+    fn check_ty_var(&mut self, var: usize, binders: usize) -> Result<Ty> {
+        let v = TyInferenceVariable::from_depth(var - binders);
+        let ui = self.unifier.table.ty_unify.probe_value(v).unbound().unwrap();
+
+        if self.unifier.table.ty_unify.unioned(v, self.var) {
+            bail!("cycle during unification");
+        }
+
+        if self.universe_index < ui {
+            // Scenario is like:
+            //
+            // ?A = foo(?B)
+            //
+            // where ?A is in universe 0 and ?B is in universe 1.
+            // This is OK, if ?B is promoted to universe 0.
+            self.unifier
+                .table
+                .ty_unify
+                .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
+                .unwrap();
+        }
+
+        Ok(Ty::Var(var))
+    }
+
+    fn check_ty_projection(&mut self, proj: &ProjectionTy) -> Result<Ty> {
+        let ProjectionTy { associated_ty_id, ref parameters } = *proj;
+
+        // FIXME(#6) -- this rejects constraints like
+        // `exists(A -> A = Item0<<A as Item1>::foo>)`, which
+        // is probably too conservative.
+        let parameters =
+            parameters.iter()
+                      .map(|p| self.check_parameter(p))
+                      .collect::<Result<Vec<_>>>()?;
+        Ok(Ty::Projection(ProjectionTy { associated_ty_id, parameters }))
+    }
+
+    fn check_lt_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+        if depth >= binders {
+            // a free existentially bound region; find the
+            // inference variable it corresponds to
+            let v = LifetimeInferenceVariable::from_depth(depth - binders);
+            match self.unifier.table.lifetime_unify.probe_value(v) {
+                InferenceValue::Unbound(ui) => {
+                    if self.universe_index < ui {
+                        // Scenario is like:
+                        //
+                        // exists<T> forall<'b> exists<'a> ?T = Foo<'a>
+                        //
+                        // where ?A is in universe 0 and `'b` is in universe 1.
+                        // This is OK, if `'b` is promoted to universe 0.
+                        self.unifier
+                            .table
+                            .lifetime_unify
+                            .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
+                            .unwrap();
+                    }
+                    Ok(Lifetime::Var(depth))
+                }
+
+                InferenceValue::Bound(l) => {
+                    Ok(l.up_shift(binders))
+                }
+            }
+        } else {
+            // a bound region like `'a` in `for<'a> fn(&'a i32)`
+            Ok(Lifetime::Var(depth))
+        }
+    }
+
+    fn check_lt_forall(&mut self, ui: UniverseIndex, lifetime: &Lifetime) -> Result<Lifetime> {
+        if self.universe_index < ui {
+            // Scenario is like:
+            //
+            // exists<T> forall<'b> ?T = Foo<'b>
+            //
+            // unlike with a type variable, this **might** be
+            // ok.  Ultimately it depends on whether the
+            // `forall` also introduced relations to lifetimes
+            // nameable in T. To handle that, we introduce a
+            // fresh region variable `'x` in same universe as `T`
+            // and add a side-constraint that `'x = 'b`:
+            //
+            // exists<'x> forall<'b> ?T = Foo<'x>, where 'x = 'b
+
+            let tick_x = self.unifier.table.new_lifetime_variable(self.universe_index);
+            self.unifier.push_lifetime_eq_constraint(tick_x.to_lifetime(), *lifetime);
+            Ok(tick_x.to_lifetime())
+        } else {
+            // If the `ui` is higher than `self.universe_index`, then we can name
+            // this lifetime, no problem.
+            Ok(Lifetime::ForAll(ui))
+        }
+    }
 }
 
 impl<'u, 't> Folder for OccursCheck<'u, 't> {
@@ -385,110 +482,17 @@ impl<'u, 't> Folder for OccursCheck<'u, 't> {
         }
 
         match *ty {
-            Ty::Apply(ref parameter_apply) => {
-                Ok(Ty::Apply(self.check_apply(parameter_apply)?))
-            }
-
-            Ty::ForAll(ref quantified_ty) => {
-                Ok(Ty::ForAll(Box::new(self.check_quantified(quantified_ty)?)))
-            }
-
-            Ty::Var(depth) => {
-                let v = TyInferenceVariable::from_depth(depth - binders);
-                let ui = self.unifier.table.ty_unify.probe_value(v).unbound().unwrap();
-
-                if self.unifier.table.ty_unify.unioned(v, self.var) {
-                    bail!("cycle during unification");
-                }
-
-                if self.universe_index < ui {
-                    // Scenario is like:
-                    //
-                    // ?A = foo(?B)
-                    //
-                    // where ?A is in universe 0 and ?B is in universe 1.
-                    // This is OK, if ?B is promoted to universe 0.
-                    self.unifier
-                        .table
-                        .ty_unify
-                        .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
-                        .unwrap();
-                }
-
-                Ok(Ty::Var(depth))
-            }
-
-            Ty::Projection(ProjectionTy { associated_ty_id, ref parameters }) => {
-                // FIXME(#6) -- this rejects constraints like
-                // `exists(A -> A = Item0<<A as Item1>::foo>)`, which
-                // is probably too conservative.
-                let parameters =
-                    parameters.iter()
-                              .map(|p| self.check_parameter(p))
-                              .collect::<Result<Vec<_>>>()?;
-                Ok(Ty::Projection(ProjectionTy { associated_ty_id, parameters }))
-            }
+            Ty::Apply(ref parameter_apply) => self.check_ty_apply(parameter_apply),
+            Ty::ForAll(ref quantified_ty) => self.check_ty_forall(quantified_ty),
+            Ty::Projection(ref proj) => self.check_ty_projection(proj),
+            Ty::Var(depth) => self.check_ty_var(depth, binders),
         }
     }
 
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
         match *lifetime {
-            Lifetime::Var(depth) => {
-                if depth >= binders {
-                    // a free existentially bound region; find the
-                    // inference variable it corresponds to
-                    let v = LifetimeInferenceVariable::from_depth(depth - binders);
-                    match self.unifier.table.lifetime_unify.probe_value(v) {
-                        InferenceValue::Unbound(ui) => {
-                            if self.universe_index < ui {
-                                // Scenario is like:
-                                //
-                                // exists<T> forall<'b> exists<'a> ?T = Foo<'a>
-                                //
-                                // where ?A is in universe 0 and `'b` is in universe 1.
-                                // This is OK, if `'b` is promoted to universe 0.
-                                self.unifier
-                                    .table
-                                    .lifetime_unify
-                                    .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
-                                    .unwrap();
-                            }
-                            Ok(Lifetime::Var(depth))
-                        }
-
-                        InferenceValue::Bound(l) => {
-                            Ok(l.up_shift(binders))
-                        }
-                    }
-                } else {
-                    // a bound region like `'a` in `for<'a> fn(&'a i32)`
-                    Ok(Lifetime::Var(depth))
-                }
-            }
-            Lifetime::ForAll(ui) => {
-                if self.universe_index < ui {
-                    // Scenario is like:
-                    //
-                    // exists<T> forall<'b> ?T = Foo<'b>
-                    //
-                    // unlike with a type variable, this **might** be
-                    // ok.  Ultimately it depends on whether the
-                    // `forall` also introduced relations to lifetimes
-                    // nameable in T. To handle that, we introduce a
-                    // fresh region variable `'x` in same universe as `T`
-                    // and add a side-constraint that `'x = 'b`:
-                    //
-                    // exists<'x> forall<'b> ?T = Foo<'x>, where 'x = 'b
-
-                    let tick_x = self.unifier.table.new_lifetime_variable(self.universe_index);
-                    self.unifier.push_lifetime_eq_constraint(tick_x.to_lifetime(), *lifetime);
-                    Ok(tick_x.to_lifetime())
-                } else {
-                    // If the `ui` is higher than `self.universe_index`, then we can name
-                    // this lifetime, no problem.
-                    Ok(Lifetime::ForAll(ui))
-                }
-            }
+            Lifetime::ForAll(ui) => self.check_lt_forall(ui, lifetime),
+            Lifetime::Var(depth) => self.check_lt_var(depth, binders),
         }
     }
 }
