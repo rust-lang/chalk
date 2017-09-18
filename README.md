@@ -30,3 +30,5 @@ Here are some blog posts talking about chalk:
     - How to prove that something is not true
 - [Query structure in chalk](http://smallcultfollowing.com/babysteps/blog/2017/05/25/query-structure-in-chalk/)
     - The basic chalk query structure, with pointers into the chalk implementation
+- [Cyclic queries in chalk](http://smallcultfollowing.com/babysteps/blog/2017/09/12/tabling-handling-cyclic-queries-in-chalk/)
+    - Handling cyclic relations and enabling the implementation of implied bounds and other long-desired features in an elegant way
