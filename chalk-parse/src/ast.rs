@@ -174,6 +174,7 @@ pub enum WhereClause {
     TraitRefWellFormed { trait_ref: TraitRef },
     UnifyTys { a: Ty, b: Ty },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
+    TraitInScope { trait_name: Identifier },
 }
 
 pub struct Field {

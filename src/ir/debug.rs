@@ -155,6 +155,7 @@ impl Debug for DomainGoal {
                        Angle(&n.parameters[1..]))
             }
             DomainGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
+            DomainGoal::InScope(ref n) => write!(fmt, "InScope({:?})", n),
         }
     }
 }

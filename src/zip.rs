@@ -201,7 +201,7 @@ macro_rules! enum_zip {
 /// variant, then zips each field of the variant in turn. Only works
 /// if all variants have a single parenthesized value right now.
 enum_zip!(PolarizedTraitRef { Positive, Negative });
-enum_zip!(DomainGoal { Implemented, Normalize, WellFormed });
+enum_zip!(DomainGoal { Implemented, Normalize, WellFormed, InScope });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(WellFormed { Ty, TraitRef });
 

@@ -186,7 +186,9 @@ WhereClause: WhereClause = {
         let trait_ref = TraitRef { trait_name: t, args: args };
         let projection = ProjectionTy { trait_ref, name, args: a2 };
         WhereClause::ProjectionEq { projection, ty }
-    }
+    },
+
+    "InScope" "(" <t:Id> ")" => WhereClause::TraitInScope { trait_name: t },
 };
 
 TraitRef<S>: TraitRef = {

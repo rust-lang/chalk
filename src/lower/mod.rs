@@ -440,6 +440,18 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
             WhereClause::UnifyTys { .. } | WhereClause::UnifyLifetimes { .. } => {
                 bail!("this form of where-clause not allowed here")
             }
+            WhereClause::TraitInScope { trait_name } => {
+                let id = match env.lookup(trait_name)? {
+                    NameLookup::Type(id) => id,
+                    NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(trait_name)),
+                };
+
+                if env.type_kind(id).sort != ir::TypeSort::Trait {
+                    bail!(ErrorKind::NotTrait(trait_name));
+                }
+
+                ir::DomainGoal::InScope(id)
+            }
         })
     }
 }
@@ -467,6 +479,18 @@ impl LowerWhereClause<ir::LeafGoal> for WhereClause {
                 a: ir::ParameterKind::Lifetime(a.lower(env)?),
                 b: ir::ParameterKind::Lifetime(b.lower(env)?),
             }.cast(),
+            WhereClause::TraitInScope { trait_name } => {
+                let id = match env.lookup(trait_name)? {
+                    NameLookup::Type(id) => id,
+                    NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(trait_name)),
+                };
+
+                if env.type_kind(id).sort != ir::TypeSort::Trait {
+                    bail!(ErrorKind::NotTrait(trait_name));
+                }
+
+                ir::DomainGoal::InScope(id).cast()
+            }
         })
     }
 }

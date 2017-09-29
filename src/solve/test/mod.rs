@@ -1742,7 +1742,6 @@ fn mixed_semantics() {
     }
 }
 
-
 #[test]
 fn partial_overlap_1() {
     test! {
@@ -1840,6 +1839,29 @@ fn partial_overlap_3() {
             i32: Marker
         } yields {
             "Unique"
+        }
+    }
+}
+
+#[test]
+fn inscope() {
+    test! {
+        program {
+            trait Foo { }
+        }
+
+        goal {
+            InScope(Foo)
+        } yields {
+            "No possible solution: no applicable candidates"
+        }
+
+        goal {
+            if (InScope(Foo)) {
+                InScope(Foo)
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
         }
     }
 }

@@ -458,6 +458,7 @@ pub enum DomainGoal {
     Implemented(TraitRef),
     Normalize(Normalize),
     WellFormed(WellFormed),
+    InScope(ItemId),
 }
 
 impl DomainGoal {
