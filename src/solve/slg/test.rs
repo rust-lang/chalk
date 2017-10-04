@@ -181,6 +181,25 @@ fn positive_cycle() {
     }
 }
 
+/// Make sure we don't get a stack overflow or other badness for this
+/// test from scalexm.
+#[test]
+fn subgoal_abstraction() {
+    test! {
+        program {
+            trait Foo { }
+            struct Box<T> { }
+            impl<T> Foo for T where Box<T>: Foo { }
+        }
+
+        goal {
+            exists<T> { T: Foo }
+        } with max 50 yields {
+            r"0 answer(s) found"
+        }
+    }
+}
+
 #[test]
 fn subgoal_cycle_uninhabited() {
     test! {

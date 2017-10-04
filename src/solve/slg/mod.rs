@@ -339,14 +339,14 @@ pub struct Answers {
 pub struct Answer {
     /// A fully instantiated version of the goal for which the query
     /// is true (including region constraints).
-    subst: CanonicalConstrainedSubst,
+    pub subst: CanonicalConstrainedSubst,
 
     /// If this flag is set, then the answer could be neither proven
     /// nor disproven. In general, the existence of a non-empty set of
     /// delayed literals simply means the answer's status is UNKNOWN,
     /// either because the size of the answer exceeded `max_size` or
     /// because of a negative loop (e.g., `P :- not { P }`).
-    ambiguous: bool,
+    pub ambiguous: bool,
 }
 
 #[derive(Clone, Debug)]
