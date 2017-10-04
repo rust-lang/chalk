@@ -19,6 +19,14 @@ impl InferenceTable {
         arg.fold_with(&mut instantiator, 0).expect("")
     }
 
+    /// Variant on `instantiate` that takes a `Canonical<T>`.
+    pub fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>)
+                                    -> T::Result
+        where T: Fold + Debug,
+    {
+        self.instantiate(bound.binders.iter().cloned(), &bound.value)
+    }
+
     /// Instantiates `arg` with fresh existential variables in the
     /// given universe; the kinds of the variables are implied by
     /// `binders`. This is used to apply a universally quantified
@@ -27,11 +35,22 @@ impl InferenceTable {
     pub fn instantiate_in<U, T>(&mut self,
                                 universe: UniverseIndex,
                                 binders: U,
-                                arg: &T) -> T::Result
+                                arg: &T)
+                                -> T::Result
         where T: Fold,
               U: IntoIterator<Item = ParameterKind<()>>
     {
         self.instantiate(binders.into_iter().map(|pk| pk.map(|_| universe)), arg)
+    }
+
+    /// Variant on `instantiate_in` that takes a `Binders<T>`.
+    pub fn instantiate_binders_in<T>(&mut self,
+                                     universe: UniverseIndex,
+                                     arg: &Binders<T>)
+                                     -> T::Result
+        where T: Fold
+    {
+        self.instantiate_in(universe, arg.binders.iter().cloned(), &arg.value)
     }
 }
 
