@@ -1,5 +1,6 @@
 #![recursion_limit = "1024"]
 #![feature(conservative_impl_trait)]
+#![feature(catch_expr)]
 
 #![allow(dead_code)] // FIXME- while iterating
 
