@@ -1,9 +1,32 @@
 use errors::*;
+use fold::Fold;
 use ir::*;
+use std::fmt::Debug;
 use std::sync::Arc;
 
+/// When we zip types, we basically traverse the structure, ensuring
+/// that it matches.  When we come to types/lifetimes, we invoke the
+/// callback methods in the zipper to match them up. Primarily used
+/// during unification or similar operations.
+///
+/// So e.g. if you had `A: Eq<B>` zipped with `X: Eq<Y>`, then the zipper
+/// would get two callbacks, one pairing `A` and `X`, and the other pairing
+/// `B` and `Y`.
+///
+/// For things other than types/lifetimes, the zip impls will
+/// guarantee equality. So e.g. if you have `A: Eq<B>` zipped with `X:
+/// Ord<Y>`, you would wind up with an error, no matter what zipper
+/// you are using. This is because the traits `Eq` and `Ord` are
+/// represented by two distinct `ItemId` values, and the impl for
+/// `ItemId` requires that all `ItemId` in the two zipped values match
+/// up.
 pub trait Zipper {
+    /// Indicates that the two types `a` and `b` were found in
+    /// matching spots, beneath `binders` levels of binders.
     fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()>;
+
+    /// Indicates that the two lifetimes `a` and `b` were found in
+    /// matching spots, beneath `binders` levels of binders.
     fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()>;
 }
 
@@ -17,7 +40,14 @@ impl<'f, Z: Zipper> Zipper for &'f mut Z {
     }
 }
 
-pub trait Zip {
+/// The `Zip` trait walks two values, invoking the `Zipper` methods where
+/// appropriate, but otherwise requiring strict equality.
+///
+/// See `Zipper` trait for more details.
+///
+/// To implement the trait, typically you would use one of the macros
+/// like `eq_zip!`, `struct_zip!`, or `enum_zip!`.
+pub trait Zip: Debug {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()>;
 }
 
@@ -54,24 +84,17 @@ impl<T: Zip> Zip for Arc<T> {
     }
 }
 
+impl<T: Zip> Zip for Box<T> {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        <T as Zip>::zip_with(zipper, a, b)
+    }
+}
+
 impl<T: Zip, U: Zip> Zip for (T, U) {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
         Zip::zip_with(zipper, &a.0, &b.0)?;
         Zip::zip_with(zipper, &a.1, &b.1)?;
         Ok(())
-    }
-}
-
-impl<T: Zip, L: Zip> Zip for ParameterKind<T, L> {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
-        match (a, b) {
-            (&ParameterKind::Ty(ref a), &ParameterKind::Ty(ref b)) => Zip::zip_with(zipper, a, b),
-            (&ParameterKind::Lifetime(ref a), &ParameterKind::Lifetime(ref b)) => Zip::zip_with(zipper, a, b),
-            (&ParameterKind::Ty(_), _) |
-            (&ParameterKind::Lifetime(_), _) => {
-                panic!("zipping things of mixed kind")
-            }
-        }
     }
 }
 
@@ -87,6 +110,9 @@ impl Zip for Lifetime {
     }
 }
 
+
+/// Generates a Zip impl that requires the two values be
+/// equal. Suitable for atomic, scalar values.
 macro_rules! eq_zip {
     ($t:ty) => {
         impl Zip for $t {
@@ -103,6 +129,7 @@ macro_rules! eq_zip {
 eq_zip!(ItemId);
 eq_zip!(TypeName);
 eq_zip!(Identifier);
+eq_zip!(QuantifierKind);
 
 macro_rules! struct_zip {
     ($t:ident$([$($param:tt)*])* { $($field:ident),* } $($w:tt)*) => {
@@ -119,6 +146,7 @@ macro_rules! struct_zip {
     }
 }
 
+/// Generates a Zip impl that zips each field of the struct in turn.
 struct_zip!(TraitRef { trait_id, parameters });
 struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
 struct_zip!(ApplicationTy { name, parameters });
@@ -155,7 +183,61 @@ macro_rules! enum_zip {
     }
 }
 
+/// Generates a Zip impl that requires the two enums be the same
+/// variant, then zips each field of the variant in turn. Only works
+/// if all variants have a single parenthesized value right now.
 enum_zip!(PolarizedTraitRef { Positive, Negative });
 enum_zip!(DomainGoal { Implemented, Normalize, WellFormed });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(WellFormed { Ty, TraitRef });
+
+// Annoyingly, Goal cannot use `enum_zip` because some variants have
+// two parameters, and I'm too lazy to make the macro account for the
+// relevant name mangling.
+impl Zip for Goal {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        match (a, b) {
+            (&Goal::Quantified(ref f_a, ref g_a), &Goal::Quantified(ref f_b, ref g_b)) => {
+                Zip::zip_with(zipper, f_a, f_b)?;
+                Zip::zip_with(zipper, g_a, g_b)
+            }
+            (&Goal::Implies(ref f_a, ref g_a), &Goal::Implies(ref f_b, ref g_b)) => {
+                Zip::zip_with(zipper, f_a, f_b)?;
+                Zip::zip_with(zipper, g_a, g_b)
+            }
+            (&Goal::And(ref f_a, ref g_a), &Goal::And(ref f_b, ref g_b)) => {
+                Zip::zip_with(zipper, f_a, f_b)?;
+                Zip::zip_with(zipper, g_a, g_b)
+            }
+            (&Goal::Not(ref f_a), &Goal::Not(ref f_b)) => {
+                Zip::zip_with(zipper, f_a, f_b)
+            }
+            (&Goal::Leaf(ref f_a), &Goal::Leaf(ref f_b)) => {
+                Zip::zip_with(zipper, f_a, f_b)
+            }
+            (&Goal::Quantified(..), _) |
+            (&Goal::Implies(..), _) |
+            (&Goal::And(..), _) |
+            (&Goal::Not(..), _) |
+            (&Goal::Leaf(..), _) => {
+                bail!("cannot zip `{:?}` and `{:?}`", a, b)
+            }
+        }
+    }
+}
+
+// I'm too lazy to make `enum_zip` support type parameters.
+impl<T: Zip, L: Zip> Zip for ParameterKind<T, L> {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        match (a, b) {
+            (&ParameterKind::Ty(ref a), &ParameterKind::Ty(ref b)) =>
+                Zip::zip_with(zipper, a, b),
+            (&ParameterKind::Lifetime(ref a), &ParameterKind::Lifetime(ref b)) =>
+                Zip::zip_with(zipper, a, b),
+            (&ParameterKind::Ty(_), _) |
+            (&ParameterKind::Lifetime(_), _) => {
+                panic!("zipping things of mixed kind")
+            }
+        }
+    }
+}
