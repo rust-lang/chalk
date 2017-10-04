@@ -5,6 +5,8 @@ use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
 use std::collections::{HashSet, HashMap, BTreeMap};
 use std::sync::Arc;
 
+pub mod could_match;
+
 pub type Identifier = InternedString;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

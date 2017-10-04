@@ -33,6 +33,11 @@ error_chain! {
             description("overlapping impls")
             display("overlapping impls of trait {:?}", trait_id)
         }
+
+        CouldNotMatch {
+            description("could not match")
+                display("could not match")
+        }
     }
 }
 
