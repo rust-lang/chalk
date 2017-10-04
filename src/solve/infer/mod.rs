@@ -9,6 +9,7 @@ mod unify;
 mod var;
 #[cfg(test)] mod test;
 
+pub use self::canonicalize::Canonicalized;
 pub use self::unify::UnificationResult;
 pub use self::var::{TyInferenceVariable, LifetimeInferenceVariable};
 use self::var::*;
@@ -138,22 +139,42 @@ impl InferenceTable {
 }
 
 impl Ty {
-    pub fn inference_var(&self) -> Option<TyInferenceVariable> {
+    /// If this is a `Ty::Var(d)`, returns `Some(d)` else `None`.
+    pub fn var(&self) -> Option<usize> {
         if let Ty::Var(depth) = *self {
-            Some(TyInferenceVariable::from_depth(depth))
+            Some(depth)
         } else {
             None
         }
     }
+
+    /// If this is a `Ty::Var`, returns the
+    /// `TyInferenceVariable` it represents. Only makes sense if
+    /// `self` is known not to appear inside of any binders, since
+    /// otherwise the depth would have be adjusted to account for
+    /// those binders.
+    pub fn inference_var(&self) -> Option<TyInferenceVariable> {
+        self.var().map(TyInferenceVariable::from_depth)
+    }
 }
 
 impl Lifetime {
-    pub fn inference_var(&self) -> Option<LifetimeInferenceVariable> {
+    /// If this is a `Lifetime::Var(d)`, returns `Some(d)` else `None`.
+    pub fn var(&self) -> Option<usize> {
         if let Lifetime::Var(depth) = *self {
-            Some(LifetimeInferenceVariable::from_depth(depth))
+            Some(depth)
         } else {
             None
         }
+    }
+
+    /// If this is a `Lifetime::Var`, returns the
+    /// `LifetimeInferenceVariable` it represents. Only makes sense if
+    /// `self` is known not to appear inside of any binders, since
+    /// otherwise the depth would have be adjusted to account for
+    /// those binders.
+    pub fn inference_var(&self) -> Option<LifetimeInferenceVariable> {
+        self.var().map(LifetimeInferenceVariable::from_depth)
     }
 }
 

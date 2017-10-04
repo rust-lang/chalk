@@ -28,6 +28,10 @@ pub trait Zipper {
     /// Indicates that the two lifetimes `a` and `b` were found in
     /// matching spots, beneath `binders` levels of binders.
     fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()>;
+
+    /// Zips two values appearing beneath binders.
+    fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Result<()>
+        where T: Zip + Fold<Result = T>;
 }
 
 impl<'f, Z: Zipper> Zipper for &'f mut Z {
@@ -37,6 +41,12 @@ impl<'f, Z: Zipper> Zipper for &'f mut Z {
 
     fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
         (**self).zip_lifetimes(a, b)
+    }
+
+    fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Result<()>
+        where T: Zip + Fold<Result = T>
+    {
+        (**self).zip_binders(a, b)
     }
 }
 
@@ -110,6 +120,11 @@ impl Zip for Lifetime {
     }
 }
 
+impl<T: Zip + Fold<Result = T>> Zip for Binders<T> {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Result<()> {
+        zipper.zip_binders(a, b)
+    }
+}
 
 /// Generates a Zip impl that requires the two values be
 /// equal. Suitable for atomic, scalar values.
