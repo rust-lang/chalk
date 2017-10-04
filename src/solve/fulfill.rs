@@ -132,27 +132,9 @@ impl<'s> Fulfill<'s> {
         debug!("push_goal({:?}, {:?})", goal, environment);
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                let mut new_environment = environment.clone();
-                let parameters: Vec<_> =
-                    subgoal.binders
-                           .iter()
-                           .map(|pk| {
-                               new_environment = new_environment.new_universe();
-                               match *pk {
-                                   ParameterKind::Lifetime(()) => {
-                                       let lt = Lifetime::ForAll(new_environment.universe);
-                                       ParameterKind::Lifetime(lt)
-                                   }
-                                   ParameterKind::Ty(()) =>
-                                       ParameterKind::Ty(Ty::Apply(ApplicationTy {
-                                           name: TypeName::ForAll(new_environment.universe),
-                                           parameters: vec![]
-                                       })),
-                               }
-                           })
-                           .collect();
-                let subgoal = subgoal.value.subst(&parameters);
-                self.push_goal(&new_environment, subgoal);
+                let InEnvironment { environment: subenvironment, goal: subgoal } =
+                    subgoal.instantiate_universally(environment);
+                self.push_goal(&subenvironment, *subgoal);
             }
             Goal::Quantified(QuantifierKind::Exists, subgoal) => {
                 let subgoal = self.instantiate_in(environment.universe,
