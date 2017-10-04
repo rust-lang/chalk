@@ -521,7 +521,7 @@ pub struct ProgramClauseImplication {
 /// All unresolved existential variables are "renumbered" according to their
 /// first appearance; the kind/universe of the variable is recorded in the
 /// `binders` field.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Canonical<T> {
     pub value: T,
     pub binders: Vec<ParameterKind<UniverseIndex>>,
