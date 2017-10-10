@@ -21,11 +21,6 @@ pub enum Solution {
     /// constraints, since we have not "committed" to any particular solution
     /// yet.
     Ambig(Guidance),
-
-    /// There is no instantiation of the existentials for which we could prove this goal
-    /// to be true. Nonetheless, the goal may yet be true for some instantiations of the
-    /// universals. In other words, this goal is neither true nor false.
-    CannotProve,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -71,8 +66,6 @@ impl Solution {
         use self::Guidance::*;
 
         if self == other { return self }
-        if other.cannot_be_proven() { return self }
-        if self.cannot_be_proven() { return other }
 
         // Otherwise, always downgrade to Ambig:
 
@@ -98,8 +91,6 @@ impl Solution {
         use self::Guidance::*;
 
         if self == other { return self }
-        if other.cannot_be_proven() { return self }
-        if self.cannot_be_proven() { return other }
 
         // Otherwise, always downgrade to Ambig:
 
@@ -118,8 +109,6 @@ impl Solution {
         use self::Guidance::*;
 
         if self == other { return self }
-        if other.cannot_be_proven() { return self }
-        if self.cannot_be_proven() { return other }
 
         if let Solution::Ambig(guidance) = self {
             match guidance {
@@ -141,7 +130,6 @@ impl Solution {
                 })
             }
             Solution::Ambig(guidance) => guidance,
-            Solution::CannotProve => Guidance::Unknown,
         }
     }
 
@@ -157,7 +145,7 @@ impl Solution {
                 };
                 Some(Canonical { value, binders: canonical.binders.clone() })
             }
-            Solution::Ambig(_) | Solution::CannotProve => None,
+            Solution::Ambig(_) => None,
         }
     }
 
@@ -174,13 +162,6 @@ impl Solution {
     pub fn is_ambig(&self) -> bool {
         match *self {
             Solution::Ambig(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn cannot_be_proven(&self) -> bool {
-        match *self {
-            Solution::CannotProve => true,
             _ => false,
         }
     }
@@ -209,9 +190,6 @@ impl fmt::Display for Solution {
             }
             Solution::Ambig(Guidance::Unknown) => {
                 write!(f, "Ambiguous; no inference guidance")
-            }
-            Solution::CannotProve => {
-                write!(f, "CannotProve")
             }
         }
     }

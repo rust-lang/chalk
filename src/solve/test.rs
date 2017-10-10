@@ -140,13 +140,19 @@ fn prove_forall() {
         goal {
             forall<T> { T: Marker }
         } yields {
-            "CannotProve"
+            "No possible solution"
         }
 
         goal {
             forall<T> { not { T: Marker } }
         } yields {
-            "CannotProve"
+            "No"
+        }
+
+        goal {
+            not { forall<T> { T: Marker } }
+        } yields {
+            "Unique"
         }
 
         // If we assume `T: Marker`, then obviously `T: Marker`.
@@ -169,7 +175,7 @@ fn prove_forall() {
         goal {
             forall<T> { Vec<T>: Clone }
         } yields {
-            "CannotProve"
+            "No possible solution"
         }
 
         // Here, we do know that `T: Clone`, so we can.
@@ -192,7 +198,7 @@ fn prove_forall() {
                 }
             }
         } yields {
-            "CannotProve"
+            "No possible solution"
         }
     }
 }
@@ -1283,6 +1289,14 @@ fn simple_negation() {
         } yields {
             "Unique"
         }
+
+        goal {
+            not {
+                forall<T> { T: Foo }
+            }
+        } yields {
+            "Unique"
+        }
     }
 }
 
@@ -1330,7 +1344,7 @@ fn negation_quantifiers() {
                 }
             }
         } yields {
-            "CannotProve"
+            "Unique"
         }
 
         goal {
@@ -1350,7 +1364,7 @@ fn negation_quantifiers() {
                 }
             }
         } yields {
-            "CannotProve"
+            "No"
         }
     }
 }
@@ -1509,7 +1523,7 @@ fn auto_trait_with_impls() {
                 Vec<T>: Send
             }
         } yields {
-            "CannotProve"
+            "No possible solution"
         }
     }
 }
@@ -1536,7 +1550,7 @@ fn coinductive_semantics() {
                 List<T>: Send
             }
         } yields {
-            "CannotProve"
+            "No possible solution"
         }
 
         // `WellFormed(T)` because of the hand-written impl for `Ptr<T>`.

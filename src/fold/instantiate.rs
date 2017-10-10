@@ -39,8 +39,8 @@ macro_rules! subst_method {
 subst_method!(Goal);
 subst_method!(Ty);
 
-impl<'b> FolderVar for Subst<'b> {
-    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+impl<'b> ExistentialFolder for Subst<'b> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         if depth >= self.parameters.len() {
             Ok(Ty::Var(depth - self.parameters.len() + binders))
         } else {
@@ -51,7 +51,7 @@ impl<'b> FolderVar for Subst<'b> {
         }
     }
 
-    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         if depth >= self.parameters.len() {
             Ok(Lifetime::Var(depth - self.parameters.len() + binders))
         } else {
@@ -61,4 +61,7 @@ impl<'b> FolderVar for Subst<'b> {
             }
         }
     }
+}
+
+impl<'b> IdentityUniversalFolder for Subst<'b> {
 }

@@ -44,8 +44,8 @@ struct Instantiator {
 /// `self.vars[i]`. Everything else stays intact, but we have to
 /// subtract `self.vars.len()` to account for the binders we are
 /// instantiating.
-impl FolderVar for Instantiator {
-    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+impl ExistentialFolder for Instantiator {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         if depth < self.vars.len() {
             Ok(self.vars[depth].as_ref().ty().unwrap().to_ty().up_shift(binders))
         } else {
@@ -53,7 +53,7 @@ impl FolderVar for Instantiator {
         }
     }
 
-    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         if depth < self.vars.len() {
             Ok(self.vars[depth].as_ref().lifetime().unwrap().to_lifetime().up_shift(binders))
         } else {
@@ -61,3 +61,5 @@ impl FolderVar for Instantiator {
         }
     }
 }
+
+impl IdentityUniversalFolder for Instantiator { }

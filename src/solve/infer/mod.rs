@@ -4,6 +4,7 @@ use ir::*;
 
 mod instantiate;
 mod canonicalize;
+mod negate;
 mod unify;
 mod var;
 #[cfg(test)] mod test;

@@ -49,7 +49,6 @@ struct PositiveSolution {
 enum NegativeSolution {
     Refuted,
     Ambiguous,
-    CannotProve,
 }
 
 /// A `Fulfill` is where we actually break down complex goals, instantiate
@@ -116,15 +115,13 @@ impl<'s> Fulfill<'s> {
     pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
         where T: ?Sized + Zip + Debug
     {
-        let UnificationResult { goals, constraints, cannot_prove } =
+        let UnificationResult { goals, constraints } =
             self.infer.unify(environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
-        debug!("unify: cannot_prove={:?}", cannot_prove);
         self.constraints.extend(constraints);
         self.obligations.extend(goals.into_iter().map(Obligation::Prove));
-        self.cannot_prove = self.cannot_prove || cannot_prove;
         Ok(())
     }
 
@@ -181,6 +178,7 @@ impl<'s> Fulfill<'s> {
     }
 
     fn prove(&mut self, wc: &InEnvironment<LeafGoal>) -> Result<PositiveSolution> {
+        println!("prove: {:?}", wc);
         let canonicalized = self.infer.canonicalize(wc);
         let reduced_goal = canonicalized.quantified.into_reduced_goal();
         Ok(PositiveSolution {
@@ -190,38 +188,21 @@ impl<'s> Fulfill<'s> {
     }
 
     fn refute(&mut self, goal: &InEnvironment<Goal>) -> Result<NegativeSolution> {
-        let canonicalized = self.infer.canonicalize(goal);
-
-        // Following the original negation-as-failure semantics, we refuse to
-        // resolve negative questions involving free variables. The reason is
-        // that the semantics of such queries is not what you expect: it
-        // basically treats the existential as a universal. For example, consider:
-        //
-        // ```rust
-        // struct Vec<T> {}
-        // struct i32 {}
-        // struct u32 {}
-        // trait Foo {}
-        // impl Foo for Vec<u32> {}
-        // ```
-        //
-        // If we ask `exists<T> { not { Vec<T>: Foo } }`, what should happen?
-        // If we allow negative queries to be definitively answered even when
-        // they contain free variables, we will get a definitive *no* to the
-        // entire goal! From a logical perspective, that's just wrong: there
-        // does exists a `T` such that `not { Vec<T>: Foo }`, namely `i32`. The
-        // problem is that the proof search procedure is actually trying to
-        // prove something stronger, that there is *no* such `T`.
-        if !canonicalized.free_vars.is_empty() {
-            return Ok(NegativeSolution::Ambiguous);
-        }
+        let canonicalized = match self.infer.negated(goal) {
+            Some(v) => v,
+            None => {
+                // Treat non-ground negatives as ambiguous. Note that, as inference
+                // proceeds, we may wind up with more information here.
+                return Ok(NegativeSolution::Ambiguous);
+            }
+        };
 
         // Negate the result
-        if let Ok(solution) = self.solver.solve_closed_goal(canonicalized.quantified.value) {
-            match solution {
-                Solution::Unique(_) => Err("refutation failed")?,
-                Solution::Ambig(_) => Ok(NegativeSolution::Ambiguous),
-                Solution::CannotProve => Ok(NegativeSolution::CannotProve),
+        if let Ok(solution) = self.solver.solve_canonical_goal(&canonicalized) {
+            if solution.has_definite() {
+                bail!("refutation failed")
+            } else {
+                Ok(NegativeSolution::Ambiguous)
             }
         } else {
             Ok(NegativeSolution::Refuted)
@@ -299,7 +280,7 @@ impl<'s> Fulfill<'s> {
             // directly.
             assert!(obligations.is_empty());
             while let Some(obligation) = self.obligations.pop() {
-                let (ambiguous, cannot_prove) = match obligation {
+                let ambiguous = match obligation {
                     Obligation::Prove(ref wc) => {
                         let PositiveSolution { free_vars, solution } = self.prove(wc)?;
 
@@ -310,11 +291,11 @@ impl<'s> Fulfill<'s> {
                             }
                         }
 
-                        (solution.is_ambig(), solution.cannot_be_proven())
+                        solution.is_ambig()
                     }
                     Obligation::Refute(ref goal) => {
                         let answer = self.refute(goal)?;
-                        (answer == NegativeSolution::Ambiguous, answer == NegativeSolution::CannotProve)
+                        answer == NegativeSolution::Ambiguous
                     }
                 };
 
@@ -322,11 +303,6 @@ impl<'s> Fulfill<'s> {
                     debug!("ambiguous result: {:?}", obligation);
                     obligations.push(obligation);
                 }
-
-                // If one of the obligations cannot be proven then the whole goal
-                // cannot be proven either, unless another obligation leads to an error
-                // in which case the function will bail out normally.
-                self.cannot_prove = self.cannot_prove || cannot_prove;
             }
 
             self.obligations.extend(obligations.drain(..));
@@ -352,7 +328,7 @@ impl<'s> Fulfill<'s> {
         let outcome = self.fulfill()?;
 
         if self.cannot_prove {
-            return Ok(Solution::CannotProve);
+            return Ok(Solution::Ambig(Guidance::Unknown));
         }
 
         if outcome.is_complete() {

@@ -29,19 +29,6 @@ macro_rules! ty {
     };
 }
 
-macro_rules! trait_ref {
-    ((item $n:tt) $($arg:tt)*) => {
-        TraitRef {
-            trait_id: ItemId { index: $n },
-            parameters: vec![$(arg!($arg)),*],
-        }
-    };
-
-    (($($b:tt)*)) => {
-        trait_ref!($($b)*)
-    };
-}
-
 macro_rules! arg {
     ($arg:tt) => {
         ParameterKind::Ty(ty!($arg))
@@ -65,8 +52,8 @@ struct Normalizer<'a> {
     table: &'a mut InferenceTable,
 }
 
-impl<'q> FolderVar for Normalizer<'q> {
-    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+impl<'q> ExistentialFolder for Normalizer<'q> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         assert_eq!(binders, 0);
         let var = TyInferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {
@@ -75,10 +62,13 @@ impl<'q> FolderVar for Normalizer<'q> {
         }
     }
 
-    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         assert_eq!(binders, 0);
         Ok(LifetimeInferenceVariable::from_depth(depth).to_lifetime())
     }
+}
+
+impl<'q> IdentityUniversalFolder for Normalizer<'q> {
 }
 
 #[test]
@@ -108,7 +98,7 @@ fn cycle_error() {
     let mut table = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(environment0.universe).to_ty();
-    table.unify(&environment0, &a, &ty!(apply (skol 1) (expr a))).unwrap_err();
+    table.unify(&environment0, &a, &ty!(apply (item 0) (expr a))).unwrap_err();
 }
 
 #[test]

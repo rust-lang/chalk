@@ -1,6 +1,6 @@
 use errors::*;
 use ir::*;
-use super::{Fold, FolderVar};
+use super::{Fold, ExistentialFolder, IdentityUniversalFolder};
 
 pub struct Shifter {
     adjustment: usize
@@ -37,12 +37,14 @@ up_shift_method!(TraitRef);
 up_shift_method!(ProjectionTy);
 up_shift_method!(DomainGoal);
 
-impl FolderVar for Shifter {
-    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+impl ExistentialFolder for Shifter {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         Ok(Ty::Var(depth + self.adjustment + binders))
     }
 
-    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         Ok(Lifetime::Var(depth + self.adjustment + binders))
     }
 }
+
+impl IdentityUniversalFolder for Shifter { }

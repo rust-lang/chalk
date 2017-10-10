@@ -1,5 +1,6 @@
 use errors::*;
-use super::{Fold, Folder, FolderRef, Shifter};
+use fold::{Fold, Folder};
+use fold::shifter::Shifter;
 
 /// Sometimes we wish to fold two values with a distinct deBruijn
 /// depth (i.e., you want to fold `(A, B)` where A is defined under N
@@ -19,8 +20,8 @@ impl<T: Fold> Shifted<T> {
     }
 }
 
-impl<T: Fold> Fold for Shifted<T> {
-    type Result = T::Result;
+impl<T: Fold<Result = T>> Fold for Shifted<T> {
+    type Result = T;
 
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
         // I... think this is right if binders is not zero, but not sure,
@@ -31,8 +32,8 @@ impl<T: Fold> Fold for Shifted<T> {
         // contains a free var with index 0, and `self.adjustment ==
         // 2`, we will translate it to a free var with index 2; then
         // we will fold *that* through `folder`.
-        let mut new_folder = (Shifter::new(self.adjustment), FolderRef::new(folder));
-        self.value.fold_with(&mut new_folder, binders)
+        let value = self.value.fold_with(&mut Shifter::new(self.adjustment), 0)?;
+        value.fold_with(folder, binders)
     }
 }
 

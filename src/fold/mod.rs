@@ -1,3 +1,6 @@
+//! Traits for transforming bits of IR.
+
+use cast::Cast;
 use errors::*;
 use ir::*;
 use std::fmt::Debug;
@@ -12,79 +15,97 @@ pub use self::shifted::Shifted;
 pub use self::shifter::Shifter;
 pub use self::instantiate::Subst;
 
-pub trait FolderVar {
-    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty>;
-    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime>;
+/// A "folder" is a transformer that can be used to make a copy of some
+/// bit of IR (e.g., a `Ty)` with certain changes applied. In particular,
+/// folders can intercept references to free variables (either existentially
+/// or universally quantified) and replace them with other types/lifetimes
+/// as appropriate.
+///
+/// To create a folder type F, one typically does one of two things:
+///
+/// - Implement `ExistentialFolder` and `IdentityUniversalFolder`:
+///   - This ignores universally quantified variables but allows you to
+///     replace existential variables with new values.
+/// - Implement `ExistentialFolder` and `UniversalFolder`:
+///   - This allows you to replace either existential or universal
+///     variables with new types/lifetimes.
+///
+/// There is no reason to implement the `Folder` trait directly.
+///
+/// To **apply** a folder, use the `Fold::fold_with` method, like so
+///
+/// ```rust,ignore
+/// let x = x.fold_with(&mut folder, 0);
+/// ```
+pub trait Folder: ExistentialFolder + UniversalFolder {
 }
 
-pub trait Folder {
-    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty>;
-    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime>;
+impl<T: ExistentialFolder + UniversalFolder> Folder for T { }
+
+/// The methods for folding free **existentially quantified
+/// variables**; for example, if you folded over `Foo<?T> }`, where `?T`
+/// is an inference variable, then this would let you replace `?T` with
+/// some other type.
+pub trait ExistentialFolder {
+    /// Invoked for `Ty::Var` instances that are not bound within the type being folded
+    /// over:
+    ///
+    /// - `depth` is the depth of the `Ty::Var`; this is not adjusted to account for binders
+    ///   in scope.
+    /// - `binders` is the number of binders in scope.
+    ///
+    /// `depth >= binders` will always hold, since otherwise the type would be considered
+    /// bound.
+    ///
+    /// This should return a type suitable for a context with `binders` in scope.
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty>;
+
+    /// As `fold_free_existential_ty`, but for lifetimes.
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime>;
 }
 
-impl<T: FolderVar> Folder for T {
-    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
-        match *ty {
-            Ty::Var(depth) => if depth >= binders {
-                self.fold_free_var(depth - binders, binders)
-            } else {
-                Ok(Ty::Var(depth))
-            },
-            Ty::Apply(ref apply) => Ok(Ty::Apply(apply.fold_with(self, binders)?)),
-            Ty::Projection(ref proj) => {
-                Ok(Ty::Projection(proj.fold_with(self, binders)?))
-            }
-            Ty::ForAll(ref quantified_ty) => {
-                Ok(Ty::ForAll(quantified_ty.fold_with(self, binders)?))
-            }
-        }
-    }
+pub trait UniversalFolder {
+    /// Invoked for `Ty::Apply` instances where the type name is a `TypeName::ForAll`.
+    /// Returns a type to use instead, which should be suitably shifted to account for `binders`.
+    ///
+    /// - `universe` is the universe of the `TypeName::ForAll` that was found
+    /// - `binders` is the number of binders in scope
+    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Result<Ty>;
 
-    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
-        match *lifetime {
-            Lifetime::Var(depth) => if depth >= binders {
-                self.fold_free_lifetime_var(depth - binders, binders)
-            } else {
-                Ok(Lifetime::Var(depth))
-            },
-            Lifetime::ForAll(universe) => Ok(Lifetime::ForAll(universe)),
-        }
-    }
+    /// As with `fold_free_universal_ty`, but for lifetimes.
+    fn fold_free_universal_lifetime(&mut self, universe: UniverseIndex, binders: usize) -> Result<Lifetime>;
 }
 
-pub struct FolderRef<'f, F> where F: 'f + ?Sized {
-    folder: &'f mut F,
+/// A convenience trait. If you implement this, you get an
+/// implementation of `UniversalFolder` for free that simply ignores
+/// universal values (that is, it replaces them with themselves).
+pub trait IdentityUniversalFolder {
 }
 
-impl<'f, F: ?Sized> FolderRef<'f, F> {
-    pub fn new(folder: &'f mut F) -> Self {
-        FolderRef {
-            folder,
-        }
-    }
-}
-
-impl<'f, F: Folder + ?Sized> Folder for FolderRef<'f, F> {
-    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
-        self.folder.fold_ty(ty, binders)
+impl<T: IdentityUniversalFolder> UniversalFolder for T {
+    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Result<Ty> {
+        Ok(TypeName::ForAll(universe).to_ty())
     }
 
-    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
-        self.folder.fold_lifetime(lifetime, binders)
+    fn fold_free_universal_lifetime(&mut self, universe: UniverseIndex, _binders: usize) -> Result<Lifetime> {
+        Ok(universe.to_lifetime())
     }
 }
 
-impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
-    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
-        self.0.fold_ty(ty, binders)?.fold_with(&mut self.1, binders)
-    }
-    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
-        self.0.fold_lifetime(lifetime, binders)?.fold_with(&mut self.1, binders)
-    }
-}
-
+/// Applies the given folder to a value.
 pub trait Fold: Debug {
+    /// The type of value that will be produced once folding is done.
+    /// Typically this is `Self`, unless `Self` contains borrowed
+    /// values, in which case owned values are produced (for example,
+    /// one can fold over a `&T` value where `T: Fold`, in which case
+    /// you get back a `T`, not a `&T`).
     type Result;
+
+    /// Apply the given folder `folder` to `self`; `binders` is the
+    /// number of binders that are in scope when beginning the
+    /// folder. Typically `binders` starts as 0, but is adjusted when
+    /// we encounter `Binders<T>` in the IR or other similar
+    /// constructs.
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result>;
 }
 
@@ -136,7 +157,32 @@ impl<T: Fold> Fold for Option<T> {
 impl Fold for Ty {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        folder.fold_ty(self, binders)
+        match *self {
+            Ty::Var(depth) => if depth >= binders {
+                folder.fold_free_existential_ty(depth - binders, binders)
+            } else {
+                Ok(Ty::Var(depth))
+            },
+            Ty::Apply(ref apply) => {
+                let &ApplicationTy { name, ref parameters } = apply;
+                match name {
+                    TypeName::ForAll(ui) => {
+                        assert!(parameters.is_empty(),
+                                "type {:?} with parameters {:?}",
+                                self,
+                                parameters);
+                        folder.fold_free_universal_ty(ui, binders)
+                    }
+
+                    TypeName::ItemId(_) | TypeName::AssociatedType(_) => {
+                        let parameters = parameters.fold_with(folder, binders)?;
+                        Ok(ApplicationTy { name, parameters }.cast())
+                    }
+                }
+            }
+            Ty::Projection(ref proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?)),
+            Ty::ForAll(ref quantified_ty) => Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?)),
+        }
     }
 }
 
@@ -162,7 +208,16 @@ impl<T> Fold for Binders<T>
 impl Fold for Lifetime {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        folder.fold_lifetime(self, binders)
+        match *self {
+            Lifetime::Var(depth) => if depth >= binders {
+                folder.fold_free_existential_lifetime(depth - binders, binders)
+            } else {
+                Ok(Lifetime::Var(depth))
+            },
+            Lifetime::ForAll(universe) => {
+                folder.fold_free_universal_lifetime(universe, binders)
+            }
+        }
     }
 }
 
@@ -200,9 +255,9 @@ macro_rules! copy_fold {
 copy_fold!(Identifier);
 copy_fold!(UniverseIndex);
 copy_fold!(ItemId);
-copy_fold!(TypeName);
 copy_fold!(usize);
 copy_fold!(QuantifierKind);
+// copy_fold!(TypeName); -- intentionally omitted! This is folded via `fold_ap`
 
 macro_rules! enum_fold {
     ($s:ident [$($n:ident),*] { $($variant:ident($($name:ident),*)),* } $($w:tt)*) => {
@@ -242,7 +297,6 @@ macro_rules! struct_fold {
     }
 }
 
-struct_fold!(ApplicationTy { name, parameters });
 struct_fold!(ProjectionTy { associated_ty_id, parameters });
 struct_fold!(TraitRef { trait_id, parameters });
 struct_fold!(Normalize { projection, ty });
@@ -253,3 +307,4 @@ struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(EqGoal { a, b });
 struct_fold!(ProgramClauseImplication { consequence, conditions });
 struct_fold!(ConstrainedSubst { subst, constraints });
+// struct_fold!(ApplicationTy { name, parameters }); -- intentionally omitted, folded through Ty
