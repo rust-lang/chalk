@@ -164,6 +164,10 @@ impl UniverseIndex {
         self.counter >= ui.counter
     }
 
+    pub fn is_root(self) -> bool {
+        self.counter == 0
+    }
+
     pub fn to_lifetime(self) -> Lifetime {
         Lifetime::ForAll(self)
     }

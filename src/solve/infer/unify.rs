@@ -34,19 +34,12 @@ struct Unifier<'t> {
     snapshot: InferenceSnapshot,
     goals: Vec<InEnvironment<LeafGoal>>,
     constraints: Vec<InEnvironment<Constraint>>,
-    cannot_prove: bool,
 }
 
 #[derive(Debug)]
 pub struct UnificationResult {
     pub goals: Vec<InEnvironment<LeafGoal>>,
     pub constraints: Vec<InEnvironment<Constraint>>,
-
-    /// When unifying two skolemized (forall-quantified) type names, we can
-    /// neither confirm nor deny their equality, since we interpret the
-    /// unification request as talking about *all possible
-    /// substitutions*. Instead, we return an ambiguous result.
-    pub cannot_prove: bool,
 }
 
 impl<'t> Unifier<'t> {
@@ -58,7 +51,6 @@ impl<'t> Unifier<'t> {
             snapshot: snapshot,
             goals: vec![],
             constraints: vec![],
-            cannot_prove: false,
         }
     }
 
@@ -67,7 +59,6 @@ impl<'t> Unifier<'t> {
         Ok(UnificationResult {
             goals: self.goals,
             constraints: self.constraints,
-            cannot_prove: self.cannot_prove,
         })
     }
 
@@ -115,20 +106,7 @@ impl<'t> Unifier<'t> {
 
             (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
                 if apply1.name != apply2.name {
-                    if apply1.name.is_for_all() || apply2.name.is_for_all() {
-                        // we're being asked to prove something like `!0 = !1`
-                        // or `!0 = i32`. We interpret this as being asked
-                        // whether that holds *for all subtitutions*. Thus, we
-                        // cannot prove the goal. That means we get:
-                        //
-                        //     forall<T, U> { T = U } // CannotProve
-                        //     forall<T, U> { not { T = U } } // CannotProve
-
-                        self.cannot_prove = true;
-                        return Ok(())
-                    } else {
-                        bail!("cannot equate `{:?}` and `{:?}`", apply1.name, apply2.name);
-                    }
+                    bail!("cannot equate `{:?}` and `{:?}`", apply1.name, apply2.name);
                 }
 
                 Zip::zip_with(self, &apply1.parameters, &apply2.parameters)

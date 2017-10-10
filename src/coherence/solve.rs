@@ -118,7 +118,10 @@ impl Solver {
                     .expect("Every trait takes at least one input type")
                     .quantify(QuantifierKind::Exists, binders);
 
-        self.solve_closed_goal(InEnvironment::empty(goal)).ok().map_or(false, |sol| !sol.cannot_be_proven())
+        self.solve_closed_goal(InEnvironment::empty(goal))
+            .ok()
+            .map(|sol| sol.has_definite())
+            .unwrap_or(false)
     }
 
     // Test for specialization.
