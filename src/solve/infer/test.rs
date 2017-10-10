@@ -29,19 +29,6 @@ macro_rules! ty {
     };
 }
 
-macro_rules! trait_ref {
-    ((item $n:tt) $($arg:tt)*) => {
-        TraitRef {
-            trait_id: ItemId { index: $n },
-            parameters: vec![$(arg!($arg)),*],
-        }
-    };
-
-    (($($b:tt)*)) => {
-        trait_ref!($($b)*)
-    };
-}
-
 macro_rules! arg {
     ($arg:tt) => {
         ParameterKind::Ty(ty!($arg))
