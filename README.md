@@ -32,3 +32,8 @@ Here are some blog posts talking about chalk:
     - The basic chalk query structure, with pointers into the chalk implementation
 - [Cyclic queries in chalk](http://smallcultfollowing.com/babysteps/blog/2017/09/12/tabling-handling-cyclic-queries-in-chalk/)
     - Handling cyclic relations and enabling the implementation of implied bounds and other long-desired features in an elegant way
+
+## Documentation
+
+In addition to the blog posts there is a [glossary](GLOSSARY.md) explaining some
+of the terminology used in *chalk*.
