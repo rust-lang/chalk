@@ -67,6 +67,9 @@ macro_rules! subst_method {
 subst_method!(Goal);
 subst_method!(Ty);
 
+impl<'b> DefaultTypeFolder for Subst<'b> {
+}
+
 impl<'b> ExistentialFolder for Subst<'b> {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         if depth >= self.parameters.len() {

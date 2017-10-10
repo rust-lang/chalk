@@ -1,5 +1,5 @@
 use errors::*;
-use fold::{Fold, ExistentialFolder, UniversalFolder};
+use fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use ir::*;
 use std::collections::HashMap;
 
@@ -109,6 +109,8 @@ impl<'q> Inverter<'q> {
         Inverter { table, inverted_ty: HashMap::new(), inverted_lifetime: HashMap::new() }
     }
 }
+
+impl<'q> DefaultTypeFolder for Inverter<'q> { }
 
 impl<'q> UniversalFolder for Inverter<'q> {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Result<Ty> {

@@ -58,6 +58,8 @@ struct Instantiator {
     vars: Vec<ParameterInferenceVariable>,
 }
 
+impl DefaultTypeFolder for Instantiator { }
+
 /// When we encounter a free variable (of any kind) with index
 /// `i`, we want to map anything in the first N binders to
 /// `self.vars[i]`. Everything else stays intact, but we have to

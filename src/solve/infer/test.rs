@@ -52,6 +52,9 @@ struct Normalizer<'a> {
     table: &'a mut InferenceTable,
 }
 
+impl<'q> DefaultTypeFolder for Normalizer<'q> {
+}
+
 impl<'q> ExistentialFolder for Normalizer<'q> {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         assert_eq!(binders, 0);

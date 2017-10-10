@@ -15,11 +15,29 @@ pub use self::shifted::Shifted;
 pub use self::shifter::Shifter;
 pub use self::instantiate::Subst;
 
-/// A "folder" is a transformer that can be used to make a copy of some
-/// bit of IR (e.g., a `Ty)` with certain changes applied. In particular,
-/// folders can intercept references to free variables (either existentially
-/// or universally quantified) and replace them with other types/lifetimes
-/// as appropriate.
+/// A "folder" is a transformer that can be used to make a copy of
+/// some term -- that is, some bit of IR, such as a `Goal` -- with
+/// certain changes applied. The idea is that it contains methods that
+/// let you swap types/lifetimes for new types/lifetimes; meanwhile,
+/// each bit of IR implements the `Fold` trait which, given a
+/// `Folder`, will reconstruct itself, invoking the folder's methods
+/// to transform each of the types/lifetimes embedded within.
+///
+/// # Usage patterns
+///
+/// ## Substituting for free variables
+///
+/// Most of the time, though, we are not interested in adjust
+/// arbitrary types/lifetimes, but rather just free variables (even
+/// more often, just free existential variables) that appear within
+/// the term.
+///
+/// For this reason, the `Folder` trait extends two other traits that
+/// contain methods that are invoked when just those particular
+///
+/// In particular, folders can intercept references to free variables
+/// (either existentially or universally quantified) and replace them
+/// with other types/lifetimes as appropriate.
 ///
 /// To create a folder type F, one typically does one of two things:
 ///
@@ -37,10 +55,41 @@ pub use self::instantiate::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder: ExistentialFolder + UniversalFolder {
+pub trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
+    /// Returns a "dynamic" version of this trait. There is no
+    /// **particular** reason to require this, except that I didn't
+    /// feel like making `super_fold_ty` generic for no reason.
+    fn to_dyn(&mut self) -> &mut Folder;
 }
 
-impl<T: ExistentialFolder + UniversalFolder> Folder for T { }
+pub trait TypeFolder {
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty>;
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime>;
+}
+
+impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
+    fn to_dyn(&mut self) -> &mut Folder {
+        self
+    }
+}
+
+/// A convenience trait that indicates that this folder doesn't take
+/// any action on types in particular, but just recursively folds
+/// their contents (note that free variables that are encountered in
+/// that process may still be substituted). The vast majority of
+/// folders implement this trait.
+pub trait DefaultTypeFolder {
+}
+
+impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for T {
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
+        super_fold_ty(self.to_dyn(), ty, binders)
+    }
+
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
+        super_fold_lifetime(self.to_dyn(), lifetime, binders)
+    }
+}
 
 /// The methods for folding free **existentially quantified
 /// variables**; for example, if you folded over `Foo<?T> }`, where `?T`
@@ -183,32 +232,40 @@ impl<T: Fold> Fold for Option<T> {
 impl Fold for Ty {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        match *self {
-            Ty::Var(depth) => if depth >= binders {
-                folder.fold_free_existential_ty(depth - binders, binders)
-            } else {
-                Ok(Ty::Var(depth))
-            },
-            Ty::Apply(ref apply) => {
-                let &ApplicationTy { name, ref parameters } = apply;
-                match name {
-                    TypeName::ForAll(ui) => {
-                        assert!(parameters.is_empty(),
-                                "type {:?} with parameters {:?}",
-                                self,
-                                parameters);
-                        folder.fold_free_universal_ty(ui, binders)
-                    }
+        folder.fold_ty(self, binders)
+    }
+}
 
-                    TypeName::ItemId(_) | TypeName::AssociatedType(_) => {
-                        let parameters = parameters.fold_with(folder, binders)?;
-                        Ok(ApplicationTy { name, parameters }.cast())
-                    }
+pub fn super_fold_ty(folder: &mut Folder,
+                     ty: &Ty,
+                     binders: usize)
+                     -> Result<Ty>
+{
+    match *ty {
+        Ty::Var(depth) => if depth >= binders {
+            folder.fold_free_existential_ty(depth - binders, binders)
+        } else {
+            Ok(Ty::Var(depth))
+        },
+        Ty::Apply(ref apply) => {
+            let &ApplicationTy { name, ref parameters } = apply;
+            match name {
+                TypeName::ForAll(ui) => {
+                    assert!(parameters.is_empty(),
+                            "type {:?} with parameters {:?}",
+                            ty,
+                            parameters);
+                    folder.fold_free_universal_ty(ui, binders)
+                }
+
+                TypeName::ItemId(_) | TypeName::AssociatedType(_) => {
+                    let parameters = parameters.fold_with(folder, binders)?;
+                    Ok(ApplicationTy { name, parameters }.cast())
                 }
             }
-            Ty::Projection(ref proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?)),
-            Ty::ForAll(ref quantified_ty) => Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?)),
         }
+        Ty::Projection(ref proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?)),
+        Ty::ForAll(ref quantified_ty) => Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?)),
     }
 }
 
@@ -234,15 +291,23 @@ impl<T> Fold for Binders<T>
 impl Fold for Lifetime {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        match *self {
-            Lifetime::Var(depth) => if depth >= binders {
-                folder.fold_free_existential_lifetime(depth - binders, binders)
-            } else {
-                Ok(Lifetime::Var(depth))
-            },
-            Lifetime::ForAll(universe) => {
-                folder.fold_free_universal_lifetime(universe, binders)
-            }
+        folder.fold_lifetime(self, binders)
+    }
+}
+
+pub fn super_fold_lifetime(folder: &mut Folder,
+                           lifetime: &Lifetime,
+                           binders: usize)
+                           -> Result<Lifetime>
+{
+    match *lifetime {
+        Lifetime::Var(depth) => if depth >= binders {
+            folder.fold_free_existential_lifetime(depth - binders, binders)
+        } else {
+            Ok(Lifetime::Var(depth))
+        },
+        Lifetime::ForAll(universe) => {
+            folder.fold_free_universal_lifetime(universe, binders)
         }
     }
 }

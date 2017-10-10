@@ -1,5 +1,5 @@
 use cast::Cast;
-use fold::{ExistentialFolder, Fold, UniversalFolder};
+use fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
@@ -335,6 +335,9 @@ impl<'u, 't> OccursCheck<'u, 't> {
            -> Self {
         OccursCheck { unifier, var, universe_index }
     }
+}
+
+impl<'u, 't> DefaultTypeFolder for OccursCheck<'u, 't> {
 }
 
 impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {

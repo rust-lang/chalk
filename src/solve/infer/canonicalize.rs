@@ -1,5 +1,5 @@
 use errors::*;
-use fold::{Fold, ExistentialFolder, UniversalFolder};
+use fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use ir::*;
 use std::cmp::max;
 
@@ -97,6 +97,8 @@ impl<'q> Canonicalizer<'q> {
         }
     }
 }
+
+impl<'q> DefaultTypeFolder for Canonicalizer<'q> { }
 
 impl<'q> UniversalFolder for Canonicalizer<'q> {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Result<Ty> {
