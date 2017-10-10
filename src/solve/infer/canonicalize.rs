@@ -1,5 +1,5 @@
 use errors::*;
-use fold::{Fold, FolderVar, FolderRef, Shifter};
+use fold::{Fold, ExistentialFolder, IdentityUniversalFolder};
 use ir::*;
 
 use super::{InferenceTable, TyInferenceVariable, LifetimeInferenceVariable,
@@ -86,38 +86,33 @@ impl<'q> Canonicalizer<'q> {
     }
 }
 
-impl<'q> FolderVar for Canonicalizer<'q> {
-    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+impl<'q> IdentityUniversalFolder for Canonicalizer<'q> {
+}
+
+impl<'q> ExistentialFolder for Canonicalizer<'q> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         let var = TyInferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {
-            Some(ty) => {
-                // If this variable is bound, we want to replace it
-                // with a quantified version of its bound value; we
-                // also have to shift *that* into the correct binder
-                // depth.
-                let mut folder = (FolderRef::new(self), Shifter::new(binders));
-                ty.fold_with(&mut folder, 0)
-            }
+            Some(ty) => Ok(ty.fold_with(self, 0)?.up_shift(binders)),
             None => {
                 // If this variable is not yet bound, find its
                 // canonical index `root_var` in the union-find table,
                 // and then map `root_var` to a fresh index that is
                 // unique to this quantification.
                 let free_var = ParameterKind::Ty(self.table.ty_unify.find(var));
-                let position = self.add(free_var) + binders;
-                Ok(TyInferenceVariable::from_depth(position).to_ty())
+                let position = self.add(free_var);
+                Ok(TyInferenceVariable::from_depth(position + binders).to_ty())
             }
         }
     }
 
-    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         debug!("fold_free_lifetime_var(depth={:?}, binders={:?})", depth, binders);
         let var = LifetimeInferenceVariable::from_depth(depth);
         match self.table.probe_lifetime_var(var) {
             Some(l) => {
                 debug!("fold_free_lifetime_var: {:?} mapped to {:?}", var, l);
-                let mut folder = (FolderRef::new(self), Shifter::new(binders));
-                l.fold_with(&mut folder, 0)
+                Ok(l.fold_with(self, 0)?.up_shift(binders))
             }
             None => {
                 debug!("fold_free_lifetime_var: {:?} not unified", var);

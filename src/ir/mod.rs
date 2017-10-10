@@ -144,6 +144,10 @@ impl TypeName {
             _ => false,
         }
     }
+
+    pub fn to_ty(self) -> Ty {
+        Ty::Apply(ApplicationTy { name: self, parameters: vec![] })
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -158,6 +162,10 @@ impl UniverseIndex {
 
     pub fn can_see(self, ui: UniverseIndex) -> bool {
         self.counter >= ui.counter
+    }
+
+    pub fn to_lifetime(self) -> Lifetime {
+        Lifetime::ForAll(self)
     }
 }
 
