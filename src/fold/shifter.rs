@@ -1,6 +1,6 @@
 use errors::*;
 use ir::*;
-use super::{Fold, Folder};
+use super::{Fold, FolderVar};
 
 pub struct Shifter {
     adjustment: usize
@@ -37,7 +37,7 @@ up_shift_method!(TraitRef);
 up_shift_method!(ProjectionTy);
 up_shift_method!(DomainGoal);
 
-impl Folder for Shifter {
+impl FolderVar for Shifter {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         Ok(Ty::Var(depth + self.adjustment + binders))
     }

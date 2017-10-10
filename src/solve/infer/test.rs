@@ -65,7 +65,7 @@ struct Normalizer<'a> {
     table: &'a mut InferenceTable,
 }
 
-impl<'q> Folder for Normalizer<'q> {
+impl<'q> FolderVar for Normalizer<'q> {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         assert_eq!(binders, 0);
         let var = TyInferenceVariable::from_depth(depth);

@@ -12,28 +12,74 @@ pub use self::shifted::Shifted;
 pub use self::shifter::Shifter;
 pub use self::instantiate::Subst;
 
-pub trait Folder {
+pub trait FolderVar {
     fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty>;
     fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime>;
 }
 
-impl<'f, F: Folder + ?Sized> Folder for &'f mut F {
-    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        (**self).fold_free_var(depth, binders)
+pub trait Folder {
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty>;
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime>;
+}
+
+impl<T: FolderVar> Folder for T {
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
+        match *ty {
+            Ty::Var(depth) => if depth >= binders {
+                self.fold_free_var(depth - binders, binders)
+            } else {
+                Ok(Ty::Var(depth))
+            },
+            Ty::Apply(ref apply) => Ok(Ty::Apply(apply.fold_with(self, binders)?)),
+            Ty::Projection(ref proj) => {
+                Ok(Ty::Projection(proj.fold_with(self, binders)?))
+            }
+            Ty::ForAll(ref quantified_ty) => {
+                Ok(Ty::ForAll(quantified_ty.fold_with(self, binders)?))
+            }
+        }
     }
 
-    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
-        (**self).fold_free_lifetime_var(depth, binders)
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
+        match *lifetime {
+            Lifetime::Var(depth) => if depth >= binders {
+                self.fold_free_lifetime_var(depth - binders, binders)
+            } else {
+                Ok(Lifetime::Var(depth))
+            },
+            Lifetime::ForAll(universe) => Ok(Lifetime::ForAll(universe)),
+        }
+    }
+}
+
+pub struct FolderRef<'f, F> where F: 'f + ?Sized {
+    folder: &'f mut F,
+}
+
+impl<'f, F: ?Sized> FolderRef<'f, F> {
+    pub fn new(folder: &'f mut F) -> Self {
+        FolderRef {
+            folder,
+        }
+    }
+}
+
+impl<'f, F: Folder + ?Sized> Folder for FolderRef<'f, F> {
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
+        self.folder.fold_ty(ty, binders)
+    }
+
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
+        self.folder.fold_lifetime(lifetime, binders)
     }
 }
 
 impl<F1: Folder, F2: Folder> Folder for (F1, F2) {
-    fn fold_free_var(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        self.0.fold_free_var(depth, binders)?.fold_with(&mut self.1, binders)
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
+        self.0.fold_ty(ty, binders)?.fold_with(&mut self.1, binders)
     }
-
-    fn fold_free_lifetime_var(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
-        self.0.fold_free_lifetime_var(depth, binders)?.fold_with(&mut self.1, binders)
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
+        self.0.fold_lifetime(lifetime, binders)?.fold_with(&mut self.1, binders)
     }
 }
 
@@ -90,20 +136,7 @@ impl<T: Fold> Fold for Option<T> {
 impl Fold for Ty {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        match *self {
-            Ty::Var(depth) => if depth >= binders {
-                folder.fold_free_var(depth - binders, binders)
-            } else {
-                Ok(Ty::Var(depth))
-            },
-            Ty::Apply(ref apply) => Ok(Ty::Apply(apply.fold_with(folder, binders)?)),
-            Ty::Projection(ref proj) => {
-                Ok(Ty::Projection(proj.fold_with(folder, binders)?))
-            }
-            Ty::ForAll(ref quantified_ty) => {
-                Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?))
-            }
-        }
+        folder.fold_ty(self, binders)
     }
 }
 
@@ -129,14 +162,7 @@ impl<T> Fold for Binders<T>
 impl Fold for Lifetime {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        match *self {
-            Lifetime::Var(depth) => if depth >= binders {
-                folder.fold_free_lifetime_var(depth - binders, binders)
-            } else {
-                Ok(Lifetime::Var(depth))
-            },
-            Lifetime::ForAll(universe) => Ok(Lifetime::ForAll(universe)),
-        }
+        folder.fold_lifetime(self, binders)
     }
 }
 
