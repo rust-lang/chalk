@@ -99,12 +99,9 @@ pub trait ExistentialFolder {
     /// Invoked for `Ty::Var` instances that are not bound within the type being folded
     /// over:
     ///
-    /// - `depth` is the depth of the `Ty::Var`; this is not adjusted to account for binders
+    /// - `depth` is the depth of the `Ty::Var`; this has been adjusted to account for binders
     ///   in scope.
     /// - `binders` is the number of binders in scope.
-    ///
-    /// `depth >= binders` will always hold, since otherwise the type would be considered
-    /// bound.
     ///
     /// This should return a type suitable for a context with `binders` in scope.
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty>;

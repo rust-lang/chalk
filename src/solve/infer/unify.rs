@@ -384,7 +384,7 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
 
 impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        let v = TyInferenceVariable::from_depth(depth - binders);
+        let v = TyInferenceVariable::from_depth(depth);
         match self.unifier.table.ty_unify.probe_value(v) {
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_ty) => {
@@ -421,7 +421,7 @@ impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
     fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         // a free existentially bound region; find the
         // inference variable it corresponds to
-        let v = LifetimeInferenceVariable::from_depth(depth - binders);
+        let v = LifetimeInferenceVariable::from_depth(depth);
         match self.unifier.table.lifetime_unify.probe_value(v) {
             InferenceValue::Unbound(ui) => {
                 if self.universe_index < ui {

@@ -9,6 +9,13 @@ macro_rules! ty {
         })
     };
 
+    (for_all $n:tt $t:tt) => {
+        Ty::ForAll(Box::new(QuantifiedTy {
+            num_binders: $n,
+            ty: ty!($t),
+        }))
+    };
+
     (projection (item $n:tt) $($arg:tt)*) => {
         Ty::Projection(ProjectionTy {
             associated_ty_id: ItemId { index: $n },
@@ -30,9 +37,27 @@ macro_rules! ty {
 }
 
 macro_rules! arg {
+    ((lifetime $b:tt)) => {
+        ParameterKind::Lifetime(lifetime!($b))
+    };
+
     ($arg:tt) => {
         ParameterKind::Ty(ty!($arg))
-    }
+    };
+}
+
+macro_rules! lifetime {
+    (var $b:expr) => {
+        Lifetime::Var($b)
+    };
+
+    (expr $b:expr) => {
+        $b.clone()
+    };
+
+    (($($b:tt)*)) => {
+        lifetime!($($b)*)
+    };
 }
 
 macro_rules! ty_name {
@@ -102,6 +127,9 @@ fn cycle_error() {
     let environment0 = Environment::new();
     let a = table.new_variable(environment0.universe).to_ty();
     table.unify(&environment0, &a, &ty!(apply (item 0) (expr a))).unwrap_err();
+
+    // exists(A -> A = for<'a> A)
+    table.unify(&environment0, &a, &ty!(for_all 1 (var 1))).unwrap_err();
 }
 
 #[test]
@@ -221,5 +249,26 @@ fn quantify_bound() {
         Canonical {
             value: ty!(apply (item 0) (apply (item 1) (var 0) (var 1)) (var 2) (var 0) (var 1)),
             binders: vec![ParameterKind::Ty(U1), ParameterKind::Ty(U0), ParameterKind::Ty(U2)],
+        });
+}
+
+#[test]
+fn quantify_ty_under_binder() {
+    let mut table = InferenceTable::new();
+    let v0 = table.new_variable(U0);
+    let v1 = table.new_variable(U0);
+    let _r0 = table.new_lifetime_variable(U0);
+
+    // Unify v0 and v1.
+    let environment0 = Environment::new();
+    table.unify(&environment0, &v0.to_ty(), &v1.to_ty()).unwrap();
+
+    // Here: the `for_all` introduces 3 binders, so `(var 3)`
+    // references `v0` and `(var v4)` references `v1` above.
+    assert_eq!(
+        table.canonicalize(&ty!(for_all 3 (apply (item 0) (var 1) (var 3) (var 4) (lifetime (var 3))))).quantified,
+        Canonical {
+            value: ty!(for_all 3 (apply (item 0) (var 1) (var 3) (var 3) (lifetime (var 4)))),
+            binders: vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)]
         });
 }
