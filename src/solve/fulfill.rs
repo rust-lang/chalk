@@ -161,7 +161,6 @@ impl<'s> Fulfill<'s> {
     }
 
     fn prove(&mut self, wc: &InEnvironment<LeafGoal>) -> Result<PositiveSolution> {
-        println!("prove: {:?}", wc);
         let canonicalized = self.infer.canonicalize(wc);
         let reduced_goal = canonicalized.quantified.into_reduced_goal();
         Ok(PositiveSolution {
