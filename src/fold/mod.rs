@@ -64,6 +64,22 @@ pub trait ExistentialFolder {
     fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime>;
 }
 
+/// A convenience trait. If you implement this, you get an
+/// implementation of `UniversalFolder` for free that simply ignores
+/// universal values (that is, it replaces them with themselves).
+pub trait IdentityExistentialFolder {
+}
+
+impl<T: IdentityExistentialFolder> ExistentialFolder for T {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+        Ok(Ty::Var(depth + binders))
+    }
+
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+        Ok(Lifetime::Var(depth + binders))
+    }
+}
+
 pub trait UniversalFolder {
     /// Invoked for `Ty::Apply` instances where the type name is a `TypeName::ForAll`.
     /// Returns a type to use instead, which should be suitably shifted to account for `binders`.
