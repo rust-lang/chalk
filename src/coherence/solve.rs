@@ -88,6 +88,8 @@ impl Solver {
     //      exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz }
     //
     fn overlaps(&mut self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
+        debug_heading!("overlaps(lhs={:?}, rhs={:?})", lhs, rhs);
+
         let lhs_len = lhs.binders.len();
 
         // Join the two impls' binders together
@@ -120,7 +122,10 @@ impl Solver {
 
         self.solve_closed_goal(InEnvironment::empty(goal))
             .ok()
-            .map(|sol| sol.has_definite())
+            .map(|sol| {
+                debug!("solution = {:?}", sol);
+                sol.has_definite()
+            })
             .unwrap_or(false)
     }
 
