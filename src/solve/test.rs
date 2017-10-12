@@ -1610,3 +1610,73 @@ fn mixed_semantics() {
         }
     }
 }
+
+
+#[test]
+fn partial_overlap_1() {
+    test! {
+        program {
+            trait Marker {}
+            trait Foo {}
+            trait Bar {}
+
+            impl<T> Marker for T where T: Foo {}
+            impl<T> Marker for T where T: Bar {}
+        }
+
+        goal {
+            forall<T> {
+                if (T: Foo, T: Bar) { T: Marker }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn partial_overlap_2() {
+    test! {
+        program {
+            trait Marker<T> {}
+            trait Foo {}
+            trait Bar {}
+
+            struct i32 {}
+            struct u32 {}
+
+            impl<T> Marker<i32> for T where T: Foo {}
+            impl<T> Marker<u32> for T where T: Bar {}
+        }
+
+        goal {
+            forall<T> {
+                if (T: Foo, T: Bar) {
+                    exists<A> { T: Marker<A> }
+                }
+            }
+        } yields {
+            "Ambiguous"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Foo, T: Bar) {
+                    T: Marker<u32>
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Foo, T: Bar) {
+                    T: Marker<i32>
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
