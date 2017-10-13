@@ -166,7 +166,7 @@ pub trait Fold: Debug {
     /// values, in which case owned values are produced (for example,
     /// one can fold over a `&T` value where `T: Fold`, in which case
     /// you get back a `T`, not a `&T`).
-    type Result;
+    type Result: Fold;
 
     /// Apply the given folder `folder` to `self`; `binders` is the
     /// number of binders that are in scope when beginning the
