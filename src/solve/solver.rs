@@ -95,6 +95,8 @@ impl Solver {
     /// solution is produced with substitution `?0 := u8`. The `?0` is drawn
     /// from the number of the instantiated existential.
     pub fn solve_closed_goal(&mut self, goal: InEnvironment<Goal>) -> Result<Solution> {
+        debug_heading!("solve_closed_goal(goal={:?})", goal);
+
         let mut fulfill = Fulfill::new(self);
         fulfill.push_goal(&goal.environment, goal.goal);
 
