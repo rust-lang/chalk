@@ -376,7 +376,7 @@ enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g), Leaf(wc) });
 
 macro_rules! struct_fold {
-    ($s:ident $([$($n:ident),*])* { $($name:ident),* } $($w:tt)*) => {
+    ($s:ident $([$($n:ident),*])* { $($name:ident),* $(,)* } $($w:tt)*) => {
         impl $(<$($n),*>)* ::fold::Fold for $s $(<$($n),*>)* $($w)* {
             type Result = $s $(<$($n :: Result),*>)* ;
             fn fold_with(&self,
