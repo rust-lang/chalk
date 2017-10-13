@@ -23,9 +23,11 @@ pub mod fold;
 #[macro_use]
 pub mod zip;
 
+#[macro_use]
+pub mod ir;
+
 pub mod cast;
 pub mod coherence;
 pub mod errors;
-pub mod ir;
 pub mod lower;
 pub mod solve;
