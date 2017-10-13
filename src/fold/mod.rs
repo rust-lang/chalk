@@ -363,6 +363,7 @@ copy_fold!(ItemId);
 copy_fold!(usize);
 copy_fold!(QuantifierKind);
 // copy_fold!(TypeName); -- intentionally omitted! This is folded via `fold_ap`
+copy_fold!(());
 
 macro_rules! enum_fold {
     ($s:ident [$($n:ident),*] { $($variant:ident($($name:ident),*)),* } $($w:tt)*) => {
@@ -390,7 +391,8 @@ enum_fold!(DomainGoal[] { Implemented(a), Normalize(a), WellFormed(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
-enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g), Leaf(wc) });
+enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g), Leaf(wc),
+                    CannotProve(a) });
 
 macro_rules! struct_fold {
     ($s:ident $([$($n:ident),*])* { $($name:ident),* $(,)* } $($w:tt)*) => {

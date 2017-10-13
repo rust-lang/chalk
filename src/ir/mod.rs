@@ -5,6 +5,8 @@ use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
 use std::collections::{HashSet, HashMap, BTreeMap};
 use std::sync::Arc;
 
+#[macro_use] mod macros;
+
 pub mod could_match;
 
 pub type Identifier = InternedString;
@@ -594,6 +596,17 @@ pub enum Goal {
     And(Box<Goal>, Box<Goal>),
     Not(Box<Goal>),
     Leaf(LeafGoal),
+
+    /// Indicates something that cannot be proven to be true or false
+    /// definitively. This can occur with overflow but also with
+    /// unifications of skolemized variables like `forall<X,Y> { X = Y
+    /// }`. Of course, that statement is false, as there exist types
+    /// X, Y where `X = Y` is not true. But we treat it as "cannot
+    /// prove" so that `forall<X,Y> { not { X = Y } }` also winds up
+    /// as cannot prove.
+    ///
+    /// (TOTAL HACK: Having a unit result makes some of our macros work better.)
+    CannotProve(()),
 }
 
 impl Goal {

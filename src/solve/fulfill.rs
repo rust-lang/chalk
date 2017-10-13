@@ -157,6 +157,9 @@ impl<'s> Fulfill<'s> {
             Goal::Leaf(wc) => {
                 self.obligations.push(Obligation::Prove(InEnvironment::new(environment, wc)));
             }
+            Goal::CannotProve(()) => {
+                self.cannot_prove = true;
+            }
         }
     }
 

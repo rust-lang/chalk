@@ -230,11 +230,15 @@ impl Zip for Goal {
             (&Goal::Leaf(ref f_a), &Goal::Leaf(ref f_b)) => {
                 Zip::zip_with(zipper, f_a, f_b)
             }
+            (&Goal::CannotProve(()), &Goal::CannotProve(())) => {
+                Ok(())
+            }
             (&Goal::Quantified(..), _) |
             (&Goal::Implies(..), _) |
             (&Goal::And(..), _) |
             (&Goal::Not(..), _) |
-            (&Goal::Leaf(..), _) => {
+            (&Goal::Leaf(..), _) |
+            (&Goal::CannotProve(..), _) => {
                 bail!("cannot zip `{:?}` and `{:?}`", a, b)
             }
         }
