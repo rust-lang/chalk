@@ -78,8 +78,7 @@ impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
 /// their contents (note that free variables that are encountered in
 /// that process may still be substituted). The vast majority of
 /// folders implement this trait.
-pub trait DefaultTypeFolder {
-}
+pub trait DefaultTypeFolder {}
 
 impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for T {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
@@ -113,8 +112,7 @@ pub trait ExistentialFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `UniversalFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-pub trait IdentityExistentialFolder {
-}
+pub trait IdentityExistentialFolder {}
 
 impl<T: IdentityExistentialFolder> ExistentialFolder for T {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
@@ -135,21 +133,28 @@ pub trait UniversalFolder {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Result<Ty>;
 
     /// As with `fold_free_universal_ty`, but for lifetimes.
-    fn fold_free_universal_lifetime(&mut self, universe: UniverseIndex, binders: usize) -> Result<Lifetime>;
+    fn fold_free_universal_lifetime(
+        &mut self,
+        universe: UniverseIndex,
+        binders: usize,
+    ) -> Result<Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
 /// implementation of `UniversalFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-pub trait IdentityUniversalFolder {
-}
+pub trait IdentityUniversalFolder {}
 
 impl<T: IdentityUniversalFolder> UniversalFolder for T {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Result<Ty> {
         Ok(TypeName::ForAll(universe).to_ty())
     }
 
-    fn fold_free_universal_lifetime(&mut self, universe: UniverseIndex, _binders: usize) -> Result<Lifetime> {
+    fn fold_free_universal_lifetime(
+        &mut self,
+        universe: UniverseIndex,
+        _binders: usize,
+    ) -> Result<Lifetime> {
         Ok(universe.to_lifetime())
     }
 }
@@ -233,11 +238,7 @@ impl Fold for Ty {
     }
 }
 
-pub fn super_fold_ty(folder: &mut Folder,
-                     ty: &Ty,
-                     binders: usize)
-                     -> Result<Ty>
-{
+pub fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Result<Ty> {
     match *ty {
         Ty::Var(depth) => if depth >= binders {
             folder.fold_free_existential_ty(depth - binders, binders)
@@ -245,13 +246,18 @@ pub fn super_fold_ty(folder: &mut Folder,
             Ok(Ty::Var(depth))
         },
         Ty::Apply(ref apply) => {
-            let &ApplicationTy { name, ref parameters } = apply;
+            let &ApplicationTy {
+                name,
+                ref parameters,
+            } = apply;
             match name {
                 TypeName::ForAll(ui) => {
-                    assert!(parameters.is_empty(),
-                            "type {:?} with parameters {:?}",
-                            ty,
-                            parameters);
+                    assert!(
+                        parameters.is_empty(),
+                        "type {:?} with parameters {:?}",
+                        ty,
+                        parameters
+                    );
                     folder.fold_free_universal_ty(ui, binders)
                 }
 
@@ -269,19 +275,32 @@ pub fn super_fold_ty(folder: &mut Folder,
 impl Fold for QuantifiedTy {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        let QuantifiedTy { num_binders, ref ty } = *self;
-        Ok(QuantifiedTy { num_binders, ty: ty.fold_with(folder, binders + num_binders)? })
+        let QuantifiedTy {
+            num_binders,
+            ref ty,
+        } = *self;
+        Ok(QuantifiedTy {
+            num_binders,
+            ty: ty.fold_with(folder, binders + num_binders)?,
+        })
     }
 }
 
 impl<T> Fold for Binders<T>
-    where T: Fold
+where
+    T: Fold,
 {
     type Result = Binders<T::Result>;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        let Binders { binders: ref self_binders, value: ref self_value } = *self;
+        let Binders {
+            binders: ref self_binders,
+            value: ref self_value,
+        } = *self;
         let value = self_value.fold_with(folder, binders + self_binders.len())?;
-        Ok(Binders { binders: self_binders.clone(), value: value })
+        Ok(Binders {
+            binders: self_binders.clone(),
+            value: value,
+        })
     }
 }
 
@@ -292,20 +311,18 @@ impl Fold for Lifetime {
     }
 }
 
-pub fn super_fold_lifetime(folder: &mut Folder,
-                           lifetime: &Lifetime,
-                           binders: usize)
-                           -> Result<Lifetime>
-{
+pub fn super_fold_lifetime(
+    folder: &mut Folder,
+    lifetime: &Lifetime,
+    binders: usize,
+) -> Result<Lifetime> {
     match *lifetime {
         Lifetime::Var(depth) => if depth >= binders {
             folder.fold_free_existential_lifetime(depth - binders, binders)
         } else {
             Ok(Lifetime::Var(depth))
         },
-        Lifetime::ForAll(universe) => {
-            folder.fold_free_universal_lifetime(universe, binders)
-        }
+        Lifetime::ForAll(universe) => folder.fold_free_universal_lifetime(universe, binders),
     }
 }
 
@@ -391,14 +408,26 @@ macro_rules! struct_fold {
     }
 }
 
-struct_fold!(ProjectionTy { associated_ty_id, parameters });
-struct_fold!(TraitRef { trait_id, parameters });
+struct_fold!(ProjectionTy {
+    associated_ty_id,
+    parameters,
+});
+struct_fold!(TraitRef {
+    trait_id,
+    parameters,
+});
 struct_fold!(Normalize { projection, ty });
-struct_fold!(AssociatedTyValue { associated_ty_id, value });
+struct_fold!(AssociatedTyValue {
+    associated_ty_id,
+    value,
+});
 struct_fold!(AssociatedTyValueBound { ty, where_clauses });
 struct_fold!(Environment { universe, clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(EqGoal { a, b });
-struct_fold!(ProgramClauseImplication { consequence, conditions });
+struct_fold!(ProgramClauseImplication {
+    consequence,
+    conditions,
+});
 struct_fold!(ConstrainedSubst { subst, constraints });
 // struct_fold!(ApplicationTy { name, parameters }); -- intentionally omitted, folded through Ty
