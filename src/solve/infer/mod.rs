@@ -106,12 +106,23 @@ impl InferenceTable {
         }
     }
 
-    fn normalize_shallow(&mut self, leaf: &Ty) -> Option<Ty> {
-        leaf.inference_var()
-            .and_then(|var| {
-                match self.ty_unify.probe_value(var) {
-                    InferenceValue::Unbound(_) => None,
-                    InferenceValue::Bound(ref val) => Some(val.clone()),
+    /// If type `leaf` is a free inference variable, and that variable has been
+    /// bound, returns `Some(T)` where `T` is the type to which it has been bound.
+    ///
+    /// `binders` is the number of binders under which `leaf` appears;
+    /// the return value will also be shifted accordingly so that it
+    /// can appear under that same number of binders.
+    pub fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty> {
+        leaf.var()
+            .and_then(|depth| {
+                if depth < binders {
+                    None // bound variable, not an inference var
+                } else {
+                    let var = TyInferenceVariable::from_depth(depth - binders);
+                    match self.ty_unify.probe_value(var) {
+                        InferenceValue::Unbound(_) => None,
+                        InferenceValue::Bound(ref val) => Some(val.up_shift(binders)),
+                    }
                 }
             })
     }

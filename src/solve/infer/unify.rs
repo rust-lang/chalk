@@ -84,9 +84,9 @@ impl<'t> Unifier<'t> {
 
     fn unify_ty_ty<'a>(&mut self, a: &'a Ty, b: &'a Ty) -> Result<()> {
         //         ^^                 ^^         ^^ FIXME rustc bug
-        if let Some(n_a) = self.table.normalize_shallow(a) {
+        if let Some(n_a) = self.table.normalize_shallow(a, 0) {
             return self.unify_ty_ty(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_shallow(b) {
+        } else if let Some(n_b) = self.table.normalize_shallow(b, 0) {
             return self.unify_ty_ty(a, &n_b);
         }
 
