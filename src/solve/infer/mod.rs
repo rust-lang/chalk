@@ -3,8 +3,8 @@ use errors::*;
 use ir::*;
 
 mod instantiate;
+mod invert;
 mod canonicalize;
-mod negate;
 mod unify;
 mod var;
 #[cfg(test)] mod test;

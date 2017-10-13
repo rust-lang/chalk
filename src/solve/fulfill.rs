@@ -173,7 +173,7 @@ impl<'s> Fulfill<'s> {
     }
 
     fn refute(&mut self, goal: &InEnvironment<Goal>) -> Result<NegativeSolution> {
-        let canonicalized = match self.infer.negated(goal) {
+        let canonicalized = match self.infer.invert_then_canonicalize(goal) {
             Some(v) => v,
             None => {
                 // Treat non-ground negatives as ambiguous. Note that, as inference
