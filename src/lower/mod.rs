@@ -94,11 +94,23 @@ impl<'k> Env<'k> {
 }
 
 pub trait LowerProgram {
+    /// Lowers from a Program AST to the internal IR for a program.
     fn lower(&self) -> Result<ir::Program>;
+
+    /// As above, but skips the coherence step. This is a hack used
+    /// internally in SLG testing to overcome shortcomings of the (for
+    /// now...?)  default engine used in those checks.
+    fn lower_without_coherence(&self) -> Result<ir::Program>;
 }
 
 impl LowerProgram for Program {
     fn lower(&self) -> Result<ir::Program> {
+        let mut program = self.lower_without_coherence()?;
+        program.record_specialization_priorities()?;
+        Ok(program)
+    }
+
+    fn lower_without_coherence(&self) -> Result<ir::Program> {
         let mut index = 0;
         let mut next_item_id = || -> ir::ItemId {
             let i = index;
@@ -191,7 +203,6 @@ impl LowerProgram for Program {
             default_impl_data: Vec::new(),
         };
         program.add_default_impls();
-        program.record_specialization_priorities()?;
         Ok(program)
     }
 }
