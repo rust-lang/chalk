@@ -1680,3 +1680,36 @@ fn partial_overlap_2() {
         }
     }
 }
+
+#[test]
+#[ignore]
+fn partial_overlap_3() {
+    test! {
+        program {
+            trait Marker {}
+            trait Foo {}
+            trait Bar {}
+
+            impl<T> Marker for T where T: Foo {}
+            impl<T> Marker for T where T: Bar {}
+
+            struct i32 {}
+            impl Foo for i32 {}
+            impl Bar for i32 {}
+        }
+
+        goal {
+            forall<T> {
+                if (T: Foo, T: Bar) { T: Marker }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            i32: Marker
+        } yields {
+            "Unique"
+        }
+    }
+}
