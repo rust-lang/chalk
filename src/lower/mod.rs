@@ -157,6 +157,7 @@ impl LowerProgram for Program {
                 Item::StructDefn(ref d) => d.lower_type_kind()?,
                 Item::TraitDefn(ref d) => d.lower_type_kind()?,
                 Item::Impl(_) => continue,
+                Item::Clause(_) => continue,
             };
             type_ids.insert(k.name, item_id);
             type_kinds.insert(item_id, k);
@@ -166,6 +167,7 @@ impl LowerProgram for Program {
         let mut trait_data = HashMap::new();
         let mut impl_data = HashMap::new();
         let mut associated_ty_data = HashMap::new();
+        let mut custom_clauses = Vec::new();
         for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let empty_env = Env {
                 type_ids: &type_ids,
@@ -202,6 +204,9 @@ impl LowerProgram for Program {
                 Item::Impl(ref d) => {
                     impl_data.insert(item_id, d.lower_impl(&empty_env)?);
                 }
+                Item::Clause(ref clause) => {
+                    custom_clauses.push(clause.lower_clause(&empty_env)?);
+                }
             }
         }
 
@@ -212,6 +217,7 @@ impl LowerProgram for Program {
             trait_data,
             impl_data,
             associated_ty_data,
+            custom_clauses,
             default_impl_data: Vec::new(),
         };
         program.add_default_impls();
@@ -319,6 +325,15 @@ impl LowerParameterMap for TraitDefn {
     }
 }
 
+impl LowerParameterMap for Clause {
+    fn synthetic_parameters(&self) -> Option<ir::ParameterKind<ir::Identifier>> {
+        None
+    }
+
+    fn declared_parameters(&self) -> &[ParameterKind] {
+        &self.parameter_kinds
+    }
+}
 
 trait LowerParameterKind {
     fn lower(&self) -> ir::ParameterKind<ir::Identifier>;
@@ -728,6 +743,37 @@ impl LowerImpl for Impl {
     }
 }
 
+trait LowerClause {
+    fn lower_clause(&self, empty_env: &Env) -> Result<ir::ProgramClause>;
+}
+
+impl LowerClause for Clause {
+    fn lower_clause(&self, empty_env: &Env) -> Result<ir::ProgramClause> {
+        let implication = empty_env.in_binders(self.all_parameters(), |env| {
+            let consequence: ir::DomainGoal = self.consequence.lower(env)?;
+            let mut conditions: Vec<ir::Goal> = self.conditions
+                .iter()
+                .map(|g| g.lower(env).map(|g| *g))
+                .collect::<Result<_>>()?;
+
+            // Subtle: in the SLG solver, we pop conditions from R to
+            // L. To preserve the expected order (L to R), we must
+            // therefore reverse.
+            conditions.reverse();
+
+            Ok(ir::ProgramClauseImplication {
+                consequence,
+                conditions,
+            })
+        })?;
+
+        Ok(ir::ProgramClause {
+            implication,
+            fallback_clause: false,
+        })
+    }
+}
+
 trait LowerAssocTyValue {
     fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssociatedTyValue>;
 }
@@ -878,6 +924,8 @@ impl ir::Program {
         //
         //       forall P0...Pn. Something :- Conditions
         let mut program_clauses = vec![];
+
+        program_clauses.extend(self.custom_clauses.iter().cloned());
 
         program_clauses.extend(
             self.struct_data

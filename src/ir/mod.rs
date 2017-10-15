@@ -33,6 +33,9 @@ pub struct Program {
 
     /// For each default impl (automatically generated for auto traits):
     pub default_impl_data: Vec<DefaultImplDatum>,
+
+    /// For each user-specified clause
+    pub custom_clauses: Vec<ProgramClause>,
 }
 
 impl Program {

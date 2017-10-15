@@ -16,6 +16,7 @@ Item: Option<Item> = {
     StructDefn => Some(Item::StructDefn(<>)),
     TraitDefn => Some(Item::TraitDefn(<>)),
     Impl => Some(Item::Impl(<>)),
+    Clause => Some(Item::Clause(<>)),
 };
 
 Comment: () = r"//.*";
@@ -134,6 +135,24 @@ Field: Field = {
         name: n,
         ty: t,
     }
+};
+
+Clause: Clause = {
+    "forall" <pk:Angle<ParameterKind>> "{" <wc:WhereClause> "if" <g:Comma<Goal1>> "}" => {
+        Clause {
+            parameter_kinds: pk,
+            consequence: wc,
+            conditions: g,
+        }
+    },
+
+    "forall" <pk:Angle<ParameterKind>> "{" <wc:WhereClause> "}" => {
+        Clause {
+            parameter_kinds: pk,
+            consequence: wc,
+            conditions: vec![],
+        }
+    },
 };
 
 WhereClauses: Vec<WhereClause> = {
