@@ -582,10 +582,35 @@ impl FullyReducedGoal {
 }
 
 impl<T> Canonical<T> {
-    pub fn map<OP, U>(self, op: OP) -> Canonical<U>
-        where OP: FnOnce(T) -> U
+    /// Maps the contents using `op`, but preserving the binders.
+    ///
+    /// NB. `op` will be invoked with an instantiated version of the
+    /// canonical value, where inference variables (from a fresh
+    /// inference context) are used in place of the quantified free
+    /// variables. The result should be in terms of those same
+    /// inference variables and will be re-canonicalized.
+    pub fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
+        where OP: FnOnce(T::Result) -> U,
+              T: Fold,
+              U: Fold,
     {
-        Canonical { value: op(self.value), binders: self.binders }
+        // Subtle: It is only quite rarely correct to apply `op` and
+        // just re-use our existing binders. For that to be valid, the
+        // result of `op` would have to ensure that it re-uses all the
+        // existing free variables and in the same order. Otherwise,
+        // the canonical form would be different: the variables might
+        // be numbered differently, or some may not longer be used.
+        // This would mean that two canonical values could no longer
+        // be compared with `Eq`, which defeats a key invariant of the
+        // `Canonical` type (indeed, its entire reason for existence).
+        use solve::infer::InferenceTable;
+        let mut infer = InferenceTable::new();
+        let snapshot = infer.snapshot();
+        let instantiated_value = infer.instantiate_canonical(&self);
+        let mapped_value = op(instantiated_value);
+        let result = infer.canonicalize(&mapped_value);
+        infer.rollback_to(snapshot);
+        result.quantified
     }
 }
 

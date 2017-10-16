@@ -1,6 +1,31 @@
 use ir::*;
 use std::marker::PhantomData;
 
+/// The `Cast` trait is used to make annoying upcasts between
+/// logically equivalent types that imply wrappers. For example, one
+/// could convert a `DomainGoal` into a `Goal` by doing:
+///
+/// ```ignore
+/// let goal: Goal = domain_goal.cast();
+/// ```
+///
+/// This is equivalent to the more explicit:
+///
+/// ```ignore
+/// let goal: Goal = Goal::DomainGoal(domain_goal)
+/// ```
+///
+/// Another useful trick is the `casted()` iterator adapter, which
+/// casts each element in the iterator as it is produced (you must
+/// have the `Caster` trait in scope for that).
+///
+/// # Invariant
+///
+/// `Cast` imposes a key invariant. You can only implement `T:
+/// Cast<U>` if both `T` and `U` have the same semantic meaning. Also,
+/// as part of this, they should always use the same set of free
+/// variables (the `Canonical` implementation, for example, relies on
+/// that).
 pub trait Cast<T>: Sized {
     fn cast(self) -> T;
 }
@@ -123,9 +148,23 @@ macro_rules! map_impl {
 }
 
 map_impl!(impl[T: Cast<U>, U] Cast<Option<U>> for Option<T>);
-map_impl!(impl[T: Cast<U>, U] Cast<Canonical<U>> for Canonical<T>);
 map_impl!(impl[T: Cast<U>, U] Cast<InEnvironment<U>> for InEnvironment<T>);
 map_impl!(impl[T: Cast<U>, U, E] Cast<Result<U, E>> for Result<T, E>);
+
+impl<T, U> Cast<Canonical<U>> for Canonical<T>
+    where T: Cast<U>
+{
+    fn cast(self) -> Canonical<U> {
+        // Subtle point: It should be ok to re-use the binders here,
+        // because `cast()` never introduces new inference variables,
+        // nor changes the "substance" of the type we are working
+        // with. It just introduces new wrapper types.
+        Canonical {
+            value: self.value.cast(),
+            binders: self.binders
+        }
+    }
+}
 
 impl<T, U> Cast<Vec<U>> for Vec<T>
     where T: Cast<U>
@@ -164,6 +203,8 @@ impl<I: Iterator, U> Iterator for Casted<I, U> where I::Item: Cast<U> {
     }
 }
 
+/// An iterator adapter that casts each element we are iterating over
+/// to some other type.
 pub trait Caster<U>: Sized {
     fn casted(self) -> Casted<Self, U>;
 }
