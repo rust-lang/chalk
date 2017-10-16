@@ -120,13 +120,8 @@ impl Solver {
                     .expect("Every trait takes at least one input type")
                     .quantify(QuantifierKind::Exists, binders);
 
-        self.solve_closed_goal(InEnvironment::empty(goal))
-            .ok()
-            .map(|sol| {
-                debug!("solution = {:?}", sol);
-                sol.has_definite()
-            })
-            .unwrap_or(false)
+        // Unless we get an error, we consider things to overlap.
+        self.solve_closed_goal(InEnvironment::empty(goal)).is_ok()
     }
 
     // Test for specialization.
