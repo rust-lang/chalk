@@ -220,6 +220,7 @@ macro_rules! tuple_fold {
 tuple_fold!(A, B);
 tuple_fold!(A, B, C);
 tuple_fold!(A, B, C, D);
+tuple_fold!(A, B, C, D, E);
 
 impl<T: Fold> Fold for Option<T> {
     type Result = Option<T::Result>;

@@ -323,6 +323,13 @@ pub enum ParameterKind<T, L = T> {
 }
 
 impl<T> ParameterKind<T> {
+    pub fn into_inner(self) -> T {
+        match self {
+            ParameterKind::Ty(t) => t,
+            ParameterKind::Lifetime(t) => t,
+        }
+    }
+
     pub fn map<OP, U>(self, op: OP) -> ParameterKind<U>
         where OP: FnOnce(T) -> U
     {

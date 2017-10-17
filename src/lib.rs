@@ -2,6 +2,7 @@
 #![feature(conservative_impl_trait)]
 #![feature(catch_expr)]
 #![feature(match_default_bindings)]
+#![feature(step_trait)]
 
 #![allow(dead_code)] // FIXME- while iterating
 
