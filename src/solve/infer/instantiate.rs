@@ -1,4 +1,5 @@
 use fold::*;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 
 use super::*;
@@ -17,6 +18,30 @@ impl InferenceTable {
         debug!("instantiate: vars={:?}", vars);
         let mut instantiator = Instantiator { vars };
         arg.fold_with(&mut instantiator, 0).expect("")
+    }
+
+    /// Given the binders from a canonicalized value C, returns a
+    /// substitution S mapping each free variable in C to a fresh
+    /// inference variable. This substitution can then be applied to
+    /// C, which would be equivalent to
+    /// `self.instantiate_canonical(v)`.
+    pub fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
+        let mut tys = BTreeMap::new();
+        let mut lifetimes = BTreeMap::new();
+
+        for (i, kind) in binders.iter().enumerate() {
+            match *kind {
+                ParameterKind::Ty(ui) => {
+                    tys.insert(TyInferenceVariable::from_depth(i), self.new_variable(ui).to_ty());
+                }
+                ParameterKind::Lifetime(ui) => {
+                    lifetimes.insert(LifetimeInferenceVariable::from_depth(i),
+                                     self.new_lifetime_variable(ui).to_lifetime());
+                }
+            }
+        }
+
+        Substitution { tys, lifetimes }
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.

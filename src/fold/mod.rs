@@ -304,6 +304,24 @@ where
     }
 }
 
+impl<T> Fold for Canonical<T>
+where
+    T: Fold,
+{
+    type Result = Canonical<T::Result>;
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+        let Canonical {
+            binders: ref self_binders,
+            value: ref self_value,
+        } = *self;
+        let value = self_value.fold_with(folder, binders + self_binders.len())?;
+        Ok(Canonical {
+            binders: self_binders.clone(),
+            value: value,
+        })
+    }
+}
+
 impl Fold for Lifetime {
     type Result = Self;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {

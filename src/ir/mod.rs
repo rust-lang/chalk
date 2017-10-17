@@ -1,6 +1,6 @@
 use cast::Cast;
 use chalk_parse::ast;
-use fold::Fold;
+use fold::{DefaultTypeFolder, Fold, ExistentialFolder, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;
 use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
 use std::collections::{HashSet, HashMap, BTreeMap};
@@ -613,6 +613,12 @@ impl<T> Canonical<T> {
         infer.rollback_to(snapshot);
         result.quantified
     }
+
+    pub fn instantiate_with_subst(&self, mut subst: &Substitution) -> T::Result
+        where T: Fold
+    {
+        self.value.fold_with(&mut subst, 0).unwrap()
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -706,7 +712,7 @@ pub enum Constraint {
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Substitution {
     // Use BTreeMap for extracting in order (mostly for debugging/testing)
     pub tys: BTreeMap<TyInferenceVariable, Ty>,
@@ -745,7 +751,35 @@ impl Substitution {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+impl<'a> DefaultTypeFolder for &'a Substitution {
+}
+
+impl<'a> ExistentialFolder for &'a Substitution {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> ::errors::Result<Ty> {
+        let v = TyInferenceVariable::from_depth(depth);
+        if let Some(ty) = self.tys.get(&v) {
+            // Substitutions do not have to be complete.
+            Ok(ty.up_shift(binders))
+        } else {
+            Ok(Ty::Var(depth + binders))
+        }
+    }
+
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> ::errors::Result<Lifetime> {
+        let v = LifetimeInferenceVariable::from_depth(depth);
+        if let Some(l) = self.lifetimes.get(&v) {
+            // Substitutions do not have to be complete.
+            Ok(l.up_shift(binders))
+        } else {
+            Ok(Lifetime::Var(depth + binders))
+        }
+    }
+}
+
+impl<'a> IdentityUniversalFolder for &'a Substitution {
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {
     pub subst: Substitution,
     pub constraints: Vec<InEnvironment<Constraint>>,
