@@ -994,7 +994,7 @@ fn mixed_indices_unify() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := ?0, ?1 := ?0, '?0 := '?1], lifetime constraints []"
+            "Unique; substitution [?1 := ?0, ?2 := ?0, '?0 := '?1], lifetime constraints []"
         }
     }
 }
@@ -1018,7 +1018,7 @@ fn mixed_indices_match_program() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := S, ?1 := S, '?0 := '?0], lifetime constraints []"
+            "Unique; substitution [?1 := S, ?2 := S, '?0 := '?0], lifetime constraints []"
         }
     }
 }

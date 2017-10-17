@@ -99,29 +99,7 @@ impl Solver {
                                 canonical_goal: &Canonical<InEnvironment<Goal>>)
                                 -> Result<Solution> {
         let mut fulfill = Fulfill::new(self);
-
-        let goal = fulfill.instantiate(canonical_goal.binders.iter().cloned(),
-                                       &canonical_goal.value);
-
-        // We use this somewhat hacky approach to get our hands on the
-        // instantiated variables after instantiating the canonical
-        // goal. This substitution is only used for REPL/debugging
-        // purposes anyway; in rustc, the top-level interaction would
-        // happen by manipulating a Fulfill more directly.
-        let subst = Substitution {
-            tys: fulfill
-                .ty_vars()
-                .iter()
-                .map(|t| (*t, t.to_ty()))
-                .collect(),
-            lifetimes: fulfill
-                .lifetime_vars()
-                .iter()
-                .map(|lt| (*lt, lt.to_lifetime()))
-                .collect(),
-        };
-
-        fulfill.push_goal(&goal.environment, goal.goal);
+        let subst = fulfill.instantiate_and_push(canonical_goal);
         fulfill.solve(subst)
     }
 

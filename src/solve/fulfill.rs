@@ -90,6 +90,17 @@ impl<'s> Fulfill<'s> {
         }
     }
 
+    /// Instantiates the given goal and pushes it as a goal to be
+    /// proven. Returns a substitution that can be given to `solve`.
+    pub fn instantiate_and_push(&mut self, canonical_goal: &Canonical<InEnvironment<Goal>>)
+                                -> Substitution
+    {
+        let subst = self.infer.fresh_subst(&canonical_goal.binders);
+        let goal = canonical_goal.instantiate_with_subst(&subst);
+        self.push_goal(&goal.environment, goal.goal);
+        subst
+    }
+
     /// Wraps `InferenceTable::instantiate`
     pub fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
         where T: Fold,
