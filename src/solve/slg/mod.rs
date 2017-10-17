@@ -53,6 +53,7 @@ use cast::{Cast, Caster};
 use ir::*;
 use ir::could_match::CouldMatch;
 use solve::infer::{InferenceTable, UnificationResult};
+use stacker;
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::cmp::min;
@@ -731,22 +732,24 @@ impl Forest {
             minimums
         );
 
-        self.snapshotted(|this| {
-            match ex_clause.subgoals.pop() {
-                // No goals left to prove: this is an answer.
-                None => this.answer(goal_depth, ex_clause, minimums),
+        maybe_grow_stack(|| {
+            self.snapshotted(|this| {
+                match ex_clause.subgoals.pop() {
+                    // No goals left to prove: this is an answer.
+                    None => this.answer(goal_depth, ex_clause, minimums),
 
-                // Positive goal.
-                Some(Literal::Positive(selected_goal)) => {
-                    this.positive(goal_depth, ex_clause, selected_goal, minimums)
-                }
+                    // Positive goal.
+                    Some(Literal::Positive(selected_goal)) => {
+                        this.positive(goal_depth, ex_clause, selected_goal, minimums)
+                    }
 
-                // Negative goal. EWFS checks for whether `selected_goal`
-                // is ground here. We push this check into `negative`.
-                Some(Literal::Negative(selected_goal)) => {
-                    this.negative(goal_depth, ex_clause, selected_goal, minimums)
+                    // Negative goal. EWFS checks for whether `selected_goal`
+                    // is ground here. We push this check into `negative`.
+                    Some(Literal::Negative(selected_goal)) => {
+                        this.negative(goal_depth, ex_clause, selected_goal, minimums)
+                    }
                 }
-            }
+            })
         })
     }
 
@@ -2321,3 +2324,17 @@ impl iter::Step for TableIndex {
         usize::add_usize(&self.value, n).map(|value| TableIndex { value })
     }
 }
+
+/// Because we recurse so deeply, we rely on stacker to
+/// avoid overflowing the stack.
+fn maybe_grow_stack<F,R>(op: F) -> R
+    where
+    F: FnOnce() -> R
+{
+    // These numbers are somewhat randomly chosen to make tests work
+    // well enough on my system. In particular, because we only test
+    // for growing the stack in `new_clause`, a red zone of 32K was
+    // insufficient to prevent stack overflow. - nikomatsakis
+    stacker::maybe_grow(256 * 1024, 2 * 1024 * 1024, op)
+}
+

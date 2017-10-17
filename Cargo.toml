@@ -11,6 +11,7 @@ lalrpop-intern = "0.13.1"
 lazy_static = "0.2.2"
 petgraph = "0.4.5"
 rustyline = "1.0"
+stacker = "0.1.2"
 
 [dependencies.chalk-parse]
 path = "chalk-parse"
