@@ -123,8 +123,8 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 fn goal(text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let mut solver = Solver::new(&prog.env, CycleStrategy::Tabling, solver::get_overflow_depth());
-    let goal = ir::InEnvironment::new(&ir::Environment::new(), *goal);
-    match solver.solve_closed_goal(goal) {
+    let peeled_goal = goal.into_peeled_goal();
+    match solver.solve_canonical_goal(&peeled_goal) {
         Ok(v) => println!("{}\n", v),
         Err(e) => println!("No possible solution: {}\n", e),
     }

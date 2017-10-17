@@ -1,5 +1,6 @@
 use cast::Cast;
 use chalk_parse::ast;
+use fold::Fold;
 use lalrpop_intern::InternedString;
 use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
 use std::collections::{HashSet, HashMap, BTreeMap};
@@ -644,6 +645,47 @@ impl Goal {
 
     pub fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
         Goal::Implies(predicates, Box::new(self))
+    }
+
+    /// Returns a canonical goal in which the outermost `exists<>` and
+    /// `forall<>` quantifiers (as well as implications) have been
+    /// "peeled" and are converted into free universal or existential
+    /// variables. Assumes that this goal is a "closed goal" which
+    /// does not -- at present -- contain any variables. Useful for
+    /// REPLs and tests but not much else.
+    pub fn into_peeled_goal(self) -> Canonical<InEnvironment<Goal>> {
+        use solve::infer::InferenceTable;
+        let mut infer = InferenceTable::new();
+        let peeled_goal = {
+            let mut env_goal = InEnvironment::new(&Environment::new(), self);
+            loop {
+                let InEnvironment { environment, goal } = env_goal;
+                match goal {
+                    Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
+                        let InEnvironment { environment, goal } =
+                            subgoal.instantiate_universally(&environment);
+                        env_goal = InEnvironment::new(&environment, *goal);
+                    }
+
+                    Goal::Quantified(QuantifierKind::Exists, subgoal) => {
+                        let subgoal = infer.instantiate_in(
+                            environment.universe,
+                            subgoal.binders.iter().cloned(),
+                            &subgoal.value,
+                        );
+                        env_goal = InEnvironment::new(&environment, *subgoal);
+                    }
+
+                    Goal::Implies(wc, subgoal) => {
+                        let new_environment = &environment.add_clauses(wc);
+                        env_goal = InEnvironment::new(&new_environment, *subgoal);
+                    }
+
+                    _ => break InEnvironment::new(&environment, goal),
+                }
+            }
+        };
+        infer.canonicalize(&peeled_goal).quantified
     }
 }
 

@@ -80,7 +80,7 @@ impl Solver {
         }
     }
 
-    /// Attempt to solve a *closed* goal. The substitution returned in the
+    /// Solves a canonical goal. The substitution returned in the
     /// solution will be for the fully decomposed goal. For example, given the
     /// program
     ///
@@ -91,37 +91,10 @@ impl Solver {
     /// impl<U> Foo<u8> for SomeType<U> { }
     /// ```
     ///
-    /// and the goal `exists<V> { forall<U> { SomeType<U>: Foo<V> } }`, a unique
-    /// solution is produced with substitution `?0 := u8`. The `?0` is drawn
-    /// from the number of the instantiated existential.
-    pub fn solve_closed_goal(&mut self, goal: InEnvironment<Goal>) -> Result<Solution> {
-        debug_heading!("solve_closed_goal(goal={:?})", goal);
-
-        let mut fulfill = Fulfill::new(self);
-        fulfill.push_goal(&goal.environment, goal.goal);
-
-        // We use this somewhat hacky approach to get our hands on the
-        // instantiated variables after pushing our initial goal. This
-        // substitution is only used for REPL/debugging purposes anyway; in
-        // rustc, the top-level interaction would happen by manipulating a
-        // Fulfill more directly.
-        let subst = Substitution {
-            tys: fulfill
-                .ty_vars()
-                .iter()
-                .map(|t| (*t, t.to_ty()))
-                .collect(),
-            lifetimes: fulfill
-                .lifetime_vars()
-                .iter()
-                .map(|lt| (*lt, lt.to_lifetime()))
-                .collect(),
-        };
-
-        fulfill.solve(subst)
-    }
-
-    /// This ought to be the *True* entry point.
+    /// and the goal `exists<V> { forall<U> { SomeType<U>: Foo<V> }
+    /// }`, `into_peeled_goal` can be used to create a canonical goal
+    /// `SomeType<!1>: Foo<?0>`. This function will then return a
+    /// solution with the substitution `?0 := u8`.
     pub fn solve_canonical_goal(&mut self,
                                 canonical_goal: &Canonical<InEnvironment<Goal>>)
                                 -> Result<Solution> {

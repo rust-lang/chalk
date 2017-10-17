@@ -121,7 +121,8 @@ impl Solver {
                     .quantify(QuantifierKind::Exists, binders);
 
         // Unless we get an error, we consider things to overlap.
-        self.solve_closed_goal(InEnvironment::empty(goal)).is_ok()
+        let canonical_goal = goal.into_peeled_goal();
+        self.solve_canonical_goal(&canonical_goal).is_ok()
     }
 
     // Test for specialization.
@@ -168,7 +169,7 @@ impl Solver {
                     .implied_by(more_special_wc)
                     .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
-        self.solve_closed_goal(InEnvironment::empty(goal)).ok().map_or(false, |sol| sol.is_unique())
+        self.solve_canonical_goal(&goal.into_peeled_goal()).ok().map_or(false, |sol| sol.is_unique())
     }
 }
 
