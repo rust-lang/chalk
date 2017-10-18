@@ -1681,8 +1681,9 @@ fn partial_overlap_2() {
     }
 }
 
+// FIXME: This test currently doesn't pass because overlapping
+// impls for marker traits are currently not supported
 #[test]
-#[ignore]
 fn partial_overlap_3() {
     test! {
         program {
