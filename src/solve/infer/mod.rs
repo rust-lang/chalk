@@ -2,9 +2,10 @@ use ena::unify as ena;
 use errors::*;
 use ir::*;
 
+mod canonicalize;
+mod normalize_deep;
 mod instantiate;
 mod invert;
-mod canonicalize;
 mod unify;
 mod var;
 #[cfg(test)] mod test;
