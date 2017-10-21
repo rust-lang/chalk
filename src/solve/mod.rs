@@ -195,30 +195,3 @@ impl fmt::Display for Solution {
     }
 }
 
-impl fmt::Display for Substitution {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        let mut first = true;
-
-        for (tv, ty) in &self.tys {
-            if first {
-                first = false;
-            } else {
-                write!(f, ", ")?;
-            }
-
-            write!(f, "{:?} := {:?}", tv, ty)?;
-        }
-
-        for (lv, lt) in &self.lifetimes {
-            if first {
-                first = false;
-            } else {
-                write!(f, ", ")?;
-            }
-
-            write!(f, "{:?} := {:?}", lv, lt)?;
-        }
-
-        Ok(())
-    }
-}
