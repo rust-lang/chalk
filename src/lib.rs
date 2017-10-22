@@ -4,8 +4,6 @@
 #![feature(match_default_bindings)]
 #![feature(step_trait)]
 
-#![allow(dead_code)] // FIXME- while iterating
-
 extern crate chalk_parse;
 #[macro_use]
 extern crate error_chain;

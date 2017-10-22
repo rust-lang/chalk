@@ -683,6 +683,7 @@ fn forall_equality() {
 
 /// Demonstrates that, given the expected value of the associated
 /// type, we can use that to narrow down the relevant impls.
+#[test]
 fn forall_projection() {
     test! {
         program {

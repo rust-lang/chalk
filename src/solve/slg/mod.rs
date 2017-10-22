@@ -170,14 +170,6 @@ struct Tables {
     tables: Vec<Table>,
 }
 
-struct TruthValues<'a> {
-    /// The tables, which all must be completely evaluated.
-    tables: &'a Tables,
-
-    /// Truth values for each table; initially populated with `None`.
-    truth_values: Vec<Option<TruthValue>>,
-}
-
 /// See `Forest`.
 #[derive(Default)]
 struct Stack {
@@ -403,11 +395,6 @@ enum Literal {
 
 enum_fold!(Literal[] { Positive(a), Negative(a) });
 
-/// A set of logical conditions, all of which must be true.
-struct Product {
-    literals: Vec<Literal>,
-}
-
 /// The `Minimums` structure is used to track the dependencies between
 /// some item E on the evaluation stack. In particular, it tracks
 /// cases where the success of E depends (or may depend) on items
@@ -460,9 +447,6 @@ enum Satisfiable<T> {
 
 type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
 type CanonicalGoal = Canonical<InEnvironment<Goal>>;
-type CanonicalDomainGoal = Canonical<InEnvironment<DomainGoal>>;
-type CanonicalSubst = Canonical<ConstrainedSubst>;
-type CanonicalExClause = Canonical<ExClause>;
 type CanonicalPendingExClause = Canonical<PendingExClause>;
 
 impl Forest {
@@ -489,11 +473,6 @@ impl Forest {
         forest.subgoal(root_table_depth, instantiated_goal, subst, &mut minimums)?;
         Simplification::simplify(&mut forest.tables);
         Ok(forest.tables[root_table].export_answers())
-    }
-
-    fn ambiguous_goal() -> InEnvironment<Goal> {
-        let environment = &Environment::new();
-        InEnvironment::new(environment, Goal::CannotProve(()))
     }
 
     /// Pushes a new goal onto the stack, creating a table entry in the process.
@@ -1968,10 +1947,6 @@ impl ChangedFlag {
 }
 
 impl Stack {
-    fn len(&self) -> usize {
-        self.stack.len()
-    }
-
     fn next_index(&self) -> StackIndex {
         StackIndex {
             value: self.stack.len(),
@@ -2025,10 +2000,6 @@ impl IndexMut<StackIndex> for Stack {
 impl Tables {
     fn indices(&self) -> Range<TableIndex> {
         TableIndex { value: 0 }..self.next_index()
-    }
-
-    fn len(&self) -> usize {
-        self.tables.len()
     }
 
     fn next_index(&self) -> TableIndex {
@@ -2128,37 +2099,13 @@ impl Table {
     fn is_not_satisfiable(&self) -> bool {
         self.answers.is_empty()
     }
-
-    /// True if all possible solutions have been evaluated.
-    fn is_completely_evaluated(&self) -> bool {
-        self.depth.is_none()
-    }
 }
 
 impl DelayedLiteralSets {
-    /// Number of distinct `DelayedLiterals` values represented here.
-    fn len(&self) -> usize {
-        match *self {
-            DelayedLiteralSets::None => 1,
-            DelayedLiteralSets::Some(ref set) => set.len(),
-        }
-    }
-
     fn is_empty(&self) -> bool {
         match *self {
             DelayedLiteralSets::None => true,
             DelayedLiteralSets::Some(_) => false,
-        }
-    }
-
-    fn into_sets_iter(self) -> impl Iterator<Item = DelayedLiteralSet> + 'static {
-        match self {
-            DelayedLiteralSets::None => Box::new(iter::once(DelayedLiteralSet {
-                delayed_literals: vec![],
-            })) as Box<Iterator<Item = DelayedLiteralSet>>,
-            DelayedLiteralSets::Some(s) => {
-                Box::new(s.into_iter()) as Box<Iterator<Item = DelayedLiteralSet>>
-            }
         }
     }
 }
@@ -2178,11 +2125,6 @@ impl Minimums {
     fn minimum_of_pos_and_neg(&self) -> DepthFirstNumber {
         min(self.positive, self.negative)
     }
-
-    fn reset_to_bottom_of_stack(&mut self) {
-        self.positive = DepthFirstNumber::MIN;
-        self.negative = DepthFirstNumber::MIN;
-    }
 }
 
 impl DepthFirstNumber {
@@ -2199,21 +2141,7 @@ impl DepthFirstNumber {
     }
 }
 
-impl TableIndex {
-    /// Index of the root table. This is always the first table
-    /// created.
-    const ROOT: TableIndex = TableIndex { value: 0 };
-}
-
 impl ExClause {
-    fn with_subgoals<I>(mut self, literals: I) -> Self
-    where
-        I: IntoIterator<Item = Literal>,
-    {
-        self.subgoals.extend(literals);
-        self
-    }
-
     fn with_constraints<I>(mut self, constraints: I) -> Self
     where
         I: IntoIterator<Item = InEnvironment<Constraint>>,
@@ -2241,53 +2169,6 @@ impl<T> Satisfiable<T> {
             Satisfiable::Yes(v) => Satisfiable::Yes(op(v)),
             Satisfiable::No => Satisfiable::No,
         }
-    }
-}
-
-impl TruthValue {
-    fn is_unknown(self) -> bool {
-        match self {
-            TruthValue::Unknown => true,
-            TruthValue::True | TruthValue::False => false,
-        }
-    }
-
-    fn or(self, other: TruthValue) -> TruthValue {
-        match (self, other) {
-            (TruthValue::True, _) | (_, TruthValue::True) => TruthValue::True,
-            (TruthValue::Unknown, _) | (_, TruthValue::Unknown) => TruthValue::Unknown,
-            (TruthValue::False, TruthValue::False) => TruthValue::False,
-        }
-    }
-
-    fn and(self, other: TruthValue) -> TruthValue {
-        match (self, other) {
-            (TruthValue::False, _) | (_, TruthValue::False) => TruthValue::False,
-            (TruthValue::Unknown, _) | (_, TruthValue::Unknown) => TruthValue::Unknown,
-            (TruthValue::True, TruthValue::True) => TruthValue::True,
-        }
-    }
-
-    fn not(self) -> TruthValue {
-        match self {
-            TruthValue::True => TruthValue::False,
-            TruthValue::False => TruthValue::True,
-            TruthValue::Unknown => TruthValue::Unknown,
-        }
-    }
-
-    fn any<I>(iter: I) -> TruthValue
-    where
-        I: IntoIterator<Item = TruthValue>,
-    {
-        iter.into_iter().fold(TruthValue::False, |a, b| a.or(b))
-    }
-
-    fn all<I>(iter: I) -> TruthValue
-    where
-        I: IntoIterator<Item = TruthValue>,
-    {
-        iter.into_iter().fold(TruthValue::True, |a, b| a.and(b))
     }
 }
 
