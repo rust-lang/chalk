@@ -1,5 +1,5 @@
 use errors::*;
-use fold::{Fold, ExistentialFolder, UniversalFolder};
+use fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use ir::*;
 use std::cmp::max;
 
@@ -26,7 +26,7 @@ impl InferenceTable {
     ///
     /// A substitution mapping from the free variables to their re-bound form is
     /// also returned.
-    pub fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T> {
+    pub fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T::Result> {
         debug!("canonicalize({:#?})", value);
         let mut q = Canonicalizer {
             table: self,
@@ -45,9 +45,9 @@ impl InferenceTable {
     }
 }
 
-pub struct Canonicalized<T: Fold> {
+pub struct Canonicalized<T> {
     /// The canonicalized result.
-    pub quantified: Canonical<T::Result>,
+    pub quantified: Canonical<T>,
 
     /// The free existential variables, along with the universes they inhabit.
     pub free_vars: Vec<ParameterInferenceVariable>,
@@ -55,6 +55,31 @@ pub struct Canonicalized<T: Fold> {
     /// The maximum universe of any universally quantified variables
     /// encountered.
     pub max_universe: UniverseIndex,
+}
+
+impl<T> Canonicalized<T> {
+    /// Returns a tuple of:
+    ///
+    /// - the quantified value Q
+    /// - a substitution S which, if applied to Q, would yield the original value V
+    ///   from which Q was derived.
+    ///
+    /// NB. You can apply a substitution with `Q.instantiate_with_subst(&S)`.
+    pub fn into_quantified_and_subst(self) -> (Canonical<T>, Substitution) {
+        let mut subst = Substitution::empty();
+        for (i, free_var) in self.free_vars.iter().enumerate() {
+            match free_var {
+                ParameterKind::Ty(v) => {
+                    subst.tys.insert(TyInferenceVariable::from_depth(i), v.to_ty());
+                }
+                ParameterKind::Lifetime(l) => {
+                    subst.lifetimes.insert(LifetimeInferenceVariable::from_depth(i), l.to_lifetime());
+                }
+            }
+        }
+
+        (self.quantified, subst)
+    }
 }
 
 struct Canonicalizer<'q> {
@@ -98,6 +123,8 @@ impl<'q> Canonicalizer<'q> {
     }
 }
 
+impl<'q> DefaultTypeFolder for Canonicalizer<'q> { }
+
 impl<'q> UniversalFolder for Canonicalizer<'q> {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Result<Ty> {
         self.max_universe = max(self.max_universe, universe);
@@ -112,9 +139,13 @@ impl<'q> UniversalFolder for Canonicalizer<'q> {
 
 impl<'q> ExistentialFolder for Canonicalizer<'q> {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        let var = TyInferenceVariable::from_depth(depth - binders);
+        debug_heading!("fold_free_existential_ty(depth={:?}, binders={:?})", depth, binders);
+        let var = TyInferenceVariable::from_depth(depth);
         match self.table.probe_var(var) {
-            Some(ty) => Ok(ty.fold_with(self, 0)?.up_shift(binders)),
+            Some(ty) => {
+                debug!("bound to {:?}", ty);
+                Ok(ty.fold_with(self, 0)?.up_shift(binders))
+            }
             None => {
                 // If this variable is not yet bound, find its
                 // canonical index `root_var` in the union-find table,
@@ -122,23 +153,24 @@ impl<'q> ExistentialFolder for Canonicalizer<'q> {
                 // unique to this quantification.
                 let free_var = ParameterKind::Ty(self.table.ty_unify.find(var));
                 let position = self.add(free_var);
+                debug!("not yet unified: position={:?}", position);
                 Ok(TyInferenceVariable::from_depth(position + binders).to_ty())
             }
         }
     }
 
     fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
-        debug!("fold_free_lifetime_var(depth={:?}, binders={:?})", depth, binders);
-        let var = LifetimeInferenceVariable::from_depth(depth - binders);
+        debug_heading!("fold_free_existential_lifetime(depth={:?}, binders={:?})", depth, binders);
+        let var = LifetimeInferenceVariable::from_depth(depth);
         match self.table.probe_lifetime_var(var) {
             Some(l) => {
-                debug!("fold_free_lifetime_var: {:?} mapped to {:?}", var, l);
+                debug!("bound to {:?}", l);
                 Ok(l.fold_with(self, 0)?.up_shift(binders))
             }
             None => {
-                debug!("fold_free_lifetime_var: {:?} not unified", var);
                 let free_var = ParameterKind::Lifetime(self.table.lifetime_unify.find(var));
                 let position = self.add(free_var);
+                debug!("not yet unified: position={:?}", position);
                 Ok(LifetimeInferenceVariable::from_depth(position + binders).to_lifetime())
             }
         }

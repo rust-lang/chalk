@@ -1,4 +1,5 @@
 use fold::*;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 
 use super::*;
@@ -19,6 +20,38 @@ impl InferenceTable {
         arg.fold_with(&mut instantiator, 0).expect("")
     }
 
+    /// Given the binders from a canonicalized value C, returns a
+    /// substitution S mapping each free variable in C to a fresh
+    /// inference variable. This substitution can then be applied to
+    /// C, which would be equivalent to
+    /// `self.instantiate_canonical(v)`.
+    pub fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
+        let mut tys = BTreeMap::new();
+        let mut lifetimes = BTreeMap::new();
+
+        for (i, kind) in binders.iter().enumerate() {
+            match *kind {
+                ParameterKind::Ty(ui) => {
+                    tys.insert(TyInferenceVariable::from_depth(i), self.new_variable(ui).to_ty());
+                }
+                ParameterKind::Lifetime(ui) => {
+                    lifetimes.insert(LifetimeInferenceVariable::from_depth(i),
+                                     self.new_lifetime_variable(ui).to_lifetime());
+                }
+            }
+        }
+
+        Substitution { tys, lifetimes }
+    }
+
+    /// Variant on `instantiate` that takes a `Canonical<T>`.
+    pub fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>)
+                                    -> T::Result
+        where T: Fold + Debug,
+    {
+        self.instantiate(bound.binders.iter().cloned(), &bound.value)
+    }
+
     /// Instantiates `arg` with fresh existential variables in the
     /// given universe; the kinds of the variables are implied by
     /// `binders`. This is used to apply a universally quantified
@@ -27,17 +60,30 @@ impl InferenceTable {
     pub fn instantiate_in<U, T>(&mut self,
                                 universe: UniverseIndex,
                                 binders: U,
-                                arg: &T) -> T::Result
+                                arg: &T)
+                                -> T::Result
         where T: Fold,
               U: IntoIterator<Item = ParameterKind<()>>
     {
         self.instantiate(binders.into_iter().map(|pk| pk.map(|_| universe)), arg)
+    }
+
+    /// Variant on `instantiate_in` that takes a `Binders<T>`.
+    pub fn instantiate_binders_in<T>(&mut self,
+                                     universe: UniverseIndex,
+                                     arg: &Binders<T>)
+                                     -> T::Result
+        where T: Fold
+    {
+        self.instantiate_in(universe, arg.binders.iter().cloned(), &arg.value)
     }
 }
 
 struct Instantiator {
     vars: Vec<ParameterInferenceVariable>,
 }
+
+impl DefaultTypeFolder for Instantiator { }
 
 /// When we encounter a free variable (of any kind) with index
 /// `i`, we want to map anything in the first N binders to

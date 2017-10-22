@@ -3,6 +3,7 @@ use errors::*;
 use ir;
 use lower::*;
 use solve::solver::{self, Solver, CycleStrategy};
+use solve::slg;
 use std::sync::Arc;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
@@ -14,13 +15,72 @@ fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goa
 }
 
 macro_rules! test {
-    (program $program:tt $(goal $goal:tt yields { $expected:expr })*) => {
-        solve_goal(stringify!($program), vec![$((stringify!($goal), $expected)),*])
-    }
+    (program $program:tt $($goals:tt)*) => {
+        test!(@program[$program]
+              @parsed_goals[]
+              @unparsed_goals[$($goals)*])
+    };
+
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[]) => {
+        solve_goal(stringify!($program), vec![$($parsed_goals),*])
+    };
+
+    // goal { G } yields { "Y" } -- test both solvers behave the same (the default)
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt yields { $expected:expr }
+        $($unparsed_goals:tt)*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[$($parsed_goals)*
+                            (stringify!($goal), SolverChoice::Default, $expected)
+                            (stringify!($goal), SolverChoice::SLG(MAX_SIZE), $expected)]
+              @unparsed_goals[$($unparsed_goals)*])
+    };
+
+    // goal { G } yields[C1] { "Y1" } yields[C2] { "Y2" } -- test that solver C1 yields Y1
+    // and C2 yields Y2
+    //
+    // Annoyingly, to avoid getting a parsing ambiguity error, we have
+    // to distinguish the case where there are other goals to come
+    // (this rule) for the last goal in the list (next rule). There
+    // might be a more elegant fix than copy-and-paste but this works.
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt $(yields[$C:expr] { $expected:expr })*
+            goal $($unparsed_goals:tt)*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[$($parsed_goals)*
+                            $((stringify!($goal), $C, $expected))+]
+              @unparsed_goals[goal $($unparsed_goals)*])
+    };
+
+    // same as above, but for the final goal in the list.
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt $(yields[$C:expr] { $expected:expr })*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[$($parsed_goals)*
+                            $((stringify!($goal), $C, $expected))+]
+              @unparsed_goals[])
+    };
 }
 
+#[derive(Debug)]
+enum SolverChoice {
+    // Run the default solver, expected test is the Solution.
+    Default,
+
+    // Run the SLG solver, producing a Solution.
+    SLG(usize),
+
+    // Run the SLG solver, producing Answers.
+    SLGAnswers(usize),
+}
+
+const MAX_SIZE: usize = 22; // default MAX_SIZE for SLG
+
 fn solve_goal(program_text: &str,
-              goals: Vec<(&str, &str)>)
+              goals: Vec<(&str, SolverChoice, &str)>)
 {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
@@ -28,18 +88,40 @@ fn solve_goal(program_text: &str,
     let program = Arc::new(parse_and_lower_program(&program_text[1..program_text.len()-1]).unwrap());
     let env = Arc::new(program.environment());
     ir::set_current_program(&program, || {
-        for (goal_text, expected) in goals {
+        for (goal_text, choice, expected) in goals {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
             let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len()-1]).unwrap();
 
-            let mut solver = Solver::new(&env, CycleStrategy::Tabling, solver::get_overflow_depth());
-            let goal = ir::InEnvironment::new(&ir::Environment::new(), *goal);
-            let result = match solver.solve_closed_goal(goal) {
-                Ok(v) => format!("{}", v),
-                Err(e) => format!("No possible solution: {}", e),
+            println!("using solver: {:?}", choice);
+            let peeled_goal = goal.into_peeled_goal();
+            let result = match choice {
+                SolverChoice::Default => {
+                    let mut solver = Solver::new(&env, CycleStrategy::Tabling, solver::get_overflow_depth());
+                    match solver.solve_canonical_goal(&peeled_goal) {
+                        Ok(v) => format!("{}", v),
+                        Err(e) => format!("No possible solution: {}", e),
+                    }
+                }
+
+                SolverChoice::SLG(max_size) => {
+                    match slg::solve_root_goal(max_size, &env, &peeled_goal) {
+                        Ok(answers) => match answers.into_solution(&peeled_goal) {
+                            Some(v) => format!("{}", v),
+                            None => format!("No possible solution: no answers"),
+                        },
+                        Err(err) => format!("Exploration error: {:?}", err),
+                    }
+                }
+
+                SolverChoice::SLGAnswers(max_size) => {
+                    match slg::solve_root_goal(max_size, &env, &peeled_goal) {
+                        Ok(answers) => format!("{:#?}", answers),
+                        Err(err) => format!("Exploration error: {:?}", err),
+                    }
+                }
             };
             println!("expected:\n{}", expected);
             println!("actual:\n{}", result);
@@ -260,7 +342,7 @@ fn cycle_no_solution() {
                 T: Foo
             }
         } yields {
-            "No possible solution: no applicable candidates"
+            "No possible solution"
         }
     }
 }
@@ -397,8 +479,46 @@ fn normalize_basic() {
                     Vec<T>: Iterator<Item = U>
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique; substitution [?0 := !1], lifetime constraints []"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME -- fallback clauses not understood by SLG solver
+            "Ambiguous; no inference guidance"
+        } yields[SolverChoice::SLGAnswers(MAX_SIZE)] {
+            r"Answers {
+                answers: [
+                    Answer {
+                        subst: Canonical {
+                            value: ConstrainedSubst {
+                                subst: Substitution {
+                                    tys: {
+                                        ?0: !1
+                                    },
+                                    lifetimes: {}
+                                },
+                                constraints: []
+                            },
+                            binders: []
+                        },
+                        ambiguous: false
+                    },
+                    Answer {
+                        subst: Canonical {
+                            value: ConstrainedSubst {
+                                subst: Substitution {
+                                    tys: {
+                                        ?0: (Iterator::Item)<Vec<!1>>
+                                    },
+                                    lifetimes: {}
+                                },
+                                constraints: []
+                            },
+                            binders: []
+                        },
+                        ambiguous: false
+                    }
+                ]
+            }"
         }
 
         goal {
@@ -417,8 +537,11 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique; substitution [?0 := u32]"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME -- fallback clauses not understood by SLG solver
+            "Ambiguous"
         }
 
         goal {
@@ -451,8 +574,11 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME -- fallback clauses not understood by SLG solver
+            "Ambiguous"
         }
     }
 }
@@ -702,8 +828,11 @@ fn atc1() {
                     }
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique; substitution [?0 := Iter<'!2, !1>], lifetime constraints []"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME -- fallback clauses not understood by SLG solver
+            "Ambiguous; no inference guidance"
         }
     }
 }
@@ -887,8 +1016,11 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Deref<'a, Item = U>
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique; substitution [?0 := I32], lifetime constraints []"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME -- fallback clauses not understood by SLG solver
+            "Ambiguous"
         }
 
         goal {
@@ -897,8 +1029,11 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Id<'a, Item = U>
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique; substitution [?0 := Ref<'!1, I32>], lifetime constraints []"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME -- fallback clauses not understood by SLG solver
+            "Ambiguous"
         }
 
         goal {
@@ -907,10 +1042,13 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Id<'a, Item = U>
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique; substitution [?0 := Ref<'?0, I32>], lifetime constraints [
                  (Env(U0, []) |- LifetimeEq('?0, '!1))
              ]"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME -- fallback clauses not understood by SLG solver
+            "Ambiguous"
         }
     }
 }
@@ -994,7 +1132,7 @@ fn mixed_indices_unify() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := ?0, ?1 := ?0, '?0 := '?1], lifetime constraints []"
+            "Unique; substitution [?1 := ?0, ?2 := ?0, '?0 := '?1], lifetime constraints []"
         }
     }
 }
@@ -1018,7 +1156,7 @@ fn mixed_indices_match_program() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := S, ?1 := S, '?0 := '?0], lifetime constraints []"
+            "Unique; substitution [?1 := S, ?2 := S, '?0 := '?0], lifetime constraints []"
         }
     }
 }
@@ -1045,8 +1183,11 @@ fn mixed_indices_normalize_application() {
                     }
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME -- fallback clauses not understood by SLG solver
+            "Ambiguous; no inference guidance"
         }
     }
 }
@@ -1186,8 +1327,11 @@ fn suggested_subst() {
                     Foo: SomeTrait<T>
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Ambiguous; suggested substitution [?0 := bool]"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME: SLG does not impl the logic to privilege where clauses
+            "Ambiguous; no inference guidance"
         }
 
         goal {
@@ -1216,8 +1360,11 @@ fn suggested_subst() {
                     Bar: SomeTrait<T>
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Ambiguous; suggested substitution [?0 := bool]"
+        } yields[SolverChoice::SLG(MAX_SIZE)] {
+            // FIXME: SLG does not impl the logic to privilege where clauses
+            "Ambiguous; no inference guidance"
         }
 
         goal {
@@ -1270,8 +1417,10 @@ fn simple_negation() {
             exists<T> {
                 not { T: Foo }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Ambig"
+        } yields[SolverChoice::SLG(MAX_SIZE) ] {
+            "Exploration error: Floundered"
         }
 
         goal {
@@ -1384,8 +1533,10 @@ fn negation_free_vars() {
             exists<T> {
                 not { Vec<T>: Foo }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Ambig"
+        } yields[SolverChoice::SLG(MAX_SIZE) ] {
+            "Exploration error: Floundered"
         }
     }
 }
@@ -1530,6 +1681,7 @@ fn auto_trait_with_impls() {
 
 #[test]
 fn coinductive_semantics() {
+    // FIXME coinduction not implemented for SLG solver
     test! {
         program {
             #[auto] trait Send { }
@@ -1560,13 +1712,13 @@ fn coinductive_semantics() {
                     List<T>: Send
                 }
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique"
         }
 
         goal {
             List<i32>: Send
-        } yields {
+        } yields[SolverChoice::Default] {
             "Unique"
         }
 
@@ -1574,7 +1726,7 @@ fn coinductive_semantics() {
             exists<T> {
                 T: Send
             }
-        } yields {
+        } yields[SolverChoice::Default] {
             "Ambiguous"
         }
     }

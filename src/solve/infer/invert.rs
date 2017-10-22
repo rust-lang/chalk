@@ -1,5 +1,5 @@
 use errors::*;
-use fold::{Fold, ExistentialFolder, UniversalFolder};
+use fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use ir::*;
 use std::collections::HashMap;
 
@@ -56,8 +56,8 @@ impl InferenceTable {
     /// `negated` query also converts all universals *into*
     /// existentials. Hence `negated` applies to `!0 = !1` would yield
     /// `exists<X,Y> { X = Y }` (note that a canonical, i.e. closed,
-    /// result is returned). Naturally this has a solution, and hence `not { !0 = !1 }` fails,
-    /// as we expect.
+    /// result is returned). Naturally this has a solution, and hence
+    /// `not { !0 = !1 }` fails, as we expect.
     ///
     /// (One could imagine converting free existentials into
     /// universals, rather than forbidding them altogether. This would
@@ -69,7 +69,7 @@ impl InferenceTable {
     /// `?T: Clone` in the case where `?T = Vec<i32>`. The current
     /// version would delay processing the negative goal (i.e., return
     /// `None`) until the second unification has occurred.)
-    pub fn negated<T>(&mut self, value: &T) -> Option<Canonical<T::Result>>
+    pub fn invert<T>(&mut self, value: &T) -> Option<T::Result>
         where T: Fold<Result = T>
     {
         let Canonicalized {
@@ -85,16 +85,20 @@ impl InferenceTable {
 
         // If this contains free universal variables, replace them with existentials.
         assert!(quantified.binders.is_empty());
-        let inverted = {
-            let snapshot = self.snapshot();
-            let inverted = quantified.value.fold_with(&mut Inverter::new(self), 0).unwrap();
-            let inverted = self.canonicalize(&inverted);
-            assert!(inverted.max_universe.is_root());
-            self.rollback_to(snapshot);
-            inverted.quantified
-        };
-
+        let inverted = quantified.value.fold_with(&mut Inverter::new(self), 0).unwrap();
         Some(inverted)
+    }
+
+    /// As `negated_instantiated`, but canonicalizes before
+    /// returning. Just a convenience function.
+    pub fn invert_then_canonicalize<T>(&mut self, value: &T) -> Option<Canonical<T::Result>>
+        where T: Fold<Result = T>
+    {
+        let snapshot = self.snapshot();
+        let result = self.invert(value);
+        let result = result.map(|r| self.canonicalize(&r).quantified);
+        self.rollback_to(snapshot);
+        result
     }
 }
 
@@ -109,6 +113,8 @@ impl<'q> Inverter<'q> {
         Inverter { table, inverted_ty: HashMap::new(), inverted_lifetime: HashMap::new() }
     }
 }
+
+impl<'q> DefaultTypeFolder for Inverter<'q> { }
 
 impl<'q> UniversalFolder for Inverter<'q> {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Result<Ty> {

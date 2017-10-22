@@ -1,9 +1,14 @@
 use cast::Cast;
 use chalk_parse::ast;
+use fold::{DefaultTypeFolder, Fold, ExistentialFolder, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;
 use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
 use std::collections::{HashSet, HashMap, BTreeMap};
 use std::sync::Arc;
+
+#[macro_use] mod macros;
+
+pub mod could_match;
 
 pub type Identifier = InternedString;
 
@@ -29,6 +34,9 @@ pub struct Program {
 
     /// For each default impl (automatically generated for auto traits):
     pub default_impl_data: Vec<DefaultImplDatum>,
+
+    /// For each user-specified clause
+    pub custom_clauses: Vec<ProgramClause>,
 }
 
 impl Program {
@@ -315,6 +323,13 @@ pub enum ParameterKind<T, L = T> {
 }
 
 impl<T> ParameterKind<T> {
+    pub fn into_inner(self) -> T {
+        match self {
+            ParameterKind::Ty(t) => t,
+            ParameterKind::Lifetime(t) => t,
+        }
+    }
+
     pub fn map<OP, U>(self, op: OP) -> ParameterKind<U>
         where OP: FnOnce(T) -> U
     {
@@ -519,7 +534,7 @@ pub struct ProgramClauseImplication {
 /// All unresolved existential variables are "renumbered" according to their
 /// first appearance; the kind/universe of the variable is recorded in the
 /// `binders` field.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Canonical<T> {
     pub value: T,
     pub binders: Vec<ParameterKind<UniverseIndex>>,
@@ -575,10 +590,41 @@ impl FullyReducedGoal {
 }
 
 impl<T> Canonical<T> {
-    pub fn map<OP, U>(self, op: OP) -> Canonical<U>
-        where OP: FnOnce(T) -> U
+    /// Maps the contents using `op`, but preserving the binders.
+    ///
+    /// NB. `op` will be invoked with an instantiated version of the
+    /// canonical value, where inference variables (from a fresh
+    /// inference context) are used in place of the quantified free
+    /// variables. The result should be in terms of those same
+    /// inference variables and will be re-canonicalized.
+    pub fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
+        where OP: FnOnce(T::Result) -> U,
+              T: Fold,
+              U: Fold,
     {
-        Canonical { value: op(self.value), binders: self.binders }
+        // Subtle: It is only quite rarely correct to apply `op` and
+        // just re-use our existing binders. For that to be valid, the
+        // result of `op` would have to ensure that it re-uses all the
+        // existing free variables and in the same order. Otherwise,
+        // the canonical form would be different: the variables might
+        // be numbered differently, or some may not longer be used.
+        // This would mean that two canonical values could no longer
+        // be compared with `Eq`, which defeats a key invariant of the
+        // `Canonical` type (indeed, its entire reason for existence).
+        use solve::infer::InferenceTable;
+        let mut infer = InferenceTable::new();
+        let snapshot = infer.snapshot();
+        let instantiated_value = infer.instantiate_canonical(&self);
+        let mapped_value = op(instantiated_value);
+        let result = infer.canonicalize(&mapped_value);
+        infer.rollback_to(snapshot);
+        result.quantified
+    }
+
+    pub fn instantiate_with_subst(&self, mut subst: &Substitution) -> T::Result
+        where T: Fold
+    {
+        self.value.fold_with(&mut subst, 0).unwrap()
     }
 }
 
@@ -592,6 +638,17 @@ pub enum Goal {
     And(Box<Goal>, Box<Goal>),
     Not(Box<Goal>),
     Leaf(LeafGoal),
+
+    /// Indicates something that cannot be proven to be true or false
+    /// definitively. This can occur with overflow but also with
+    /// unifications of skolemized variables like `forall<X,Y> { X = Y
+    /// }`. Of course, that statement is false, as there exist types
+    /// X, Y where `X = Y` is not true. But we treat it as "cannot
+    /// prove" so that `forall<X,Y> { not { X = Y } }` also winds up
+    /// as cannot prove.
+    ///
+    /// (TOTAL HACK: Having a unit result makes some of our macros work better.)
+    CannotProve(()),
 }
 
 impl Goal {
@@ -601,6 +658,47 @@ impl Goal {
 
     pub fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
         Goal::Implies(predicates, Box::new(self))
+    }
+
+    /// Returns a canonical goal in which the outermost `exists<>` and
+    /// `forall<>` quantifiers (as well as implications) have been
+    /// "peeled" and are converted into free universal or existential
+    /// variables. Assumes that this goal is a "closed goal" which
+    /// does not -- at present -- contain any variables. Useful for
+    /// REPLs and tests but not much else.
+    pub fn into_peeled_goal(self) -> Canonical<InEnvironment<Goal>> {
+        use solve::infer::InferenceTable;
+        let mut infer = InferenceTable::new();
+        let peeled_goal = {
+            let mut env_goal = InEnvironment::new(&Environment::new(), self);
+            loop {
+                let InEnvironment { environment, goal } = env_goal;
+                match goal {
+                    Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
+                        let InEnvironment { environment, goal } =
+                            subgoal.instantiate_universally(&environment);
+                        env_goal = InEnvironment::new(&environment, *goal);
+                    }
+
+                    Goal::Quantified(QuantifierKind::Exists, subgoal) => {
+                        let subgoal = infer.instantiate_in(
+                            environment.universe,
+                            subgoal.binders.iter().cloned(),
+                            &subgoal.value,
+                        );
+                        env_goal = InEnvironment::new(&environment, *subgoal);
+                    }
+
+                    Goal::Implies(wc, subgoal) => {
+                        let new_environment = &environment.add_clauses(wc);
+                        env_goal = InEnvironment::new(&new_environment, *subgoal);
+                    }
+
+                    _ => break InEnvironment::new(&environment, goal),
+                }
+            }
+        };
+        infer.canonicalize(&peeled_goal).quantified
     }
 }
 
@@ -621,7 +719,7 @@ pub enum Constraint {
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Substitution {
     // Use BTreeMap for extracting in order (mostly for debugging/testing)
     pub tys: BTreeMap<TyInferenceVariable, Ty>,
@@ -660,7 +758,35 @@ impl Substitution {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+impl<'a> DefaultTypeFolder for &'a Substitution {
+}
+
+impl<'a> ExistentialFolder for &'a Substitution {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> ::errors::Result<Ty> {
+        let v = TyInferenceVariable::from_depth(depth);
+        if let Some(ty) = self.tys.get(&v) {
+            // Substitutions do not have to be complete.
+            Ok(ty.up_shift(binders))
+        } else {
+            Ok(Ty::Var(depth + binders))
+        }
+    }
+
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> ::errors::Result<Lifetime> {
+        let v = LifetimeInferenceVariable::from_depth(depth);
+        if let Some(l) = self.lifetimes.get(&v) {
+            // Substitutions do not have to be complete.
+            Ok(l.up_shift(binders))
+        } else {
+            Ok(Lifetime::Var(depth + binders))
+        }
+    }
+}
+
+impl<'a> IdentityUniversalFolder for &'a Substitution {
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {
     pub subst: Substitution,
     pub constraints: Vec<InEnvironment<Constraint>>,

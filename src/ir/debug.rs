@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Formatter, Error};
+use std::fmt::{Debug, Display, Formatter, Error};
 
 use super::*;
 
@@ -16,6 +16,12 @@ impl Debug for ItemId {
             }
             None => fmt.debug_struct("ItemId").field("index", &self.index).finish(),
         })
+    }
+}
+
+impl Display for UniverseIndex {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "U{}", self.counter)
     }
 }
 
@@ -206,6 +212,7 @@ impl Debug for Goal {
             Goal::And(ref g1, ref g2) => write!(fmt, "({:?}, {:?})", g1, g2),
             Goal::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),
+            Goal::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
         }
     }
 }
@@ -241,3 +248,67 @@ impl<G: Debug> Debug for InEnvironment<G> {
         write!(fmt, "({:?} |- {:?})", self.environment, self.goal)
     }
 }
+
+impl<T: Display> Display for Canonical<T> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        let Canonical { binders, value } = self;
+
+        if binders.is_empty() {
+            write!(f, "{}", value)?;
+        } else {
+            write!(f, "exists<")?;
+
+            for (i, ui) in binders.iter().enumerate() {
+                if i > 0 { write!(f, ",")?; }
+                write!(f, "{}", ui.into_inner())?;
+            }
+
+            write!(f, "> {{ {} }}", value)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for ConstrainedSubst {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        let ConstrainedSubst { subst, constraints } = self;
+
+        write!(f, "{}", subst)?;
+
+        if !constraints.is_empty() {
+            write!(f, " if {:?}", constraints)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for Substitution {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        let mut first = true;
+
+        for (tv, ty) in &self.tys {
+            if first {
+                first = false;
+            } else {
+                write!(f, ", ")?;
+            }
+
+            write!(f, "{:?} := {:?}", tv, ty)?;
+        }
+
+        for (lv, lt) in &self.lifetimes {
+            if first {
+                first = false;
+            } else {
+                write!(f, ", ")?;
+            }
+
+            write!(f, "{:?} := {:?}", lv, lt)?;
+        }
+
+        Ok(())
+    }
+}
+

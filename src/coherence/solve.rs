@@ -88,6 +88,8 @@ impl Solver {
     //      exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz }
     //
     fn overlaps(&mut self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
+        debug_heading!("overlaps(lhs={:?}, rhs={:?})", lhs, rhs);
+
         let lhs_len = lhs.binders.len();
 
         // Join the two impls' binders together
@@ -118,10 +120,9 @@ impl Solver {
                     .expect("Every trait takes at least one input type")
                     .quantify(QuantifierKind::Exists, binders);
 
-        self.solve_closed_goal(InEnvironment::empty(goal))
-            .ok()
-            .map(|sol| sol.has_definite())
-            .unwrap_or(false)
+        // Unless we get an error, we consider things to overlap.
+        let canonical_goal = goal.into_peeled_goal();
+        self.solve_canonical_goal(&canonical_goal).is_ok()
     }
 
     // Test for specialization.
@@ -168,7 +169,7 @@ impl Solver {
                     .implied_by(more_special_wc)
                     .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
-        self.solve_closed_goal(InEnvironment::empty(goal)).ok().map_or(false, |sol| sol.is_unique())
+        self.solve_canonical_goal(&goal.into_peeled_goal()).ok().map_or(false, |sol| sol.is_unique())
     }
 }
 

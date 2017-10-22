@@ -1,22 +1,25 @@
 use petgraph::prelude::*;
 
 use errors::Result;
-use ir::{Program, ItemId};
+use ir::{self, Program, ItemId};
+use std::sync::Arc;
 
 mod solve;
 
 
 impl Program {
     pub fn record_specialization_priorities(&mut self) -> Result<()> {
-        let forest = self.build_specialization_forest()?;
+        ir::set_current_program(&Arc::new(self.clone()), || {
+            let forest = self.build_specialization_forest()?;
 
-        // Visit every root in the forest & set specialization
-        // priority for the tree that is the root of.
-        for root_idx in forest.externals(Direction::Incoming) {
-            self.set_priorities(root_idx, &forest, 0);
-        }
+            // Visit every root in the forest & set specialization
+            // priority for the tree that is the root of.
+            for root_idx in forest.externals(Direction::Incoming) {
+                self.set_priorities(root_idx, &forest, 0);
+            }
 
-        Ok(())
+            Ok(())
+        })
     }
 
     // Build the forest of specialization relationships.

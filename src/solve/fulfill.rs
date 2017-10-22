@@ -1,4 +1,5 @@
 use super::*;
+use cast::Caster;
 use errors::*;
 use fold::Fold;
 use solve::infer::{InferenceTable, UnificationResult, ParameterInferenceVariable};
@@ -89,6 +90,17 @@ impl<'s> Fulfill<'s> {
         }
     }
 
+    /// Instantiates the given goal and pushes it as a goal to be
+    /// proven. Returns a substitution that can be given to `solve`.
+    pub fn instantiate_and_push(&mut self, canonical_goal: &Canonical<InEnvironment<Goal>>)
+                                -> Substitution
+    {
+        let subst = self.infer.fresh_subst(&canonical_goal.binders);
+        let goal = canonical_goal.instantiate_with_subst(&subst);
+        self.push_goal(&goal.environment, goal.goal);
+        subst
+    }
+
     /// Wraps `InferenceTable::instantiate`
     pub fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
         where T: Fold,
@@ -121,7 +133,7 @@ impl<'s> Fulfill<'s> {
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
         self.constraints.extend(constraints);
-        self.obligations.extend(goals.into_iter().map(Obligation::Prove));
+        self.obligations.extend(goals.into_iter().casted().map(Obligation::Prove));
         Ok(())
     }
 
@@ -131,27 +143,9 @@ impl<'s> Fulfill<'s> {
         debug!("push_goal({:?}, {:?})", goal, environment);
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                let mut new_environment = environment.clone();
-                let parameters: Vec<_> =
-                    subgoal.binders
-                           .iter()
-                           .map(|pk| {
-                               new_environment = new_environment.new_universe();
-                               match *pk {
-                                   ParameterKind::Lifetime(()) => {
-                                       let lt = Lifetime::ForAll(new_environment.universe);
-                                       ParameterKind::Lifetime(lt)
-                                   }
-                                   ParameterKind::Ty(()) =>
-                                       ParameterKind::Ty(Ty::Apply(ApplicationTy {
-                                           name: TypeName::ForAll(new_environment.universe),
-                                           parameters: vec![]
-                                       })),
-                               }
-                           })
-                           .collect();
-                let subgoal = subgoal.value.subst(&parameters);
-                self.push_goal(&new_environment, subgoal);
+                let InEnvironment { environment: subenvironment, goal: subgoal } =
+                    subgoal.instantiate_universally(environment);
+                self.push_goal(&subenvironment, *subgoal);
             }
             Goal::Quantified(QuantifierKind::Exists, subgoal) => {
                 let subgoal = self.instantiate_in(environment.universe,
@@ -174,11 +168,13 @@ impl<'s> Fulfill<'s> {
             Goal::Leaf(wc) => {
                 self.obligations.push(Obligation::Prove(InEnvironment::new(environment, wc)));
             }
+            Goal::CannotProve(()) => {
+                self.cannot_prove = true;
+            }
         }
     }
 
     fn prove(&mut self, wc: &InEnvironment<LeafGoal>) -> Result<PositiveSolution> {
-        println!("prove: {:?}", wc);
         let canonicalized = self.infer.canonicalize(wc);
         let reduced_goal = canonicalized.quantified.into_reduced_goal();
         Ok(PositiveSolution {
@@ -188,7 +184,7 @@ impl<'s> Fulfill<'s> {
     }
 
     fn refute(&mut self, goal: &InEnvironment<Goal>) -> Result<NegativeSolution> {
-        let canonicalized = match self.infer.negated(goal) {
+        let canonicalized = match self.infer.invert_then_canonicalize(goal) {
             Some(v) => v,
             None => {
                 // Treat non-ground negatives as ambiguous. Note that, as inference

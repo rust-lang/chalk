@@ -22,6 +22,10 @@ impl TyInferenceVariable {
     pub fn to_ty(&self) -> Ty {
         Ty::Var(self.index as usize)
     }
+
+    pub fn to_usize(&self) -> usize {
+        self.index as usize
+    }
 }
 
 impl UnifyKey for TyInferenceVariable {

@@ -21,6 +21,7 @@ pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
     Impl(Impl),
+    Clause(Clause),
 }
 
 pub struct StructDefn {
@@ -175,6 +176,14 @@ pub struct Field {
     pub ty: Ty,
 }
 
+/// This allows users to add arbitrary `A :- B` clauses into the
+/// logic; it has no equivalent in Rust, but it's useful for testing.
+pub struct Clause {
+    pub parameter_kinds: Vec<ParameterKind>,
+    pub consequence: WhereClause,
+    pub conditions: Vec<Box<Goal>>,
+}
+
 pub enum Goal {
     ForAll(Vec<ParameterKind>, Box<Goal>),
     Exists(Vec<ParameterKind>, Box<Goal>),
@@ -188,3 +197,4 @@ pub enum Goal {
     // Additional kinds of goals:
     Leaf(WhereClause),
 }
+
