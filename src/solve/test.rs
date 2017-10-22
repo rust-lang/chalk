@@ -1833,9 +1833,10 @@ fn partial_overlap_2() {
     }
 }
 
-// FIXME: This test currently doesn't pass because overlapping
+// FIXME: This test currently panics because overlapping
 // impls for marker traits are currently not supported
 #[test]
+#[should_panic(expected = "OverlappingImpls(\"Marker\")")]
 fn partial_overlap_3() {
     test! {
         program {
