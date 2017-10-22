@@ -244,7 +244,13 @@ pub struct TraitDatum {
 pub struct TraitDatumBound {
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<DomainGoal>,
+    pub flags: TraitFlags,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TraitFlags {
     pub auto: bool,
+    pub marker: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -582,7 +588,7 @@ impl FullyReducedGoal {
                 ..
         }) = *self {
             let trait_datum = &program.trait_data[&tr.trait_id];
-            return trait_datum.binders.value.auto;
+            return trait_datum.binders.value.flags.auto;
         }
 
         false

@@ -49,16 +49,20 @@ StructDefn: StructDefn = {
 };
 
 AutoKeyword: () = "#" "[" "auto" "]";
+MarkerKeyword: () = "#" "[" "marker" "]";
 
 TraitDefn: TraitDefn = {
-    <auto:AutoKeyword?> "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{"
+    <auto:AutoKeyword?> <marker:MarkerKeyword?> "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{"
         <a:AssocTyDefn*> "}" =>
     TraitDefn {
         name: n,
         parameter_kinds: p,
         where_clauses: w,
         assoc_ty_defns: a,
-        auto: auto.is_some(),
+        flags: TraitFlags {
+            auto: auto.is_some(),
+            marker: marker.is_some(),
+        },
     }
 };
 

@@ -36,7 +36,12 @@ pub struct TraitDefn {
     pub parameter_kinds: Vec<ParameterKind>,
     pub where_clauses: Vec<WhereClause>,
     pub assoc_ty_defns: Vec<AssocTyDefn>,
+    pub flags: TraitFlags,
+}
+
+pub struct TraitFlags {
     pub auto: bool,
+    pub marker: bool,
 }
 
 pub struct AssocTyDefn {
