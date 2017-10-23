@@ -137,14 +137,6 @@ impl<'a, T: Debug> Debug for Angle<'a, T> {
     }
 }
 
-struct Assignment<'a>(Identifier, &'a Ty);
-
-impl<'a> Debug for Assignment<'a> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{} = {:?}", self.0, self.1)
-    }
-}
-
 impl Debug for Normalize {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "{:?} ==> {:?}", self.projection, self.ty)

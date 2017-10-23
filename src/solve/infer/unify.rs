@@ -303,25 +303,6 @@ impl<'t> Zipper for Unifier<'t> {
     }
 }
 
-impl ApplicationTy {
-    fn universe_index(&self) -> UniverseIndex {
-        self.name.universe_index()
-    }
-}
-
-impl TypeName {
-    fn universe_index(&self) -> UniverseIndex {
-        match *self {
-            TypeName::ItemId(_) |
-            TypeName::AssociatedType(_) => UniverseIndex::root(),
-            TypeName::ForAll(universe) => {
-                assert!(universe.counter > 0);
-                universe
-            }
-        }
-    }
-}
-
 struct OccursCheck<'u, 't: 'u> {
     unifier: &'u mut Unifier<'t>,
     var: TyInferenceVariable,
