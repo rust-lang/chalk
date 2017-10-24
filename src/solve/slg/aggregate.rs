@@ -1,3 +1,4 @@
+use cast::Cast;
 use ir::*;
 use solve::{Guidance, Solution};
 use solve::infer::InferenceTable;
@@ -58,9 +59,20 @@ impl Answers {
 
             // Collect the types that the two substitutions have in
             // common.
-            let mut aggr_tys = BTreeMap::new();
-            for (key, ty) in subst.value.tys {
-                if let Some(ty1) = subst1.tys.get(&key) {
+            let mut aggr_parameters = BTreeMap::new();
+            for (key, value) in subst.value.parameters {
+                let ty = match value {
+                    ParameterKind::Ty(ty) => ty,
+                    ParameterKind::Lifetime(_) => {
+                        // Ignore the lifetimes from the substitution: we're just
+                        // creating guidance here anyway.
+                        continue;
+                    }
+                };
+
+                if let Some(ty1) = subst1.parameters.get(&key) {
+                    let ty1 = ty1.assert_ty_ref();
+
                     // We have two values for some variable X that
                     // appears in the root goal. Find out the universe
                     // of X.
@@ -72,17 +84,11 @@ impl Answers {
                         universe,
                     };
                     let ty_aggr = aggr.aggregate_tys(&ty, ty1);
-                    aggr_tys.insert(key, ty_aggr);
+                    aggr_parameters.insert(key, ty_aggr.cast());
                 }
             }
 
-            // Ignore the lifetimes from the substitution: we're just
-            // creating guidance here anyway.
-
-            let aggr_subst = Substitution {
-                tys: aggr_tys,
-                lifetimes: BTreeMap::new(),
-            };
+            let aggr_subst = Substitution { parameters: aggr_parameters };
 
             subst = infer.canonicalize(&aggr_subst).quantified;
             infer.rollback_to(snapshot);
@@ -101,19 +107,22 @@ impl Answers {
 }
 
 fn is_trivial(subst: &Canonical<Substitution>) -> bool {
+    let mut uniq = HashSet::new();
+
     // A subst is trivial if..
+    subst.value.parameters.values().all(|parameter| match parameter {
+        // All types are mapped to distinct variables.
+        ParameterKind::Ty(t) => {
+            match t.var() {
+                None => false,
+                Some(depth) => uniq.insert(depth),
+            }
+        }
 
-    // ...all liftimes are empty (this is too strict, but we never
-    // product substs with lifetimes)...
-    subst.value.lifetimes.is_empty() && {
-        let mut uniq = HashSet::new();
-
-        // ...and all types are mapped to distinct variables.
-        subst.value.tys.values().all(|t| match t.var() {
-            None => false,
-            Some(depth) => uniq.insert(depth),
-        })
-    }
+        // And no lifetime mappings. (This is too strict, but we never
+        // product substs with lifetimes.)
+        ParameterKind::Lifetime(_) => false,
+    })
 }
 
 /// [Anti-unification] is the act of taking two things that do not

@@ -5,7 +5,6 @@ use errors::*;
 use ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::collections::BTreeMap;
 
 mod instantiate;
 mod shifted;
@@ -348,17 +347,15 @@ pub fn super_fold_lifetime(
 impl Fold for Substitution {
     type Result = Substitution;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
-        let mut tys = BTreeMap::new();
-        let mut lifetimes = BTreeMap::new();
-
-        for (var, ty) in &self.tys {
-            tys.insert(*var, ty.fold_with(folder, binders)?);
-        }
-        for (var, lt) in &self.lifetimes {
-            lifetimes.insert(*var, lt.fold_with(folder, binders)?);
-        }
-
-        Ok(Substitution { tys, lifetimes })
+        // Do not fold the keys of the substitution, just the values.
+        let parameters =
+            self.parameters.iter()
+                           .map(|(&key, value)| {
+                               value.fold_with(folder, binders)
+                                    .map(|value| (key, value))
+                           })
+                           .collect::<Result<_>>()?;
+        Ok(Substitution { parameters })
     }
 }
 

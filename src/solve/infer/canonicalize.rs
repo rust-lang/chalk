@@ -66,14 +66,7 @@ impl<T> Canonicalized<T> {
     pub fn into_quantified_and_subst(self) -> (Canonical<T>, Substitution) {
         let mut subst = Substitution::empty();
         for (i, free_var) in self.free_vars.iter().enumerate() {
-            match free_var {
-                ParameterKind::Ty(v) => {
-                    subst.tys.insert(InferenceVariable::from_depth(i), v.to_ty());
-                }
-                ParameterKind::Lifetime(l) => {
-                    subst.lifetimes.insert(InferenceVariable::from_depth(i), l.to_lifetime());
-                }
-            }
+            subst.insert(InferenceVariable::from_depth(i), free_var.to_parameter());
         }
 
         (self.quantified, subst)

@@ -491,10 +491,9 @@ fn normalize_basic() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: !1
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -506,10 +505,9 @@ fn normalize_basic() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: (Iterator::Item)<Vec<!1>>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -1133,7 +1131,7 @@ fn mixed_indices_unify() {
                 }
             }
         } yields {
-            "Unique; substitution [?1 := ?0, ?2 := ?0, ?0 := '?1], lifetime constraints []"
+            "Unique; substitution [?0 := '?0, ?1 := ?1, ?2 := ?1], lifetime constraints []"
         }
     }
 }
@@ -1157,7 +1155,7 @@ fn mixed_indices_match_program() {
                 }
             }
         } yields {
-            "Unique; substitution [?1 := S, ?2 := S, ?0 := '?0], lifetime constraints []"
+            "Unique; substitution [?0 := '?0, ?1 := S, ?2 := S], lifetime constraints []"
         }
     }
 }

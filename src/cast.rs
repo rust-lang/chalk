@@ -137,6 +137,18 @@ impl Cast<Ty> for ApplicationTy {
     }
 }
 
+impl Cast<Parameter> for Ty {
+    fn cast(self) -> Parameter {
+        ParameterKind::Ty(self)
+    }
+}
+
+impl Cast<Parameter> for Lifetime {
+    fn cast(self) -> Parameter {
+        ParameterKind::Lifetime(self)
+    }
+}
+
 macro_rules! map_impl {
     (impl[$($t:tt)*] Cast<$b:ty> for $a:ty) => {
         impl<$($t)*> Cast<$b> for $a {
@@ -171,18 +183,6 @@ impl<T, U> Cast<Vec<U>> for Vec<T>
 {
     fn cast(self) -> Vec<U> {
         self.into_iter().casted().collect()
-    }
-}
-
-impl Cast<Parameter> for Ty {
-    fn cast(self) -> Parameter {
-        ParameterKind::Ty(self)
-    }
-}
-
-impl Cast<Parameter> for Lifetime {
-    fn cast(self) -> Parameter {
-        ParameterKind::Lifetime(self)
     }
 }
 

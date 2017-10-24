@@ -1,5 +1,4 @@
 use fold::*;
-use std::collections::BTreeMap;
 use std::fmt::Debug;
 
 use super::*;
@@ -26,22 +25,14 @@ impl InferenceTable {
     /// C, which would be equivalent to
     /// `self.instantiate_canonical(v)`.
     pub fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
-        let mut tys = BTreeMap::new();
-        let mut lifetimes = BTreeMap::new();
+        let mut subst = Substitution::empty();
 
         for (i, kind) in binders.iter().enumerate() {
-            match *kind {
-                ParameterKind::Ty(ui) => {
-                    tys.insert(InferenceVariable::from_depth(i), self.new_variable(ui).to_ty());
-                }
-                ParameterKind::Lifetime(ui) => {
-                    lifetimes.insert(InferenceVariable::from_depth(i),
-                                     self.new_variable(ui).to_lifetime());
-                }
-            }
+            let param_infer_var = kind.map(|ui| self.new_variable(ui));
+            subst.insert(InferenceVariable::from_depth(i), param_infer_var.to_parameter());
         }
 
-        Substitution { tys, lifetimes }
+        subst
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.
@@ -93,7 +84,7 @@ impl DefaultTypeFolder for Instantiator { }
 impl ExistentialFolder for Instantiator {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         if depth < self.vars.len() {
-            Ok(self.vars[depth].as_ref().ty().unwrap().to_ty().up_shift(binders))
+            Ok(self.vars[depth].assert_ty_ref().to_ty().up_shift(binders))
         } else {
             Ok(Ty::Var(depth + binders - self.vars.len())) // see comment above
         }
@@ -101,7 +92,7 @@ impl ExistentialFolder for Instantiator {
 
     fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         if depth < self.vars.len() {
-            Ok(self.vars[depth].as_ref().lifetime().unwrap().to_lifetime().up_shift(binders))
+            Ok(self.vars[depth].assert_lifetime_ref().to_lifetime().up_shift(binders))
         } else {
             Ok(Lifetime::Var(depth + binders - self.vars.len())) // see comment above
         }

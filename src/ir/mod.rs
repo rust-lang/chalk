@@ -1,12 +1,13 @@
 use cast::Cast;
 use chalk_parse::ast;
-use fold::{DefaultTypeFolder, Fold, ExistentialFolder, IdentityUniversalFolder};
+use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;
 use solve::infer::InferenceVariable;
-use std::collections::{HashSet, HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
-#[macro_use] mod macros;
+#[macro_use]
+mod macros;
 
 pub mod could_match;
 
@@ -41,9 +42,14 @@ pub struct Program {
 
 impl Program {
     /// Used for debugging output
-    pub fn split_projection<'p>(&self, projection: &'p ProjectionTy)
-                            -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
-        let ProjectionTy { associated_ty_id, ref parameters } = *projection;
+    pub fn split_projection<'p>(
+        &self,
+        projection: &'p ProjectionTy,
+    ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
+        let ProjectionTy {
+            associated_ty_id,
+            ref parameters,
+        } = *projection;
         let associated_ty_data = &self.associated_ty_data[&associated_ty_id];
         let trait_datum = &self.trait_data[&associated_ty_data.trait_id];
         let trait_num_params = trait_datum.binders.len();
@@ -67,9 +73,14 @@ pub struct ProgramEnvironment {
 
 impl ProgramEnvironment {
     /// Used for debugging output
-    pub fn split_projection<'p>(&self, projection: &'p ProjectionTy)
-                            -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
-        let ProjectionTy { associated_ty_id, ref parameters } = *projection;
+    pub fn split_projection<'p>(
+        &self,
+        projection: &'p ProjectionTy,
+    ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
+        let ProjectionTy {
+            associated_ty_id,
+            ref parameters,
+        } = *projection;
         let associated_ty_data = &self.associated_ty_data[&associated_ty_id];
         let trait_datum = &self.trait_data[&associated_ty_data.trait_id];
         let trait_num_params = trait_datum.binders.len();
@@ -89,11 +100,15 @@ pub struct Environment {
 
 impl Environment {
     pub fn new() -> Arc<Environment> {
-        Arc::new(Environment { universe: UniverseIndex::root(), clauses: vec![] })
+        Arc::new(Environment {
+            universe: UniverseIndex::root(),
+            clauses: vec![],
+        })
     }
 
     pub fn add_clauses<I>(&self, clauses: I) -> Arc<Environment>
-        where I: IntoIterator<Item = DomainGoal>
+    where
+        I: IntoIterator<Item = DomainGoal>,
     {
         let mut env = self.clone();
         let env_clauses: HashSet<_> = env.clauses.into_iter().chain(clauses).collect();
@@ -103,7 +118,9 @@ impl Environment {
 
     pub fn new_universe(&self) -> Arc<Environment> {
         let mut env = self.clone();
-        env.universe = UniverseIndex { counter: self.universe.counter + 1 };
+        env.universe = UniverseIndex {
+            counter: self.universe.counter + 1,
+        };
         Arc::new(env)
     }
 }
@@ -116,15 +133,22 @@ pub struct InEnvironment<G> {
 
 impl<G> InEnvironment<G> {
     pub fn new(environment: &Arc<Environment>, goal: G) -> Self {
-        InEnvironment { environment: environment.clone(), goal }
+        InEnvironment {
+            environment: environment.clone(),
+            goal,
+        }
     }
 
     pub fn empty(goal: G) -> Self {
-        InEnvironment { environment: Environment::new(), goal }
+        InEnvironment {
+            environment: Environment::new(),
+            goal,
+        }
     }
 
     pub fn map<OP, H>(self, op: OP) -> InEnvironment<H>
-        where OP: FnOnce(G) -> H
+    where
+        OP: FnOnce(G) -> H,
     {
         InEnvironment {
             environment: self.environment,
@@ -154,7 +178,10 @@ impl TypeName {
     }
 
     pub fn to_ty(self) -> Ty {
-        Ty::Apply(ApplicationTy { name: self, parameters: vec![] })
+        Ty::Apply(ApplicationTy {
+            name: self,
+            parameters: vec![],
+        })
     }
 }
 
@@ -183,7 +210,7 @@ impl UniverseIndex {
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ItemId {
-    pub index: usize
+    pub index: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -306,7 +333,7 @@ pub enum Ty {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct QuantifiedTy {
     pub num_binders: usize,
-    pub ty: Ty
+    pub ty: Ty,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -337,7 +364,8 @@ impl<T> ParameterKind<T> {
     }
 
     pub fn map<OP, U>(self, op: OP) -> ParameterKind<U>
-        where OP: FnOnce(T) -> U
+    where
+        OP: FnOnce(T) -> U,
     {
         match self {
             ParameterKind::Ty(t) => ParameterKind::Ty(op(t)),
@@ -347,6 +375,14 @@ impl<T> ParameterKind<T> {
 }
 
 impl<T, L> ParameterKind<T, L> {
+    pub fn assert_ty_ref(&self) -> &T {
+        self.as_ref().ty().unwrap()
+    }
+
+    pub fn assert_lifetime_ref(&self) -> &L {
+        self.as_ref().lifetime().unwrap()
+    }
+
     pub fn as_ref(&self) -> ParameterKind<&T, &L> {
         match *self {
             ParameterKind::Ty(ref t) => ParameterKind::Ty(t),
@@ -408,8 +444,7 @@ impl PolarizedTraitRef {
 
     pub fn trait_ref(&self) -> &TraitRef {
         match *self {
-            PolarizedTraitRef::Positive(ref tr) |
-            PolarizedTraitRef::Negative(ref tr) => tr
+            PolarizedTraitRef::Positive(ref tr) | PolarizedTraitRef::Negative(ref tr) => tr,
         }
     }
 }
@@ -445,17 +480,18 @@ impl DomainGoal {
     pub fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
         let mut expanded = vec![];
         match self {
-            DomainGoal::Implemented(ref trait_ref) =>
-                expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast()),
+            DomainGoal::Implemented(ref trait_ref) => {
+                expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast())
+            }
             DomainGoal::Normalize(Normalize { ref projection, .. }) => {
                 let (associated_ty_data, trait_params, _) = program.split_projection(&projection);
                 let trait_ref = TraitRef {
                     trait_id: associated_ty_data.trait_id,
-                    parameters: trait_params.to_owned()
+                    parameters: trait_params.to_owned(),
                 };
                 expanded.push(WellFormed::TraitRef(trait_ref).cast());
             }
-            _ => ()
+            _ => (),
         };
         expanded.push(self.cast());
         expanded.into_iter()
@@ -504,7 +540,8 @@ pub struct Binders<T> {
 
 impl<T> Binders<T> {
     pub fn map_ref<U, OP>(&self, op: OP) -> Binders<U>
-        where OP: FnOnce(&T) -> U
+    where
+        OP: FnOnce(&T) -> U,
     {
         let value = op(&self.value);
         Binders {
@@ -548,14 +585,23 @@ pub struct Canonical<T> {
 
 impl Canonical<InEnvironment<LeafGoal>> {
     pub fn into_reduced_goal(self) -> FullyReducedGoal {
-        let Canonical { value: InEnvironment { goal, environment }, binders } = self;
+        let Canonical {
+            value: InEnvironment { goal, environment },
+            binders,
+        } = self;
         match goal {
             LeafGoal::EqGoal(goal) => {
-                let canonical = Canonical { value: InEnvironment { goal, environment }, binders };
+                let canonical = Canonical {
+                    value: InEnvironment { goal, environment },
+                    binders,
+                };
                 FullyReducedGoal::EqGoal(canonical)
             }
             LeafGoal::DomainGoal(goal) => {
-                let canonical = Canonical { value: InEnvironment { goal, environment }, binders };
+                let canonical = Canonical {
+                    value: InEnvironment { goal, environment },
+                    binders,
+                };
                 FullyReducedGoal::DomainGoal(canonical)
             }
         }
@@ -574,19 +620,21 @@ impl FullyReducedGoal {
     pub fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
         match self {
             FullyReducedGoal::EqGoal(Canonical { binders, .. }) |
-            FullyReducedGoal::DomainGoal(Canonical { binders, ..}) => binders,
+            FullyReducedGoal::DomainGoal(Canonical { binders, .. }) => binders,
         }
     }
 
     /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
     pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
         if let FullyReducedGoal::DomainGoal(Canonical {
-                value: InEnvironment {
+            value:
+                InEnvironment {
                     goal: DomainGoal::Implemented(ref tr),
                     ..
                 },
-                ..
-        }) = *self {
+            ..
+        }) = *self
+        {
             let trait_datum = &program.trait_data[&tr.trait_id];
             return trait_datum.binders.value.flags.auto;
         }
@@ -604,9 +652,10 @@ impl<T> Canonical<T> {
     /// variables. The result should be in terms of those same
     /// inference variables and will be re-canonicalized.
     pub fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
-        where OP: FnOnce(T::Result) -> U,
-              T: Fold,
-              U: Fold,
+    where
+        OP: FnOnce(T::Result) -> U,
+        T: Fold,
+        U: Fold,
     {
         // Subtle: It is only quite rarely correct to apply `op` and
         // just re-use our existing binders. For that to be valid, the
@@ -628,7 +677,8 @@ impl<T> Canonical<T> {
     }
 
     pub fn instantiate_with_subst(&self, mut subst: &Substitution) -> T::Result
-        where T: Fold
+    where
+        T: Fold,
     {
         self.value.fold_with(&mut subst, 0).unwrap()
     }
@@ -659,7 +709,13 @@ pub enum Goal {
 
 impl Goal {
     pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal {
-        Goal::Quantified(kind, Binders { value: Box::new(self), binders })
+        Goal::Quantified(
+            kind,
+            Binders {
+                value: Box::new(self),
+                binders,
+            },
+        )
     }
 
     pub fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
@@ -710,7 +766,8 @@ impl Goal {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum QuantifierKind {
-    ForAll, Exists
+    ForAll,
+    Exists,
 }
 
 /// A constraint on lifetimes.
@@ -727,61 +784,82 @@ pub enum Constraint {
 /// A mapping of inference variables to instantiations thereof.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Substitution {
-    // Use BTreeMap for extracting in order (mostly for debugging/testing)
-    pub tys: BTreeMap<InferenceVariable, Ty>,
-    pub lifetimes: BTreeMap<InferenceVariable, Lifetime>,
+    /// Map free variable with given index to the value with the same
+    /// index. Naturally, the kind of the variable must agree with
+    /// the kind of the value.
+    ///
+    /// This is a map because the substitution is not necessarily
+    /// complete. We use a btree map to ensure that the result is in a
+    /// deterministic order.
+    pub parameters: BTreeMap<InferenceVariable, Parameter>,
 }
 
 impl Substitution {
     pub fn empty() -> Substitution {
-        Substitution {
-            tys: BTreeMap::new(),
-            lifetimes: BTreeMap::new(),
-        }
+        Substitution { parameters: BTreeMap::new() }
+    }
+
+    /// Add `var := value` to the substutition.
+    ///
+    /// # Panics
+    ///
+    /// If a mapping for `var` is already present.
+    pub fn insert(&mut self,
+                  var: InferenceVariable,
+                  value: Parameter)
+    {
+        let old_value = self.parameters.insert(var, value);
+        assert!(old_value.is_none(),
+                "already had a key for {:?} in subst (old_value={:?})",
+                var, old_value);
     }
 
     /// Construct an identity substitution given a set of binders
     pub fn from_binders(binders: &[ParameterKind<UniverseIndex>]) -> Self {
-        let mut tys = BTreeMap::new();
-        let mut lifetimes = BTreeMap::new();
+        let parameters = binders
+            .iter()
+            .enumerate()
+            .map(|(index, kind)| {
+                let var = InferenceVariable::from_depth(index);
+                let value = match kind {
+                    ParameterKind::Ty(_) => ParameterKind::Ty(var.to_ty()),
+                    ParameterKind::Lifetime(_) => ParameterKind::Lifetime(var.to_lifetime()),
+                };
+                (var, value)
+            })
+            .collect();
 
-        for (i, kind) in binders.iter().enumerate() {
-            match *kind {
-                ParameterKind::Ty(_) => {
-                    tys.insert(InferenceVariable::from_depth(i), Ty::Var(i));
-                }
-                ParameterKind::Lifetime(_) => {
-                    lifetimes.insert(InferenceVariable::from_depth(i), Lifetime::Var(i));
-                }
-            }
-        }
-
-        Substitution { tys, lifetimes }
+        Substitution { parameters }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.tys.is_empty() && self.lifetimes.is_empty()
+        self.parameters.is_empty()
     }
 }
 
-impl<'a> DefaultTypeFolder for &'a Substitution {
-}
+impl<'a> DefaultTypeFolder for &'a Substitution {}
 
 impl<'a> ExistentialFolder for &'a Substitution {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> ::errors::Result<Ty> {
         let v = InferenceVariable::from_depth(depth);
-        if let Some(ty) = self.tys.get(&v) {
+        if let Some(ty) = self.parameters.get(&v) {
             // Substitutions do not have to be complete.
+            let ty = ty.assert_ty_ref();
             Ok(ty.up_shift(binders))
         } else {
             Ok(Ty::Var(depth + binders))
         }
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> ::errors::Result<Lifetime> {
+    fn fold_free_existential_lifetime(
+        &mut self,
+        depth: usize,
+        binders: usize,
+    ) -> ::errors::Result<Lifetime> {
         let v = InferenceVariable::from_depth(depth);
-        if let Some(l) = self.lifetimes.get(&v) {
+        if let Some(l) = self.parameters.get(&v) {
             // Substitutions do not have to be complete.
+            let l = l.assert_lifetime_ref();
             Ok(l.up_shift(binders))
         } else {
             Ok(Lifetime::Var(depth + binders))
@@ -789,8 +867,7 @@ impl<'a> ExistentialFolder for &'a Substitution {
     }
 }
 
-impl<'a> IdentityUniversalFolder for &'a Substitution {
-}
+impl<'a> IdentityUniversalFolder for &'a Substitution {}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {

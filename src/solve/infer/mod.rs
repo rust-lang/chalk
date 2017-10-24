@@ -221,22 +221,35 @@ impl Substitution {
     /// Check whether this substitution is the identity substitution in the
     /// given inference context.
     pub fn is_trivial_within(&self, in_infer: &mut InferenceTable) -> bool {
-        for ty in self.tys.values() {
-            if let Some(var) = ty.inference_var() {
-                if in_infer.var_is_bound(var) {
-                    return false;
+        for value in self.parameters.values() {
+            match value {
+                ParameterKind::Ty(ty) => {
+                    if let Some(var) = ty.inference_var() {
+                        if in_infer.var_is_bound(var) {
+                            return false;
+                        }
+                    }
                 }
-            }
-        }
 
-        for lt in self.lifetimes.values() {
-            if let Some(var) = lt.inference_var() {
-                if in_infer.var_is_bound(var) {
-                    return false;
+                ParameterKind::Lifetime(lifetime) => {
+                    if let Some(var) = lifetime.inference_var() {
+                        if in_infer.var_is_bound(var) {
+                            return false;
+                        }
+                    }
                 }
             }
         }
 
         true
+    }
+}
+
+impl ParameterInferenceVariable {
+    pub fn to_parameter(self) -> Parameter {
+        match self {
+            ParameterKind::Ty(v) => ParameterKind::Ty(v.to_ty()),
+            ParameterKind::Lifetime(v) => ParameterKind::Lifetime(v.to_lifetime()),
+        }
     }
 }
