@@ -5,7 +5,7 @@ use cast::Cast;
 impl Program {
     pub(super) fn add_default_impls(&mut self) {
         // For each auto trait `MyAutoTrait` and for each struct/type `MyStruct`
-        for auto_trait in self.trait_data.values().filter(|t| t.binders.value.auto) {
+        for auto_trait in self.trait_data.values().filter(|t| t.binders.value.flags.auto) {
             for struct_datum in self.struct_data.values() {
 
                 // `MyStruct: MyAutoTrait`

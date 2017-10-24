@@ -15,8 +15,13 @@ impl Program {
             solver::get_overflow_depth()
         );
 
-        // Create a vector of references to impl datums, sorted by trait ref
-        let impl_data = self.impl_data.iter().sorted_by(|&(_, lhs), &(_, rhs)| {
+        // Create a vector of references to impl datums, sorted by trait ref.
+        let impl_data = self.impl_data.iter().filter(|&(_, impl_datum)| {
+            // Ignore impls for marker traits as they are allowed to overlap.
+            let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
+            let trait_datum = &self.trait_data[&trait_id];
+            !trait_datum.binders.value.flags.marker
+        }).sorted_by(|&(_, lhs), &(_, rhs)| {
             lhs.binders.value.trait_ref.trait_ref().trait_id.cmp(&rhs.binders.value.trait_ref.trait_ref().trait_id)
         });
 

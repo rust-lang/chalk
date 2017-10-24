@@ -136,7 +136,7 @@ impl LowerProgram for Program {
         let mut associated_ty_infos = HashMap::new();
         for (item, &item_id) in self.items.iter().zip(&item_ids) {
             if let Item::TraitDefn(ref d) = *item {
-                if d.auto && !d.assoc_ty_defns.is_empty() {
+                if d.flags.auto && !d.assoc_ty_defns.is_empty() {
                     bail!("auto trait cannot define associated types");
                 }
                 for defn in &d.assoc_ty_defns {
@@ -806,7 +806,7 @@ impl LowerTrait for TraitDefn {
                 parameters: self.parameter_refs(),
             };
 
-            if self.auto {
+            if self.flags.auto {
                 if trait_ref.parameters.len() > 1 {
                     bail!("auto trait cannot have parameters");
                 }
@@ -818,7 +818,10 @@ impl LowerTrait for TraitDefn {
             Ok(ir::TraitDatumBound {
                 trait_ref: trait_ref,
                 where_clauses: self.lower_where_clauses(env)?,
-                auto: self.auto,
+                flags: ir::TraitFlags {
+                    auto: self.flags.auto,
+                    marker: self.flags.marker,
+                },
             })
         })?;
 
