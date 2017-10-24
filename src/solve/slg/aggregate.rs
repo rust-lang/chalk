@@ -261,7 +261,7 @@ impl<'infer> AntiUnifier<'infer> {
 
     fn new_lifetime_variable(&mut self) -> Lifetime {
         self.infer
-            .new_lifetime_variable(self.universe)
+            .new_variable(self.universe)
             .to_lifetime()
     }
 }

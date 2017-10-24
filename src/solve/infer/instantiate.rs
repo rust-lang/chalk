@@ -13,7 +13,7 @@ impl InferenceTable {
     {
         debug!("instantiate(arg={:?})", arg);
         let vars: Vec<_> = universes.into_iter()
-            .map(|u| self.new_parameter_variable(u))
+            .map(|u| u.map(|u| self.new_variable(u)))
             .collect();
         debug!("instantiate: vars={:?}", vars);
         let mut instantiator = Instantiator { vars };
@@ -32,11 +32,11 @@ impl InferenceTable {
         for (i, kind) in binders.iter().enumerate() {
             match *kind {
                 ParameterKind::Ty(ui) => {
-                    tys.insert(TyInferenceVariable::from_depth(i), self.new_variable(ui).to_ty());
+                    tys.insert(InferenceVariable::from_depth(i), self.new_variable(ui).to_ty());
                 }
                 ParameterKind::Lifetime(ui) => {
-                    lifetimes.insert(LifetimeInferenceVariable::from_depth(i),
-                                     self.new_lifetime_variable(ui).to_lifetime());
+                    lifetimes.insert(InferenceVariable::from_depth(i),
+                                     self.new_variable(ui).to_lifetime());
                 }
             }
         }

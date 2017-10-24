@@ -2,7 +2,7 @@ use errors::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use ir::*;
 
-use super::{InferenceTable, TyInferenceVariable, LifetimeInferenceVariable};
+use super::{InferenceTable, InferenceVariable};
 
 impl InferenceTable {
     /// Given a value `value` with variables in it, replaces those variables
@@ -32,18 +32,18 @@ impl<'table> IdentityUniversalFolder for DeepNormalizer<'table> {
 
 impl<'table> ExistentialFolder for DeepNormalizer<'table> {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
-        let var = TyInferenceVariable::from_depth(depth);
-        match self.table.probe_var(var) {
+        let var = InferenceVariable::from_depth(depth);
+        match self.table.probe_ty_var(var) {
             Some(ty) => Ok(ty.fold_with(self, 0)?.up_shift(binders)),
-            None => Ok(TyInferenceVariable::from_depth(depth + binders).to_ty())
+            None => Ok(InferenceVariable::from_depth(depth + binders).to_ty())
         }
     }
 
     fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
-        let var = LifetimeInferenceVariable::from_depth(depth);
+        let var = InferenceVariable::from_depth(depth);
         match self.table.probe_lifetime_var(var) {
             Some(l) => Ok(l.fold_with(self, 0)?.up_shift(binders)),
-            None => Ok(LifetimeInferenceVariable::from_depth(depth + binders).to_lifetime()),
+            None => Ok(InferenceVariable::from_depth(depth + binders).to_lifetime()),
         }
     }
 }

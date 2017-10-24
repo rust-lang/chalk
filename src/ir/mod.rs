@@ -2,7 +2,7 @@ use cast::Cast;
 use chalk_parse::ast;
 use fold::{DefaultTypeFolder, Fold, ExistentialFolder, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;
-use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
+use solve::infer::InferenceVariable;
 use std::collections::{HashSet, HashMap, BTreeMap};
 use std::sync::Arc;
 
@@ -728,8 +728,8 @@ pub enum Constraint {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Substitution {
     // Use BTreeMap for extracting in order (mostly for debugging/testing)
-    pub tys: BTreeMap<TyInferenceVariable, Ty>,
-    pub lifetimes: BTreeMap<LifetimeInferenceVariable, Lifetime>,
+    pub tys: BTreeMap<InferenceVariable, Ty>,
+    pub lifetimes: BTreeMap<InferenceVariable, Lifetime>,
 }
 
 impl Substitution {
@@ -748,10 +748,10 @@ impl Substitution {
         for (i, kind) in binders.iter().enumerate() {
             match *kind {
                 ParameterKind::Ty(_) => {
-                    tys.insert(TyInferenceVariable::from_depth(i), Ty::Var(i));
+                    tys.insert(InferenceVariable::from_depth(i), Ty::Var(i));
                 }
                 ParameterKind::Lifetime(_) => {
-                    lifetimes.insert(LifetimeInferenceVariable::from_depth(i), Lifetime::Var(i));
+                    lifetimes.insert(InferenceVariable::from_depth(i), Lifetime::Var(i));
                 }
             }
         }
@@ -769,7 +769,7 @@ impl<'a> DefaultTypeFolder for &'a Substitution {
 
 impl<'a> ExistentialFolder for &'a Substitution {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> ::errors::Result<Ty> {
-        let v = TyInferenceVariable::from_depth(depth);
+        let v = InferenceVariable::from_depth(depth);
         if let Some(ty) = self.tys.get(&v) {
             // Substitutions do not have to be complete.
             Ok(ty.up_shift(binders))
@@ -779,7 +779,7 @@ impl<'a> ExistentialFolder for &'a Substitution {
     }
 
     fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> ::errors::Result<Lifetime> {
-        let v = LifetimeInferenceVariable::from_depth(depth);
+        let v = InferenceVariable::from_depth(depth);
         if let Some(l) = self.lifetimes.get(&v) {
             // Substitutions do not have to be complete.
             Ok(l.up_shift(binders))

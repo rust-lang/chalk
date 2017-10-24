@@ -637,7 +637,7 @@ fn region_equality() {
                 }
             }
         } yields {
-            "Unique; substitution ['?0 := '!1], lifetime constraints []"
+            "Unique; substitution [?0 := '!1], lifetime constraints []"
         }
     }
 }
@@ -1070,7 +1070,7 @@ fn unify_quantified_lifetimes() {
                 }
             }
         } yields {
-            "Unique; substitution ['?0 := '?0], lifetime constraints [
+            "Unique; substitution [?0 := '?0], lifetime constraints [
                  (Env(U1, []) |- LifetimeEq('?0, '!1))
              ]"
         }
@@ -1086,7 +1086,7 @@ fn unify_quantified_lifetimes() {
                 }
             }
         } yields {
-            "Unique; substitution ['?0 := '?0, '?1 := '!1], lifetime constraints [
+            "Unique; substitution [?0 := '?0, ?1 := '!1], lifetime constraints [
                  (Env(U1, []) |- LifetimeEq('?0, '!1))
              ]"
         }
@@ -1110,7 +1110,7 @@ fn equality_binder() {
                 }
             }
         } yields {
-            "Unique; substitution ['?0 := '?0], lifetime constraints [
+            "Unique; substitution [?0 := '?0], lifetime constraints [
                  (Env(U2, []) |- LifetimeEq('!2, '?0))
              ]"
         }
@@ -1133,7 +1133,7 @@ fn mixed_indices_unify() {
                 }
             }
         } yields {
-            "Unique; substitution [?1 := ?0, ?2 := ?0, '?0 := '?1], lifetime constraints []"
+            "Unique; substitution [?1 := ?0, ?2 := ?0, ?0 := '?1], lifetime constraints []"
         }
     }
 }
@@ -1157,7 +1157,7 @@ fn mixed_indices_match_program() {
                 }
             }
         } yields {
-            "Unique; substitution [?1 := S, ?2 := S, '?0 := '?0], lifetime constraints []"
+            "Unique; substitution [?1 := S, ?2 := S, ?0 := '?0], lifetime constraints []"
         }
     }
 }
