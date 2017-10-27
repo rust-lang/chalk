@@ -20,6 +20,7 @@ use chalk::ir;
 use chalk::lower::*;
 use chalk::solve::solver::{self, Solver, CycleStrategy};
 use chalk::solve::slg;
+use chalk::solve::SolverChoice;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
 
@@ -65,8 +66,8 @@ struct Program {
 }
 
 impl Program {
-    fn new(text: String) -> Result<Program> {
-        let ir = Arc::new(chalk_parse::parse_program(&text)?.lower()?);
+    fn new(text: String, solver_choice: SolverChoice) -> Result<Program> {
+        let ir = Arc::new(chalk_parse::parse_program(&text)?.lower(solver_choice)?);
         let env = Arc::new(ir.environment());
         Ok(Program { text, ir, env })
     }
@@ -90,7 +91,7 @@ fn run() -> Result<()> {
     let mut prog = None;
 
     if let Some(program) = &args.flag_program {
-        match load_program(program) {
+        match load_program(args, program) {
             Ok(p) => prog = Some(p),
             Err(err) => {
                 eprintln!("error loading program: {}", err);
@@ -155,10 +156,10 @@ fn process(args: &Args,
     if command == "help" {
         help()
     } else if command == "program" {
-        *prog = Some(Program::new(read_program(rl)?)?);
+        *prog = Some(Program::new(read_program(rl)?, args.solver_choice())?);
     } else if command.starts_with("load ") {
         let filename = &command["load ".len()..];
-        *prog = Some(load_program(filename)?);
+        *prog = Some(load_program(args, filename)?);
     } else {
         let prog = prog.as_ref().ok_or("no program currently loaded")?;
         ir::set_current_program(&prog.ir, || -> Result<()> {
@@ -174,10 +175,10 @@ fn process(args: &Args,
     Ok(())
 }
 
-fn load_program(filename: &str) -> Result<Program> {
+fn load_program(args: &Args, filename: &str) -> Result<Program> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
-    Ok(Program::new(text)?)
+    Ok(Program::new(text, args.solver_choice())?)
 }
 
 fn help() {
@@ -229,4 +230,14 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
         }
     }
     Ok(())
+}
+
+impl Args {
+    fn solver_choice(&self) -> SolverChoice {
+        if self.flag_slg {
+            SolverChoice::SLG(self.flag_overflow_depth)
+        } else {
+            SolverChoice::Recursive
+        }
+    }
 }

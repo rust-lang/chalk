@@ -3,17 +3,23 @@ use std::sync::Arc;
 use itertools::Itertools;
 use errors::*;
 use ir::*;
-use solve::solver::{self, Solver, CycleStrategy};
+use solve::SolverChoice;
+
+struct OverlapSolver {
+    env: Arc<ProgramEnvironment>,
+    solver_choice: SolverChoice,
+}
 
 impl Program {
-    pub(super) fn visit_specializations<F>(&self, mut record_specialization: F) -> Result<()>
+    pub(super) fn visit_specializations<F>(&self,
+                                           solver_choice: SolverChoice,
+                                           mut record_specialization: F) -> Result<()>
         where F: FnMut(ItemId, ItemId)
     {
-        let mut solver = Solver::new(
-            &Arc::new(self.environment()),
-            CycleStrategy::Tabling,
-            solver::get_overflow_depth()
-        );
+        let mut solver = OverlapSolver {
+            env: Arc::new(self.environment()),
+            solver_choice,
+        };
 
         // Create a vector of references to impl datums, sorted by trait ref.
         let impl_data = self.impl_data.iter().filter(|&(_, impl_datum)| {
@@ -61,7 +67,7 @@ impl Program {
     }
 }
 
-impl Solver {
+impl OverlapSolver {
     // Test for overlap.
     //
     // If this test succeeds, these two impls overlap.
@@ -92,7 +98,7 @@ impl Solver {
     //  Generates:
     //      exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz }
     //
-    fn overlaps(&mut self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
+    fn overlaps(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
         debug_heading!("overlaps(lhs={:?}, rhs={:?})", lhs, rhs);
 
         let lhs_len = lhs.binders.len();
@@ -125,9 +131,9 @@ impl Solver {
                     .expect("Every trait takes at least one input type")
                     .quantify(QuantifierKind::Exists, binders);
 
-        // Unless we get an error, we consider things to overlap.
-        let canonical_goal = goal.into_peeled_goal();
-        self.solve_canonical_goal(&canonical_goal).is_ok()
+        // Unless we can prove NO solution, we consider things to overlap.
+        let canonical_goal = &goal.into_closed_goal();
+        self.solver_choice.solve_root_goal(&self.env, canonical_goal).unwrap().is_some()
     }
 
     // Test for specialization.
@@ -174,7 +180,11 @@ impl Solver {
                     .implied_by(more_special_wc)
                     .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
-        self.solve_canonical_goal(&goal.into_peeled_goal()).ok().map_or(false, |sol| sol.is_unique())
+        let canonical_goal = &goal.into_closed_goal();
+        match self.solver_choice.solve_root_goal(&self.env, canonical_goal).unwrap() {
+            Some(sol) => sol.is_unique(),
+            None => false,
+        }
     }
 }
 

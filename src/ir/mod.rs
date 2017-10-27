@@ -762,6 +762,22 @@ impl Goal {
         };
         infer.canonicalize(&peeled_goal).quantified
     }
+
+    /// Given a goal with no free variables (a "closed" goal), creates
+    /// a canonical form suitable for solving. This is a suitable
+    /// choice if you don't actually care about the values of any of
+    /// the variables within; otherwise, you might want
+    /// `into_peeled_goal`.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if this goal does in fact contain free variables.
+    pub fn into_closed_goal(self) -> Canonical<InEnvironment<Goal>> {
+        use solve::infer::InferenceTable;
+        let mut infer = InferenceTable::new();
+        let env_goal = InEnvironment::new(&Environment::new(), self);
+        infer.canonicalize(&env_goal).quantified
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]

@@ -2,13 +2,12 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::solver::{self, Solver, CycleStrategy};
-use solve::slg;
 use solve::SolverChoice;
+use std::collections::HashMap;
 use std::sync::Arc;
 
-fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
-    chalk_parse::parse_program(text)?.lower()
+fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<ir::Program> {
+    chalk_parse::parse_program(text)?.lower(solver_choice)
 }
 
 fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goal>> {
@@ -68,42 +67,32 @@ macro_rules! test {
 
 const MAX_SIZE: usize = 22; // default MAX_SIZE for SLG
 
-fn solve_goal(program_text: &str,
-              goals: Vec<(&str, SolverChoice, &str)>)
-{
+fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let program = Arc::new(parse_and_lower_program(&program_text[1..program_text.len()-1]).unwrap());
-    let env = Arc::new(program.environment());
-    ir::set_current_program(&program, || {
-        for (goal_text, choice, expected) in goals {
+    let mut program_env_cache = HashMap::new();
+    for (goal_text, solver_choice, expected) in goals {
+        let (program, env) = program_env_cache.entry(solver_choice).or_insert_with(|| {
+            let program_text = &program_text[1..program_text.len() - 1]; // exclude `{}`
+            let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
+            let env = Arc::new(program.environment());
+            (program, env)
+        });
+
+        ir::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
-            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len()-1]).unwrap();
+            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
 
-            println!("using solver: {:?}", choice);
+            println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
-            let result = match choice {
-                SolverChoice::Recursive => {
-                    let mut solver = Solver::new(&env, CycleStrategy::Tabling, solver::get_overflow_depth());
-                    match solver.solve_canonical_goal(&peeled_goal) {
-                        Ok(v) => format!("{}", v),
-                        Err(e) => format!("No possible solution: {}", e),
-                    }
-                }
-
-                SolverChoice::SLG(max_size) => {
-                    match slg::solve_root_goal(max_size, &env, &peeled_goal) {
-                        Ok(answers) => match answers.into_solution(&peeled_goal) {
-                            Some(v) => format!("{}", v),
-                            None => format!("No possible solution: no answers"),
-                        },
-                        Err(err) => format!("Exploration error: {:?}", err),
-                    }
-                }
+            let result = match solver_choice.solve_root_goal(&env, &peeled_goal) {
+                Ok(Some(v)) => format!("{}", v),
+                Ok(None) => format!("No possible solution"),
+                Err(e) => format!("{}", e),
             };
             println!("expected:\n{}", expected);
             println!("actual:\n{}", result);
@@ -112,8 +101,8 @@ fn solve_goal(program_text: &str,
             let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
             let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
             assert!(!expected1.is_empty() && result1.starts_with(&expected1));
-        }
-    });
+        });
+    }
 }
 
 #[test]
@@ -912,7 +901,7 @@ fn trait_wf() {
             "No possible solution"
         }
 
-        // not WF because previous equation doesn't hold, despite Slice<Int> having an impl for Ord<Int> 
+        // not WF because previous equation doesn't hold, despite Slice<Int> having an impl for Ord<Int>
         goal {
             WellFormed(Slice<Int>: Ord<Slice<Int>>)
         } yields {
