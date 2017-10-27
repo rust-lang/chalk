@@ -12,84 +12,71 @@ mod var;
 
 pub use self::canonicalize::Canonicalized;
 pub use self::unify::UnificationResult;
-pub use self::var::{TyInferenceVariable, LifetimeInferenceVariable};
+pub use self::var::InferenceVariable;
 use self::var::*;
 
 #[derive(Clone)]
 pub struct InferenceTable {
-    ty_unify: ena::UnificationTable<TyInferenceVariable>,
-    ty_vars: Vec<TyInferenceVariable>,
-    lifetime_unify: ena::UnificationTable<LifetimeInferenceVariable>,
-    lifetime_vars: Vec<LifetimeInferenceVariable>,
+    unify: ena::UnificationTable<InferenceVariable>,
+    vars: Vec<InferenceVariable>,
 }
 
 pub struct InferenceSnapshot {
-    ty_unify_snapshot: ena::Snapshot<TyInferenceVariable>,
-    ty_vars: Vec<TyInferenceVariable>,
-    lifetime_unify_snapshot: ena::Snapshot<LifetimeInferenceVariable>,
-    lifetime_vars: Vec<LifetimeInferenceVariable>,
+    unify_snapshot: ena::Snapshot<InferenceVariable>,
+    vars: Vec<InferenceVariable>,
 }
 
-pub type ParameterInferenceVariable = ParameterKind<TyInferenceVariable, LifetimeInferenceVariable>;
+pub type ParameterInferenceVariable = ParameterKind<InferenceVariable>;
 
 impl InferenceTable {
+    /// Create an empty inference table with no variables.
     pub fn new() -> Self {
         InferenceTable {
-            ty_unify: ena::UnificationTable::new(),
-            ty_vars: vec![],
-            lifetime_unify: ena::UnificationTable::new(),
-            lifetime_vars: vec![],
+            unify: ena::UnificationTable::new(),
+            vars: vec![],
         }
     }
 
-    pub fn new_variable(&mut self, ui: UniverseIndex) -> TyInferenceVariable {
-        let var = self.ty_unify.new_key(InferenceValue::Unbound(ui));
-        self.ty_vars.push(var);
+    /// Creates a new inference variable and returns its index. The
+    /// kind of the variable should be known by the caller, but is not
+    /// tracked directly by the inference table.
+    pub fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
+        let var = self.unify.new_key(InferenceValue::Unbound(ui));
+        self.vars.push(var);
         var
     }
 
-    pub fn new_lifetime_variable(&mut self, ui: UniverseIndex) -> LifetimeInferenceVariable {
-        let var = self.lifetime_unify.new_key(InferenceValue::Unbound(ui));
-        self.lifetime_vars.push(var);
-        var
-    }
-
-    pub fn new_parameter_variable(&mut self, ui: ParameterKind<UniverseIndex>)
-                                  -> ParameterInferenceVariable {
-        match ui {
-            ParameterKind::Ty(ui) => ParameterKind::Ty(self.new_variable(ui)),
-            ParameterKind::Lifetime(ui) => ParameterKind::Lifetime(self.new_lifetime_variable(ui)),
-        }
-    }
-
-    pub fn ty_vars(&self) -> &[TyInferenceVariable] {
-        &self.ty_vars
-    }
-
-    pub fn lifetime_vars(&self) -> &[LifetimeInferenceVariable] {
-        &self.lifetime_vars
-    }
-
+    /// Takes a "snapshot" of the current state of the inference
+    /// table.  Later, you must invoke either `rollback_to` or
+    /// `commit` with that snapshot.  Snapshots can be nested, but you
+    /// must respect a stack discipline (i.e., rollback or commit
+    /// snapshots in reverse order of that with which they were
+    /// created).
     pub fn snapshot(&mut self) -> InferenceSnapshot {
-        let ty_unify_snapshot = self.ty_unify.snapshot();
-        let lifetime_unify_snapshot = self.lifetime_unify.snapshot();
-        let ty_vars = self.ty_vars.clone();
-        let lifetime_vars = self.lifetime_vars.clone();
-        InferenceSnapshot { ty_unify_snapshot, lifetime_unify_snapshot, ty_vars, lifetime_vars }
+        let unify_snapshot = self.unify.snapshot();
+        let vars = self.vars.clone();
+        InferenceSnapshot { unify_snapshot, vars }
     }
 
+    /// Restore the table to the state it had when the snapshot was taken.
     pub fn rollback_to(&mut self, snapshot: InferenceSnapshot) {
-        self.ty_unify.rollback_to(snapshot.ty_unify_snapshot);
-        self.lifetime_unify.rollback_to(snapshot.lifetime_unify_snapshot);
-        self.ty_vars = snapshot.ty_vars;
-        self.lifetime_vars = snapshot.lifetime_vars;
+        self.unify.rollback_to(snapshot.unify_snapshot);
+        self.vars = snapshot.vars;
     }
 
+    /// Make permanent the changes made since the snapshot was taken.
     pub fn commit(&mut self, snapshot: InferenceSnapshot) {
-        self.ty_unify.commit(snapshot.ty_unify_snapshot);
-        self.lifetime_unify.commit(snapshot.lifetime_unify_snapshot);
+        self.unify.commit(snapshot.unify_snapshot);
     }
 
+    /// This helper function creates a snapshot and then execues `op`;
+    /// if `op` returns `Ok(v)`, then the snapshot is committed and
+    /// `Ok(v)` is returned.  If `op` returns `Err(e)`, then the
+    /// changes are rolled back and `Err(e)` is propagated.
+    ///
+    /// This is commonly used to perform a series of smaller changes,
+    /// some of which may be fallible; the result is that either all
+    /// the changes take effect, or none.
     pub fn commit_if_ok<F, R>(&mut self, op: F) -> Result<R>
         where F: FnOnce(&mut Self) -> Result<R>
     {
@@ -119,33 +106,73 @@ impl InferenceTable {
                 if depth < binders {
                     None // bound variable, not an inference var
                 } else {
-                    let var = TyInferenceVariable::from_depth(depth - binders);
-                    match self.ty_unify.probe_value(var) {
+                    let var = InferenceVariable::from_depth(depth - binders);
+                    match self.unify.probe_value(var) {
                         InferenceValue::Unbound(_) => None,
-                        InferenceValue::Bound(ref val) => Some(val.up_shift(binders)),
+                        InferenceValue::Bound(ref val) => {
+                            let ty = val.as_ref().ty().unwrap();
+                            Some(ty.up_shift(binders))
+                        }
                     }
                 }
             })
     }
 
+    /// If `leaf` represents an inference variable `X`, and `X` is bound,
+    /// returns `Some(v)` where `v` is the value to which `X` is bound.
     fn normalize_lifetime(&mut self, leaf: &Lifetime) -> Option<Lifetime> {
         match *leaf {
-            Lifetime::Var(v) => self.probe_lifetime_var(LifetimeInferenceVariable::from_depth(v)),
+            Lifetime::Var(v) => self.probe_lifetime_var(InferenceVariable::from_depth(v)),
             Lifetime::ForAll(_) => None,
         }
     }
 
-    pub fn probe_var(&mut self, var: TyInferenceVariable) -> Option<Ty> {
-        match self.ty_unify.probe_value(var) {
+    /// Finds the type to which `var` is bound, returning `None` if it is not yet
+    /// bound.
+    ///
+    /// # Panics
+    ///
+    /// This method is only valid for inference variables of kind
+    /// type. If this variable is of a different kind, then the
+    /// function may panic.
+    fn probe_ty_var(&mut self, var: InferenceVariable) -> Option<Ty> {
+        match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(ref val) => Some(val.clone()),
+            InferenceValue::Bound(ref val) => Some(val.as_ref().ty().unwrap().clone()),
         }
     }
 
-    pub fn probe_lifetime_var(&mut self, var: LifetimeInferenceVariable) -> Option<Lifetime> {
-        match self.lifetime_unify.probe_value(var) {
+    /// Finds the lifetime to which `var` is bound, returning `None` if it is not yet
+    /// bound.
+    ///
+    /// # Panics
+    ///
+    /// This method is only valid for inference variables of kind
+    /// lifetime. If this variable is of a different kind, then the function may panic.
+    fn probe_lifetime_var(&mut self, var: InferenceVariable) -> Option<Lifetime> {
+        match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(val) => Some(val.clone()),
+            InferenceValue::Bound(ref val) => Some(val.as_ref().lifetime().unwrap().clone()),
+        }
+    }
+
+    /// True if the given inference variable is bound to a value.
+    pub fn var_is_bound(&mut self, var: InferenceVariable) -> bool {
+        match self.unify.probe_value(var) {
+            InferenceValue::Unbound(_) => false,
+            InferenceValue::Bound(_) => true,
+        }
+    }
+
+    /// Given an unbound variable, returns its universe.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the variable is bound.
+    fn universe_of_unbound_var(&mut self, var: InferenceVariable) -> UniverseIndex {
+        match self.unify.probe_value(var) {
+            InferenceValue::Unbound(ui) => ui,
+            InferenceValue::Bound(_) => panic!("var_universe invoked on bound variable")
         }
     }
 }
@@ -165,8 +192,8 @@ impl Ty {
     /// `self` is known not to appear inside of any binders, since
     /// otherwise the depth would have be adjusted to account for
     /// those binders.
-    pub fn inference_var(&self) -> Option<TyInferenceVariable> {
-        self.var().map(TyInferenceVariable::from_depth)
+    pub fn inference_var(&self) -> Option<InferenceVariable> {
+        self.var().map(InferenceVariable::from_depth)
     }
 }
 
@@ -185,8 +212,8 @@ impl Lifetime {
     /// `self` is known not to appear inside of any binders, since
     /// otherwise the depth would have be adjusted to account for
     /// those binders.
-    pub fn inference_var(&self) -> Option<LifetimeInferenceVariable> {
-        self.var().map(LifetimeInferenceVariable::from_depth)
+    pub fn inference_var(&self) -> Option<InferenceVariable> {
+        self.var().map(InferenceVariable::from_depth)
     }
 }
 
@@ -194,22 +221,35 @@ impl Substitution {
     /// Check whether this substitution is the identity substitution in the
     /// given inference context.
     pub fn is_trivial_within(&self, in_infer: &mut InferenceTable) -> bool {
-        for ty in self.tys.values() {
-            if let Some(var) = ty.inference_var() {
-                if in_infer.probe_var(var).is_some() {
-                    return false;
+        for value in self.parameters.values() {
+            match value {
+                ParameterKind::Ty(ty) => {
+                    if let Some(var) = ty.inference_var() {
+                        if in_infer.var_is_bound(var) {
+                            return false;
+                        }
+                    }
                 }
-            }
-        }
 
-        for lt in self.lifetimes.values() {
-            if let Some(var) = lt.inference_var() {
-                if in_infer.probe_lifetime_var(var).is_some() {
-                    return false;
+                ParameterKind::Lifetime(lifetime) => {
+                    if let Some(var) = lifetime.inference_var() {
+                        if in_infer.var_is_bound(var) {
+                            return false;
+                        }
+                    }
                 }
             }
         }
 
         true
+    }
+}
+
+impl ParameterInferenceVariable {
+    pub fn to_parameter(self) -> Parameter {
+        match self {
+            ParameterKind::Ty(v) => ParameterKind::Ty(v.to_ty()),
+            ParameterKind::Lifetime(v) => ParameterKind::Lifetime(v.to_lifetime()),
+        }
     }
 }

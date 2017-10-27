@@ -280,24 +280,14 @@ impl Display for Substitution {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let mut first = true;
 
-        for (tv, ty) in &self.tys {
+        for (var, value) in &self.parameters {
             if first {
                 first = false;
             } else {
                 write!(f, ", ")?;
             }
 
-            write!(f, "{:?} := {:?}", tv, ty)?;
-        }
-
-        for (lv, lt) in &self.lifetimes {
-            if first {
-                first = false;
-            } else {
-                write!(f, ", ")?;
-            }
-
-            write!(f, "{:?} := {:?}", lv, lt)?;
+            write!(f, "{:?} := {:?}", var, value)?;
         }
 
         Ok(())

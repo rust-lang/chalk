@@ -19,8 +19,8 @@ impl<'q> DefaultTypeFolder for Normalizer<'q> {
 impl<'q> ExistentialFolder for Normalizer<'q> {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
         assert_eq!(binders, 0);
-        let var = TyInferenceVariable::from_depth(depth);
-        match self.table.probe_var(var) {
+        let var = InferenceVariable::from_depth(depth);
+        match self.table.probe_ty_var(var) {
             Some(ty) => ty.fold_with(self, 0),
             None => Ok(var.to_ty()),
         }
@@ -28,7 +28,7 @@ impl<'q> ExistentialFolder for Normalizer<'q> {
 
     fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
         assert_eq!(binders, 0);
-        Ok(LifetimeInferenceVariable::from_depth(depth).to_lifetime())
+        Ok(InferenceVariable::from_depth(depth).to_lifetime())
     }
 }
 
@@ -150,9 +150,9 @@ const U2: UniverseIndex = UniverseIndex { counter: 2 };
 #[test]
 fn quantify_simple() {
     let mut table = InferenceTable::new();
-    let _ = table.new_parameter_variable(ParameterKind::Ty(U0));
-    let _ = table.new_parameter_variable(ParameterKind::Ty(U1));
-    let _ = table.new_parameter_variable(ParameterKind::Ty(U2));
+    let _ = table.new_variable(U0);
+    let _ = table.new_variable(U1);
+    let _ = table.new_variable(U2);
 
     assert_eq!(
         table.canonicalize(&ty!(apply (item 0) (var 2) (var 1) (var 0))).quantified,
@@ -193,7 +193,7 @@ fn quantify_ty_under_binder() {
     let mut table = InferenceTable::new();
     let v0 = table.new_variable(U0);
     let v1 = table.new_variable(U0);
-    let _r0 = table.new_lifetime_variable(U0);
+    let _r0 = table.new_variable(U0);
 
     // Unify v0 and v1.
     let environment0 = Environment::new();

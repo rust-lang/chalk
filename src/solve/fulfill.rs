@@ -3,7 +3,7 @@ use cast::Caster;
 use errors::*;
 use fold::Fold;
 use solve::infer::{InferenceTable, UnificationResult, ParameterInferenceVariable};
-use solve::infer::{TyInferenceVariable, LifetimeInferenceVariable};
+use solve::infer::InferenceVariable;
 use solve::solver::Solver;
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -205,16 +205,6 @@ impl<'s> Fulfill<'s> {
         }
     }
 
-    /// Provide all of the type inference variables created so far; used for REPL/debugging.
-    pub fn ty_vars(&self) -> &[TyInferenceVariable] {
-        self.infer.ty_vars()
-    }
-
-    /// Provide all of the type inference variables created so far; used for REPL/debugging.
-    pub fn lifetime_vars(&self) -> &[LifetimeInferenceVariable] {
-        self.infer.lifetime_vars()
-    }
-
     /// Apply the subsitution `subst` to all the variables of `free_vars`
     /// (understood in deBruijn style), and add any lifetime constraints.
     fn apply_solution(&mut self,
@@ -232,23 +222,18 @@ impl<'s> Fulfill<'s> {
         // guaranteed to succeed without generating any new constraints.
         let empty_env = &Environment::new();
 
-        for (i, var) in free_vars.into_iter().enumerate() {
-            match var {
-                ParameterKind::Ty(ty) => {
-                    // Should always be `Some(..)` unless we applied coinductive semantics
-                    // somewhere and hence returned an empty substitution.
-                    if let Some(new_ty) = subst.tys.get(&TyInferenceVariable::from_depth(i)) {
-                        self.unify(empty_env, &ty.to_ty(), &new_ty)
-                            .expect("apply_solution failed to substitute");
-                    }
-                }
-                ParameterKind::Lifetime(lt) => {
-                    // Same as above.
-                    if let Some(new_lt) = subst.lifetimes.get(&LifetimeInferenceVariable::from_depth(i)) {
-                        self.unify(empty_env, &lt.to_lifetime(), &new_lt)
-                            .expect("apply_solution failed to substitute");
-                    }
-                }
+        for (i, free_var) in free_vars.into_iter().enumerate() {
+            let subst_var = InferenceVariable::from_depth(i);
+
+            // Should always be `Some(..)` unless we applied coinductive semantics
+            // somewhere and hence returned an empty substitution.
+            if let Some(subst_value) = subst.parameters.get(&subst_var) {
+                let free_value = free_var.to_parameter();
+                self.unify(empty_env, &free_value, subst_value)
+                    .unwrap_or_else(|err| {
+                        panic!("apply_solution failed with free_var={:?}, subst_value={:?}: {:?}",
+                               free_var, subst_value, err);
+                    });
             }
         }
     }

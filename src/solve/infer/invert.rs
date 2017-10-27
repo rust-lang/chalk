@@ -3,7 +3,7 @@ use fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use ir::*;
 use std::collections::HashMap;
 
-use super::{InferenceTable, TyInferenceVariable, LifetimeInferenceVariable};
+use super::{InferenceTable, InferenceVariable};
 use super::canonicalize::Canonicalized;
 
 impl InferenceTable {
@@ -104,8 +104,8 @@ impl InferenceTable {
 
 struct Inverter<'q> {
     table: &'q mut InferenceTable,
-    inverted_ty: HashMap<UniverseIndex, TyInferenceVariable>,
-    inverted_lifetime: HashMap<UniverseIndex, LifetimeInferenceVariable>,
+    inverted_ty: HashMap<UniverseIndex, InferenceVariable>,
+    inverted_lifetime: HashMap<UniverseIndex, InferenceVariable>,
 }
 
 impl<'q> Inverter<'q> {
@@ -130,7 +130,7 @@ impl<'q> UniversalFolder for Inverter<'q> {
         let table = &mut self.table;
         Ok(self.inverted_lifetime
            .entry(universe)
-           .or_insert_with(|| table.new_lifetime_variable(universe))
+           .or_insert_with(|| table.new_variable(universe))
            .to_lifetime()
            .up_shift(binders))
     }

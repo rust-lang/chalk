@@ -80,8 +80,7 @@ fn slg_from_env() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: []
                             },
@@ -117,10 +116,9 @@ fn positive_cycle() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: i32
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -132,10 +130,9 @@ fn positive_cycle() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Vec<i32>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -147,10 +144,9 @@ fn positive_cycle() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Vec<Vec<?0>>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -164,10 +160,9 @@ fn positive_cycle() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Vec<Vec<i32>>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -231,8 +226,7 @@ fn subgoal_cycle_uninhabited() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: []
                             },
@@ -254,8 +248,7 @@ fn subgoal_cycle_uninhabited() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: []
                             },
@@ -285,10 +278,9 @@ fn subgoal_cycle_uninhabited() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Vec<u32>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -310,10 +302,9 @@ fn subgoal_cycle_uninhabited() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: !1
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -348,10 +339,9 @@ fn subgoal_cycle_inhabited() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: u32
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -384,8 +374,7 @@ fn basic_region_constraint_from_positive_impl() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: [
                                     (Env(U3, []) |- LifetimeEq('!2, '!1))
@@ -418,8 +407,7 @@ fn basic_region_constraint_from_unification_goal() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: [
                                     (Env(U3, []) |- LifetimeEq('!2, '!1))
@@ -462,10 +450,9 @@ fn example_2_1_EWFS() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: a
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -477,10 +464,9 @@ fn example_2_1_EWFS() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: b
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -492,10 +478,9 @@ fn example_2_1_EWFS() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: c
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -538,8 +523,7 @@ fn example_2_2_EWFS() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: []
                             },
@@ -582,8 +566,7 @@ fn example_2_3_EWFS() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: []
                             },
@@ -622,8 +605,7 @@ fn example_3_3_EWFS() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: []
                             },
@@ -658,8 +640,7 @@ fn contradiction() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: []
                             },
@@ -695,8 +676,7 @@ fn negative_loop() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {},
-                                    lifetimes: {}
+                                    parameters: {}
                                 },
                                 constraints: []
                             },
@@ -742,10 +722,9 @@ fn cached_answers_1() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Lemon
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -757,10 +736,9 @@ fn cached_answers_1() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Vinegar
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -772,10 +750,9 @@ fn cached_answers_1() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: HotSauce<?0>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -789,10 +766,9 @@ fn cached_answers_1() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: HotSauce<Lemon>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -804,10 +780,9 @@ fn cached_answers_1() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: HotSauce<Vinegar>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -845,10 +820,9 @@ fn cached_answers_2() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Lemon
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -860,10 +834,9 @@ fn cached_answers_2() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Vinegar
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -875,10 +848,9 @@ fn cached_answers_2() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: HotSauce<?0>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -892,10 +864,9 @@ fn cached_answers_2() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: HotSauce<Lemon>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -907,10 +878,9 @@ fn cached_answers_2() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: HotSauce<Vinegar>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -948,10 +918,9 @@ fn cached_answers_3() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Lemon
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -963,10 +932,9 @@ fn cached_answers_3() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: Vinegar
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -978,10 +946,9 @@ fn cached_answers_3() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: HotSauce<?0>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -995,10 +962,9 @@ fn cached_answers_3() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: HotSauce<Lemon>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
@@ -1010,10 +976,9 @@ fn cached_answers_3() {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
-                                    tys: {
+                                    parameters: {
                                         ?0: HotSauce<Vinegar>
-                                    },
-                                    lifetimes: {}
+                                    }
                                 },
                                 constraints: []
                             },
