@@ -37,20 +37,28 @@ pub struct Solver {
     overflow_depth: usize,
 }
 
+/// The `minimums` struct is used while solving to track whether we encountered
+/// any cycles in the process.
+struct Minimums {
+    pos_min: usize,
+}
+
 /// An extension trait for merging `Result`s
 trait MergeWith<T> {
-    fn merge_with<F>(self, other: Self, f: F) -> Self where F: FnOnce(T, T) -> T;
+    fn merge_with<F>(self, other: Self, f: F) -> Self
+    where
+        F: FnOnce(T, T) -> T;
 }
 
 impl<T> MergeWith<T> for Fallible<T> {
     fn merge_with<F>(self: Fallible<T>, other: Fallible<T>, f: F) -> Fallible<T>
-        where F: FnOnce(T, T) -> T
+    where
+        F: FnOnce(T, T) -> T,
     {
         match (self, other) {
-            (Err(_), Ok(v)) |
-            (Ok(v), Err(_)) => Ok(v),
+            (Err(_), Ok(v)) | (Ok(v), Err(_)) => Ok(v),
             (Ok(v1), Ok(v2)) => Ok(f(v1, v2)),
-            (Err(_), Err(e)) => Err(e)
+            (Err(_), Err(e)) => Err(e),
         }
     }
 }
@@ -59,7 +67,7 @@ impl Solver {
     pub fn new(
         program: &Arc<ProgramEnvironment>,
         cycle_strategy: CycleStrategy,
-        overflow_depth: usize
+        overflow_depth: usize,
     ) -> Self {
         Solver {
             program: program.clone(),
@@ -84,27 +92,35 @@ impl Solver {
     /// }`, `into_peeled_goal` can be used to create a canonical goal
     /// `SomeType<!1>: Foo<?0>`. This function will then return a
     /// solution with the substitution `?0 := u8`.
-    pub fn solve_root_goal(&mut self,
-                           canonical_goal: &Canonical<InEnvironment<Goal>>)
-                           -> Fallible<Solution> {
+    pub fn solve_root_goal(
+        &mut self,
+        canonical_goal: &Canonical<InEnvironment<Goal>>,
+    ) -> Fallible<Solution> {
         assert!(self.stack.is_empty());
-        self.solve_canonical_goal(canonical_goal)
+        let minimums = &mut Minimums::new();
+        self.solve_canonical_goal(canonical_goal, minimums)
     }
 
     /// Solves (recursively) a canonical goal that has not been broken
     /// down into smaller steps.
-    fn solve_canonical_goal(&mut self,
-                            canonical_goal: &Canonical<InEnvironment<Goal>>)
-                            -> Fallible<Solution> {
+    fn solve_canonical_goal(
+        &mut self,
+        canonical_goal: &Canonical<InEnvironment<Goal>>,
+        minimums: &mut Minimums,
+    ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = fulfill.instantiate_and_push(canonical_goal);
-        fulfill.solve(subst)
+        fulfill.solve(subst, minimums)
     }
 
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Fallible<Solution> {
+    fn solve_reduced_goal(
+        &mut self,
+        goal: FullyReducedGoal,
+        minimums: &mut Minimums,
+    ) -> Fallible<Solution> {
         debug_heading!("Solver::solve({:?})", goal);
 
         if self.stack.len() > self.overflow_depth {
@@ -112,24 +128,29 @@ impl Solver {
         }
 
         // The goal was already on the stack: we found a cycle.
-        if let Some(index) = self.stack.iter().position(|s| { s.goal == goal }) {
+        if let Some(index) = self.stack.iter().position(|s| s.goal == goal) {
+            minimums.update_pos_min(index);
 
             // If we are facing a goal of the form `?0: AutoTrait`, we apply coinductive semantics:
             // if all the components of the cycle also have coinductive semantics, we accept
             // the cycle `(?0: AutoTrait) :- ... :- (?0: AutoTrait)` as an infinite proof for
             // `?0: AutoTrait` and we do not perform any substitution.
-            if self.stack.iter()
-                         .skip(index)
-                         .map(|s| &s.goal)
-                         .chain(Some(&goal))
-                         .all(|g| g.is_coinductive(&*self.program))
+            if self.stack
+                .iter()
+                .skip(index)
+                .map(|s| &s.goal)
+                .chain(Some(&goal))
+                .all(|g| g.is_coinductive(&*self.program))
             {
                 let value = ConstrainedSubst {
                     subst: Substitution::empty(),
                     constraints: vec![],
                 };
                 debug!("applying coinductive semantics");
-                return Ok(Solution::Unique(Canonical { value, binders: goal.into_binders() }));
+                return Ok(Solution::Unique(Canonical {
+                    value,
+                    binders: goal.into_binders(),
+                }));
             }
 
             // Else we indicate that we found a cycle by setting `slot.cycle = true`.
@@ -162,7 +183,7 @@ impl Solver {
             let result = match goal.clone() {
                 FullyReducedGoal::EqGoal(g) => {
                     // Equality goals are understood "natively" by the logic, via unification:
-                    self.solve_via_unification(g)
+                    self.solve_via_unification(g, minimums)
                 }
                 FullyReducedGoal::DomainGoal(Canonical { value, binders }) => {
                     // "Domain" goals (i.e., leaf goals that are Rust-specific) are
@@ -171,24 +192,34 @@ impl Solver {
                     // or from the lowered program, which includes fallback
                     // clauses. We try each approach in turn:
 
-                    let env_clauses = value.environment.clauses.iter()
+                    let env_clauses = value
+                        .environment
+                        .clauses
+                        .iter()
                         .cloned()
                         .map(DomainGoal::into_program_clause);
-                    let env_solution = self.solve_from_clauses(&binders, &value, env_clauses);
+                    let env_solution =
+                        self.solve_from_clauses(&binders, &value, env_clauses, minimums);
 
-                    let prog_clauses: Vec<_> = self.program.program_clauses.iter()
+                    let prog_clauses: Vec<_> = self.program
+                        .program_clauses
+                        .iter()
                         .cloned()
                         .filter(|clause| !clause.fallback_clause)
                         .collect();
-                    let prog_solution = self.solve_from_clauses(&binders, &value, prog_clauses);
+                    let prog_solution =
+                        self.solve_from_clauses(&binders, &value, prog_clauses, minimums);
 
                     // These fallback clauses are used when we're sure we'll never
                     // reach Unique via another route
-                    let fallback: Vec<_> = self.program.program_clauses.iter()
+                    let fallback: Vec<_> = self.program
+                        .program_clauses
+                        .iter()
                         .cloned()
                         .filter(|clause| clause.fallback_clause)
                         .collect();
-                    let fallback_solution = self.solve_from_clauses(&binders, &value, fallback);
+                    let fallback_solution =
+                        self.solve_from_clauses(&binders, &value, fallback, minimums);
 
                     // Now that we have all the outcomes, we attempt to combine
                     // them. Here, we apply a heuristic (also found in rustc): if we
@@ -200,7 +231,9 @@ impl Solver {
 
                     env_solution
                         .merge_with(prog_solution, |env, prog| env.favor_over(prog))
-                        .merge_with(fallback_solution, |merged, fallback| merged.fallback_to(fallback))
+                        .merge_with(fallback_solution, |merged, fallback| {
+                            merged.fallback_to(fallback)
+                        })
                 }
             };
             debug!("Solver::solve: loop iteration result = {:?}", result);
@@ -217,9 +250,8 @@ impl Solver {
                     // any unification and thus fail to correctly reach a fixed point. See test
                     // `multiple_ambiguous_cycles`.
                     match (fixed_point, &actual_answer) {
-                        (_, &Some(Solution::Ambig(_))) | (true, _) =>
-                            return result,
-                        _ => ()
+                        (_, &Some(Solution::Ambig(_))) | (true, _) => return result,
+                        _ => (),
                     };
 
                     answer = actual_answer;
@@ -232,6 +264,7 @@ impl Solver {
     fn solve_via_unification(
         &mut self,
         goal: Canonical<InEnvironment<EqGoal>>,
+        minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let Canonical { value, binders } = goal;
@@ -240,7 +273,7 @@ impl Solver {
             fulfill.instantiate(binders, &(value, subst));
 
         fulfill.unify(&environment, &goal.a, &goal.b)?;
-        fulfill.solve(subst)
+        fulfill.solve(subst, minimums)
     }
 
     /// See whether we can solve a goal by implication on any of the given
@@ -250,7 +283,8 @@ impl Solver {
         &mut self,
         binders: &[ParameterKind<UniverseIndex>],
         goal: &InEnvironment<DomainGoal>,
-        clauses: C
+        clauses: C,
+        minimums: &mut Minimums,
     ) -> Fallible<Solution>
     where
         C: IntoIterator<Item = ProgramClause>,
@@ -259,15 +293,13 @@ impl Solver {
         for ProgramClause { implication, .. } in clauses {
             debug_heading!("clause={:?}", implication);
 
-            let res = self.solve_via_implication(binders, goal.clone(), implication);
+            let res = self.solve_via_implication(binders, goal.clone(), implication, minimums);
             if let Ok(solution) = res {
                 debug!("ok: solution={:?}", solution);
-                cur_solution = Some(
-                    match cur_solution {
-                        None => solution,
-                        Some(cur) => solution.combine(cur),
-                    },
-                );
+                cur_solution = Some(match cur_solution {
+                    None => solution,
+                    Some(cur) => solution.combine(cur),
+                });
             } else {
                 debug!("error");
             }
@@ -280,14 +312,17 @@ impl Solver {
         &mut self,
         binders: &[ParameterKind<UniverseIndex>],
         goal: InEnvironment<DomainGoal>,
-        clause: Binders<ProgramClauseImplication>
+        clause: Binders<ProgramClauseImplication>,
+        minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = Substitution::from_binders(&binders);
         let (goal, (clause, subst)) =
             fulfill.instantiate(binders.iter().cloned(), &(goal, (clause, subst)));
-        let ProgramClauseImplication { consequence, conditions } =
-            fulfill.instantiate_in(goal.environment.universe, clause.binders, &clause.value);
+        let ProgramClauseImplication {
+            consequence,
+            conditions,
+        } = fulfill.instantiate_in(goal.environment.universe, clause.binders, &clause.value);
 
         fulfill.unify(&goal.environment, &goal.goal, &consequence)?;
 
@@ -297,6 +332,19 @@ impl Solver {
         }
 
         // and then try to solve
-        fulfill.solve(subst)
+        fulfill.solve(subst, minimums)
+    }
+}
+
+impl Minimums {
+    fn new() -> Self {
+        use std::usize;
+        Minimums {
+            pos_min: usize::MAX,
+        }
+    }
+
+    fn update_pos_min(&mut self, value: usize) {
+        self.pos_min = ::std::cmp::min(self.pos_min, value);
     }
 }
