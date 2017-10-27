@@ -228,7 +228,7 @@ impl SolverChoice {
         match self {
             SolverChoice::Recursive { cycle_strategy, overflow_depth } => {
                 let mut solver = recursive::Solver::new(env, cycle_strategy, overflow_depth);
-                match solver.solve_canonical_goal(canonical_goal) {
+                match solver.solve_root_goal(canonical_goal) {
                         Ok(v) => Ok(Some(v)),
                         Err(_) => Ok(None),
                 }

@@ -84,9 +84,18 @@ impl Solver {
     /// }`, `into_peeled_goal` can be used to create a canonical goal
     /// `SomeType<!1>: Foo<?0>`. This function will then return a
     /// solution with the substitution `?0 := u8`.
-    pub fn solve_canonical_goal(&mut self,
-                                canonical_goal: &Canonical<InEnvironment<Goal>>)
-                                -> Fallible<Solution> {
+    pub fn solve_root_goal(&mut self,
+                           canonical_goal: &Canonical<InEnvironment<Goal>>)
+                           -> Fallible<Solution> {
+        assert!(self.stack.is_empty());
+        self.solve_canonical_goal(canonical_goal)
+    }
+
+    /// Solves (recursively) a canonical goal that has not been broken
+    /// down into smaller steps.
+    fn solve_canonical_goal(&mut self,
+                            canonical_goal: &Canonical<InEnvironment<Goal>>)
+                            -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = fulfill.instantiate_and_push(canonical_goal);
         fulfill.solve(subst)

@@ -192,8 +192,8 @@ impl<'s> Fulfill<'s> {
         };
 
         // Negate the result
-        if let Ok(solution) = self.solver.solve_canonical_goal(&canonicalized) {
-            if solution.has_definite() {
+        if let Ok(solution) = self.solver.solve_root_goal(&canonicalized) {
+            if solution.is_unique() {
                 Err(NoSolution)
             } else {
                 Ok(NegativeSolution::Ambiguous)
