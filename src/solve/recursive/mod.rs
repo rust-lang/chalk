@@ -1,4 +1,4 @@
-use errors::*;
+use fallible::*;
 use std::sync::Arc;
 
 use super::*;
@@ -42,8 +42,8 @@ trait MergeWith<T> {
     fn merge_with<F>(self, other: Self, f: F) -> Self where F: FnOnce(T, T) -> T;
 }
 
-impl<T> MergeWith<T> for Result<T> {
-    fn merge_with<F>(self: Result<T>, other: Result<T>, f: F) -> Result<T>
+impl<T> MergeWith<T> for Fallible<T> {
+    fn merge_with<F>(self: Fallible<T>, other: Fallible<T>, f: F) -> Fallible<T>
         where F: FnOnce(T, T) -> T
     {
         match (self, other) {
@@ -86,7 +86,7 @@ impl Solver {
     /// solution with the substitution `?0 := u8`.
     pub fn solve_canonical_goal(&mut self,
                                 canonical_goal: &Canonical<InEnvironment<Goal>>)
-                                -> Result<Solution> {
+                                -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = fulfill.instantiate_and_push(canonical_goal);
         fulfill.solve(subst)
@@ -95,7 +95,7 @@ impl Solver {
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Result<Solution> {
+    fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Fallible<Solution> {
         debug_heading!("Solver::solve({:?})", goal);
 
         if self.stack.len() > self.overflow_depth {
@@ -129,7 +129,7 @@ impl Solver {
             let slot = &mut self.stack[index];
             slot.cycle = true;
             debug!("cycle detected: previous solution {:?}", slot.answer);
-            return slot.answer.clone().ok_or("cycle".into());
+            return slot.answer.clone().ok_or(NoSolution);
         }
 
         // We start with `answer = None` and try to solve the goal. At the end of the iteration,
@@ -223,7 +223,7 @@ impl Solver {
     fn solve_via_unification(
         &mut self,
         goal: Canonical<InEnvironment<EqGoal>>,
-    ) -> Result<Solution> {
+    ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let Canonical { value, binders } = goal;
         let subst = Substitution::from_binders(&binders);
@@ -242,7 +242,7 @@ impl Solver {
         binders: &[ParameterKind<UniverseIndex>],
         goal: &InEnvironment<DomainGoal>,
         clauses: C
-    ) -> Result<Solution>
+    ) -> Fallible<Solution>
     where
         C: IntoIterator<Item = ProgramClause>,
     {
@@ -263,7 +263,7 @@ impl Solver {
                 debug!("error");
             }
         }
-        cur_solution.ok_or("no applicable candidates".into())
+        cur_solution.ok_or(NoSolution)
     }
 
     /// Modus ponens! That is: try to apply an implication by proving its premises.
@@ -272,7 +272,7 @@ impl Solver {
         binders: &[ParameterKind<UniverseIndex>],
         goal: InEnvironment<DomainGoal>,
         clause: Binders<ProgramClauseImplication>
-    ) -> Result<Solution> {
+    ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = Substitution::from_binders(&binders);
         let (goal, (clause, subst)) =

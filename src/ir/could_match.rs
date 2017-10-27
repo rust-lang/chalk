@@ -1,4 +1,4 @@
-use errors::*;
+use fallible::*;
 use ir::*;
 use zip::{Zip, Zipper};
 
@@ -14,7 +14,7 @@ impl<T: Zip> CouldMatch<T> for T {
         struct MatchZipper;
 
         impl Zipper for MatchZipper {
-            fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()> {
+            fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Fallible<()> {
                 let could_match = match (a, b) {
                     (&Ty::Apply(ref a), &Ty::Apply(ref b)) => {
                         let names_could_match = match (a.name, b.name) {
@@ -32,14 +32,14 @@ impl<T: Zip> CouldMatch<T> for T {
                     _ => true,
                 };
 
-                if could_match { Ok(()) } else { Err(Error::from_kind(ErrorKind::CouldNotMatch)) }
+                if could_match { Ok(()) } else { Err(NoSolution) }
             }
 
-            fn zip_lifetimes(&mut self, _: &Lifetime, _: &Lifetime) -> Result<()> {
+            fn zip_lifetimes(&mut self, _: &Lifetime, _: &Lifetime) -> Fallible<()> {
                 Ok(())
             }
 
-            fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Result<()>
+            fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
                 where T: Zip
             {
                 Zip::zip_with(self, &a.value, &b.value)

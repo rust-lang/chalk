@@ -1,6 +1,6 @@
 //!
 
-use errors::*;
+use fallible::*;
 use fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
 use ir::*;
 use solve::infer::InferenceTable;
@@ -65,7 +65,7 @@ impl<'infer> Truncater<'infer> {
 }
 
 impl<'infer> TypeFolder for Truncater<'infer> {
-    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
         if let Some(normalized_ty) = self.infer.normalize_shallow(ty, binders) {
             return self.fold_ty(&normalized_ty, binders);
         }
@@ -100,7 +100,7 @@ impl<'infer> TypeFolder for Truncater<'infer> {
         Ok(result)
     }
 
-    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime> {
         fold::super_fold_lifetime(self, lifetime, binders)
     }
 }

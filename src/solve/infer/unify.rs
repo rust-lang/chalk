@@ -1,4 +1,5 @@
 use cast::Cast;
+use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use std::sync::Arc;
 use zip::{Zip, Zipper};
@@ -11,7 +12,7 @@ impl InferenceTable {
                     environment: &Arc<Environment>,
                     a: &T,
                     b: &T)
-                    -> Result<UnificationResult>
+                    -> Fallible<UnificationResult>
         where T: ?Sized + Zip,
     {
         debug_heading!("unify(a={:?}\
@@ -56,7 +57,7 @@ impl<'t> Unifier<'t> {
     /// The main entry point for the `Unifier` type and really the
     /// only type meant to be called externally. Performs a
     /// unification of `a` and `b` and returns the Unification Result.
-    fn unify<T>(mut self, a: &T, b: &T) -> Result<UnificationResult>
+    fn unify<T>(mut self, a: &T, b: &T) -> Fallible<UnificationResult>
         where T: ?Sized + Zip,
     {
         Zip::zip_with(&mut self, a, b)?;
@@ -72,7 +73,7 @@ impl<'t> Unifier<'t> {
                     environment: &Arc<Environment>,
                     ty1: T,
                     ty2: T)
-                    -> Result<()>
+                    -> Fallible<()>
         where T: Zip + Fold,
     {
         let sub_unifier = Unifier::new(self.table, environment);
@@ -82,7 +83,7 @@ impl<'t> Unifier<'t> {
         Ok(())
     }
 
-    fn unify_ty_ty<'a>(&mut self, a: &'a Ty, b: &'a Ty) -> Result<()> {
+    fn unify_ty_ty<'a>(&mut self, a: &'a Ty, b: &'a Ty) -> Fallible<()> {
         //         ^^                 ^^         ^^ FIXME rustc bug
         if let Some(n_a) = self.table.normalize_shallow(a, 0) {
             return self.unify_ty_ty(&n_a, b);
@@ -122,7 +123,7 @@ impl<'t> Unifier<'t> {
 
             (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
                 if apply1.name != apply2.name {
-                    bail!("cannot equate `{:?}` and `{:?}`", apply1.name, apply2.name);
+                    return Err(NoSolution);
                 }
 
                 Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
@@ -143,7 +144,7 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    fn unify_forall_tys(&mut self, ty1: &QuantifiedTy, ty2: &QuantifiedTy) -> Result<()> {
+    fn unify_forall_tys(&mut self, ty1: &QuantifiedTy, ty2: &QuantifiedTy) -> Fallible<()> {
         // for<'a...> T == for<'b...> U where 'a != 'b
         //
         // if:
@@ -173,14 +174,14 @@ impl<'t> Unifier<'t> {
         self.sub_unify(&environment, ty1, ty2)
     }
 
-    fn unify_projection_tys(&mut self, proj1: &ProjectionTy, proj2: &ProjectionTy) -> Result<()> {
+    fn unify_projection_tys(&mut self, proj1: &ProjectionTy, proj2: &ProjectionTy) -> Fallible<()> {
         let var = self.table.new_variable(self.environment.universe).to_ty();
         self.unify_projection_ty(proj1, &var)?;
         self.unify_projection_ty(proj2, &var)?;
         Ok(())
     }
 
-    fn unify_projection_ty(&mut self, proj: &ProjectionTy, ty: &Ty) -> Result<()> {
+    fn unify_projection_ty(&mut self, proj: &ProjectionTy, ty: &Ty) -> Fallible<()> {
         Ok(self.goals.push(InEnvironment::new(self.environment,
                                               Normalize {
                                                   projection: proj.clone(),
@@ -189,7 +190,7 @@ impl<'t> Unifier<'t> {
                                               .cast())))
     }
 
-    fn unify_forall_apply(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Result<()> {
+    fn unify_forall_apply(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Fallible<()> {
         let mut environment = self.environment.clone();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|_| {
@@ -204,7 +205,7 @@ impl<'t> Unifier<'t> {
         self.sub_unify(&environment, ty1, ty2)
     }
 
-    fn unify_var_ty(&mut self, var: InferenceVariable, ty: &Ty) -> Result<()> {
+    fn unify_var_ty(&mut self, var: InferenceVariable, ty: &Ty) -> Fallible<()> {
         debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
 
         // Determine the universe index associated with this
@@ -222,7 +223,7 @@ impl<'t> Unifier<'t> {
         Ok(())
     }
 
-    fn unify_lifetime_lifetime(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
+    fn unify_lifetime_lifetime(&mut self, a: &Lifetime, b: &Lifetime) -> Fallible<()> {
         if let Some(n_a) = self.table.normalize_lifetime(a) {
             return self.unify_lifetime_lifetime(&n_a, b);
         } else if let Some(n_b) = self.table.normalize_lifetime(b) {
@@ -270,15 +271,15 @@ impl<'t> Unifier<'t> {
 }
 
 impl<'t> Zipper for Unifier<'t> {
-    fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Result<()> {
+    fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Fallible<()> {
         self.unify_ty_ty(a, b)
     }
 
-    fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Result<()> {
+    fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Fallible<()> {
         self.unify_lifetime_lifetime(a, b)
     }
 
-    fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Result<()>
+    fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
         where T: Zip + Fold<Result = T>
     {
         {
@@ -319,10 +320,9 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
     fn fold_free_universal_ty(&mut self,
                               universe: UniverseIndex,
                               _binders: usize)
-                              -> Result<Ty> {
+                              -> Fallible<Ty> {
         if self.universe_index < universe {
-            bail!("incompatible universes(universe_index={:?}, application_universe_index={:?})",
-                  self.universe_index, universe)
+            Err(NoSolution)
         } else {
             Ok(TypeName::ForAll(universe).to_ty()) // no need to shift, not relative to depth
         }
@@ -331,7 +331,7 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
     fn fold_free_universal_lifetime(&mut self,
                                     ui: UniverseIndex,
                                     binders: usize)
-                                    -> Result<Lifetime> {
+                                    -> Fallible<Lifetime> {
         if self.universe_index < ui {
             // Scenario is like:
             //
@@ -358,7 +358,7 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
 }
 
 impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         let v = InferenceVariable::from_depth(depth);
         match self.unifier.table.unify.probe_value(v) {
             // If this variable already has a value, fold over that value instead.
@@ -372,7 +372,7 @@ impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
             // become the value of).
             InferenceValue::Unbound(ui) => {
                 if self.unifier.table.unify.unioned(v, self.var) {
-                    bail!("cycle during unification");
+                    return Err(NoSolution);
                 }
 
                 if self.universe_index < ui {
@@ -394,7 +394,7 @@ impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
         }
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         // a free existentially bound region; find the
         // inference variable it corresponds to
         let v = InferenceVariable::from_depth(depth);

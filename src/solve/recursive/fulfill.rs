@@ -122,7 +122,7 @@ impl<'s> Fulfill<'s> {
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
+    pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Fallible<()>
         where T: ?Sized + Zip + Debug
     {
         let UnificationResult { goals, constraints } =
@@ -172,7 +172,7 @@ impl<'s> Fulfill<'s> {
         }
     }
 
-    fn prove(&mut self, wc: &InEnvironment<LeafGoal>) -> Result<PositiveSolution> {
+    fn prove(&mut self, wc: &InEnvironment<LeafGoal>) -> Fallible<PositiveSolution> {
         let canonicalized = self.infer.canonicalize(wc);
         let reduced_goal = canonicalized.quantified.into_reduced_goal();
         Ok(PositiveSolution {
@@ -181,7 +181,7 @@ impl<'s> Fulfill<'s> {
         })
     }
 
-    fn refute(&mut self, goal: &InEnvironment<Goal>) -> Result<NegativeSolution> {
+    fn refute(&mut self, goal: &InEnvironment<Goal>) -> Fallible<NegativeSolution> {
         let canonicalized = match self.infer.invert_then_canonicalize(goal) {
             Some(v) => v,
             None => {
@@ -194,7 +194,7 @@ impl<'s> Fulfill<'s> {
         // Negate the result
         if let Ok(solution) = self.solver.solve_canonical_goal(&canonicalized) {
             if solution.has_definite() {
-                bail!("refutation failed")
+                Err(NoSolution)
             } else {
                 Ok(NegativeSolution::Ambiguous)
             }
@@ -236,7 +236,7 @@ impl<'s> Fulfill<'s> {
         }
     }
 
-    fn fulfill(&mut self) -> Result<Outcome> {
+    fn fulfill(&mut self) -> Fallible<Outcome> {
         debug_heading!("fulfill(obligations={:#?})", self.obligations);
 
         // Try to solve all the obligations. We do this via a fixed-point
@@ -303,7 +303,7 @@ impl<'s> Fulfill<'s> {
     /// Try to fulfill all pending obligations and build the resulting
     /// solution. The returned solution will transform `subst` substitution with
     /// the outcome of type inference by updating the replacements it provides.
-    pub fn solve(mut self, subst: Substitution) -> Result<Solution> {
+    pub fn solve(mut self, subst: Substitution) -> Fallible<Solution> {
         let outcome = self.fulfill()?;
 
         if self.cannot_prove {

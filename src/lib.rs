@@ -30,5 +30,6 @@ pub mod ir;
 pub mod cast;
 pub mod coherence;
 pub mod errors;
+pub mod fallible;
 pub mod lower;
 pub mod solve;

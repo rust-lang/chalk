@@ -1,5 +1,4 @@
 use ena::unify as ena;
-use errors::*;
 use ir::*;
 
 mod canonicalize;
@@ -77,8 +76,8 @@ impl InferenceTable {
     /// This is commonly used to perform a series of smaller changes,
     /// some of which may be fallible; the result is that either all
     /// the changes take effect, or none.
-    pub fn commit_if_ok<F, R>(&mut self, op: F) -> Result<R>
-        where F: FnOnce(&mut Self) -> Result<R>
+    pub fn commit_if_ok<F, R, E>(&mut self, op: F) -> Result<R, E>
+        where F: FnOnce(&mut Self) -> Result<R, E>
     {
         let snapshot = self.snapshot();
         match op(self) {

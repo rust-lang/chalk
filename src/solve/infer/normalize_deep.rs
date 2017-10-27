@@ -1,4 +1,4 @@
-use errors::*;
+use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use ir::*;
 
@@ -31,7 +31,7 @@ impl<'table> IdentityUniversalFolder for DeepNormalizer<'table> {
 }
 
 impl<'table> ExistentialFolder for DeepNormalizer<'table> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_ty_var(var) {
             Some(ty) => Ok(ty.fold_with(self, 0)?.up_shift(binders)),
@@ -39,7 +39,7 @@ impl<'table> ExistentialFolder for DeepNormalizer<'table> {
         }
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_lifetime_var(var) {
             Some(l) => Ok(l.fold_with(self, 0)?.up_shift(binders)),

@@ -1,5 +1,6 @@
 use cast::Cast;
 use chalk_parse::ast;
+use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;
 use solve::infer::InferenceVariable;
@@ -856,7 +857,7 @@ impl Substitution {
 impl<'a> DefaultTypeFolder for &'a Substitution {}
 
 impl<'a> ExistentialFolder for &'a Substitution {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> ::errors::Result<Ty> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         let v = InferenceVariable::from_depth(depth);
         if let Some(ty) = self.parameters.get(&v) {
             // Substitutions do not have to be complete.
@@ -871,7 +872,7 @@ impl<'a> ExistentialFolder for &'a Substitution {
         &mut self,
         depth: usize,
         binders: usize,
-    ) -> ::errors::Result<Lifetime> {
+    ) -> Fallible<Lifetime> {
         let v = InferenceVariable::from_depth(depth);
         if let Some(l) = self.parameters.get(&v) {
             // Substitutions do not have to be complete.
