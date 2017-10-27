@@ -1,29 +1,17 @@
+use ir::could_match::CouldMatch;
 use fallible::*;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::*;
 
 mod fulfill;
+mod search_graph;
+mod stack;
+
 use self::fulfill::Fulfill;
-
-/// We use a stack for detecting cycles. Each stack slot contains:
-/// - a goal which is being processed
-/// - a flag indicating the presence of a cycle during the processing of this goal
-/// - in case a cycle has been found, the latest previous answer to the same goal
-#[derive(Debug)]
-struct StackSlot {
-    goal: FullyReducedGoal,
-    cycle: bool,
-    answer: Option<Solution>,
-}
-
-/// For debugging purpose only: choose whether to apply a tabling strategy for cycles or
-/// treat them as hard errors (the latter can possibly reduce debug output)
-#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub enum CycleStrategy {
-    Tabling,
-    Error,
-}
+use self::search_graph::{DepthFirstNumber, SearchGraph};
+use self::stack::{Stack, StackDepth};
 
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
@@ -32,15 +20,21 @@ pub enum CycleStrategy {
 /// context.
 pub struct Solver {
     program: Arc<ProgramEnvironment>,
-    stack: Vec<StackSlot>,
-    cycle_strategy: CycleStrategy,
-    overflow_depth: usize,
+    stack: Stack,
+    search_graph: SearchGraph,
+
+    caching_enabled: bool,
+
+    /// The cache contains **fully solved** goals, whose results are
+    /// not dependent on the stack in anyway.
+    cache: HashMap<FullyReducedGoal, Fallible<Solution>>,
 }
 
 /// The `minimums` struct is used while solving to track whether we encountered
 /// any cycles in the process.
+#[derive(Copy, Clone, Debug)]
 struct Minimums {
-    pos_min: usize,
+    positive: DepthFirstNumber,
 }
 
 /// An extension trait for merging `Result`s
@@ -66,14 +60,15 @@ impl<T> MergeWith<T> for Fallible<T> {
 impl Solver {
     pub fn new(
         program: &Arc<ProgramEnvironment>,
-        cycle_strategy: CycleStrategy,
         overflow_depth: usize,
+        caching_enabled: bool,
     ) -> Self {
         Solver {
             program: program.clone(),
-            stack: vec![],
-            cycle_strategy,
-            overflow_depth,
+            stack: Stack::new(program, overflow_depth),
+            search_graph: SearchGraph::new(),
+            cache: HashMap::new(),
+            caching_enabled,
         }
     }
 
@@ -121,47 +116,82 @@ impl Solver {
         goal: FullyReducedGoal,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
-        debug_heading!("Solver::solve({:?})", goal);
+        debug_heading!("solve_reduced_goal({:?})", goal);
 
-        if self.stack.len() > self.overflow_depth {
-            panic!("overflow depth reached");
+        // First check the cache.
+        if let Some(value) = self.cache.get(&goal) {
+            debug!("solve_reduced_goal: cache hit, value={:?}", value);
+            return value.clone();
         }
 
-        // The goal was already on the stack: we found a cycle.
-        if let Some(index) = self.stack.iter().position(|s| s.goal == goal) {
-            minimums.update_pos_min(index);
+        // Next, check if the goal is in the search tree already.
+        if let Some(dfn) = self.search_graph.lookup(&goal) {
+            // Check if this table is still on the stack.
+            if let Some(depth) = self.search_graph[dfn].stack_depth {
+                // Is this a coinductive goal? If so, that is success,
+                // so we can return normally. Note that this return is
+                // not tabled.
+                //
+                // XXX how does caching with coinduction work?
+                if self.stack.coinductive_cycle_from(depth) {
+                    let value = ConstrainedSubst {
+                        subst: Substitution::empty(),
+                        constraints: vec![],
+                    };
+                    debug!("applying coinductive semantics");
+                    return Ok(Solution::Unique(Canonical {
+                        value,
+                        binders: goal.into_binders(),
+                    }));
+                }
 
-            // If we are facing a goal of the form `?0: AutoTrait`, we apply coinductive semantics:
-            // if all the components of the cycle also have coinductive semantics, we accept
-            // the cycle `(?0: AutoTrait) :- ... :- (?0: AutoTrait)` as an infinite proof for
-            // `?0: AutoTrait` and we do not perform any substitution.
-            if self.stack
-                .iter()
-                .skip(index)
-                .map(|s| &s.goal)
-                .chain(Some(&goal))
-                .all(|g| g.is_coinductive(&*self.program))
-            {
-                let value = ConstrainedSubst {
-                    subst: Substitution::empty(),
-                    constraints: vec![],
-                };
-                debug!("applying coinductive semantics");
-                return Ok(Solution::Unique(Canonical {
-                    value,
-                    binders: goal.into_binders(),
-                }));
+                self.stack[depth].flag_cycle();
             }
 
-            // Else we indicate that we found a cycle by setting `slot.cycle = true`.
-            // If there is no cached answer, we can't make any more progress and return `Err`.
-            // If there is one, use this answer.
-            let slot = &mut self.stack[index];
-            slot.cycle = true;
-            debug!("cycle detected: previous solution {:?}", slot.answer);
-            return slot.answer.clone().ok_or(NoSolution);
-        }
+            minimums.update_from(self.search_graph[dfn].links);
 
+            // Return the solution from the table.
+            let previous_solution = self.search_graph[dfn].solution.clone();
+            debug!("solve_reduced_goal: cycle detected, previous solution {:?}", previous_solution);
+            previous_solution
+        } else {
+            // Otherwise, push the goal onto the stack and create a table.
+            // The initial result for this table is error.
+            let depth = self.stack.push(&goal);
+            let dfn = self.search_graph.insert(&goal, depth);
+            let subgoal_minimums = self.solve_new_subgoal(&goal, depth, dfn);
+            self.search_graph[dfn].links = subgoal_minimums;
+            self.search_graph[dfn].stack_depth = None;
+            self.stack.pop(depth);
+            minimums.update_from(subgoal_minimums);
+
+            // Read final result from table.
+            let result = self.search_graph[dfn].solution.clone();
+
+            // If processing this subgoal did not involve anything
+            // outside of its subtree, then we can promote it to the
+            // cache now. This is a sort of hack to alleviate the
+            // worst of the repeated work that we do during tabling.
+            if subgoal_minimums.positive >= dfn {
+                if self.caching_enabled {
+                    debug!("solve_reduced_goal: SCC head encountered, moving to cache");
+                    self.search_graph.move_to_cache(dfn, &mut self.cache);
+                } else {
+                    debug!("solve_reduced_goal: SCC head encountered, rolling back as caching disabled");
+                    self.search_graph.rollback_to(dfn);
+                }
+            }
+
+            result
+        }
+    }
+
+    fn solve_new_subgoal(
+        &mut self,
+        goal: &FullyReducedGoal,
+        depth: StackDepth,
+        dfn: DepthFirstNumber,
+    ) -> Minimums {
         // We start with `answer = None` and try to solve the goal. At the end of the iteration,
         // `answer` will be updated with the result of the solving process. If we detect a cycle
         // during the solving process, we cache `answer` and try to solve the goal again. We repeat
@@ -171,16 +201,9 @@ impl Solver {
         // - None < Some(CannotProve)
         // the function which maps the loop iteration to `answer` is a nondecreasing function
         // so this function will eventually be constant and the loop terminates.
-        let mut answer = None;
+        let minimums = &mut Minimums::new();
         loop {
-            self.stack.push(StackSlot {
-                goal: goal.clone(),
-                cycle: false,
-                answer: answer.clone(),
-            });
-
-            debug!("Solver::solve: new loop iteration");
-            let result = match goal.clone() {
+            let current_answer = match goal.clone() {
                 FullyReducedGoal::EqGoal(g) => {
                     // Equality goals are understood "natively" by the logic, via unification:
                     self.solve_via_unification(g, minimums)
@@ -196,6 +219,7 @@ impl Solver {
                         .environment
                         .clauses
                         .iter()
+                        .filter(|&clause| clause.could_match(&value.goal))
                         .cloned()
                         .map(DomainGoal::into_program_clause);
                     let env_solution =
@@ -204,8 +228,9 @@ impl Solver {
                     let prog_clauses: Vec<_> = self.program
                         .program_clauses
                         .iter()
-                        .cloned()
                         .filter(|clause| !clause.fallback_clause)
+                        .filter(|&clause| clause.could_match(&value.goal))
+                        .cloned()
                         .collect();
                     let prog_solution =
                         self.solve_from_clauses(&binders, &value, prog_clauses, minimums);
@@ -215,8 +240,9 @@ impl Solver {
                     let fallback: Vec<_> = self.program
                         .program_clauses
                         .iter()
-                        .cloned()
                         .filter(|clause| clause.fallback_clause)
+                        .filter(|&clause| clause.could_match(&value.goal))
+                        .cloned()
                         .collect();
                     let fallback_solution =
                         self.solve_from_clauses(&binders, &value, fallback, minimums);
@@ -236,28 +262,43 @@ impl Solver {
                         })
                 }
             };
-            debug!("Solver::solve: loop iteration result = {:?}", result);
 
-            let slot = self.stack.pop().unwrap();
-            match self.cycle_strategy {
-                CycleStrategy::Tabling if slot.cycle => {
-                    let actual_answer = result.as_ref().ok().map(|s| s.clone());
-                    let fixed_point = answer == actual_answer;
+            debug!(
+                "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
+                current_answer, minimums
+            );
 
-                    // If we reach a fixed point, we can break.
-                    // If the answer is `Ambig`, then we know that we already have multiple
-                    // solutions, and we *must* break because an `Ambig` solution may not perform
-                    // any unification and thus fail to correctly reach a fixed point. See test
-                    // `multiple_ambiguous_cycles`.
-                    match (fixed_point, &actual_answer) {
-                        (_, &Some(Solution::Ambig(_))) | (true, _) => return result,
-                        _ => (),
-                    };
+            if !self.stack[depth].read_and_reset_cycle_flag() {
+                // None of our subgoals depended on us directly.
+                // We can return.
+                self.search_graph[dfn].solution = current_answer;
+                return *minimums;
+            }
 
-                    answer = actual_answer;
-                }
-                _ => return result,
+            // Some of our subgoals depended on us. We need to re-run
+            // with the current answer.
+            if self.search_graph[dfn].solution == current_answer {
+                // Reached a fixed point.
+                return *minimums;
+            }
+
+            let current_answer_is_ambig = match &current_answer {
+                Ok(s) => s.is_ambig(),
+                Err(_) => false,
             };
+
+            self.search_graph[dfn].solution = current_answer;
+
+            // Subtle: if our current answer is ambiguous, we can just
+            // stop, and in fact we *must* -- otherwise, wesometimes
+            // fail to reach a fixed point. See
+            // `multiple_ambiguous_cycles` for more.
+            if current_answer_is_ambig {
+                return *minimums;
+            }
+
+            // Otherwise: rollback the search tree and try again.
+            self.search_graph.rollback_to(dfn + 1);
         }
     }
 
@@ -338,13 +379,12 @@ impl Solver {
 
 impl Minimums {
     fn new() -> Self {
-        use std::usize;
         Minimums {
-            pos_min: usize::MAX,
+            positive: DepthFirstNumber::MAX,
         }
     }
 
-    fn update_pos_min(&mut self, value: usize) {
-        self.pos_min = ::std::cmp::min(self.pos_min, value);
+    fn update_from(&mut self, minimums: Minimums) {
+        self.positive = ::std::cmp::min(self.positive, minimums.positive);
     }
 }

@@ -18,7 +18,6 @@ use std::process::exit;
 
 use chalk::ir;
 use chalk::lower::*;
-use chalk::solve::recursive::CycleStrategy;
 use chalk::solve::slg;
 use chalk::solve::SolverChoice;
 use docopt::Docopt;
@@ -38,6 +37,7 @@ Options:
   --overflow-depth=N  Specifies the overflow depth [default: 10].
   --slg               Use the experimental SLG resolution system.
   --all-answers       When using SLG solver, dump out each individual answer.
+  --no-cache          Disable caching.
 ";
 
 #[derive(Debug, Deserialize)]
@@ -47,6 +47,7 @@ struct Args {
     flag_overflow_depth: usize,
     flag_slg: bool,
     flag_all_answers: bool,
+    flag_no_cache: bool,
 }
 
 error_chain! {
@@ -240,12 +241,12 @@ impl Args {
     fn solver_choice(&self) -> SolverChoice {
         if self.flag_slg {
             SolverChoice::SLG {
-                max_size: self.flag_overflow_depth
+                max_size: self.flag_overflow_depth,
             }
         } else {
             SolverChoice::Recursive {
-                cycle_strategy: CycleStrategy::Tabling,
                 overflow_depth: self.flag_overflow_depth,
+                caching_enabled: !self.flag_no_cache,
             }
         }
     }

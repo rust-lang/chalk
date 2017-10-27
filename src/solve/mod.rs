@@ -7,8 +7,6 @@ pub mod recursive;
 pub mod slg;
 mod truncate;
 
-use self::recursive::CycleStrategy;
-
 #[cfg(test)] mod test;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -202,7 +200,7 @@ impl fmt::Display for Solution {
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum SolverChoice {
     /// Chalk's recursive solving strategy.
-    Recursive { overflow_depth: usize, cycle_strategy: CycleStrategy },
+    Recursive { overflow_depth: usize, caching_enabled: bool },
 
     /// Run the SLG solver, producing a Solution.
     SLG { max_size: usize },
@@ -226,8 +224,8 @@ impl SolverChoice {
                            -> ::errors::Result<Option<Solution>>
     {
         match self {
-            SolverChoice::Recursive { cycle_strategy, overflow_depth } => {
-                let mut solver = recursive::Solver::new(env, cycle_strategy, overflow_depth);
+            SolverChoice::Recursive { overflow_depth, caching_enabled } => {
+                let mut solver = recursive::Solver::new(env, overflow_depth, caching_enabled);
                 match solver.solve_root_goal(canonical_goal) {
                         Ok(v) => Ok(Some(v)),
                         Err(_) => Ok(None),
@@ -246,8 +244,8 @@ impl SolverChoice {
     /// Returns the default recursive parameters.
     pub fn recursive() -> Self {
         SolverChoice::Recursive {
-            cycle_strategy: CycleStrategy::Tabling,
             overflow_depth: 10,
+            caching_enabled: true,
         }
     }
 
