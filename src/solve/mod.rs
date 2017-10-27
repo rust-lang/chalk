@@ -5,6 +5,7 @@ use ir::*;
 pub mod infer;
 pub mod recursive;
 pub mod slg;
+mod truncate;
 
 use self::recursive::CycleStrategy;
 

@@ -53,6 +53,7 @@ use cast::{Cast, Caster};
 use ir::*;
 use ir::could_match::CouldMatch;
 use solve::infer::{InferenceTable, UnificationResult};
+use solve::truncate::{truncate, Truncated};
 use stacker;
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
@@ -67,8 +68,6 @@ use zip::Zip;
 mod aggregate;
 mod resolvent;
 mod test;
-mod truncate;
-use self::truncate::{truncate, Truncated};
 
 /// Finds all possible solutions to the given root goal in the context
 /// of the given program, approximating if the size of solutions or
