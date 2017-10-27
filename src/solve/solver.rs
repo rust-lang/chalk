@@ -3,20 +3,6 @@ use std::sync::Arc;
 
 use super::*;
 use solve::fulfill::Fulfill;
-use std::cell::Cell;
-
-thread_local! {
-    // Default overflow depth which will be used in tests
-    static OVERFLOW_DEPTH: Cell<usize> = Cell::new(10);
-}
-
-pub fn set_overflow_depth(overflow_depth: usize) {
-    OVERFLOW_DEPTH.with(|depth| depth.set(overflow_depth));
-}
-
-pub fn get_overflow_depth() -> usize {
-    OVERFLOW_DEPTH.with(|depth| depth.get())
-}
 
 /// We use a stack for detecting cycles. Each stack slot contains:
 /// - a goal which is being processed
@@ -31,6 +17,7 @@ struct StackSlot {
 
 /// For debugging purpose only: choose whether to apply a tabling strategy for cycles or
 /// treat them as hard errors (the latter can possibly reduce debug output)
+#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum CycleStrategy {
     Tabling,
     Error,

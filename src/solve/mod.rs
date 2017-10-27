@@ -202,10 +202,10 @@ impl fmt::Display for Solution {
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum SolverChoice {
     /// Chalk's recursive solving strategy.
-    Recursive,
+    Recursive { overflow_depth: usize, cycle_strategy: CycleStrategy },
 
     /// Run the SLG solver, producing a Solution.
-    SLG(usize),
+    SLG { max_size: usize },
 }
 
 impl SolverChoice {
@@ -226,15 +226,15 @@ impl SolverChoice {
                            -> ::errors::Result<Option<Solution>>
     {
         match self {
-            SolverChoice::Recursive => {
-                let mut solver = Solver::new(env, CycleStrategy::Tabling, solver::get_overflow_depth());
+            SolverChoice::Recursive { cycle_strategy, overflow_depth } => {
+                let mut solver = Solver::new(env, cycle_strategy, overflow_depth);
                 match solver.solve_canonical_goal(canonical_goal) {
                         Ok(v) => Ok(Some(v)),
                         Err(_) => Ok(None),
                 }
             }
 
-            SolverChoice::SLG(max_size) => {
+            SolverChoice::SLG { max_size } => {
                 match slg::solve_root_goal(max_size, env, canonical_goal) {
                     Ok(answers) => Ok(answers.into_solution(canonical_goal)),
                     Err(err) => bail!("Exploration error: {:?}", err),
@@ -242,10 +242,25 @@ impl SolverChoice {
             }
         }
     }
+
+    /// Returns the default recursive parameters.
+    pub fn recursive() -> Self {
+        SolverChoice::Recursive {
+            cycle_strategy: CycleStrategy::Tabling,
+            overflow_depth: 10,
+        }
+    }
+
+    /// Returns the default SLG parameters.
+    pub fn slg() -> Self {
+        SolverChoice::SLG {
+            max_size: 10
+        }
+    }
 }
 
 impl Default for SolverChoice {
     fn default() -> Self {
-        SolverChoice::Recursive
+        SolverChoice::recursive()
     }
 }
