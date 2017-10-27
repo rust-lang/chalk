@@ -1,10 +1,8 @@
 use super::*;
 use cast::Caster;
-use errors::*;
 use fold::Fold;
 use solve::infer::{InferenceTable, UnificationResult, ParameterInferenceVariable};
 use solve::infer::InferenceVariable;
-use solve::solver::Solver;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;

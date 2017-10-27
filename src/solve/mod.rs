@@ -2,12 +2,11 @@ use std::fmt;
 use std::sync::Arc;
 use ir::*;
 
-mod fulfill;
 pub mod infer;
-pub mod solver;
+pub mod recursive;
 pub mod slg;
 
-use self::solver::{Solver, CycleStrategy};
+use self::recursive::CycleStrategy;
 
 #[cfg(test)] mod test;
 
@@ -227,7 +226,7 @@ impl SolverChoice {
     {
         match self {
             SolverChoice::Recursive { cycle_strategy, overflow_depth } => {
-                let mut solver = Solver::new(env, cycle_strategy, overflow_depth);
+                let mut solver = recursive::Solver::new(env, cycle_strategy, overflow_depth);
                 match solver.solve_canonical_goal(canonical_goal) {
                         Ok(v) => Ok(Some(v)),
                         Err(_) => Ok(None),

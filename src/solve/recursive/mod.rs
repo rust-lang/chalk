@@ -2,7 +2,9 @@ use errors::*;
 use std::sync::Arc;
 
 use super::*;
-use solve::fulfill::Fulfill;
+
+mod fulfill;
+use self::fulfill::Fulfill;
 
 /// We use a stack for detecting cycles. Each stack slot contains:
 /// - a goal which is being processed
@@ -93,7 +95,7 @@ impl Solver {
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    pub fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Result<Solution> {
+    fn solve_reduced_goal(&mut self, goal: FullyReducedGoal) -> Result<Solution> {
         debug_heading!("Solver::solve({:?})", goal);
 
         if self.stack.len() > self.overflow_depth {

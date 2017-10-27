@@ -18,7 +18,7 @@ use std::process::exit;
 
 use chalk::ir;
 use chalk::lower::*;
-use chalk::solve::solver::CycleStrategy;
+use chalk::solve::recursive::CycleStrategy;
 use chalk::solve::slg;
 use chalk::solve::SolverChoice;
 use docopt::Docopt;
