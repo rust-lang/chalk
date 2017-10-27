@@ -72,9 +72,6 @@ enum SolverChoice {
 
     // Run the SLG solver, producing a Solution.
     SLG(usize),
-
-    // Run the SLG solver, producing Answers.
-    SLGAnswers(usize),
 }
 
 const MAX_SIZE: usize = 22; // default MAX_SIZE for SLG
@@ -112,13 +109,6 @@ fn solve_goal(program_text: &str,
                             Some(v) => format!("{}", v),
                             None => format!("No possible solution: no answers"),
                         },
-                        Err(err) => format!("Exploration error: {:?}", err),
-                    }
-                }
-
-                SolverChoice::SLGAnswers(max_size) => {
-                    match slg::solve_root_goal(max_size, &env, &peeled_goal) {
-                        Ok(answers) => format!("{:#?}", answers),
                         Err(err) => format!("Exploration error: {:?}", err),
                     }
                 }
@@ -484,39 +474,6 @@ fn normalize_basic() {
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous; no inference guidance"
-        } yields[SolverChoice::SLGAnswers(MAX_SIZE)] {
-            r"Answers {
-                answers: [
-                    Answer {
-                        subst: Canonical {
-                            value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: !1
-                                    }
-                                },
-                                constraints: []
-                            },
-                            binders: []
-                        },
-                        ambiguous: false
-                    },
-                    Answer {
-                        subst: Canonical {
-                            value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: (Iterator::Item)<Vec<!1>>
-                                    }
-                                },
-                                constraints: []
-                            },
-                            binders: []
-                        },
-                        ambiguous: false
-                    }
-                ]
-            }"
         }
 
         goal {
