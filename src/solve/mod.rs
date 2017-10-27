@@ -196,3 +196,12 @@ impl fmt::Display for Solution {
     }
 }
 
+#[derive(Debug)]
+pub enum SolverChoice {
+    // Chalk's recursive solving strategy.
+    Recursive,
+
+    // Run the SLG solver, producing a Solution.
+    SLG(usize),
+}
+

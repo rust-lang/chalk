@@ -4,6 +4,7 @@ use ir;
 use lower::*;
 use solve::solver::{self, Solver, CycleStrategy};
 use solve::slg;
+use solve::SolverChoice;
 use std::sync::Arc;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
@@ -32,7 +33,7 @@ macro_rules! test {
     ]) => {
         test!(@program[$program]
               @parsed_goals[$($parsed_goals)*
-                            (stringify!($goal), SolverChoice::Default, $expected)
+                            (stringify!($goal), SolverChoice::Recursive, $expected)
                             (stringify!($goal), SolverChoice::SLG(MAX_SIZE), $expected)]
               @unparsed_goals[$($unparsed_goals)*])
     };
@@ -65,15 +66,6 @@ macro_rules! test {
     };
 }
 
-#[derive(Debug)]
-enum SolverChoice {
-    // Run the default solver, expected test is the Solution.
-    Default,
-
-    // Run the SLG solver, producing a Solution.
-    SLG(usize),
-}
-
 const MAX_SIZE: usize = 22; // default MAX_SIZE for SLG
 
 fn solve_goal(program_text: &str,
@@ -95,7 +87,7 @@ fn solve_goal(program_text: &str,
             println!("using solver: {:?}", choice);
             let peeled_goal = goal.into_peeled_goal();
             let result = match choice {
-                SolverChoice::Default => {
+                SolverChoice::Recursive => {
                     let mut solver = Solver::new(&env, CycleStrategy::Tabling, solver::get_overflow_depth());
                     match solver.solve_canonical_goal(&peeled_goal) {
                         Ok(v) => format!("{}", v),
@@ -469,7 +461,7 @@ fn normalize_basic() {
                     Vec<T>: Iterator<Item = U>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique; substitution [?0 := !1], lifetime constraints []"
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME -- fallback clauses not understood by SLG solver
@@ -492,7 +484,7 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique; substitution [?0 := u32]"
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME -- fallback clauses not understood by SLG solver
@@ -529,7 +521,7 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique"
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME -- fallback clauses not understood by SLG solver
@@ -784,7 +776,7 @@ fn atc1() {
                     }
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique; substitution [?0 := Iter<'!2, !1>], lifetime constraints []"
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME -- fallback clauses not understood by SLG solver
@@ -972,7 +964,7 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Deref<'a, Item = U>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique; substitution [?0 := I32], lifetime constraints []"
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME -- fallback clauses not understood by SLG solver
@@ -985,7 +977,7 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Id<'a, Item = U>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique; substitution [?0 := Ref<'!1, I32>], lifetime constraints []"
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME -- fallback clauses not understood by SLG solver
@@ -998,7 +990,7 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Id<'a, Item = U>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique; substitution [?0 := Ref<'?0, I32>], lifetime constraints [
                  (Env(U0, []) |- LifetimeEq('?0, '!1))
              ]"
@@ -1139,7 +1131,7 @@ fn mixed_indices_normalize_application() {
                     }
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique"
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME -- fallback clauses not understood by SLG solver
@@ -1283,7 +1275,7 @@ fn suggested_subst() {
                     Foo: SomeTrait<T>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Ambiguous; suggested substitution [?0 := bool]"
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME: SLG does not impl the logic to privilege where clauses
@@ -1316,7 +1308,7 @@ fn suggested_subst() {
                     Bar: SomeTrait<T>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Ambiguous; suggested substitution [?0 := bool]"
         } yields[SolverChoice::SLG(MAX_SIZE)] {
             // FIXME: SLG does not impl the logic to privilege where clauses
@@ -1373,7 +1365,7 @@ fn simple_negation() {
             exists<T> {
                 not { T: Foo }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Ambig"
         } yields[SolverChoice::SLG(MAX_SIZE) ] {
             "Exploration error: Floundered"
@@ -1489,7 +1481,7 @@ fn negation_free_vars() {
             exists<T> {
                 not { Vec<T>: Foo }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Ambig"
         } yields[SolverChoice::SLG(MAX_SIZE) ] {
             "Exploration error: Floundered"
@@ -1668,13 +1660,13 @@ fn coinductive_semantics() {
                     List<T>: Send
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique"
         }
 
         goal {
             List<i32>: Send
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Unique"
         }
 
@@ -1682,7 +1674,7 @@ fn coinductive_semantics() {
             exists<T> {
                 T: Send
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::Recursive] {
             "Ambiguous"
         }
     }
