@@ -31,7 +31,7 @@ pub enum CycleStrategy {
 /// allows for better caching, and simplifies management of the inference
 /// context.
 pub struct Solver {
-    pub(super) program: Arc<ProgramEnvironment>,
+    program: Arc<ProgramEnvironment>,
     stack: Vec<StackSlot>,
     cycle_strategy: CycleStrategy,
     overflow_depth: usize,
