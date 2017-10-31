@@ -11,10 +11,13 @@ struct OverlapSolver {
 }
 
 impl Program {
-    pub(super) fn visit_specializations<F>(&self,
-                                           solver_choice: SolverChoice,
-                                           mut record_specialization: F) -> Result<()>
-        where F: FnMut(ItemId, ItemId)
+    pub(super) fn visit_specializations<F>(
+        &self,
+        solver_choice: SolverChoice,
+        mut record_specialization: F,
+    ) -> Result<()>
+    where
+        F: FnMut(ItemId, ItemId),
     {
         let mut solver = OverlapSolver {
             env: Arc::new(self.environment()),
@@ -22,14 +25,22 @@ impl Program {
         };
 
         // Create a vector of references to impl datums, sorted by trait ref.
-        let impl_data = self.impl_data.iter().filter(|&(_, impl_datum)| {
-            // Ignore impls for marker traits as they are allowed to overlap.
-            let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
-            let trait_datum = &self.trait_data[&trait_id];
-            !trait_datum.binders.value.flags.marker
-        }).sorted_by(|&(_, lhs), &(_, rhs)| {
-            lhs.binders.value.trait_ref.trait_ref().trait_id.cmp(&rhs.binders.value.trait_ref.trait_ref().trait_id)
-        });
+        let impl_data = self.impl_data
+            .iter()
+            .filter(|&(_, impl_datum)| {
+                // Ignore impls for marker traits as they are allowed to overlap.
+                let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
+                let trait_datum = &self.trait_data[&trait_id];
+                !trait_datum.binders.value.flags.marker
+            })
+            .sorted_by(|&(_, lhs), &(_, rhs)| {
+                lhs.binders
+                    .value
+                    .trait_ref
+                    .trait_ref()
+                    .trait_id
+                    .cmp(&rhs.binders.value.trait_ref.trait_ref().trait_id)
+            });
 
         // Group impls by trait.
         let impl_groupings = impl_data.into_iter().group_by(|&(_, impl_datum)| {
@@ -43,7 +54,9 @@ impl Program {
 
             for ((&l_id, lhs), (&r_id, rhs)) in impls.into_iter().tuple_combinations() {
                 // Two negative impls never overlap.
-                if !lhs.binders.value.trait_ref.is_positive() && !rhs.binders.value.trait_ref.is_positive() {
+                if !lhs.binders.value.trait_ref.is_positive()
+                    && !rhs.binders.value.trait_ref.is_positive()
+                {
                     continue;
                 }
 
@@ -52,11 +65,11 @@ impl Program {
                 // specialization checks return *either* true or false, that's an error.
                 if solver.overlaps(lhs, rhs) {
                     match (solver.specializes(lhs, rhs), solver.specializes(rhs, lhs)) {
-                        (true, false)   => record_specialization(l_id, r_id),
-                        (false, true)   => record_specialization(r_id, l_id),
-                        (_, _)          => {
+                        (true, false) => record_specialization(l_id, r_id),
+                        (false, true) => record_specialization(r_id, l_id),
+                        (_, _) => {
                             let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
-                            return Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)))
+                            return Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)));
                         }
                     }
                 }
@@ -99,7 +112,7 @@ impl OverlapSolver {
     //      exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz }
     //
     fn overlaps(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
-        debug_heading!("overlaps(lhs={:?}, rhs={:?})", lhs, rhs);
+        debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
 
         let lhs_len = lhs.binders.len();
 
@@ -113,27 +126,39 @@ impl OverlapSolver {
 
         // Create an equality goal for every input type the trait, attempting
         // to unify the inputs to both impls with one another
-        let params_goals = lhs_params.zip(rhs_params)
-                            .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
+        let params_goals = lhs_params
+            .zip(rhs_params)
+            .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
 
         // Upshift the rhs variables in where clauses
         let lhs_where_clauses = lhs.binders.value.where_clauses.iter().cloned();
-        let rhs_where_clauses = rhs.binders.value.where_clauses.iter().map(|wc| wc.up_shift(lhs_len));
+        let rhs_where_clauses = rhs.binders
+            .value
+            .where_clauses
+            .iter()
+            .map(|wc| wc.up_shift(lhs_len));
 
         // Create a goal for each clause in both where clauses
-        let wc_goals = lhs_where_clauses.chain(rhs_where_clauses)
-                    .map(|wc| Goal::Leaf(LeafGoal::DomainGoal(wc)));
+        let wc_goals = lhs_where_clauses
+            .chain(rhs_where_clauses)
+            .map(|wc| Goal::Leaf(LeafGoal::DomainGoal(wc)));
 
         // Join all the goals we've created together with And, then quantify them
         // over the joined binders. This is our query.
-        let goal = params_goals.chain(wc_goals)
-                    .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-                    .expect("Every trait takes at least one input type")
-                    .quantify(QuantifierKind::Exists, binders);
+        let goal = params_goals
+            .chain(wc_goals)
+            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
+            .expect("Every trait takes at least one input type")
+            .quantify(QuantifierKind::Exists, binders);
 
         // Unless we can prove NO solution, we consider things to overlap.
         let canonical_goal = &goal.into_closed_goal();
-        self.solver_choice.solve_root_goal(&self.env, canonical_goal).unwrap().is_some()
+        let result = self.solver_choice
+            .solve_root_goal(&self.env, canonical_goal)
+            .unwrap()
+            .is_some();
+        debug!("overlaps: result = {:?}", result);
+        result
     }
 
     // Test for specialization.
@@ -153,8 +178,16 @@ impl OverlapSolver {
     //  }
     // }
     fn specializes(&mut self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
+        debug_heading!(
+            "specializes(less_special={:#?}, more_special={:#?})",
+            less_special,
+            more_special
+        );
+
         // Negative impls cannot specialize.
-        if !less_special.binders.value.trait_ref.is_positive() || !more_special.binders.value.trait_ref.is_positive() {
+        if !less_special.binders.value.trait_ref.is_positive()
+            || !more_special.binders.value.trait_ref.is_positive()
+        {
             return false;
         }
 
@@ -163,28 +196,40 @@ impl OverlapSolver {
         // Create parameter equality goals.
         let more_special_params = params(more_special).iter().cloned();
         let less_special_params = params(less_special).iter().map(|p| p.up_shift(more_len));
-        let params_goals = more_special_params.zip(less_special_params)
-                            .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
+        let params_goals = more_special_params
+            .zip(less_special_params)
+            .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
 
         // Create the where clause goals.
         let more_special_wc = more_special.binders.value.where_clauses.clone();
-        let less_special_wc = less_special.binders.value.where_clauses.iter().map(|wc| {
-            Goal::Leaf(LeafGoal::DomainGoal(wc.up_shift(more_len)))
-        });
+        let less_special_wc = less_special
+            .binders
+            .value
+            .where_clauses
+            .iter()
+            .map(|wc| Goal::Leaf(LeafGoal::DomainGoal(wc.up_shift(more_len))));
 
         // Join all of the goals together.
-        let goal = params_goals.chain(less_special_wc)
-                    .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-                    .expect("Every trait takes at least one input type")
-                    .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
-                    .implied_by(more_special_wc)
-                    .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
+        let goal = params_goals
+            .chain(less_special_wc)
+            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
+            .expect("Every trait takes at least one input type")
+            .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
+            .implied_by(more_special_wc)
+            .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
         let canonical_goal = &goal.into_closed_goal();
-        match self.solver_choice.solve_root_goal(&self.env, canonical_goal).unwrap() {
+        let result = match self.solver_choice
+            .solve_root_goal(&self.env, canonical_goal)
+            .unwrap()
+        {
             Some(sol) => sol.is_unique(),
             None => false,
-        }
+        };
+
+        debug!("specializes: result = {:?}", result);
+
+        result
     }
 }
 
