@@ -75,6 +75,18 @@ impl Cast<LeafGoal> for Normalize {
     }
 }
 
+impl Cast<DomainGoal> for UnselectedNormalize {
+    fn cast(self) -> DomainGoal {
+        DomainGoal::UnselectedNormalize(self)
+    }
+}
+
+impl Cast<LeafGoal> for UnselectedNormalize {
+    fn cast(self) -> LeafGoal {
+        LeafGoal::DomainGoal(self.cast())
+    }
+}
+
 impl Cast<DomainGoal> for WellFormed {
     fn cast(self) -> DomainGoal {
         DomainGoal::WellFormed(self)
@@ -95,6 +107,13 @@ impl Cast<Goal> for WellFormed {
 }
 
 impl Cast<Goal> for Normalize {
+    fn cast(self) -> Goal {
+        let wcg: LeafGoal = self.cast();
+        wcg.cast()
+    }
+}
+
+impl Cast<Goal> for UnselectedNormalize {
     fn cast(self) -> Goal {
         let wcg: LeafGoal = self.cast();
         wcg.cast()

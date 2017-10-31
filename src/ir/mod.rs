@@ -326,7 +326,21 @@ pub enum Ty {
     Var(usize),
     Apply(ApplicationTy),
     Projection(ProjectionTy),
+    UnselectedProjection(UnselectedProjectionTy),
     ForAll(Box<QuantifiedTy>),
+}
+
+impl Ty {
+    pub fn as_projection_ty_enum(&self) -> ProjectionTyRefEnum {
+        match *self {
+            Ty::Projection(ref proj) =>
+                ProjectionTyEnum::Selected(proj),
+            Ty::UnselectedProjection(ref proj) =>
+                ProjectionTyEnum::Unselected(proj),
+            _ =>
+                panic!("{:?} is not a projection", self),
+        }
+    }
 }
 
 /// for<'a...'z> X -- all binders are instantiated at once,
@@ -424,6 +438,20 @@ pub struct ProjectionTy {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct UnselectedProjectionTy {
+    pub type_name: Identifier,
+    pub parameters: Vec<Parameter>,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum ProjectionTyEnum<S = ProjectionTy, U = UnselectedProjectionTy> {
+    Selected(S),
+    Unselected(U),
+}
+
+pub type ProjectionTyRefEnum<'a> = ProjectionTyEnum<&'a ProjectionTy, &'a UnselectedProjectionTy>;
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TraitRef {
     pub trait_id: ItemId,
     pub parameters: Vec<Parameter>,
@@ -457,6 +485,7 @@ impl PolarizedTraitRef {
 pub enum DomainGoal {
     Implemented(TraitRef),
     Normalize(Normalize),
+    UnselectedNormalize(UnselectedNormalize),
     WellFormed(WellFormed),
     InScope(ItemId),
 }
@@ -524,6 +553,29 @@ pub enum WellFormed {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Normalize {
     pub projection: ProjectionTy,
+    pub ty: Ty,
+}
+
+/// Indicates that the trait where the associated type belongs to is
+/// not yet known, i.e. is unselected. For example, a normal
+/// `Normalize` would be of the form `<Vec<T> as Iterator>::Item ==>
+/// T`. When `Iterator` is in scope, and it is the only trait in scope
+/// with an associated type `Item`, it suffices to write
+/// `Vec<T>::Item` instead of `<Vec<T> as Iterator>::Item`. The
+/// corresponding `UnselectedNormalize` is `Vec<T>::Item ==> T`.
+///
+/// For each associated type we encounter in an `impl`, we generate
+/// rules to derive an `UnselectedNormalize` from a `Normalize`. For
+/// example, implementing `Iterator` for `Vec<T>` yields the rule:
+///
+/// ```text
+/// Vec<T>::Item ==> T :-
+///     InScope(Iterator),
+///     <Vec<T> as Iterator>::Item ==> T
+/// ```
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct UnselectedNormalize {
+    pub projection: UnselectedProjectionTy,
     pub ty: Ty,
 }
 

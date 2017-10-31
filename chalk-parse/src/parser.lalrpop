@@ -106,13 +106,19 @@ AssocTyValue: AssocTyValue = {
 };
 
 pub Ty: Ty = {
-    <n:Id> => Ty::Id { name: n},
-    <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
-    <p:ProjectionTy> => Ty::Projection { proj: p },
     "for" "<" <l:Comma<LifetimeId>> ">" <t:Ty> => Ty::ForAll {
         lifetime_names: l,
         ty: Box::new(t)
     },
+    TyWithoutFor,
+};
+
+TyWithoutFor: Ty = {
+    <n:Id> => Ty::Id { name: n},
+    <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
+    <p:ProjectionTy> => Ty::Projection { proj: p },
+    <proj:UnselectedProjectionTy> => Ty::UnselectedProjection { <> },
+    "(" <Ty> ")",
 };
 
 Lifetime: Lifetime = {
@@ -127,6 +133,17 @@ Parameter: Parameter = {
 ProjectionTy: ProjectionTy = {
     "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => ProjectionTy {
         trait_ref: t, name: n, args: a
+    },
+};
+
+UnselectedProjectionTy: UnselectedProjectionTy = {
+    <ty:TyWithoutFor> "::" <name:Id> <a:Angle<Parameter>> => {
+        let mut args = vec![Parameter::Ty(ty)];
+        args.extend(a);
+        UnselectedProjectionTy {
+            name: name,
+            args: args,
+        }
     },
 };
 

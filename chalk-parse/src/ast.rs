@@ -123,6 +123,9 @@ pub enum Ty {
     Projection {
         proj: ProjectionTy,
     },
+    UnselectedProjection {
+        proj: UnselectedProjectionTy,
+    },
     ForAll {
         lifetime_names: Vec<Identifier>,
         ty: Box<Ty>
@@ -137,6 +140,11 @@ pub enum Lifetime {
 
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
+    pub name: Identifier,
+    pub args: Vec<Parameter>,
+}
+
+pub struct UnselectedProjectionTy {
     pub name: Identifier,
     pub args: Vec<Parameter>,
 }

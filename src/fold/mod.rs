@@ -268,6 +268,7 @@ pub fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Fallible<T
             }
         }
         Ty::Projection(ref proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?)),
+        Ty::UnselectedProjection(ref proj) => Ok(Ty::UnselectedProjection(proj.fold_with(folder, binders)?)),
         Ty::ForAll(ref quantified_ty) => Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?)),
     }
 }
@@ -403,7 +404,7 @@ macro_rules! enum_fold {
 
 enum_fold!(PolarizedTraitRef[] { Positive(a), Negative(a) });
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
-enum_fold!(DomainGoal[] { Implemented(a), Normalize(a), WellFormed(a), InScope(a) });
+enum_fold!(DomainGoal[] { Implemented(a), Normalize(a), UnselectedNormalize(a), WellFormed(a), InScope(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
@@ -430,11 +431,16 @@ struct_fold!(ProjectionTy {
     associated_ty_id,
     parameters,
 });
+struct_fold!(UnselectedProjectionTy {
+    type_name,
+    parameters
+});
 struct_fold!(TraitRef {
     trait_id,
     parameters,
 });
 struct_fold!(Normalize { projection, ty });
+struct_fold!(UnselectedNormalize { projection, ty });
 struct_fold!(AssociatedTyValue {
     associated_ty_id,
     value,

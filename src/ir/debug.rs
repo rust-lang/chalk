@@ -56,6 +56,7 @@ impl Debug for Ty {
             Ty::Var(depth) => write!(fmt, "?{}", depth),
             Ty::Apply(ref apply) => write!(fmt, "{:?}", apply),
             Ty::Projection(ref proj) => write!(fmt, "{:?}", proj),
+            Ty::UnselectedProjection(ref proj) => write!(fmt, "{:?}", proj),
             Ty::ForAll(ref quantified_ty) => write!(fmt, "{:?}", quantified_ty),
         }
     }
@@ -118,6 +119,16 @@ impl Debug for ProjectionTy {
     }
 }
 
+impl Debug for UnselectedProjectionTy {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt,
+               "{:?}::{}{:?}",
+               self.parameters[0],
+               self.type_name,
+               Angle(&self.parameters[1..]))
+    }
+}
+
 pub struct Angle<'a, T: 'a>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
@@ -143,10 +154,17 @@ impl Debug for Normalize {
     }
 }
 
+impl Debug for UnselectedNormalize {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{:?} ==> {:?}", self.projection, self.ty)
+    }
+}
+
 impl Debug for DomainGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             DomainGoal::Normalize(ref n) => write!(fmt, "{:?}", n),
+            DomainGoal::UnselectedNormalize(ref n) => write!(fmt, "{:?}", n),
             DomainGoal::Implemented(ref n) => {
                 write!(fmt,
                        "{:?}: {:?}{:?}",

@@ -631,6 +631,21 @@ impl LowerProjectionTy for ProjectionTy {
     }
 }
 
+trait LowerUnselectedProjectionTy {
+    fn lower(&self, env: &Env) -> Result<ir::UnselectedProjectionTy>;
+}
+
+impl LowerUnselectedProjectionTy for UnselectedProjectionTy {
+    fn lower(&self, env: &Env) -> Result<ir::UnselectedProjectionTy> {
+        let parameters: Vec<_> = try!(self.args.iter().map(|a| a.lower(env)).collect());
+        let ret = ir::UnselectedProjectionTy {
+            type_name: self.name.str,
+            parameters: parameters,
+        };
+        Ok(ret)
+    }
+}
+
 trait LowerTy {
     fn lower(&self, env: &Env) -> Result<ir::Ty>;
 }
@@ -688,6 +703,8 @@ impl LowerTy for Ty {
 
             Ty::Projection { ref proj } => Ok(ir::Ty::Projection(proj.lower(env)?)),
 
+            Ty::UnselectedProjection { ref proj } => Ok(ir::Ty::UnselectedProjection(proj.lower(env)?)),
+
             Ty::ForAll {
                 ref lifetime_names,
                 ref ty,
@@ -697,6 +714,7 @@ impl LowerTy for Ty {
                         .iter()
                         .map(|id| ir::ParameterKind::Lifetime(id.str)),
                 );
+
                 let ty = ty.lower(&quantified_env)?;
                 let quantified_ty = ir::QuantifiedTy {
                     num_binders: lifetime_names.len(),
@@ -983,7 +1001,7 @@ impl ir::Program {
                         .value
                         .associated_ty_values
                         .iter()
-                        .flat_map(|atv| atv.to_program_clauses(datum)),
+                        .flat_map(|atv| atv.to_program_clauses(self, datum)),
                 );
             }
         }
@@ -1088,7 +1106,17 @@ impl ir::AssociatedTyValue {
     ///         (T: 'a)              // (2)
     /// }
     /// ```
-    fn to_program_clauses(&self, impl_datum: &ir::ImplDatum) -> Vec<ir::ProgramClause> {
+    ///
+    /// and:
+    ///
+    /// ```notrust
+    /// forall<'a, T> {
+    ///     Vec<T>::IntoIter<'a> ==> Iter<'a, T> :-
+    ///         InScope(Iterable),
+    ///         <Vec<T> as Iterable>::IntoIter<'a> ==> Iter<'a, T>
+    /// }
+    /// ```
+    fn to_program_clauses(&self, program: &ir::Program, impl_datum: &ir::ImplDatum) -> Vec<ir::ProgramClause> {
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
         let all_binders: Vec<_> = self.value
             .binders
@@ -1113,35 +1141,59 @@ impl ir::AssociatedTyValue {
             .chain(self.value.value.where_clauses.clone().cast())
             .collect();
 
-        let projection = {
+        let parameters: Vec<_> = {
             // First add refs to the bound parameters (`'a`, in above example)
             let parameters = self.value.binders.iter().zip(0..).map(|p| p.to_parameter());
 
             // Then add the trait-ref parameters (`Vec<T>`, in above example)
-            let parameters = parameters.chain(impl_trait_ref.parameters.clone());
-
-            ir::ProjectionTy {
-                associated_ty_id: self.associated_ty_id,
-                parameters: parameters.collect(),
-            }
+            parameters.chain(impl_trait_ref.parameters.clone()).collect()
         };
+
+        let projection = ir::ProjectionTy {
+            associated_ty_id: self.associated_ty_id,
+            parameters: parameters.clone(),
+        };
+
+        let normalize_goal = ir::DomainGoal::Normalize(ir::Normalize {
+            projection: projection.clone(),
+            ty: self.value.value.ty.clone()
+        });
 
         // Determine the normalization
         let normalization = ir::ProgramClause {
             implication: ir::Binders {
                 binders: all_binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: ir::DomainGoal::Normalize(ir::Normalize {
-                        projection: projection.clone(),
-                        ty: self.value.value.ty.clone(),
-                    }),
+                    consequence: normalize_goal.clone(),
                     conditions: conditions.clone(),
                 },
             },
             fallback_clause: false,
         };
 
-        vec![normalization]
+        let unselected_projection = ir::UnselectedProjectionTy {
+            type_name: program.associated_ty_data[&self.associated_ty_id].name.clone(),
+            parameters: parameters,
+        };
+
+        let unselected_normalization = ir::ProgramClause {
+            implication: ir::Binders {
+                binders: all_binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::DomainGoal::UnselectedNormalize(ir::UnselectedNormalize {
+                        projection: unselected_projection,
+                        ty: self.value.value.ty.clone(),
+                    }),
+                    conditions: vec![
+                        normalize_goal.cast(),
+                        ir::DomainGoal::InScope(impl_trait_ref.trait_id).cast(),
+                    ],
+                },
+            },
+            fallback_clause: false,
+        };
+
+        vec![normalization, unselected_normalization]
     }
 }
 
