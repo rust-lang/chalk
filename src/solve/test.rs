@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use chalk_parse;
 use errors::*;
 use ir;

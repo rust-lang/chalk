@@ -544,6 +544,7 @@ impl Forest {
 
                 for clause in clauses {
                     self.snapshotted(|this| {
+                        debug!("program clause = {:#?}", clause);
                         match resolvent::resolvent_clause(
                             &mut this.infer,
                             &domain_goal,

@@ -7,7 +7,8 @@ pub mod recursive;
 pub mod slg;
 mod truncate;
 
-#[cfg(test)] mod test;
+mod bench;
+mod test;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 /// A (possible) solution for a proposed goal. Usually packaged in a `Result`,

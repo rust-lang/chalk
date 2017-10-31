@@ -1,4 +1,5 @@
 #![recursion_limit = "1024"]
+#![cfg_attr(test, feature(test))]
 #![feature(conservative_impl_trait)]
 #![feature(catch_expr)]
 #![feature(match_default_bindings)]
