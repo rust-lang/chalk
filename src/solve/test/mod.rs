@@ -4,7 +4,7 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::SolverChoice;
+use solve::{SolverChoice, Solution};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -14,6 +14,25 @@ fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<ir
 
 fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goal>> {
     chalk_parse::parse_goal(text)?.lower(program)
+}
+
+fn result_to_string(result: &Result<Option<Solution>>) -> String {
+    match result {
+        Ok(Some(v)) => format!("{}", v),
+        Ok(None) => format!("No possible solution"),
+        Err(e) => format!("{}", e),
+    }
+}
+
+fn assert_result(result: &Result<Option<Solution>>, expected: &str) {
+    let result = result_to_string(result);
+
+    println!("expected:\n{}", expected);
+    println!("actual:\n{}", result);
+
+    let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
+    let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
+    assert!(!expected1.is_empty() && result1.starts_with(&expected1));
 }
 
 macro_rules! test {
@@ -89,18 +108,8 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
 
             println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
-            let result = match solver_choice.solve_root_goal(&env, &peeled_goal) {
-                Ok(Some(v)) => format!("{}", v),
-                Ok(None) => format!("No possible solution"),
-                Err(e) => format!("{}", e),
-            };
-            println!("expected:\n{}", expected);
-            println!("actual:\n{}", result);
-
-            // remove all whitespace:
-            let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-            let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-            assert!(!expected1.is_empty() && result1.starts_with(&expected1));
+            let result = solver_choice.solve_root_goal(&env, &peeled_goal);
+            assert_result(&result, expected);
         });
     }
 }

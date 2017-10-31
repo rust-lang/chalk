@@ -5,10 +5,8 @@ use ir::*;
 pub mod infer;
 pub mod recursive;
 pub mod slg;
-mod truncate;
-
-mod bench;
 mod test;
+mod truncate;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 /// A (possible) solution for a proposed goal. Usually packaged in a `Result`,

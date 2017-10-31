@@ -1,7 +1,5 @@
 //! Benchmarking tests.
 
-#![cfg(test)]
-
 extern crate test;
 use self::test::Bencher;
 
@@ -12,13 +10,9 @@ use lower::*;
 use solve::SolverChoice;
 use std::sync::Arc;
 
-fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<ir::Program> {
-    chalk_parse::parse_program(text)?.lower(solver_choice)
-}
-
-fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goal>> {
-    chalk_parse::parse_goal(text)?.lower(program)
-}
+use super::{parse_and_lower_program,
+            parse_and_lower_goal,
+            assert_result};
 
 fn run_bench(
     program_text: &str,
@@ -34,16 +28,12 @@ fn run_bench(
         let peeled_goal = goal.into_peeled_goal();
 
         // Execute once to get an expected result.
-        let result = match solver_choice.solve_root_goal(&env, &peeled_goal) {
-            Ok(Some(v)) => format!("{}", v),
-            Ok(None) => format!("No possible solution"),
-            Err(e) => format!("{}", e),
-        };
+        let result = match solver_choice.solve_root_goal(&env, &peeled_goal);
 
-        let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-        let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-        assert!(!expected1.is_empty() && result1.starts_with(&expected1));
+        // Check expectation.
+        assert_result(&result, expected);
 
+        // Then do it many times to measure time.
         bencher.iter(|| solver_choice.solve_root_goal(&env, &peeled_goal));
     });
 }
