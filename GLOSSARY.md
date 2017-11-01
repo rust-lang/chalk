@@ -1,5 +1,5 @@
 # Glossary
-This is a glossary of terminology (possibly) used in the chalk crate.
+This is a glossary of terminology (possibly) used in the *chalk* crate.
 
 ## Binary connective
 There are sixteen logical connectives on two boolean variables. The most
@@ -32,8 +32,8 @@ Examples for binders:
 ## Canonical Form
 A formula in canonical form has the property that its DeBruijn indices are
 minimized. For example when the formula `forall<0, 1> { 0: A && 1: B }` is
-processed, both "branches" `0: A` and `1: B` are processed individually. The
-first branch would be in canonical form, the second branch not since the
+processed, both "branches" `0: A` and `1: B` are processed individually. Then
+the first branch would be in canonical form, the second branch not since the
 occurring DeBruijn index `1` could be replaced with `0`.
 
 ## Clause
@@ -47,7 +47,8 @@ positive literal. A *Definite clause* has exactly one positive literal.
 *Horn clauses* can be written in the form `A || !B || !C || ...` with `A` being
 the optional positive literal. Due to the equivalence `(P => Q) <=> (!P || Q)`
 the clause can be expressed as `B && C && ... => A` which means that A is true
-if `B`, `C`, etc. are all true. All rules in chalk are in this form. For example
+if `B`, `C`, etc. are all true. All rules in *chalk* are in this form. For
+example
 
 ```
 struct A<T> {}
@@ -84,6 +85,10 @@ With a set of type variables, given types, traits and impls, a goal specifies a
 problem which is solved by finding types for the type variables that satisfy the
 formula. For example the goal `exists<T> { T: u32 }` can be solved with `T =
 u32`.
+
+## Iff
+Iff means "If and only if", which is the same as `A <=> B`, which is the same
+as `(A => B) && (B => A)`. See also *binary connective*.
 
 ## Literal
 A literal is an atomic element of a formula together with the constants `true`
@@ -132,10 +137,10 @@ formula that makes it true.
 ## Unification
 Unification is the process of solving a formula. That means unification finds
 values for all the free literals of the formula that satisfy it. In the context
-of chalk the values refer to types.
+of *chalk* the values refer to types.
 
 ## Universe
-A universe sets the scope in which a particular variable name is bound. (See
+A universe sets the scope in which a particular literal is bound. (See
 *Binder*.) A universe can encapsulate other universes. A universe can
 be contained by only one parent universe. Universes have therefore a tree-like
 structure. A universe can access the variable names of itself and the parent
@@ -146,7 +151,9 @@ A formula is well-formed if it is constructed according to a predefined set of
 syntactic rules.
 
 In the context of the Rust type system this means that basic rules for type
-construction have to be met. Two examples: 1) Given a struct definition
+construction have to be met. Two examples:
+
+1) Given a struct definition
 
 ```rust
 struct HashSet<T: Hash>
@@ -168,7 +175,7 @@ A formula with the existential quantifier `exists(x). P(x)` is satisfiable if
 and only if there exists at least one value for all possible values of x which
 satisfies the subformula `P(x)`.
 
-In the context of chalk, the existential quantifier usually demands the
+In the context of *chalk*, the existential quantifier usually demands the
 existence of exactly one instance (i.e. type) that satisfies the formula (i.e.
 type constraints). More than one instance means that the result is ambiguous.
 
@@ -181,12 +188,16 @@ if and only if the subformula `P(x)` is true for all possible values for x.
 - `not(exists(x). P(x)) <=> forall(x). not(P(x))`
 
 ## Skolemization
-Skolemization is a technique of transferring a logical formula with existential
+Skolemization is a technique of transforming a logical formula with existential
 quantifiers to a statement without them. The resulting statement is in general
 not equivalent to the original statement but equisatisfiable.
 
+The idea to accomplish this transformation by adding the type variable inside an
+existential quantifier to the current universe. This new type variable has to be
+unified with another type later on, otherwise the goal cannot be satisfied.
+
 ## Validity
-An argument (*premisses* therefore *conclusion*) is valid iff there is no
+An argument ("*premisses* therefore *conclusion*") is valid iff there is no
 valuation which makes the premisses true and the conclusion false.
 
 Valid: `A && B therefore A || B`. Invalid: `A || B therefore A && B` because the
