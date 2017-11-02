@@ -1,4 +1,4 @@
-use errors::*;
+use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use ir::*;
 use std::collections::HashMap;
@@ -117,7 +117,7 @@ impl<'q> Inverter<'q> {
 impl<'q> DefaultTypeFolder for Inverter<'q> { }
 
 impl<'q> UniversalFolder for Inverter<'q> {
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Result<Ty> {
+    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Fallible<Ty> {
         let table = &mut self.table;
         Ok(self.inverted_ty
            .entry(universe)
@@ -126,7 +126,7 @@ impl<'q> UniversalFolder for Inverter<'q> {
            .up_shift(binders))
     }
 
-    fn fold_free_universal_lifetime(&mut self, universe: UniverseIndex, binders: usize) -> Result<Lifetime> {
+    fn fold_free_universal_lifetime(&mut self, universe: UniverseIndex, binders: usize) -> Fallible<Lifetime> {
         let table = &mut self.table;
         Ok(self.inverted_lifetime
            .entry(universe)
@@ -137,11 +137,11 @@ impl<'q> UniversalFolder for Inverter<'q> {
 }
 
 impl<'q> ExistentialFolder for Inverter<'q> {
-    fn fold_free_existential_ty(&mut self, _depth: usize, _binders: usize) -> Result<Ty> {
+    fn fold_free_existential_ty(&mut self, _depth: usize, _binders: usize) -> Fallible<Ty> {
         panic!("should not be any existentials")
     }
 
-    fn fold_free_existential_lifetime(&mut self, _depth: usize, _binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, _depth: usize, _binders: usize) -> Fallible<Lifetime> {
         panic!("should not be any existentials")
     }
 }

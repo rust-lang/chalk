@@ -1,12 +1,12 @@
 use std::fmt;
+use std::sync::Arc;
 use ir::*;
 
-pub mod fulfill;
 pub mod infer;
-pub mod solver;
+pub mod recursive;
 pub mod slg;
-
-#[cfg(test)] mod test;
+mod test;
+mod truncate;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 /// A (possible) solution for a proposed goal. Usually packaged in a `Result`,
@@ -196,3 +196,68 @@ impl fmt::Display for Solution {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
+pub enum SolverChoice {
+    /// Chalk's recursive solving strategy.
+    Recursive { overflow_depth: usize, caching_enabled: bool },
+
+    /// Run the SLG solver, producing a Solution.
+    SLG { max_size: usize },
+}
+
+impl SolverChoice {
+    /// Attempts to solve the given root goal, which must be in
+    /// canonical form. The solution is searching for unique answers
+    /// to any free existential variables in this goal.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(None)` is the goal cannot be proven.
+    /// - `Ok(Some(solution))` if we succeeded in finding *some* answers,
+    ///   although `solution` may reflect ambiguity and unknowns.
+    /// - `Err` if there was an internal error solving the goal, which does not
+    ///   reflect success nor failure.
+    pub fn solve_root_goal(self,
+                           env: &Arc<ProgramEnvironment>,
+                           canonical_goal: &Canonical<InEnvironment<Goal>>)
+                           -> ::errors::Result<Option<Solution>>
+    {
+        match self {
+            SolverChoice::Recursive { overflow_depth, caching_enabled } => {
+                let mut solver = recursive::Solver::new(env, overflow_depth, caching_enabled);
+                match solver.solve_root_goal(canonical_goal) {
+                        Ok(v) => Ok(Some(v)),
+                        Err(_) => Ok(None),
+                }
+            }
+
+            SolverChoice::SLG { max_size } => {
+                match slg::solve_root_goal(max_size, env, canonical_goal) {
+                    Ok(answers) => Ok(answers.into_solution(canonical_goal)),
+                    Err(err) => bail!("Exploration error: {:?}", err),
+                }
+            }
+        }
+    }
+
+    /// Returns the default recursive parameters.
+    pub fn recursive() -> Self {
+        SolverChoice::Recursive {
+            overflow_depth: 10,
+            caching_enabled: true,
+        }
+    }
+
+    /// Returns the default SLG parameters.
+    pub fn slg() -> Self {
+        SolverChoice::SLG {
+            max_size: 10
+        }
+    }
+}
+
+impl Default for SolverChoice {
+    fn default() -> Self {
+        SolverChoice::recursive()
+    }
+}

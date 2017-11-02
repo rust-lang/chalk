@@ -18,8 +18,8 @@ use std::process::exit;
 
 use chalk::ir;
 use chalk::lower::*;
-use chalk::solve::solver::{self, Solver, CycleStrategy};
 use chalk::solve::slg;
+use chalk::solve::SolverChoice;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
 
@@ -36,6 +36,8 @@ Options:
   --goal=GOAL         Specifies a goal to evaluate (may be given more than once).
   --overflow-depth=N  Specifies the overflow depth [default: 10].
   --slg               Use the experimental SLG resolution system.
+  --all-answers       When using SLG solver, dump out each individual answer.
+  --no-cache          Disable caching.
 ";
 
 #[derive(Debug, Deserialize)]
@@ -44,6 +46,8 @@ struct Args {
     flag_goal: Vec<String>,
     flag_overflow_depth: usize,
     flag_slg: bool,
+    flag_all_answers: bool,
+    flag_no_cache: bool,
 }
 
 error_chain! {
@@ -65,8 +69,8 @@ struct Program {
 }
 
 impl Program {
-    fn new(text: String) -> Result<Program> {
-        let ir = Arc::new(chalk_parse::parse_program(&text)?.lower()?);
+    fn new(text: String, solver_choice: SolverChoice) -> Result<Program> {
+        let ir = Arc::new(chalk_parse::parse_program(&text)?.lower(solver_choice)?);
         let env = Arc::new(ir.environment());
         Ok(Program { text, ir, env })
     }
@@ -79,9 +83,6 @@ fn run() -> Result<()> {
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
-    // Initialize global overflow depth before everything
-    solver::set_overflow_depth(args.flag_overflow_depth);
-
     if args.flag_overflow_depth == 0 {
         eprintln!("error: overflow depth must be at least 1");
         exit(1);
@@ -89,8 +90,13 @@ fn run() -> Result<()> {
 
     let mut prog = None;
 
+    if args.flag_all_answers && !args.flag_slg {
+        eprintln!("error: in order to report all answers, you must also pass --slg");
+        exit(1);
+    }
+
     if let Some(program) = &args.flag_program {
-        match load_program(program) {
+        match load_program(args, program) {
             Ok(p) => prog = Some(p),
             Err(err) => {
                 eprintln!("error loading program: {}", err);
@@ -155,10 +161,10 @@ fn process(args: &Args,
     if command == "help" {
         help()
     } else if command == "program" {
-        *prog = Some(Program::new(read_program(rl)?)?);
+        *prog = Some(Program::new(read_program(rl)?, args.solver_choice())?);
     } else if command.starts_with("load ") {
         let filename = &command["load ".len()..];
-        *prog = Some(load_program(filename)?);
+        *prog = Some(load_program(args, filename)?);
     } else {
         let prog = prog.as_ref().ok_or("no program currently loaded")?;
         ir::set_current_program(&prog.ir, || -> Result<()> {
@@ -174,10 +180,10 @@ fn process(args: &Args,
     Ok(())
 }
 
-fn load_program(filename: &str) -> Result<Program> {
+fn load_program(args: &Args, filename: &str) -> Result<Program> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
-    Ok(Program::new(text)?)
+    Ok(Program::new(text, args.solver_choice())?)
 }
 
 fn help() {
@@ -203,8 +209,8 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let peeled_goal = goal.into_peeled_goal();
-    if args.flag_slg {
-        match slg::solve_root_goal(solver::get_overflow_depth(), &prog.env, &peeled_goal) {
+    if args.flag_slg && args.flag_all_answers {
+        match slg::solve_root_goal(args.flag_overflow_depth, &prog.env, &peeled_goal) {
             Ok(slg::Answers { answers }) => {
                 if answers.is_empty() {
                     println!("No answers found.");
@@ -222,11 +228,26 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
             }
         }
     } else {
-        let mut solver = Solver::new(&prog.env, CycleStrategy::Tabling, solver::get_overflow_depth());
-        match solver.solve_canonical_goal(&peeled_goal) {
-            Ok(v) => println!("{}\n", v),
-            Err(e) => println!("No possible solution: {}\n", e),
+        match args.solver_choice().solve_root_goal(&prog.env, &peeled_goal) {
+            Ok(Some(v)) => println!("{}\n", v),
+            Ok(None) => println!("No possible solution.\n"),
+            Err(e) => println!("Solver failed: {}", e),
         }
     }
     Ok(())
+}
+
+impl Args {
+    fn solver_choice(&self) -> SolverChoice {
+        if self.flag_slg {
+            SolverChoice::SLG {
+                max_size: self.flag_overflow_depth,
+            }
+        } else {
+            SolverChoice::Recursive {
+                overflow_depth: self.flag_overflow_depth,
+                caching_enabled: !self.flag_no_cache,
+            }
+        }
+    }
 }

@@ -1,17 +1,38 @@
+#![cfg(test)]
+
 use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::solver::{self, Solver, CycleStrategy};
-use solve::slg;
+use solve::{SolverChoice, Solution};
+use std::collections::HashMap;
 use std::sync::Arc;
 
-fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
-    chalk_parse::parse_program(text)?.lower()
+fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<ir::Program> {
+    chalk_parse::parse_program(text)?.lower(solver_choice)
 }
 
 fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goal>> {
     chalk_parse::parse_goal(text)?.lower(program)
+}
+
+fn result_to_string(result: &Result<Option<Solution>>) -> String {
+    match result {
+        Ok(Some(v)) => format!("{}", v),
+        Ok(None) => format!("No possible solution"),
+        Err(e) => format!("{}", e),
+    }
+}
+
+fn assert_result(result: &Result<Option<Solution>>, expected: &str) {
+    let result = result_to_string(result);
+
+    println!("expected:\n{}", expected);
+    println!("actual:\n{}", result);
+
+    let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
+    let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
+    assert!(!expected1.is_empty() && result1.starts_with(&expected1));
 }
 
 macro_rules! test {
@@ -32,8 +53,8 @@ macro_rules! test {
     ]) => {
         test!(@program[$program]
               @parsed_goals[$($parsed_goals)*
-                            (stringify!($goal), SolverChoice::Default, $expected)
-                            (stringify!($goal), SolverChoice::SLG(MAX_SIZE), $expected)]
+                            (stringify!($goal), SolverChoice::recursive(), $expected)
+                            (stringify!($goal), SolverChoice::slg(), $expected)]
               @unparsed_goals[$($unparsed_goals)*])
     };
 
@@ -65,73 +86,32 @@ macro_rules! test {
     };
 }
 
-#[derive(Debug)]
-enum SolverChoice {
-    // Run the default solver, expected test is the Solution.
-    Default,
-
-    // Run the SLG solver, producing a Solution.
-    SLG(usize),
-
-    // Run the SLG solver, producing Answers.
-    SLGAnswers(usize),
-}
-
-const MAX_SIZE: usize = 22; // default MAX_SIZE for SLG
-
-fn solve_goal(program_text: &str,
-              goals: Vec<(&str, SolverChoice, &str)>)
-{
+fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let program = Arc::new(parse_and_lower_program(&program_text[1..program_text.len()-1]).unwrap());
-    let env = Arc::new(program.environment());
-    ir::set_current_program(&program, || {
-        for (goal_text, choice, expected) in goals {
+    let mut program_env_cache = HashMap::new();
+    for (goal_text, solver_choice, expected) in goals {
+        let (program, env) = program_env_cache.entry(solver_choice).or_insert_with(|| {
+            let program_text = &program_text[1..program_text.len() - 1]; // exclude `{}`
+            let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
+            let env = Arc::new(program.environment());
+            (program, env)
+        });
+
+        ir::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
-            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len()-1]).unwrap();
+            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
 
-            println!("using solver: {:?}", choice);
+            println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
-            let result = match choice {
-                SolverChoice::Default => {
-                    let mut solver = Solver::new(&env, CycleStrategy::Tabling, solver::get_overflow_depth());
-                    match solver.solve_canonical_goal(&peeled_goal) {
-                        Ok(v) => format!("{}", v),
-                        Err(e) => format!("No possible solution: {}", e),
-                    }
-                }
-
-                SolverChoice::SLG(max_size) => {
-                    match slg::solve_root_goal(max_size, &env, &peeled_goal) {
-                        Ok(answers) => match answers.into_solution(&peeled_goal) {
-                            Some(v) => format!("{}", v),
-                            None => format!("No possible solution: no answers"),
-                        },
-                        Err(err) => format!("Exploration error: {:?}", err),
-                    }
-                }
-
-                SolverChoice::SLGAnswers(max_size) => {
-                    match slg::solve_root_goal(max_size, &env, &peeled_goal) {
-                        Ok(answers) => format!("{:#?}", answers),
-                        Err(err) => format!("Exploration error: {:?}", err),
-                    }
-                }
-            };
-            println!("expected:\n{}", expected);
-            println!("actual:\n{}", result);
-
-            // remove all whitespace:
-            let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-            let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-            assert!(!expected1.is_empty() && result1.starts_with(&expected1));
-        }
-    });
+            let result = solver_choice.solve_root_goal(&env, &peeled_goal);
+            assert_result(&result, expected);
+        });
+    }
 }
 
 #[test]
@@ -168,6 +148,39 @@ fn prove_clone() {
             Vec<Bar>: Clone
         } yields {
             "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn inner_cycle() {
+    // Interesting test that shows why recursive solver needs to run
+    // to an inner fixed point during iteration. Here, the first
+    // round, we get that `?T: A` has a unique sol'n `?T = i32`.  On
+    // the second round, we ought to get ambiguous: but if we don't
+    // run the `?T: B` to a fixed point, it will terminate with `?T =
+    // i32`, leading to an (incorrect) unique solution.
+    test! {
+        program {
+            #[marker]
+            trait A { }
+            #[marker]
+            trait B { }
+
+            struct i32 { }
+            struct Vec<T> { }
+
+            impl<T> A for T where T: B { }
+            impl A for i32 { }
+
+            impl<T> B for T where T: A { }
+            impl<T> B for Vec<T> where T: B { }
+        }
+
+        goal {
+            exists<T> { T: A }
+        } yields {
+            "Ambiguous"
         }
     }
 }
@@ -479,44 +492,11 @@ fn normalize_basic() {
                     Vec<T>: Iterator<Item = U>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := !1], lifetime constraints []"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous; no inference guidance"
-        } yields[SolverChoice::SLGAnswers(MAX_SIZE)] {
-            r"Answers {
-                answers: [
-                    Answer {
-                        subst: Canonical {
-                            value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: !1
-                                    }
-                                },
-                                constraints: []
-                            },
-                            binders: []
-                        },
-                        ambiguous: false
-                    },
-                    Answer {
-                        subst: Canonical {
-                            value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: (Iterator::Item)<Vec<!1>>
-                                    }
-                                },
-                                constraints: []
-                            },
-                            binders: []
-                        },
-                        ambiguous: false
-                    }
-                ]
-            }"
         }
 
         goal {
@@ -535,9 +515,9 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := u32]"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous"
         }
@@ -572,9 +552,9 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous"
         }
@@ -827,9 +807,9 @@ fn atc1() {
                     }
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := Iter<'!2, !1>], lifetime constraints []"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous; no inference guidance"
         }
@@ -963,7 +943,7 @@ fn trait_wf() {
             "No possible solution"
         }
 
-        // not WF because previous equation doesn't hold, despite Slice<Int> having an impl for Ord<Int> 
+        // not WF because previous equation doesn't hold, despite Slice<Int> having an impl for Ord<Int>
         goal {
             WellFormed(Slice<Int>: Ord<Slice<Int>>)
         } yields {
@@ -1015,9 +995,9 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Deref<'a, Item = U>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := I32], lifetime constraints []"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous"
         }
@@ -1028,9 +1008,9 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Id<'a, Item = U>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := Ref<'!1, I32>], lifetime constraints []"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous"
         }
@@ -1041,11 +1021,11 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Id<'a, Item = U>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := Ref<'?0, I32>], lifetime constraints [
                  (Env(U0, []) |- LifetimeEq('?0, '!1))
              ]"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous"
         }
@@ -1182,9 +1162,9 @@ fn mixed_indices_normalize_application() {
                     }
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous; no inference guidance"
         }
@@ -1326,9 +1306,9 @@ fn suggested_subst() {
                     Foo: SomeTrait<T>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME: SLG does not impl the logic to privilege where clauses
             "Ambiguous; no inference guidance"
         }
@@ -1359,9 +1339,9 @@ fn suggested_subst() {
                     Bar: SomeTrait<T>
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::SLG(MAX_SIZE)] {
+        } yields[SolverChoice::slg()] {
             // FIXME: SLG does not impl the logic to privilege where clauses
             "Ambiguous; no inference guidance"
         }
@@ -1416,9 +1396,9 @@ fn simple_negation() {
             exists<T> {
                 not { T: Foo }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Ambig"
-        } yields[SolverChoice::SLG(MAX_SIZE) ] {
+        } yields[SolverChoice::slg() ] {
             "Exploration error: Floundered"
         }
 
@@ -1532,9 +1512,9 @@ fn negation_free_vars() {
             exists<T> {
                 not { Vec<T>: Foo }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Ambig"
-        } yields[SolverChoice::SLG(MAX_SIZE) ] {
+        } yields[SolverChoice::slg() ] {
             "Exploration error: Floundered"
         }
     }
@@ -1711,13 +1691,13 @@ fn coinductive_semantics() {
                     List<T>: Send
                 }
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique"
         }
 
         goal {
             List<i32>: Send
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Unique"
         }
 
@@ -1725,7 +1705,7 @@ fn coinductive_semantics() {
             exists<T> {
                 T: Send
             }
-        } yields[SolverChoice::Default] {
+        } yields[SolverChoice::recursive()] {
             "Ambiguous"
         }
     }

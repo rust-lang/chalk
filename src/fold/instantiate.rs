@@ -71,7 +71,7 @@ impl<'b> DefaultTypeFolder for Subst<'b> {
 }
 
 impl<'b> ExistentialFolder for Subst<'b> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         if depth >= self.parameters.len() {
             Ok(Ty::Var(depth - self.parameters.len() + binders))
         } else {
@@ -82,7 +82,7 @@ impl<'b> ExistentialFolder for Subst<'b> {
         }
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         if depth >= self.parameters.len() {
             Ok(Lifetime::Var(depth - self.parameters.len() + binders))
         } else {

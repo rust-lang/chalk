@@ -2,15 +2,16 @@ use petgraph::prelude::*;
 
 use errors::Result;
 use ir::{self, Program, ItemId};
+use solve::SolverChoice;
 use std::sync::Arc;
 
 mod solve;
 
 
 impl Program {
-    pub fn record_specialization_priorities(&mut self) -> Result<()> {
+    pub fn record_specialization_priorities(&mut self, solver_choice: SolverChoice) -> Result<()> {
         ir::set_current_program(&Arc::new(self.clone()), || {
-            let forest = self.build_specialization_forest()?;
+            let forest = self.build_specialization_forest(solver_choice)?;
 
             // Visit every root in the forest & set specialization
             // priority for the tree that is the root of.
@@ -23,7 +24,7 @@ impl Program {
     }
 
     // Build the forest of specialization relationships.
-    fn build_specialization_forest(&self) -> Result<Graph<ItemId, ()>> {
+    fn build_specialization_forest(&self, solver_choice: SolverChoice) -> Result<Graph<ItemId, ()>> {
         // The forest is returned as a graph but built as a GraphMap; this is
         // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraphMap::new();
@@ -31,7 +32,7 @@ impl Program {
         // Find all specializations (implemented in coherence/solve)
         // Record them in the forest by adding an edge from the less special
         // to the more special.
-        self.visit_specializations(|less_special, more_special| {
+        self.visit_specializations(solver_choice, |less_special, more_special| {
             forest.add_edge(less_special, more_special, ());
         })?;
 

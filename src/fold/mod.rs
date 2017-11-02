@@ -1,7 +1,7 @@
 //! Traits for transforming bits of IR.
 
 use cast::Cast;
-use errors::*;
+use fallible::*;
 use ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -62,8 +62,8 @@ pub trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
 }
 
 pub trait TypeFolder {
-    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty>;
-    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime>;
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty>;
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime>;
 }
 
 impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
@@ -80,11 +80,11 @@ impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
 pub trait DefaultTypeFolder {}
 
 impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for T {
-    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Result<Ty> {
+    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
         super_fold_ty(self.to_dyn(), ty, binders)
     }
 
-    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Result<Lifetime> {
+    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime> {
         super_fold_lifetime(self.to_dyn(), lifetime, binders)
     }
 }
@@ -102,10 +102,10 @@ pub trait ExistentialFolder {
     /// - `binders` is the number of binders in scope.
     ///
     /// This should return a type suitable for a context with `binders` in scope.
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty>;
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty>;
 
     /// As `fold_free_existential_ty`, but for lifetimes.
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime>;
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
@@ -114,11 +114,11 @@ pub trait ExistentialFolder {
 pub trait IdentityExistentialFolder {}
 
 impl<T: IdentityExistentialFolder> ExistentialFolder for T {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         Ok(Ty::Var(depth + binders))
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         Ok(Lifetime::Var(depth + binders))
     }
 }
@@ -129,14 +129,14 @@ pub trait UniversalFolder {
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Result<Ty>;
+    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Fallible<Ty>;
 
     /// As with `fold_free_universal_ty`, but for lifetimes.
     fn fold_free_universal_lifetime(
         &mut self,
         universe: UniverseIndex,
         binders: usize,
-    ) -> Result<Lifetime>;
+    ) -> Fallible<Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
@@ -145,7 +145,7 @@ pub trait UniversalFolder {
 pub trait IdentityUniversalFolder {}
 
 impl<T: IdentityUniversalFolder> UniversalFolder for T {
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Result<Ty> {
+    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
         Ok(TypeName::ForAll(universe).to_ty())
     }
 
@@ -153,7 +153,7 @@ impl<T: IdentityUniversalFolder> UniversalFolder for T {
         &mut self,
         universe: UniverseIndex,
         _binders: usize,
-    ) -> Result<Lifetime> {
+    ) -> Fallible<Lifetime> {
         Ok(universe.to_lifetime())
     }
 }
@@ -172,33 +172,33 @@ pub trait Fold: Debug {
     /// folder. Typically `binders` starts as 0, but is adjusted when
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result>;
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result>;
 }
 
 impl<'a, T: Fold> Fold for &'a T {
     type Result = T::Result;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         (**self).fold_with(folder, binders)
     }
 }
 
 impl<T: Fold> Fold for Vec<T> {
     type Result = Vec<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         self.iter().map(|e| e.fold_with(folder, binders)).collect()
     }
 }
 
 impl<T: Fold> Fold for Box<T> {
     type Result = Box<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         Ok(Box::new((**self).fold_with(folder, binders)?))
     }
 }
 
 impl<T: Fold> Fold for Arc<T> {
     type Result = Arc<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         Ok(Arc::new((**self).fold_with(folder, binders)?))
     }
 }
@@ -207,7 +207,7 @@ macro_rules! tuple_fold {
     ($($n:ident),*) => {
         impl<$($n: Fold,)*> Fold for ($($n,)*) {
             type Result = ($($n::Result,)*);
-            fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+            fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
                 #[allow(non_snake_case)]
                 let &($(ref $n),*) = self;
                 Ok(($($n.fold_with(folder, binders)?,)*))
@@ -223,7 +223,7 @@ tuple_fold!(A, B, C, D, E);
 
 impl<T: Fold> Fold for Option<T> {
     type Result = Option<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         match *self {
             None => Ok(None),
             Some(ref e) => Ok(Some(e.fold_with(folder, binders)?)),
@@ -233,12 +233,12 @@ impl<T: Fold> Fold for Option<T> {
 
 impl Fold for Ty {
     type Result = Self;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         folder.fold_ty(self, binders)
     }
 }
 
-pub fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Result<Ty> {
+pub fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Fallible<Ty> {
     match *ty {
         Ty::Var(depth) => if depth >= binders {
             folder.fold_free_existential_ty(depth - binders, binders)
@@ -274,7 +274,7 @@ pub fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Result<Ty>
 
 impl Fold for QuantifiedTy {
     type Result = Self;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         let QuantifiedTy {
             num_binders,
             ref ty,
@@ -291,7 +291,7 @@ where
     T: Fold,
 {
     type Result = Binders<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         let Binders {
             binders: ref self_binders,
             value: ref self_value,
@@ -309,7 +309,7 @@ where
     T: Fold,
 {
     type Result = Canonical<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         let Canonical {
             binders: ref self_binders,
             value: ref self_value,
@@ -324,7 +324,7 @@ where
 
 impl Fold for Lifetime {
     type Result = Self;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         folder.fold_lifetime(self, binders)
     }
 }
@@ -333,7 +333,7 @@ pub fn super_fold_lifetime(
     folder: &mut Folder,
     lifetime: &Lifetime,
     binders: usize,
-) -> Result<Lifetime> {
+) -> Fallible<Lifetime> {
     match *lifetime {
         Lifetime::Var(depth) => if depth >= binders {
             folder.fold_free_existential_lifetime(depth - binders, binders)
@@ -346,7 +346,7 @@ pub fn super_fold_lifetime(
 
 impl Fold for Substitution {
     type Result = Substitution;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         // Do not fold the keys of the substitution, just the values.
         let parameters =
             self.parameters.iter()
@@ -354,7 +354,7 @@ impl Fold for Substitution {
                                value.fold_with(folder, binders)
                                     .map(|value| (key, value))
                            })
-                           .collect::<Result<_>>()?;
+                           .collect::<Fallible<_>>()?;
         Ok(Substitution { parameters })
     }
 }
@@ -366,7 +366,7 @@ macro_rules! copy_fold {
             fn fold_with(&self,
                          _folder: &mut ::fold::Folder,
                          _binders: usize)
-                         -> ::errors::Result<Self::Result> {
+                         -> ::fallible::Fallible<Self::Result> {
                 Ok(*self)
             }
         }
@@ -388,7 +388,7 @@ macro_rules! enum_fold {
             fn fold_with(&self,
                          folder: &mut ::fold::Folder,
                          binders: usize)
-                         -> ::errors::Result<Self::Result> {
+                         -> ::fallible::Fallible<Self::Result> {
                 match *self {
                     $(
                         $s::$variant( $(ref $name),* ) => {
@@ -417,7 +417,7 @@ macro_rules! struct_fold {
             fn fold_with(&self,
                          folder: &mut ::fold::Folder,
                          binders: usize)
-                         -> ::errors::Result<Self::Result> {
+                         -> ::fallible::Fallible<Self::Result> {
                 Ok($s {
                     $($name: self.$name.fold_with(folder, binders)?),*
                 })

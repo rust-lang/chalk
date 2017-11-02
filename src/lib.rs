@@ -1,4 +1,5 @@
 #![recursion_limit = "1024"]
+#![cfg_attr(test, feature(test))]
 #![feature(conservative_impl_trait)]
 #![feature(catch_expr)]
 #![feature(match_default_bindings)]
@@ -30,5 +31,6 @@ pub mod ir;
 pub mod cast;
 pub mod coherence;
 pub mod errors;
+pub mod fallible;
 pub mod lower;
 pub mod solve;

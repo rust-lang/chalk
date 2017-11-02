@@ -1,4 +1,4 @@
-use errors::*;
+use fallible::*;
 use fold::{Fold, Folder};
 use fold::shifter::Shifter;
 
@@ -23,7 +23,7 @@ impl<T: Fold> Shifted<T> {
 impl<T: Fold<Result = T>> Fold for Shifted<T> {
     type Result = T;
 
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Result<Self::Result> {
+    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         // I... think this is right if binders is not zero, but not sure,
         // and don't care to think about it.
         assert_eq!(binders, 0);

@@ -1,3 +1,4 @@
+use fallible::*;
 use fold::*;
 use std::fmt::Debug;
 
@@ -82,7 +83,7 @@ impl DefaultTypeFolder for Instantiator { }
 /// subtract `self.vars.len()` to account for the binders we are
 /// instantiating.
 impl ExistentialFolder for Instantiator {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         if depth < self.vars.len() {
             Ok(self.vars[depth].assert_ty_ref().to_ty().up_shift(binders))
         } else {
@@ -90,7 +91,7 @@ impl ExistentialFolder for Instantiator {
         }
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         if depth < self.vars.len() {
             Ok(self.vars[depth].assert_lifetime_ref().to_lifetime().up_shift(binders))
         } else {

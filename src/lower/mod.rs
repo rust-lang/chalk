@@ -6,6 +6,7 @@ use lalrpop_intern::intern;
 use cast::{Cast, Caster};
 use errors::*;
 use ir;
+use solve::SolverChoice;
 
 mod test;
 mod default;
@@ -105,7 +106,7 @@ impl<'k> Env<'k> {
 
 pub trait LowerProgram {
     /// Lowers from a Program AST to the internal IR for a program.
-    fn lower(&self) -> Result<ir::Program>;
+    fn lower(&self, solver_choice: SolverChoice) -> Result<ir::Program>;
 
     /// As above, but skips the coherence step. This is a hack used
     /// internally in SLG testing to overcome shortcomings of the (for
@@ -114,9 +115,9 @@ pub trait LowerProgram {
 }
 
 impl LowerProgram for Program {
-    fn lower(&self) -> Result<ir::Program> {
+    fn lower(&self, solver_choice: SolverChoice) -> Result<ir::Program> {
         let mut program = self.lower_without_coherence()?;
-        program.record_specialization_priorities()?;
+        program.record_specialization_priorities(solver_choice)?;
         Ok(program)
     }
 

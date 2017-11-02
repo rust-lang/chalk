@@ -3,6 +3,7 @@
 use chalk_parse;
 use errors::*;
 use ir::*;
+use solve::SolverChoice;
 use std::sync::Arc;
 use super::{LowerProgram, LowerGoal};
 
@@ -31,7 +32,7 @@ macro_rules! lowering_error {
 
 
 fn parse_and_lower(text: &str) -> Result<Program> {
-    chalk_parse::parse_program(text)?.lower()
+    chalk_parse::parse_program(text)?.lower(SolverChoice::default())
 }
 
 fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {

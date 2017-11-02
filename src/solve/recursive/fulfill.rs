@@ -1,10 +1,8 @@
 use super::*;
 use cast::Caster;
-use errors::*;
 use fold::Fold;
-use solve::infer::{InferenceTable, UnificationResult, ParameterInferenceVariable};
+use solve::infer::{InferenceTable, ParameterInferenceVariable, UnificationResult};
 use solve::infer::InferenceVariable;
-use solve::solver::Solver;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -92,9 +90,10 @@ impl<'s> Fulfill<'s> {
 
     /// Instantiates the given goal and pushes it as a goal to be
     /// proven. Returns a substitution that can be given to `solve`.
-    pub fn instantiate_and_push(&mut self, canonical_goal: &Canonical<InEnvironment<Goal>>)
-                                -> Substitution
-    {
+    pub fn instantiate_and_push(
+        &mut self,
+        canonical_goal: &Canonical<InEnvironment<Goal>>,
+    ) -> Substitution {
         let subst = self.infer.fresh_subst(&canonical_goal.binders);
         let goal = canonical_goal.instantiate_with_subst(&subst);
         self.push_goal(&goal.environment, goal.goal);
@@ -103,19 +102,23 @@ impl<'s> Fulfill<'s> {
 
     /// Wraps `InferenceTable::instantiate`
     pub fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
-        where T: Fold,
-              U: IntoIterator<Item = ParameterKind<UniverseIndex>>
+    where
+        T: Fold,
+        U: IntoIterator<Item = ParameterKind<UniverseIndex>>,
     {
         self.infer.instantiate(universes, arg)
     }
 
     /// Wraps `InferenceTable::instantiate_in`
-    pub fn instantiate_in<U, T>(&mut self,
-                                universe: UniverseIndex,
-                                binders: U,
-                                arg: &T) -> T::Result
-        where T: Fold,
-              U: IntoIterator<Item = ParameterKind<()>>
+    pub fn instantiate_in<U, T>(
+        &mut self,
+        universe: UniverseIndex,
+        binders: U,
+        arg: &T,
+    ) -> T::Result
+    where
+        T: Fold,
+        U: IntoIterator<Item = ParameterKind<()>>,
     {
         self.infer.instantiate_in(universe, binders, arg)
     }
@@ -124,16 +127,17 @@ impl<'s> Fulfill<'s> {
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Result<()>
-        where T: ?Sized + Zip + Debug
+    pub fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Fallible<()>
+    where
+        T: ?Sized + Zip + Debug,
     {
-        let UnificationResult { goals, constraints } =
-            self.infer.unify(environment, a, b)?;
+        let UnificationResult { goals, constraints } = self.infer.unify(environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
         self.constraints.extend(constraints);
-        self.obligations.extend(goals.into_iter().casted().map(Obligation::Prove));
+        self.obligations
+            .extend(goals.into_iter().casted().map(Obligation::Prove));
         Ok(())
     }
 
@@ -143,14 +147,18 @@ impl<'s> Fulfill<'s> {
         debug!("push_goal({:?}, {:?})", goal, environment);
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                let InEnvironment { environment: subenvironment, goal: subgoal } =
-                    subgoal.instantiate_universally(environment);
+                let InEnvironment {
+                    environment: subenvironment,
+                    goal: subgoal,
+                } = subgoal.instantiate_universally(environment);
                 self.push_goal(&subenvironment, *subgoal);
             }
             Goal::Quantified(QuantifierKind::Exists, subgoal) => {
-                let subgoal = self.instantiate_in(environment.universe,
-                                                  subgoal.binders.iter().cloned(),
-                                                  &subgoal.value);
+                let subgoal = self.instantiate_in(
+                    environment.universe,
+                    subgoal.binders.iter().cloned(),
+                    &subgoal.value,
+                );
                 self.push_goal(environment, *subgoal);
             }
             Goal::Implies(wc, subgoal) => {
@@ -166,7 +174,8 @@ impl<'s> Fulfill<'s> {
                 self.obligations.push(Obligation::Refute(in_env));
             }
             Goal::Leaf(wc) => {
-                self.obligations.push(Obligation::Prove(InEnvironment::new(environment, wc)));
+                self.obligations
+                    .push(Obligation::Prove(InEnvironment::new(environment, wc)));
             }
             Goal::CannotProve(()) => {
                 self.cannot_prove = true;
@@ -174,16 +183,20 @@ impl<'s> Fulfill<'s> {
         }
     }
 
-    fn prove(&mut self, wc: &InEnvironment<LeafGoal>) -> Result<PositiveSolution> {
+    fn prove(
+        &mut self,
+        wc: &InEnvironment<LeafGoal>,
+        minimums: &mut Minimums,
+    ) -> Fallible<PositiveSolution> {
         let canonicalized = self.infer.canonicalize(wc);
         let reduced_goal = canonicalized.quantified.into_reduced_goal();
         Ok(PositiveSolution {
             free_vars: canonicalized.free_vars,
-            solution: self.solver.solve_reduced_goal(reduced_goal)?,
+            solution: self.solver.solve_reduced_goal(reduced_goal, minimums)?,
         })
     }
 
-    fn refute(&mut self, goal: &InEnvironment<Goal>) -> Result<NegativeSolution> {
+    fn refute(&mut self, goal: &InEnvironment<Goal>) -> Fallible<NegativeSolution> {
         let canonicalized = match self.infer.invert_then_canonicalize(goal) {
             Some(v) => v,
             None => {
@@ -194,9 +207,9 @@ impl<'s> Fulfill<'s> {
         };
 
         // Negate the result
-        if let Ok(solution) = self.solver.solve_canonical_goal(&canonicalized) {
-            if solution.has_definite() {
-                bail!("refutation failed")
+        if let Ok(solution) = self.solver.solve_root_goal(&canonicalized) {
+            if solution.is_unique() {
+                Err(NoSolution)
             } else {
                 Ok(NegativeSolution::Ambiguous)
             }
@@ -207,14 +220,18 @@ impl<'s> Fulfill<'s> {
 
     /// Apply the subsitution `subst` to all the variables of `free_vars`
     /// (understood in deBruijn style), and add any lifetime constraints.
-    fn apply_solution(&mut self,
-                      free_vars: Vec<ParameterInferenceVariable>,
-                      subst: Canonical<ConstrainedSubst>)
-    {
+    fn apply_solution(
+        &mut self,
+        free_vars: Vec<ParameterInferenceVariable>,
+        subst: Canonical<ConstrainedSubst>,
+    ) {
         let Canonical { value, binders } = subst;
         let ConstrainedSubst { subst, constraints } = self.instantiate(binders, &value);
 
-        debug!("fulfill::apply_solution: adding constraints {:?}", constraints);
+        debug!(
+            "fulfill::apply_solution: adding constraints {:?}",
+            constraints
+        );
         self.constraints.extend(constraints);
 
         // We use the empty environment for unification here because we're
@@ -231,14 +248,18 @@ impl<'s> Fulfill<'s> {
                 let free_value = free_var.to_parameter();
                 self.unify(empty_env, &free_value, subst_value)
                     .unwrap_or_else(|err| {
-                        panic!("apply_solution failed with free_var={:?}, subst_value={:?}: {:?}",
-                               free_var, subst_value, err);
+                        panic!(
+                            "apply_solution failed with free_var={:?}, subst_value={:?}: {:?}",
+                            free_var,
+                            subst_value,
+                            err
+                        );
                     });
             }
         }
     }
 
-    fn fulfill(&mut self) -> Result<Outcome> {
+    fn fulfill(&mut self, minimums: &mut Minimums) -> Fallible<Outcome> {
         debug_heading!("fulfill(obligations={:#?})", self.obligations);
 
         // Try to solve all the obligations. We do this via a fixed-point
@@ -263,7 +284,10 @@ impl<'s> Fulfill<'s> {
             while let Some(obligation) = self.obligations.pop() {
                 let ambiguous = match obligation {
                     Obligation::Prove(ref wc) => {
-                        let PositiveSolution { free_vars, solution } = self.prove(wc)?;
+                        let PositiveSolution {
+                            free_vars,
+                            solution,
+                        } = self.prove(wc, minimums)?;
 
                         if solution.has_definite() {
                             if let Some(constrained_subst) = solution.constrained_subst() {
@@ -305,8 +329,12 @@ impl<'s> Fulfill<'s> {
     /// Try to fulfill all pending obligations and build the resulting
     /// solution. The returned solution will transform `subst` substitution with
     /// the outcome of type inference by updating the replacements it provides.
-    pub fn solve(mut self, subst: Substitution) -> Result<Solution> {
-        let outcome = self.fulfill()?;
+    pub(super) fn solve(
+        mut self,
+        subst: Substitution,
+        minimums: &mut Minimums,
+    ) -> Fallible<Solution> {
+        let outcome = self.fulfill(minimums)?;
 
         if self.cannot_prove {
             return Ok(Solution::Ambig(Guidance::Unknown));
@@ -317,8 +345,9 @@ impl<'s> Fulfill<'s> {
             // and the current inference state is the unique way to solve them.
 
             let constraints = self.constraints.into_iter().collect();
-            let constrained = self.infer.canonicalize(&ConstrainedSubst { subst, constraints });
-            return Ok(Solution::Unique(constrained.quantified))
+            let constrained = self.infer
+                .canonicalize(&ConstrainedSubst { subst, constraints });
+            return Ok(Solution::Unique(constrained.quantified));
         }
 
         // Otherwise, we have (positive or negative) obligations remaining, but
@@ -336,7 +365,10 @@ impl<'s> Fulfill<'s> {
 
             while let Some(obligation) = self.obligations.pop() {
                 if let Obligation::Prove(goal) = obligation {
-                    let PositiveSolution { free_vars, solution } = self.prove(&goal).unwrap();
+                    let PositiveSolution {
+                        free_vars,
+                        solution,
+                    } = self.prove(&goal, minimums).unwrap();
                     if let Some(constrained_subst) = solution.constrained_subst() {
                         self.apply_solution(free_vars, constrained_subst);
                         let subst = self.infer.canonicalize(&subst);

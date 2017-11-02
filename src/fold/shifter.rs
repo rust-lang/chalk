@@ -1,4 +1,4 @@
-use errors::*;
+use fallible::*;
 use ir::*;
 use super::{Fold, DefaultTypeFolder, ExistentialFolder, IdentityUniversalFolder};
 
@@ -63,11 +63,11 @@ shift_method!(DomainGoal);
 impl DefaultTypeFolder for Shifter { }
 
 impl ExistentialFolder for Shifter {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Result<Ty> {
+    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         Ok(Ty::Var(self.adjust(depth, binders)))
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Result<Lifetime> {
+    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         Ok(Lifetime::Var(self.adjust(depth, binders)))
     }
 }
