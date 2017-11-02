@@ -16,6 +16,23 @@ suitable reference.
 [Chalkidiki]: https://en.wikipedia.org/wiki/Chalkidiki
 [Aristotle]: https://en.wikipedia.org/wiki/Aristotle
 
+## Blog posts
+[blog-posts]: #blog-posts
+Here are some blog posts talking about chalk:
+
+- [Lowering Rust Traits to Logic](http://smallcultfollowing.com/babysteps/blog/2017/01/26/lowering-rust-traits-to-logic/)
+    - Explains the basic concepts at play
+- [Unification in Chalk, Part 1](http://smallcultfollowing.com/babysteps/blog/2017/03/25/unification-in-chalk-part-1/)
+    - An introduction to unification
+- [Unification in Chalk, Part 2](http://smallcultfollowing.com/babysteps/blog/2017/04/23/unification-in-chalk-part-2/)
+    - Extending the system for associated types
+- [Negative reasoning in Chalk](http://aturon.github.io/blog/2017/04/24/negative-chalk/)
+    - How to prove that something is not true
+- [Query structure in chalk](http://smallcultfollowing.com/babysteps/blog/2017/05/25/query-structure-in-chalk/)
+    - The basic chalk query structure, with pointers into the chalk implementation
+- [Cyclic queries in chalk](http://smallcultfollowing.com/babysteps/blog/2017/09/12/tabling-handling-cyclic-queries-in-chalk/)
+    - Handling cyclic relations and enabling the implementation of implied bounds and other long-desired features in an elegant way
+
 ## Contributing
 If you are interested in contributing to chalk, please take a look at the
 [Contribution guide](CONTRIBUTING.md).
