@@ -165,7 +165,9 @@ struct_zip!(TraitRef { trait_id, parameters });
 struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
 struct_zip!(ApplicationTy { name, parameters });
 struct_zip!(ProjectionTy { associated_ty_id, parameters });
+struct_zip!(UnselectedProjectionTy { type_name, parameters });
 struct_zip!(Normalize { projection, ty });
+struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
 
 impl Zip for Environment {
@@ -201,7 +203,7 @@ macro_rules! enum_zip {
 /// variant, then zips each field of the variant in turn. Only works
 /// if all variants have a single parenthesized value right now.
 enum_zip!(PolarizedTraitRef { Positive, Negative });
-enum_zip!(DomainGoal { Implemented, Normalize, WellFormed });
+enum_zip!(DomainGoal { Implemented, Normalize, UnselectedNormalize, WellFormed, InScope });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(WellFormed { Ty, TraitRef });
 

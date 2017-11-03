@@ -1742,7 +1742,6 @@ fn mixed_semantics() {
     }
 }
 
-
 #[test]
 fn partial_overlap_1() {
     test! {
@@ -1840,6 +1839,90 @@ fn partial_overlap_3() {
             i32: Marker
         } yields {
             "Unique"
+        }
+    }
+}
+
+#[test]
+fn inscope() {
+    test! {
+        program {
+            trait Foo { }
+        }
+
+        goal {
+            InScope(Foo)
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            if (InScope(Foo)) {
+                InScope(Foo)
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn unselected_projection() {
+    test! {
+        program {
+            trait Iterator {
+                type Item;
+            }
+
+            trait Iterator2 {
+                type Item;
+            }
+
+            struct Chars { }
+            struct char { }
+            struct char2 { }
+
+            impl Iterator for Chars {
+                type Item = char;
+            }
+
+            impl Iterator2 for Chars {
+                type Item = char2;
+            }
+        }
+
+        goal {
+            Chars::Item = char
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            if (InScope(Iterator)) {
+                Chars::Item = char
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            exists<T> {
+                if (InScope(Iterator)) {
+                    Chars::Item = T
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := char], lifetime constraints []"
+        }
+
+        goal {
+            exists<T> {
+                if (InScope(Iterator), InScope(Iterator2)) {
+                    Chars::Item = T
+                }
+            }
+        } yields {
+            "Ambiguous; no inference guidance"
         }
     }
 }

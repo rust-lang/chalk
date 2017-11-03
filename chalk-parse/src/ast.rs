@@ -123,6 +123,9 @@ pub enum Ty {
     Projection {
         proj: ProjectionTy,
     },
+    UnselectedProjection {
+        proj: UnselectedProjectionTy,
+    },
     ForAll {
         lifetime_names: Vec<Identifier>,
         ty: Box<Ty>
@@ -137,6 +140,11 @@ pub enum Lifetime {
 
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
+    pub name: Identifier,
+    pub args: Vec<Parameter>,
+}
+
+pub struct UnselectedProjectionTy {
     pub name: Identifier,
     pub args: Vec<Parameter>,
 }
@@ -174,6 +182,7 @@ pub enum WhereClause {
     TraitRefWellFormed { trait_ref: TraitRef },
     UnifyTys { a: Ty, b: Ty },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
+    TraitInScope { trait_name: Identifier },
 }
 
 pub struct Field {
