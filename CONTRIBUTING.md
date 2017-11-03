@@ -79,47 +79,6 @@ You can find documentation style guidelines in [RFC 1574][rfc1574].
 
 [rfc1574]: https://github.com/rust-lang/rfcs/blob/master/text/1574-more-api-documentation-conventions.md#appendix-a-full-conventions-text
 
-## Issue Triage
-[issue-triage]: #issue-triage
-
-Sometimes, an issue will stay open, even though the bug has been fixed. And
-sometimes, the original bug may go stale because something has changed in the
-meantime.
-
-It can be helpful to go through older bug reports and make sure that they are
-still valid. Load up an older issue, double check that it's still true, and
-leave a comment letting us know if it is or is not. The [least recently
-updated sort][lru] is good for finding issues like this.
-
-Contributors with sufficient permissions on the Rust repo can help by adding
-labels to triage issues:
-
-* Green, **E**-prefixed labels explain the level of **experience** necessary
-  to fix the issue.
-
-* Red, **I**-prefixed labels indicate the **importance** of the issue. The
-  [I-nominated][inom] label indicates that an issue has been nominated for
-  prioritizing at the next triage meeting.
-
-* The purple **metabug** label marks lists of bugs collected by other
-  categories.
-
-* Orange, **P**-prefixed labels indicate a bug's **priority**. These labels
-  are only assigned during triage meetings, and replace the [I-nominated][inom]
-  label.
-
-* The light orange **relnotes** label marks issues that should be documented in
-  the release notes of the next release.
-
-* Gray, **S**-prefixed labels are used for tracking the **status** of pull
-  requests.
-
-If you're looking for somewhere to start, check out the [E-easy][eeasy] tag.
-
-[inom]: https://github.com/rust-lang-nursery/chalk/issues?q=is%3Aopen+is%3Aissue+label%3AI-nominated
-[eeasy]: https://github.com/rust-lang-nursery/chalk/issues?q=is%3Aopen+is%3Aissue+label%3AE-easy
-[lru]: https://github.com/rust-lang-nursery/chalk/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-asc
-
 # Helpful Links and Information
 [Helpful Links and Information]: #helpful-links-and-information
 
