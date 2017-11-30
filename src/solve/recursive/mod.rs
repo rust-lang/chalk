@@ -358,8 +358,8 @@ impl Solver {
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = Substitution::from_binders(&binders);
-        let (goal, (clause, subst)) =
-            fulfill.instantiate(binders.iter().cloned(), &(goal, (clause, subst)));
+        let (goal, subst) =
+            fulfill.instantiate(binders.iter().cloned(), &(goal, subst));
         let ProgramClauseImplication {
             consequence,
             conditions,
