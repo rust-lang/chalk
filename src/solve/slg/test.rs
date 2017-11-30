@@ -20,13 +20,12 @@ macro_rules! test {
     }
 }
 
-fn solve_goal(program_text: &str,
-              goals: Vec<(usize, &str, &str)>)
-{
+fn solve_goal(program_text: &str, goals: Vec<(usize, &str, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let program = &Arc::new(parse_and_lower_program(&program_text[1..program_text.len()-1]).unwrap());
+    let program =
+        &Arc::new(parse_and_lower_program(&program_text[1..program_text.len() - 1]).unwrap());
     let env = &Arc::new(program.environment());
     ir::set_current_program(&program, || {
         for (max_size, goal_text, expected) in goals {
@@ -34,7 +33,7 @@ fn solve_goal(program_text: &str,
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
-            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len()-1]).unwrap();
+            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
             let peeled_goal = goal.into_peeled_goal();
             let result = match super::solve_root_goal(max_size, env, &peeled_goal) {
                 Ok(answers) => format!("{} answer(s) found: {:#?}", answers.answers.len(), answers),

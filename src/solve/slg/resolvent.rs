@@ -173,7 +173,7 @@ fn resolvent_unify<G>(
     consequence: &InEnvironment<G>,
     conditions: Vec<Goal>,
 ) -> Satisfiable<ExClause>
-    where
+where
     G: Zip,
 {
     let environment = &selected_goal.environment;

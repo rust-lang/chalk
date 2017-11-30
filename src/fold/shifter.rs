@@ -1,6 +1,6 @@
 use fallible::*;
 use ir::*;
-use super::{Fold, DefaultTypeFolder, ExistentialFolder, IdentityUniversalFolder};
+use super::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 
 /// A folder that adjusts debruijn indices by a certain amount.
 ///
@@ -60,16 +60,20 @@ shift_method!(TraitRef);
 shift_method!(ProjectionTy);
 shift_method!(DomainGoal);
 
-impl DefaultTypeFolder for Shifter { }
+impl DefaultTypeFolder for Shifter {}
 
 impl ExistentialFolder for Shifter {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         Ok(Ty::Var(self.adjust(depth, binders)))
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_existential_lifetime(
+        &mut self,
+        depth: usize,
+        binders: usize,
+    ) -> Fallible<Lifetime> {
         Ok(Lifetime::Var(self.adjust(depth, binders)))
     }
 }
 
-impl IdentityUniversalFolder for Shifter { }
+impl IdentityUniversalFolder for Shifter {}

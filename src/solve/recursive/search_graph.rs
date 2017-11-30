@@ -117,6 +117,8 @@ impl Add<usize> for DepthFirstNumber {
     type Output = DepthFirstNumber;
 
     fn add(self, v: usize) -> DepthFirstNumber {
-        DepthFirstNumber { index: self.index + v }
+        DepthFirstNumber {
+            index: self.index + v,
+        }
     }
 }

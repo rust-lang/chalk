@@ -333,12 +333,9 @@ pub enum Ty {
 impl Ty {
     pub fn as_projection_ty_enum(&self) -> ProjectionTyRefEnum {
         match *self {
-            Ty::Projection(ref proj) =>
-                ProjectionTyEnum::Selected(proj),
-            Ty::UnselectedProjection(ref proj) =>
-                ProjectionTyEnum::Unselected(proj),
-            _ =>
-                panic!("{:?} is not a projection", self),
+            Ty::Projection(ref proj) => ProjectionTyEnum::Selected(proj),
+            Ty::UnselectedProjection(ref proj) => ProjectionTyEnum::Unselected(proj),
+            _ => panic!("{:?} is not a projection", self),
         }
     }
 }
@@ -866,7 +863,9 @@ pub struct Substitution {
 
 impl Substitution {
     pub fn empty() -> Substitution {
-        Substitution { parameters: BTreeMap::new() }
+        Substitution {
+            parameters: BTreeMap::new(),
+        }
     }
 
     /// Add `var := value` to the substutition.
@@ -874,14 +873,14 @@ impl Substitution {
     /// # Panics
     ///
     /// If a mapping for `var` is already present.
-    pub fn insert(&mut self,
-                  var: InferenceVariable,
-                  value: Parameter)
-    {
+    pub fn insert(&mut self, var: InferenceVariable, value: Parameter) {
         let old_value = self.parameters.insert(var, value);
-        assert!(old_value.is_none(),
-                "already had a key for {:?} in subst (old_value={:?})",
-                var, old_value);
+        assert!(
+            old_value.is_none(),
+            "already had a key for {:?} in subst (old_value={:?})",
+            var,
+            old_value
+        );
     }
 
     /// Construct an identity substitution given a set of binders

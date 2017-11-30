@@ -67,4 +67,3 @@ macro_rules! ty_name {
     ((item $n:expr)) => { ::ir::TypeName::ItemId(ItemId { index: $n }) };
     ((skol $n:expr)) => { ::ir::TypeName::ForAll(UniverseIndex { counter: $n }) }
 }
-

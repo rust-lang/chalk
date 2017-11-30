@@ -801,7 +801,9 @@ impl Forest {
             // a cycle.  We'll still use whatever answers have been
             // found so far, but we'll also register ourselves to
             // receive any new answers that will come later.
-            self.tables[subgoal_table].positives.push(pending_ex_clause.clone());
+            self.tables[subgoal_table]
+                .positives
+                .push(pending_ex_clause.clone());
             self.update_lookup(goal_depth, subgoal_depth, Sign::Positive, minimums);
         }
 
@@ -2208,9 +2210,9 @@ impl iter::Step for TableIndex {
 
 /// Because we recurse so deeply, we rely on stacker to
 /// avoid overflowing the stack.
-fn maybe_grow_stack<F,R>(op: F) -> R
-    where
-    F: FnOnce() -> R
+fn maybe_grow_stack<F, R>(op: F) -> R
+where
+    F: FnOnce() -> R,
 {
     // These numbers are somewhat randomly chosen to make tests work
     // well enough on my system. In particular, because we only test
@@ -2218,4 +2220,3 @@ fn maybe_grow_stack<F,R>(op: F) -> R
     // insufficient to prevent stack overflow. - nikomatsakis
     stacker::maybe_grow(256 * 1024, 2 * 1024 * 1024, op)
 }
-

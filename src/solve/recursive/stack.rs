@@ -51,7 +51,10 @@ impl Stack {
         }
 
         let coinductive_goal = goal.is_coinductive(&self.program);
-        self.entries.push(StackEntry { coinductive_goal, cycle: false });
+        self.entries.push(StackEntry {
+            coinductive_goal,
+            cycle: false,
+        });
         depth
     }
 
@@ -67,7 +70,9 @@ impl Stack {
     /// True if all the goals from the top of the stack down to (and
     /// including) the given depth are coinductive.
     pub fn coinductive_cycle_from(&self, depth: StackDepth) -> bool {
-        self.entries[depth.depth..].iter().all(|entry| entry.coinductive_goal)
+        self.entries[depth.depth..]
+            .iter()
+            .all(|entry| entry.coinductive_goal)
     }
 }
 

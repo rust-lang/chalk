@@ -183,7 +183,8 @@ map_impl!(impl[T: Cast<U>, U] Cast<InEnvironment<U>> for InEnvironment<T>);
 map_impl!(impl[T: Cast<U>, U, E] Cast<Result<U, E>> for Result<T, E>);
 
 impl<T, U> Cast<Canonical<U>> for Canonical<T>
-    where T: Cast<U>
+where
+    T: Cast<U>,
 {
     fn cast(self) -> Canonical<U> {
         // Subtle point: It should be ok to re-use the binders here,
@@ -192,13 +193,14 @@ impl<T, U> Cast<Canonical<U>> for Canonical<T>
         // with. It just introduces new wrapper types.
         Canonical {
             value: self.value.cast(),
-            binders: self.binders
+            binders: self.binders,
         }
     }
 }
 
 impl<T, U> Cast<Vec<U>> for Vec<T>
-    where T: Cast<U>
+where
+    T: Cast<U>,
 {
     fn cast(self) -> Vec<U> {
         self.into_iter().casted().collect()
@@ -210,7 +212,10 @@ pub struct Casted<I, U> {
     _cast: PhantomData<U>,
 }
 
-impl<I: Iterator, U> Iterator for Casted<I, U> where I::Item: Cast<U> {
+impl<I: Iterator, U> Iterator for Casted<I, U>
+where
+    I::Item: Cast<U>,
+{
     type Item = U;
 
     fn next(&mut self) -> Option<Self::Item> {

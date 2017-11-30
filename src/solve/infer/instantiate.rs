@@ -8,11 +8,13 @@ impl InferenceTable {
     /// Create a instance of `arg` where each variable is replaced with
     /// a fresh inference variable of suitable kind.
     pub fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
-        where T: Fold + Debug,
-              U: IntoIterator<Item = ParameterKind<UniverseIndex>>
+    where
+        T: Fold + Debug,
+        U: IntoIterator<Item = ParameterKind<UniverseIndex>>,
     {
         debug!("instantiate(arg={:?})", arg);
-        let vars: Vec<_> = universes.into_iter()
+        let vars: Vec<_> = universes
+            .into_iter()
             .map(|u| u.map(|u| self.new_variable(u)))
             .collect();
         debug!("instantiate: vars={:?}", vars);
@@ -30,16 +32,19 @@ impl InferenceTable {
 
         for (i, kind) in binders.iter().enumerate() {
             let param_infer_var = kind.map(|ui| self.new_variable(ui));
-            subst.insert(InferenceVariable::from_depth(i), param_infer_var.to_parameter());
+            subst.insert(
+                InferenceVariable::from_depth(i),
+                param_infer_var.to_parameter(),
+            );
         }
 
         subst
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.
-    pub fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>)
-                                    -> T::Result
-        where T: Fold + Debug,
+    pub fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
+    where
+        T: Fold + Debug,
     {
         self.instantiate(bound.binders.iter().cloned(), &bound.value)
     }
@@ -49,23 +54,27 @@ impl InferenceTable {
     /// `binders`. This is used to apply a universally quantified
     /// clause like `forall X, 'Y. P => Q`. Here the `binders`
     /// argument is referring to `X, 'Y`.
-    pub fn instantiate_in<U, T>(&mut self,
-                                universe: UniverseIndex,
-                                binders: U,
-                                arg: &T)
-                                -> T::Result
-        where T: Fold,
-              U: IntoIterator<Item = ParameterKind<()>>
+    pub fn instantiate_in<U, T>(
+        &mut self,
+        universe: UniverseIndex,
+        binders: U,
+        arg: &T,
+    ) -> T::Result
+    where
+        T: Fold,
+        U: IntoIterator<Item = ParameterKind<()>>,
     {
         self.instantiate(binders.into_iter().map(|pk| pk.map(|_| universe)), arg)
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
-    pub fn instantiate_binders_in<T>(&mut self,
-                                     universe: UniverseIndex,
-                                     arg: &Binders<T>)
-                                     -> T::Result
-        where T: Fold
+    pub fn instantiate_binders_in<T>(
+        &mut self,
+        universe: UniverseIndex,
+        arg: &Binders<T>,
+    ) -> T::Result
+    where
+        T: Fold,
     {
         self.instantiate_in(universe, arg.binders.iter().cloned(), &arg.value)
     }
@@ -75,7 +84,7 @@ struct Instantiator {
     vars: Vec<ParameterInferenceVariable>,
 }
 
-impl DefaultTypeFolder for Instantiator { }
+impl DefaultTypeFolder for Instantiator {}
 
 /// When we encounter a free variable (of any kind) with index
 /// `i`, we want to map anything in the first N binders to
@@ -91,13 +100,22 @@ impl ExistentialFolder for Instantiator {
         }
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_existential_lifetime(
+        &mut self,
+        depth: usize,
+        binders: usize,
+    ) -> Fallible<Lifetime> {
         if depth < self.vars.len() {
-            Ok(self.vars[depth].assert_lifetime_ref().to_lifetime().up_shift(binders))
+            Ok(
+                self.vars[depth]
+                    .assert_lifetime_ref()
+                    .to_lifetime()
+                    .up_shift(binders),
+            )
         } else {
             Ok(Lifetime::Var(depth + binders - self.vars.len())) // see comment above
         }
     }
 }
 
-impl IdentityUniversalFolder for Instantiator { }
+impl IdentityUniversalFolder for Instantiator {}

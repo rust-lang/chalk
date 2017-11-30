@@ -105,7 +105,11 @@ pub trait ExistentialFolder {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty>;
 
     /// As `fold_free_existential_ty`, but for lifetimes.
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime>;
+    fn fold_free_existential_lifetime(
+        &mut self,
+        depth: usize,
+        binders: usize,
+    ) -> Fallible<Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
@@ -118,7 +122,11 @@ impl<T: IdentityExistentialFolder> ExistentialFolder for T {
         Ok(Ty::Var(depth + binders))
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_existential_lifetime(
+        &mut self,
+        depth: usize,
+        binders: usize,
+    ) -> Fallible<Lifetime> {
         Ok(Lifetime::Var(depth + binders))
     }
 }
@@ -268,7 +276,9 @@ pub fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Fallible<T
             }
         }
         Ty::Projection(ref proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?)),
-        Ty::UnselectedProjection(ref proj) => Ok(Ty::UnselectedProjection(proj.fold_with(folder, binders)?)),
+        Ty::UnselectedProjection(ref proj) => {
+            Ok(Ty::UnselectedProjection(proj.fold_with(folder, binders)?))
+        }
         Ty::ForAll(ref quantified_ty) => Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?)),
     }
 }
@@ -349,13 +359,12 @@ impl Fold for Substitution {
     type Result = Substitution;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
         // Do not fold the keys of the substitution, just the values.
-        let parameters =
-            self.parameters.iter()
-                           .map(|(&key, value)| {
-                               value.fold_with(folder, binders)
-                                    .map(|value| (key, value))
-                           })
-                           .collect::<Fallible<_>>()?;
+        let parameters = self.parameters
+            .iter()
+            .map(|(&key, value)| {
+                value.fold_with(folder, binders).map(|value| (key, value))
+            })
+            .collect::<Fallible<_>>()?;
         Ok(Substitution { parameters })
     }
 }
@@ -433,7 +442,7 @@ struct_fold!(ProjectionTy {
 });
 struct_fold!(UnselectedProjectionTy {
     type_name,
-    parameters
+    parameters,
 });
 struct_fold!(TraitRef {
     trait_id,

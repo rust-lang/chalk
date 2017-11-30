@@ -7,7 +7,8 @@ mod instantiate;
 mod invert;
 mod unify;
 mod var;
-#[cfg(test)] mod test;
+#[cfg(test)]
+mod test;
 
 pub use self::canonicalize::Canonicalized;
 pub use self::unify::UnificationResult;
@@ -54,7 +55,10 @@ impl InferenceTable {
     pub fn snapshot(&mut self) -> InferenceSnapshot {
         let unify_snapshot = self.unify.snapshot();
         let vars = self.vars.clone();
-        InferenceSnapshot { unify_snapshot, vars }
+        InferenceSnapshot {
+            unify_snapshot,
+            vars,
+        }
     }
 
     /// Restore the table to the state it had when the snapshot was taken.
@@ -77,7 +81,8 @@ impl InferenceTable {
     /// some of which may be fallible; the result is that either all
     /// the changes take effect, or none.
     pub fn commit_if_ok<F, R, E>(&mut self, op: F) -> Result<R, E>
-        where F: FnOnce(&mut Self) -> Result<R, E>
+    where
+        F: FnOnce(&mut Self) -> Result<R, E>,
     {
         let snapshot = self.snapshot();
         match op(self) {
@@ -100,21 +105,20 @@ impl InferenceTable {
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
     pub fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty> {
-        leaf.var()
-            .and_then(|depth| {
-                if depth < binders {
-                    None // bound variable, not an inference var
-                } else {
-                    let var = InferenceVariable::from_depth(depth - binders);
-                    match self.unify.probe_value(var) {
-                        InferenceValue::Unbound(_) => None,
-                        InferenceValue::Bound(ref val) => {
-                            let ty = val.as_ref().ty().unwrap();
-                            Some(ty.up_shift(binders))
-                        }
+        leaf.var().and_then(|depth| {
+            if depth < binders {
+                None // bound variable, not an inference var
+            } else {
+                let var = InferenceVariable::from_depth(depth - binders);
+                match self.unify.probe_value(var) {
+                    InferenceValue::Unbound(_) => None,
+                    InferenceValue::Bound(ref val) => {
+                        let ty = val.as_ref().ty().unwrap();
+                        Some(ty.up_shift(binders))
                     }
                 }
-            })
+            }
+        })
     }
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
@@ -171,7 +175,7 @@ impl InferenceTable {
     fn universe_of_unbound_var(&mut self, var: InferenceVariable) -> UniverseIndex {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(ui) => ui,
-            InferenceValue::Bound(_) => panic!("var_universe invoked on bound variable")
+            InferenceValue::Bound(_) => panic!("var_universe invoked on bound variable"),
         }
     }
 }
@@ -222,21 +226,17 @@ impl Substitution {
     pub fn is_trivial_within(&self, in_infer: &mut InferenceTable) -> bool {
         for value in self.parameters.values() {
             match value {
-                ParameterKind::Ty(ty) => {
-                    if let Some(var) = ty.inference_var() {
-                        if in_infer.var_is_bound(var) {
-                            return false;
-                        }
+                ParameterKind::Ty(ty) => if let Some(var) = ty.inference_var() {
+                    if in_infer.var_is_bound(var) {
+                        return false;
                     }
-                }
+                },
 
-                ParameterKind::Lifetime(lifetime) => {
-                    if let Some(var) = lifetime.inference_var() {
-                        if in_infer.var_is_bound(var) {
-                            return false;
-                        }
+                ParameterKind::Lifetime(lifetime) => if let Some(var) = lifetime.inference_var() {
+                    if in_infer.var_is_bound(var) {
+                        return false;
                     }
-                }
+                },
             }
         }
 

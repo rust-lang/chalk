@@ -88,7 +88,9 @@ impl Answers {
                 }
             }
 
-            let aggr_subst = Substitution { parameters: aggr_parameters };
+            let aggr_subst = Substitution {
+                parameters: aggr_parameters,
+            };
 
             subst = infer.canonicalize(&aggr_subst).quantified;
             infer.rollback_to(snapshot);
@@ -110,19 +112,21 @@ fn is_trivial(subst: &Canonical<Substitution>) -> bool {
     let mut uniq = HashSet::new();
 
     // A subst is trivial if..
-    subst.value.parameters.values().all(|parameter| match parameter {
-        // All types are mapped to distinct variables.
-        ParameterKind::Ty(t) => {
-            match t.var() {
+    subst
+        .value
+        .parameters
+        .values()
+        .all(|parameter| match parameter {
+            // All types are mapped to distinct variables.
+            ParameterKind::Ty(t) => match t.var() {
                 None => false,
                 Some(depth) => uniq.insert(depth),
-            }
-        }
+            },
 
-        // And no lifetime mappings. (This is too strict, but we never
-        // product substs with lifetimes.)
-        ParameterKind::Lifetime(_) => false,
-    })
+            // And no lifetime mappings. (This is too strict, but we never
+            // product substs with lifetimes.)
+            ParameterKind::Lifetime(_) => false,
+        })
 }
 
 /// [Anti-unification] is the act of taking two things that do not
@@ -165,9 +169,11 @@ impl<'infer> AntiUnifier<'infer> {
             }
 
             // Mismatched base kinds.
-            (Ty::Var(_), _) | (Ty::ForAll(_), _) | (Ty::Apply(_), _) | (Ty::Projection(_), _) | (Ty::UnselectedProjection(_), _) => {
-                self.new_variable()
-            }
+            (Ty::Var(_), _) |
+            (Ty::ForAll(_), _) |
+            (Ty::Apply(_), _) |
+            (Ty::Projection(_), _) |
+            (Ty::UnselectedProjection(_), _) => self.new_variable(),
         }
     }
 
@@ -208,7 +214,11 @@ impl<'infer> AntiUnifier<'infer> {
             .unwrap_or_else(|| self.new_variable())
     }
 
-    fn aggregate_unselected_projection_tys(&mut self, proj1: &UnselectedProjectionTy, proj2: &UnselectedProjectionTy) -> Ty {
+    fn aggregate_unselected_projection_tys(
+        &mut self,
+        proj1: &UnselectedProjectionTy,
+        proj2: &UnselectedProjectionTy,
+    ) -> Ty {
         let UnselectedProjectionTy {
             type_name: name1,
             parameters: parameters1,
@@ -293,9 +303,7 @@ impl<'infer> AntiUnifier<'infer> {
     }
 
     fn new_lifetime_variable(&mut self) -> Lifetime {
-        self.infer
-            .new_variable(self.universe)
-            .to_lifetime()
+        self.infer.new_variable(self.universe).to_lifetime()
     }
 }
 

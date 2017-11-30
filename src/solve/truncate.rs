@@ -20,7 +20,11 @@ where
     let value = value
         .fold_with(&mut truncater, 0)
         .expect("Truncater is infallible");
-    debug!("truncate: overflow={} value={:?}", truncater.overflow, value);
+    debug!(
+        "truncate: overflow={} value={:?}",
+        truncater.overflow,
+        value
+    );
     Truncated {
         overflow: truncater.overflow,
         value,
@@ -238,7 +242,8 @@ fn truncate_normalizes() {
         ty!(apply (item 0)
             (apply (item 0)
              (var 1))),
-        ty_overflow);
+        ty_overflow
+    );
 }
 
 #[test]
@@ -259,4 +264,3 @@ fn truncate_normalizes_under_binders() {
     // the index in `(var 1)` should be adjusted to account for binders
     assert!(!truncate(&mut table, u0, 4, &ty0).overflow);
 }
-

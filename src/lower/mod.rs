@@ -703,7 +703,9 @@ impl LowerTy for Ty {
 
             Ty::Projection { ref proj } => Ok(ir::Ty::Projection(proj.lower(env)?)),
 
-            Ty::UnselectedProjection { ref proj } => Ok(ir::Ty::UnselectedProjection(proj.lower(env)?)),
+            Ty::UnselectedProjection { ref proj } => {
+                Ok(ir::Ty::UnselectedProjection(proj.lower(env)?))
+            }
 
             Ty::ForAll {
                 ref lifetime_names,
@@ -1116,7 +1118,11 @@ impl ir::AssociatedTyValue {
     ///         <Vec<T> as Iterable>::IntoIter<'a> ==> Iter<'a, T>
     /// }
     /// ```
-    fn to_program_clauses(&self, program: &ir::Program, impl_datum: &ir::ImplDatum) -> Vec<ir::ProgramClause> {
+    fn to_program_clauses(
+        &self,
+        program: &ir::Program,
+        impl_datum: &ir::ImplDatum,
+    ) -> Vec<ir::ProgramClause> {
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
         let all_binders: Vec<_> = self.value
             .binders
@@ -1146,7 +1152,9 @@ impl ir::AssociatedTyValue {
             let parameters = self.value.binders.iter().zip(0..).map(|p| p.to_parameter());
 
             // Then add the trait-ref parameters (`Vec<T>`, in above example)
-            parameters.chain(impl_trait_ref.parameters.clone()).collect()
+            parameters
+                .chain(impl_trait_ref.parameters.clone())
+                .collect()
         };
 
         let projection = ir::ProjectionTy {
@@ -1156,7 +1164,7 @@ impl ir::AssociatedTyValue {
 
         let normalize_goal = ir::DomainGoal::Normalize(ir::Normalize {
             projection: projection.clone(),
-            ty: self.value.value.ty.clone()
+            ty: self.value.value.ty.clone(),
         });
 
         // Determine the normalization
@@ -1172,7 +1180,9 @@ impl ir::AssociatedTyValue {
         };
 
         let unselected_projection = ir::UnselectedProjectionTy {
-            type_name: program.associated_ty_data[&self.associated_ty_id].name.clone(),
+            type_name: program.associated_ty_data[&self.associated_ty_id]
+                .name
+                .clone(),
             parameters: parameters,
         };
 

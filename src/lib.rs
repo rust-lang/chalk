@@ -6,14 +6,14 @@
 #![feature(step_trait)]
 
 extern crate chalk_parse;
+extern crate ena;
 #[macro_use]
 extern crate error_chain;
-extern crate ena;
 extern crate itertools;
-extern crate petgraph;
 extern crate lalrpop_intern;
 #[macro_use]
 extern crate lazy_static;
+extern crate petgraph;
 extern crate stacker;
 
 #[macro_use]

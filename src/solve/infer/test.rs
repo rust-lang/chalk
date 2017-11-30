@@ -4,7 +4,8 @@ use super::*;
 
 impl InferenceTable {
     pub fn normalize<T>(&mut self, value: &T) -> T::Result
-        where T: Fold
+    where
+        T: Fold,
     {
         value.fold_with(&mut Normalizer { table: self }, 0).unwrap()
     }
@@ -14,8 +15,7 @@ struct Normalizer<'a> {
     table: &'a mut InferenceTable,
 }
 
-impl<'q> DefaultTypeFolder for Normalizer<'q> {
-}
+impl<'q> DefaultTypeFolder for Normalizer<'q> {}
 
 impl<'q> ExistentialFolder for Normalizer<'q> {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
@@ -27,14 +27,17 @@ impl<'q> ExistentialFolder for Normalizer<'q> {
         }
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_existential_lifetime(
+        &mut self,
+        depth: usize,
+        binders: usize,
+    ) -> Fallible<Lifetime> {
         assert_eq!(binders, 0);
         Ok(InferenceVariable::from_depth(depth).to_lifetime())
     }
 }
 
-impl<'q> IdentityUniversalFolder for Normalizer<'q> {
-}
+impl<'q> IdentityUniversalFolder for Normalizer<'q> {}
 
 #[test]
 fn infer() {
@@ -42,9 +45,13 @@ fn infer() {
     let environment0 = Environment::new();
     let a = table.new_variable(environment0.universe).to_ty();
     let b = table.new_variable(environment0.universe).to_ty();
-    table.unify(&environment0, &a, &ty!(apply (item 0) (expr b))).unwrap();
+    table
+        .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
+        .unwrap();
     assert_eq!(table.normalize(&a), ty!(apply (item 0) (expr b)));
-    table.unify(&environment0, &b, &ty!(apply (item 1))).unwrap();
+    table
+        .unify(&environment0, &b, &ty!(apply (item 1)))
+        .unwrap();
     assert_eq!(table.normalize(&a), ty!(apply (item 0) (apply (item 1))));
 }
 
@@ -54,7 +61,9 @@ fn universe_error() {
     let mut table = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(environment0.universe).to_ty();
-    table.unify(&environment0, &a, &ty!(apply (skol 1))).unwrap_err();
+    table
+        .unify(&environment0, &a, &ty!(apply (skol 1)))
+        .unwrap_err();
 }
 
 #[test]
@@ -63,10 +72,14 @@ fn cycle_error() {
     let mut table = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(environment0.universe).to_ty();
-    table.unify(&environment0, &a, &ty!(apply (item 0) (expr a))).unwrap_err();
+    table
+        .unify(&environment0, &a, &ty!(apply (item 0) (expr a)))
+        .unwrap_err();
 
     // exists(A -> A = for<'a> A)
-    table.unify(&environment0, &a, &ty!(for_all 1 (var 1))).unwrap_err();
+    table
+        .unify(&environment0, &a, &ty!(for_all 1 (var 1)))
+        .unwrap_err();
 }
 
 #[test]
@@ -76,7 +89,9 @@ fn cycle_indirect() {
     let environment0 = Environment::new();
     let a = table.new_variable(environment0.universe).to_ty();
     let b = table.new_variable(environment0.universe).to_ty();
-    table.unify(&environment0, &a, &ty!(apply (item 0) (expr b))).unwrap();
+    table
+        .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
+        .unwrap();
     table.unify(&environment0, &a, &b).unwrap_err();
 }
 
@@ -88,7 +103,9 @@ fn universe_error_indirect_1() {
     let environment1 = environment0.new_universe();
     let a = table.new_variable(environment0.universe).to_ty();
     let b = table.new_variable(environment1.universe).to_ty();
-    table.unify(&environment1, &b, &ty!(apply (skol 1))).unwrap();
+    table
+        .unify(&environment1, &b, &ty!(apply (skol 1)))
+        .unwrap();
     table.unify(&environment1, &a, &b).unwrap_err();
 }
 
@@ -101,7 +118,9 @@ fn universe_error_indirect_2() {
     let a = table.new_variable(environment0.universe).to_ty();
     let b = table.new_variable(environment1.universe).to_ty();
     table.unify(&environment1, &a, &b).unwrap();
-    table.unify(&environment1, &b, &ty!(apply (skol 1))).unwrap_err();
+    table
+        .unify(&environment1, &b, &ty!(apply (skol 1)))
+        .unwrap_err();
 }
 
 #[test]
@@ -112,8 +131,12 @@ fn universe_promote() {
     let environment1 = environment0.new_universe();
     let a = table.new_variable(environment0.universe).to_ty();
     let b = table.new_variable(environment1.universe).to_ty();
-    table.unify(&environment1, &a, &ty!(apply (item 0) (expr b))).unwrap();
-    table.unify(&environment1, &a, &ty!(apply (item 0) (apply (item 1)))).unwrap();
+    table
+        .unify(&environment1, &a, &ty!(apply (item 0) (expr b)))
+        .unwrap();
+    table
+        .unify(&environment1, &a, &ty!(apply (item 0) (apply (item 1))))
+        .unwrap();
 }
 
 #[test]
@@ -124,8 +147,12 @@ fn universe_promote_bad() {
     let environment1 = environment0.new_universe();
     let a = table.new_variable(environment0.universe).to_ty();
     let b = table.new_variable(environment1.universe).to_ty();
-    table.unify(&environment1, &a, &ty!(apply (item 0) (expr b))).unwrap();
-    table.unify(&environment1, &b, &ty!(apply (skol 1))).unwrap_err();
+    table
+        .unify(&environment1, &a, &ty!(apply (item 0) (expr b)))
+        .unwrap();
+    table
+        .unify(&environment1, &b, &ty!(apply (skol 1)))
+        .unwrap_err();
 }
 
 #[test]
@@ -138,9 +165,12 @@ fn projection_eq() {
     let a = table.new_variable(environment0.universe).to_ty();
 
     // expect an error ("cycle during unification")
-    table.unify(&environment0,
-               &a,
-               &ty!(apply (item 0) (projection (item 1) (expr a))))
+    table
+        .unify(
+            &environment0,
+            &a,
+            &ty!(apply (item 0) (projection (item 1) (expr a))),
+        )
         .unwrap_err();
 }
 
@@ -156,11 +186,18 @@ fn quantify_simple() {
     let _ = table.new_variable(U2);
 
     assert_eq!(
-        table.canonicalize(&ty!(apply (item 0) (var 2) (var 1) (var 0))).quantified,
+        table
+            .canonicalize(&ty!(apply (item 0) (var 2) (var 1) (var 0)))
+            .quantified,
         Canonical {
             value: ty!(apply (item 0) (var 0) (var 1) (var 2)),
-            binders: vec![ParameterKind::Ty(U2), ParameterKind::Ty(U1), ParameterKind::Ty(U0)],
-        });
+            binders: vec![
+                ParameterKind::Ty(U2),
+                ParameterKind::Ty(U1),
+                ParameterKind::Ty(U0),
+            ],
+        }
+    );
 }
 
 #[test]
@@ -176,17 +213,27 @@ fn quantify_bound() {
     let v2a = table.new_variable(environment2.universe).to_ty();
     let v2b = table.new_variable(environment2.universe).to_ty();
 
-    table.unify(&environment0,
-                &v2b,
-                &ty!(apply (item 1) (expr v1) (expr v0)))
+    table
+        .unify(
+            &environment0,
+            &v2b,
+            &ty!(apply (item 1) (expr v1) (expr v0)),
+        )
         .unwrap();
 
     assert_eq!(
-        table.canonicalize(&ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0))).quantified,
+        table
+            .canonicalize(&ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0)))
+            .quantified,
         Canonical {
             value: ty!(apply (item 0) (apply (item 1) (var 0) (var 1)) (var 2) (var 0) (var 1)),
-            binders: vec![ParameterKind::Ty(U1), ParameterKind::Ty(U0), ParameterKind::Ty(U2)],
-        });
+            binders: vec![
+                ParameterKind::Ty(U1),
+                ParameterKind::Ty(U0),
+                ParameterKind::Ty(U2),
+            ],
+        }
+    );
 }
 
 #[test]
@@ -198,14 +245,21 @@ fn quantify_ty_under_binder() {
 
     // Unify v0 and v1.
     let environment0 = Environment::new();
-    table.unify(&environment0, &v0.to_ty(), &v1.to_ty()).unwrap();
+    table
+        .unify(&environment0, &v0.to_ty(), &v1.to_ty())
+        .unwrap();
 
     // Here: the `for_all` introduces 3 binders, so `(var 3)`
     // references `v0` and `(var v4)` references `v1` above.
     assert_eq!(
-        table.canonicalize(&ty!(for_all 3 (apply (item 0) (var 1) (var 3) (var 4) (lifetime (var 3))))).quantified,
+        table
+            .canonicalize(
+                &ty!(for_all 3 (apply (item 0) (var 1) (var 3) (var 4) (lifetime (var 3))))
+            )
+            .quantified,
         Canonical {
             value: ty!(for_all 3 (apply (item 0) (var 1) (var 3) (var 3) (lifetime (var 4)))),
-            binders: vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)]
-        });
+            binders: vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)],
+        }
+    );
 }

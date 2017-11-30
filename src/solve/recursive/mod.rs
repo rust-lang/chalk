@@ -152,7 +152,10 @@ impl Solver {
 
             // Return the solution from the table.
             let previous_solution = self.search_graph[dfn].solution.clone();
-            debug!("solve_reduced_goal: cycle detected, previous solution {:?}", previous_solution);
+            debug!(
+                "solve_reduced_goal: cycle detected, previous solution {:?}",
+                previous_solution
+            );
             previous_solution
         } else {
             // Otherwise, push the goal onto the stack and create a table.
@@ -177,7 +180,9 @@ impl Solver {
                     debug!("solve_reduced_goal: SCC head encountered, moving to cache");
                     self.search_graph.move_to_cache(dfn, &mut self.cache);
                 } else {
-                    debug!("solve_reduced_goal: SCC head encountered, rolling back as caching disabled");
+                    debug!(
+                        "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
+                    );
                     self.search_graph.rollback_to(dfn);
                 }
             }
@@ -265,7 +270,8 @@ impl Solver {
 
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
-                current_answer, minimums
+                current_answer,
+                minimums
             );
 
             if !self.stack[depth].read_and_reset_cycle_flag() {
@@ -358,8 +364,7 @@ impl Solver {
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = Substitution::from_binders(&binders);
-        let (goal, subst) =
-            fulfill.instantiate(binders.iter().cloned(), &(goal, subst));
+        let (goal, subst) = fulfill.instantiate(binders.iter().cloned(), &(goal, subst));
         let ProgramClauseImplication {
             consequence,
             conditions,

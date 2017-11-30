@@ -40,4 +40,3 @@ error_chain! {
         }
     }
 }
-

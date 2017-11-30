@@ -36,6 +36,3 @@ impl<T: Fold<Result = T>> Fold for Shifted<T> {
         value.fold_with(folder, binders)
     }
 }
-
-
-

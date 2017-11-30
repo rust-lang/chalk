@@ -5,15 +5,17 @@ use cast::Cast;
 impl Program {
     pub(super) fn add_default_impls(&mut self) {
         // For each auto trait `MyAutoTrait` and for each struct/type `MyStruct`
-        for auto_trait in self.trait_data.values().filter(|t| t.binders.value.flags.auto) {
+        for auto_trait in self.trait_data
+            .values()
+            .filter(|t| t.binders.value.flags.auto)
+        {
             for struct_datum in self.struct_data.values() {
-
                 // `MyStruct: MyAutoTrait`
                 let trait_ref = TraitRef {
                     trait_id: auto_trait.binders.value.trait_ref.trait_id,
                     parameters: vec![
-                        ParameterKind::Ty(Ty::Apply(struct_datum.binders.value.self_ty.clone()))
-                    ]
+                        ParameterKind::Ty(Ty::Apply(struct_datum.binders.value.self_ty.clone())),
+                    ],
                 };
 
                 // If a positive or negative impl is already provided for a type family
@@ -28,8 +30,8 @@ impl Program {
                         value: DefaultImplDatumBound {
                             trait_ref,
                             accessible_tys: struct_datum.binders.value.fields.clone(),
-                        }
-                    }
+                        },
+                    },
                 });
             }
         }
@@ -45,9 +47,16 @@ impl Program {
 
         for impl_datum in self.impl_data.values() {
             // We retrieve the trait ref given by the positive impl (even if the actual impl is negative)
-            let impl_goal: DomainGoal = impl_datum.binders.value.trait_ref.trait_ref().clone().cast();
+            let impl_goal: DomainGoal = impl_datum
+                .binders
+                .value
+                .trait_ref
+                .trait_ref()
+                .clone()
+                .cast();
 
-            let impl_goal = infer.instantiate_in(env.universe, impl_datum.binders.binders.clone(), &impl_goal);
+            let impl_goal =
+                infer.instantiate_in(env.universe, impl_datum.binders.binders.clone(), &impl_goal);
 
             // We check whether the impl `MyStruct: (!)MyAutoTrait` unifies with an existing impl.
             // Examples:

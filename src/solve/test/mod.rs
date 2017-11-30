@@ -4,7 +4,7 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::{SolverChoice, Solution};
+use solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 use std::sync::Arc;
 
