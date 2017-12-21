@@ -15,11 +15,25 @@ impl InferenceTable {
         debug!("instantiate(arg={:?})", arg);
         let vars: Vec<_> = universes
             .into_iter()
-            .map(|u| u.map(|u| self.new_variable(u)))
+            .map(|param_kind| self.parameter_kind_to_parameter(param_kind))
             .collect();
         debug!("instantiate: vars={:?}", vars);
         let mut instantiator = Instantiator { vars };
         arg.fold_with(&mut instantiator, 0).expect("")
+    }
+
+    fn parameter_kind_to_parameter(
+        &mut self,
+        param_kind: ParameterKind<UniverseIndex>,
+    ) -> Parameter {
+        match param_kind {
+            ParameterKind::Ty(ui) => {
+                ParameterKind::Ty(self.new_variable(ui).to_ty())
+            }
+            ParameterKind::Lifetime(ui) => {
+                ParameterKind::Lifetime(self.new_variable(ui).to_lifetime())
+            }
+        }
     }
 
     /// Given the binders from a canonicalized value C, returns a
@@ -81,7 +95,7 @@ impl InferenceTable {
 }
 
 struct Instantiator {
-    vars: Vec<ParameterInferenceVariable>,
+    vars: Vec<Parameter>,
 }
 
 impl DefaultTypeFolder for Instantiator {}
@@ -94,7 +108,7 @@ impl DefaultTypeFolder for Instantiator {}
 impl ExistentialFolder for Instantiator {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         if depth < self.vars.len() {
-            Ok(self.vars[depth].assert_ty_ref().to_ty().up_shift(binders))
+            Ok(self.vars[depth].assert_ty_ref().up_shift(binders))
         } else {
             Ok(Ty::Var(depth + binders - self.vars.len())) // see comment above
         }
@@ -106,12 +120,7 @@ impl ExistentialFolder for Instantiator {
         binders: usize,
     ) -> Fallible<Lifetime> {
         if depth < self.vars.len() {
-            Ok(
-                self.vars[depth]
-                    .assert_lifetime_ref()
-                    .to_lifetime()
-                    .up_shift(binders),
-            )
+            Ok(self.vars[depth].assert_lifetime_ref().up_shift(binders))
         } else {
             Ok(Lifetime::Var(depth + binders - self.vars.len())) // see comment above
         }
