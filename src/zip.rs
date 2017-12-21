@@ -148,7 +148,7 @@ eq_zip!(Identifier);
 eq_zip!(QuantifierKind);
 
 macro_rules! struct_zip {
-    ($t:ident$([$($param:tt)*])* { $($field:ident),* } $($w:tt)*) => {
+    ($t:ident$([$($param:tt)*])* { $($field:ident),* $(,)* } $($w:tt)*) => {
         impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
             fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
                 // Validate that we have indeed listed all fields
@@ -191,7 +191,7 @@ impl Zip for Environment {
 }
 
 macro_rules! enum_zip {
-    ($t:ident$([$($param:tt)*])* { $( $variant:ident ),* } $($w:tt)*) => {
+    ($t:ident$([$($param:tt)*])* { $( $variant:ident ),* $(,)* } $($w:tt)*) => {
         impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
             fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
                 match (a, b) {

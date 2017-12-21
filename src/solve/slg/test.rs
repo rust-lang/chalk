@@ -150,7 +150,7 @@ fn positive_cycle() {
                                 constraints: []
                             },
                             binders: [
-                                U0
+                                Ty(U0)
                             ]
                         },
                         ambiguous: true
@@ -756,7 +756,7 @@ fn cached_answers_1() {
                                 constraints: []
                             },
                             binders: [
-                                U0
+                                Ty(U0)
                             ]
                         },
                         ambiguous: true
@@ -854,7 +854,7 @@ fn cached_answers_2() {
                                 constraints: []
                             },
                             binders: [
-                                U0
+                                Ty(U0)
                             ]
                         },
                         ambiguous: true
@@ -952,7 +952,7 @@ fn cached_answers_3() {
                                 constraints: []
                             },
                             binders: [
-                                U0
+                                Ty(U0)
                             ]
                         },
                         ambiguous: true

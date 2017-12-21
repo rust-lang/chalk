@@ -186,18 +186,17 @@ impl Solution {
 
 impl fmt::Display for Solution {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            Solution::Unique(ref constrained) => write!(
+        match self {
+            Solution::Unique(constrained) => write!(
                 f,
-                "Unique; substitution [{}], lifetime constraints {:?}",
-                &constrained.value.subst,
-                &constrained.value.constraints
+                "Unique; {}",
+                constrained,
             ),
-            Solution::Ambig(Guidance::Definite(ref subst)) => {
-                write!(f, "Ambiguous; definite substitution [{}]", &subst.value)
+            Solution::Ambig(Guidance::Definite(subst)) => {
+                write!(f, "Ambiguous; definite substitution {}", subst)
             }
-            Solution::Ambig(Guidance::Suggested(ref subst)) => {
-                write!(f, "Ambiguous; suggested substitution [{}]", &subst.value)
+            Solution::Ambig(Guidance::Suggested(subst)) => {
+                write!(f, "Ambiguous; suggested substitution {}", subst)
             }
             Solution::Ambig(Guidance::Unknown) => write!(f, "Ambiguous; no inference guidance"),
         }

@@ -43,15 +43,6 @@ impl Debug for TypeName {
     }
 }
 
-impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
-            ParameterKind::Ty(ref n) => write!(fmt, "{:?}", n),
-            ParameterKind::Lifetime(ref n) => write!(fmt, "{:?}", n),
-        }
-    }
-}
-
 impl Debug for Ty {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
@@ -281,13 +272,13 @@ impl<T: Display> Display for Canonical<T> {
         if binders.is_empty() {
             write!(f, "{}", value)?;
         } else {
-            write!(f, "exists<")?;
+            write!(f, "for<")?;
 
-            for (i, ui) in binders.iter().enumerate() {
+            for (i, pk) in binders.iter().enumerate() {
                 if i > 0 {
                     write!(f, ",")?;
                 }
-                write!(f, "{}", ui.into_inner())?;
+                write!(f, "?{}", pk.into_inner())?;
             }
 
             write!(f, "> {{ {} }}", value)?;
@@ -297,23 +288,42 @@ impl<T: Display> Display for Canonical<T> {
     }
 }
 
+impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
+    default fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            ParameterKind::Ty(ref n) => write!(fmt, "Ty({:?})", n),
+            ParameterKind::Lifetime(ref n) => write!(fmt, "Lifetime({:?})", n),
+        }
+    }
+}
+
+impl Debug for Parameter {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            ParameterKind::Ty(ref n) => write!(fmt, "{:?}", n),
+            ParameterKind::Lifetime(ref n) => write!(fmt, "{:?}", n),
+        }
+    }
+}
+
 impl Display for ConstrainedSubst {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let ConstrainedSubst { subst, constraints } = self;
 
-        write!(f, "{}", subst)?;
-
-        if !constraints.is_empty() {
-            write!(f, " if {:?}", constraints)?;
-        }
-
-        Ok(())
+        write!(
+            f,
+            "substitution {}, lifetime constraints {:?}",
+            subst,
+            constraints,
+        )
     }
 }
 
 impl Display for Substitution {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let mut first = true;
+
+        write!(f, "[")?;
 
         for (var, value) in &self.parameters {
             if first {
@@ -324,6 +334,8 @@ impl Display for Substitution {
 
             write!(f, "{:?} := {:?}", var, value)?;
         }
+
+        write!(f, "]")?;
 
         Ok(())
     }

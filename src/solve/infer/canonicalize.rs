@@ -46,6 +46,7 @@ impl InferenceTable {
     }
 }
 
+#[derive(Debug)]
 pub struct Canonicalized<T> {
     /// The canonicalized result.
     pub quantified: Canonical<T>,

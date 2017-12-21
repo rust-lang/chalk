@@ -3,6 +3,7 @@
 #![feature(conservative_impl_trait)]
 #![feature(catch_expr)]
 #![feature(match_default_bindings)]
+#![feature(specialization)]
 #![feature(step_trait)]
 
 extern crate chalk_parse;
