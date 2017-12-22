@@ -1,18 +1,15 @@
 use ena::unify as ena;
 use ir::*;
 
-mod canonicalize;
+pub mod canonicalize;
 mod normalize_deep;
 mod instantiate;
 mod invert;
-mod unify;
-mod var;
+pub mod unify;
+pub mod var;
 #[cfg(test)]
 mod test;
 
-pub use self::canonicalize::Canonicalized;
-pub use self::unify::UnificationResult;
-pub use self::var::InferenceVariable;
 use self::var::*;
 
 #[derive(Clone)]

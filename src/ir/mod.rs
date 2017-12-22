@@ -3,7 +3,7 @@ use chalk_parse::ast;
 use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;
-use solve::infer::InferenceVariable;
+use solve::infer::var::InferenceVariable;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 

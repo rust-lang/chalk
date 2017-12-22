@@ -6,6 +6,7 @@
 #![feature(specialization)]
 #![feature(step_trait)]
 #![feature(universal_impl_trait)]
+#![feature(use_nested_groups)]
 
 extern crate chalk_parse;
 extern crate ena;

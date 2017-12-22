@@ -1,8 +1,12 @@
 use super::*;
 use cast::Caster;
 use fold::Fold;
-use solve::infer::{InferenceTable, ParameterInferenceVariable, UnificationResult};
-use solve::infer::InferenceVariable;
+use solve::infer::{
+    InferenceTable,
+    ParameterInferenceVariable,
+    unify::UnificationResult,
+    var::InferenceVariable,
+};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;

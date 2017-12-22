@@ -52,7 +52,7 @@
 use cast::{Cast, Caster};
 use ir::*;
 use ir::could_match::CouldMatch;
-use solve::infer::{InferenceTable, UnificationResult};
+use solve::infer::{InferenceTable, unify::UnificationResult};
 use solve::truncate::{truncate, Truncated};
 use stacker;
 use std::collections::{HashMap, HashSet};
