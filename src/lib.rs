@@ -5,6 +5,7 @@
 #![feature(match_default_bindings)]
 #![feature(specialization)]
 #![feature(step_trait)]
+#![feature(universal_impl_trait)]
 
 extern crate chalk_parse;
 extern crate ena;
