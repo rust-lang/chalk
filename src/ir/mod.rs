@@ -696,6 +696,26 @@ impl<T> Canonical<T> {
     }
 }
 
+/// A "universe canonical" value. This is a wrapper around a
+/// `Canonical`, indicating that the universes within have been
+/// "renumbered" to start from 0 and collapse unimportant
+/// distinctions.
+///
+/// To produce one of these values, use the `u_canonicalize` method.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct UCanonical<T> {
+    pub canonical: Canonical<T>,
+}
+
+impl<T> UCanonical<T> {
+    pub fn substitute(&self, subst: &Substitution) -> T::Result
+    where
+        T: Fold,
+    {
+        self.canonical.substitute(subst)
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum Goal {

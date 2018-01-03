@@ -2,6 +2,7 @@ use ena::unify as ena;
 use ir::*;
 
 pub mod canonicalize;
+pub mod ucanonicalize;
 mod normalize_deep;
 mod instantiate;
 mod invert;
