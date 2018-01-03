@@ -883,24 +883,6 @@ impl Substitution {
         );
     }
 
-    /// Construct an identity substitution given a set of binders
-    pub fn from_binders(binders: &[ParameterKind<UniverseIndex>]) -> Self {
-        let parameters = binders
-            .iter()
-            .enumerate()
-            .map(|(index, kind)| {
-                let var = InferenceVariable::from_depth(index);
-                let value = match kind {
-                    ParameterKind::Ty(_) => ParameterKind::Ty(var.to_ty()),
-                    ParameterKind::Lifetime(_) => ParameterKind::Lifetime(var.to_lifetime()),
-                };
-                (var, value)
-            })
-            .collect();
-
-        Substitution { parameters }
-    }
-
     pub fn is_empty(&self) -> bool {
         self.parameters.is_empty()
     }

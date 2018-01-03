@@ -7,7 +7,7 @@ use super::*;
 impl InferenceTable {
     /// Create a instance of `arg` where each variable is replaced with
     /// a fresh inference variable of suitable kind.
-    pub fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
+    fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
     where
         T: Fold + Debug,
         U: IntoIterator<Item = ParameterKind<UniverseIndex>>,

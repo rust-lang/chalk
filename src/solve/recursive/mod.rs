@@ -211,34 +211,34 @@ impl Solver {
             let current_answer = match goal.clone() {
                 FullyReducedGoal::EqGoal(g) => {
                     // Equality goals are understood "natively" by the logic, via unification:
-                    self.solve_via_unification(g, minimums)
+                    self.solve_via_unification(&g, minimums)
                 }
-                FullyReducedGoal::DomainGoal(Canonical { value, binders }) => {
+                FullyReducedGoal::DomainGoal(canonical_goal) => {
                     // "Domain" goals (i.e., leaf goals that are Rust-specific) are
                     // always solved via some form of implication. We can either
                     // apply assumptions from our environment (i.e. where clauses),
                     // or from the lowered program, which includes fallback
                     // clauses. We try each approach in turn:
 
-                    let env_clauses = value
+                    let env_clauses = canonical_goal.value
                         .environment
                         .clauses
                         .iter()
-                        .filter(|&clause| clause.could_match(&value.goal))
+                        .filter(|&clause| clause.could_match(&canonical_goal.value.goal))
                         .cloned()
                         .map(DomainGoal::into_program_clause);
                     let env_solution =
-                        self.solve_from_clauses(&binders, &value, env_clauses, minimums);
+                        self.solve_from_clauses(&canonical_goal, env_clauses, minimums);
 
                     let prog_clauses: Vec<_> = self.program
                         .program_clauses
                         .iter()
                         .filter(|clause| !clause.fallback_clause)
-                        .filter(|&clause| clause.could_match(&value.goal))
+                        .filter(|&clause| clause.could_match(&canonical_goal.value.goal))
                         .cloned()
                         .collect();
                     let prog_solution =
-                        self.solve_from_clauses(&binders, &value, prog_clauses, minimums);
+                        self.solve_from_clauses(&canonical_goal, prog_clauses, minimums);
 
                     // These fallback clauses are used when we're sure we'll never
                     // reach Unique via another route
@@ -246,11 +246,11 @@ impl Solver {
                         .program_clauses
                         .iter()
                         .filter(|clause| clause.fallback_clause)
-                        .filter(|&clause| clause.could_match(&value.goal))
+                        .filter(|&clause| clause.could_match(&canonical_goal.value.goal))
                         .cloned()
                         .collect();
                     let fallback_solution =
-                        self.solve_from_clauses(&binders, &value, fallback, minimums);
+                        self.solve_from_clauses(&canonical_goal, fallback, minimums);
 
                     // Now that we have all the outcomes, we attempt to combine
                     // them. Here, we apply a heuristic (also found in rustc): if we
@@ -310,14 +310,12 @@ impl Solver {
 
     fn solve_via_unification(
         &mut self,
-        goal: Canonical<InEnvironment<EqGoal>>,
+        canonical_goal: &Canonical<InEnvironment<EqGoal>>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
-        let Canonical { value, binders } = goal;
-        let subst = Substitution::from_binders(&binders);
-        let (InEnvironment { environment, goal }, subst) =
-            fulfill.instantiate(binders, &(value, subst));
+        let subst = fulfill.fresh_subst(&canonical_goal.binders);
+        let InEnvironment { environment, goal } = canonical_goal.instantiate_with_subst(&subst);
 
         fulfill.unify(&environment, &goal.a, &goal.b)?;
         fulfill.solve(subst, minimums)
@@ -328,8 +326,7 @@ impl Solver {
     /// them.
     fn solve_from_clauses<C>(
         &mut self,
-        binders: &[ParameterKind<UniverseIndex>],
-        goal: &InEnvironment<DomainGoal>,
+        canonical_goal: &Canonical<InEnvironment<DomainGoal>>,
         clauses: C,
         minimums: &mut Minimums,
     ) -> Fallible<Solution>
@@ -340,7 +337,7 @@ impl Solver {
         for ProgramClause { implication, .. } in clauses {
             debug_heading!("clause={:?}", implication);
 
-            let res = self.solve_via_implication(binders, goal.clone(), implication, minimums);
+            let res = self.solve_via_implication(canonical_goal, implication, minimums);
             if let Ok(solution) = res {
                 debug!("ok: solution={:?}", solution);
                 cur_solution = Some(match cur_solution {
@@ -357,14 +354,13 @@ impl Solver {
     /// Modus ponens! That is: try to apply an implication by proving its premises.
     fn solve_via_implication(
         &mut self,
-        binders: &[ParameterKind<UniverseIndex>],
-        goal: InEnvironment<DomainGoal>,
+        canonical_goal: &Canonical<InEnvironment<DomainGoal>>,
         clause: Binders<ProgramClauseImplication>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
-        let subst = Substitution::from_binders(&binders);
-        let (goal, subst) = fulfill.instantiate(binders.iter().cloned(), &(goal, subst));
+        let subst = fulfill.fresh_subst(&canonical_goal.binders);
+        let goal = canonical_goal.instantiate_with_subst(&subst);
         let ProgramClauseImplication {
             consequence,
             conditions,

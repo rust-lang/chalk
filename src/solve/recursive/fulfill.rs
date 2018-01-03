@@ -98,19 +98,21 @@ impl<'s> Fulfill<'s> {
         &mut self,
         canonical_goal: &Canonical<InEnvironment<Goal>>,
     ) -> Substitution {
-        let subst = self.infer.fresh_subst(&canonical_goal.binders);
+        let subst = self.fresh_subst(&canonical_goal.binders);
         let goal = canonical_goal.instantiate_with_subst(&subst);
         self.push_goal(&goal.environment, goal.goal);
         subst
     }
 
-    /// Wraps `InferenceTable::instantiate`
-    pub fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
-    where
-        T: Fold,
-        U: IntoIterator<Item = ParameterKind<UniverseIndex>>,
-    {
-        self.infer.instantiate(universes, arg)
+    /// Wraps `InferenceTable::fresh_subst` -- given the binders from
+    /// a canonical value, returns a substitution mapping each bound
+    /// value to a fresh inference variable in the appropriate
+    /// universe.
+    pub fn fresh_subst(
+        &mut self,
+        canonical_binders: &[ParameterKind<UniverseIndex>],
+    ) -> Substitution {
+        self.infer.fresh_subst(&canonical_binders)
     }
 
     /// Wraps `InferenceTable::instantiate_in`
@@ -229,8 +231,7 @@ impl<'s> Fulfill<'s> {
         free_vars: Vec<ParameterInferenceVariable>,
         subst: Canonical<ConstrainedSubst>,
     ) {
-        let Canonical { value, binders } = subst;
-        let ConstrainedSubst { subst, constraints } = self.instantiate(binders, &value);
+        let ConstrainedSubst { subst, constraints } = self.infer.instantiate_canonical(&subst);
 
         debug!(
             "fulfill::apply_solution: adding constraints {:?}",
