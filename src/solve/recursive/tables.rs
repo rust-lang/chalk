@@ -6,7 +6,7 @@ use super::stack::StackDepth;
 
 #[derive(Default)]
 pub struct Tables {
-    indices: HashMap<FullyReducedGoal, TableIndex>,
+    indices: HashMap<CanonicalLeafGoal, TableIndex>,
     tables: Vec<Table>,
 }
 
@@ -20,12 +20,12 @@ pub struct Table {
 }
 
 impl Tables {
-    pub fn lookup(&self, goal: &FullyReducedGoal) -> Option<TableIndex> {
+    pub fn lookup(&self, goal: &CanonicalLeafGoal) -> Option<TableIndex> {
         self.indices.get(goal)
     }
 
     pub fn insert(&mut self,
-                  goal: &FullyReducedGoal,
+                  goal: &CanonicalLeafGoal,
                   solution: Fallible<Solution>,
                   stack_depth: Option<StackDepth>)
                   -> TableIndex {

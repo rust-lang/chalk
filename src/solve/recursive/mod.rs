@@ -13,6 +13,8 @@ use self::fulfill::Fulfill;
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 
+pub type CanonicalLeafGoal = Canonical<InEnvironment<LeafGoal>>;
+
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
@@ -27,7 +29,7 @@ pub struct Solver {
 
     /// The cache contains **fully solved** goals, whose results are
     /// not dependent on the stack in anyway.
-    cache: HashMap<FullyReducedGoal, Fallible<Solution>>,
+    cache: HashMap<CanonicalLeafGoal, Fallible<Solution>>,
 }
 
 /// The `minimums` struct is used while solving to track whether we encountered
@@ -111,12 +113,12 @@ impl Solver {
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    fn solve_reduced_goal(
+    fn solve_leaf_goal(
         &mut self,
-        goal: FullyReducedGoal,
+        goal: Canonical<InEnvironment<LeafGoal>>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
-        debug_heading!("solve_reduced_goal({:?})", goal);
+        debug_heading!("solve_leaf_goal({:?})", goal);
 
         // First check the cache.
         if let Some(value) = self.cache.get(&goal) {
@@ -141,7 +143,7 @@ impl Solver {
                     debug!("applying coinductive semantics");
                     return Ok(Solution::Unique(Canonical {
                         value,
-                        binders: goal.into_binders(),
+                        binders: goal.binders,
                     }));
                 }
 
@@ -162,7 +164,7 @@ impl Solver {
             // The initial result for this table is error.
             let depth = self.stack.push(&goal);
             let dfn = self.search_graph.insert(&goal, depth);
-            let subgoal_minimums = self.solve_new_subgoal(&goal, depth, dfn);
+            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
             self.search_graph[dfn].links = subgoal_minimums;
             self.search_graph[dfn].stack_depth = None;
             self.stack.pop(depth);
@@ -193,7 +195,7 @@ impl Solver {
 
     fn solve_new_subgoal(
         &mut self,
-        goal: &FullyReducedGoal,
+        canonical_goal: CanonicalLeafGoal,
         depth: StackDepth,
         dfn: DepthFirstNumber,
     ) -> Minimums {
@@ -208,19 +210,40 @@ impl Solver {
         // so this function will eventually be constant and the loop terminates.
         let minimums = &mut Minimums::new();
         loop {
-            let current_answer = match goal.clone() {
-                FullyReducedGoal::EqGoal(g) => {
-                    // Equality goals are understood "natively" by the logic, via unification:
-                    self.solve_via_unification(&g, minimums)
+            let Canonical {
+                binders,
+                value: InEnvironment { environment, goal },
+            } = canonical_goal.clone();
+
+            let current_answer = match goal {
+                LeafGoal::EqGoal(eq_goal) => {
+                    let canonical_goal = Canonical {
+                        binders,
+                        value: InEnvironment {
+                            environment,
+                            goal: eq_goal,
+                        },
+                    };
+                    self.solve_via_unification(&canonical_goal, minimums)
                 }
-                FullyReducedGoal::DomainGoal(canonical_goal) => {
+
+                LeafGoal::DomainGoal(domain_goal) => {
+                    let canonical_goal = Canonical {
+                        binders,
+                        value: InEnvironment {
+                            environment,
+                            goal: domain_goal,
+                        },
+                    };
+
                     // "Domain" goals (i.e., leaf goals that are Rust-specific) are
                     // always solved via some form of implication. We can either
                     // apply assumptions from our environment (i.e. where clauses),
                     // or from the lowered program, which includes fallback
                     // clauses. We try each approach in turn:
 
-                    let env_clauses = canonical_goal.value
+                    let env_clauses = canonical_goal
+                        .value
                         .environment
                         .clauses
                         .iter()
@@ -270,8 +293,7 @@ impl Solver {
 
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
-                current_answer,
-                minimums
+                current_answer, minimums
             );
 
             if !self.stack[depth].read_and_reset_cycle_flag() {

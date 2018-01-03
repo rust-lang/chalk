@@ -195,10 +195,9 @@ impl<'s> Fulfill<'s> {
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution> {
         let canonicalized = self.infer.canonicalize(wc);
-        let reduced_goal = canonicalized.quantified.into_reduced_goal();
         Ok(PositiveSolution {
             free_vars: canonicalized.free_vars,
-            solution: self.solver.solve_reduced_goal(reduced_goal, minimums)?,
+            solution: self.solver.solve_leaf_goal(canonicalized.quantified, minimums)?,
         })
     }
 

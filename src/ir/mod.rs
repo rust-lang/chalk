@@ -635,62 +635,15 @@ pub struct Canonical<T> {
 }
 
 impl Canonical<InEnvironment<LeafGoal>> {
-    pub fn into_reduced_goal(self) -> FullyReducedGoal {
-        let Canonical {
-            value: InEnvironment { goal, environment },
-            binders,
-        } = self;
-        match goal {
-            LeafGoal::EqGoal(goal) => {
-                let canonical = Canonical {
-                    value: InEnvironment { goal, environment },
-                    binders,
-                };
-                FullyReducedGoal::EqGoal(canonical)
-            }
-            LeafGoal::DomainGoal(goal) => {
-                let canonical = Canonical {
-                    value: InEnvironment { goal, environment },
-                    binders,
-                };
-                FullyReducedGoal::DomainGoal(canonical)
-            }
-        }
-    }
-}
-
-/// A goal that has been fully broken down into leaf form, and canonicalized
-/// with an environment. These are the goals we do "real work" on.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum FullyReducedGoal {
-    EqGoal(Canonical<InEnvironment<EqGoal>>),
-    DomainGoal(Canonical<InEnvironment<DomainGoal>>),
-}
-
-impl FullyReducedGoal {
-    pub fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
-        match self {
-            FullyReducedGoal::EqGoal(Canonical { binders, .. }) |
-            FullyReducedGoal::DomainGoal(Canonical { binders, .. }) => binders,
-        }
-    }
-
     /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
     pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
-        if let FullyReducedGoal::DomainGoal(Canonical {
-            value:
-                InEnvironment {
-                    goal: DomainGoal::Implemented(ref tr),
-                    ..
-                },
-            ..
-        }) = *self
-        {
-            let trait_datum = &program.trait_data[&tr.trait_id];
-            return trait_datum.binders.value.flags.auto;
+        match &self.value.goal {
+            LeafGoal::DomainGoal(DomainGoal::Implemented(tr)) => {
+                let trait_datum = &program.trait_data[&tr.trait_id];
+                trait_datum.binders.value.flags.auto
+            }
+            _ => false,
         }
-
-        false
     }
 }
 

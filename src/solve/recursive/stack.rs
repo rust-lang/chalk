@@ -1,9 +1,11 @@
-use ir::{FullyReducedGoal, ProgramEnvironment};
+use ir::{ProgramEnvironment};
 use std::mem;
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::sync::Arc;
 use std::usize;
+
+use super::CanonicalLeafGoal;
 
 pub struct Stack {
     program: Arc<ProgramEnvironment>,
@@ -38,7 +40,7 @@ impl Stack {
         self.entries.is_empty()
     }
 
-    pub fn push(&mut self, goal: &FullyReducedGoal) -> StackDepth {
+    pub fn push(&mut self, goal: &CanonicalLeafGoal) -> StackDepth {
         let depth = StackDepth {
             depth: self.entries.len(),
         };
