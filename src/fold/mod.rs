@@ -6,13 +6,13 @@ use ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-mod instantiate;
 mod shifted;
 mod shifter;
+mod subst;
 
 pub use self::shifted::Shifted;
 pub use self::shifter::Shifter;
-pub use self::instantiate::Subst;
+pub use self::subst::Subst;
 
 /// A "folder" is a transformer that can be used to make a copy of
 /// some term -- that is, some bit of IR, such as a `Goal` -- with
