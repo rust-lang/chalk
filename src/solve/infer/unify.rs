@@ -194,8 +194,8 @@ impl<'t> Unifier<'t> {
             })
             .collect();
 
-        let ty1 = ty1.subst(&lifetimes1);
-        let ty2 = ty2.subst(&lifetimes2);
+        let ty1 = ty1.substitute(&lifetimes1);
+        let ty2 = ty2.substitute(&lifetimes2);
         debug!("unify_forall_tys: ty1 = {:?}", ty1);
         debug!("unify_forall_tys: ty2 = {:?}", ty2);
 
@@ -257,7 +257,7 @@ impl<'t> Unifier<'t> {
             })
             .collect();
 
-        let ty1 = ty1.subst(&lifetimes1);
+        let ty1 = ty1.substitute(&lifetimes1);
         let ty2 = ty2.clone();
 
         self.sub_unify(&environment, ty1, ty2)

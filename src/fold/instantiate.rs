@@ -20,9 +20,9 @@ impl<'s> Subst<'s> {
 }
 
 impl QuantifiedTy {
-    pub fn subst(&self, parameters: &[Parameter]) -> Ty {
+    pub fn substitute(&self, parameters: &[Parameter]) -> Ty {
         assert_eq!(self.num_binders, parameters.len());
-        self.ty.subst(parameters)
+        Subst::apply(parameters, &self.ty)
     }
 }
 
@@ -52,19 +52,6 @@ impl<T: Fold> Binders<T> {
         InEnvironment::new(&new_environment, value)
     }
 }
-
-macro_rules! subst_method {
-    ($t:ty) => {
-        impl $t {
-            pub fn subst(&self, parameters: &[Parameter]) -> Self {
-                Subst::apply(parameters, self)
-            }
-        }
-    }
-}
-
-subst_method!(Goal);
-subst_method!(Ty);
 
 impl<'b> DefaultTypeFolder for Subst<'b> {}
 
