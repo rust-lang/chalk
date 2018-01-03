@@ -468,7 +468,7 @@ impl Forest {
         let (root_table, root_table_depth) = forest.push_new_table(&root_goal, None, None);
         let mut minimums = forest.stack[root_table_depth].link;
         let subst = forest.infer.fresh_subst(&root_goal.binders);
-        let instantiated_goal = root_goal.instantiate_with_subst(&subst);
+        let instantiated_goal = root_goal.substitute(&subst);
         forest.subgoal(root_table_depth, instantiated_goal, subst, &mut minimums)?;
         Simplification::simplify(&mut forest.tables);
         Ok(forest.tables[root_table].export_answers())

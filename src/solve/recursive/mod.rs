@@ -315,7 +315,7 @@ impl Solver {
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = fulfill.fresh_subst(&canonical_goal.binders);
-        let InEnvironment { environment, goal } = canonical_goal.instantiate_with_subst(&subst);
+        let InEnvironment { environment, goal } = canonical_goal.substitute(&subst);
 
         fulfill.unify(&environment, &goal.a, &goal.b)?;
         fulfill.solve(subst, minimums)
@@ -360,7 +360,7 @@ impl Solver {
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
         let subst = fulfill.fresh_subst(&canonical_goal.binders);
-        let goal = canonical_goal.instantiate_with_subst(&subst);
+        let goal = canonical_goal.substitute(&subst);
         let ProgramClauseImplication {
             consequence,
             conditions,

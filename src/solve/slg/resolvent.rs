@@ -102,7 +102,7 @@ fn resolvent_answer(
     // Apply the substitution from the answer to the original
     // table goal to yield our new `answer_goal`. This is needed
     // for unifying.
-    let answer_goal = answer_table_goal.instantiate_with_subst(&answer_subst);
+    let answer_goal = answer_table_goal.substitute(&answer_subst);
 
     // Perform the SLG resolvent unification.
     let resolvent = resolvent::resolvent_unify(
@@ -295,7 +295,7 @@ fn factor(
         constraints: answer_constraints,
     } = infer.instantiate_canonical(&canonical_answer_subst);
 
-    let answer_goal = answer_table_goal.instantiate_with_subst(&answer_subst);
+    let answer_goal = answer_table_goal.substitute(&answer_subst);
 
     // Unify the selected literal Li with C'.
     let UnificationResult { goals, constraints } = {

@@ -99,7 +99,7 @@ impl<'s> Fulfill<'s> {
         canonical_goal: &Canonical<InEnvironment<Goal>>,
     ) -> Substitution {
         let subst = self.fresh_subst(&canonical_goal.binders);
-        let goal = canonical_goal.instantiate_with_subst(&subst);
+        let goal = canonical_goal.substitute(&subst);
         self.push_goal(&goal.environment, goal.goal);
         subst
     }

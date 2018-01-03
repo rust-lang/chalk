@@ -66,7 +66,7 @@ impl<T> Canonicalized<T> {
     /// - a substitution S which, if applied to Q, would yield the original value V
     ///   from which Q was derived.
     ///
-    /// NB. You can apply a substitution with `Q.instantiate_with_subst(&S)`.
+    /// NB. You can apply a substitution with `Q.substitute(&S)`.
     pub fn into_quantified_and_subst(self) -> (Canonical<T>, Substitution) {
         let mut subst = Substitution::empty();
         for (i, free_var) in self.free_vars.iter().enumerate() {

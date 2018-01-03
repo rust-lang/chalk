@@ -727,10 +727,18 @@ impl<T> Canonical<T> {
         result.quantified
     }
 
-    pub fn instantiate_with_subst(&self, mut subst: &Substitution) -> T::Result
+    /// Substitutes the values from `subst` in place of the values
+    /// bound by the binders in this canonical; the substitution should be
+    /// complete.
+    pub fn substitute(&self, mut subst: &Substitution) -> T::Result
     where
         T: Fold,
     {
+        assert_eq!(
+            subst.parameters.len(),
+            self.binders.len(),
+            "substitute invoked with incomplete substitution",
+        );
         self.value.fold_with(&mut subst, 0).unwrap()
     }
 }
