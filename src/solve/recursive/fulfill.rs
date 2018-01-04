@@ -1,12 +1,9 @@
 use super::*;
 use cast::Caster;
 use fold::Fold;
-use solve::infer::{
-    InferenceTable,
-    ParameterInferenceVariable,
-    unify::UnificationResult,
-    var::InferenceVariable,
-};
+use solve::infer::{InferenceTable, ParameterInferenceVariable, canonicalize::Canonicalized,
+                   ucanonicalize::{UCanonicalized, UniverseMap}, unify::UnificationResult,
+                   var::InferenceVariable};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -41,9 +38,10 @@ enum Obligation {
 
 /// When proving a leaf goal, we record the free variables that appear within it
 /// so that we can update inference state accordingly.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 struct PositiveSolution {
     free_vars: Vec<ParameterInferenceVariable>,
+    universes: UniverseMap,
     solution: Solution,
 }
 
@@ -94,13 +92,17 @@ impl<'s> Fulfill<'s> {
 
     /// Instantiates the given goal and pushes it as a goal to be
     /// proven. Returns a substitution that can be given to `solve`.
+    /// May be invoked once, immediately after `Fulfill` is created.
     pub fn instantiate_and_push_initial_goal(
         &mut self,
-        canonical_goal: &Canonical<InEnvironment<Goal>>,
+        canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Substitution {
-        let subst = self.initial_subst(canonical_goal);
-        let goal = canonical_goal.substitute(&subst);
-        self.push_goal(&goal.environment, goal.goal);
+        assert!(
+            self.obligations.is_empty(),
+            "instantiate_and_push invoked after fulfill already in use"
+        );
+        let (subst, InEnvironment { environment, goal }) = self.initial_subst(canonical_goal);
+        self.push_goal(&environment, goal);
         subst
     }
 
@@ -110,11 +112,13 @@ impl<'s> Fulfill<'s> {
     /// then later be used as the answer to be returned to the user.
     ///
     /// See also `InferenceTable::fresh_subst`.
-    pub fn initial_subst<T: Debug>(
+    pub fn initial_subst<T: Fold>(
         &mut self,
-        canonical_goal: &Canonical<InEnvironment<T>>,
-    ) -> Substitution {
-        self.infer.fresh_subst(&canonical_goal.binders)
+        canonical_goal: &UCanonical<InEnvironment<T>>,
+    ) -> (Substitution, InEnvironment<T::Result>) {
+        let subst = self.infer.fresh_subst(&canonical_goal.canonical.binders);
+        let value = canonical_goal.canonical.substitute(&subst);
+        (subst, value)
     }
 
     /// Wraps `InferenceTable::instantiate_in`
@@ -196,10 +200,19 @@ impl<'s> Fulfill<'s> {
         wc: &InEnvironment<LeafGoal>,
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution> {
-        let canonicalized = self.infer.canonicalize(wc);
+        let Canonicalized {
+            quantified,
+            free_vars,
+            max_universe: _,
+        } = self.infer.canonicalize(wc);
+        let UCanonicalized {
+            quantified,
+            universes,
+        } = self.infer.u_canonicalize(&quantified);
         Ok(PositiveSolution {
-            free_vars: canonicalized.free_vars,
-            solution: self.solver.solve_leaf_goal(canonicalized.quantified, minimums)?,
+            free_vars,
+            universes,
+            solution: self.solver.solve_leaf_goal(quantified, minimums)?,
         })
     }
 
@@ -214,7 +227,11 @@ impl<'s> Fulfill<'s> {
         };
 
         // Negate the result
-        if let Ok(solution) = self.solver.solve_root_goal(&canonicalized) {
+        let UCanonicalized {
+            quantified,
+            universes: _,
+        } = self.infer.u_canonicalize(&canonicalized);
+        if let Ok(solution) = self.solver.solve_root_goal(&quantified) {
             if solution.is_unique() {
                 Err(NoSolution)
             } else {
@@ -225,13 +242,21 @@ impl<'s> Fulfill<'s> {
         }
     }
 
-    /// Apply the subsitution `subst` to all the variables of `free_vars`
-    /// (understood in deBruijn style), and add any lifetime constraints.
+    /// Trying to prove some goal led to a the substitution `subst`; we
+    /// wish to apply that substitution to our own inference variables
+    /// (and incorporate any region constraints). This substitution
+    /// requires some mapping to get it into our namespace -- first,
+    /// the universes it refers to have been canonicalized, and
+    /// `universes` stores the mapping back into our
+    /// universes. Second, the free variables that appear within can
+    /// be mapped into our variables with `free_vars`.
     fn apply_solution(
         &mut self,
         free_vars: Vec<ParameterInferenceVariable>,
+        universes: UniverseMap,
         subst: Canonical<ConstrainedSubst>,
     ) {
+        let subst = universes.map_from_canonical(&subst);
         let ConstrainedSubst { subst, constraints } = self.infer.instantiate_canonical(&subst);
 
         debug!(
@@ -256,9 +281,7 @@ impl<'s> Fulfill<'s> {
                     .unwrap_or_else(|err| {
                         panic!(
                             "apply_solution failed with free_var={:?}, subst_value={:?}: {:?}",
-                            free_var,
-                            subst_value,
-                            err
+                            free_var, subst_value, err
                         );
                     });
             }
@@ -292,12 +315,13 @@ impl<'s> Fulfill<'s> {
                     Obligation::Prove(ref wc) => {
                         let PositiveSolution {
                             free_vars,
+                            universes,
                             solution,
                         } = self.prove(wc, minimums)?;
 
                         if solution.has_definite() {
                             if let Some(constrained_subst) = solution.constrained_subst() {
-                                self.apply_solution(free_vars, constrained_subst);
+                                self.apply_solution(free_vars, universes, constrained_subst);
                                 progress = true;
                             }
                         }
@@ -373,10 +397,11 @@ impl<'s> Fulfill<'s> {
                 if let Obligation::Prove(goal) = obligation {
                     let PositiveSolution {
                         free_vars,
+                        universes,
                         solution,
                     } = self.prove(&goal, minimums).unwrap();
                     if let Some(constrained_subst) = solution.constrained_subst() {
-                        self.apply_solution(free_vars, constrained_subst);
+                        self.apply_solution(free_vars, universes, constrained_subst);
                         let subst = self.infer.canonicalize(&subst);
                         return Ok(Solution::Ambig(Guidance::Suggested(subst.quantified)));
                     }

@@ -5,7 +5,7 @@ use std::ops::IndexMut;
 use std::sync::Arc;
 use std::usize;
 
-use super::CanonicalLeafGoal;
+use super::UCanonicalLeafGoal;
 
 pub struct Stack {
     program: Arc<ProgramEnvironment>,
@@ -40,7 +40,7 @@ impl Stack {
         self.entries.is_empty()
     }
 
-    pub fn push(&mut self, goal: &CanonicalLeafGoal) -> StackDepth {
+    pub fn push(&mut self, goal: &UCanonicalLeafGoal) -> StackDepth {
         let depth = StackDepth {
             depth: self.entries.len(),
         };

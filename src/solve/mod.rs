@@ -230,7 +230,7 @@ impl SolverChoice {
     pub fn solve_root_goal(
         self,
         env: &Arc<ProgramEnvironment>,
-        canonical_goal: &Canonical<InEnvironment<Goal>>,
+        canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> ::errors::Result<Option<Solution>> {
         match self {
             SolverChoice::Recursive {
@@ -245,8 +245,8 @@ impl SolverChoice {
             }
 
             SolverChoice::SLG { max_size } => {
-                match slg::solve_root_goal(max_size, env, canonical_goal) {
-                    Ok(answers) => Ok(answers.into_solution(canonical_goal)),
+                match slg::solve_root_goal(max_size, env, &canonical_goal) {
+                    Ok(answers) => Ok(answers.into_solution(&canonical_goal.canonical)),
                     Err(err) => bail!("Exploration error: {:?}", err),
                 }
             }

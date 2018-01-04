@@ -84,9 +84,9 @@ mod test;
 pub fn solve_root_goal(
     max_size: usize,
     program: &Arc<ProgramEnvironment>,
-    root_goal: &CanonicalGoal,
+    root_goal: &UCanonicalGoal,
 ) -> Result<Answers, ExplorationError> {
-    Forest::solve_root_goal(max_size, program, root_goal)
+    Forest::solve_root_goal(max_size, program, &root_goal.canonical)
 }
 
 /// The **FOREST** of evaluation tracks all the in-progress work.
@@ -447,6 +447,7 @@ enum Satisfiable<T> {
 type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
 type CanonicalGoal = Canonical<InEnvironment<Goal>>;
 type CanonicalPendingExClause = Canonical<PendingExClause>;
+type UCanonicalGoal = UCanonical<InEnvironment<Goal>>;
 
 impl Forest {
     fn solve_root_goal(

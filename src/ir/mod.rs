@@ -634,19 +634,6 @@ pub struct Canonical<T> {
     pub binders: Vec<ParameterKind<UniverseIndex>>,
 }
 
-impl Canonical<InEnvironment<LeafGoal>> {
-    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
-    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
-        match &self.value.goal {
-            LeafGoal::DomainGoal(DomainGoal::Implemented(tr)) => {
-                let trait_datum = &program.trait_data[&tr.trait_id];
-                trait_datum.binders.value.flags.auto
-            }
-            _ => false,
-        }
-    }
-}
-
 impl<T> Canonical<T> {
     /// Maps the contents using `op`, but preserving the binders.
     ///
@@ -716,6 +703,19 @@ impl<T> UCanonical<T> {
     }
 }
 
+impl UCanonical<InEnvironment<LeafGoal>> {
+    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
+    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+        match &self.canonical.value.goal {
+            LeafGoal::DomainGoal(DomainGoal::Implemented(tr)) => {
+                let trait_datum = &program.trait_data[&tr.trait_id];
+                trait_datum.binders.value.flags.auto
+            }
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum Goal {
@@ -760,7 +760,7 @@ impl Goal {
     /// variables. Assumes that this goal is a "closed goal" which
     /// does not -- at present -- contain any variables. Useful for
     /// REPLs and tests but not much else.
-    pub fn into_peeled_goal(self) -> Canonical<InEnvironment<Goal>> {
+    pub fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal>> {
         use solve::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let peeled_goal = {
@@ -792,7 +792,8 @@ impl Goal {
                 }
             }
         };
-        infer.canonicalize(&peeled_goal).quantified
+        let canonical = infer.canonicalize(&peeled_goal).quantified;
+        infer.u_canonicalize(&canonical).quantified
     }
 
     /// Given a goal with no free variables (a "closed" goal), creates
@@ -804,11 +805,12 @@ impl Goal {
     /// # Panics
     ///
     /// Will panic if this goal does in fact contain free variables.
-    pub fn into_closed_goal(self) -> Canonical<InEnvironment<Goal>> {
+    pub fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>> {
         use solve::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(), self);
-        infer.canonicalize(&env_goal).quantified
+        let canonical_goal = infer.canonicalize(&env_goal).quantified;
+        infer.u_canonicalize(&canonical_goal).quantified
     }
 }
 
