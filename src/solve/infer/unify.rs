@@ -352,13 +352,13 @@ impl<'t> Zipper for Unifier<'t> {
         T: Zip + Fold<Result = T>,
     {
         {
-            let a = a.instantiate_universally(self.environment);
+            let a = self.table.instantiate_binders_universally(self.environment, a);
             let b = self.table.instantiate_binders_in(a.environment.universe, b);
             let () = self.sub_unify(&a.environment, &a.goal, &b)?;
         }
 
         {
-            let b = b.instantiate_universally(self.environment);
+            let b = self.table.instantiate_binders_universally(self.environment, b);
             let a = self.table.instantiate_binders_in(b.environment.universe, a);
             let () = self.sub_unify(&b.environment, &a, &b.goal)?;
         }

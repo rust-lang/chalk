@@ -770,7 +770,7 @@ impl Goal {
                 match goal {
                     Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
                         let InEnvironment { environment, goal } =
-                            subgoal.instantiate_universally(&environment);
+                            infer.instantiate_binders_universally(&environment, &subgoal);
                         env_goal = InEnvironment::new(&environment, *goal);
                     }
 

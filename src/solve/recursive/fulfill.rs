@@ -162,7 +162,7 @@ impl<'s> Fulfill<'s> {
                 let InEnvironment {
                     environment: subenvironment,
                     goal: subgoal,
-                } = subgoal.instantiate_universally(environment);
+                } = self.infer.instantiate_binders_universally(environment, &subgoal);
                 self.push_goal(&subenvironment, *subgoal);
             }
             Goal::Quantified(QuantifierKind::Exists, subgoal) => {

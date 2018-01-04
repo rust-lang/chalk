@@ -1,6 +1,7 @@
 use fallible::*;
 use fold::*;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use super::*;
 
@@ -27,9 +28,7 @@ impl InferenceTable {
         param_kind: ParameterKind<UniverseIndex>,
     ) -> Parameter {
         match param_kind {
-            ParameterKind::Ty(ui) => {
-                ParameterKind::Ty(self.new_variable(ui).to_ty())
-            }
+            ParameterKind::Ty(ui) => ParameterKind::Ty(self.new_variable(ui).to_ty()),
             ParameterKind::Lifetime(ui) => {
                 ParameterKind::Lifetime(self.new_variable(ui).to_lifetime())
             }
@@ -91,6 +90,35 @@ impl InferenceTable {
         T: Fold,
     {
         self.instantiate_in(universe, arg.binders.iter().cloned(), &arg.value)
+    }
+
+    pub fn instantiate_binders_universally<T>(
+        &mut self,
+        environment: &Arc<Environment>,
+        arg: &Binders<T>,
+    ) -> InEnvironment<T::Result>
+    where
+        T: Fold,
+    {
+        let mut new_environment = environment.clone();
+        let parameters: Vec<_> = arg.binders
+            .iter()
+            .map(|pk| {
+                new_environment = new_environment.new_universe();
+                match *pk {
+                    ParameterKind::Lifetime(()) => {
+                        let lt = Lifetime::ForAll(new_environment.universe);
+                        ParameterKind::Lifetime(lt)
+                    }
+                    ParameterKind::Ty(()) => ParameterKind::Ty(Ty::Apply(ApplicationTy {
+                        name: TypeName::ForAll(new_environment.universe),
+                        parameters: vec![],
+                    })),
+                }
+            })
+            .collect();
+        let value = Subst::apply(&parameters, &arg.value);
+        InEnvironment::new(&new_environment, value)
     }
 }
 

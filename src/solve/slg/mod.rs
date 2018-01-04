@@ -610,8 +610,10 @@ impl Forest {
         while let Some(InEnvironment { environment, goal }) = pending_goals.pop() {
             match goal {
                 Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                    let InEnvironment { environment, goal } =
-                        subgoal.instantiate_universally(&environment);
+                    let InEnvironment { environment, goal } = infer.instantiate_binders_universally(
+                        &environment,
+                        &subgoal,
+                    );
                     pending_goals.push(InEnvironment::new(&environment, *goal));
                 }
                 Goal::Quantified(QuantifierKind::Exists, subgoal) => {

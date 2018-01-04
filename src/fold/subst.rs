@@ -26,33 +26,6 @@ impl QuantifiedTy {
     }
 }
 
-impl<T: Fold> Binders<T> {
-    pub fn instantiate_universally(
-        &self,
-        environment: &Arc<Environment>,
-    ) -> InEnvironment<T::Result> {
-        let mut new_environment = environment.clone();
-        let parameters: Vec<_> = self.binders
-            .iter()
-            .map(|pk| {
-                new_environment = new_environment.new_universe();
-                match *pk {
-                    ParameterKind::Lifetime(()) => {
-                        let lt = Lifetime::ForAll(new_environment.universe);
-                        ParameterKind::Lifetime(lt)
-                    }
-                    ParameterKind::Ty(()) => ParameterKind::Ty(Ty::Apply(ApplicationTy {
-                        name: TypeName::ForAll(new_environment.universe),
-                        parameters: vec![],
-                    })),
-                }
-            })
-            .collect();
-        let value = Subst::apply(&parameters, &self.value);
-        InEnvironment::new(&new_environment, value)
-    }
-}
-
 impl<'b> DefaultTypeFolder for Subst<'b> {}
 
 impl<'b> ExistentialFolder for Subst<'b> {
