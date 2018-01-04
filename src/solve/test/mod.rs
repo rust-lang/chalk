@@ -1936,3 +1936,32 @@ fn unselected_projection() {
         }
     }
 }
+
+#[test]
+#[should_panic] // FIXME
+fn overflow_universe() {
+    test! {
+        program {
+            struct Foo { }
+
+            trait Bar { }
+
+            forall<X> { X: Bar if forall<Y> { Y: Bar } }
+        }
+
+        goal {
+            Foo: Bar
+        } yields[SolverChoice::recursive()] {
+            // Currently the recursive solver overflows and panics on
+            // this example. Once the universe canonicalization work
+            // is completed, however, it should not.
+            ""
+        } yields[SolverChoice::slg()] {
+            // The SLG solver currently runs forever; in this setup,
+            // it intentionally never gets a *chance* to run. With
+            // full universe canonicalization, though, it should not
+            // run forever.
+            ""
+        }
+    }
+}
