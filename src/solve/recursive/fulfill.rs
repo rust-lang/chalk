@@ -94,25 +94,27 @@ impl<'s> Fulfill<'s> {
 
     /// Instantiates the given goal and pushes it as a goal to be
     /// proven. Returns a substitution that can be given to `solve`.
-    pub fn instantiate_and_push(
+    pub fn instantiate_and_push_initial_goal(
         &mut self,
         canonical_goal: &Canonical<InEnvironment<Goal>>,
     ) -> Substitution {
-        let subst = self.fresh_subst(&canonical_goal.binders);
+        let subst = self.initial_subst(canonical_goal);
         let goal = canonical_goal.substitute(&subst);
         self.push_goal(&goal.environment, goal.goal);
         subst
     }
 
-    /// Wraps `InferenceTable::fresh_subst` -- given the binders from
-    /// a canonical value, returns a substitution mapping each bound
-    /// value to a fresh inference variable in the appropriate
-    /// universe.
-    pub fn fresh_subst(
+    /// Given the canonical, initial goal, returns a substitution
+    /// that, when applied to this goal, will convert all of its bound
+    /// variables into fresh inference variables. The substitution can
+    /// then later be used as the answer to be returned to the user.
+    ///
+    /// See also `InferenceTable::fresh_subst`.
+    pub fn initial_subst<T: Debug>(
         &mut self,
-        canonical_binders: &[ParameterKind<UniverseIndex>],
+        canonical_goal: &Canonical<InEnvironment<T>>,
     ) -> Substitution {
-        self.infer.fresh_subst(&canonical_binders)
+        self.infer.fresh_subst(&canonical_goal.binders)
     }
 
     /// Wraps `InferenceTable::instantiate_in`

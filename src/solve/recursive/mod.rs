@@ -106,7 +106,7 @@ impl Solver {
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
-        let subst = fulfill.instantiate_and_push(canonical_goal);
+        let subst = fulfill.instantiate_and_push_initial_goal(canonical_goal);
         fulfill.solve(subst, minimums)
     }
 
@@ -336,7 +336,7 @@ impl Solver {
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
-        let subst = fulfill.fresh_subst(&canonical_goal.binders);
+        let subst = fulfill.initial_subst(canonical_goal);
         let InEnvironment { environment, goal } = canonical_goal.substitute(&subst);
 
         fulfill.unify(&environment, &goal.a, &goal.b)?;
@@ -381,7 +381,7 @@ impl Solver {
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         let mut fulfill = Fulfill::new(self);
-        let subst = fulfill.fresh_subst(&canonical_goal.binders);
+        let subst = fulfill.initial_subst(canonical_goal);
         let goal = canonical_goal.substitute(&subst);
         let ProgramClauseImplication {
             consequence,
