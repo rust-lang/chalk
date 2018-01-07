@@ -1,7 +1,6 @@
 use fallible::*;
 use fold::*;
 use std::fmt::Debug;
-use std::sync::Arc;
 
 use super::*;
 
@@ -81,44 +80,67 @@ impl InferenceTable {
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
-    pub fn instantiate_binders_in<T>(
+    #[allow(non_camel_case_types)]
+    pub fn instantiate_binders_existentially<T>(
         &mut self,
-        universe: UniverseIndex,
-        arg: &Binders<T>,
+        arg: &impl BindersAndValue<Output = T>,
     ) -> T::Result
     where
         T: Fold,
     {
-        self.instantiate_in(universe, arg.binders.iter().cloned(), &arg.value)
+        let (binders, value) = arg.split();
+        let max_universe = self.max_universe;
+        self.instantiate_in(max_universe, binders.iter().cloned(), value)
     }
 
+    #[allow(non_camel_case_types)]
     pub fn instantiate_binders_universally<T>(
         &mut self,
-        environment: &Arc<Environment>,
-        arg: &Binders<T>,
-    ) -> InEnvironment<T::Result>
+        arg: &impl BindersAndValue<Output = T>,
+    ) -> T::Result
     where
         T: Fold,
     {
-        let mut new_environment = environment.clone();
-        let parameters: Vec<_> = arg.binders
+        let (binders, value) = arg.split();
+        let parameters: Vec<_> = binders
             .iter()
             .map(|pk| {
-                new_environment = new_environment.new_universe();
+                let new_universe = self.new_universe();
                 match *pk {
                     ParameterKind::Lifetime(()) => {
-                        let lt = Lifetime::ForAll(new_environment.universe);
+                        let lt = Lifetime::ForAll(new_universe);
                         ParameterKind::Lifetime(lt)
                     }
                     ParameterKind::Ty(()) => ParameterKind::Ty(Ty::Apply(ApplicationTy {
-                        name: TypeName::ForAll(new_environment.universe),
+                        name: TypeName::ForAll(new_universe),
                         parameters: vec![],
                     })),
                 }
             })
             .collect();
-        let value = Subst::apply(&parameters, &arg.value);
-        InEnvironment::new(&new_environment, value)
+        Subst::apply(&parameters, value)
+    }
+}
+
+pub trait BindersAndValue {
+    type Output;
+
+    fn split(&self) -> (&[ParameterKind<()>], &Self::Output);
+}
+
+impl<T> BindersAndValue for Binders<T> {
+    type Output = T;
+
+    fn split(&self) -> (&[ParameterKind<()>], &Self::Output) {
+        (&self.binders, &self.value)
+    }
+}
+
+impl<'a, T> BindersAndValue for (&'a Vec<ParameterKind<()>>, &'a T) {
+    type Output = T;
+
+    fn split(&self) -> (&[ParameterKind<()>], &Self::Output) {
+        (&self.0, &self.1)
     }
 }
 

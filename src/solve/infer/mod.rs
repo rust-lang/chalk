@@ -4,7 +4,7 @@ use ir::*;
 pub mod canonicalize;
 pub mod ucanonicalize;
 mod normalize_deep;
-mod instantiate;
+pub mod instantiate;
 mod invert;
 pub mod unify;
 pub mod var;
@@ -17,10 +17,12 @@ use self::var::*;
 pub struct InferenceTable {
     unify: ena::UnificationTable<InferenceVariable>,
     vars: Vec<InferenceVariable>,
+    max_universe: UniverseIndex,
 }
 
 pub struct InferenceSnapshot {
     unify_snapshot: ena::Snapshot<InferenceVariable>,
+    max_universe: UniverseIndex,
     vars: Vec<InferenceVariable>,
 }
 
@@ -32,7 +34,36 @@ impl InferenceTable {
         InferenceTable {
             unify: ena::UnificationTable::new(),
             vars: vec![],
+            max_universe: UniverseIndex::root(),
         }
+    }
+
+    /// Creates and returns a fresh universe that is distinct from all
+    /// others created within this inference table. This universe is
+    /// able to see all previously created universes (though hopefully
+    /// it is only brought into contact with its logical *parents*).
+    pub fn new_universe(&mut self) -> UniverseIndex {
+        let u = self.max_universe.next();
+        self.max_universe = u;
+        u
+    }
+
+    /// Creates and returns a fresh universe that is distinct from all
+    /// others created within this inference table. This universe is
+    /// able to see all previously created universes (though hopefully
+    /// it is only brought into contact with its logical *parents*).
+    pub fn instantiate_universes<'v, T>(&mut self, value: &'v UCanonical<T>) -> &'v Canonical<T> {
+        let UCanonical { universes, canonical } = value;
+        assert!(*universes >= 1); // always have U0
+        for _ in 1 .. *universes {
+            self.new_universe();
+        }
+        canonical
+    }
+
+    /// Current maximum universe -- one that can see all existing names.
+    pub fn max_universe(&self) -> UniverseIndex {
+        self.max_universe
     }
 
     /// Creates a new inference variable and returns its index. The
@@ -54,8 +85,10 @@ impl InferenceTable {
     pub fn snapshot(&mut self) -> InferenceSnapshot {
         let unify_snapshot = self.unify.snapshot();
         let vars = self.vars.clone();
+        let max_universe = self.max_universe;
         InferenceSnapshot {
             unify_snapshot,
+            max_universe,
             vars,
         }
     }
@@ -64,6 +97,7 @@ impl InferenceTable {
     pub fn rollback_to(&mut self, snapshot: InferenceSnapshot) {
         self.unify.rollback_to(snapshot.unify_snapshot);
         self.vars = snapshot.vars;
+        self.max_universe = snapshot.max_universe;
     }
 
     /// Make permanent the changes made since the snapshot was taken.

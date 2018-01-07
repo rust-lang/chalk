@@ -204,16 +204,17 @@ impl Solver {
         let minimums = &mut Minimums::new();
         loop {
             let UCanonical {
-                canonical:
-                    Canonical {
-                        binders,
-                        value: InEnvironment { environment, goal },
-                    },
+                universes,
+                canonical: Canonical {
+                    binders,
+                    value: InEnvironment { environment, goal },
+                },
             } = canonical_goal.clone();
 
             let current_answer = match goal {
                 Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
                     let canonical_goal = UCanonical {
+                        universes,
                         canonical: Canonical {
                             binders,
                             value: InEnvironment {
@@ -278,6 +279,7 @@ impl Solver {
 
                 goal => {
                     let canonical_goal = UCanonical {
+                        universes,
                         canonical: Canonical {
                             binders,
                             value: InEnvironment {
@@ -389,7 +391,7 @@ impl Solver {
         let ProgramClauseImplication {
             consequence,
             conditions,
-        } = fulfill.instantiate_in(goal.environment.universe, clause.binders, &clause.value);
+        } = fulfill.instantiate_binders_existentially(&clause);
 
         fulfill.unify(&goal.environment, &goal.goal, &consequence)?;
 

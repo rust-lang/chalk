@@ -376,7 +376,7 @@ fn basic_region_constraint_from_positive_impl() {
                                     parameters: {}
                                 },
                                 constraints: [
-                                    (Env(U3, []) |- LifetimeEq('!2, '!1))
+                                    (Env([]) |- LifetimeEq('!2, '!1))
                                 ]
                             },
                             binders: []
@@ -409,7 +409,7 @@ fn basic_region_constraint_from_unification_goal() {
                                     parameters: {}
                                 },
                                 constraints: [
-                                    (Env(U3, []) |- LifetimeEq('!2, '!1))
+                                    (Env([]) |- LifetimeEq('!2, '!1))
                                 ]
                             },
                             binders: []

@@ -7,7 +7,6 @@ use solve::infer::InferenceTable;
 
 pub fn truncate<T>(
     infer: &mut InferenceTable,
-    universe: UniverseIndex,
     max_size: usize,
     value: &T,
 ) -> Truncated<T::Result>
@@ -16,7 +15,7 @@ where
 {
     debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
 
-    let mut truncater = Truncater::new(infer, universe, max_size);
+    let mut truncater = Truncater::new(infer, max_size);
     let value = value
         .fold_with(&mut truncater, 0)
         .expect("Truncater is infallible");
@@ -44,17 +43,15 @@ pub struct Truncated<T> {
 
 struct Truncater<'infer> {
     infer: &'infer mut InferenceTable,
-    universe: UniverseIndex,
     current_size: usize,
     max_size: usize,
     overflow: bool,
 }
 
 impl<'infer> Truncater<'infer> {
-    fn new(infer: &'infer mut InferenceTable, universe: UniverseIndex, max_size: usize) -> Self {
+    fn new(infer: &'infer mut InferenceTable, max_size: usize) -> Self {
         Truncater {
             infer,
-            universe,
             current_size: 0,
             max_size,
             overflow: false,
@@ -64,7 +61,8 @@ impl<'infer> Truncater<'infer> {
     fn overflow(&mut self, pre_size: usize) -> Ty {
         self.overflow = true;
         self.current_size = pre_size + 1;
-        self.infer.new_variable(self.universe).to_ty()
+        let universe = self.infer.max_universe();
+        self.infer.new_variable(universe).to_ty()
     }
 }
 
@@ -116,11 +114,8 @@ impl<'infer> IdentityUniversalFolder for Truncater<'infer> {}
 #[test]
 fn truncate_types() {
     let mut table = InferenceTable::new();
-
     let environment0 = &Environment::new();
-    let environment1 = &environment0.new_universe();
-    let u1 = environment1.universe;
-    let environment2 = &environment1.new_universe();
+    let _u1 = table.new_universe();
 
     // Vec<Vec<Vec<Vec<T>>>>
     let ty0 = ty!(apply (item 0)
@@ -133,7 +128,7 @@ fn truncate_types() {
     let Truncated {
         overflow,
         value: ty_no_overflow,
-    } = truncate(&mut table, u1, 5, &ty0);
+    } = truncate(&mut table, 5, &ty0);
     assert!(!overflow);
     assert_eq!(ty0, ty_no_overflow);
 
@@ -144,26 +139,24 @@ fn truncate_types() {
     let Truncated {
         overflow,
         value: ty_overflow,
-    } = truncate(&mut table, u1, 3, &ty0);
+    } = truncate(&mut table, 3, &ty0);
     assert!(overflow);
     assert_eq!(ty_expect, ty_overflow);
 
     // test: the `X` is in u1, hence should fail to unify with a skolemized value in U2.
+    let _u2 = table.new_universe();
     let ty_in_u2 = ty!(apply (item 0)
                        (apply (item 0)
                         (apply (skol 2))));
     table
-        .unify(environment2, &ty_overflow, &ty_in_u2)
+        .unify(environment0, &ty_overflow, &ty_in_u2)
         .unwrap_err();
 }
 
 #[test]
 fn truncate_multiple_types() {
     let mut table = InferenceTable::new();
-
-    let environment0 = &Environment::new();
-    let environment1 = &environment0.new_universe();
-    let u1 = environment1.universe;
+    let _u1 = table.new_universe();
 
     // Vec<Vec<Vec<Vec<T>>>>
     let ty0 = ty!(apply (item 0)
@@ -177,7 +170,7 @@ fn truncate_multiple_types() {
     let Truncated {
         overflow,
         value: ty_no_overflow,
-    } = truncate(&mut table, u1, 5, &ty0_3);
+    } = truncate(&mut table, 5, &ty0_3);
     assert!(!overflow);
     assert_eq!(ty0_3, ty_no_overflow);
 
@@ -186,7 +179,7 @@ fn truncate_multiple_types() {
     let Truncated {
         overflow,
         value: ty_no_overflow,
-    } = truncate(&mut table, u1, 6, &ty0_3);
+    } = truncate(&mut table, 6, &ty0_3);
     assert!(!overflow);
     assert_eq!(ty0_3, ty_no_overflow);
 
@@ -195,7 +188,7 @@ fn truncate_multiple_types() {
     let Truncated {
         overflow,
         value: ty_overflow,
-    } = truncate(&mut table, u1, 3, &ty0_3);
+    } = truncate(&mut table, 3, &ty0_3);
     assert!(overflow);
     assert_eq!(
         vec![
@@ -212,8 +205,7 @@ fn truncate_normalizes() {
     let mut table = InferenceTable::new();
 
     let environment0 = &Environment::new();
-    let environment1 = &environment0.new_universe();
-    let u1 = environment1.universe;
+    let u1 = table.new_universe();
 
     // ty0 = Vec<Vec<X>>
     let v0 = table.new_variable(u1);
@@ -227,16 +219,16 @@ fn truncate_normalizes() {
                    (apply (skol 1))));
 
     // test: truncating *before* unifying has no effect
-    assert!(!truncate(&mut table, u1, 3, &ty0).overflow);
+    assert!(!truncate(&mut table, 3, &ty0).overflow);
 
     // unify X and ty1
-    table.unify(environment1, &v0.to_ty(), &ty1).unwrap();
+    table.unify(environment0, &v0.to_ty(), &ty1).unwrap();
 
     // test: truncating *after* triggers
     let Truncated {
         overflow,
         value: ty_overflow,
-    } = truncate(&mut table, u1, 3, &ty0);
+    } = truncate(&mut table, 3, &ty0);
     assert!(overflow);
     assert_eq!(
         ty!(apply (item 0)
@@ -250,7 +242,7 @@ fn truncate_normalizes() {
 fn truncate_normalizes_under_binders() {
     let mut table = InferenceTable::new();
 
-    let u0 = UniverseIndex::root();
+    let u0 = UniverseIndex::ROOT;
 
     // v0 = X
     let _v0 = table.new_variable(u0);
@@ -262,5 +254,5 @@ fn truncate_normalizes_under_binders() {
                     (var 1))));
 
     // the index in `(var 1)` should be adjusted to account for binders
-    assert!(!truncate(&mut table, u0, 4, &ty0).overflow);
+    assert!(!truncate(&mut table, 4, &ty0).overflow);
 }

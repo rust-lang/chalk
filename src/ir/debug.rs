@@ -255,7 +255,7 @@ impl<T: Debug> Debug for Binders<T> {
 
 impl Debug for Environment {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "Env({:?}, {:?})", self.universe, self.clauses)
+        write!(fmt, "Env({:?})", self.clauses)
     }
 }
 

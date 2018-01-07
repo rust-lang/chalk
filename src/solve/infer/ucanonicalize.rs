@@ -40,6 +40,7 @@ impl InferenceTable {
 
         UCanonicalized {
             quantified: UCanonical {
+                universes: universes.num_canonical_universes(),
                 canonical: Canonical {
                     value: value1,
                     binders,
@@ -77,6 +78,11 @@ impl UniverseMap {
         UniverseMap {
             universes: vec![UniverseIndex::root()],
         }
+    }
+
+    /// Number of canonical universes.
+    fn num_canonical_universes(&self) -> usize {
+        self.universes.len()
     }
 
     fn add(&mut self, universe: UniverseIndex) {

@@ -156,7 +156,7 @@ pub(super) fn resolvent_clause(
     let ProgramClauseImplication {
         consequence,
         conditions,
-    } = infer.instantiate_binders_in(environment.universe, clause);
+    } = infer.instantiate_binders_existentially(clause);
     let consequence: InEnvironment<DomainGoal> = InEnvironment::new(&environment, consequence);
 
     resolvent::resolvent_unify(infer, ex_clause, &goal, &consequence, conditions)

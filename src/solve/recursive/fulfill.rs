@@ -2,8 +2,8 @@ use super::*;
 use cast::Caster;
 use fold::Fold;
 use solve::infer::{InferenceTable, ParameterInferenceVariable, canonicalize::Canonicalized,
-                   ucanonicalize::{UCanonicalized, UniverseMap}, unify::UnificationResult,
-                   var::InferenceVariable};
+                   ucanonicalize::{UCanonicalized, UniverseMap}, instantiate::BindersAndValue,
+                   unify::UnificationResult, var::InferenceVariable};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -98,25 +98,24 @@ impl<'s> Fulfill<'s> {
     /// See also `InferenceTable::fresh_subst`.
     pub fn initial_subst<T: Fold>(
         &mut self,
-        canonical_goal: &UCanonical<InEnvironment<T>>,
+        ucanonical_goal: &UCanonical<InEnvironment<T>>,
     ) -> (Substitution, InEnvironment<T::Result>) {
-        let subst = self.infer.fresh_subst(&canonical_goal.canonical.binders);
-        let value = canonical_goal.canonical.substitute(&subst);
+        let canonical_goal = self.infer.instantiate_universes(ucanonical_goal);
+        let subst = self.infer.fresh_subst(&canonical_goal.binders);
+        let value = canonical_goal.substitute(&subst);
         (subst, value)
     }
 
     /// Wraps `InferenceTable::instantiate_in`
-    pub fn instantiate_in<U, T>(
+    #[allow(non_camel_case_types)]
+    pub fn instantiate_binders_existentially<T>(
         &mut self,
-        universe: UniverseIndex,
-        binders: U,
-        arg: &T,
+        arg: &impl BindersAndValue<Output = T>,
     ) -> T::Result
     where
         T: Fold,
-        U: IntoIterator<Item = ParameterKind<()>>,
     {
-        self.infer.instantiate_in(universe, binders, arg)
+        self.infer.instantiate_binders_existentially(arg)
     }
 
     /// Unifies `a` and `b` in the given environment.
@@ -143,18 +142,11 @@ impl<'s> Fulfill<'s> {
         debug!("push_goal({:?}, {:?})", goal, environment);
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                let InEnvironment {
-                    environment: subenvironment,
-                    goal: subgoal,
-                } = self.infer.instantiate_binders_universally(environment, &subgoal);
-                self.push_goal(&subenvironment, *subgoal)?;
+                let subgoal = self.infer.instantiate_binders_universally(&subgoal);
+                self.push_goal(environment, *subgoal)?;
             }
             Goal::Quantified(QuantifierKind::Exists, subgoal) => {
-                let subgoal = self.instantiate_in(
-                    environment.universe,
-                    subgoal.binders.iter().cloned(),
-                    &subgoal.value,
-                );
+                let subgoal = self.infer.instantiate_binders_existentially(&subgoal);
                 self.push_goal(environment, *subgoal)?;
             }
             Goal::Implies(wc, subgoal) => {

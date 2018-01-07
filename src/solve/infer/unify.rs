@@ -76,11 +76,11 @@ impl<'t> Unifier<'t> {
 
     /// When we encounter a "sub-unification" problem that is in a distinct
     /// environment, we invoke this routine.
-    fn sub_unify<T>(&mut self, environment: &Arc<Environment>, ty1: T, ty2: T) -> Fallible<()>
+    fn sub_unify<T>(&mut self, ty1: T, ty2: T) -> Fallible<()>
     where
         T: Zip + Fold,
     {
-        let sub_unifier = Unifier::new(self.table, environment);
+        let sub_unifier = Unifier::new(self.table, &self.environment);
         let UnificationResult { goals, constraints } = sub_unifier.unify(&ty1, &ty2)?;
         self.goals.extend(goals);
         self.constraints.extend(constraints);
@@ -175,21 +175,16 @@ impl<'t> Unifier<'t> {
 
         debug!("unify_forall_tys({:?}, {:?})", ty1, ty2);
 
-        let mut environment = self.environment.clone();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|_| {
-                environment = environment.new_universe();
-                Lifetime::ForAll(environment.universe).cast()
+                let new_universe = self.table.new_universe();
+                Lifetime::ForAll(new_universe).cast()
             })
             .collect();
 
+        let max_universe = self.table.max_universe;
         let lifetimes2: Vec<_> = (0..ty2.num_binders)
-            .map(|_| {
-                self.table
-                    .new_variable(environment.universe)
-                    .to_lifetime()
-                    .cast()
-            })
+            .map(|_| self.table.new_variable(max_universe).to_lifetime().cast())
             .collect();
 
         let ty1 = ty1.substitute(&lifetimes1);
@@ -197,7 +192,7 @@ impl<'t> Unifier<'t> {
         debug!("unify_forall_tys: ty1 = {:?}", ty1);
         debug!("unify_forall_tys: ty2 = {:?}", ty2);
 
-        self.sub_unify(&environment, ty1, ty2)
+        self.sub_unify(ty1, ty2)
     }
 
     fn unify_projection_tys(
@@ -205,7 +200,8 @@ impl<'t> Unifier<'t> {
         proj1: ProjectionTyRefEnum,
         proj2: ProjectionTyRefEnum,
     ) -> Fallible<()> {
-        let var = self.table.new_variable(self.environment.universe).to_ty();
+        let max_universe = self.table.max_universe;
+        let var = self.table.new_variable(max_universe).to_ty();
         self.unify_projection_ty_enum(proj1, &var)?;
         self.unify_projection_ty_enum(proj2, &var)?;
         Ok(())
@@ -243,18 +239,17 @@ impl<'t> Unifier<'t> {
     }
 
     fn unify_forall_apply(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Fallible<()> {
-        let mut environment = self.environment.clone();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|_| {
-                environment = environment.new_universe();
-                Lifetime::ForAll(environment.universe).cast()
+                let new_universe = self.table.new_universe();
+                Lifetime::ForAll(new_universe).cast()
             })
             .collect();
 
         let ty1 = ty1.substitute(&lifetimes1);
         let ty2 = ty2.clone();
 
-        self.sub_unify(&environment, ty1, ty2)
+        self.sub_unify(ty1, ty2)
     }
 
     fn unify_var_ty(&mut self, var: InferenceVariable, ty: &Ty) -> Fallible<()> {
@@ -353,17 +348,15 @@ impl<'t> Zipper for Unifier<'t> {
         T: Zip + Fold<Result = T>,
     {
         {
-            let a = self.table
-                .instantiate_binders_universally(self.environment, a);
-            let b = self.table.instantiate_binders_in(a.environment.universe, b);
-            let () = self.sub_unify(&a.environment, &a.goal, &b)?;
+            let a = &self.table.instantiate_binders_universally(a);
+            let b = &self.table.instantiate_binders_existentially(b);
+            let () = self.sub_unify(a, b)?;
         }
 
         {
-            let b = self.table
-                .instantiate_binders_universally(self.environment, b);
-            let a = self.table.instantiate_binders_in(b.environment.universe, a);
-            let () = self.sub_unify(&b.environment, &a, &b.goal)?;
+            let b = &self.table.instantiate_binders_universally(b);
+            let a = &self.table.instantiate_binders_existentially(a);
+            let () = self.sub_unify(a, b)?;
         }
 
         Ok(())

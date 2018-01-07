@@ -95,16 +95,12 @@ impl ProgramEnvironment {
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment {
-    pub universe: UniverseIndex,
     pub clauses: Vec<DomainGoal>,
 }
 
 impl Environment {
     pub fn new() -> Arc<Environment> {
-        Arc::new(Environment {
-            universe: UniverseIndex::root(),
-            clauses: vec![],
-        })
+        Arc::new(Environment { clauses: vec![] })
     }
 
     pub fn add_clauses<I>(&self, clauses: I) -> Arc<Environment>
@@ -114,14 +110,6 @@ impl Environment {
         let mut env = self.clone();
         let env_clauses: HashSet<_> = env.clauses.into_iter().chain(clauses).collect();
         env.clauses = env_clauses.into_iter().collect();
-        Arc::new(env)
-    }
-
-    pub fn new_universe(&self) -> Arc<Environment> {
-        let mut env = self.clone();
-        env.universe = UniverseIndex {
-            counter: self.universe.counter + 1,
-        };
         Arc::new(env)
     }
 }
@@ -192,8 +180,10 @@ pub struct UniverseIndex {
 }
 
 impl UniverseIndex {
+    pub const ROOT: UniverseIndex = UniverseIndex { counter: 0 };
+
     pub fn root() -> UniverseIndex {
-        UniverseIndex { counter: 0 }
+        Self::ROOT
     }
 
     pub fn can_see(self, ui: UniverseIndex) -> bool {
@@ -206,6 +196,12 @@ impl UniverseIndex {
 
     pub fn to_lifetime(self) -> Lifetime {
         Lifetime::ForAll(self)
+    }
+
+    pub fn next(self) -> UniverseIndex {
+        UniverseIndex {
+            counter: self.counter + 1,
+        }
     }
 }
 
@@ -692,6 +688,7 @@ impl<T> Canonical<T> {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UCanonical<T> {
     pub canonical: Canonical<T>,
+    pub universes: usize,
 }
 
 impl<T> UCanonical<T> {
@@ -769,17 +766,12 @@ impl Goal {
                 let InEnvironment { environment, goal } = env_goal;
                 match goal {
                     Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                        let InEnvironment { environment, goal } =
-                            infer.instantiate_binders_universally(&environment, &subgoal);
-                        env_goal = InEnvironment::new(&environment, *goal);
+                        let subgoal = infer.instantiate_binders_universally(&subgoal);
+                        env_goal = InEnvironment::new(&environment, *subgoal);
                     }
 
                     Goal::Quantified(QuantifierKind::Exists, subgoal) => {
-                        let subgoal = infer.instantiate_in(
-                            environment.universe,
-                            subgoal.binders.iter().cloned(),
-                            &subgoal.value,
-                        );
+                        let subgoal = infer.instantiate_binders_existentially(&subgoal);
                         env_goal = InEnvironment::new(&environment, *subgoal);
                     }
 

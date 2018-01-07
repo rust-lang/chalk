@@ -40,10 +40,9 @@ impl Program {
     fn impl_provided_for(&self, trait_ref: TraitRef, struct_datum: &StructDatum) -> bool {
         let goal: DomainGoal = trait_ref.cast();
 
-        let env = Environment::new();
         let mut infer = InferenceTable::new();
 
-        let goal = infer.instantiate_in(env.universe, struct_datum.binders.binders.clone(), &goal);
+        let goal = infer.instantiate_binders_existentially(&(&struct_datum.binders.binders, &goal));
 
         for impl_datum in self.impl_data.values() {
             // We retrieve the trait ref given by the positive impl (even if the actual impl is negative)
@@ -56,7 +55,7 @@ impl Program {
                 .cast();
 
             let impl_goal =
-                infer.instantiate_in(env.universe, impl_datum.binders.binders.clone(), &impl_goal);
+                infer.instantiate_binders_existentially(&(&impl_datum.binders.binders, &impl_goal));
 
             // We check whether the impl `MyStruct: (!)MyAutoTrait` unifies with an existing impl.
             // Examples:

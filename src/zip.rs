@@ -183,7 +183,6 @@ struct_zip!(EqGoal { a, b });
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        assert_eq!(a.universe, b.universe); // it's wrong to zip 2 env's with distinct universes!
         assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
         Zip::zip_with(zipper, &a.clauses, &b.clauses)?;
         Ok(())
