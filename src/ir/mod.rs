@@ -703,11 +703,11 @@ impl<T> UCanonical<T> {
     }
 }
 
-impl UCanonical<InEnvironment<LeafGoal>> {
+impl UCanonical<InEnvironment<Goal>> {
     /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
     pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
         match &self.canonical.value.goal {
-            LeafGoal::DomainGoal(DomainGoal::Implemented(tr)) => {
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Implemented(tr))) => {
                 let trait_datum = &program.trait_data[&tr.trait_id];
                 trait_datum.binders.value.flags.auto
             }

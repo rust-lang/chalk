@@ -1024,7 +1024,7 @@ fn normalize_under_binder() {
         } yields[SolverChoice::recursive()] {
             "Unique; for<?U0> { \
              substitution [?0 := Ref<'?0, I32>], \
-             lifetime constraints [(Env(U0, []) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [(Env(U1, []) |- LifetimeEq('?0, '!1))] \
              }"
         } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver

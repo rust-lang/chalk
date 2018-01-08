@@ -28,7 +28,7 @@ impl Outcome {
 enum Obligation {
     /// For "positive" goals, we flatten all the way out to leafs within the
     /// current `Fulfill`
-    Prove(InEnvironment<LeafGoal>),
+    Prove(InEnvironment<Goal>),
 
     /// For "negative" goals, we don't flatten in *this* `Fulfill`, which would
     /// require having a logical "or" operator. Instead, we recursively solve in
@@ -88,22 +88,6 @@ impl<'s> Fulfill<'s> {
             constraints: HashSet::new(),
             cannot_prove: false,
         }
-    }
-
-    /// Instantiates the given goal and pushes it as a goal to be
-    /// proven. Returns a substitution that can be given to `solve`.
-    /// May be invoked once, immediately after `Fulfill` is created.
-    pub fn instantiate_and_push_initial_goal(
-        &mut self,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
-    ) -> Substitution {
-        assert!(
-            self.obligations.is_empty(),
-            "instantiate_and_push invoked after fulfill already in use"
-        );
-        let (subst, InEnvironment { environment, goal }) = self.initial_subst(canonical_goal);
-        self.push_goal(&environment, goal);
-        subst
     }
 
     /// Given the canonical, initial goal, returns a substitution
@@ -185,9 +169,9 @@ impl<'s> Fulfill<'s> {
                 let in_env = InEnvironment::new(environment, *subgoal);
                 self.obligations.push(Obligation::Refute(in_env));
             }
-            Goal::Leaf(wc) => {
-                self.obligations
-                    .push(Obligation::Prove(InEnvironment::new(environment, wc)));
+            Goal::Leaf(_) => {
+                let in_env = InEnvironment::new(environment, goal);
+                self.obligations.push(Obligation::Prove(in_env));
             }
             Goal::CannotProve(()) => {
                 self.cannot_prove = true;
@@ -197,7 +181,7 @@ impl<'s> Fulfill<'s> {
 
     fn prove(
         &mut self,
-        wc: &InEnvironment<LeafGoal>,
+        wc: &InEnvironment<Goal>,
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution> {
         let Canonicalized {
@@ -212,7 +196,7 @@ impl<'s> Fulfill<'s> {
         Ok(PositiveSolution {
             free_vars,
             universes,
-            solution: self.solver.solve_leaf_goal(quantified, minimums)?,
+            solution: self.solver.solve_goal(quantified, minimums)?,
         })
     }
 
@@ -231,7 +215,8 @@ impl<'s> Fulfill<'s> {
             quantified,
             universes: _,
         } = self.infer.u_canonicalize(&canonicalized);
-        if let Ok(solution) = self.solver.solve_root_goal(&quantified) {
+        let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
+        if let Ok(solution) = self.solver.solve_goal(quantified, &mut minimums) {
             if solution.is_unique() {
                 Err(NoSolution)
             } else {

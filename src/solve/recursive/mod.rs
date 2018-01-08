@@ -16,6 +16,9 @@ use self::stack::{Stack, StackDepth};
 pub type CanonicalLeafGoal = Canonical<InEnvironment<LeafGoal>>;
 pub type UCanonicalLeafGoal = UCanonical<InEnvironment<LeafGoal>>;
 
+pub type CanonicalGoal = Canonical<InEnvironment<Goal>>;
+pub type UCanonicalGoal = UCanonical<InEnvironment<Goal>>;
+
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
@@ -30,7 +33,7 @@ pub struct Solver {
 
     /// The cache contains **fully solved** goals, whose results are
     /// not dependent on the stack in anyway.
-    cache: HashMap<UCanonicalLeafGoal, Fallible<Solution>>,
+    cache: HashMap<UCanonicalGoal, Fallible<Solution>>,
 }
 
 /// The `minimums` struct is used while solving to track whether we encountered
@@ -94,32 +97,21 @@ impl Solver {
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Fallible<Solution> {
+        debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.stack.is_empty());
         let minimums = &mut Minimums::new();
-        self.solve_canonical_goal(canonical_goal, minimums)
-    }
-
-    /// Solves (recursively) a canonical goal that has not been broken
-    /// down into smaller steps.
-    fn solve_canonical_goal(
-        &mut self,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
-        minimums: &mut Minimums,
-    ) -> Fallible<Solution> {
-        let mut fulfill = Fulfill::new(self);
-        let subst = fulfill.instantiate_and_push_initial_goal(canonical_goal);
-        fulfill.solve(subst, minimums)
+        self.solve_goal(canonical_goal.clone(), minimums)
     }
 
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    fn solve_leaf_goal(
+    fn solve_goal(
         &mut self,
-        goal: UCanonical<InEnvironment<LeafGoal>>,
+        goal: UCanonical<InEnvironment<Goal>>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
-        debug_heading!("solve_leaf_goal({:?})", goal);
+        debug_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
         if let Some(value) = self.cache.get(&goal) {
@@ -196,7 +188,7 @@ impl Solver {
 
     fn solve_new_subgoal(
         &mut self,
-        canonical_goal: UCanonicalLeafGoal,
+        canonical_goal: UCanonicalGoal,
         depth: StackDepth,
         dfn: DepthFirstNumber,
     ) -> Minimums {
@@ -212,14 +204,15 @@ impl Solver {
         let minimums = &mut Minimums::new();
         loop {
             let UCanonical {
-                canonical: Canonical {
-                    binders,
-                    value: InEnvironment { environment, goal },
-                },
+                canonical:
+                    Canonical {
+                        binders,
+                        value: InEnvironment { environment, goal },
+                    },
             } = canonical_goal.clone();
 
             let current_answer = match goal {
-                LeafGoal::EqGoal(eq_goal) => {
+                Goal::Leaf(LeafGoal::EqGoal(eq_goal)) => {
                     let canonical_goal = UCanonical {
                         canonical: Canonical {
                             binders,
@@ -232,7 +225,7 @@ impl Solver {
                     self.solve_via_unification(&canonical_goal, minimums)
                 }
 
-                LeafGoal::DomainGoal(domain_goal) => {
+                Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
                     let canonical_goal = UCanonical {
                         canonical: Canonical {
                             binders,
@@ -295,6 +288,20 @@ impl Solver {
                             merged.fallback_to(fallback)
                         })
                 }
+
+                goal => {
+                    let canonical_goal = UCanonical {
+                        canonical: Canonical {
+                            binders,
+                            value: InEnvironment {
+                                environment,
+                                goal: goal,
+                            },
+                        },
+                    };
+
+                    self.solve_via_simplification(&canonical_goal, minimums)
+                }
             };
 
             debug!(
@@ -341,9 +348,22 @@ impl Solver {
         canonical_goal: &UCanonical<InEnvironment<EqGoal>>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
+        debug_heading!("solve_via_unification({:?})", canonical_goal);
         let mut fulfill = Fulfill::new(self);
         let (subst, InEnvironment { environment, goal }) = fulfill.initial_subst(canonical_goal);
         fulfill.unify(&environment, &goal.a, &goal.b)?;
+        fulfill.solve(subst, minimums)
+    }
+
+    fn solve_via_simplification(
+        &mut self,
+        canonical_goal: &UCanonical<InEnvironment<Goal>>,
+        minimums: &mut Minimums,
+    ) -> Fallible<Solution> {
+        debug_heading!("solve_via_simplification({:?})", canonical_goal);
+        let mut fulfill = Fulfill::new(self);
+        let (subst, InEnvironment { environment, goal }) = fulfill.initial_subst(canonical_goal);
+        fulfill.push_goal(&environment, goal);
         fulfill.solve(subst, minimums)
     }
 
@@ -384,6 +404,11 @@ impl Solver {
         clause: Binders<ProgramClauseImplication>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
+        debug_heading!(
+            "solve_via_implication(canonical_goal={:?}, clause={:?})",
+            canonical_goal,
+            clause
+        );
         let mut fulfill = Fulfill::new(self);
         let (subst, goal) = fulfill.initial_subst(canonical_goal);
         let ProgramClauseImplication {
