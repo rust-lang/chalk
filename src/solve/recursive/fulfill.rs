@@ -139,7 +139,7 @@ impl<'s> Fulfill<'s> {
 
     /// Create obligations for the given goal in the given environment. This may
     /// ultimately create any number of obligations.
-    pub fn push_goal(&mut self, environment: &Arc<Environment>, goal: Goal) {
+    pub fn push_goal(&mut self, environment: &Arc<Environment>, goal: Goal) -> Fallible<()> {
         debug!("push_goal({:?}, {:?})", goal, environment);
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
@@ -147,7 +147,7 @@ impl<'s> Fulfill<'s> {
                     environment: subenvironment,
                     goal: subgoal,
                 } = self.infer.instantiate_binders_universally(environment, &subgoal);
-                self.push_goal(&subenvironment, *subgoal);
+                self.push_goal(&subenvironment, *subgoal)?;
             }
             Goal::Quantified(QuantifierKind::Exists, subgoal) => {
                 let subgoal = self.instantiate_in(
@@ -155,28 +155,32 @@ impl<'s> Fulfill<'s> {
                     subgoal.binders.iter().cloned(),
                     &subgoal.value,
                 );
-                self.push_goal(environment, *subgoal);
+                self.push_goal(environment, *subgoal)?;
             }
             Goal::Implies(wc, subgoal) => {
                 let new_environment = &environment.add_clauses(wc);
-                self.push_goal(new_environment, *subgoal);
+                self.push_goal(new_environment, *subgoal)?;
             }
             Goal::And(subgoal1, subgoal2) => {
-                self.push_goal(environment, *subgoal1);
-                self.push_goal(environment, *subgoal2);
+                self.push_goal(environment, *subgoal1)?;
+                self.push_goal(environment, *subgoal2)?;
             }
             Goal::Not(subgoal) => {
                 let in_env = InEnvironment::new(environment, *subgoal);
                 self.obligations.push(Obligation::Refute(in_env));
             }
-            Goal::Leaf(_) => {
+            Goal::Leaf(LeafGoal::DomainGoal(_)) => {
                 let in_env = InEnvironment::new(environment, goal);
                 self.obligations.push(Obligation::Prove(in_env));
+            }
+            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => {
+                self.unify(&environment, &a, &b)?;
             }
             Goal::CannotProve(()) => {
                 self.cannot_prove = true;
             }
         }
+        Ok(())
     }
 
     fn prove(

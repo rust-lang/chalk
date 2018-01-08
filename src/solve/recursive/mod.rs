@@ -212,19 +212,6 @@ impl Solver {
             } = canonical_goal.clone();
 
             let current_answer = match goal {
-                Goal::Leaf(LeafGoal::EqGoal(eq_goal)) => {
-                    let canonical_goal = UCanonical {
-                        canonical: Canonical {
-                            binders,
-                            value: InEnvironment {
-                                environment,
-                                goal: eq_goal,
-                            },
-                        },
-                    };
-                    self.solve_via_unification(&canonical_goal, minimums)
-                }
-
                 Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
                     let canonical_goal = UCanonical {
                         canonical: Canonical {
@@ -343,18 +330,6 @@ impl Solver {
         }
     }
 
-    fn solve_via_unification(
-        &mut self,
-        canonical_goal: &UCanonical<InEnvironment<EqGoal>>,
-        minimums: &mut Minimums,
-    ) -> Fallible<Solution> {
-        debug_heading!("solve_via_unification({:?})", canonical_goal);
-        let mut fulfill = Fulfill::new(self);
-        let (subst, InEnvironment { environment, goal }) = fulfill.initial_subst(canonical_goal);
-        fulfill.unify(&environment, &goal.a, &goal.b)?;
-        fulfill.solve(subst, minimums)
-    }
-
     fn solve_via_simplification(
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<Goal>>,
@@ -363,7 +338,7 @@ impl Solver {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
         let mut fulfill = Fulfill::new(self);
         let (subst, InEnvironment { environment, goal }) = fulfill.initial_subst(canonical_goal);
-        fulfill.push_goal(&environment, goal);
+        fulfill.push_goal(&environment, goal)?;
         fulfill.solve(subst, minimums)
     }
 
@@ -420,7 +395,7 @@ impl Solver {
 
         // if so, toss in all of its premises
         for condition in conditions {
-            fulfill.push_goal(&goal.environment, condition);
+            fulfill.push_goal(&goal.environment, condition)?;
         }
 
         // and then try to solve

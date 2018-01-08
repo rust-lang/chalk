@@ -462,7 +462,7 @@ fn nonoverlapping_assoc_types() {
 
 #[test]
 fn overlapping_assoc_types() {
-    lowering_error! {
+    lowering_success! {
         program {
             trait Foo<T> { }
 
@@ -472,9 +472,36 @@ fn overlapping_assoc_types() {
             struct Vec<T> { }
             impl<T> Iterator for Vec<T> { type Item = T; }
 
+            // This impl overlaps with the one below, but specializes it.
             impl<T> Foo<<T as Iterator>::Item> for T where T: Iterator { }
 
             impl<A, B> Foo<A> for B { }
+        }
+    }
+}
+
+#[test]
+fn overlapping_assoc_types_error() {
+    lowering_error! {
+        program {
+            trait Foo<T> { }
+
+            trait Bar { }
+
+            trait Iterator { type Item; }
+
+
+            struct Vec<T> { }
+            impl<T> Iterator for Vec<T> { type Item = T; }
+
+            struct Other { }
+            impl Bar for Other { }
+
+            // This impl overlaps with the one below, and does not
+            // specialize because don't know that bar holds.
+            impl<T> Foo<<T as Iterator>::Item> for T where T: Iterator { }
+
+            impl<A, B> Foo<A> for B where A: Bar { }
         } error_msg {
             "overlapping impls of trait \"Foo\""
         }

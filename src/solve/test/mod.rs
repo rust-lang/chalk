@@ -1065,7 +1065,13 @@ fn unify_quantified_lifetimes() {
                     }
                 }
             }
-        } yields {
+        } yields[SolverChoice::recursive()] {
+            "Unique; for<?U0> { \
+             substitution [?0 := '?0, ?1 := '?0], \
+             lifetime constraints [(Env(U1, []) |- LifetimeEq('?0, '!1))] \
+             }"
+        } yields[SolverChoice::slg()] {
+            // SLG yields this distinct, but equivalent, result
             "Unique; for<?U0> { \
              substitution [?0 := '?0, ?1 := '!1], \
              lifetime constraints [(Env(U1, []) |- LifetimeEq('?0, '!1))] \
