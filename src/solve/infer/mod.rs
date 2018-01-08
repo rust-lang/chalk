@@ -41,6 +41,7 @@ impl InferenceTable {
     pub fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
+        debug!("new_variable: var={:?} ui={:?}", var, ui);
         var
     }
 

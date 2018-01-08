@@ -107,18 +107,16 @@ impl<'t> Unifier<'t> {
                 let var1 = InferenceVariable::from_depth(depth1);
                 let var2 = InferenceVariable::from_depth(depth2);
                 debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
-                Ok(
-                    self.table
-                        .unify
-                        .unify_var_var(var1, var2)
-                        .expect("unification of two unbound variables cannot fail"),
-                )
+                Ok(self.table
+                    .unify
+                    .unify_var_var(var1, var2)
+                    .expect("unification of two unbound variables cannot fail"))
             }
 
-            (&Ty::Var(depth), ty @ &Ty::Apply(_)) |
-            (ty @ &Ty::Apply(_), &Ty::Var(depth)) |
-            (&Ty::Var(depth), ty @ &Ty::ForAll(_)) |
-            (ty @ &Ty::ForAll(_), &Ty::Var(depth)) => {
+            (&Ty::Var(depth), ty @ &Ty::Apply(_))
+            | (ty @ &Ty::Apply(_), &Ty::Var(depth))
+            | (&Ty::Var(depth), ty @ &Ty::ForAll(_))
+            | (ty @ &Ty::ForAll(_), &Ty::Var(depth)) => {
                 self.unify_var_ty(InferenceVariable::from_depth(depth), ty)
             }
 
@@ -126,8 +124,8 @@ impl<'t> Unifier<'t> {
                 self.unify_forall_tys(quantified_ty1, quantified_ty2)
             }
 
-            (&Ty::ForAll(ref quantified_ty), apply_ty @ &Ty::Apply(_)) |
-            (apply_ty @ &Ty::Apply(_), &Ty::ForAll(ref quantified_ty)) => {
+            (&Ty::ForAll(ref quantified_ty), apply_ty @ &Ty::Apply(_))
+            | (apply_ty @ &Ty::Apply(_), &Ty::ForAll(ref quantified_ty)) => {
                 self.unify_forall_apply(quantified_ty, apply_ty)
             }
 
@@ -139,29 +137,29 @@ impl<'t> Unifier<'t> {
                 Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
             }
 
-            (proj1 @ &Ty::Projection(_), proj2 @ &Ty::Projection(_)) |
-            (proj1 @ &Ty::Projection(_), proj2 @ &Ty::UnselectedProjection(_)) |
-            (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::Projection(_)) |
-            (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::UnselectedProjection(_)) => {
+            (proj1 @ &Ty::Projection(_), proj2 @ &Ty::Projection(_))
+            | (proj1 @ &Ty::Projection(_), proj2 @ &Ty::UnselectedProjection(_))
+            | (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::Projection(_))
+            | (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::UnselectedProjection(_)) => {
                 self.unify_projection_tys(
                     proj1.as_projection_ty_enum(),
                     proj2.as_projection_ty_enum(),
                 )
             }
 
-            (ty @ &Ty::Apply(_), &Ty::Projection(ref proj)) |
-            (ty @ &Ty::ForAll(_), &Ty::Projection(ref proj)) |
-            (ty @ &Ty::Var(_), &Ty::Projection(ref proj)) |
-            (&Ty::Projection(ref proj), ty @ &Ty::Apply(_)) |
-            (&Ty::Projection(ref proj), ty @ &Ty::ForAll(_)) |
-            (&Ty::Projection(ref proj), ty @ &Ty::Var(_)) => self.unify_projection_ty(proj, ty),
+            (ty @ &Ty::Apply(_), &Ty::Projection(ref proj))
+            | (ty @ &Ty::ForAll(_), &Ty::Projection(ref proj))
+            | (ty @ &Ty::Var(_), &Ty::Projection(ref proj))
+            | (&Ty::Projection(ref proj), ty @ &Ty::Apply(_))
+            | (&Ty::Projection(ref proj), ty @ &Ty::ForAll(_))
+            | (&Ty::Projection(ref proj), ty @ &Ty::Var(_)) => self.unify_projection_ty(proj, ty),
 
-            (ty @ &Ty::Apply(_), &Ty::UnselectedProjection(ref proj)) |
-            (ty @ &Ty::ForAll(_), &Ty::UnselectedProjection(ref proj)) |
-            (ty @ &Ty::Var(_), &Ty::UnselectedProjection(ref proj)) |
-            (&Ty::UnselectedProjection(ref proj), ty @ &Ty::Apply(_)) |
-            (&Ty::UnselectedProjection(ref proj), ty @ &Ty::ForAll(_)) |
-            (&Ty::UnselectedProjection(ref proj), ty @ &Ty::Var(_)) => {
+            (ty @ &Ty::Apply(_), &Ty::UnselectedProjection(ref proj))
+            | (ty @ &Ty::ForAll(_), &Ty::UnselectedProjection(ref proj))
+            | (ty @ &Ty::Var(_), &Ty::UnselectedProjection(ref proj))
+            | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::Apply(_))
+            | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::ForAll(_))
+            | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::Var(_)) => {
                 self.unify_unselected_projection_ty(proj, ty)
             }
         }
@@ -221,15 +219,13 @@ impl<'t> Unifier<'t> {
     }
 
     fn unify_projection_ty(&mut self, proj: &ProjectionTy, ty: &Ty) -> Fallible<()> {
-        Ok(
-            self.goals.push(InEnvironment::new(
-                self.environment,
-                Normalize {
-                    projection: proj.clone(),
-                    ty: ty.clone(),
-                }.cast(),
-            )),
-        )
+        Ok(self.goals.push(InEnvironment::new(
+            self.environment,
+            Normalize {
+                projection: proj.clone(),
+                ty: ty.clone(),
+            }.cast(),
+        )))
     }
 
     fn unify_unselected_projection_ty(
@@ -237,15 +233,13 @@ impl<'t> Unifier<'t> {
         proj: &UnselectedProjectionTy,
         ty: &Ty,
     ) -> Fallible<()> {
-        Ok(
-            self.goals.push(InEnvironment::new(
-                self.environment,
-                UnselectedNormalize {
-                    projection: proj.clone(),
-                    ty: ty.clone(),
-                }.cast(),
-            )),
-        )
+        Ok(self.goals.push(InEnvironment::new(
+            self.environment,
+            UnselectedNormalize {
+                projection: proj.clone(),
+                ty: ty.clone(),
+            }.cast(),
+        )))
     }
 
     fn unify_forall_apply(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Fallible<()> {
@@ -291,7 +285,7 @@ impl<'t> Unifier<'t> {
             return self.unify_lifetime_lifetime(a, &n_b);
         }
 
-        debug!("unify_lifetime_lifetime({:?}, {:?})", a, b);
+        debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
 
         match (a, b) {
             (&Lifetime::Var(depth_a), &Lifetime::Var(depth_b)) => {
@@ -299,18 +293,21 @@ impl<'t> Unifier<'t> {
                 let var_b = InferenceVariable::from_depth(depth_b);
                 debug!(
                     "unify_lifetime_lifetime: var_a={:?} var_b={:?}",
-                    var_a,
-                    var_b
+                    var_a, var_b
                 );
                 self.table.unify.unify_var_var(var_a, var_b).unwrap();
                 Ok(())
             }
 
-            (&Lifetime::Var(depth), &Lifetime::ForAll(ui)) |
-            (&Lifetime::ForAll(ui), &Lifetime::Var(depth)) => {
+            (&Lifetime::Var(depth), &Lifetime::ForAll(ui))
+            | (&Lifetime::ForAll(ui), &Lifetime::Var(depth)) => {
                 let var = InferenceVariable::from_depth(depth);
                 let var_ui = self.table.universe_of_unbound_var(var);
                 if var_ui.can_see(ui) {
+                    debug!(
+                        "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
+                        var, var_ui, ui
+                    );
                     let v = Lifetime::ForAll(ui);
                     self.table
                         .unify
@@ -318,6 +315,10 @@ impl<'t> Unifier<'t> {
                         .unwrap();
                     Ok(())
                 } else {
+                    debug!(
+                        "unify_lifetime_lifetime: {:?} in {:?} cannot see {:?}; pushing constraint",
+                        var, var_ui, ui
+                    );
                     Ok(self.push_lifetime_eq_constraint(*a, *b))
                 }
             }
@@ -352,13 +353,15 @@ impl<'t> Zipper for Unifier<'t> {
         T: Zip + Fold<Result = T>,
     {
         {
-            let a = self.table.instantiate_binders_universally(self.environment, a);
+            let a = self.table
+                .instantiate_binders_universally(self.environment, a);
             let b = self.table.instantiate_binders_in(a.environment.universe, b);
             let () = self.sub_unify(&a.environment, &a.goal, &b)?;
         }
 
         {
-            let b = self.table.instantiate_binders_universally(self.environment, b);
+            let b = self.table
+                .instantiate_binders_universally(self.environment, b);
             let a = self.table.instantiate_binders_in(b.environment.universe, a);
             let () = self.sub_unify(&b.environment, &a, &b.goal)?;
         }
@@ -492,7 +495,10 @@ impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
                 Ok(Lifetime::Var(depth).up_shift(binders))
             }
 
-            InferenceValue::Bound(l) => Ok(l.lifetime().unwrap().up_shift(binders)),
+            InferenceValue::Bound(l) => {
+                let l = l.lifetime().unwrap().up_shift(binders);
+                l.fold_with(self, binders)
+            }
         }
     }
 }

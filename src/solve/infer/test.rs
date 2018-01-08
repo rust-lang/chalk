@@ -1,6 +1,7 @@
 use fallible::*;
 use fold::*;
 use super::*;
+use super::unify::UnificationResult;
 
 impl InferenceTable {
     pub fn normalize<T>(&mut self, value: &T) -> T::Result
@@ -261,5 +262,37 @@ fn quantify_ty_under_binder() {
             value: ty!(for_all 3 (apply (item 0) (var 1) (var 3) (var 3) (lifetime (var 4)))),
             binders: vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)],
         }
+    );
+}
+
+#[test]
+fn lifetime_constraint_indirect() {
+    let mut table = InferenceTable::new();
+    let _t_0 = table.new_variable(U0);
+    let _l_1 = table.new_variable(U1);
+
+    let environment0 = Environment::new();
+    let environment1 = environment0.new_universe();
+
+    // Here, we unify '?1 (the lifetime variable in universe 1) with
+    // '!1.
+    let t_a = ty!(apply (item 0) (lifetime (skol 1)));
+    let t_b = ty!(apply (item 0) (lifetime (var 1)));
+    let UnificationResult { goals, constraints } = table.unify(&environment1, &t_a, &t_b).unwrap();
+    assert!(goals.is_empty());
+    assert!(constraints.is_empty());
+
+    // Here, we try to unify `?0` (the type variable in universe 0)
+    // with something that involves `'?1`. Since `'?1` has been
+    // unified with `'!1`, and `'!1` is not visible from universe 0,
+    // we will replace `'!1` with a new variable `'?2` and introduce a
+    // (likely unsatisfiable) constraint relating them.
+    let t_c = ty!(var 0);
+    let UnificationResult { goals, constraints } = table.unify(&environment1, &t_c, &t_b).unwrap();
+    assert!(goals.is_empty());
+    assert_eq!(constraints.len(), 1);
+    assert_eq!(
+        format!("{:?}", constraints[0]),
+        "(Env(U1, []) |- LifetimeEq('?2, '!1))"
     );
 }
