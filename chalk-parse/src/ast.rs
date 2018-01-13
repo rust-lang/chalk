@@ -177,6 +177,7 @@ pub struct Identifier {
 
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
+    Normalize { projection: ProjectionTy, ty: Ty },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
     TyWellFormed { ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },

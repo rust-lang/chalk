@@ -32,6 +32,7 @@ Goal1: Box<Goal> = {
     <i:IfKeyword> "(" <w:Comma<WhereClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g, i)),
     "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
     <w:WhereClause> => Box::new(Goal::Leaf(w)),
+    "(" <Goal> ")",
 };
 
 IfKeyword: bool = {
@@ -194,7 +195,10 @@ WhereClause: WhereClause = {
 
     <a:Lifetime> "=" <b:Lifetime> => WhereClause::UnifyLifetimes { a, b },
 
-    // `T: Foo<U = Bar>` -- a normalization
+    // `<T as Foo>::U -> Bar` -- a normalization
+    "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => WhereClause::Normalize { projection: s, ty: t },
+
+    // `T: Foo<U = Bar>` -- projection equality
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
         "=" <ty:Ty> ">" =>
     {

@@ -186,7 +186,7 @@ fn goal_quantifiers() {
     set_current_program(&program, || {
         assert_eq!(
             format!("{:?}", goal),
-            "ForAll<type> { Exists<type> { ForAll<type> { ?0: Foo<?1, ?2> } } }"
+            "ForAll<type> { Exists<type> { ForAll<type> { (?0: Foo<?1, ?2>) } } }"
         );
     });
 }
@@ -243,7 +243,7 @@ fn atc_accounting() {
         println!("{}", goal_text);
         assert_eq!(
             goal_text,
-            "ForAll<type> { ForAll<lifetime> { ForAll<type> { <?2 as Iterable>::Iter<'?1> ==> ?0 } } }"
+            "ForAll<type> { ForAll<lifetime> { ForAll<type> { ProjectionEq(<?2 as Iterable>::Iter<'?1> = ?0) } } }"
         );
     });
 }

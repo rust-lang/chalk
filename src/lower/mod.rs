@@ -430,6 +430,13 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
             WhereClause::ProjectionEq {
                 ref projection,
                 ref ty,
+            } => ir::DomainGoal::ProjectionEq(ir::ProjectionEq {
+                projection: projection.lower(env)?,
+                ty: ty.lower(env)?,
+            }),
+            WhereClause::Normalize {
+                ref projection,
+                ref ty,
             } => ir::DomainGoal::Normalize(ir::Normalize {
                 projection: projection.lower(env)?,
                 ty: ty.lower(env)?,
@@ -464,7 +471,9 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
 impl LowerWhereClause<ir::LeafGoal> for WhereClause {
     fn lower(&self, env: &Env) -> Result<ir::LeafGoal> {
         Ok(match *self {
-            WhereClause::Implemented { .. } | WhereClause::ProjectionEq { .. } => {
+            WhereClause::Implemented { .. }
+            | WhereClause::ProjectionEq { .. }
+            | WhereClause::Normalize { .. } => {
                 let g: ir::DomainGoal = self.lower(env)?;
                 g.cast()
             }
@@ -815,7 +824,6 @@ impl LowerClause for Clause {
 
         Ok(ir::ProgramClause {
             implication,
-            fallback_clause: false,
         })
     }
 }
@@ -1040,7 +1048,6 @@ impl ir::ImplDatum {
                         .collect(),
                 }
             }),
-            fallback_clause: false,
         }
     }
 }
@@ -1086,7 +1093,6 @@ impl ir::DefaultImplDatum {
                     },
                 }
             }),
-            fallback_clause: false,
         }
     }
 }
@@ -1177,7 +1183,6 @@ impl ir::AssociatedTyValue {
                     conditions: conditions.clone(),
                 },
             },
-            fallback_clause: false,
         };
 
         let unselected_projection = ir::UnselectedProjectionTy {
@@ -1201,7 +1206,6 @@ impl ir::AssociatedTyValue {
                     ],
                 },
             },
-            fallback_clause: false,
         };
 
         vec![normalization, unselected_normalization]
@@ -1273,7 +1277,6 @@ impl ir::StructDatum {
                     },
                 }
             }),
-            fallback_clause: false,
         };
 
         vec![wf]
@@ -1327,7 +1330,6 @@ impl ir::TraitDatum {
                     },
                 }
             }),
-            fallback_clause: false,
         };
 
         let mut clauses = vec![clauses];
@@ -1339,7 +1341,6 @@ impl ir::TraitDatum {
                         conditions: vec![wf.clone().cast()],
                     }
                 }),
-                fallback_clause: false,
             });
         }
 
@@ -1349,9 +1350,9 @@ impl ir::TraitDatum {
 
 impl ir::AssociatedTyDatum {
     fn to_program_clauses(&self, program: &ir::Program) -> Vec<ir::ProgramClause> {
-        // For each associated type, we define a normalization "fallback" for
-        // projecting when we don't have constraints to say anything interesting
-        // about an associated type.
+        // For each associated type, we define the "projection
+        // equality" rules. There are always two; one for a successful normalization,
+        // and one for the "fallback" notion of equality.
         //
         // Given:
         //
@@ -1359,10 +1360,33 @@ impl ir::AssociatedTyDatum {
         //        type Assoc;
         //    }
         //
-        // we generate:
+        // we generate the 'fallback' rule:
         //
-        //    <?T as Foo>::Assoc ==> (Foo::Assoc)<?T> :- (?T: Foo)
-        //    forall<U> { (?T: Foo) :- <?T as Foo>::Assoc ==> U }
+        //    forall<T> {
+        //        ProjectionEq(<T as Foo>::Assoc = (Foo::Assoc)<T>) :-
+        //            T: Foo
+        //    }
+        //
+        // and
+        //
+        //    forall<T> {
+        //        ProjectionEq(<T as Foo>::Assoc = U) :-
+        //            Normalize(<T as Foo>::Assoc -> U)
+        //    }
+        //
+        // We used to generate an "elaboration" rule like this:
+        //
+        //    forall<T> {
+        //        T: Foo :-
+        //            exists<U> { ProjectionEq(<T as Foo>::Assoc = U) }
+        //    }
+        //
+        // but this caused problems with the recursive solver. In
+        // particular, whenever normalization is possible, we cannot
+        // solve that projection uniquely, since we can now elaborate
+        // `ProjectionEq` to fallback *or* normalize it. So instead we
+        // handle this kind of reasoning by expanding "projection
+        // equality" predicates (see `DomainGoal::expanded`).
 
         let binders: Vec<_> = self.parameter_kinds
             .iter()
@@ -1383,33 +1407,42 @@ impl ir::AssociatedTyDatum {
             }
         };
 
-        let fallback = {
+        //    forall<T> {
+        //        ProjectionEq(<T as Foo>::Assoc = (Foo::Assoc)<T>) :-
+        //            T: Foo
+        //    }
+        let fallback_clause = {
             // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
             // we would produce `(Iterator::Item)<T>`.
             let app = ir::ApplicationTy {
                 name: ir::TypeName::AssociatedType(self.id),
-                parameters,
+               parameters,
             };
-            let ty = ir::Ty::Apply(app);
+            let app_ty = ir::Ty::Apply(app);
 
             ir::ProgramClause {
                 implication: ir::Binders {
                     binders: binders.clone(),
                     value: ir::ProgramClauseImplication {
-                        consequence: ir::Normalize {
+                        consequence: ir::ProjectionEq {
                             projection: projection.clone(),
-                            ty,
+                            ty: app_ty,
                         }.cast(),
-                        conditions: vec![trait_ref.clone().cast()],
+                        conditions: vec![
+                            trait_ref.cast(),
+                        ],
                     },
                 },
-                fallback_clause: true,
             }
         };
 
-        let elaborate = {
+        //    forall<T> {
+        //        ProjectionEq(<T as Foo>::Assoc = U) :-
+        //            Normalize(<T as Foo>::Assoc -> U)
+        //    }
+        let normalize_clause = {
             // add new type parameter U
-            let mut binders = binders;
+            let mut binders = binders.clone();
             binders.push(ir::ParameterKind::Ty(()));
             let ty = ir::Ty::Var(binders.len() - 1);
 
@@ -1417,14 +1450,21 @@ impl ir::AssociatedTyDatum {
                 implication: ir::Binders {
                     binders,
                     value: ir::ProgramClauseImplication {
-                        consequence: trait_ref.cast(),
-                        conditions: vec![ir::Normalize { projection, ty }.cast()],
+                        consequence: ir::ProjectionEq {
+                            projection: projection.clone(),
+                            ty: ty.clone(),
+                        }.cast(),
+                        conditions: vec![
+                            ir::Normalize {
+                                projection: projection.clone(),
+                                ty,
+                            }.cast()
+                        ],
                     },
                 },
-                fallback_clause: false,
             }
         };
 
-        vec![fallback, elaborate]
+        vec![fallback_clause, normalize_clause]
     }
 }
