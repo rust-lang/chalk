@@ -702,7 +702,7 @@ impl Forest {
         mut ex_clause: ExClause, // Contains both A and G together.
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug_heading!(
+        info_heading!(
             "new_clause(goal_depth={:?}, ex_clause={:?}, minimums={:?}",
             goal_depth,
             self.infer.normalize_deep(&ex_clause),
@@ -1181,7 +1181,7 @@ impl Forest {
         ex_clause: ExClause, // Contains both A and G together.
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug_heading!(
+        info_heading!(
             "answer(goal_depth={:?}, ex_clause={:?}, minimums={:?})",
             goal_depth,
             self.infer.normalize_deep(&ex_clause),
@@ -1400,7 +1400,7 @@ impl Forest {
         completed_goal_depth: StackIndex,
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug_heading!(
+        info_heading!(
             "complete(completed_goal_depth={:?}, minimums={:?})",
             completed_goal_depth,
             minimums
@@ -1451,7 +1451,7 @@ impl Forest {
         completed_goal_depth: StackIndex,
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug!(
+        info!(
             "complete_pop(completed_goal_depth={:?}, minimums={:?}",
             completed_goal_depth,
             minimums
@@ -1549,7 +1549,7 @@ impl Forest {
         completed_goal_depth: StackIndex,
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug!(
+        info!(
             "complete_delay(completed_goal_depth={:?}, minimums={:?}",
             completed_goal_depth,
             minimums

@@ -111,7 +111,7 @@ impl Solver {
         goal: UCanonical<InEnvironment<Goal>>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
-        debug_heading!("solve_goal({:?})", goal);
+        info_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
         if let Some(value) = self.cache.get(&goal) {
@@ -381,8 +381,10 @@ impl Solver {
         clause: Binders<ProgramClauseImplication>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
-        debug_heading!(
-            "solve_via_implication(canonical_goal={:?}, clause={:?})",
+        info_heading!(
+            "solve_via_implication(\
+             \n    canonical_goal={:?},\
+             \n    clause={:?})",
             canonical_goal,
             clause
         );
