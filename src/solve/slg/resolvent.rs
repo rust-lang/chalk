@@ -45,6 +45,14 @@ pub(super) fn resolvent_pending(
     answer_table_goal: &CanonicalGoal,
     answer_subst: &CanonicalConstrainedSubst,
 ) -> Satisfiable<(StackIndex, ExClause)> {
+    debug_heading!("resolvent_pending(\
+                   \n    pending_ex_clause={:?},\
+                   \n    answer_table_goal={:?},\
+                   \n    answer_subst={:?})",
+                  pending_ex_clause,
+                  answer_table_goal,
+                  answer_subst);
+
     let PendingExClause {
         goal_depth,
         subst,
@@ -61,13 +69,17 @@ pub(super) fn resolvent_pending(
         subgoals,
     };
 
-    resolvent::resolvent_answer(
+    let result = resolvent::resolvent_answer(
         infer,
         &ex_clause,
         &selected_goal,
         answer_table_goal,
         answer_subst,
-    ).map(|r| (goal_depth, r))
+    ).map(|r| (goal_depth, r));
+
+    info!("resolvent = {:?}", result);
+
+    result
 }
 
 /// Applies the SLG resolvent algorithm to incorporate an answer
@@ -178,6 +190,16 @@ where
 {
     let environment = &selected_goal.environment;
 
+    debug_heading!(
+        "resolvent_unify(\
+         \n    selected_goal={:?},\
+         \n    consequence={:?},\
+         \n    conditions={:?})",
+        selected_goal,
+        consequence,
+        conditions,
+    );
+
     // Unify the selected literal Li with C'.
     let UnificationResult { goals, constraints } = {
         match infer.unify(&selected_goal.environment, selected_goal, consequence) {
@@ -189,6 +211,7 @@ where
     goal.constraints.extend(constraints);
 
     // One (minor) complication: unification for us sometimes yields further domain goals.
+    info!("subgoals={:?}", goals);
     goal.subgoals
         .extend(goals.into_iter().casted().map(Literal::Positive));
 
