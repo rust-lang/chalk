@@ -277,13 +277,44 @@ enum TruthValue {
     Unknown,
 }
 
+/// A link between two tables, indicating that when an answer is
+/// produced by one table, it should be fed into another table.
+/// For example, if we have a clause like
+///
+/// ```notrust
+/// foo(?X) :- bar(?X), baz(?X)
+/// ```
+///
+/// then `foo` might insert a `PendingExClause` into the table for
+/// `bar`, indicating that each value of `?X` could lead to an answer
+/// for `foo` (if `baz(?X)` is true).
 #[derive(Clone, Debug)]
 struct PendingExClause {
+    /// The `goal_depth` in the stack of `foo`, the blocked goal.
+    /// Note that `foo` must always be in the stack, since it is
+    /// actively awaiting an answer.
     goal_depth: StackIndex,
+
+    /// Answer substitution that the pending ex-clause carries along
+    /// with it. Maps from the free variables in the table goal to the
+    /// final values they wind up with.
     subst: Substitution,
+
+    /// The goal `bar(?X)` that `foo(?X)` was trying to solve;
+    /// typically equal to the table-goal in which this pending
+    /// ex-clause is contained, modulo the ordering of variables. This
+    /// is not *always* true, however, because the table goal may have
+    /// been truncated.
     selected_goal: InEnvironment<Goal>,
+
+    /// Any delayed literals in the ex-clause we were solving
+    /// when we blocked on `bar`.
     delayed_literals: Vec<DelayedLiteral>,
+
+    /// Constraints accumulated thus far in the ex-clause we were solving.
     constraints: Vec<InEnvironment<Constraint>>,
+
+    /// Further subgoals, like `baz(?X)`, that must be solved after `foo`.
     subgoals: Vec<Literal>,
 }
 
