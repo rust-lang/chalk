@@ -1944,7 +1944,6 @@ fn unselected_projection() {
 }
 
 #[test]
-#[should_panic] // FIXME
 fn overflow_universe() {
     test! {
         program {
@@ -1952,22 +1951,33 @@ fn overflow_universe() {
 
             trait Bar { }
 
+            // When asked to solve X: Bar, we will produce a
+            // requirement to solve !1: Bar. And then when asked to
+            // solve that, we'll produce a requirement to solve !2:
+            // Bar.  And so forth.
             forall<X> { X: Bar if forall<Y> { Y: Bar } }
         }
 
         goal {
             Foo: Bar
         } yields[SolverChoice::recursive()] {
-            // Currently the recursive solver overflows and panics on
-            // this example. Once the universe canonicalization work
-            // is completed, however, it should not.
-            ""
+            // The internal universe canonicalization in the recursive
+            // solver means that when we are asked to solve (e.g.)
+            // `!2: Bar`, we rewrite that to `!1: Bar`, identifying a
+            // cycle.
+            "No possible solution"
         } yields[SolverChoice::slg()] {
-            // The SLG solver currently runs forever; in this setup,
-            // it intentionally never gets a *chance* to run. With
-            // full universe canonicalization, though, it should not
-            // run forever.
-            ""
+            // The SLG solver here *currently* works a bit by
+            // accident, as it does not yet do universe
+            // canonicalization internally. However, we wind up with a table
+            // for the goal
+            //
+            //     forall<Y> { Y: Bar }
+            //
+            // and that table never produces any answers. But if we
+            // could induce a cycle !1: Bar to !2: Bar to !3: Bar etc,
+            // the SLG solver would loop forever. Ungreat.
+            "No possible solution"
         }
     }
 }
