@@ -6,11 +6,9 @@ use ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-mod shifted;
 mod shifter;
 mod subst;
 
-pub use self::shifted::Shifted;
 pub use self::shifter::Shifter;
 pub use self::subst::Subst;
 
