@@ -6,10 +6,9 @@ use ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-mod shifter;
+crate mod shift;
 mod subst;
 
-pub use self::shifter::Shifter;
 pub use self::subst::Subst;
 
 /// A "folder" is a transformer that can be used to make a copy of

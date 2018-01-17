@@ -2,6 +2,7 @@ use cast::Cast;
 use chalk_parse::ast;
 use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
+use fold::shift::Shift;
 use lalrpop_intern::InternedString;
 use solve::infer::var::InferenceVariable;
 use std::collections::{BTreeMap, HashMap, HashSet};

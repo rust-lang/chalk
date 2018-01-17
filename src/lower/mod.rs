@@ -5,6 +5,7 @@ use lalrpop_intern::intern;
 
 use cast::{Cast, Caster};
 use errors::*;
+use fold::shift::Shift;
 use ir;
 use solve::SolverChoice;
 

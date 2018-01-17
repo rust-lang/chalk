@@ -1,5 +1,6 @@
 use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
+use fold::shift::Shift;
 use ir::*;
 
 use super::{InferenceTable, InferenceVariable};

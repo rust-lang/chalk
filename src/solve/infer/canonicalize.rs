@@ -1,5 +1,6 @@
 use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
+use fold::shift::Shift;
 use ir::*;
 use std::cmp::max;
 
