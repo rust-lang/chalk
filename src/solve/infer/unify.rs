@@ -343,23 +343,11 @@ impl<'t> Zipper for Unifier<'t> {
         self.unify_lifetime_lifetime(a, b)
     }
 
-    fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
+    fn zip_binders<T>(&mut self, _: &Binders<T>, _: &Binders<T>) -> Fallible<()>
     where
         T: Zip + Fold<Result = T>,
     {
-        {
-            let a = &self.table.instantiate_binders_universally(a);
-            let b = &self.table.instantiate_binders_existentially(b);
-            let () = self.sub_unify(a, b)?;
-        }
-
-        {
-            let b = &self.table.instantiate_binders_universally(b);
-            let a = &self.table.instantiate_binders_existentially(a);
-            let () = self.sub_unify(a, b)?;
-        }
-
-        Ok(())
+        panic!("cannot unify things with binders (other than types)")
     }
 }
 

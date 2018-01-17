@@ -2164,18 +2164,6 @@ impl DepthFirstNumber {
     }
 }
 
-impl ExClause {
-    fn with_constraints<I>(mut self, constraints: I) -> Self
-    where
-        I: IntoIterator<Item = InEnvironment<Constraint>>,
-    {
-        self.constraints.extend(constraints);
-        self.constraints.sort();
-        self.constraints.dedup();
-        self
-    }
-}
-
 impl<T> Satisfiable<T> {
     fn yes(self) -> Option<T> {
         match self {

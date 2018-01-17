@@ -544,21 +544,9 @@ fn normalize_basic() {
                     <T as Iterator>::Item = <T as Iterator>::Item
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields {
             "Unique"
-        } // FIXME yields[SolverChoice::slg()] {
-        //    "Unique"
-        // }
-        //
-        // The SLG solver here goes into an infinite loop.
-        // The reason is interesting: we find a successful answer for
-        // the goal, but when we try to "unify" that answer with the
-        // goal, we wind up unifying `<T as Iterator>::Item = <T as
-        // Iterator>::Item` with itself, which winds up producing the
-        // same goal again as a subclause. This really shouldn't
-        // happen and it's a side-effect of the way we handle some
-        // parts of projection and normalization as part of
-        // unification. I'm not sure yet of the best fix for this.
+        }
 
         goal {
             forall<T> {
@@ -568,14 +556,10 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields {
             // True for `U = T`, of course, but also true for `U = Vec<T>`.
             "Ambiguous"
-        } // FIXME yields[SolverChoice::slg()] {
-        // "Ambiguous"
-        // }
-        //
-        // As above, the SLG solver here goes into a loop.
+        }
     }
 }
 
