@@ -45,13 +45,15 @@ pub(super) fn resolvent_pending(
     answer_table_goal: &CanonicalGoal,
     answer_subst: &CanonicalConstrainedSubst,
 ) -> Satisfiable<(StackIndex, ExClause)> {
-    debug_heading!("resolvent_pending(\
-                   \n    pending_ex_clause={:?},\
-                   \n    answer_table_goal={:?},\
-                   \n    answer_subst={:?})",
-                  pending_ex_clause,
-                  answer_table_goal,
-                  answer_subst);
+    debug_heading!(
+        "resolvent_pending(\
+         \n    pending_ex_clause={:?},\
+         \n    answer_table_goal={:?},\
+         \n    answer_subst={:?})",
+        pending_ex_clause,
+        answer_table_goal,
+        answer_subst
+    );
 
     let PendingExClause {
         goal_depth,
