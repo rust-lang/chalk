@@ -7,7 +7,8 @@ thread_local! {
 }
 
 pub fn with_current_program<OP, R>(op: OP) -> R
-    where OP: FnOnce(Option<&Arc<ir::Program>>) -> R
+where
+    OP: FnOnce(Option<&Arc<ir::Program>>) -> R,
 {
     PROGRAM.with(|prog_cell| {
         let p = prog_cell.borrow();
@@ -16,7 +17,8 @@ pub fn with_current_program<OP, R>(op: OP) -> R
 }
 
 pub fn set_current_program<OP, R>(p: &Arc<ir::Program>, op: OP) -> R
-    where OP: FnOnce() -> R
+where
+    OP: FnOnce() -> R,
 {
     PROGRAM.with(|prog_cell| {
         *prog_cell.borrow_mut() = Some(p.clone());

@@ -31,7 +31,8 @@ pub trait Zipper {
 
     /// Zips two values appearing beneath binders.
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
-        where T: Zip + Fold<Result = T>;
+    where
+        T: Zip + Fold<Result = T>;
 }
 
 impl<'f, Z: Zipper> Zipper for &'f mut Z {
@@ -44,7 +45,8 @@ impl<'f, Z: Zipper> Zipper for &'f mut Z {
     }
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
-        where T: Zip + Fold<Result = T>
+    where
+        T: Zip + Fold<Result = T>,
     {
         (**self).zip_binders(a, b)
     }
@@ -146,7 +148,7 @@ eq_zip!(Identifier);
 eq_zip!(QuantifierKind);
 
 macro_rules! struct_zip {
-    ($t:ident$([$($param:tt)*])* { $($field:ident),* } $($w:tt)*) => {
+    ($t:ident$([$($param:tt)*])* { $($field:ident),* $(,)* } $($w:tt)*) => {
         impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
             fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
                 // Validate that we have indeed listed all fields
@@ -161,18 +163,26 @@ macro_rules! struct_zip {
 }
 
 /// Generates a Zip impl that zips each field of the struct in turn.
-struct_zip!(TraitRef { trait_id, parameters });
+struct_zip!(TraitRef {
+    trait_id,
+    parameters,
+});
 struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
 struct_zip!(ApplicationTy { name, parameters });
-struct_zip!(ProjectionTy { associated_ty_id, parameters });
-struct_zip!(UnselectedProjectionTy { type_name, parameters });
+struct_zip!(ProjectionTy {
+    associated_ty_id,
+    parameters,
+});
+struct_zip!(UnselectedProjectionTy {
+    type_name,
+    parameters,
+});
 struct_zip!(Normalize { projection, ty });
 struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        assert_eq!(a.universe, b.universe); // it's wrong to zip 2 env's with distinct universes!
         assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
         Zip::zip_with(zipper, &a.clauses, &b.clauses)?;
         Ok(())
@@ -180,7 +190,7 @@ impl Zip for Environment {
 }
 
 macro_rules! enum_zip {
-    ($t:ident$([$($param:tt)*])* { $( $variant:ident ),* } $($w:tt)*) => {
+    ($t:ident$([$($param:tt)*])* { $( $variant:ident ),* $(,)* } $($w:tt)*) => {
         impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
             fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
                 match (a, b) {
@@ -203,7 +213,13 @@ macro_rules! enum_zip {
 /// variant, then zips each field of the variant in turn. Only works
 /// if all variants have a single parenthesized value right now.
 enum_zip!(PolarizedTraitRef { Positive, Negative });
-enum_zip!(DomainGoal { Implemented, Normalize, UnselectedNormalize, WellFormed, InScope });
+enum_zip!(DomainGoal {
+    Implemented,
+    Normalize,
+    UnselectedNormalize,
+    WellFormed,
+    InScope,
+});
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(WellFormed { Ty, TraitRef });
 
@@ -225,15 +241,9 @@ impl Zip for Goal {
                 Zip::zip_with(zipper, f_a, f_b)?;
                 Zip::zip_with(zipper, g_a, g_b)
             }
-            (&Goal::Not(ref f_a), &Goal::Not(ref f_b)) => {
-                Zip::zip_with(zipper, f_a, f_b)
-            }
-            (&Goal::Leaf(ref f_a), &Goal::Leaf(ref f_b)) => {
-                Zip::zip_with(zipper, f_a, f_b)
-            }
-            (&Goal::CannotProve(()), &Goal::CannotProve(())) => {
-                Ok(())
-            }
+            (&Goal::Not(ref f_a), &Goal::Not(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
+            (&Goal::Leaf(ref f_a), &Goal::Leaf(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
+            (&Goal::CannotProve(()), &Goal::CannotProve(())) => Ok(()),
             (&Goal::Quantified(..), _) |
             (&Goal::Implies(..), _) |
             (&Goal::And(..), _) |
@@ -250,12 +260,11 @@ impl Zip for Goal {
 impl<T: Zip, L: Zip> Zip for ParameterKind<T, L> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         match (a, b) {
-            (&ParameterKind::Ty(ref a), &ParameterKind::Ty(ref b)) =>
-                Zip::zip_with(zipper, a, b),
-            (&ParameterKind::Lifetime(ref a), &ParameterKind::Lifetime(ref b)) =>
-                Zip::zip_with(zipper, a, b),
-            (&ParameterKind::Ty(_), _) |
-            (&ParameterKind::Lifetime(_), _) => {
+            (&ParameterKind::Ty(ref a), &ParameterKind::Ty(ref b)) => Zip::zip_with(zipper, a, b),
+            (&ParameterKind::Lifetime(ref a), &ParameterKind::Lifetime(ref b)) => {
+                Zip::zip_with(zipper, a, b)
+            }
+            (&ParameterKind::Ty(_), _) | (&ParameterKind::Lifetime(_), _) => {
                 panic!("zipping things of mixed kind")
             }
         }

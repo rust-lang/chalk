@@ -7,17 +7,31 @@ use super::*;
 impl InferenceTable {
     /// Create a instance of `arg` where each variable is replaced with
     /// a fresh inference variable of suitable kind.
-    pub fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
-        where T: Fold + Debug,
-              U: IntoIterator<Item = ParameterKind<UniverseIndex>>
+    fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
+    where
+        T: Fold + Debug,
+        U: IntoIterator<Item = ParameterKind<UniverseIndex>>,
     {
         debug!("instantiate(arg={:?})", arg);
-        let vars: Vec<_> = universes.into_iter()
-            .map(|u| u.map(|u| self.new_variable(u)))
+        let vars: Vec<_> = universes
+            .into_iter()
+            .map(|param_kind| self.parameter_kind_to_parameter(param_kind))
             .collect();
         debug!("instantiate: vars={:?}", vars);
         let mut instantiator = Instantiator { vars };
         arg.fold_with(&mut instantiator, 0).expect("")
+    }
+
+    fn parameter_kind_to_parameter(
+        &mut self,
+        param_kind: ParameterKind<UniverseIndex>,
+    ) -> Parameter {
+        match param_kind {
+            ParameterKind::Ty(ui) => ParameterKind::Ty(self.new_variable(ui).to_ty()),
+            ParameterKind::Lifetime(ui) => {
+                ParameterKind::Lifetime(self.new_variable(ui).to_lifetime())
+            }
+        }
     }
 
     /// Given the binders from a canonicalized value C, returns a
@@ -30,16 +44,19 @@ impl InferenceTable {
 
         for (i, kind) in binders.iter().enumerate() {
             let param_infer_var = kind.map(|ui| self.new_variable(ui));
-            subst.insert(InferenceVariable::from_depth(i), param_infer_var.to_parameter());
+            subst.insert(
+                InferenceVariable::from_depth(i),
+                param_infer_var.to_parameter(),
+            );
         }
 
         subst
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.
-    pub fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>)
-                                    -> T::Result
-        where T: Fold + Debug,
+    pub fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
+    where
+        T: Fold + Debug,
     {
         self.instantiate(bound.binders.iter().cloned(), &bound.value)
     }
@@ -49,33 +66,89 @@ impl InferenceTable {
     /// `binders`. This is used to apply a universally quantified
     /// clause like `forall X, 'Y. P => Q`. Here the `binders`
     /// argument is referring to `X, 'Y`.
-    pub fn instantiate_in<U, T>(&mut self,
-                                universe: UniverseIndex,
-                                binders: U,
-                                arg: &T)
-                                -> T::Result
-        where T: Fold,
-              U: IntoIterator<Item = ParameterKind<()>>
+    pub fn instantiate_in<U, T>(
+        &mut self,
+        universe: UniverseIndex,
+        binders: U,
+        arg: &T,
+    ) -> T::Result
+    where
+        T: Fold,
+        U: IntoIterator<Item = ParameterKind<()>>,
     {
         self.instantiate(binders.into_iter().map(|pk| pk.map(|_| universe)), arg)
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
-    pub fn instantiate_binders_in<T>(&mut self,
-                                     universe: UniverseIndex,
-                                     arg: &Binders<T>)
-                                     -> T::Result
-        where T: Fold
+    #[allow(non_camel_case_types)]
+    pub fn instantiate_binders_existentially<T>(
+        &mut self,
+        arg: &impl BindersAndValue<Output = T>,
+    ) -> T::Result
+    where
+        T: Fold,
     {
-        self.instantiate_in(universe, arg.binders.iter().cloned(), &arg.value)
+        let (binders, value) = arg.split();
+        let max_universe = self.max_universe;
+        self.instantiate_in(max_universe, binders.iter().cloned(), value)
+    }
+
+    #[allow(non_camel_case_types)]
+    pub fn instantiate_binders_universally<T>(
+        &mut self,
+        arg: &impl BindersAndValue<Output = T>,
+    ) -> T::Result
+    where
+        T: Fold,
+    {
+        let (binders, value) = arg.split();
+        let parameters: Vec<_> = binders
+            .iter()
+            .map(|pk| {
+                let new_universe = self.new_universe();
+                match *pk {
+                    ParameterKind::Lifetime(()) => {
+                        let lt = Lifetime::ForAll(new_universe);
+                        ParameterKind::Lifetime(lt)
+                    }
+                    ParameterKind::Ty(()) => ParameterKind::Ty(Ty::Apply(ApplicationTy {
+                        name: TypeName::ForAll(new_universe),
+                        parameters: vec![],
+                    })),
+                }
+            })
+            .collect();
+        Subst::apply(&parameters, value)
+    }
+}
+
+pub trait BindersAndValue {
+    type Output;
+
+    fn split(&self) -> (&[ParameterKind<()>], &Self::Output);
+}
+
+impl<T> BindersAndValue for Binders<T> {
+    type Output = T;
+
+    fn split(&self) -> (&[ParameterKind<()>], &Self::Output) {
+        (&self.binders, &self.value)
+    }
+}
+
+impl<'a, T> BindersAndValue for (&'a Vec<ParameterKind<()>>, &'a T) {
+    type Output = T;
+
+    fn split(&self) -> (&[ParameterKind<()>], &Self::Output) {
+        (&self.0, &self.1)
     }
 }
 
 struct Instantiator {
-    vars: Vec<ParameterInferenceVariable>,
+    vars: Vec<Parameter>,
 }
 
-impl DefaultTypeFolder for Instantiator { }
+impl DefaultTypeFolder for Instantiator {}
 
 /// When we encounter a free variable (of any kind) with index
 /// `i`, we want to map anything in the first N binders to
@@ -85,19 +158,23 @@ impl DefaultTypeFolder for Instantiator { }
 impl ExistentialFolder for Instantiator {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         if depth < self.vars.len() {
-            Ok(self.vars[depth].assert_ty_ref().to_ty().up_shift(binders))
+            Ok(self.vars[depth].assert_ty_ref().up_shift(binders))
         } else {
             Ok(Ty::Var(depth + binders - self.vars.len())) // see comment above
         }
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_existential_lifetime(
+        &mut self,
+        depth: usize,
+        binders: usize,
+    ) -> Fallible<Lifetime> {
         if depth < self.vars.len() {
-            Ok(self.vars[depth].assert_lifetime_ref().to_lifetime().up_shift(binders))
+            Ok(self.vars[depth].assert_lifetime_ref().up_shift(binders))
         } else {
             Ok(Lifetime::Var(depth + binders - self.vars.len())) // see comment above
         }
     }
 }
 
-impl IdentityUniversalFolder for Instantiator { }
+impl IdentityUniversalFolder for Instantiator {}

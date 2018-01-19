@@ -1,20 +1,22 @@
-use std::fmt::{Debug, Display, Formatter, Error};
+use std::fmt::{Debug, Display, Error, Formatter};
 
 use super::*;
 
 impl Debug for ItemId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         with_current_program(|p| match p {
-            Some(prog) => {
-                if let Some(k) = prog.type_kinds.get(self) {
-                    write!(fmt, "{}", k.name)
-                } else if let Some(k) = prog.associated_ty_data.get(self) {
-                    write!(fmt, "({:?}::{})", k.trait_id, k.name)
-                } else {
-                    fmt.debug_struct("ItemId").field("index", &self.index).finish()
-                }
-            }
-            None => fmt.debug_struct("ItemId").field("index", &self.index).finish(),
+            Some(prog) => if let Some(k) = prog.type_kinds.get(self) {
+                write!(fmt, "{}", k.name)
+            } else if let Some(k) = prog.associated_ty_data.get(self) {
+                write!(fmt, "({:?}::{})", k.trait_id, k.name)
+            } else {
+                fmt.debug_struct("ItemId")
+                    .field("index", &self.index)
+                    .finish()
+            },
+            None => fmt.debug_struct("ItemId")
+                .field("index", &self.index)
+                .finish(),
         })
     }
 }
@@ -41,15 +43,6 @@ impl Debug for TypeName {
     }
 }
 
-impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
-            ParameterKind::Ty(ref n) => write!(fmt, "{:?}", n),
-            ParameterKind::Lifetime(ref n) => write!(fmt, "{:?}", n),
-        }
-    }
-}
-
 impl Debug for Ty {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
@@ -65,7 +58,10 @@ impl Debug for Ty {
 impl Debug for QuantifiedTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         // FIXME -- we should introduce some names or something here
-        let QuantifiedTy { num_binders, ref ty } = *self;
+        let QuantifiedTy {
+            num_binders,
+            ref ty,
+        } = *self;
         write!(fmt, "for<{}> {:?}", num_binders, ty)
     }
 }
@@ -87,11 +83,13 @@ impl Debug for ApplicationTy {
 
 impl Debug for TraitRef {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt,
-               "{:?} as {:?}{:?}",
-               self.parameters[0],
-               self.trait_id,
-               Angle(&self.parameters[1..]))
+        write!(
+            fmt,
+            "{:?} as {:?}{:?}",
+            self.parameters[0],
+            self.trait_id,
+            Angle(&self.parameters[1..])
+        )
     }
 }
 
@@ -101,31 +99,35 @@ impl Debug for ProjectionTy {
             Some(program) => {
                 let (associated_ty_data, trait_params, other_params) =
                     program.split_projection(self);
-                write!(fmt,
-                       "<{:?} as {:?}{:?}>::{}{:?}",
-                       &trait_params[0],
-                       associated_ty_data.trait_id,
-                       Angle(&trait_params[1..]),
-                       associated_ty_data.name,
-                       Angle(&other_params))
+                write!(
+                    fmt,
+                    "<{:?} as {:?}{:?}>::{}{:?}",
+                    &trait_params[0],
+                    associated_ty_data.trait_id,
+                    Angle(&trait_params[1..]),
+                    associated_ty_data.name,
+                    Angle(&other_params)
+                )
             }
-            None => {
-                write!(fmt,
-                       "({:?}){:?}",
-                       self.associated_ty_id,
-                       Angle(&self.parameters))
-            }
+            None => write!(
+                fmt,
+                "({:?}){:?}",
+                self.associated_ty_id,
+                Angle(&self.parameters)
+            ),
         })
     }
 }
 
 impl Debug for UnselectedProjectionTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt,
-               "{:?}::{}{:?}",
-               self.parameters[0],
-               self.type_name,
-               Angle(&self.parameters[1..]))
+        write!(
+            fmt,
+            "{:?}::{}{:?}",
+            self.parameters[0],
+            self.type_name,
+            Angle(&self.parameters[1..])
+        )
     }
 }
 
@@ -165,13 +167,13 @@ impl Debug for DomainGoal {
         match *self {
             DomainGoal::Normalize(ref n) => write!(fmt, "{:?}", n),
             DomainGoal::UnselectedNormalize(ref n) => write!(fmt, "{:?}", n),
-            DomainGoal::Implemented(ref n) => {
-                write!(fmt,
-                       "{:?}: {:?}{:?}",
-                       n.parameters[0],
-                       n.trait_id,
-                       Angle(&n.parameters[1..]))
-            }
+            DomainGoal::Implemented(ref n) => write!(
+                fmt,
+                "{:?}: {:?}{:?}",
+                n.parameters[0],
+                n.trait_id,
+                Angle(&n.parameters[1..])
+            ),
             DomainGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
             DomainGoal::InScope(ref n) => write!(fmt, "InScope({:?})", n),
         }
@@ -230,7 +232,10 @@ impl Debug for Goal {
 
 impl<T: Debug> Debug for Binders<T> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let Binders { ref binders, ref value } = *self;
+        let Binders {
+            ref binders,
+            ref value,
+        } = *self;
         if !binders.is_empty() {
             write!(fmt, "for<")?;
             for (index, binder) in binders.iter().enumerate() {
@@ -250,7 +255,7 @@ impl<T: Debug> Debug for Binders<T> {
 
 impl Debug for Environment {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "Env({:?}, {:?})", self.universe, self.clauses)
+        write!(fmt, "Env({:?})", self.clauses)
     }
 }
 
@@ -267,11 +272,13 @@ impl<T: Display> Display for Canonical<T> {
         if binders.is_empty() {
             write!(f, "{}", value)?;
         } else {
-            write!(f, "exists<")?;
+            write!(f, "for<")?;
 
-            for (i, ui) in binders.iter().enumerate() {
-                if i > 0 { write!(f, ",")?; }
-                write!(f, "{}", ui.into_inner())?;
+            for (i, pk) in binders.iter().enumerate() {
+                if i > 0 {
+                    write!(f, ",")?;
+                }
+                write!(f, "?{}", pk.into_inner())?;
             }
 
             write!(f, "> {{ {} }}", value)?;
@@ -281,23 +288,42 @@ impl<T: Display> Display for Canonical<T> {
     }
 }
 
+impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
+    default fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            ParameterKind::Ty(ref n) => write!(fmt, "Ty({:?})", n),
+            ParameterKind::Lifetime(ref n) => write!(fmt, "Lifetime({:?})", n),
+        }
+    }
+}
+
+impl Debug for Parameter {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            ParameterKind::Ty(ref n) => write!(fmt, "{:?}", n),
+            ParameterKind::Lifetime(ref n) => write!(fmt, "{:?}", n),
+        }
+    }
+}
+
 impl Display for ConstrainedSubst {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let ConstrainedSubst { subst, constraints } = self;
 
-        write!(f, "{}", subst)?;
-
-        if !constraints.is_empty() {
-            write!(f, " if {:?}", constraints)?;
-        }
-
-        Ok(())
+        write!(
+            f,
+            "substitution {}, lifetime constraints {:?}",
+            subst,
+            constraints,
+        )
     }
 }
 
 impl Display for Substitution {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let mut first = true;
+
+        write!(f, "[")?;
 
         for (var, value) in &self.parameters {
             if first {
@@ -309,7 +335,8 @@ impl Display for Substitution {
             write!(f, "{:?} := {:?}", var, value)?;
         }
 
+        write!(f, "]")?;
+
         Ok(())
     }
 }
-

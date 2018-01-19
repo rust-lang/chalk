@@ -4,7 +4,7 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::{SolverChoice, Solution};
+use solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -604,7 +604,7 @@ fn region_equality() {
         } yields {
             "Unique; substitution [],
                      lifetime constraints [
-                       (Env(U2, []) |- LifetimeEq('!2, '!1))
+                       (Env([]) |- LifetimeEq('!2, '!1))
                      ]"
         }
 
@@ -653,7 +653,7 @@ fn forall_equality() {
                 for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
         } yields {
             "Unique; substitution [], lifetime constraints [
-                 (Env(U2, []) |- LifetimeEq('!2, '!1))
+                 (Env([]) |- LifetimeEq('!2, '!1))
              ]"
         }
     }
@@ -1022,9 +1022,10 @@ fn normalize_under_binder() {
                 }
             }
         } yields[SolverChoice::recursive()] {
-            "Unique; substitution [?0 := Ref<'?0, I32>], lifetime constraints [
-                 (Env(U0, []) |- LifetimeEq('?0, '!1))
-             ]"
+            "Unique; for<?U0> { \
+             substitution [?0 := Ref<'?0, I32>], \
+             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             }"
         } yields[SolverChoice::slg()] {
             // FIXME -- fallback clauses not understood by SLG solver
             "Ambiguous"
@@ -1048,9 +1049,10 @@ fn unify_quantified_lifetimes() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := '?0], lifetime constraints [
-                 (Env(U1, []) |- LifetimeEq('?0, '!1))
-             ]"
+            "Unique; for<?U0> { \
+             substitution [?0 := '?0], \
+             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             }"
         }
 
         // Similar to the previous test, but indirect.
@@ -1063,10 +1065,17 @@ fn unify_quantified_lifetimes() {
                     }
                 }
             }
-        } yields {
-            "Unique; substitution [?0 := '?0, ?1 := '!1], lifetime constraints [
-                 (Env(U1, []) |- LifetimeEq('?0, '!1))
-             ]"
+        } yields[SolverChoice::recursive()] {
+            "Unique; for<?U0> { \
+             substitution [?0 := '?0, ?1 := '?0], \
+             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             }"
+        } yields[SolverChoice::slg()] {
+            // SLG yields this distinct, but equivalent, result
+            "Unique; for<?U0> { \
+             substitution [?0 := '?0, ?1 := '!1], \
+             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             }"
         }
     }
 }
@@ -1088,9 +1097,10 @@ fn equality_binder() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := '?0], lifetime constraints [
-                 (Env(U2, []) |- LifetimeEq('!2, '?0))
-             ]"
+            "Unique; for<?U1> { \
+                 substitution [?0 := '?0], \
+                 lifetime constraints [(Env([]) |- LifetimeEq('!2, '?0))] \
+             }"
         }
     }
 }
@@ -1111,7 +1121,10 @@ fn mixed_indices_unify() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := '?0, ?1 := ?1, ?2 := ?1], lifetime constraints []"
+            "Unique; for<?U0,?U0> { \
+                 substitution [?0 := '?0, ?1 := ?1, ?2 := ?1], \
+                 lifetime constraints []\
+             }"
         }
     }
 }
@@ -1135,7 +1148,10 @@ fn mixed_indices_match_program() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := '?0, ?1 := S, ?2 := S], lifetime constraints []"
+            "Unique; for<?U0> { \
+                 substitution [?0 := '?0, ?1 := S, ?2 := S], \
+                 lifetime constraints [] \
+             }"
         }
     }
 }
@@ -1243,7 +1259,7 @@ fn definite_guidance() {
                 T: Debug
             }
         } yields {
-            "Ambiguous; definite substitution [?0 := Foo<?0>]"
+            "Ambiguous; definite substitution for<?U0> { [?0 := Foo<?0>] }"
         }
     }
 }
@@ -1923,6 +1939,45 @@ fn unselected_projection() {
             }
         } yields {
             "Ambiguous; no inference guidance"
+        }
+    }
+}
+
+#[test]
+fn overflow_universe() {
+    test! {
+        program {
+            struct Foo { }
+
+            trait Bar { }
+
+            // When asked to solve X: Bar, we will produce a
+            // requirement to solve !1: Bar. And then when asked to
+            // solve that, we'll produce a requirement to solve !2:
+            // Bar.  And so forth.
+            forall<X> { X: Bar if forall<Y> { Y: Bar } }
+        }
+
+        goal {
+            Foo: Bar
+        } yields[SolverChoice::recursive()] {
+            // The internal universe canonicalization in the recursive
+            // solver means that when we are asked to solve (e.g.)
+            // `!2: Bar`, we rewrite that to `!1: Bar`, identifying a
+            // cycle.
+            "No possible solution"
+        } yields[SolverChoice::slg()] {
+            // The SLG solver here *currently* works a bit by
+            // accident, as it does not yet do universe
+            // canonicalization internally. However, we wind up with a table
+            // for the goal
+            //
+            //     forall<Y> { Y: Bar }
+            //
+            // and that table never produces any answers. But if we
+            // could induce a cycle !1: Bar to !2: Bar to !3: Bar etc,
+            // the SLG solver would loop forever. Ungreat.
+            "No possible solution"
         }
     }
 }

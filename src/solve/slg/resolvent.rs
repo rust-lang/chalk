@@ -102,7 +102,7 @@ fn resolvent_answer(
     // Apply the substitution from the answer to the original
     // table goal to yield our new `answer_goal`. This is needed
     // for unifying.
-    let answer_goal = answer_table_goal.instantiate_with_subst(&answer_subst);
+    let answer_goal = answer_table_goal.substitute(&answer_subst);
 
     // Perform the SLG resolvent unification.
     let resolvent = resolvent::resolvent_unify(
@@ -156,7 +156,7 @@ pub(super) fn resolvent_clause(
     let ProgramClauseImplication {
         consequence,
         conditions,
-    } = infer.instantiate_binders_in(environment.universe, clause);
+    } = infer.instantiate_binders_existentially(clause);
     let consequence: InEnvironment<DomainGoal> = InEnvironment::new(&environment, consequence);
 
     resolvent::resolvent_unify(infer, ex_clause, &goal, &consequence, conditions)
@@ -173,7 +173,7 @@ fn resolvent_unify<G>(
     consequence: &InEnvironment<G>,
     conditions: Vec<Goal>,
 ) -> Satisfiable<ExClause>
-    where
+where
     G: Zip,
 {
     let environment = &selected_goal.environment;
@@ -295,7 +295,7 @@ fn factor(
         constraints: answer_constraints,
     } = infer.instantiate_canonical(&canonical_answer_subst);
 
-    let answer_goal = answer_table_goal.instantiate_with_subst(&answer_subst);
+    let answer_goal = answer_table_goal.substitute(&answer_subst);
 
     // Unify the selected literal Li with C'.
     let UnificationResult { goals, constraints } = {

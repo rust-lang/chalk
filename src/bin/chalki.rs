@@ -1,9 +1,9 @@
 #![feature(match_default_bindings)]
 
-extern crate rustyline;
-extern crate chalk_parse;
 extern crate chalk;
+extern crate chalk_parse;
 extern crate docopt;
+extern crate rustyline;
 
 #[macro_use]
 extern crate serde_derive;
@@ -136,7 +136,8 @@ fn run() -> Result<()> {
 
 /// Repeatedly calls `f`, passing in each line, using the given promt, until EOF is received
 fn readline_loop<F>(rl: &mut rustyline::Editor<()>, prompt: &str, mut f: F) -> Result<()>
-    where F: FnMut(&mut rustyline::Editor<()>, &str)
+where
+    F: FnMut(&mut rustyline::Editor<()>, &str),
 {
     loop {
         match rl.readline(prompt) {
@@ -153,11 +154,12 @@ fn readline_loop<F>(rl: &mut rustyline::Editor<()>, prompt: &str, mut f: F) -> R
 }
 
 /// Process a single command
-fn process(args: &Args,
-           command: &str,
-           rl: &mut rustyline::Editor<()>,
-           prog: &mut Option<Program>)
-           -> Result<()> {
+fn process(
+    args: &Args,
+    command: &str,
+    rl: &mut rustyline::Editor<()>,
+    prog: &mut Option<Program>,
+) -> Result<()> {
     if command == "help" {
         help()
     } else if command == "program" {
@@ -211,24 +213,26 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     let peeled_goal = goal.into_peeled_goal();
     if args.flag_slg && args.flag_all_answers {
         match slg::solve_root_goal(args.flag_overflow_depth, &prog.env, &peeled_goal) {
-            Ok(slg::Answers { answers }) => {
-                if answers.is_empty() {
-                    println!("No answers found.");
-                } else {
-                    println!("{} answer(s) found:", answers.len());
-                    for answer in &answers {
-                        println!("- {}{}",
-                                 answer.subst,
-                                 if answer.ambiguous { " [ambiguous]" } else { "" });
-                    }
+            Ok(slg::Answers { answers }) => if answers.is_empty() {
+                println!("No answers found.");
+            } else {
+                println!("{} answer(s) found:", answers.len());
+                for answer in &answers {
+                    println!(
+                        "- {}{}",
+                        answer.subst,
+                        if answer.ambiguous { " [ambiguous]" } else { "" }
+                    );
                 }
-            }
+            },
             Err(error) => {
                 println!("exploration error: {:?}\n", error);
             }
         }
     } else {
-        match args.solver_choice().solve_root_goal(&prog.env, &peeled_goal) {
+        match args.solver_choice()
+            .solve_root_goal(&prog.env, &peeled_goal)
+        {
             Ok(Some(v)) => println!("{}\n", v),
             Ok(None) => println!("No possible solution.\n"),
             Err(e) => println!("Solver failed: {}", e),

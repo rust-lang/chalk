@@ -52,7 +52,7 @@
 use cast::{Cast, Caster};
 use ir::*;
 use ir::could_match::CouldMatch;
-use solve::infer::{InferenceTable, UnificationResult};
+use solve::infer::{InferenceTable, unify::UnificationResult};
 use solve::truncate::{truncate, Truncated};
 use stacker;
 use std::collections::{HashMap, HashSet};
@@ -84,9 +84,9 @@ mod test;
 pub fn solve_root_goal(
     max_size: usize,
     program: &Arc<ProgramEnvironment>,
-    root_goal: &CanonicalGoal,
+    root_goal: &UCanonicalGoal,
 ) -> Result<Answers, ExplorationError> {
-    Forest::solve_root_goal(max_size, program, root_goal)
+    Forest::solve_root_goal(max_size, program, &root_goal)
 }
 
 /// The **FOREST** of evaluation tracks all the in-progress work.
@@ -447,12 +447,13 @@ enum Satisfiable<T> {
 type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
 type CanonicalGoal = Canonical<InEnvironment<Goal>>;
 type CanonicalPendingExClause = Canonical<PendingExClause>;
+type UCanonicalGoal = UCanonical<InEnvironment<Goal>>;
 
 impl Forest {
     fn solve_root_goal(
         max_size: usize,
         program: &Arc<ProgramEnvironment>,
-        root_goal: &CanonicalGoal,
+        root_goal: &UCanonicalGoal,
     ) -> Result<Answers, ExplorationError> {
         let program = program.clone();
 
@@ -465,10 +466,12 @@ impl Forest {
             max_size: max_size,
         };
 
+        let root_goal = forest.infer.instantiate_universes(root_goal);
+
         let (root_table, root_table_depth) = forest.push_new_table(&root_goal, None, None);
         let mut minimums = forest.stack[root_table_depth].link;
         let subst = forest.infer.fresh_subst(&root_goal.binders);
-        let instantiated_goal = root_goal.instantiate_with_subst(&subst);
+        let instantiated_goal = root_goal.substitute(&subst);
         forest.subgoal(root_table_depth, instantiated_goal, subst, &mut minimums)?;
         Simplification::simplify(&mut forest.tables);
         Ok(forest.tables[root_table].export_answers())
@@ -609,16 +612,11 @@ impl Forest {
         while let Some(InEnvironment { environment, goal }) = pending_goals.pop() {
             match goal {
                 Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                    let InEnvironment { environment, goal } =
-                        subgoal.instantiate_universally(&environment);
-                    pending_goals.push(InEnvironment::new(&environment, *goal));
+                    let subgoal = infer.instantiate_binders_universally(&subgoal);
+                    pending_goals.push(InEnvironment::new(&environment, *subgoal));
                 }
                 Goal::Quantified(QuantifierKind::Exists, subgoal) => {
-                    let subgoal = infer.instantiate_in(
-                        environment.universe,
-                        subgoal.binders.iter().cloned(),
-                        &subgoal.value,
-                    );
+                    let subgoal = infer.instantiate_binders_existentially(&subgoal);
                     pending_goals.push(InEnvironment::new(&environment, *subgoal))
                 }
                 Goal::Implies(wc, subgoal) => {
@@ -771,11 +769,10 @@ impl Forest {
         // irrelevant answers (e.g., `Vec<Vec<u32>>: Sized`), they
         // will fail to unify with our selected goal, producing no
         // resolvent.
-        let universe = selected_goal.environment.universe;
         let Truncated {
             overflow: _,
             value: truncated_subgoal,
-        } = truncate(&mut self.infer, universe, self.max_size, &selected_goal);
+        } = truncate(&mut self.infer, self.max_size, &selected_goal);
 
         // Check if we need to create a new table and (if so) stop.
         let subgoal_table = match self.select_goal(
@@ -801,7 +798,9 @@ impl Forest {
             // a cycle.  We'll still use whatever answers have been
             // found so far, but we'll also register ourselves to
             // receive any new answers that will come later.
-            self.tables[subgoal_table].positives.push(pending_ex_clause.clone());
+            self.tables[subgoal_table]
+                .positives
+                .push(pending_ex_clause.clone());
             self.update_lookup(goal_depth, subgoal_depth, Sign::Positive, minimums);
         }
 
@@ -870,7 +869,7 @@ impl Forest {
 
         for (new_goal_depth, new_ex_clause) in new_ex_clauses {
             assert_eq!(new_goal_depth, goal_depth);
-            let new_ex_clause = self.truncate_returned(goal_depth, new_ex_clause);
+            let new_ex_clause = self.truncate_returned(new_ex_clause);
             self.new_clause(goal_depth, new_ex_clause, minimums)?;
         }
 
@@ -1102,8 +1101,7 @@ impl Forest {
         // variables that have been inverted, as discussed in the
         // prior paragraph above.) I just didn't feel like dealing
         // with it yet.
-        let universe = selected_goal.environment.universe;
-        if truncate(&mut self.infer, universe, self.max_size, &inverted_subgoal).overflow {
+        if truncate(&mut self.infer, self.max_size, &inverted_subgoal).overflow {
             return Err(ExplorationError::NegativeOverflow);
         }
 
@@ -1315,7 +1313,7 @@ impl Forest {
 
         // Process each of them in turn.
         for (pending_table, pending_ex_clause) in list {
-            let pending_ex_clause = self.truncate_returned(pending_table, pending_ex_clause);
+            let pending_ex_clause = self.truncate_returned(pending_ex_clause);
             self.new_clause(pending_table, pending_ex_clause, minimums)?;
         }
 
@@ -1645,7 +1643,7 @@ impl Forest {
     /// Used whenever we process an answer (whether new or cached) on
     /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
     /// the resolvent (or factor) if it has grown too large.
-    fn truncate_returned(&mut self, goal_depth: StackIndex, ex_clause: ExClause) -> ExClause {
+    fn truncate_returned(&mut self, ex_clause: ExClause) -> ExClause {
         // DIVERGENCE
         //
         // In the original RR paper, truncation is only applied
@@ -1666,13 +1664,7 @@ impl Forest {
         // aimed at giving us more times to eliminate this
         // ambiguous answer.
 
-        let goal_table = self.stack[goal_depth].table;
-        let universe = self.tables[goal_table]
-            .table_goal
-            .value
-            .environment
-            .universe;
-        match truncate(&mut self.infer, universe, self.max_size, &ex_clause.subst) {
+        match truncate(&mut self.infer, self.max_size, &ex_clause.subst) {
             // No need to truncate? Just propagate the resolvent back.
             Truncated {
                 overflow: false, ..
@@ -2208,9 +2200,9 @@ impl iter::Step for TableIndex {
 
 /// Because we recurse so deeply, we rely on stacker to
 /// avoid overflowing the stack.
-fn maybe_grow_stack<F,R>(op: F) -> R
-    where
-    F: FnOnce() -> R
+fn maybe_grow_stack<F, R>(op: F) -> R
+where
+    F: FnOnce() -> R,
 {
     // These numbers are somewhat randomly chosen to make tests work
     // well enough on my system. In particular, because we only test
@@ -2218,4 +2210,3 @@ fn maybe_grow_stack<F,R>(op: F) -> R
     // insufficient to prevent stack overflow. - nikomatsakis
     stacker::maybe_grow(256 * 1024, 2 * 1024 * 1024, op)
 }
-

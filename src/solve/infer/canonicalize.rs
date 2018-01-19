@@ -36,13 +36,17 @@ impl InferenceTable {
         let max_universe = q.max_universe;
 
         Canonicalized {
-            quantified: Canonical { value, binders: q.into_binders() },
+            quantified: Canonical {
+                value,
+                binders: q.into_binders(),
+            },
             max_universe,
             free_vars,
         }
     }
 }
 
+#[derive(Debug)]
 pub struct Canonicalized<T> {
     /// The canonicalized result.
     pub quantified: Canonical<T>,
@@ -62,7 +66,7 @@ impl<T> Canonicalized<T> {
     /// - a substitution S which, if applied to Q, would yield the original value V
     ///   from which Q was derived.
     ///
-    /// NB. You can apply a substitution with `Q.instantiate_with_subst(&S)`.
+    /// NB. You can apply a substitution with `Q.substitute(&S)`.
     pub fn into_quantified_and_subst(self) -> (Canonical<T>, Substitution) {
         let mut subst = Substitution::empty();
         for (i, free_var) in self.free_vars.iter().enumerate() {
@@ -81,7 +85,11 @@ struct Canonicalizer<'q> {
 
 impl<'q> Canonicalizer<'q> {
     fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
-        let Canonicalizer { table, free_vars, max_universe: _ } = self;
+        let Canonicalizer {
+            table,
+            free_vars,
+            max_universe: _,
+        } = self;
         free_vars
             .into_iter()
             .map(|p_v| p_v.map(|v| table.universe_of_unbound_var(v)))
@@ -100,7 +108,7 @@ impl<'q> Canonicalizer<'q> {
     }
 }
 
-impl<'q> DefaultTypeFolder for Canonicalizer<'q> { }
+impl<'q> DefaultTypeFolder for Canonicalizer<'q> {}
 
 impl<'q> UniversalFolder for Canonicalizer<'q> {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
@@ -108,7 +116,11 @@ impl<'q> UniversalFolder for Canonicalizer<'q> {
         Ok(TypeName::ForAll(universe).to_ty())
     }
 
-    fn fold_free_universal_lifetime(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_universal_lifetime(
+        &mut self,
+        universe: UniverseIndex,
+        _binders: usize,
+    ) -> Fallible<Lifetime> {
         self.max_universe = max(self.max_universe, universe);
         Ok(universe.to_lifetime())
     }
@@ -116,7 +128,11 @@ impl<'q> UniversalFolder for Canonicalizer<'q> {
 
 impl<'q> ExistentialFolder for Canonicalizer<'q> {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        debug_heading!("fold_free_existential_ty(depth={:?}, binders={:?})", depth, binders);
+        debug_heading!(
+            "fold_free_existential_ty(depth={:?}, binders={:?})",
+            depth,
+            binders
+        );
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_ty_var(var) {
             Some(ty) => {
@@ -136,8 +152,16 @@ impl<'q> ExistentialFolder for Canonicalizer<'q> {
         }
     }
 
-    fn fold_free_existential_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
-        debug_heading!("fold_free_existential_lifetime(depth={:?}, binders={:?})", depth, binders);
+    fn fold_free_existential_lifetime(
+        &mut self,
+        depth: usize,
+        binders: usize,
+    ) -> Fallible<Lifetime> {
+        debug_heading!(
+            "fold_free_existential_lifetime(depth={:?}, binders={:?})",
+            depth,
+            binders
+        );
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_lifetime_var(var) {
             Some(l) => {

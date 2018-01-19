@@ -70,7 +70,8 @@ impl InferenceTable {
     /// version would delay processing the negative goal (i.e., return
     /// `None`) until the second unification has occurred.)
     pub fn invert<T>(&mut self, value: &T) -> Option<T::Result>
-        where T: Fold<Result = T>
+    where
+        T: Fold<Result = T>,
     {
         let Canonicalized {
             free_vars,
@@ -85,14 +86,18 @@ impl InferenceTable {
 
         // If this contains free universal variables, replace them with existentials.
         assert!(quantified.binders.is_empty());
-        let inverted = quantified.value.fold_with(&mut Inverter::new(self), 0).unwrap();
+        let inverted = quantified
+            .value
+            .fold_with(&mut Inverter::new(self), 0)
+            .unwrap();
         Some(inverted)
     }
 
     /// As `negated_instantiated`, but canonicalizes before
     /// returning. Just a convenience function.
     pub fn invert_then_canonicalize<T>(&mut self, value: &T) -> Option<Canonical<T::Result>>
-        where T: Fold<Result = T>
+    where
+        T: Fold<Result = T>,
     {
         let snapshot = self.snapshot();
         let result = self.invert(value);
@@ -110,29 +115,41 @@ struct Inverter<'q> {
 
 impl<'q> Inverter<'q> {
     fn new(table: &'q mut InferenceTable) -> Self {
-        Inverter { table, inverted_ty: HashMap::new(), inverted_lifetime: HashMap::new() }
+        Inverter {
+            table,
+            inverted_ty: HashMap::new(),
+            inverted_lifetime: HashMap::new(),
+        }
     }
 }
 
-impl<'q> DefaultTypeFolder for Inverter<'q> { }
+impl<'q> DefaultTypeFolder for Inverter<'q> {}
 
 impl<'q> UniversalFolder for Inverter<'q> {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Fallible<Ty> {
         let table = &mut self.table;
-        Ok(self.inverted_ty
-           .entry(universe)
-           .or_insert_with(|| table.new_variable(universe))
-           .to_ty()
-           .up_shift(binders))
+        Ok(
+            self.inverted_ty
+                .entry(universe)
+                .or_insert_with(|| table.new_variable(universe))
+                .to_ty()
+                .up_shift(binders),
+        )
     }
 
-    fn fold_free_universal_lifetime(&mut self, universe: UniverseIndex, binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_universal_lifetime(
+        &mut self,
+        universe: UniverseIndex,
+        binders: usize,
+    ) -> Fallible<Lifetime> {
         let table = &mut self.table;
-        Ok(self.inverted_lifetime
-           .entry(universe)
-           .or_insert_with(|| table.new_variable(universe))
-           .to_lifetime()
-           .up_shift(binders))
+        Ok(
+            self.inverted_lifetime
+                .entry(universe)
+                .or_insert_with(|| table.new_variable(universe))
+                .to_lifetime()
+                .up_shift(binders),
+        )
     }
 }
 
@@ -141,7 +158,11 @@ impl<'q> ExistentialFolder for Inverter<'q> {
         panic!("should not be any existentials")
     }
 
-    fn fold_free_existential_lifetime(&mut self, _depth: usize, _binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_existential_lifetime(
+        &mut self,
+        _depth: usize,
+        _binders: usize,
+    ) -> Fallible<Lifetime> {
         panic!("should not be any existentials")
     }
 }

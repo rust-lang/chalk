@@ -45,7 +45,9 @@ impl InferenceVariable {
     /// `InferenceVariable::from_depth(D - B)`.
     pub fn from_depth(depth: usize) -> InferenceVariable {
         assert!(depth < u32::MAX as usize);
-        InferenceVariable { index: depth as u32 }
+        InferenceVariable {
+            index: depth as u32,
+        }
     }
 
     /// Convert this inference variable into a type. When using this
@@ -116,16 +118,16 @@ impl From<Lifetime> for InferenceValue {
 }
 
 impl UnifyValue for InferenceValue {
-    fn unify_values(a: &InferenceValue, b: &InferenceValue)
-                    -> Result<InferenceValue, (InferenceValue, InferenceValue)> {
+    fn unify_values(
+        a: &InferenceValue,
+        b: &InferenceValue,
+    ) -> Result<InferenceValue, (InferenceValue, InferenceValue)> {
         match (a, b) {
             (&InferenceValue::Unbound(ui_a), &InferenceValue::Unbound(ui_b)) => {
                 Ok(InferenceValue::Unbound(min(ui_a, ui_b)))
             }
             (bound @ &InferenceValue::Bound(_), &InferenceValue::Unbound(_)) |
-            (&InferenceValue::Unbound(_), bound @ &InferenceValue::Bound(_)) => {
-                Ok(bound.clone())
-            }
+            (&InferenceValue::Unbound(_), bound @ &InferenceValue::Bound(_)) => Ok(bound.clone()),
             (&InferenceValue::Bound(_), &InferenceValue::Bound(_)) => {
                 panic!("we should not be asked to unify two bound things")
             }

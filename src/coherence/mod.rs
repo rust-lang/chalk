@@ -1,7 +1,7 @@
 use petgraph::prelude::*;
 
 use errors::Result;
-use ir::{self, Program, ItemId};
+use ir::{self, ItemId, Program};
 use solve::SolverChoice;
 use std::sync::Arc;
 
@@ -24,7 +24,10 @@ impl Program {
     }
 
     // Build the forest of specialization relationships.
-    fn build_specialization_forest(&self, solver_choice: SolverChoice) -> Result<Graph<ItemId, ()>> {
+    fn build_specialization_forest(
+        &self,
+        solver_choice: SolverChoice,
+    ) -> Result<Graph<ItemId, ()>> {
         // The forest is returned as a graph but built as a GraphMap; this is
         // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraphMap::new();
@@ -41,11 +44,14 @@ impl Program {
 
     // Recursively set priorities for those node and all of its children.
     fn set_priorities(&mut self, idx: NodeIndex, forest: &Graph<ItemId, ()>, p: usize) {
-    
         // Get the impl datum recorded at this node and reset its priority
         {
-            let impl_id = forest.node_weight(idx).expect("index should be a valid index into graph");
-            let impl_datum = self.impl_data.get_mut(impl_id).expect("node should be valid impl id");
+            let impl_id = forest
+                .node_weight(idx)
+                .expect("index should be a valid index into graph");
+            let impl_datum = self.impl_data
+                .get_mut(impl_id)
+                .expect("node should be valid impl id");
             impl_datum.binders.value.specialization_priority = p;
         }
 

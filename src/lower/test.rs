@@ -5,7 +5,7 @@ use errors::*;
 use ir::*;
 use solve::SolverChoice;
 use std::sync::Arc;
-use super::{LowerProgram, LowerGoal};
+use super::{LowerGoal, LowerProgram};
 
 macro_rules! lowering_success {
     (program $program:tt) => {
@@ -164,7 +164,8 @@ fn type_parameter_bound() {
 
 #[test]
 fn assoc_tys() {
-    parse_and_lower("
+    parse_and_lower(
+        "
     struct String { }
     struct Char { }
 
@@ -173,23 +174,28 @@ fn assoc_tys() {
 
     trait Foo { }
     impl<X> Foo for <X as Iterator>::Item where X: Iterator { }
-    ")
-        .unwrap();
+    ",
+    ).unwrap();
 }
 
 #[test]
 fn goal_quantifiers() {
     let program = Arc::new(parse_and_lower("trait Foo<A, B> { }").unwrap());
-    let goal = parse_and_lower_goal(&program, "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}")
-        .unwrap();
+    let goal =
+        parse_and_lower_goal(&program, "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}").unwrap();
     set_current_program(&program, || {
-        assert_eq!(format!("{:?}", goal), "ForAll<type> { Exists<type> { ForAll<type> { ?0: Foo<?1, ?2> } } }");
+        assert_eq!(
+            format!("{:?}", goal),
+            "ForAll<type> { Exists<type> { ForAll<type> { ?0: Foo<?1, ?2> } } }"
+        );
     });
 }
 
 #[test]
 fn atc_accounting() {
-    let program = Arc::new(parse_and_lower("
+    let program = Arc::new(
+        parse_and_lower(
+            "
             struct Vec<T> { }
 
             trait Iterable {
@@ -201,11 +207,15 @@ fn atc_accounting() {
             }
 
             struct Iter<'a, T> { }
-    ").unwrap());
+    ",
+        ).unwrap(),
+    );
     set_current_program(&program, || {
         let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
         println!("{}", impl_text);
-        assert_eq!(&impl_text[..], r#"ImplDatum {
+        assert_eq!(
+            &impl_text[..],
+            r#"ImplDatum {
     binders: for<type> ImplDatumBound {
         trait_ref: Positive(
             Vec<?0> as Iterable
@@ -222,19 +232,24 @@ fn atc_accounting() {
         ],
         specialization_priority: 0
     }
-}"#);
-        let goal = parse_and_lower_goal(&program, "forall<X> { forall<'a> { forall<Y> { \
-                                                   X: Iterable<Iter<'a> = Y> } } }")
-            .unwrap();
+}"#
+        );
+        let goal = parse_and_lower_goal(
+            &program,
+            "forall<X> { forall<'a> { forall<Y> { \
+             X: Iterable<Iter<'a> = Y> } } }",
+        ).unwrap();
         let goal_text = format!("{:?}", goal);
         println!("{}", goal_text);
-        assert_eq!(goal_text, "ForAll<type> { ForAll<lifetime> { ForAll<type> { <?2 as Iterable>::Iter<'?1> ==> ?0 } } }");
+        assert_eq!(
+            goal_text,
+            "ForAll<type> { ForAll<lifetime> { ForAll<type> { <?2 as Iterable>::Iter<'?1> ==> ?0 } } }"
+        );
     });
 }
 
 #[test]
 fn check_parameter_kinds() {
-
     lowering_error! {
         program {
             struct Foo<'a> { }
@@ -447,7 +462,7 @@ fn nonoverlapping_assoc_types() {
 
 #[test]
 fn overlapping_assoc_types() {
-    lowering_error! {
+    lowering_success! {
         program {
             trait Foo<T> { }
 
@@ -457,9 +472,36 @@ fn overlapping_assoc_types() {
             struct Vec<T> { }
             impl<T> Iterator for Vec<T> { type Item = T; }
 
+            // This impl overlaps with the one below, but specializes it.
             impl<T> Foo<<T as Iterator>::Item> for T where T: Iterator { }
 
             impl<A, B> Foo<A> for B { }
+        }
+    }
+}
+
+#[test]
+fn overlapping_assoc_types_error() {
+    lowering_error! {
+        program {
+            trait Foo<T> { }
+
+            trait Bar { }
+
+            trait Iterator { type Item; }
+
+
+            struct Vec<T> { }
+            impl<T> Iterator for Vec<T> { type Item = T; }
+
+            struct Other { }
+            impl Bar for Other { }
+
+            // This impl overlaps with the one below, and does not
+            // specialize because don't know that bar holds.
+            impl<T> Foo<<T as Iterator>::Item> for T where T: Iterator { }
+
+            impl<A, B> Foo<A> for B where A: Bar { }
         } error_msg {
             "overlapping impls of trait \"Foo\""
         }

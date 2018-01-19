@@ -3,7 +3,7 @@ use chalk_parse::ast;
 use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;
-use solve::infer::InferenceVariable;
+use solve::infer::var::InferenceVariable;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
@@ -95,16 +95,12 @@ impl ProgramEnvironment {
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment {
-    pub universe: UniverseIndex,
     pub clauses: Vec<DomainGoal>,
 }
 
 impl Environment {
     pub fn new() -> Arc<Environment> {
-        Arc::new(Environment {
-            universe: UniverseIndex::root(),
-            clauses: vec![],
-        })
+        Arc::new(Environment { clauses: vec![] })
     }
 
     pub fn add_clauses<I>(&self, clauses: I) -> Arc<Environment>
@@ -114,14 +110,6 @@ impl Environment {
         let mut env = self.clone();
         let env_clauses: HashSet<_> = env.clauses.into_iter().chain(clauses).collect();
         env.clauses = env_clauses.into_iter().collect();
-        Arc::new(env)
-    }
-
-    pub fn new_universe(&self) -> Arc<Environment> {
-        let mut env = self.clone();
-        env.universe = UniverseIndex {
-            counter: self.universe.counter + 1,
-        };
         Arc::new(env)
     }
 }
@@ -192,8 +180,10 @@ pub struct UniverseIndex {
 }
 
 impl UniverseIndex {
+    pub const ROOT: UniverseIndex = UniverseIndex { counter: 0 };
+
     pub fn root() -> UniverseIndex {
-        UniverseIndex { counter: 0 }
+        Self::ROOT
     }
 
     pub fn can_see(self, ui: UniverseIndex) -> bool {
@@ -206,6 +196,12 @@ impl UniverseIndex {
 
     pub fn to_lifetime(self) -> Lifetime {
         Lifetime::ForAll(self)
+    }
+
+    pub fn next(self) -> UniverseIndex {
+        UniverseIndex {
+            counter: self.counter + 1,
+        }
     }
 }
 
@@ -333,12 +329,9 @@ pub enum Ty {
 impl Ty {
     pub fn as_projection_ty_enum(&self) -> ProjectionTyRefEnum {
         match *self {
-            Ty::Projection(ref proj) =>
-                ProjectionTyEnum::Selected(proj),
-            Ty::UnselectedProjection(ref proj) =>
-                ProjectionTyEnum::Unselected(proj),
-            _ =>
-                panic!("{:?} is not a projection", self),
+            Ty::Projection(ref proj) => ProjectionTyEnum::Selected(proj),
+            Ty::UnselectedProjection(ref proj) => ProjectionTyEnum::Unselected(proj),
+            _ => panic!("{:?} is not a projection", self),
         }
     }
 }
@@ -637,66 +630,6 @@ pub struct Canonical<T> {
     pub binders: Vec<ParameterKind<UniverseIndex>>,
 }
 
-impl Canonical<InEnvironment<LeafGoal>> {
-    pub fn into_reduced_goal(self) -> FullyReducedGoal {
-        let Canonical {
-            value: InEnvironment { goal, environment },
-            binders,
-        } = self;
-        match goal {
-            LeafGoal::EqGoal(goal) => {
-                let canonical = Canonical {
-                    value: InEnvironment { goal, environment },
-                    binders,
-                };
-                FullyReducedGoal::EqGoal(canonical)
-            }
-            LeafGoal::DomainGoal(goal) => {
-                let canonical = Canonical {
-                    value: InEnvironment { goal, environment },
-                    binders,
-                };
-                FullyReducedGoal::DomainGoal(canonical)
-            }
-        }
-    }
-}
-
-/// A goal that has been fully broken down into leaf form, and canonicalized
-/// with an environment. These are the goals we do "real work" on.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum FullyReducedGoal {
-    EqGoal(Canonical<InEnvironment<EqGoal>>),
-    DomainGoal(Canonical<InEnvironment<DomainGoal>>),
-}
-
-impl FullyReducedGoal {
-    pub fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
-        match self {
-            FullyReducedGoal::EqGoal(Canonical { binders, .. }) |
-            FullyReducedGoal::DomainGoal(Canonical { binders, .. }) => binders,
-        }
-    }
-
-    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
-    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
-        if let FullyReducedGoal::DomainGoal(Canonical {
-            value:
-                InEnvironment {
-                    goal: DomainGoal::Implemented(ref tr),
-                    ..
-                },
-            ..
-        }) = *self
-        {
-            let trait_datum = &program.trait_data[&tr.trait_id];
-            return trait_datum.binders.value.flags.auto;
-        }
-
-        false
-    }
-}
-
 impl<T> Canonical<T> {
     /// Maps the contents using `op`, but preserving the binders.
     ///
@@ -730,11 +663,53 @@ impl<T> Canonical<T> {
         result.quantified
     }
 
-    pub fn instantiate_with_subst(&self, mut subst: &Substitution) -> T::Result
+    /// Substitutes the values from `subst` in place of the values
+    /// bound by the binders in this canonical; the substitution should be
+    /// complete.
+    pub fn substitute(&self, mut subst: &Substitution) -> T::Result
     where
         T: Fold,
     {
+        assert_eq!(
+            subst.parameters.len(),
+            self.binders.len(),
+            "substitute invoked with incomplete substitution",
+        );
         self.value.fold_with(&mut subst, 0).unwrap()
+    }
+}
+
+/// A "universe canonical" value. This is a wrapper around a
+/// `Canonical`, indicating that the universes within have been
+/// "renumbered" to start from 0 and collapse unimportant
+/// distinctions.
+///
+/// To produce one of these values, use the `u_canonicalize` method.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct UCanonical<T> {
+    pub canonical: Canonical<T>,
+    pub universes: usize,
+}
+
+impl<T> UCanonical<T> {
+    pub fn substitute(&self, subst: &Substitution) -> T::Result
+    where
+        T: Fold,
+    {
+        self.canonical.substitute(subst)
+    }
+}
+
+impl UCanonical<InEnvironment<Goal>> {
+    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
+    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+        match &self.canonical.value.goal {
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Implemented(tr))) => {
+                let trait_datum = &program.trait_data[&tr.trait_id];
+                trait_datum.binders.value.flags.auto
+            }
+            _ => false,
+        }
     }
 }
 
@@ -782,7 +757,7 @@ impl Goal {
     /// variables. Assumes that this goal is a "closed goal" which
     /// does not -- at present -- contain any variables. Useful for
     /// REPLs and tests but not much else.
-    pub fn into_peeled_goal(self) -> Canonical<InEnvironment<Goal>> {
+    pub fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal>> {
         use solve::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let peeled_goal = {
@@ -791,17 +766,12 @@ impl Goal {
                 let InEnvironment { environment, goal } = env_goal;
                 match goal {
                     Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                        let InEnvironment { environment, goal } =
-                            subgoal.instantiate_universally(&environment);
-                        env_goal = InEnvironment::new(&environment, *goal);
+                        let subgoal = infer.instantiate_binders_universally(&subgoal);
+                        env_goal = InEnvironment::new(&environment, *subgoal);
                     }
 
                     Goal::Quantified(QuantifierKind::Exists, subgoal) => {
-                        let subgoal = infer.instantiate_in(
-                            environment.universe,
-                            subgoal.binders.iter().cloned(),
-                            &subgoal.value,
-                        );
+                        let subgoal = infer.instantiate_binders_existentially(&subgoal);
                         env_goal = InEnvironment::new(&environment, *subgoal);
                     }
 
@@ -814,7 +784,8 @@ impl Goal {
                 }
             }
         };
-        infer.canonicalize(&peeled_goal).quantified
+        let canonical = infer.canonicalize(&peeled_goal).quantified;
+        infer.u_canonicalize(&canonical).quantified
     }
 
     /// Given a goal with no free variables (a "closed" goal), creates
@@ -826,11 +797,12 @@ impl Goal {
     /// # Panics
     ///
     /// Will panic if this goal does in fact contain free variables.
-    pub fn into_closed_goal(self) -> Canonical<InEnvironment<Goal>> {
+    pub fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>> {
         use solve::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(), self);
-        infer.canonicalize(&env_goal).quantified
+        let canonical_goal = infer.canonicalize(&env_goal).quantified;
+        infer.u_canonicalize(&canonical_goal).quantified
     }
 }
 
@@ -866,7 +838,9 @@ pub struct Substitution {
 
 impl Substitution {
     pub fn empty() -> Substitution {
-        Substitution { parameters: BTreeMap::new() }
+        Substitution {
+            parameters: BTreeMap::new(),
+        }
     }
 
     /// Add `var := value` to the substutition.
@@ -874,32 +848,14 @@ impl Substitution {
     /// # Panics
     ///
     /// If a mapping for `var` is already present.
-    pub fn insert(&mut self,
-                  var: InferenceVariable,
-                  value: Parameter)
-    {
+    pub fn insert(&mut self, var: InferenceVariable, value: Parameter) {
         let old_value = self.parameters.insert(var, value);
-        assert!(old_value.is_none(),
-                "already had a key for {:?} in subst (old_value={:?})",
-                var, old_value);
-    }
-
-    /// Construct an identity substitution given a set of binders
-    pub fn from_binders(binders: &[ParameterKind<UniverseIndex>]) -> Self {
-        let parameters = binders
-            .iter()
-            .enumerate()
-            .map(|(index, kind)| {
-                let var = InferenceVariable::from_depth(index);
-                let value = match kind {
-                    ParameterKind::Ty(_) => ParameterKind::Ty(var.to_ty()),
-                    ParameterKind::Lifetime(_) => ParameterKind::Lifetime(var.to_lifetime()),
-                };
-                (var, value)
-            })
-            .collect();
-
-        Substitution { parameters }
+        assert!(
+            old_value.is_none(),
+            "already had a key for {:?} in subst (old_value={:?})",
+            var,
+            old_value
+        );
     }
 
     pub fn is_empty(&self) -> bool {

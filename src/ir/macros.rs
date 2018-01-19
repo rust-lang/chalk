@@ -53,6 +53,10 @@ macro_rules! lifetime {
         ::ir::Lifetime::Var($b)
     };
 
+    (skol $b:expr) => {
+        ::ir::Lifetime::ForAll(UniverseIndex { counter: $b })
+    };
+
     (expr $b:expr) => {
         $b.clone()
     };
@@ -67,4 +71,3 @@ macro_rules! ty_name {
     ((item $n:expr)) => { ::ir::TypeName::ItemId(ItemId { index: $n }) };
     ((skol $n:expr)) => { ::ir::TypeName::ForAll(UniverseIndex { counter: $n }) }
 }
-

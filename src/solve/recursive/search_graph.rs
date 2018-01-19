@@ -1,5 +1,4 @@
 use fallible::*;
-use ir::FullyReducedGoal;
 use solve::Solution;
 use std::collections::HashMap;
 use std::ops::Index;
@@ -7,11 +6,11 @@ use std::ops::IndexMut;
 use std::ops::Add;
 use std::usize;
 
-use super::Minimums;
+use super::{UCanonicalGoal, Minimums};
 use super::stack::StackDepth;
 
 pub(super) struct SearchGraph {
-    indices: HashMap<FullyReducedGoal, DepthFirstNumber>,
+    indices: HashMap<UCanonicalGoal, DepthFirstNumber>,
     nodes: Vec<Node>,
 }
 
@@ -21,7 +20,7 @@ pub(super) struct DepthFirstNumber {
 }
 
 pub(super) struct Node {
-    pub goal: FullyReducedGoal,
+    pub goal: UCanonicalGoal,
 
     pub solution: Fallible<Solution>,
 
@@ -44,7 +43,7 @@ impl SearchGraph {
         }
     }
 
-    pub fn lookup(&self, goal: &FullyReducedGoal) -> Option<DepthFirstNumber> {
+    pub fn lookup(&self, goal: &UCanonicalGoal) -> Option<DepthFirstNumber> {
         self.indices.get(goal).cloned()
     }
 
@@ -54,7 +53,7 @@ impl SearchGraph {
     /// - stack depth as given
     /// - links set to its own DFN
     /// - solution is initially `NoSolution`
-    pub fn insert(&mut self, goal: &FullyReducedGoal, stack_depth: StackDepth) -> DepthFirstNumber {
+    pub fn insert(&mut self, goal: &UCanonicalGoal, stack_depth: StackDepth) -> DepthFirstNumber {
         let dfn = DepthFirstNumber {
             index: self.nodes.len(),
         };
@@ -82,7 +81,7 @@ impl SearchGraph {
     pub fn move_to_cache(
         &mut self,
         dfn: DepthFirstNumber,
-        cache: &mut HashMap<FullyReducedGoal, Fallible<Solution>>,
+        cache: &mut HashMap<UCanonicalGoal, Fallible<Solution>>,
     ) {
         debug!("move_to_cache(dfn={:?})", dfn);
         self.indices.retain(|_key, value| *value < dfn);
@@ -117,6 +116,8 @@ impl Add<usize> for DepthFirstNumber {
     type Output = DepthFirstNumber;
 
     fn add(self, v: usize) -> DepthFirstNumber {
-        DepthFirstNumber { index: self.index + v }
+        DepthFirstNumber {
+            index: self.index + v,
+        }
     }
 }

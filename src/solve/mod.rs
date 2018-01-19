@@ -66,15 +66,19 @@ impl Solution {
     pub fn combine(self, other: Solution) -> Solution {
         use self::Guidance::*;
 
-        if self == other { return self }
+        if self == other {
+            return self;
+        }
 
         // Otherwise, always downgrade to Ambig:
 
         let guidance = match (self.into_guidance(), other.into_guidance()) {
-            (Definite(ref subst1), Definite(ref subst2)) if subst1 == subst2 =>
-                Definite(subst1.clone()),
-            (Suggested(ref subst1), Suggested(ref subst2)) if subst1 == subst2 =>
-                Suggested(subst1.clone()),
+            (Definite(ref subst1), Definite(ref subst2)) if subst1 == subst2 => {
+                Definite(subst1.clone())
+            }
+            (Suggested(ref subst1), Suggested(ref subst2)) if subst1 == subst2 => {
+                Suggested(subst1.clone())
+            }
             _ => Unknown,
         };
         Solution::Ambig(guidance)
@@ -91,7 +95,9 @@ impl Solution {
     pub fn favor_over(self, other: Solution) -> Solution {
         use self::Guidance::*;
 
-        if self == other { return self }
+        if self == other {
+            return self;
+        }
 
         // Otherwise, always downgrade to Ambig:
 
@@ -109,7 +115,9 @@ impl Solution {
     pub fn fallback_to(self, other: Solution) -> Solution {
         use self::Guidance::*;
 
-        if self == other { return self }
+        if self == other {
+            return self;
+        }
 
         if let Solution::Ambig(guidance) = self {
             match guidance {
@@ -124,12 +132,10 @@ impl Solution {
     /// View this solution purely in terms of type inference guidance
     pub fn into_guidance(self) -> Guidance {
         match self {
-            Solution::Unique(constrained) => {
-                Guidance::Definite(Canonical {
-                    value: constrained.value.subst,
-                    binders: constrained.binders,
-                })
-            }
+            Solution::Unique(constrained) => Guidance::Definite(Canonical {
+                value: constrained.value.subst,
+                binders: constrained.binders,
+            }),
             Solution::Ambig(guidance) => guidance,
         }
     }
@@ -144,7 +150,10 @@ impl Solution {
                     subst: canonical.value.clone(),
                     constraints: vec![],
                 };
-                Some(Canonical { value, binders: canonical.binders.clone() })
+                Some(Canonical {
+                    value,
+                    binders: canonical.binders.clone(),
+                })
             }
             Solution::Ambig(_) => None,
         }
@@ -169,29 +178,27 @@ impl Solution {
 
     pub fn is_unique(&self) -> bool {
         match *self {
-            Solution::Unique(..)    => true,
-            _                       => false,
+            Solution::Unique(..) => true,
+            _ => false,
         }
     }
 }
 
 impl fmt::Display for Solution {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            Solution::Unique(ref constrained) => {
-                write!(f, "Unique; substitution [{}], lifetime constraints {:?}",
-                       &constrained.value.subst,
-                       &constrained.value.constraints)
+        match self {
+            Solution::Unique(constrained) => write!(
+                f,
+                "Unique; {}",
+                constrained,
+            ),
+            Solution::Ambig(Guidance::Definite(subst)) => {
+                write!(f, "Ambiguous; definite substitution {}", subst)
             }
-            Solution::Ambig(Guidance::Definite(ref subst)) => {
-                write!(f, "Ambiguous; definite substitution [{}]", &subst.value)
+            Solution::Ambig(Guidance::Suggested(subst)) => {
+                write!(f, "Ambiguous; suggested substitution {}", subst)
             }
-            Solution::Ambig(Guidance::Suggested(ref subst)) => {
-                write!(f, "Ambiguous; suggested substitution [{}]", &subst.value)
-            }
-            Solution::Ambig(Guidance::Unknown) => {
-                write!(f, "Ambiguous; no inference guidance")
-            }
+            Solution::Ambig(Guidance::Unknown) => write!(f, "Ambiguous; no inference guidance"),
         }
     }
 }
@@ -199,7 +206,10 @@ impl fmt::Display for Solution {
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum SolverChoice {
     /// Chalk's recursive solving strategy.
-    Recursive { overflow_depth: usize, caching_enabled: bool },
+    Recursive {
+        overflow_depth: usize,
+        caching_enabled: bool,
+    },
 
     /// Run the SLG solver, producing a Solution.
     SLG { max_size: usize },
@@ -217,23 +227,26 @@ impl SolverChoice {
     ///   although `solution` may reflect ambiguity and unknowns.
     /// - `Err` if there was an internal error solving the goal, which does not
     ///   reflect success nor failure.
-    pub fn solve_root_goal(self,
-                           env: &Arc<ProgramEnvironment>,
-                           canonical_goal: &Canonical<InEnvironment<Goal>>)
-                           -> ::errors::Result<Option<Solution>>
-    {
+    pub fn solve_root_goal(
+        self,
+        env: &Arc<ProgramEnvironment>,
+        canonical_goal: &UCanonical<InEnvironment<Goal>>,
+    ) -> ::errors::Result<Option<Solution>> {
         match self {
-            SolverChoice::Recursive { overflow_depth, caching_enabled } => {
+            SolverChoice::Recursive {
+                overflow_depth,
+                caching_enabled,
+            } => {
                 let mut solver = recursive::Solver::new(env, overflow_depth, caching_enabled);
                 match solver.solve_root_goal(canonical_goal) {
-                        Ok(v) => Ok(Some(v)),
-                        Err(_) => Ok(None),
+                    Ok(v) => Ok(Some(v)),
+                    Err(_) => Ok(None),
                 }
             }
 
             SolverChoice::SLG { max_size } => {
-                match slg::solve_root_goal(max_size, env, canonical_goal) {
-                    Ok(answers) => Ok(answers.into_solution(canonical_goal)),
+                match slg::solve_root_goal(max_size, env, &canonical_goal) {
+                    Ok(answers) => Ok(answers.into_solution(&canonical_goal.canonical)),
                     Err(err) => bail!("Exploration error: {:?}", err),
                 }
             }
@@ -250,9 +263,7 @@ impl SolverChoice {
 
     /// Returns the default SLG parameters.
     pub fn slg() -> Self {
-        SolverChoice::SLG {
-            max_size: 10
-        }
+        SolverChoice::SLG { max_size: 10 }
     }
 }
 

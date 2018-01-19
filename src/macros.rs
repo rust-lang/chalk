@@ -59,7 +59,7 @@ pub fn dump(string: &str) {
 }
 
 pub struct Indent {
-    _dummy: ()
+    _dummy: (),
 }
 
 impl Indent {
