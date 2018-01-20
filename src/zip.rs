@@ -178,6 +178,7 @@ struct_zip!(UnselectedProjectionTy {
     parameters,
 });
 struct_zip!(Normalize { projection, ty });
+struct_zip!(ProjectionEq { projection, ty });
 struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
 
@@ -216,6 +217,7 @@ enum_zip!(PolarizedTraitRef { Positive, Negative });
 enum_zip!(DomainGoal {
     Implemented,
     Normalize,
+    ProjectionEq,
     UnselectedNormalize,
     WellFormed,
     InScope,

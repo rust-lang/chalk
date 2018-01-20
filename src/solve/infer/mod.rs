@@ -1,5 +1,6 @@
 use ena::unify as ena;
 use ir::*;
+use fold::shift::Shift;
 
 pub mod canonicalize;
 pub mod ucanonicalize;

@@ -152,13 +152,19 @@ impl<'a, T: Debug> Debug for Angle<'a, T> {
 
 impl Debug for Normalize {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?} ==> {:?}", self.projection, self.ty)
+        write!(fmt, "Normalize({:?} -> {:?})", self.projection, self.ty)
+    }
+}
+
+impl Debug for ProjectionEq {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "ProjectionEq({:?} = {:?})", self.projection, self.ty)
     }
 }
 
 impl Debug for UnselectedNormalize {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?} ==> {:?}", self.projection, self.ty)
+        write!(fmt, "UnselectedNormalize({:?} -> {:?})", self.projection, self.ty)
     }
 }
 
@@ -166,10 +172,11 @@ impl Debug for DomainGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             DomainGoal::Normalize(ref n) => write!(fmt, "{:?}", n),
+            DomainGoal::ProjectionEq(ref n) => write!(fmt, "{:?}", n),
             DomainGoal::UnselectedNormalize(ref n) => write!(fmt, "{:?}", n),
             DomainGoal::Implemented(ref n) => write!(
                 fmt,
-                "{:?}: {:?}{:?}",
+                "({:?}: {:?}{:?})",
                 n.parameters[0],
                 n.trait_id,
                 Angle(&n.parameters[1..])

@@ -2,6 +2,7 @@ use cast::Cast;
 use chalk_parse::ast;
 use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
+use fold::shift::Shift;
 use lalrpop_intern::InternedString;
 use solve::infer::var::InferenceVariable;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -477,6 +478,7 @@ impl PolarizedTraitRef {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DomainGoal {
     Implemented(TraitRef),
+    ProjectionEq(ProjectionEq),
     Normalize(Normalize),
     UnselectedNormalize(UnselectedNormalize),
     WellFormed(WellFormed),
@@ -495,25 +497,25 @@ impl DomainGoal {
                 },
                 binders: vec![],
             },
-            fallback_clause: false,
         }
     }
 
     /// A clause of the form (T: Foo) expands to (T: Foo), WF(T: Foo).
-    /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), WF(T: Foo).
+    /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), T: Foo, WF(T: Foo).
     pub fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
         let mut expanded = vec![];
         match self {
             DomainGoal::Implemented(ref trait_ref) => {
                 expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast())
             }
-            DomainGoal::Normalize(Normalize { ref projection, .. }) => {
+            DomainGoal::ProjectionEq(ProjectionEq { ref projection, .. }) => {
                 let (associated_ty_data, trait_params, _) = program.split_projection(&projection);
                 let trait_ref = TraitRef {
                     trait_id: associated_ty_data.trait_id,
                     parameters: trait_params.to_owned(),
                 };
-                expanded.push(WellFormed::TraitRef(trait_ref).cast());
+                expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast());
+                expanded.push(trait_ref.cast());
             }
             _ => (),
         };
@@ -543,28 +545,41 @@ pub enum WellFormed {
     TraitRef(TraitRef),
 }
 
+/// Proves that the given projection **normalizes** to the given
+/// type. A projection `T::Foo` normalizes to the type `U` if we can
+/// **match it to an impl** and that impl has a `type Foo = V` where
+/// `U = V`.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Normalize {
     pub projection: ProjectionTy,
     pub ty: Ty,
 }
 
+/// Proves **equality** between a projection `T::Foo` and a type
+/// `U`. Equality can be proven via normalization, but we can also
+/// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ProjectionEq {
+    pub projection: ProjectionTy,
+    pub ty: Ty,
+}
+
 /// Indicates that the trait where the associated type belongs to is
 /// not yet known, i.e. is unselected. For example, a normal
-/// `Normalize` would be of the form `<Vec<T> as Iterator>::Item ==>
+/// `Normalize` would be of the form `<Vec<T> as Iterator>::Item ->
 /// T`. When `Iterator` is in scope, and it is the only trait in scope
 /// with an associated type `Item`, it suffices to write
 /// `Vec<T>::Item` instead of `<Vec<T> as Iterator>::Item`. The
-/// corresponding `UnselectedNormalize` is `Vec<T>::Item ==> T`.
+/// corresponding `UnselectedNormalize` is `Vec<T>::Item -> T`.
 ///
 /// For each associated type we encounter in an `impl`, we generate
 /// rules to derive an `UnselectedNormalize` from a `Normalize`. For
 /// example, implementing `Iterator` for `Vec<T>` yields the rule:
 ///
 /// ```text
-/// Vec<T>::Item ==> T :-
+/// Vec<T>::Item -> T :-
 ///     InScope(Iterator),
-///     <Vec<T> as Iterator>::Item ==> T
+///     <Vec<T> as Iterator>::Item -> T
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct UnselectedNormalize {
@@ -605,9 +620,6 @@ impl<T> Binders<T> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProgramClause {
     pub implication: Binders<ProgramClauseImplication>,
-
-    /// Is this a fallback clause which should get lower priority?
-    pub fallback_clause: bool,
 }
 
 /// Represents one clause of the form `consequence :- conditions` where

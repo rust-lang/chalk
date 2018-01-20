@@ -2,6 +2,7 @@
 #![cfg_attr(test, feature(test))]
 #![feature(conservative_impl_trait)]
 #![feature(catch_expr)]
+#![feature(crate_visibility_modifier)]
 #![feature(match_default_bindings)]
 #![feature(specialization)]
 #![feature(step_trait)]

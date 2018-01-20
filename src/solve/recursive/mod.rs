@@ -111,7 +111,7 @@ impl Solver {
         goal: UCanonical<InEnvironment<Goal>>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
-        debug_heading!("solve_goal({:?})", goal);
+        info_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
         if let Some(value) = self.cache.get(&goal) {
@@ -148,7 +148,7 @@ impl Solver {
             // Return the solution from the table.
             let previous_solution = self.search_graph[dfn].solution.clone();
             debug!(
-                "solve_reduced_goal: cycle detected, previous solution {:?}",
+                "solve_goal: cycle detected, previous solution {:?}",
                 previous_solution
             );
             previous_solution
@@ -182,6 +182,10 @@ impl Solver {
                 }
             }
 
+            debug!(
+                "solve_goal: solution = {:?}",
+                result,
+            );
             result
         }
     }
@@ -192,6 +196,13 @@ impl Solver {
         depth: StackDepth,
         dfn: DepthFirstNumber,
     ) -> Minimums {
+        debug_heading!(
+            "solve_new_subgoal(canonical_goal={:?}, depth={:?}, dfn={:?})",
+            canonical_goal,
+            depth,
+            dfn,
+        );
+
         // We start with `answer = None` and try to solve the goal. At the end of the iteration,
         // `answer` will be updated with the result of the solving process. If we detect a cycle
         // during the solving process, we cache `answer` and try to solve the goal again. We repeat
@@ -231,36 +242,35 @@ impl Solver {
                     // clauses. We try each approach in turn:
 
                     let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
-                    let env_clauses = environment
-                        .clauses
-                        .iter()
-                        .filter(|&clause| clause.could_match(goal))
-                        .cloned()
-                        .map(DomainGoal::into_program_clause);
-                    let env_solution =
-                        self.solve_from_clauses(&canonical_goal, env_clauses, minimums);
+                    let env_solution = {
+                        debug_heading!(
+                            "env_clauses"
+                        );
 
-                    let prog_clauses: Vec<_> = self.program
-                        .program_clauses
-                        .iter()
-                        .filter(|clause| !clause.fallback_clause)
-                        .filter(|&clause| clause.could_match(goal))
-                        .cloned()
-                        .collect();
-                    let prog_solution =
-                        self.solve_from_clauses(&canonical_goal, prog_clauses, minimums);
+                        let env_clauses = environment
+                            .clauses
+                            .iter()
+                            .filter(|&clause| clause.could_match(goal))
+                            .cloned()
+                            .map(DomainGoal::into_program_clause);
+                        self.solve_from_clauses(&canonical_goal, env_clauses, minimums)
+                    };
+                    debug!("env_solution={:?}", env_solution);
 
-                    // These fallback clauses are used when we're sure we'll never
-                    // reach Unique via another route
-                    let fallback: Vec<_> = self.program
-                        .program_clauses
-                        .iter()
-                        .filter(|clause| clause.fallback_clause)
-                        .filter(|&clause| clause.could_match(goal))
-                        .cloned()
-                        .collect();
-                    let fallback_solution =
-                        self.solve_from_clauses(&canonical_goal, fallback, minimums);
+                    let prog_solution = {
+                        debug_heading!(
+                            "prog_clauses"
+                        );
+
+                        let prog_clauses: Vec<_> = self.program
+                                                       .program_clauses
+                                                       .iter()
+                                                       .filter(|&clause| clause.could_match(goal))
+                                                       .cloned()
+                                                       .collect();
+                        self.solve_from_clauses(&canonical_goal, prog_clauses, minimums)
+                    };
+                    debug!("prog_solution={:?}", prog_solution);
 
                     // Now that we have all the outcomes, we attempt to combine
                     // them. Here, we apply a heuristic (also found in rustc): if we
@@ -269,12 +279,7 @@ impl Solver {
                     // inference. The idea is that the assumptions you've explicitly
                     // made in a given context are more likely to be relevant than
                     // general `impl`s.
-
-                    env_solution
-                        .merge_with(prog_solution, |env, prog| env.favor_over(prog))
-                        .merge_with(fallback_solution, |merged, fallback| {
-                            merged.fallback_to(fallback)
-                        })
+                    env_solution.merge_with(prog_solution, |env, prog| env.favor_over(prog))
                 }
 
                 goal => {
@@ -381,8 +386,10 @@ impl Solver {
         clause: Binders<ProgramClauseImplication>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
-        debug_heading!(
-            "solve_via_implication(canonical_goal={:?}, clause={:?})",
+        info_heading!(
+            "solve_via_implication(\
+             \n    canonical_goal={:?},\
+             \n    clause={:?})",
             canonical_goal,
             clause
         );

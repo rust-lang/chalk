@@ -75,6 +75,18 @@ impl Cast<LeafGoal> for Normalize {
     }
 }
 
+impl Cast<DomainGoal> for ProjectionEq {
+    fn cast(self) -> DomainGoal {
+        DomainGoal::ProjectionEq(self)
+    }
+}
+
+impl Cast<LeafGoal> for ProjectionEq {
+    fn cast(self) -> LeafGoal {
+        LeafGoal::DomainGoal(self.cast())
+    }
+}
+
 impl Cast<DomainGoal> for UnselectedNormalize {
     fn cast(self) -> DomainGoal {
         DomainGoal::UnselectedNormalize(self)
@@ -107,6 +119,13 @@ impl Cast<Goal> for WellFormed {
 }
 
 impl Cast<Goal> for Normalize {
+    fn cast(self) -> Goal {
+        let wcg: LeafGoal = self.cast();
+        wcg.cast()
+    }
+}
+
+impl Cast<Goal> for ProjectionEq {
     fn cast(self) -> Goal {
         let wcg: LeafGoal = self.cast();
         wcg.cast()
@@ -153,6 +172,12 @@ impl Cast<LeafGoal> for EqGoal {
 impl Cast<Ty> for ApplicationTy {
     fn cast(self) -> Ty {
         Ty::Apply(self)
+    }
+}
+
+impl Cast<Ty> for ProjectionTy {
+    fn cast(self) -> Ty {
+        Ty::Projection(self)
     }
 }
 

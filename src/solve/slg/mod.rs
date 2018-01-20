@@ -277,13 +277,44 @@ enum TruthValue {
     Unknown,
 }
 
+/// A link between two tables, indicating that when an answer is
+/// produced by one table, it should be fed into another table.
+/// For example, if we have a clause like
+///
+/// ```notrust
+/// foo(?X) :- bar(?X), baz(?X)
+/// ```
+///
+/// then `foo` might insert a `PendingExClause` into the table for
+/// `bar`, indicating that each value of `?X` could lead to an answer
+/// for `foo` (if `baz(?X)` is true).
 #[derive(Clone, Debug)]
 struct PendingExClause {
+    /// The `goal_depth` in the stack of `foo`, the blocked goal.
+    /// Note that `foo` must always be in the stack, since it is
+    /// actively awaiting an answer.
     goal_depth: StackIndex,
+
+    /// Answer substitution that the pending ex-clause carries along
+    /// with it. Maps from the free variables in the table goal to the
+    /// final values they wind up with.
     subst: Substitution,
+
+    /// The goal `bar(?X)` that `foo(?X)` was trying to solve;
+    /// typically equal to the table-goal in which this pending
+    /// ex-clause is contained, modulo the ordering of variables. This
+    /// is not *always* true, however, because the table goal may have
+    /// been truncated.
     selected_goal: InEnvironment<Goal>,
+
+    /// Any delayed literals in the ex-clause we were solving
+    /// when we blocked on `bar`.
     delayed_literals: Vec<DelayedLiteral>,
+
+    /// Constraints accumulated thus far in the ex-clause we were solving.
     constraints: Vec<InEnvironment<Constraint>>,
+
+    /// Further subgoals, like `baz(?X)`, that must be solved after `foo`.
     subgoals: Vec<Literal>,
 }
 
@@ -702,7 +733,7 @@ impl Forest {
         mut ex_clause: ExClause, // Contains both A and G together.
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug_heading!(
+        info_heading!(
             "new_clause(goal_depth={:?}, ex_clause={:?}, minimums={:?}",
             goal_depth,
             self.infer.normalize_deep(&ex_clause),
@@ -1181,7 +1212,7 @@ impl Forest {
         ex_clause: ExClause, // Contains both A and G together.
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug_heading!(
+        info_heading!(
             "answer(goal_depth={:?}, ex_clause={:?}, minimums={:?})",
             goal_depth,
             self.infer.normalize_deep(&ex_clause),
@@ -1400,7 +1431,7 @@ impl Forest {
         completed_goal_depth: StackIndex,
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug_heading!(
+        info_heading!(
             "complete(completed_goal_depth={:?}, minimums={:?})",
             completed_goal_depth,
             minimums
@@ -1451,7 +1482,7 @@ impl Forest {
         completed_goal_depth: StackIndex,
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug!(
+        info!(
             "complete_pop(completed_goal_depth={:?}, minimums={:?}",
             completed_goal_depth,
             minimums
@@ -1549,7 +1580,7 @@ impl Forest {
         completed_goal_depth: StackIndex,
         minimums: &mut Minimums,
     ) -> ExplorationResult {
-        debug!(
+        info!(
             "complete_delay(completed_goal_depth={:?}, minimums={:?}",
             completed_goal_depth,
             minimums
@@ -2130,18 +2161,6 @@ impl DepthFirstNumber {
         assert!(value < ::std::u64::MAX);
         self.value += 1;
         DepthFirstNumber { value }
-    }
-}
-
-impl ExClause {
-    fn with_constraints<I>(mut self, constraints: I) -> Self
-    where
-        I: IntoIterator<Item = InEnvironment<Constraint>>,
-    {
-        self.constraints.extend(constraints);
-        self.constraints.sort();
-        self.constraints.dedup();
-        self
     }
 }
 

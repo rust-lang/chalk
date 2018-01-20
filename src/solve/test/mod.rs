@@ -489,14 +489,11 @@ fn normalize_basic() {
         goal {
             forall<T> {
                 exists<U> {
-                    Vec<T>: Iterator<Item = U>
+                    Normalize(<Vec<T> as Iterator>::Item -> U)
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields {
             "Unique; substitution [?0 := !1], lifetime constraints []"
-        } yields[SolverChoice::slg()] {
-            // FIXME -- fallback clauses not understood by SLG solver
-            "Ambiguous; no inference guidance"
         }
 
         goal {
@@ -510,16 +507,23 @@ fn normalize_basic() {
         goal {
             forall<T> {
                 if (T: Iterator<Item = u32>) {
+                    <T as Iterator>::Item = u32
+                }
+            }
+        } yields {
+            "Unique; substitution []"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Iterator) {
                     exists<U> {
                         T: Iterator<Item = U>
                     }
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Unique; substitution [?0 := u32]"
         } yields[SolverChoice::slg()] {
-            // FIXME -- fallback clauses not understood by SLG solver
-            "Ambiguous"
+            "Unique; substitution [?0 := (Iterator::Item)<!1>]"
         }
 
         goal {
@@ -552,10 +556,8 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Unique"
-        } yields[SolverChoice::slg()] {
-            // FIXME -- fallback clauses not understood by SLG solver
+        } yields {
+            // True for `U = T`, of course, but also true for `U = Vec<T>`.
             "Ambiguous"
         }
     }
@@ -725,6 +727,7 @@ fn elaborate_transitive() {
 }
 
 #[test]
+#[ignore]
 fn elaborate_normalize() {
     test! {
         program {
@@ -803,15 +806,12 @@ fn atc1() {
             forall<T> {
                 forall<'a> {
                     exists<U> {
-                        Vec<T>: Iterable<Iter<'a> = U>
+                        Normalize(<Vec<T> as Iterable>::Iter<'a> -> U)
                     }
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields {
             "Unique; substitution [?0 := Iter<'!2, !1>], lifetime constraints []"
-        } yields[SolverChoice::slg()] {
-            // FIXME -- fallback clauses not understood by SLG solver
-            "Ambiguous; no inference guidance"
         }
     }
 }
@@ -966,6 +966,34 @@ fn trait_wf() {
 }
 
 #[test]
+fn normalize_fallback_option() {
+    test! {
+        program {
+            trait Iterator { type Item; }
+            struct Foo { }
+            struct Vec<T> { }
+            impl<T> Iterator for Vec<T> { type Item = T; }
+        }
+
+        goal {
+            forall<T> {
+                if (T: Iterator) {
+                    exists<U> {
+                        exists<V> {
+                            // Here, `U` could be `T` or it could be
+                            // `Vec<Foo>`.
+                            U: Iterator<Item = V>
+                        }
+                    }
+                }
+            }
+        } yields {
+            "Ambiguous"
+        }
+    }
+}
+
+#[test]
 fn normalize_under_binder() {
     test! {
         program {
@@ -995,11 +1023,18 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Deref<'a, Item = U>
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Unique; substitution [?0 := I32], lifetime constraints []"
-        } yields[SolverChoice::slg()] {
-            // FIXME -- fallback clauses not understood by SLG solver
+        } yields {
             "Ambiguous"
+        }
+
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Normalize(<Ref<'a, I32> as Deref<'a>>::Item -> U)
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := I32], lifetime constraints []"
         }
 
         goal {
@@ -1008,27 +1043,31 @@ fn normalize_under_binder() {
                     Ref<'a, I32>: Id<'a, Item = U>
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Unique; substitution [?0 := Ref<'!1, I32>], lifetime constraints []"
-        } yields[SolverChoice::slg()] {
-            // FIXME -- fallback clauses not understood by SLG solver
+        } yields {
             "Ambiguous"
+        }
+
+        goal {
+            forall<'a> {
+                exists<U> {
+                    Normalize(<Ref<'a, I32> as Id<'a>>::Item -> U)
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := Ref<'!1, I32>], lifetime constraints []"
         }
 
         goal {
             exists<U> {
                 forall<'a> {
-                    Ref<'a, I32>: Id<'a, Item = U>
+                    Normalize(<Ref<'a, I32> as Id<'a>>::Item -> U)
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields {
             "Unique; for<?U0> { \
              substitution [?0 := Ref<'?0, I32>], \
              lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
              }"
-        } yields[SolverChoice::slg()] {
-            // FIXME -- fallback clauses not understood by SLG solver
-            "Ambiguous"
         }
     }
 }
@@ -1174,15 +1213,12 @@ fn mixed_indices_normalize_application() {
             exists<T> {
                 exists<'a> {
                     exists<U> {
-                        <Ref<'a, T> as Foo>::T = U
+                        Normalize(<Ref<'a, T> as Foo>::T -> U)
                     }
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Unique"
-        } yields[SolverChoice::slg()] {
-            // FIXME -- fallback clauses not understood by SLG solver
-            "Ambiguous; no inference guidance"
+        } yields {
+            "Unique; for<?U0,?U0> { substitution [?0 := '?0, ?1 := ?1, ?2 := ?1], "
         }
     }
 }

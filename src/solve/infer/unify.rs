@@ -137,8 +137,7 @@ impl<'t> Unifier<'t> {
                 Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
             }
 
-            (proj1 @ &Ty::Projection(_), proj2 @ &Ty::Projection(_))
-            | (proj1 @ &Ty::Projection(_), proj2 @ &Ty::UnselectedProjection(_))
+            (proj1 @ &Ty::Projection(_), proj2 @ &Ty::UnselectedProjection(_))
             | (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::Projection(_))
             | (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::UnselectedProjection(_)) => {
                 self.unify_projection_tys(
@@ -150,6 +149,7 @@ impl<'t> Unifier<'t> {
             (ty @ &Ty::Apply(_), &Ty::Projection(ref proj))
             | (ty @ &Ty::ForAll(_), &Ty::Projection(ref proj))
             | (ty @ &Ty::Var(_), &Ty::Projection(ref proj))
+            | (&Ty::Projection(ref proj), ty @ &Ty::Projection(_))
             | (&Ty::Projection(ref proj), ty @ &Ty::Apply(_))
             | (&Ty::Projection(ref proj), ty @ &Ty::ForAll(_))
             | (&Ty::Projection(ref proj), ty @ &Ty::Var(_)) => self.unify_projection_ty(proj, ty),
@@ -217,7 +217,7 @@ impl<'t> Unifier<'t> {
     fn unify_projection_ty(&mut self, proj: &ProjectionTy, ty: &Ty) -> Fallible<()> {
         Ok(self.goals.push(InEnvironment::new(
             self.environment,
-            Normalize {
+            ProjectionEq {
                 projection: proj.clone(),
                 ty: ty.clone(),
             }.cast(),
@@ -343,23 +343,11 @@ impl<'t> Zipper for Unifier<'t> {
         self.unify_lifetime_lifetime(a, b)
     }
 
-    fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
+    fn zip_binders<T>(&mut self, _: &Binders<T>, _: &Binders<T>) -> Fallible<()>
     where
         T: Zip + Fold<Result = T>,
     {
-        {
-            let a = &self.table.instantiate_binders_universally(a);
-            let b = &self.table.instantiate_binders_existentially(b);
-            let () = self.sub_unify(a, b)?;
-        }
-
-        {
-            let b = &self.table.instantiate_binders_universally(b);
-            let a = &self.table.instantiate_binders_existentially(a);
-            let () = self.sub_unify(a, b)?;
-        }
-
-        Ok(())
+        panic!("cannot unify things with binders (other than types)")
     }
 }
 
