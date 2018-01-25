@@ -181,6 +181,8 @@ pub enum WhereClause {
     ProjectionEq { projection: ProjectionTy, ty: Ty },
     TyWellFormed { ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
+    TyFromEnv { ty: Ty },
+    TraitRefFromEnv { trait_ref: TraitRef },
     UnifyTys { a: Ty, b: Ty },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
     TraitInScope { trait_name: Identifier },
@@ -202,10 +204,7 @@ pub struct Clause {
 pub enum Goal {
     ForAll(Vec<ParameterKind>, Box<Goal>),
     Exists(Vec<ParameterKind>, Box<Goal>),
-
-    // The `bool` flag indicates whether we should elaborate where clauses or not
-    Implies(Vec<WhereClause>, Box<Goal>, bool),
-
+    Implies(Vec<WhereClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
     Not(Box<Goal>),
 

@@ -3,7 +3,7 @@ use solve::infer::InferenceTable;
 use cast::Cast;
 
 impl Program {
-    pub(super) fn add_default_impls(&mut self) {
+    pub fn add_default_impls(&mut self) {
         // For each auto trait `MyAutoTrait` and for each struct/type `MyStruct`
         for auto_trait in self.trait_data
             .values()

@@ -111,7 +111,26 @@ impl Cast<LeafGoal> for WellFormed {
     }
 }
 
+impl Cast<DomainGoal> for FromEnv {
+    fn cast(self) -> DomainGoal {
+        DomainGoal::FromEnv(self)
+    }
+}
+
+impl Cast<LeafGoal> for FromEnv {
+    fn cast(self) -> LeafGoal {
+        LeafGoal::DomainGoal(self.cast())
+    }
+}
+
 impl Cast<Goal> for WellFormed {
+    fn cast(self) -> Goal {
+        let wcg: LeafGoal = self.cast();
+        wcg.cast()
+    }
+}
+
+impl Cast<Goal> for FromEnv {
     fn cast(self) -> Goal {
         let wcg: LeafGoal = self.cast();
         wcg.cast()

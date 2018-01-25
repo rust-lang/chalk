@@ -1,4 +1,3 @@
-use cast::Cast;
 use chalk_parse::ast;
 use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
@@ -444,6 +443,7 @@ pub enum DomainGoal {
     Normalize(Normalize),
     UnselectedNormalize(UnselectedNormalize),
     WellFormed(WellFormed),
+    FromEnv(FromEnv),
     InScope(ItemId),
 }
 
@@ -462,27 +462,20 @@ impl DomainGoal {
         }
     }
 
-    /// A clause of the form (T: Foo) expands to (T: Foo), WF(T: Foo).
-    /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), T: Foo, WF(T: Foo).
-    crate fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
-        let mut expanded = vec![];
+    crate fn into_well_formed_clause(self) -> DomainGoal {
         match self {
-            DomainGoal::Implemented(ref trait_ref) => {
-                expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast())
-            }
-            DomainGoal::ProjectionEq(ProjectionEq { ref projection, .. }) => {
-                let (associated_ty_data, trait_params, _) = program.split_projection(&projection);
-                let trait_ref = TraitRef {
-                    trait_id: associated_ty_data.trait_id,
-                    parameters: trait_params.to_owned(),
-                };
-                expanded.push(WellFormed::TraitRef(trait_ref.clone()).cast());
-                expanded.push(trait_ref.cast());
-            }
-            _ => (),
-        };
-        expanded.push(self.cast());
-        expanded.into_iter()
+            DomainGoal::Implemented(tr) => DomainGoal::WellFormed(WellFormed::TraitRef(tr)),
+            DomainGoal::Normalize(n) => DomainGoal::WellFormed(WellFormed::Normalize(n)),
+            goal => goal,
+        }
+    }
+
+    crate fn into_from_env_clause(self) -> DomainGoal {
+        match self {
+            DomainGoal::Implemented(tr) => DomainGoal::FromEnv(FromEnv::TraitRef(tr)),
+            DomainGoal::Normalize(n) => DomainGoal::FromEnv(FromEnv::Normalize(n)),
+            goal => goal,
+        }
     }
 }
 
@@ -505,6 +498,14 @@ pub struct EqGoal {
 pub enum WellFormed {
     Ty(Ty),
     TraitRef(TraitRef),
+    Normalize(Normalize),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum FromEnv {
+    Ty(Ty),
+    TraitRef(TraitRef),
+    Normalize(Normalize),
 }
 
 /// Proves that the given projection **normalizes** to the given
@@ -716,6 +717,9 @@ impl UCanonical<InEnvironment<Goal>> {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Implemented(tr))) => {
                 let trait_datum = &program.trait_data[&tr.trait_id];
                 trait_datum.binders.value.flags.auto
+            }
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::TraitRef(_)))) => {
+                true
             }
             _ => false,
         }

@@ -32,7 +32,7 @@ macro_rules! lowering_error {
 
 
 fn parse_and_lower(text: &str) -> Result<Program> {
-    chalk_parse::parse_program(text)?.lower(SolverChoice::default())
+    chalk_parse::parse_program(text)?.lower(SolverChoice::on_demand_slg())
 }
 
 fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
