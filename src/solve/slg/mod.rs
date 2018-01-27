@@ -388,7 +388,7 @@ enum DelayedLiteralSets {
 /// we get back an approximated answer with `Goal::CannotProve` as a
 /// delayed literal, which in turn forces its subgoal to be delayed,
 /// and so forth. Therefore, we store canonicalized goals.)
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 struct DelayedLiteralSet {
     delayed_literals: Vec<DelayedLiteral>,
 }
