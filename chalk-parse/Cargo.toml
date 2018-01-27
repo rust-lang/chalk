@@ -6,12 +6,12 @@ build = "build.rs" # LALRPOP preprocessing
 
 # Add a dependency on the LALRPOP runtime library:
 [dependencies.lalrpop-util]
-version = "0.13.1"
+version = "0.14"
  
 [build-dependencies.lalrpop]
-version = "0.13.1"
+version = "0.14"
 
 [dependencies]
 error-chain = "0.11.0"
-lalrpop-intern = "0.13.1"
+lalrpop-intern = "0.14"
 regex = "0.2.2"
