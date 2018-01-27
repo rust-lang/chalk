@@ -2,9 +2,13 @@ use cast::Caster;
 use fallible::Fallible;
 use fold::Fold;
 use fold::shift::Shift;
-use solve::infer::var::InferenceVariable;
-use super::*;
-use zip::Zipper;
+use ir::*;
+use solve::infer::{InferenceTable, unify::UnificationResult, var::InferenceVariable};
+use std::sync::Arc;
+use zip::{Zip, Zipper};
+
+use super::{CanonicalConstrainedSubst, CanonicalGoal, CanonicalPendingExClause, DelayedLiteral,
+            ExClause, Literal, PendingExClause, Satisfiable, StackIndex, TableIndex};
 
 ///////////////////////////////////////////////////////////////////////////
 // SLG RESOLVENTS
@@ -81,7 +85,7 @@ pub(super) fn resolvent_pending(
         ex_clause,
         &selected_goal,
         answer_table_goal,
-        answer_subst
+        answer_subst,
     ).map(|r| (goal_depth, r));
 
     info!("resolvent = {:?}", result);
@@ -130,7 +134,7 @@ pub(super) fn resolvent_clause(
     } = infer.instantiate_binders_existentially(clause);
     let consequence: InEnvironment<DomainGoal> = InEnvironment::new(&environment, consequence);
 
-    resolvent::resolvent_unify(infer, ex_clause, &goal, &consequence, conditions)
+    resolvent_unify(infer, ex_clause, &goal, &consequence, conditions)
 }
 
 /// Given the goal G (`goal`) with selected literal Li
@@ -253,10 +257,9 @@ pub(super) fn factor_pending(
         answer_subst,
     ).map(|mut ex_clause| {
         // Push Li into the list of delayed literals.
-        ex_clause.delayed_literals.push(DelayedLiteral::Positive(
-            answer_table,
-            answer_subst.clone(),
-        ));
+        ex_clause
+            .delayed_literals
+            .push(DelayedLiteral::Positive(answer_table, answer_subst.clone()));
 
         (goal_depth, ex_clause)
     });

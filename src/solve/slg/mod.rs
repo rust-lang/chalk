@@ -63,7 +63,6 @@ use std::mem;
 use std::ops::{Index, IndexMut, Range};
 use std::sync::Arc;
 use std::usize;
-use zip::Zip;
 
 mod aggregate;
 mod resolvent;
