@@ -9,6 +9,17 @@ macro_rules! index_struct {
 
         copy_fold!($n);
 
+        impl $n {
+            // Not all index structs need this, so allow it to be dead
+            // code.
+            #[allow(dead_code)]
+            $v fn get_and_increment(&mut self) -> Self {
+                let old_value = *self;
+                self.value += 1;
+                old_value
+            }
+        }
+
         impl ::std::iter::Step for $n {
             fn steps_between(start: &Self, end: &Self) -> Option<usize> {
                 usize::steps_between(&start.value, &end.value)
