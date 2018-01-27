@@ -18,6 +18,11 @@ macro_rules! index_struct {
                 self.value += 1;
                 old_value
             }
+
+            #[allow(dead_code)]
+            $v fn increment(&mut self) {
+                self.value += 1;
+            }
         }
 
         impl ::std::iter::Step for $n {
