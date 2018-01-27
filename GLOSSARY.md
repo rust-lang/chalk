@@ -197,7 +197,7 @@ existential quantifier to the current universe. This new type variable has to be
 unified with another type later on, otherwise the goal cannot be satisfied.
 
 ## Validity
-An argument ("*premisses* therefore *conclusion*") is valid iff there is no
+An argument ("*premises* therefore *conclusion*") is valid iff there is no
 valuation which makes the premisses true and the conclusion false.
 
 Valid: `A && B therefore A || B`. Invalid: `A || B therefore A && B` because the
