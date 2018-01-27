@@ -35,4 +35,5 @@ Here are some blog posts talking about chalk:
 
 ## Contributing
 If you are interested in contributing to chalk, please take a look at the
-[Contribution guide](CONTRIBUTING.md).
+[Contribution guide](CONTRIBUTING.md). You might also want to take a look at the
+[glossary](GLOSSARY.md).
