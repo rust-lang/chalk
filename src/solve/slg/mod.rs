@@ -175,23 +175,21 @@ struct Stack {
     stack: Vec<StackEntry>,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct TableIndex {
-    value: usize,
+index_struct! {
+    struct TableIndex {
+        value: usize,
+    }
 }
-
-copy_fold!(TableIndex);
 
 /// The StackIndex identifies the position of a table's goal in the
 /// stack of goals that are actively being processed. Note that once a
 /// table is completely evaluated, it may be popped from the stack,
 /// and hence no longer have a stack index.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct StackIndex {
-    value: usize,
+index_struct! {
+    struct StackIndex {
+        value: usize,
+    }
 }
-
-copy_fold!(StackIndex);
 
 /// The `DepthFirstNumber` (DFN) is a sequential number assigned to
 /// each goal when it is first encountered. The naming (taken from
@@ -519,9 +517,7 @@ impl Forest {
         let table = self.tables.insert(goal, depth);
         debug!(
             "push_new_table: depth {:?} is table {:?} with goal {:?}",
-            depth,
-            table,
-            goal
+            depth, table, goal
         );
         self.tables[table].positives.extend(positive_pending);
         self.tables[table].negatives.extend(negative_pending);
@@ -614,12 +610,10 @@ impl Forest {
 
         debug!(
             "subgoal: goal_depth={:?} minimums={:?}",
-            goal_depth,
-            minimums
+            goal_depth, minimums
         );
         self.complete(goal_depth, minimums)
     }
-
 
     /// Simplifies an HH goal into a series of positive domain goals
     /// and negative HH goals. This operation may fail if the HH goal
@@ -678,9 +672,12 @@ impl Forest {
                 }
                 Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
                     let domain_goal = domain_goal.cast();
-                    ex_clause.subgoals.push(Literal::Positive(
-                        InEnvironment::new(&environment, domain_goal),
-                    ));
+                    ex_clause
+                        .subgoals
+                        .push(Literal::Positive(InEnvironment::new(
+                            &environment,
+                            domain_goal,
+                        )));
                 }
                 Goal::CannotProve(()) => {
                     // You can think of `CannotProve` as a special
@@ -1008,15 +1005,13 @@ impl Forest {
         );
         let canonical_parts = self.infer.canonicalize(&parts).quantified;
         canonical_parts.map(
-            |(subst, selected_goal, delayed_literals, constraints, subgoals)| {
-                PendingExClause {
-                    goal_depth,
-                    subst,
-                    selected_goal,
-                    delayed_literals,
-                    constraints,
-                    subgoals,
-                }
+            |(subst, selected_goal, delayed_literals, constraints, subgoals)| PendingExClause {
+                goal_depth,
+                subst,
+                selected_goal,
+                delayed_literals,
+                constraints,
+                subgoals,
             },
         )
     }
@@ -1235,8 +1230,7 @@ impl Forest {
             .quantified;
         debug!(
             "answer: goal_table={:?}, answer_subst={:?}",
-            goal_table,
-            answer_subst
+            goal_table, answer_subst
         );
 
         // Convert the `DelayedLiterals` instance representing the set
@@ -1368,11 +1362,7 @@ impl Forest {
         debug!(
             "update_solution(goal_depth={:?}, subgoal_table={:?}, sign={:?}, \
              minimums={:?}, subgoal_minimums={:?})",
-            goal_depth,
-            subgoal_table,
-            sign,
-            minimums,
-            subgoal_minimums
+            goal_depth, subgoal_table, sign, minimums, subgoal_minimums
         );
 
         if let Some(subgoal_depth) = self.tables[subgoal_table].depth {
@@ -1483,8 +1473,7 @@ impl Forest {
     ) -> ExplorationResult {
         info!(
             "complete_pop(completed_goal_depth={:?}, minimums={:?}",
-            completed_goal_depth,
-            minimums
+            completed_goal_depth, minimums
         );
 
         let completed_dfn = self.stack[completed_goal_depth].dfn;
@@ -1581,8 +1570,7 @@ impl Forest {
     ) -> ExplorationResult {
         info!(
             "complete_delay(completed_goal_depth={:?}, minimums={:?}",
-            completed_goal_depth,
-            minimums
+            completed_goal_depth, minimums
         );
 
         let mut new_clauses;
@@ -2021,7 +2009,7 @@ impl IndexMut<StackIndex> for Stack {
 
 impl Tables {
     fn indices(&self) -> Range<TableIndex> {
-        TableIndex { value: 0 }..self.next_index()
+        TableIndex::from(0)..self.next_index()
     }
 
     fn next_index(&self) -> TableIndex {
@@ -2076,11 +2064,9 @@ impl Table {
         let mut result = Answers {
             answers: self.answers
                 .iter()
-                .map(|(subst, delay_sets)| {
-                    Answer {
-                        subst: subst.clone(),
-                        ambiguous: !delay_sets.is_empty(),
-                    }
+                .map(|(subst, delay_sets)| Answer {
+                    subst: subst.clone(),
+                    ambiguous: !delay_sets.is_empty(),
                 })
                 .collect(),
         };
@@ -2179,40 +2165,6 @@ impl<T> Satisfiable<T> {
             Satisfiable::Yes(v) => Satisfiable::Yes(op(v)),
             Satisfiable::No => Satisfiable::No,
         }
-    }
-}
-
-impl iter::Step for TableIndex {
-    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
-        usize::steps_between(&start.value, &end.value)
-    }
-
-    fn replace_one(&mut self) -> Self {
-        TableIndex {
-            value: usize::replace_one(&mut self.value),
-        }
-    }
-
-    fn replace_zero(&mut self) -> Self {
-        TableIndex {
-            value: usize::replace_zero(&mut self.value),
-        }
-    }
-
-    fn add_one(&self) -> Self {
-        TableIndex {
-            value: usize::add_one(&self.value),
-        }
-    }
-
-    fn sub_one(&self) -> Self {
-        TableIndex {
-            value: usize::sub_one(&self.value),
-        }
-    }
-
-    fn add_usize(&self, n: usize) -> Option<Self> {
-        usize::add_usize(&self.value, n).map(|value| TableIndex { value })
     }
 }
 

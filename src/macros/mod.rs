@@ -1,5 +1,8 @@
 use std::cell::RefCell;
 
+#[macro_use]
+mod index;
+
 lazy_static! {
     pub static ref DEBUG_ENABLED: bool = {
         use std::env;
