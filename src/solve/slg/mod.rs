@@ -461,7 +461,7 @@ struct Minimums {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum Sign {
+enum Polarity {
     Positive,
     Negative,
 }
@@ -804,7 +804,7 @@ impl Forest {
         // Check if we need to create a new table and (if so) stop.
         let subgoal_table = match self.select_goal(
             goal_depth,
-            Sign::Positive,
+            Polarity::Positive,
             &ex_clause,
             &selected_goal,
             truncated_subgoal,
@@ -828,7 +828,7 @@ impl Forest {
             self.tables[subgoal_table]
                 .positives
                 .push(pending_ex_clause.clone());
-            self.update_lookup(goal_depth, subgoal_depth, Sign::Positive, minimums);
+            self.update_lookup(goal_depth, subgoal_depth, Polarity::Positive, minimums);
         }
 
         // Process the answers that have already been found one by
@@ -918,7 +918,7 @@ impl Forest {
     /// # Parameters
     ///
     /// - `goal_depth`: depth of current goal that we are solving in the stack
-    /// - `sign`: is the selected literal positive or negative
+    /// - `polarity`: is the selected literal positive or negative
     /// - `ex_clause`: current X-clause we are solving
     /// - `selected_goal`: goal of current selected literal (unaltered by abstraction)
     /// - `instantiated_subgoal`: abstracted version of selected goal used for table lookup
@@ -926,7 +926,7 @@ impl Forest {
     fn select_goal(
         &mut self,
         goal_depth: StackIndex,
-        sign: Sign,
+        polarity: Polarity,
         ex_clause: &ExClause,
         selected_goal: &InEnvironment<Goal>,
         instantiated_subgoal: InEnvironment<Goal>,
@@ -934,12 +934,12 @@ impl Forest {
     ) -> Result<Option<TableIndex>, ExplorationError> {
         debug_heading!(
             "select_goal(goal_depth={:?}, \
-             sign={:?}, \
+             polarity={:?}, \
              selected_goal={:?}, \
              instantiated_subgoal={:?}, \
              minimums={:?})",
             goal_depth,
-            sign,
+            polarity,
             selected_goal,
             instantiated_subgoal,
             minimums
@@ -958,9 +958,9 @@ impl Forest {
         // Otherwise, create the new table, listing the current goal
         // as being pending. Then try to solve this new table.
         let pending_ex_clause = self.pending_ex_clause(goal_depth, ex_clause, selected_goal);
-        let (positive_link, negative_link) = match sign {
-            Sign::Positive => (Some(pending_ex_clause), None),
-            Sign::Negative => (None, Some(pending_ex_clause)),
+        let (positive_link, negative_link) = match polarity {
+            Polarity::Positive => (Some(pending_ex_clause), None),
+            Polarity::Negative => (None, Some(pending_ex_clause)),
         };
         let (subgoal_table, subgoal_depth) =
             self.push_new_table(&canonical_subgoal, positive_link, negative_link);
@@ -974,7 +974,7 @@ impl Forest {
         self.update_solution(
             goal_depth,
             subgoal_table,
-            sign,
+            polarity,
             minimums,
             &mut subgoal_minimums,
         );
@@ -1133,7 +1133,7 @@ impl Forest {
         // Check if we need to create a new table and (if so) stop.
         let subgoal_table = match self.select_goal(
             goal_depth,
-            Sign::Negative,
+            Polarity::Negative,
             &ex_clause,
             &selected_goal,
             inverted_subgoal,
@@ -1154,7 +1154,7 @@ impl Forest {
             // having interest in negative solutions and stop for now.
             let pending_ex_clause = self.pending_ex_clause(goal_depth, &ex_clause, &selected_goal);
             self.tables[subgoal_table].negatives.push(pending_ex_clause);
-            self.update_lookup(goal_depth, subgoal_depth, Sign::Negative, minimums);
+            self.update_lookup(goal_depth, subgoal_depth, Polarity::Negative, minimums);
             return Ok(FullyExplored);
         }
 
@@ -1355,18 +1355,18 @@ impl Forest {
         &mut self,
         goal_depth: StackIndex,
         subgoal_table: TableIndex,
-        sign: Sign,
+        polarity: Polarity,
         minimums: &mut Minimums,
         subgoal_minimums: &Minimums,
     ) {
         debug!(
-            "update_solution(goal_depth={:?}, subgoal_table={:?}, sign={:?}, \
+            "update_solution(goal_depth={:?}, subgoal_table={:?}, polarity={:?}, \
              minimums={:?}, subgoal_minimums={:?})",
-            goal_depth, subgoal_table, sign, minimums, subgoal_minimums
+            goal_depth, subgoal_table, polarity, minimums, subgoal_minimums
         );
 
         if let Some(subgoal_depth) = self.tables[subgoal_table].depth {
-            self.update_lookup(goal_depth, subgoal_depth, sign, minimums);
+            self.update_lookup(goal_depth, subgoal_depth, polarity, minimums);
         } else {
             self.stack[goal_depth].link.take_minimums(subgoal_minimums);
             minimums.take_minimums(subgoal_minimums);
@@ -1379,17 +1379,17 @@ impl Forest {
         &mut self,
         goal_depth: StackIndex,
         subgoal_depth: StackIndex,
-        sign: Sign,
+        polarity: Polarity,
         minimums: &mut Minimums,
     ) {
-        match sign {
-            Sign::Positive => {
+        match polarity {
+            Polarity::Positive => {
                 let subgoal_link = self.stack[subgoal_depth].link;
                 self.stack[goal_depth].link.take_minimums(&subgoal_link);
                 minimums.take_minimums(&subgoal_link);
             }
 
-            Sign::Negative => {
+            Polarity::Negative => {
                 // If `goal` depends on `not(subgoal)`, then for goal
                 // to succeed, `subgoal` must be completely
                 // evaluated. Therefore, `goal` depends (negatively)
