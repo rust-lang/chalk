@@ -569,7 +569,7 @@ impl Forest {
         match goal {
             Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
                 let domain_goal = InEnvironment::new(&environment, domain_goal);
-                let clauses = self.clauses(&domain_goal);
+                let clauses = clauses(&self.program, &domain_goal);
 
                 for clause in clauses {
                     self.snapshotted(|this| {
@@ -599,7 +599,7 @@ impl Forest {
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
                 let hh_goal = InEnvironment::new(&environment, goal);
-                let ex_clause = match Self::simplify_hh_goal(&mut self.infer, subst, hh_goal) {
+                let ex_clause = match simplify_hh_goal(&mut self.infer, subst, hh_goal) {
                     Satisfiable::Yes(ex_clause) => ex_clause,
                     Satisfiable::No => return Ok(FullyExplored), // now way to solve
                 };
@@ -613,110 +613,6 @@ impl Forest {
             goal_depth, minimums
         );
         self.complete(goal_depth, minimums)
-    }
-
-    /// Simplifies an HH goal into a series of positive domain goals
-    /// and negative HH goals. This operation may fail if the HH goal
-    /// includes unifications that cannot be completed.
-    fn simplify_hh_goal(
-        infer: &mut InferenceTable,
-        subst: Substitution,
-        initial_goal: InEnvironment<Goal>,
-    ) -> Satisfiable<ExClause> {
-        let mut ex_clause = ExClause {
-            subst,
-            delayed_literals: vec![],
-            constraints: vec![],
-            subgoals: vec![],
-        };
-
-        // A stack of higher-level goals to process.
-        let mut pending_goals = vec![initial_goal];
-
-        while let Some(InEnvironment { environment, goal }) = pending_goals.pop() {
-            match goal {
-                Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                    let subgoal = infer.instantiate_binders_universally(&subgoal);
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal));
-                }
-                Goal::Quantified(QuantifierKind::Exists, subgoal) => {
-                    let subgoal = infer.instantiate_binders_existentially(&subgoal);
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal))
-                }
-                Goal::Implies(wc, subgoal) => {
-                    let new_environment = &environment.add_clauses(wc);
-                    pending_goals.push(InEnvironment::new(&new_environment, *subgoal));
-                }
-                Goal::And(subgoal1, subgoal2) => {
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal1));
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal2));
-                }
-                Goal::Not(subgoal) => {
-                    let subgoal = (*subgoal).clone();
-                    ex_clause
-                        .subgoals
-                        .push(Literal::Negative(InEnvironment::new(&environment, subgoal)));
-                }
-                Goal::Leaf(LeafGoal::EqGoal(ref eq_goal)) => {
-                    let UnificationResult { goals, constraints } = {
-                        match infer.unify(&environment, &eq_goal.a, &eq_goal.b) {
-                            Ok(v) => v,
-                            Err(_) => return Satisfiable::No,
-                        }
-                    };
-
-                    ex_clause.constraints.extend(constraints);
-                    ex_clause
-                        .subgoals
-                        .extend(goals.into_iter().casted().map(Literal::Positive));
-                }
-                Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
-                    let domain_goal = domain_goal.cast();
-                    ex_clause
-                        .subgoals
-                        .push(Literal::Positive(InEnvironment::new(
-                            &environment,
-                            domain_goal,
-                        )));
-                }
-                Goal::CannotProve(()) => {
-                    // You can think of `CannotProve` as a special
-                    // goal that is only provable if `not {
-                    // CannotProve }`. Trying to prove this, of
-                    // course, will always create a negative cycle and
-                    // hence a delayed literal that cannot be
-                    // resolved.
-                    ex_clause
-                        .subgoals
-                        .push(Literal::Negative(InEnvironment::new(&environment, goal)));
-                }
-            }
-        }
-
-        Satisfiable::Yes(ex_clause)
-    }
-
-    /// Returns all clauses that are relevant to `goal`, either from
-    /// the environment or the program.
-    fn clauses(&mut self, goal: &InEnvironment<DomainGoal>) -> Vec<ProgramClause> {
-        let &InEnvironment {
-            ref environment,
-            ref goal,
-        } = goal;
-
-        let environment_clauses = environment
-            .clauses
-            .iter()
-            .filter(|&env_clause| env_clause.could_match(goal))
-            .map(|env_clause| env_clause.clone().into_program_clause());
-
-        let program_clauses = self.program
-            .program_clauses
-            .iter()
-            .filter(|clause| clause.could_match(goal))
-            .cloned();
-
-        environment_clauses.chain(program_clauses).collect()
     }
 
     /// Pop off the next subgoal from `ex_clause` and try to solve
@@ -2175,6 +2071,113 @@ impl ExClause {
             }
         }
     }
+}
+
+/// Returns all clauses that are relevant to `goal`, either from
+/// the environment or the program.
+fn clauses(
+    program: &Arc<ProgramEnvironment>,
+    goal: &InEnvironment<DomainGoal>,
+) -> Vec<ProgramClause> {
+    let &InEnvironment {
+        ref environment,
+        ref goal,
+    } = goal;
+
+    let environment_clauses = environment
+        .clauses
+        .iter()
+        .filter(|&env_clause| env_clause.could_match(goal))
+        .map(|env_clause| env_clause.clone().into_program_clause());
+
+    let program_clauses = program
+        .program_clauses
+        .iter()
+        .filter(|clause| clause.could_match(goal))
+        .cloned();
+
+    environment_clauses.chain(program_clauses).collect()
+}
+
+/// Simplifies an HH goal into a series of positive domain goals
+/// and negative HH goals. This operation may fail if the HH goal
+/// includes unifications that cannot be completed.
+fn simplify_hh_goal(
+    infer: &mut InferenceTable,
+    subst: Substitution,
+    initial_goal: InEnvironment<Goal>,
+) -> Satisfiable<ExClause> {
+    let mut ex_clause = ExClause {
+        subst,
+        delayed_literals: vec![],
+        constraints: vec![],
+        subgoals: vec![],
+    };
+
+    // A stack of higher-level goals to process.
+    let mut pending_goals = vec![initial_goal];
+
+    while let Some(InEnvironment { environment, goal }) = pending_goals.pop() {
+        match goal {
+            Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
+                let subgoal = infer.instantiate_binders_universally(&subgoal);
+                pending_goals.push(InEnvironment::new(&environment, *subgoal));
+            }
+            Goal::Quantified(QuantifierKind::Exists, subgoal) => {
+                let subgoal = infer.instantiate_binders_existentially(&subgoal);
+                pending_goals.push(InEnvironment::new(&environment, *subgoal))
+            }
+            Goal::Implies(wc, subgoal) => {
+                let new_environment = &environment.add_clauses(wc);
+                pending_goals.push(InEnvironment::new(&new_environment, *subgoal));
+            }
+            Goal::And(subgoal1, subgoal2) => {
+                pending_goals.push(InEnvironment::new(&environment, *subgoal1));
+                pending_goals.push(InEnvironment::new(&environment, *subgoal2));
+            }
+            Goal::Not(subgoal) => {
+                let subgoal = (*subgoal).clone();
+                ex_clause
+                    .subgoals
+                    .push(Literal::Negative(InEnvironment::new(&environment, subgoal)));
+            }
+            Goal::Leaf(LeafGoal::EqGoal(ref eq_goal)) => {
+                let UnificationResult { goals, constraints } = {
+                    match infer.unify(&environment, &eq_goal.a, &eq_goal.b) {
+                        Ok(v) => v,
+                        Err(_) => return Satisfiable::No,
+                    }
+                };
+
+                ex_clause.constraints.extend(constraints);
+                ex_clause
+                    .subgoals
+                    .extend(goals.into_iter().casted().map(Literal::Positive));
+            }
+            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
+                let domain_goal = domain_goal.cast();
+                ex_clause
+                    .subgoals
+                    .push(Literal::Positive(InEnvironment::new(
+                        &environment,
+                        domain_goal,
+                    )));
+            }
+            Goal::CannotProve(()) => {
+                // You can think of `CannotProve` as a special
+                // goal that is only provable if `not {
+                // CannotProve }`. Trying to prove this, of
+                // course, will always create a negative cycle and
+                // hence a delayed literal that cannot be
+                // resolved.
+                ex_clause
+                    .subgoals
+                    .push(Literal::Negative(InEnvironment::new(&environment, goal)));
+            }
+        }
+    }
+
+    Satisfiable::Yes(ex_clause)
 }
 
 /// Because we recurse so deeply, we rely on stacker to
