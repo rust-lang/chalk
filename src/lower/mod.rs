@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use chalk_parse::ast::*;
 use lalrpop_intern::intern;
@@ -12,10 +12,10 @@ use solve::SolverChoice;
 mod test;
 mod default;
 
-type TypeIds = HashMap<ir::Identifier, ir::ItemId>;
-type TypeKinds = HashMap<ir::ItemId, ir::TypeKind>;
-type AssociatedTyInfos = HashMap<(ir::ItemId, ir::Identifier), AssociatedTyInfo>;
-type ParameterMap = HashMap<ir::ParameterKind<ir::Identifier>, usize>;
+type TypeIds = BTreeMap<ir::Identifier, ir::ItemId>;
+type TypeKinds = BTreeMap<ir::ItemId, ir::TypeKind>;
+type AssociatedTyInfos = BTreeMap<(ir::ItemId, ir::Identifier), AssociatedTyInfo>;
+type ParameterMap = BTreeMap<ir::ParameterKind<ir::Identifier>, usize>;
 
 #[derive(Clone, Debug)]
 struct Env<'k> {
@@ -135,7 +135,7 @@ impl LowerProgram for Program {
         let item_ids: Vec<_> = self.items.iter().map(|_| next_item_id()).collect();
 
         // Create ids for associated types
-        let mut associated_ty_infos = HashMap::new();
+        let mut associated_ty_infos = BTreeMap::new();
         for (item, &item_id) in self.items.iter().zip(&item_ids) {
             if let Item::TraitDefn(ref d) = *item {
                 if d.flags.auto && !d.assoc_ty_defns.is_empty() {
@@ -152,8 +152,8 @@ impl LowerProgram for Program {
             }
         }
 
-        let mut type_ids = HashMap::new();
-        let mut type_kinds = HashMap::new();
+        let mut type_ids = BTreeMap::new();
+        let mut type_kinds = BTreeMap::new();
         for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let k = match *item {
                 Item::StructDefn(ref d) => d.lower_type_kind()?,
@@ -165,17 +165,17 @@ impl LowerProgram for Program {
             type_kinds.insert(item_id, k);
         }
 
-        let mut struct_data = HashMap::new();
-        let mut trait_data = HashMap::new();
-        let mut impl_data = HashMap::new();
-        let mut associated_ty_data = HashMap::new();
+        let mut struct_data = BTreeMap::new();
+        let mut trait_data = BTreeMap::new();
+        let mut impl_data = BTreeMap::new();
+        let mut associated_ty_data = BTreeMap::new();
         let mut custom_clauses = Vec::new();
         for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let empty_env = Env {
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
                 associated_ty_infos: &associated_ty_infos,
-                parameter_map: HashMap::new(),
+                parameter_map: BTreeMap::new(),
             };
 
             match *item {
@@ -889,7 +889,7 @@ pub trait LowerGoal<A> {
 
 impl LowerGoal<ir::Program> for Goal {
     fn lower(&self, program: &ir::Program) -> Result<Box<ir::Goal>> {
-        let associated_ty_infos: HashMap<_, _> = program
+        let associated_ty_infos: BTreeMap<_, _> = program
             .associated_ty_data
             .iter()
             .map(|(&associated_ty_id, datum)| {
@@ -909,7 +909,7 @@ impl LowerGoal<ir::Program> for Goal {
             type_ids: &program.type_ids,
             type_kinds: &program.type_kinds,
             associated_ty_infos: &associated_ty_infos,
-            parameter_map: HashMap::new(),
+            parameter_map: BTreeMap::new(),
         };
 
         self.lower(&env)

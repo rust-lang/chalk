@@ -5,7 +5,7 @@ use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use fold::shift::Shift;
 use lalrpop_intern::InternedString;
 use solve::infer::var::InferenceVariable;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
 #[macro_use]
@@ -18,22 +18,22 @@ pub type Identifier = InternedString;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// From type-name to item-id. Used during lowering only.
-    pub type_ids: HashMap<Identifier, ItemId>,
+    pub type_ids: BTreeMap<Identifier, ItemId>,
 
     /// For each struct/trait:
-    pub type_kinds: HashMap<ItemId, TypeKind>,
+    pub type_kinds: BTreeMap<ItemId, TypeKind>,
 
     /// For each struct:
-    pub struct_data: HashMap<ItemId, StructDatum>,
+    pub struct_data: BTreeMap<ItemId, StructDatum>,
 
     /// For each impl:
-    pub impl_data: HashMap<ItemId, ImplDatum>,
+    pub impl_data: BTreeMap<ItemId, ImplDatum>,
 
     /// For each trait:
-    pub trait_data: HashMap<ItemId, TraitDatum>,
+    pub trait_data: BTreeMap<ItemId, TraitDatum>,
 
     /// For each associated ty:
-    pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
+    pub associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// For each default impl (automatically generated for auto traits):
     pub default_impl_data: Vec<DefaultImplDatum>,
@@ -64,10 +64,10 @@ impl Program {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProgramEnvironment {
     /// For each trait (used for debugging):
-    pub trait_data: HashMap<ItemId, TraitDatum>,
+    pub trait_data: BTreeMap<ItemId, TraitDatum>,
 
     /// For each associated type (used for debugging):
-    pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
+    pub associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// Compiled forms of the above:
     pub program_clauses: Vec<ProgramClause>,
