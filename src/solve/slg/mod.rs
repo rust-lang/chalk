@@ -74,7 +74,7 @@ mod test;
 ///
 /// If this returns `Ok`, a complete set of answers is returned, some
 /// of which may be approximated. This can be converted into a
-/// solution using the method `into_solution` on `Answers`.
+/// solution using the method `into_solution` on `SimplifiedAnswers`.
 ///
 /// If this returns `Err`, then the success or failure of the program
 /// could not be interpreted due to some execution error (typically
@@ -84,7 +84,7 @@ pub fn solve_root_goal(
     max_size: usize,
     program: &Arc<ProgramEnvironment>,
     root_goal: &UCanonicalGoal,
-) -> Result<Answers, ExplorationError> {
+) -> Result<SimplifiedAnswers, ExplorationError> {
     Forest::solve_root_goal(max_size, program, &root_goal)
 }
 
@@ -350,12 +350,12 @@ struct_fold!(ExClause {
 });
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Answers {
-    pub answers: Vec<Answer>,
+pub struct SimplifiedAnswers {
+    pub answers: Vec<SimplifiedAnswer>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Answer {
+pub struct SimplifiedAnswer {
     /// A fully instantiated version of the goal for which the query
     /// is true (including region constraints).
     pub subst: CanonicalConstrainedSubst,
@@ -482,7 +482,7 @@ impl Forest {
         max_size: usize,
         program: &Arc<ProgramEnvironment>,
         root_goal: &UCanonicalGoal,
-    ) -> Result<Answers, ExplorationError> {
+    ) -> Result<SimplifiedAnswers, ExplorationError> {
         let program = program.clone();
 
         let mut forest = Forest {
@@ -1897,11 +1897,11 @@ impl<'a> IntoIterator for &'a mut Tables {
 }
 
 impl Table {
-    fn export_answers(&self) -> Answers {
-        let mut result = Answers {
+    fn export_answers(&self) -> SimplifiedAnswers {
+        let mut result = SimplifiedAnswers {
             answers: self.answers
                 .iter()
-                .map(|(subst, delay_sets)| Answer {
+                .map(|(subst, delay_sets)| SimplifiedAnswer {
                     subst: subst.clone(),
                     ambiguous: !delay_sets.is_empty(),
                 })

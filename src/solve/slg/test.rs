@@ -73,9 +73,9 @@ fn slg_from_env() {
         goal {
             forall<T> { if (T: Sized) { T: Sized } }
         } with max 10 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -109,9 +109,9 @@ fn positive_cycle() {
         goal {
             exists<T> { T: Sized }
         } with max 3 yields {
-            r"4 answer(s) found: Answers {
+            r"4 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -125,7 +125,7 @@ fn positive_cycle() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -139,7 +139,7 @@ fn positive_cycle() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -155,7 +155,7 @@ fn positive_cycle() {
                         },
                         ambiguous: true
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -210,7 +210,7 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T: Foo }
         } with max 2 yields {
-            r"0 answer(s) found: Answers {
+            r"0 answer(s) found: SimplifiedAnswers {
                 answers: []
             }"
         }
@@ -219,9 +219,9 @@ fn subgoal_cycle_uninhabited() {
         goal {
             not { exists<T> { T: Foo } }
         } with max 2 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -241,9 +241,9 @@ fn subgoal_cycle_uninhabited() {
         goal {
             forall<T> { not { T: Foo } }
         } with max 2 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -271,9 +271,9 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
         } with max 4 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -295,9 +295,9 @@ fn subgoal_cycle_uninhabited() {
         goal {
             forall<U> { if (U: Foo) { exists<T> { T: Foo } } }
         } with max 2 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -332,9 +332,9 @@ fn subgoal_cycle_inhabited() {
         goal {
             exists<T> { T: Foo }
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -367,9 +367,9 @@ fn basic_region_constraint_from_positive_impl() {
         goal {
             forall<'a, 'b, T> { Ref<'a, 'b, T>: Foo }
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -400,9 +400,9 @@ fn basic_region_constraint_from_unification_goal() {
         goal {
             forall<'a, 'b, T> { Ref<'a, 'b, T> = Ref<'a, 'a, T> }
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -443,9 +443,9 @@ fn example_2_1_EWFS() {
         goal {
             exists<V> { a: TransitiveClosure<V> }
         } with max 3 yields {
-            r"3 answer(s) found: Answers {
+            r"3 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -459,7 +459,7 @@ fn example_2_1_EWFS() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -473,7 +473,7 @@ fn example_2_1_EWFS() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -516,9 +516,9 @@ fn example_2_2_EWFS() {
         goal {
             c: M
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -559,9 +559,9 @@ fn example_2_3_EWFS() {
         goal {
             a: W
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -598,9 +598,9 @@ fn example_3_3_EWFS() {
         goal {
             a: S
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -633,9 +633,9 @@ fn contradiction() {
         goal {
             u32: P
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -669,9 +669,9 @@ fn negative_loop() {
         goal {
             u32: P
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -715,9 +715,9 @@ fn cached_answers_1() {
         goal {
             exists<T> { T: Sour }
         } with max 2 yields {
-            r"5 answer(s) found: Answers {
+            r"5 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -731,7 +731,7 @@ fn cached_answers_1() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -745,7 +745,7 @@ fn cached_answers_1() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -761,7 +761,7 @@ fn cached_answers_1() {
                         },
                         ambiguous: true
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -775,7 +775,7 @@ fn cached_answers_1() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -813,9 +813,9 @@ fn cached_answers_2() {
         goal {
             exists<T> { T: Sour }
         } with max 2 yields {
-            r"5 answer(s) found: Answers {
+            r"5 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -829,7 +829,7 @@ fn cached_answers_2() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -843,7 +843,7 @@ fn cached_answers_2() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -859,7 +859,7 @@ fn cached_answers_2() {
                         },
                         ambiguous: true
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -873,7 +873,7 @@ fn cached_answers_2() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -911,9 +911,9 @@ fn cached_answers_3() {
         goal {
             exists<T> { T: Sour }
         } with max 2 yields {
-            r"5 answer(s) found: Answers {
+            r"5 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -927,7 +927,7 @@ fn cached_answers_3() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -941,7 +941,7 @@ fn cached_answers_3() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -957,7 +957,7 @@ fn cached_answers_3() {
                         },
                         ambiguous: true
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {
@@ -971,7 +971,7 @@ fn cached_answers_3() {
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
                                 subst: Substitution {

@@ -6,9 +6,9 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
 
-use super::{Answer, Answers, CanonicalGoal};
+use super::{SimplifiedAnswer, SimplifiedAnswers, CanonicalGoal};
 
-impl Answers {
+impl SimplifiedAnswers {
     pub fn into_solution(mut self, root_goal: &CanonicalGoal) -> Option<Solution> {
         // No answers at all.
 
@@ -18,7 +18,7 @@ impl Answers {
 
         // Exactly 1 answer?
 
-        let Answer { subst, ambiguous } = self.answers.pop().unwrap();
+        let SimplifiedAnswer { subst, ambiguous } = self.answers.pop().unwrap();
         if self.answers.is_empty() && !ambiguous {
             return Some(Solution::Unique(subst));
         }
@@ -39,7 +39,7 @@ impl Answers {
 
         let mut infer = InferenceTable::new();
         while let Some(answer1) = self.answers.pop() {
-            let Answer {
+            let SimplifiedAnswer {
                 subst:
                     Canonical {
                         value:

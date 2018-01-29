@@ -213,7 +213,7 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     let peeled_goal = goal.into_peeled_goal();
     if args.flag_slg && args.flag_all_answers {
         match slg::solve_root_goal(args.flag_overflow_depth, &prog.env, &peeled_goal) {
-            Ok(slg::Answers { answers }) => if answers.is_empty() {
+            Ok(slg::SimplifiedAnswers { answers }) => if answers.is_empty() {
                 println!("No answers found.");
             } else {
                 println!("{} answer(s) found:", answers.len());
