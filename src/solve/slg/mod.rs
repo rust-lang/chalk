@@ -65,6 +65,7 @@ use std::sync::Arc;
 use std::usize;
 
 mod aggregate;
+pub mod on_demand;
 mod resolvent;
 mod test;
 
@@ -1955,7 +1956,24 @@ impl DelayedLiteralSets {
     }
 }
 
+impl DelayedLiteralSet {
+    fn is_empty(&self) -> bool {
+        self.delayed_literals.is_empty()
+    }
+
+    fn is_subset(&self, other: &DelayedLiteralSet) -> bool {
+        self.delayed_literals
+            .iter()
+            .all(|elem| other.delayed_literals.binary_search(elem).is_ok())
+    }
+}
+
 impl Minimums {
+    const MAX: Minimums = Minimums {
+        positive: DepthFirstNumber::MAX,
+        negative: DepthFirstNumber::MAX,
+    };
+
     /// Update our fields to be the minimum of our current value
     /// and the values from other.
     fn take_minimums(&mut self, other: &Minimums) {

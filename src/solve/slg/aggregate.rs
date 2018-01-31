@@ -14,7 +14,9 @@ impl SimplifiedAnswers {
     }
 }
 
-fn make_solution(
+/// Draws as many answers as it needs from `simplified_answers` (but
+/// no more!) in order to come up with a solution.
+pub(super) fn make_solution(
     root_goal: &CanonicalGoal,
     simplified_answers: impl IntoIterator<Item = SimplifiedAnswer>,
 ) -> Option<Solution> {

@@ -990,3 +990,43 @@ fn cached_answers_3() {
         }
     }
 }
+
+/// Here, P depends on Q negatively, but Q depends only on itself.
+/// What happens is that P adds a negative link on Q, so that when Q
+/// delays, P is also delayed.
+#[test]
+fn negative_answer_delayed_literal() {
+    test! {
+        program {
+            trait P { }
+            trait Q { }
+            struct u32 { }
+
+            forall<> { u32: P if not { u32: Q } }
+            forall<> { u32: Q if not { u32: Q } }
+        }
+
+        goal {
+            u32: P
+        } with max 3 yields {
+            r"
+            1 answer(s) found: SimplifiedAnswers {
+                answers: [
+                    SimplifiedAnswer {
+                        subst: Canonical {
+                            value: ConstrainedSubst {
+                                subst: Substitution {
+                                    parameters: {}
+                                },
+                                constraints: []
+                            },
+                            binders: []
+                        },
+                        ambiguous: true
+                    }
+                ]
+            }
+            "
+        }
+    }
+}
