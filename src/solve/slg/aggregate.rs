@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
 
-use super::{SimplifiedAnswer, SimplifiedAnswers, CanonicalGoal};
+use super::{CanonicalConstrainedSubst, SimplifiedAnswer, SimplifiedAnswers, CanonicalGoal};
 
 impl SimplifiedAnswers {
     pub fn into_solution(mut self, root_goal: &CanonicalGoal) -> Option<Solution> {
@@ -37,63 +37,8 @@ impl SimplifiedAnswers {
         // rust-lang/rust#21974.
         let mut subst = subst.map(|cs| cs.subst);
 
-        let mut infer = InferenceTable::new();
         while let Some(answer1) = self.answers.pop() {
-            let SimplifiedAnswer {
-                subst:
-                    Canonical {
-                        value:
-                            ConstrainedSubst {
-                                subst: subst1,
-                                constraints: _,
-                            },
-                        binders: _,
-                    },
-                ambiguous: _,
-            } = answer1;
-
-            // While we aggregate each pair of matching types, we will
-            // make new variables, but after each round is done we
-            // will canonicalize and cleanup.
-            let snapshot = infer.snapshot();
-
-            // Collect the types that the two substitutions have in
-            // common.
-            let mut aggr_parameters = BTreeMap::new();
-            for (key, value) in subst.value.parameters {
-                let ty = match value {
-                    ParameterKind::Ty(ty) => ty,
-                    ParameterKind::Lifetime(_) => {
-                        // Ignore the lifetimes from the substitution: we're just
-                        // creating guidance here anyway.
-                        continue;
-                    }
-                };
-
-                if let Some(ty1) = subst1.parameters.get(&key) {
-                    let ty1 = ty1.assert_ty_ref();
-
-                    // We have two values for some variable X that
-                    // appears in the root goal. Find out the universe
-                    // of X.
-                    let universe = root_goal.binders[key.to_usize()].into_inner();
-
-                    // Combine the two types into a new type.
-                    let mut aggr = AntiUnifier {
-                        infer: &mut infer,
-                        universe,
-                    };
-                    let ty_aggr = aggr.aggregate_tys(&ty, ty1);
-                    aggr_parameters.insert(key, ty_aggr.cast());
-                }
-            }
-
-            let aggr_subst = Substitution {
-                parameters: aggr_parameters,
-            };
-
-            subst = infer.canonicalize(&aggr_subst).quantified;
-            infer.rollback_to(snapshot);
+            subst = merge_into_guidance(root_goal, subst, &answer1.subst);
         }
 
         let guidance = if subst.value.is_empty() {
@@ -106,6 +51,66 @@ impl SimplifiedAnswers {
 
         Some(Solution::Ambig(guidance))
     }
+}
+
+/// Given a current substitution used as guidance for `root_goal`, and
+/// a new possible answer to `root_goal`, returns a new set of
+/// guidance that encompasses both of them. This is often more general
+/// than the old guidance. For example, if we had a guidance of `?0 =
+/// u32` and the new answer is `?0 = i32`, then the guidance would
+/// become `?0 = ?X` (where `?X` is some fresh variable).
+fn merge_into_guidance(
+    root_goal: &CanonicalGoal,
+    guidance: Canonical<Substitution>,
+    answer: &CanonicalConstrainedSubst,
+) -> Canonical<Substitution> {
+    let mut infer = InferenceTable::new();
+    let Canonical {
+            value:
+            ConstrainedSubst {
+                subst: subst1,
+                constraints: _,
+            },
+            binders: _,
+    } = answer;
+
+    // Collect the types that the two substitutions have in
+    // common.
+    let mut aggr_parameters = BTreeMap::new();
+
+    for (key, value) in guidance.value.parameters {
+        let ty = match value {
+            ParameterKind::Ty(ty) => ty,
+            ParameterKind::Lifetime(_) => {
+                // Ignore the lifetimes from the substitution: we're just
+                // creating guidance here anyway.
+                continue;
+            }
+        };
+
+        if let Some(ty1) = subst1.parameters.get(&key) {
+            let ty1 = ty1.assert_ty_ref();
+
+            // We have two values for some variable X that
+            // appears in the root goal. Find out the universe
+            // of X.
+            let universe = root_goal.binders[key.to_usize()].into_inner();
+
+            // Combine the two types into a new type.
+            let mut aggr = AntiUnifier {
+                infer: &mut infer,
+                universe,
+            };
+            let ty_aggr = aggr.aggregate_tys(&ty, ty1);
+            aggr_parameters.insert(key, ty_aggr.cast());
+        }
+    }
+
+    let aggr_subst = Substitution {
+        parameters: aggr_parameters,
+    };
+
+    infer.canonicalize(&aggr_subst).quantified
 }
 
 fn is_trivial(subst: &Canonical<Substitution>) -> bool {
