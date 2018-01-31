@@ -255,3 +255,39 @@ fn flounder() {
         }
     }
 }
+
+// Test that, when solving `?T: Sized`, we only wind up pulling a few
+// answers before we stop.
+#[test]
+fn only_draw_so_many() {
+    let program_text = "
+            trait Sized { }
+
+            struct Vec<T> { }
+            impl<T> Sized for Vec<T> where T: Sized { }
+
+            struct i32 { }
+            impl Sized for i32 { }
+
+            struct Slice<T> { }
+            impl<T> Sized for Slice<T> where T: Sized { }
+    ";
+
+    let goal_text = "exists<T> { T: Sized }";
+
+    let program = &Arc::new(parse_and_lower_program(program_text).unwrap());
+    let env = &Arc::new(program.environment());
+    ir::set_current_program(&program, || {
+        let goal = parse_and_lower_goal(&program, goal_text).unwrap();
+        let peeled_goal = goal.into_peeled_goal();
+        let mut forest = Forest::new(env, 10);
+        let solution = forest.solve(&peeled_goal);
+
+        // First, check we got the expected solution.
+        assert_eq!(format!("{:?}", solution), "Some(Ambig(Unknown))");
+
+        // Next, check how many answers we had to peel to get it.
+        let table = forest.get_or_create_table_for_ucanonical_goal(peeled_goal.clone());
+        assert_eq!(forest.tables[table].num_cached_answers(), 2);
+    });
+}

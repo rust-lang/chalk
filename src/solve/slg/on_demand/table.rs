@@ -145,6 +145,10 @@ impl Table {
     pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer> {
         self.answers.get(index.value)
     }
+
+    pub(super) fn num_cached_answers(&self) -> usize {
+        self.answers.len()
+    }
 }
 
 impl AnswerIndex {
