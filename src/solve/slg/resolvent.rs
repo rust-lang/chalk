@@ -347,13 +347,19 @@ pub(super) fn factor_pending(
 // `Vec<?X>` with `u32` (from the substitution), which will fail. That
 // failure will get propagated back up.
 
-fn apply_answer_subst(
+pub(super) fn apply_answer_subst(
     infer: &mut InferenceTable,
     mut ex_clause: ExClause,
     selected_goal: &InEnvironment<Goal>,
     answer_table_goal: &CanonicalGoal,
     canonical_answer_subst: &CanonicalConstrainedSubst,
 ) -> Satisfiable<ExClause> {
+    debug_heading!("apply_answer_subst()");
+    debug!("ex_clause={:?}", ex_clause);
+    debug!("selected_goal={:?}", infer.normalize_deep(selected_goal));
+    debug!("answer_table_goal={:?}", answer_table_goal);
+    debug!("canonical_answer_subst={:?}", canonical_answer_subst);
+
     // C' is now `answer`. No variables in commmon with G.
     let ConstrainedSubst {
         subst: answer_subst,
@@ -485,6 +491,10 @@ impl<'t> AnswerSubstitutor<'t> {
 
 impl<'t> Zipper for AnswerSubstitutor<'t> {
     fn zip_tys(&mut self, answer: &Ty, pending: &Ty) -> Fallible<()> {
+        if let Some(pending) = self.table.normalize_shallow(pending, self.pending_binders) {
+            return Zip::zip_with(self, answer, &pending);
+        }
+
         // If the answer has a variable here, then this is one of the
         // "inputs" to the subgoal table. We need to extract the
         // resulting answer that the subgoal found and unify it with
@@ -533,6 +543,10 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
     }
 
     fn zip_lifetimes(&mut self, answer: &Lifetime, pending: &Lifetime) -> Fallible<()> {
+        if let Some(pending) = self.table.normalize_lifetime(pending, self.pending_binders) {
+            return Zip::zip_with(self, answer, &pending);
+        }
+
         if let Lifetime::Var(answer_depth) = answer {
             if self.unify_free_answer_var(*answer_depth, ParameterKind::Lifetime(pending))? {
                 return Ok(());
