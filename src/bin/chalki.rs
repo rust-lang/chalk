@@ -35,7 +35,7 @@ Options:
   --program=PATH      Specifies the path to the `.chalk` file containing traits/impls.
   --goal=GOAL         Specifies a goal to evaluate (may be given more than once).
   --overflow-depth=N  Specifies the overflow depth [default: 10].
-  --slg               Use the experimental SLG resolution system.
+  --solver S          Selects a solver (recursive, slg-eager, or slg-on-demand) [default: recursive]
   --all-answers       When using SLG solver, dump out each individual answer.
   --no-cache          Disable caching.
 ";
@@ -45,7 +45,7 @@ struct Args {
     flag_program: Option<String>,
     flag_goal: Vec<String>,
     flag_overflow_depth: usize,
-    flag_slg: bool,
+    flag_solver: String,
     flag_all_answers: bool,
     flag_no_cache: bool,
 }
@@ -90,9 +90,24 @@ fn run() -> Result<()> {
 
     let mut prog = None;
 
-    if args.flag_all_answers && !args.flag_slg {
-        eprintln!("error: in order to report all answers, you must also pass --slg");
-        exit(1);
+    let solver_choice = match args.solver_choice() {
+        Some(s) => s,
+        None => {
+            eprintln!("error: invalid solver choice `{}`", args.flag_solver);
+            eprintln!("try `recursive`, `slg-eager`, or `slg-on-demand`");
+            exit(1);
+        }
+    };
+
+    if args.flag_all_answers {
+        match solver_choice {
+            SolverChoice::SLG { eager: true, .. } => { }
+            _ => {
+                eprintln!("error: in order to report all answers, \
+                           you must use the `slg-eager` solver");
+                exit(1);
+            }
+        }
     }
 
     if let Some(program) = &args.flag_program {
@@ -163,7 +178,8 @@ fn process(
     if command == "help" {
         help()
     } else if command == "program" {
-        *prog = Some(Program::new(read_program(rl)?, args.solver_choice())?);
+        let solver_choice = args.solver_choice().unwrap();
+        *prog = Some(Program::new(read_program(rl)?, solver_choice)?);
     } else if command.starts_with("load ") {
         let filename = &command["load ".len()..];
         *prog = Some(load_program(args, filename)?);
@@ -185,7 +201,8 @@ fn process(
 fn load_program(args: &Args, filename: &str) -> Result<Program> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
-    Ok(Program::new(text, args.solver_choice())?)
+    let solver_choice = args.solver_choice().unwrap();
+    Ok(Program::new(text, solver_choice)?)
 }
 
 fn help() {
@@ -211,7 +228,7 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let peeled_goal = goal.into_peeled_goal();
-    if args.flag_slg && args.flag_all_answers {
+    if args.flag_all_answers {
         match slg::solve_root_goal(args.flag_overflow_depth, &prog.env, &peeled_goal) {
             Ok(slg::SimplifiedAnswers { answers }) => if answers.is_empty() {
                 println!("No answers found.");
@@ -230,9 +247,8 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
             }
         }
     } else {
-        match args.solver_choice()
-            .solve_root_goal(&prog.env, &peeled_goal)
-        {
+        let solver_choice = args.solver_choice().unwrap();
+        match solver_choice.solve_root_goal(&prog.env, &peeled_goal) {
             Ok(Some(v)) => println!("{}\n", v),
             Ok(None) => println!("No possible solution.\n"),
             Err(e) => println!("Solver failed: {}", e),
@@ -242,16 +258,24 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
 }
 
 impl Args {
-    fn solver_choice(&self) -> SolverChoice {
-        if self.flag_slg {
-            SolverChoice::SLG {
+    fn solver_choice(&self) -> Option<SolverChoice> {
+        match &self.flag_solver[..] {
+            "slg-eager" => Some(SolverChoice::SLG {
+                eager: true,
                 max_size: self.flag_overflow_depth,
-            }
-        } else {
-            SolverChoice::Recursive {
+            }),
+
+            "slg-on-demand" => Some(SolverChoice::SLG {
+                eager: false,
+                max_size: self.flag_overflow_depth,
+            }),
+
+            "recursive" => Some(SolverChoice::Recursive {
                 overflow_depth: self.flag_overflow_depth,
                 caching_enabled: !self.flag_no_cache,
-            }
+            }),
+
+            _ => None
         }
     }
 }

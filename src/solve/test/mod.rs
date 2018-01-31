@@ -52,9 +52,12 @@ macro_rules! test {
         $($unparsed_goals:tt)*
     ]) => {
         test!(@program[$program]
-              @parsed_goals[$($parsed_goals)*
-                            (stringify!($goal), SolverChoice::recursive(), $expected)
-                            (stringify!($goal), SolverChoice::slg(), $expected)]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), SolverChoice::recursive(), $expected)
+                      (stringify!($goal), SolverChoice::eager_slg(), $expected)
+                      (stringify!($goal), SolverChoice::on_demand_slg(), $expected)
+              ]
               @unparsed_goals[$($unparsed_goals)*])
     };
 
@@ -66,22 +69,22 @@ macro_rules! test {
     // (this rule) for the last goal in the list (next rule). There
     // might be a more elegant fix than copy-and-paste but this works.
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
-        goal $goal:tt $(yields[$C:expr] { $expected:expr })*
+        goal $goal:tt $(yields[$($C:expr),+] { $expected:expr })*
             goal $($unparsed_goals:tt)*
     ]) => {
         test!(@program[$program]
               @parsed_goals[$($parsed_goals)*
-                            $((stringify!($goal), $C, $expected))+]
+                            $($((stringify!($goal), $C, $expected))+)+]
               @unparsed_goals[goal $($unparsed_goals)*])
     };
 
     // same as above, but for the final goal in the list.
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
-        goal $goal:tt $(yields[$C:expr] { $expected:expr })*
+        goal $goal:tt $(yields[$($C:expr),+] { $expected:expr })*
     ]) => {
         test!(@program[$program]
               @parsed_goals[$($parsed_goals)*
-                            $((stringify!($goal), $C, $expected))+]
+                            $($((stringify!($goal), $C, $expected))+)+]
               @unparsed_goals[])
     };
 }
@@ -522,7 +525,9 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::on_demand_slg()] {
+            "Unique; substitution [?0 := (Iterator::Item)<!1>]"
+        } yields[SolverChoice::eager_slg()] {
             "Unique; substitution [?0 := (Iterator::Item)<!1>]"
         }
 
@@ -1109,7 +1114,13 @@ fn unify_quantified_lifetimes() {
              substitution [?0 := '?0, ?1 := '?0], \
              lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
              }"
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::on_demand_slg()] {
+            // SLG yields this distinct, but equivalent, result
+            "Unique; for<?U0> { \
+             substitution [?0 := '?0, ?1 := '!1], \
+             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             }"
+        } yields[SolverChoice::eager_slg()] {
             // SLG yields this distinct, but equivalent, result
             "Unique; for<?U0> { \
              substitution [?0 := '?0, ?1 := '!1], \
@@ -1360,7 +1371,10 @@ fn suggested_subst() {
             }
         } yields[SolverChoice::recursive()] {
             "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::on_demand_slg()] {
+            // FIXME: SLG does not impl the logic to privilege where clauses
+            "Ambiguous; no inference guidance"
+        } yields[SolverChoice::eager_slg()] {
             // FIXME: SLG does not impl the logic to privilege where clauses
             "Ambiguous; no inference guidance"
         }
@@ -1393,7 +1407,7 @@ fn suggested_subst() {
             }
         } yields[SolverChoice::recursive()] {
             "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::on_demand_slg(), SolverChoice::eager_slg()] {
             // FIXME: SLG does not impl the logic to privilege where clauses
             "Ambiguous; no inference guidance"
         }
@@ -1448,9 +1462,9 @@ fn simple_negation() {
             exists<T> {
                 not { T: Foo }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::on_demand_slg(), SolverChoice::recursive()] {
             "Ambig"
-        } yields[SolverChoice::slg() ] {
+        } yields[SolverChoice::eager_slg() ] {
             "Exploration error: Floundered"
         }
 
@@ -1564,9 +1578,9 @@ fn negation_free_vars() {
             exists<T> {
                 not { Vec<T>: Foo }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::on_demand_slg(), SolverChoice::recursive()] {
             "Ambig"
-        } yields[SolverChoice::slg() ] {
+        } yields[SolverChoice::eager_slg() ] {
             "Exploration error: Floundered"
         }
     }
@@ -1996,13 +2010,13 @@ fn overflow_universe() {
 
         goal {
             Foo: Bar
-        } yields[SolverChoice::recursive()] {
-            // The internal universe canonicalization in the recursive
+        } yields[SolverChoice::on_demand_slg(), SolverChoice::recursive()] {
+            // The internal universe canonicalization in the on-demand/recursive
             // solver means that when we are asked to solve (e.g.)
             // `!2: Bar`, we rewrite that to `!1: Bar`, identifying a
             // cycle.
             "No possible solution"
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::eager_slg()] {
             // The SLG solver here *currently* works a bit by
             // accident, as it does not yet do universe
             // canonicalization internally. However, we wind up with a table
