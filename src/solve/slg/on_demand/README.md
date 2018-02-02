@@ -41,6 +41,10 @@ look for a table with this as the key: since the forest is empty, this
 lookup will fail, and we will create a new table T0, corresponding to
 the u-canonical goal Q.
 
+**Ignoring negative reasoning and regions.** To start, we'll ignore
+the possibility of negative goals like `not { Foo }`. We'll phase them
+in later, as they bring several complications.
+
 **Creating a table.** When we first create a table, we also initialize
 it with a set of *initial strands*. A "strand" is kind of like a
 "thread" for the solver: it contains a particular way to produce an
@@ -69,21 +73,19 @@ a selected subgoal from that X-clause. But what is an X-clause
 
 - The current state of the goal we are trying to prove;
 - A set of subgoals that have yet to be proven;
-- A set of delayed literals that we will have to revisit later;
-  - (I'll ignore these for now; they are only needed to handle loops between negative goals.)
-- A set of region constraints accumulated thus far.
-  - (I'll ignore these too for now; we'll cover regions later on.)
+- There are also a few things we're ignoring for now:
+  - delayed literals, region constraints
 
 The general form of an X-clause is written much like a Prolog clause,
-but with somewhat different semantics:
+but with somewhat different semantics. Since we're ignoring delayed
+literals and region constraints, an X-clause just looks like this:
 
-    G :- D | L
+    G :- L
     
-where G is a goal, D is a set of delayed literals, and L is the set of
-literals that must be proven (in the general case, these can be both a
-goal like G but also a negated goal like `not { G }`). The idea is
-that -- if we are able to prove L and D -- then the goal G can be
-considered true.
+where G is a goal and L is a set of subgoals that must be proven.
+(The L stands for *literal* -- when we address negative reasoning, a
+literal will be either a positive or negative subgoal.) The idea is
+that if we are able to prove L then the goal G can be considered true.
 
 In the case of our example, we would wind up creating one strand, with
 an X-clause like so:
@@ -97,7 +99,7 @@ refer to variables in a canonicalized goal; in the code, however, they
 are both represented with an index.)
 
 For each strand, we also optionally store a *selected subgoal*. This
-is the literal after the turnstile (`:-`) that we are currently trying
+is the subgoal after the turnstile (`:-`) that we are currently trying
 to prove in this strand. Initally, when a strand is first created,
 there is no selected subgoal.
 
@@ -129,11 +131,11 @@ the state of the strand to:
     (Rc<?T>: Debug) :- selected(?T: Debug, A0)
     
 Here, we write `selected(L, An)` to indicate that (a) the literal `L`
-is the selected subgoal and (b) which answer An we are looking for. We
+is the selected subgoal and (b) which answer `An` we are looking for. We
 start out looking for `A0`.
 
 **Processing the selected subgoal.** Next, we have to try and find an
-answer to this 5Aselected goal. To do that, we will u-canonicalize it
+answer to this selected goal. To do that, we will u-canonicalize it
 and try to find an associated table. In this case, the u-canonical
 form of the subgoal is `?0: Debug`: we don't have a table yet for
 that, so we can create a new one, T1. As before, we'll initialize T1
