@@ -555,6 +555,7 @@ impl Forest {
                         &subst,
                         &clause.implication,
                     ) {
+                        debug!("pushing initial strand with ex-clause: {:#?}", resolvent);
                         table_ref.push_strand(Strand {
                             infer: clause_infer,
                             ex_clause: resolvent,
@@ -577,6 +578,7 @@ impl Forest {
                 if let Satisfiable::Yes(ex_clause) =
                     slg::simplify_hh_goal(&mut infer, subst, hh_goal)
                 {
+                    debug!("simplified hh goal into {:#?}", ex_clause);
                     table_ref.push_strand(Strand {
                         infer,
                         ex_clause,
