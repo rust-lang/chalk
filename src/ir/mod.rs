@@ -5,7 +5,7 @@ use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use fold::shift::Shift;
 use lalrpop_intern::InternedString;
 use solve::infer::var::InferenceVariable;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 #[macro_use]
@@ -109,7 +109,7 @@ impl Environment {
         I: IntoIterator<Item = DomainGoal>,
     {
         let mut env = self.clone();
-        let env_clauses: HashSet<_> = env.clauses.into_iter().chain(clauses).collect();
+        let env_clauses: BTreeSet<_> = env.clauses.into_iter().chain(clauses).collect();
         env.clauses = env_clauses.into_iter().collect();
         Arc::new(env)
     }
