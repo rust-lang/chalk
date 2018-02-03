@@ -60,6 +60,10 @@ impl Table {
         self.strands.extend(strands);
     }
 
+    crate fn strands_mut(&mut self) -> impl Iterator<Item = &mut Strand> {
+        self.strands.iter_mut()
+    }
+
     crate fn take_strands(&mut self) -> VecDeque<Strand> {
         mem::replace(&mut self.strands, VecDeque::new())
     }

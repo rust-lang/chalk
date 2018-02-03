@@ -9,6 +9,8 @@ use solve::slg::on_demand::stack::StackIndex;
 use solve::slg::on_demand::strand::{SelectedSubgoal, Strand};
 use solve::slg::on_demand::table::{Answer, AnswerIndex};
 use solve::truncate::{self, Truncated};
+use std::collections::HashSet;
+use std::mem;
 
 type SearchResult<T> = Result<T, SearchFail>;
 
@@ -57,7 +59,11 @@ impl Forest {
     ///
     /// In the case of a cycle, we return an error with this table's
     /// DFN as the "positive minimum" (and no negative minimum).
-    pub(super) fn ensure_answer(&mut self, table: TableIndex, answer: AnswerIndex) -> SearchResult<()> {
+    pub(super) fn ensure_answer(
+        &mut self,
+        table: TableIndex,
+        answer: AnswerIndex,
+    ) -> SearchResult<()> {
         info_heading!("ensure_answer(table={:?}, answer={:?})", table, answer);
         info!("table goal = {:?}", self.tables[table].table_goal);
 
@@ -144,7 +150,10 @@ impl Forest {
                         // We started with no strands!
                         return Err(SearchFail::NoMoreSolutions);
                     } else {
-                        return self.cycle(depth, cyclic_strands, cyclic_minimums);
+                        let c = mem::replace(&mut cyclic_strands, vec![]);
+                        if let Some(err) = self.cycle(depth, c, cyclic_minimums) {
+                            return Err(err);
+                        }
                     }
                 }
             }
@@ -155,12 +164,16 @@ impl Forest {
     /// encountered a cycle. In this case, the vector `strands` are
     /// the set of strands that encountered cycles, and `minimums` is
     /// the minimum stack depths that they were dependent on.
+    ///
+    /// Returns `None` if we have resolved the cycle and should try to
+    /// pick a strand again. Returns `Some(_)` if the cycle indicates
+    /// an error that we can propagate higher up.
     fn cycle(
         &mut self,
         depth: StackIndex,
         strands: Vec<Strand>,
         minimums: Minimums,
-    ) -> SearchResult<()> {
+    ) -> Option<SearchFail> {
         let table = self.stack[depth].table;
         assert!(self.tables[table].pop_next_strand().is_none());
 
@@ -171,12 +184,16 @@ impl Forest {
             // then no more answers are forthcoming. We can clear all
             // the strands for those things recursively.
             self.clear_strands_after_cycle(table, strands);
-            Err(SearchFail::NoMoreSolutions)
-        } else if minimums.positive == dfn && minimums.negative >= dfn {
-            panic!("FIXME -- need to delay here")
+            Some(SearchFail::NoMoreSolutions)
+        } else if minimums.positive >= dfn && minimums.negative >= dfn {
+            let mut visited = HashSet::default();
+            visited.insert(table);
+            self.tables[table].extend_strands(strands);
+            self.delay_strands_after_cycle(table, &mut visited);
+            None
         } else {
             self.tables[table].extend_strands(strands);
-            Err(SearchFail::Cycle(minimums))
+            Some(SearchFail::Cycle(minimums))
         }
     }
 
@@ -209,6 +226,55 @@ impl Forest {
             let strand_table = selected_subgoal.subgoal_table;
             let strands = self.tables[strand_table].take_strands();
             self.clear_strands_after_cycle(strand_table, strands);
+        }
+    }
+
+    /// Invoked after we have determined that every strand in `table`
+    /// encounters a cycle, and that some of those cycles involve
+    /// negative edges. In that case, walks all negative edges and
+    /// converts them to delayed literals.
+    fn delay_strands_after_cycle(
+        &mut self,
+        table: TableIndex,
+        visited: &mut HashSet<TableIndex>,
+    ) {
+        let mut tables = vec![];
+
+        for strand in self.tables[table].strands_mut() {
+            let (subgoal_index, subgoal_table) = match &strand.selected_subgoal {
+                Some(selected_subgoal) => (
+                    selected_subgoal.subgoal_index,
+                    selected_subgoal.subgoal_table,
+                ),
+                None => {
+                    panic!(
+                        "delay_strands_after_cycle invoked on strand in table {:?} \
+                         without a selected subgoal: {:?}",
+                        table,
+                        strand,
+                    );
+                }
+            };
+
+            // Delay negative literals.
+            if let Literal::Negative(_) = strand.ex_clause.subgoals[subgoal_index] {
+                strand.ex_clause.subgoals.remove(subgoal_index);
+                strand.ex_clause.delayed_literals.push(
+                    DelayedLiteral::Negative(subgoal_table),
+                );
+                strand.selected_subgoal = None;
+            }
+
+            if visited.insert(subgoal_table) {
+                tables.push(subgoal_table);
+            }
+        }
+
+        for table in tables {
+            self.delay_strands_after_cycle(
+                table,
+                visited,
+            );
         }
     }
 
@@ -371,7 +437,10 @@ impl Forest {
     /// In terms of the NFTD paper, creating a new table corresponds
     /// to the *New Subgoal* step as well as the *Program Clause
     /// Resolution* steps.
-    pub(super) fn get_or_create_table_for_ucanonical_goal(&mut self, goal: UCanonicalGoal) -> TableIndex {
+    pub(super) fn get_or_create_table_for_ucanonical_goal(
+        &mut self,
+        goal: UCanonicalGoal,
+    ) -> TableIndex {
         debug_heading!("get_or_create_table_for_ucanonical_goal({:?})", goal);
 
         if let Some(table) = self.tables.index_of(&goal) {

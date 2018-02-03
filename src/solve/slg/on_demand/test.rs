@@ -291,3 +291,45 @@ fn only_draw_so_many() {
         assert_eq!(forest.tables[table].num_cached_answers(), 2);
     });
 }
+
+/// Here, P and Q depend on one another through a negative loop.
+#[test]
+fn negative_loop() {
+    test! {
+        program {
+            trait P { }
+            trait Q { }
+            struct u32 { }
+
+            forall<> { u32: P if not { u32: Q } }
+            forall<> { u32: Q if not { u32: P } }
+        }
+
+        goal {
+            u32: P
+        } first 5 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: Substitution {
+                                parameters: {}
+                            },
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: [
+                            Negative(
+                                TableIndex {
+                                    value: 1
+                                }
+                            )
+                        ]
+                    }
+                }
+            ]"
+        }
+    }
+}
