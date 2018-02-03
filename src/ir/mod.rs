@@ -830,7 +830,7 @@ pub enum QuantifierKind {
 /// lifetime constraints, instead gathering them up to return with our solution
 /// for later checking. This allows for decoupling between type and region
 /// checking in the compiler.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Constraint {
     LifetimeEq(Lifetime, Lifetime),
 }

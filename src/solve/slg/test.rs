@@ -376,7 +376,10 @@ fn basic_region_constraint_from_positive_impl() {
                                     parameters: {}
                                 },
                                 constraints: [
-                                    (Env([]) |- LifetimeEq('!2, '!1))
+                                    InEnvironment {
+                                        environment: Env([]),
+                                        goal: '!2 == '!1
+                                    }
                                 ]
                             },
                             binders: []
@@ -409,7 +412,10 @@ fn basic_region_constraint_from_unification_goal() {
                                     parameters: {}
                                 },
                                 constraints: [
-                                    (Env([]) |- LifetimeEq('!2, '!1))
+                                    InEnvironment {
+                                        environment: Env([]),
+                                        goal: '!2 == '!1
+                                    }
                                 ]
                             },
                             binders: []

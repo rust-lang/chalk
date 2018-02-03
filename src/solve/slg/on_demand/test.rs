@@ -322,9 +322,7 @@ fn negative_loop() {
                     delayed_literals: DelayedLiteralSet {
                         delayed_literals: [
                             Negative(
-                                TableIndex {
-                                    value: 1
-                                }
+                                TableIndex(1)
                             )
                         ]
                     }

@@ -268,7 +268,10 @@ impl Debug for Environment {
 
 impl<G: Debug> Debug for InEnvironment<G> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "({:?} |- {:?})", self.environment, self.goal)
+        fmt.debug_struct("InEnvironment")
+           .field("environment", &self.environment)
+           .field("goal", &self.goal)
+           .finish()
     }
 }
 
@@ -300,6 +303,14 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
         match *self {
             ParameterKind::Ty(ref n) => write!(fmt, "Ty({:?})", n),
             ParameterKind::Lifetime(ref n) => write!(fmt, "Lifetime({:?})", n),
+        }
+    }
+}
+
+impl Debug for Constraint {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match self {
+            Constraint::LifetimeEq(a, b) => write!(fmt, "{:?} == {:?}", a, b),
         }
     }
 }

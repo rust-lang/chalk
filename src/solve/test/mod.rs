@@ -612,9 +612,9 @@ fn region_equality() {
             }
         } yields {
             "Unique; substitution [],
-                     lifetime constraints [
-                       (Env([]) |- LifetimeEq('!2, '!1))
-                     ]"
+                     lifetime constraints \
+                     [InEnvironment { environment: Env([]), goal: '!2 == '!1 }]
+                     "
         }
 
         goal {
@@ -662,7 +662,7 @@ fn forall_equality() {
                 for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
         } yields {
             "Unique; substitution [], lifetime constraints [
-                 (Env([]) |- LifetimeEq('!2, '!1))
+                 InEnvironment { environment: Env([]), goal: '!2 == '!1 }
              ]"
         }
     }
@@ -1073,7 +1073,7 @@ fn normalize_under_binder() {
         } yields {
             "Unique; for<?U0> { \
              substitution [?0 := Ref<'?0, I32>], \
-             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
         }
     }
@@ -1097,7 +1097,7 @@ fn unify_quantified_lifetimes() {
         } yields {
             "Unique; for<?U0> { \
              substitution [?0 := '?0], \
-             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
         }
 
@@ -1114,19 +1114,19 @@ fn unify_quantified_lifetimes() {
         } yields[SolverChoice::recursive()] {
             "Unique; for<?U0> { \
              substitution [?0 := '?0, ?1 := '?0], \
-             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
         } yields[SolverChoice::on_demand_slg()] {
             // SLG yields this distinct, but equivalent, result
             "Unique; for<?U0> { \
              substitution [?0 := '?0, ?1 := '!1], \
-             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
         } yields[SolverChoice::eager_slg()] {
             // SLG yields this distinct, but equivalent, result
             "Unique; for<?U0> { \
              substitution [?0 := '?0, ?1 := '!1], \
-             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
         }
     }
@@ -1151,7 +1151,7 @@ fn equality_binder() {
         } yields {
             "Unique; for<?U1> { \
                  substitution [?0 := '?0], \
-                 lifetime constraints [(Env([]) |- LifetimeEq('!2, '?0))] \
+                 lifetime constraints [InEnvironment { environment: Env([]), goal: '!2 == '?0 }] \
              }"
         }
     }
