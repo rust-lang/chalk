@@ -2,7 +2,7 @@ macro_rules! index_struct {
     ($v:vis struct $n:ident {
         $vf:vis value: usize,
     }) => {
-        #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
         $v struct $n {
             $vf value: usize,
         }
@@ -22,6 +22,12 @@ macro_rules! index_struct {
             #[allow(dead_code)]
             $v fn increment(&mut self) {
                 self.value += 1;
+            }
+        }
+
+        impl ::std::fmt::Debug for $n {
+            fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+                write!(fmt, "{}({})", stringify!($n), self.value)
             }
         }
 
