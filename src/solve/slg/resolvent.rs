@@ -113,17 +113,13 @@ pub(super) fn resolvent_clause(
     //   - Also, we always select the first literal in `ex_clause.literals`, so `i` is 0.
     // - `clause` is C, except with binders for any existential variables.
 
-    // Goal here is now G.
-    let ex_clause = ExClause {
-        subst: subst.clone(),
-        delayed_literals: vec![],
-        constraints: vec![],
-        subgoals: vec![],
-    };
-
-    // The selected literal for us will always be the main goal
-    // `G`. See if we can unify that with C'.
-    let environment = &goal.environment;
+    debug_heading!(
+        "resolvent_clause(\
+         \n    goal={:?},\
+         \n    clause={:?})",
+        goal,
+        clause,
+    );
 
     // C' in the description above is `consequence :- conditions`.
     //
@@ -132,63 +128,41 @@ pub(super) fn resolvent_clause(
         consequence,
         conditions,
     } = infer.instantiate_binders_existentially(clause);
-    let consequence: InEnvironment<DomainGoal> = InEnvironment::new(&environment, consequence);
+    debug!("consequence = {:?}", consequence);
+    debug!("conditions = {:?}", conditions);
 
-    resolvent_unify(infer, ex_clause, &goal, &consequence, conditions)
-}
-
-/// Given the goal G (`goal`) with selected literal Li
-/// (`selected_goal`), the goal environment `environment`, and
-/// the clause C' (`consequence :- conditions`), applies the SLG
-/// resolvent algorithm to yield a new `ExClause`.
-fn resolvent_unify<G>(
-    infer: &mut InferenceTable,
-    mut goal: ExClause,
-    selected_goal: &InEnvironment<G>,
-    consequence: &InEnvironment<G>,
-    conditions: Vec<Goal>,
-) -> Satisfiable<ExClause>
-where
-    G: Zip,
-{
-    let environment = &selected_goal.environment;
-
-    debug_heading!(
-        "resolvent_unify(\
-         \n    selected_goal={:?},\
-         \n    consequence={:?},\
-         \n    conditions={:?})",
-        selected_goal,
-        consequence,
-        conditions,
-    );
+    let environment = &goal.environment.clone();
 
     // Unify the selected literal Li with C'.
-    let UnificationResult { goals, constraints } = {
-        match infer.unify(&selected_goal.environment, selected_goal, consequence) {
+    let UnificationResult { goals: subgoals, constraints } = {
+        match infer.unify(environment, &goal.goal, &consequence) {
             Err(_) => return Satisfiable::No,
             Ok(v) => v,
         }
     };
 
-    goal.constraints.extend(constraints);
+    // Final X-clause that we will return.
+    let mut ex_clause = ExClause {
+        subst: subst.clone(),
+        delayed_literals: vec![],
+        constraints: vec![],
+        subgoals: vec![],
+    };
 
-    // One (minor) complication: unification for us sometimes yields further domain goals.
-    info!("subgoals={:?}", goals);
-    goal.subgoals
-        .extend(goals.into_iter().casted().map(Literal::Positive));
+    // Add the subgoals/region-constraints that unification gave us.
+    debug!("subgoals={:?}", subgoals);
+    ex_clause.subgoals
+             .extend(subgoals.into_iter().casted().map(Literal::Positive));
+    ex_clause.constraints.extend(constraints);
 
-    // Add the `conditions` into the result. One complication is
-    // that these are HH-clauses, so we have to simplify into
-    // literals first. This can product a sum-of-products. This is
-    // why we return a vector.
-    goal.subgoals
-        .extend(conditions.into_iter().map(|c| match c {
-            Goal::Not(c) => Literal::Negative(InEnvironment::new(&environment, *c)),
-            c => Literal::Positive(InEnvironment::new(&environment, c)),
-        }));
+    // Add the `conditions` from the program clause into the result too.
+    ex_clause.subgoals
+             .extend(conditions.into_iter().map(|c| match c {
+                 Goal::Not(c) => Literal::Negative(InEnvironment::new(environment, *c)),
+                 c => Literal::Positive(InEnvironment::new(environment, c)),
+             }));
 
-    Satisfiable::Yes(goal)
+    Satisfiable::Yes(ex_clause)
 }
 
 ///////////////////////////////////////////////////////////////////////////

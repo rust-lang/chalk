@@ -2036,3 +2036,37 @@ fn overflow_universe() {
         }
     }
 }
+
+#[test]
+fn projection_from_env() {
+    test! {
+        program {
+            trait Sized { }
+
+            struct Slice<T> where T: Sized { }
+            impl<T> Sized for Slice<T> { }
+
+            trait SliceExt
+            {
+                type Item;
+            }
+
+            impl<T> SliceExt for Slice<T>
+            {
+                type Item = T;
+            }
+        }
+
+        goal {
+            forall<T> {
+                if (
+                    <Slice<T> as SliceExt>::Item: Sized
+                ) {
+                    T: Sized
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
