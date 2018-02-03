@@ -1,5 +1,5 @@
 use solve::slg::{DepthFirstNumber, TableIndex};
-use std::ops::{Index, IndexMut};
+use std::ops::{Index, IndexMut, Range};
 
 /// See `Forest`.
 #[derive(Default)]
@@ -27,6 +27,10 @@ crate struct StackEntry {
 }
 
 impl Stack {
+    pub(super) fn is_empty(&self) -> bool {
+        self.stack.is_empty()
+    }
+
     /// Searches the stack to see if `table` is active. If so, returns
     /// its stack index.
     pub(super) fn is_active(&self, table: TableIndex) -> Option<StackIndex> {
@@ -41,6 +45,10 @@ impl Stack {
                 }
             })
             .next()
+    }
+
+    pub(super) fn top_of_stack_from(&self, depth: StackIndex) -> Range<StackIndex> {
+        depth .. StackIndex::from(self.stack.len())
     }
 
     pub(super) fn push(&mut self, table: TableIndex, dfn: DepthFirstNumber) -> StackIndex {

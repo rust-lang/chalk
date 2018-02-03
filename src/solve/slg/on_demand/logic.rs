@@ -12,10 +12,34 @@ use solve::truncate::{self, Truncated};
 use std::collections::HashSet;
 use std::mem;
 
-type SearchResult<T> = Result<T, SearchFail>;
+type RootSearchResult<T> = Result<T, RootSearchFail>;
 
+/// The different ways that a *root* search (which potentially pursues
+/// many strands) can fail. A root search is one that begins with an
+/// empty stack.
+///
+/// (This is different from `RecursiveSearchFail` because nothing can
+/// be on the stack, so cycles are ruled out.)
 #[derive(Debug)]
-pub(super) enum SearchFail {
+pub(super) enum RootSearchFail {
+    /// The subgoal we were trying to solve cannot succeed.
+    NoMoreSolutions,
+
+    /// We did not find a solution, but we still have things to try.
+    /// Repeat the request, and we'll give one of those a spin.
+    ///
+    /// (In a purely depth-first-based solver, like Prolog, this
+    /// doesn't appear.)
+    QuantumExceeded,
+}
+
+type RecursiveSearchResult<T> = Result<T, RecursiveSearchFail>;
+
+/// The different ways that a recursive search (which potentially
+/// pursues many strands) can fail -- a "recursive" search is one that
+/// did not start with an empty stack.
+#[derive(Debug)]
+enum RecursiveSearchFail {
     /// The subgoal we were trying to solve cannot succeed.
     NoMoreSolutions,
 
@@ -50,33 +74,81 @@ pub(super) enum StrandFail {
     Cycle(Strand, Minimums),
 }
 
+#[derive(Debug)]
+enum EnsureSuccess {
+    AnswerAvailable,
+    Coinductive,
+}
+
 impl Forest {
     /// Ensures that answer with the given index is available from the
-    /// given table. If the answer is already found in the table,
-    /// returns immediately. Otherwise, we'll try to produce it by
-    /// activating the next strange in line. Returns `Ok(())` if the
-    /// answer is available.
-    ///
-    /// In the case of a cycle, we return an error with this table's
-    /// DFN as the "positive minimum" (and no negative minimum).
-    pub(super) fn ensure_answer(
+    /// given table. This may require activating a strand. Returns
+    /// `Ok(())` if the answer is available and otherwise a
+    /// `RootSearchFail` result.
+    pub(super) fn ensure_root_answer(
         &mut self,
         table: TableIndex,
         answer: AnswerIndex,
-    ) -> SearchResult<()> {
+    ) -> RootSearchResult<()> {
+        assert!(self.stack.is_empty());
+
+        match self.ensure_answer_recursively(table, answer) {
+            Ok(EnsureSuccess::AnswerAvailable) => Ok(()),
+            Err(RecursiveSearchFail::NoMoreSolutions) => Err(RootSearchFail::NoMoreSolutions),
+            Err(RecursiveSearchFail::QuantumExceeded) => Err(RootSearchFail::QuantumExceeded),
+
+            // Things involving cycles should be impossible since our
+            // stack was empty on entry:
+            Ok(EnsureSuccess::Coinductive) | Err(RecursiveSearchFail::Cycle(..)) => {
+                panic!("ensure_root_answer: nothing on the stack but cyclic result")
+            }
+        }
+    }
+
+    /// Ensures that answer with the given index is available from the
+    /// given table. Returns `Ok` if there is an answer:
+    ///
+    /// - `EnsureSuccess::AnswerAvailable` means that the answer is
+    ///   cached in the table (and can be fetched with e.g. `self.answer()`).
+    /// - `EnsureSuccess::Coinductive` means that this was a cyclic
+    ///   request of a coinductive goal and is thus considered true;
+    ///   in this case, the answer is not cached in the table (it is
+    ///   only true in this cyclic context).
+    ///
+    /// This function first attempts to fetch answer that is cached in
+    /// the table. If none is found, then we will if the table is on
+    /// the stack; if so, that constitutes a cycle (producing a new
+    /// result for the table X required producing a new result for the
+    /// table X), and we return a suitable result. Otherwise, we can
+    /// push the table onto the stack and select the next available
+    /// strand -- if none are available, then no more answers are
+    /// possible.
+    fn ensure_answer_recursively(
+        &mut self,
+        table: TableIndex,
+        answer: AnswerIndex,
+    ) -> RecursiveSearchResult<EnsureSuccess> {
         info_heading!("ensure_answer(table={:?}, answer={:?})", table, answer);
         info!("table goal = {:?}", self.tables[table].table_goal);
 
         // First, check for a tabled answer.
         if self.tables[table].answer(answer).is_some() {
             debug!("answer cached");
-            return Ok(());
+            return Ok(EnsureSuccess::AnswerAvailable);
         }
+
+        // If no tabled answer is present, we ought to be requesting
+        // the next available index.
+        assert_eq!(self.tables[table].next_answer_index(), answer);
 
         // Next, check if the table is already active. If so, then we
         // have a recursive attempt.
         if let Some(depth) = self.stack.is_active(table) {
-            return Err(SearchFail::Cycle(Minimums {
+            if self.top_of_stack_is_coinductive_from(depth) {
+                return Ok(EnsureSuccess::Coinductive);
+            }
+
+            return Err(RecursiveSearchFail::Cycle(Minimums {
                 positive: self.stack[depth].dfn,
                 negative: DepthFirstNumber::MAX,
             }));
@@ -87,7 +159,7 @@ impl Forest {
         let result = self.pursue_next_strand(depth);
         self.stack.pop(table, depth);
         debug!("result = {:?}", result);
-        result
+        result.map(|()| EnsureSuccess::AnswerAvailable)
     }
 
     pub(super) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer {
@@ -100,7 +172,7 @@ impl Forest {
     /// reaches one that did not encounter a cycle; that result is
     /// propagated.  If all strands return a cycle, then the entire
     /// subtree is "completed" by invoking `cycle`.
-    fn pursue_next_strand(&mut self, depth: StackIndex) -> SearchResult<()> {
+    fn pursue_next_strand(&mut self, depth: StackIndex) -> RecursiveSearchResult<()> {
         // This is a bit complicated because this is where we handle cycles.
         let table = self.stack[depth].table;
 
@@ -128,7 +200,7 @@ impl Forest {
                             // future. Enqueue the cyclic strands to
                             // be retried after that point.
                             self.tables[table].extend_strands(cyclic_strands);
-                            return Err(SearchFail::QuantumExceeded);
+                            return Err(RecursiveSearchFail::QuantumExceeded);
                         }
 
                         Err(StrandFail::Cycle(strand, strand_minimums)) => {
@@ -148,7 +220,7 @@ impl Forest {
 
                     if cyclic_strands.is_empty() {
                         // We started with no strands!
-                        return Err(SearchFail::NoMoreSolutions);
+                        return Err(RecursiveSearchFail::NoMoreSolutions);
                     } else {
                         let c = mem::replace(&mut cyclic_strands, vec![]);
                         if let Some(err) = self.cycle(depth, c, cyclic_minimums) {
@@ -173,7 +245,7 @@ impl Forest {
         depth: StackIndex,
         strands: Vec<Strand>,
         minimums: Minimums,
-    ) -> Option<SearchFail> {
+    ) -> Option<RecursiveSearchFail> {
         let table = self.stack[depth].table;
         assert!(self.tables[table].pop_next_strand().is_none());
 
@@ -184,7 +256,7 @@ impl Forest {
             // then no more answers are forthcoming. We can clear all
             // the strands for those things recursively.
             self.clear_strands_after_cycle(table, strands);
-            Some(SearchFail::NoMoreSolutions)
+            Some(RecursiveSearchFail::NoMoreSolutions)
         } else if minimums.positive >= dfn && minimums.negative >= dfn {
             let mut visited = HashSet::default();
             visited.insert(table);
@@ -193,7 +265,7 @@ impl Forest {
             None
         } else {
             self.tables[table].extend_strands(strands);
-            Some(SearchFail::Cycle(minimums))
+            Some(RecursiveSearchFail::Cycle(minimums))
         }
     }
 
@@ -233,11 +305,7 @@ impl Forest {
     /// encounters a cycle, and that some of those cycles involve
     /// negative edges. In that case, walks all negative edges and
     /// converts them to delayed literals.
-    fn delay_strands_after_cycle(
-        &mut self,
-        table: TableIndex,
-        visited: &mut HashSet<TableIndex>,
-    ) {
+    fn delay_strands_after_cycle(&mut self, table: TableIndex, visited: &mut HashSet<TableIndex>) {
         let mut tables = vec![];
 
         for strand in self.tables[table].strands_mut() {
@@ -250,8 +318,7 @@ impl Forest {
                     panic!(
                         "delay_strands_after_cycle invoked on strand in table {:?} \
                          without a selected subgoal: {:?}",
-                        table,
-                        strand,
+                        table, strand,
                     );
                 }
             };
@@ -259,9 +326,10 @@ impl Forest {
             // Delay negative literals.
             if let Literal::Negative(_) = strand.ex_clause.subgoals[subgoal_index] {
                 strand.ex_clause.subgoals.remove(subgoal_index);
-                strand.ex_clause.delayed_literals.push(
-                    DelayedLiteral::Negative(subgoal_table),
-                );
+                strand
+                    .ex_clause
+                    .delayed_literals
+                    .push(DelayedLiteral::Negative(subgoal_table));
                 strand.selected_subgoal = None;
             }
 
@@ -271,10 +339,7 @@ impl Forest {
         }
 
         for table in tables {
-            self.delay_strands_after_cycle(
-                table,
-                visited,
-            );
+            self.delay_strands_after_cycle(table, visited);
         }
     }
 
@@ -701,15 +766,44 @@ impl Forest {
             ref universe_map,
         } = *selected_subgoal;
 
-        match self.ensure_answer(subgoal_table, answer_index) {
-            Ok(()) => {}
-            Err(SearchFail::NoMoreSolutions) => return Err(StrandFail::NoSolution),
-            Err(SearchFail::QuantumExceeded) => {
+        match self.ensure_answer_recursively(subgoal_table, answer_index) {
+            Ok(EnsureSuccess::AnswerAvailable) => {
+                // The given answer is available; we'll process it below.
+            }
+            Ok(EnsureSuccess::Coinductive) => {
+                // This is a co-inductive cycle. That is, this table
+                // appears somewhere higher on the stack, and has now
+                // recursively requested an answer for itself. That
+                // means that our subgoal is unconditionally true, so
+                // we can drop it and pursue the next thing.
+                assert!(
+                    self.tables[table].coinductive_goal
+                        && self.tables[subgoal_table].coinductive_goal
+                );
+                let Strand {
+                    infer,
+                    mut ex_clause,
+                    selected_subgoal: _,
+                } = strand;
+                ex_clause.subgoals.remove(subgoal_index);
+                return self.pursue_strand_recursively(
+                    depth,
+                    Strand {
+                        infer,
+                        ex_clause,
+                        selected_subgoal: None,
+                    },
+                );
+            }
+            Err(RecursiveSearchFail::NoMoreSolutions) => return Err(StrandFail::NoSolution),
+            Err(RecursiveSearchFail::QuantumExceeded) => {
                 // We'll have to revisit this strand later
                 self.tables[table].push_strand(strand);
                 return Err(StrandFail::QuantumExceeded);
             }
-            Err(SearchFail::Cycle(minimums)) => return Err(StrandFail::Cycle(strand, minimums)),
+            Err(RecursiveSearchFail::Cycle(minimums)) => {
+                return Err(StrandFail::Cycle(strand, minimums))
+            }
         }
 
         // Whichever way this particular answer turns out, there may
@@ -821,8 +915,8 @@ impl Forest {
         // Before exiting the match, then, we set `delayed_literal` to
         // either `Some` or `None` depending.
         let delayed_literal: Option<DelayedLiteral>;
-        match self.ensure_answer(subgoal_table, answer_index) {
-            Ok(()) => {
+        match self.ensure_answer_recursively(subgoal_table, answer_index) {
+            Ok(EnsureSuccess::AnswerAvailable) => {
                 if self.answer(subgoal_table, answer_index).is_unconditional() {
                     // We want to disproval the subgoal, but we
                     // have an unconditional answer for the subgoal,
@@ -848,7 +942,16 @@ impl Forest {
                 delayed_literal = Some(DelayedLiteral::Negative(subgoal_table));
             }
 
-            Err(SearchFail::Cycle(minimums)) => {
+            Ok(EnsureSuccess::Coinductive) => {
+                // This is a co-inductive cycle. That is, this table
+                // appears somewhere higher on the stack, and has now
+                // recursively requested an answer for itself. That
+                // means that our subgoal is unconditionally true, so
+                // our negative goal fails.
+                return Err(StrandFail::NoSolution);
+            }
+
+            Err(RecursiveSearchFail::Cycle(minimums)) => {
                 // We depend on `not(subgoal)`. For us to continue,
                 // `subgoal` must be completely evaluated. Therefore,
                 // we depend (negatively) on the minimum link of
@@ -864,7 +967,7 @@ impl Forest {
                 ));
             }
 
-            Err(SearchFail::NoMoreSolutions) => {
+            Err(RecursiveSearchFail::NoMoreSolutions) => {
                 // This answer does not exist. Huzzah, happy days are
                 // here again! =) We can just remove this subgoal and continue
                 // with no need for a delayed literal.
@@ -872,7 +975,7 @@ impl Forest {
             }
 
             // Learned nothing yet. Have to try again some other time.
-            Err(SearchFail::QuantumExceeded) => {
+            Err(RecursiveSearchFail::QuantumExceeded) => {
                 self.tables[table].push_strand(strand);
                 return Err(StrandFail::QuantumExceeded);
             }

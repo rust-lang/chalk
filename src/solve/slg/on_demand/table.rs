@@ -10,6 +10,8 @@ crate struct Table {
     /// it up).
     crate table_goal: UCanonicalGoal,
 
+    /// A goal is coinductive if it can assume itself to be true, more
+    /// or less. This is true for auto traits.
     crate coinductive_goal: bool,
 
     /// Stores the answers that we have found thus far. When we get a request
@@ -155,6 +157,10 @@ impl Table {
 
     pub(super) fn num_cached_answers(&self) -> usize {
         self.answers.len()
+    }
+
+    pub(super) fn next_answer_index(&self) -> AnswerIndex {
+        AnswerIndex::from(self.answers.len())
     }
 }
 

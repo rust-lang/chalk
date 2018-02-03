@@ -2,8 +2,8 @@ use ir::*;
 use solve::Solution;
 use solve::slg::aggregate;
 use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex, UCanonicalGoal};
-use solve::slg::on_demand::logic::SearchFail;
-use solve::slg::on_demand::stack::Stack;
+use solve::slg::on_demand::logic::RootSearchFail;
+use solve::slg::on_demand::stack::{Stack, StackIndex};
 use solve::slg::on_demand::tables::Tables;
 use solve::slg::on_demand::table::{Answer, AnswerIndex};
 use std::sync::Arc;
@@ -48,11 +48,10 @@ impl Forest {
         for i in 0..num_answers {
             let i = AnswerIndex::from(i);
             loop {
-                match self.ensure_answer(table, i) {
+                match self.ensure_root_answer(table, i) {
                     Ok(()) => break,
-                    Err(SearchFail::QuantumExceeded) => continue,
-                    Err(SearchFail::NoMoreSolutions) => return answers,
-                    Err(SearchFail::Cycle(_)) => panic!("unresolved cycle"),
+                    Err(RootSearchFail::QuantumExceeded) => continue,
+                    Err(RootSearchFail::NoMoreSolutions) => return answers,
                 }
             }
 
@@ -84,6 +83,39 @@ impl Forest {
     ) -> Option<Solution> {
         aggregate::make_solution(&goal.canonical, self.iter_answers(goal))
     }
+
+    /// True if all the tables on the stack starting from `depth` and
+    /// continuing until the top of the stack are coinductive.
+    ///
+    /// Example: Given a program like:
+    ///
+    /// ```
+    /// struct Foo { a: Option<Box<Bar>> }
+    /// struct Bar { a: Option<Box<Foo>> }
+    /// trait XXX { }
+    /// impl<T: Send> XXX for T { }
+    /// ```
+    ///
+    /// and then a goal of `Foo: XXX`, we would eventually wind up
+    /// with a stack like this:
+    ///
+    /// | StackIndex | Table Goal  |
+    /// | ---------- | ----------- |
+    /// | 0          | `Foo: XXX`  |
+    /// | 1          | `Foo: Send` |
+    /// | 2          | `Bar: Send` |
+    ///
+    /// Here, the top of the stack is `Bar: Send`. And now we are
+    /// asking `top_of_stack_is_coinductive_from(1)` -- the answer
+    /// would be true, since `Send` is an auto trait, which yields a
+    /// coinductive goal. But `top_of_stack_is_coinductive_from(0)` is
+    /// false, since `XXX` is not an auto trait.
+    pub(super) fn top_of_stack_is_coinductive_from(&self, depth: StackIndex) -> bool {
+        self.stack.top_of_stack_from(depth).all(|d| {
+            let table = self.stack[d].table;
+            self.tables[table].coinductive_goal
+        })
+    }
 }
 
 struct ForestSolver<'forest> {
@@ -97,7 +129,7 @@ impl<'forest> Iterator for ForestSolver<'forest> {
 
     fn next(&mut self) -> Option<SimplifiedAnswer> {
         loop {
-            match self.forest.ensure_answer(self.table, self.answer) {
+            match self.forest.ensure_root_answer(self.table, self.answer) {
                 Ok(()) => {
                     let answer = self.forest.answer(self.table, self.answer);
 
@@ -120,15 +152,11 @@ impl<'forest> Iterator for ForestSolver<'forest> {
                     return Some(simplified_answer);
                 }
 
-                Err(SearchFail::NoMoreSolutions) => {
+                Err(RootSearchFail::NoMoreSolutions) => {
                     return None;
                 }
 
-                Err(SearchFail::QuantumExceeded) => {
-                }
-
-                Err(SearchFail::Cycle(..)) => {
-                    panic!("cycle should not happen for top-most goal")
+                Err(RootSearchFail::QuantumExceeded) => {
                 }
             }
         }

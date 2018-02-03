@@ -1726,7 +1726,6 @@ fn auto_trait_with_impls() {
 
 #[test]
 fn coinductive_semantics() {
-    // FIXME coinduction not implemented for SLG solver
     test! {
         program {
             #[auto] trait Send { }
@@ -1757,21 +1756,27 @@ fn coinductive_semantics() {
                     List<T>: Send
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive(), SolverChoice::on_demand_slg()] {
             "Unique"
+        } yields[SolverChoice::eager_slg()] {
+            // FIXME coinduction not implemented for eager slg
+            "No possible solution"
         }
 
         goal {
             List<i32>: Send
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive(), SolverChoice::on_demand_slg()] {
             "Unique"
+        } yields[SolverChoice::eager_slg()] {
+            // FIXME coinduction not implemented for eager slg
+            "No possible solution"
         }
 
         goal {
             exists<T> {
                 T: Send
             }
-        } yields[SolverChoice::recursive()] {
+        } yields {
             "Ambiguous"
         }
     }
