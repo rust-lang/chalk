@@ -8,6 +8,8 @@ use solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+mod bench;
+
 fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<ir::Program> {
     chalk_parse::parse_program(text)?.lower(solver_choice)
 }
