@@ -15,7 +15,8 @@ crate struct Tables {
 }
 
 impl Tables {
-    fn next_index(&self) -> TableIndex {
+    /// The index that will be given to the next table to be inserted.
+    pub(super) fn next_index(&self) -> TableIndex {
         TableIndex {
             value: self.tables.len(),
         }

@@ -133,7 +133,7 @@ impl Forest {
 
         // First, check for a tabled answer.
         if self.tables[table].answer(answer).is_some() {
-            debug!("answer cached");
+            info!("answer cached = {:?}", self.tables[table].answer(answer));
             return Ok(EnsureSuccess::AnswerAvailable);
         }
 
@@ -144,6 +144,8 @@ impl Forest {
         // Next, check if the table is already active. If so, then we
         // have a recursive attempt.
         if let Some(depth) = self.stack.is_active(table) {
+            info!("ensure_answer: cycle detected at depth {:?}", depth);
+
             if self.top_of_stack_is_coinductive_from(depth) {
                 return Ok(EnsureSuccess::Coinductive);
             }
@@ -158,7 +160,7 @@ impl Forest {
         let depth = self.stack.push(table, dfn);
         let result = self.pursue_next_strand(depth);
         self.stack.pop(table, depth);
-        debug!("result = {:?}", result);
+        info!("ensure_answer: result = {:?}", result);
         result.map(|()| EnsureSuccess::AnswerAvailable)
     }
 
@@ -349,10 +351,11 @@ impl Forest {
     /// the table on the stack at the given `depth`.
     fn pursue_strand(&mut self, depth: StackIndex, mut strand: Strand) -> StrandResult<()> {
         info_heading!(
-            "pursue_strand(table={:?}, depth={:?}, strand={:#?})",
+            "pursue_strand(table={:?}, depth={:?}, ex_clause={:#?}, selected_subgoal={:?})",
             self.stack[depth].table,
             depth,
-            strand
+            strand.infer.normalize_deep(&strand.ex_clause),
+            strand.selected_subgoal,
         );
 
         // If no subgoal has yet been selected, select one.
@@ -452,7 +455,7 @@ impl Forest {
         if self.tables[table].push_answer(answer) {
             Ok(())
         } else {
-            debug!("answer: not a new answer, returning StrandFail::NoSolution");
+            info!("answer: not a new answer, returning StrandFail::NoSolution");
             Err(StrandFail::NoSolution)
         }
     }
@@ -513,10 +516,10 @@ impl Forest {
             return table;
         }
 
+        info_heading!("creating new table {:?} and goal {:#?}", self.tables.next_index(), goal);
         let coinductive_goal = goal.is_coinductive(&self.program);
         let table = self.tables.insert(goal, coinductive_goal);
         self.push_initial_strands(table);
-        debug!("created table {:?}", table);
         table
     }
 
@@ -555,7 +558,10 @@ impl Forest {
                         &subst,
                         &clause.implication,
                     ) {
-                        debug!("pushing initial strand with ex-clause: {:#?}", resolvent);
+                        info!(
+                            "pushing initial strand with ex-clause: {:#?}",
+                            clause_infer.normalize_deep(&resolvent),
+                        );
                         table_ref.push_strand(Strand {
                             infer: clause_infer,
                             ex_clause: resolvent,
@@ -578,7 +584,10 @@ impl Forest {
                 if let Satisfiable::Yes(ex_clause) =
                     slg::simplify_hh_goal(&mut infer, subst, hh_goal)
                 {
-                    debug!("simplified hh goal into {:#?}", ex_clause);
+                    info!(
+                        "pushing initial strand with ex-clause: {:#?}",
+                        infer.normalize_deep(&ex_clause),
+                    );
                     table_ref.push_strand(Strand {
                         infer,
                         ex_clause,
@@ -797,13 +806,18 @@ impl Forest {
                     },
                 );
             }
-            Err(RecursiveSearchFail::NoMoreSolutions) => return Err(StrandFail::NoSolution),
+            Err(RecursiveSearchFail::NoMoreSolutions) => {
+                info!("pursue_positive_subgoal: no more solutions");
+                return Err(StrandFail::NoSolution);
+            }
             Err(RecursiveSearchFail::QuantumExceeded) => {
                 // We'll have to revisit this strand later
+                info!("pursue_positive_subgoal: quantum exceeded");
                 self.tables[table].push_strand(strand);
                 return Err(StrandFail::QuantumExceeded);
             }
             Err(RecursiveSearchFail::Cycle(minimums)) => {
+                info!("pursue_positive_subgoal: cycle with minimums {:?}", minimums);
                 return Err(StrandFail::Cycle(strand, minimums))
             }
         }
@@ -865,7 +879,10 @@ impl Forest {
             // This answer led nowhere. Give up for now, but of course
             // there may still be other strands to pursue, so return
             // `QuantumExceeded`.
-            Satisfiable::No => Err(StrandFail::NoSolution),
+            Satisfiable::No => {
+                info!("pursue_positive_subgoal: answer not unifiable -> NoSolution");
+                Err(StrandFail::NoSolution)
+            }
         }
     }
 
@@ -923,6 +940,7 @@ impl Forest {
                     // We want to disproval the subgoal, but we
                     // have an unconditional answer for the subgoal,
                     // therefore we have failed to disprove it.
+                    info!("pursue_negative_subgoal: found unconditional answer to neg literal -> NoSolution");
                     return Err(StrandFail::NoSolution);
                 }
 
@@ -950,6 +968,7 @@ impl Forest {
                 // recursively requested an answer for itself. That
                 // means that our subgoal is unconditionally true, so
                 // our negative goal fails.
+                info!("pursue_negative_subgoal: found coinductive answer to neg literal -> NoSolution");
                 return Err(StrandFail::NoSolution);
             }
 
@@ -960,6 +979,7 @@ impl Forest {
                 // `subgoal` as a whole -- it doesn't matter whether
                 // it's pos or neg.
                 let min = minimums.minimum_of_pos_and_neg();
+                info!("pursue_negative_subgoal: found neg cycle at depth {:?}", min);
                 return Err(StrandFail::Cycle(
                     strand,
                     Minimums {
@@ -978,6 +998,7 @@ impl Forest {
 
             // Learned nothing yet. Have to try again some other time.
             Err(RecursiveSearchFail::QuantumExceeded) => {
+                info!("pursue_negative_subgoal: quantum exceeded");
                 self.tables[table].push_strand(strand);
                 return Err(StrandFail::QuantumExceeded);
             }
