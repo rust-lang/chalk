@@ -448,7 +448,8 @@ impl Forest {
             return table;
         }
 
-        let table = self.tables.insert(goal);
+        let coinductive_goal = goal.is_coinductive(&self.program);
+        let table = self.tables.insert(goal, coinductive_goal);
         self.push_initial_strands(table);
         debug!("created table {:?}", table);
         table

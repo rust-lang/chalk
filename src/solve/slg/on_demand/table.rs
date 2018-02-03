@@ -10,6 +10,8 @@ crate struct Table {
     /// it up).
     crate table_goal: UCanonicalGoal,
 
+    crate coinductive_goal: bool,
+
     /// Stores the answers that we have found thus far. When we get a request
     /// for an answer N, we will first check this vector.
     answers: Vec<Answer>,
@@ -43,9 +45,10 @@ pub(super) struct Answer {
 }
 
 impl Table {
-    crate fn new(table_goal: UCanonicalGoal) -> Table {
+    crate fn new(table_goal: UCanonicalGoal, coinductive_goal: bool) -> Table {
         Table {
             table_goal,
+            coinductive_goal,
             answers: Vec::new(),
             answers_hash: HashMap::new(),
             strands: VecDeque::new(),

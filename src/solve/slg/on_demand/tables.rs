@@ -21,10 +21,10 @@ impl Tables {
         }
     }
 
-    pub(super) fn insert(&mut self, goal: UCanonicalGoal) -> TableIndex {
+    pub(super) fn insert(&mut self, goal: UCanonicalGoal, coinductive_goal: bool) -> TableIndex {
         let index = self.next_index();
-        self.tables.push(Table::new(goal.clone()));
-        self.table_indices.insert(goal.clone(), index);
+        self.tables.push(Table::new(goal.clone(), coinductive_goal));
+        self.table_indices.insert(goal, index);
         index
     }
 
