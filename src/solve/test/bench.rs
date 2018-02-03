@@ -3,10 +3,7 @@
 extern crate test;
 use self::test::Bencher;
 
-use chalk_parse;
-use errors::*;
 use ir;
-use lower::*;
 use solve::SolverChoice;
 use std::sync::Arc;
 
@@ -28,7 +25,7 @@ fn run_bench(
         let peeled_goal = goal.into_peeled_goal();
 
         // Execute once to get an expected result.
-        let result = match solver_choice.solve_root_goal(&env, &peeled_goal);
+        let result = solver_choice.solve_root_goal(&env, &peeled_goal);
 
         // Check expectation.
         assert_result(&result, expected);
@@ -129,10 +126,27 @@ fn cycley_recursive_uncached(b: &mut Bencher) {
 }
 
 #[bench]
-fn cycley_slg(b: &mut Bencher) {
+#[ignore]
+fn cycley_eager_slg(b: &mut Bencher) {
     run_bench(
         CYCLEY,
         SolverChoice::SLG {
+            eager: true,
+            max_size: 20,
+        },
+        CYCLEY_GOAL,
+        b,
+        "No possible solution", // FIXME
+    );
+}
+
+#[bench]
+#[ignore]
+fn cycley_on_demand_slg(b: &mut Bencher) {
+    run_bench(
+        CYCLEY,
+        SolverChoice::SLG {
+            eager: false,
             max_size: 20,
         },
         CYCLEY_GOAL,
