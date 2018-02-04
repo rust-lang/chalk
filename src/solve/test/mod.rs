@@ -2072,3 +2072,58 @@ fn projection_from_env() {
         }
     }
 }
+
+// This variant of the above test used to be achingly slow on SLG
+// solvers, before the "trivial answer" green cut was introduced.
+//
+// The problem was that we wound up enumerating a goal like
+//
+//     <?0 as SliceExt>::Item = !1
+//
+// which meant "find me the types that normalize to `!1`". We had no
+// problem finding these types, but after the first such type, we had
+// the only unique answer we would ever find, and we wanted to reach
+// the point where we could say "no more answers", so we kept
+// requesting more answers.
+#[test]
+fn projection_from_env_slow() {
+    test! {
+        program {
+            trait Clone { }
+            trait Sized { }
+
+            struct Slice<T> where T: Sized { }
+            impl<T> Sized for Slice<T> { }
+
+            struct u32 { }
+            impl Clone for u32 { }
+            impl Sized for u32 { }
+
+            trait SliceExt
+                where <Self as SliceExt>::Item: Clone
+            {
+                type Item;
+            }
+
+            impl<T> SliceExt for Slice<T>
+                where T: Clone
+            {
+                type Item = T;
+            }
+        }
+
+        goal {
+            forall<T> {
+                if (
+                    <Slice<T> as SliceExt>::Item: Clone,
+                    <Slice<T> as SliceExt>::Item: Sized,
+                    T: Clone
+                ) {
+                    T: Sized
+                }
+            }
+        } yields[SolverChoice::on_demand_slg()] {
+            "Unique"
+        }
+    }
+}

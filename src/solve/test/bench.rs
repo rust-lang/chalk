@@ -141,7 +141,6 @@ fn cycley_eager_slg(b: &mut Bencher) {
 }
 
 #[bench]
-#[ignore] // FIXME SLG solver runs for too long here
 fn cycley_on_demand_slg(b: &mut Bencher) {
     run_bench(
         CYCLEY,
@@ -151,6 +150,6 @@ fn cycley_on_demand_slg(b: &mut Bencher) {
         },
         CYCLEY_GOAL,
         b,
-        "No possible solution", // FIXME
+        "Unique",
     );
 }

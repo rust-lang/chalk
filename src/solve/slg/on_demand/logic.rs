@@ -452,7 +452,75 @@ impl Forest {
             delayed_literals,
         };
 
+        // A "trivial" answer is one that is 'just true for all cases'
+        // -- in other words, it gives no information back to the
+        // caller. For example, `Vec<u32>: Sized` is "just true".
+        // Such answers are important because they are the most
+        // general case, and after we provide a trivial answer, no
+        // further answers are useful -- therefore we can clear any
+        // further pending strands (this is a "green cut", in
+        // Prolog parlance).
+        //
+        // This optimization is *crucial* for performance: for
+        // example, `projection_from_env_slow` fails miserably without
+        // it. The reason is that we wind up (thanks to implied bounds)
+        // with a clause like this:
+        //
+        // ```ignore
+        // forall<T> { (<T as SliceExt>::Item: Clone) :- WF(T: SliceExt) }
+        // ```
+        //
+        // we then apply that clause to `!1: Clone`, resulting in the
+        // table goal `!1: Clone :- <?0 as SliceExt>::Item = !1,
+        // WF(?0: SliceExt)`.  This causes us to **enumerate all types
+        // `?0` that where `Slice<?0>` normalizes to `!1` -- this is
+        // an infinite set of types, effectively. Interestingly,
+        // though, we only need one and we are done, because (if you
+        // look) our goal (`!1: Clone`) doesn't have any output
+        // parameters.
+        //
+        // This is actually a kind of general case. Due to Rust's rule
+        // about constrained impl type parameters, generally speaking
+        // when we have some free inference variable (like `?0`)
+        // within our clause, it must appear in the head of the
+        // clause. This means that the values we create for it will
+        // propagate up to the caller, and they will quickly surmise
+        // that there is ambiguity and stop requesting more answers.
+        // Indeed, the only exception to this rule about constrained
+        // type parameters if with associated type projections, as in
+        // the case above!
+        //
+        // (Actually, because of the trivial answer cut off rule, we
+        // never even get to the point of asking the query above in
+        // `projection_from_env_slow`.)
+        //
+        // However, there is one fly in the ointment: answers include
+        // region constraints, and you might imagine that we could
+        // find future answers that are also trivial but with distinct
+        // sets of region constraints. **For this reason, we only
+        // apply this green cut rule if the set of generated
+        // constraints is empty.**
+        //
+        // The limitation on region constraints is quite a drag! We
+        // can probably do better, though: for example, coherence
+        // guarantees that, for any given set of types, only a single
+        // impl ought to be applicable, and that impl can only impose
+        // one set of region constraints. However, it's not quite that
+        // simple, thanks to specialization as well as the possibility
+        // of proving things from the environment (though the latter
+        // is a *bit* suspect; e.g., those things in the environment
+        // must be backed by an impl *eventually*).
+        let is_trivial_answer = {
+            answer.delayed_literals.is_empty() &&
+                self.tables[table].table_goal.is_trivial_substitution(&answer.subst) &&
+                answer.subst.value.constraints.is_empty()
+        };
+
         if self.tables[table].push_answer(answer) {
+            if is_trivial_answer {
+                self.tables[table].take_strands();
+            }
+
             Ok(())
         } else {
             info!("answer: not a new answer, returning StrandFail::NoSolution");
