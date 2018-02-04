@@ -61,9 +61,7 @@ fn basic() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: Substitution {
-                                parameters: {}
-                            },
+                            subst: [],
                             constraints: []
                         },
                         binders: []
@@ -100,11 +98,7 @@ fn breadth_first() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: Substitution {
-                                parameters: {
-                                    ?0: i32
-                                }
-                            },
+                            subst: [?0 := i32],
                             constraints: []
                         },
                         binders: []
@@ -116,11 +110,7 @@ fn breadth_first() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: Substitution {
-                                parameters: {
-                                    ?0: Vec<i32>
-                                }
-                            },
+                            subst: [?0 := Vec<i32>],
                             constraints: []
                         },
                         binders: []
@@ -132,11 +122,7 @@ fn breadth_first() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: Substitution {
-                                parameters: {
-                                    ?0: Slice<i32>
-                                }
-                            },
+                            subst: [?0 := Slice<i32>],
                             constraints: []
                         },
                         binders: []
@@ -148,11 +134,7 @@ fn breadth_first() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: Substitution {
-                                parameters: {
-                                    ?0: Vec<Vec<i32>>
-                                }
-                            },
+                            subst: [?0 := Vec<Vec<i32>>],
                             constraints: []
                         },
                         binders: []
@@ -164,11 +146,7 @@ fn breadth_first() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: Substitution {
-                                parameters: {
-                                    ?0: Slice<Vec<i32>>
-                                }
-                            },
+                            subst: [?0 := Slice<Vec<i32>>],
                             constraints: []
                         },
                         binders: []
@@ -226,11 +204,7 @@ fn flounder() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: Substitution {
-                                parameters: {
-                                    ?0: ?0
-                                }
-                            },
+                            subst: [?0 := ?0],
                             constraints: []
                         },
                         binders: [
@@ -306,9 +280,7 @@ fn negative_loop() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: Substitution {
-                                parameters: {}
-                            },
+                            subst: [],
                             constraints: []
                         },
                         binders: []

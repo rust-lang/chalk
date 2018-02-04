@@ -261,7 +261,7 @@ impl Substitution {
     /// Check whether this substitution is the identity substitution in the
     /// given inference context.
     pub fn is_trivial_within(&self, in_infer: &mut InferenceTable) -> bool {
-        for value in self.parameters.values() {
+        for value in &self.parameters {
             match value {
                 ParameterKind::Ty(ty) => if let Some(var) = ty.inference_var() {
                     if in_infer.var_is_bound(var) {

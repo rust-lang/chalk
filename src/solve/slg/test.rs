@@ -73,9 +73,7 @@ fn slg_from_env() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -109,11 +107,7 @@ fn positive_cycle() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: i32
-                                    }
-                                },
+                                subst: [?0 := i32],
                                 constraints: []
                             },
                             binders: []
@@ -123,11 +117,7 @@ fn positive_cycle() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vec<i32>
-                                    }
-                                },
+                                subst: [?0 := Vec<i32>],
                                 constraints: []
                             },
                             binders: []
@@ -137,11 +127,7 @@ fn positive_cycle() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vec<Vec<?0>>
-                                    }
-                                },
+                                subst: [?0 := Vec<Vec<?0>>],
                                 constraints: []
                             },
                             binders: [
@@ -153,11 +139,7 @@ fn positive_cycle() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vec<Vec<i32>>
-                                    }
-                                },
+                                subst: [?0 := Vec<Vec<i32>>],
                                 constraints: []
                             },
                             binders: []
@@ -184,7 +166,9 @@ fn subgoal_abstraction() {
         goal {
             exists<T> { T: Foo }
         } with max 50 yields {
-            r"0 answer(s) found"
+            r"0 answer(s) found: SimplifiedAnswers {
+                 answers: []
+            }"
         }
     }
 }
@@ -219,9 +203,7 @@ fn subgoal_cycle_uninhabited() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -241,9 +223,7 @@ fn subgoal_cycle_uninhabited() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -271,11 +251,7 @@ fn subgoal_cycle_uninhabited() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vec<u32>
-                                    }
-                                },
+                                subst: [?0 := Vec<u32>],
                                 constraints: []
                             },
                             binders: []
@@ -295,11 +271,7 @@ fn subgoal_cycle_uninhabited() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: !1
-                                    }
-                                },
+                                subst: [?0 := !1],
                                 constraints: []
                             },
                             binders: []
@@ -332,11 +304,7 @@ fn subgoal_cycle_inhabited() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: u32
-                                    }
-                                },
+                                subst: [?0 := u32],
                                 constraints: []
                             },
                             binders: []
@@ -367,9 +335,7 @@ fn basic_region_constraint_from_positive_impl() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: [
                                     InEnvironment {
                                         environment: Env([]),
@@ -403,9 +369,7 @@ fn basic_region_constraint_from_unification_goal() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: [
                                     InEnvironment {
                                         environment: Env([]),
@@ -449,11 +413,7 @@ fn example_2_1_EWFS() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: a
-                                    }
-                                },
+                                subst: [?0 := a],
                                 constraints: []
                             },
                             binders: []
@@ -463,11 +423,7 @@ fn example_2_1_EWFS() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: b
-                                    }
-                                },
+                                subst: [?0 := b],
                                 constraints: []
                             },
                             binders: []
@@ -477,11 +433,7 @@ fn example_2_1_EWFS() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: c
-                                    }
-                                },
+                                subst: [?0 := c],
                                 constraints: []
                             },
                             binders: []
@@ -522,9 +474,7 @@ fn example_2_2_EWFS() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -565,9 +515,7 @@ fn example_2_3_EWFS() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -604,9 +552,7 @@ fn example_3_3_EWFS() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -639,9 +585,7 @@ fn contradiction() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -675,9 +619,7 @@ fn negative_loop() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -721,11 +663,7 @@ fn cached_answers_1() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Lemon
-                                    }
-                                },
+                                subst: [?0 := Lemon],
                                 constraints: []
                             },
                             binders: []
@@ -735,11 +673,7 @@ fn cached_answers_1() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vinegar
-                                    }
-                                },
+                                subst: [?0 := Vinegar],
                                 constraints: []
                             },
                             binders: []
@@ -749,11 +683,7 @@ fn cached_answers_1() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<?0>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<?0>],
                                 constraints: []
                             },
                             binders: [
@@ -765,11 +695,7 @@ fn cached_answers_1() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Lemon>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Lemon>],
                                 constraints: []
                             },
                             binders: []
@@ -779,11 +705,7 @@ fn cached_answers_1() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Vinegar>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Vinegar>],
                                 constraints: []
                             },
                             binders: []
@@ -819,11 +741,7 @@ fn cached_answers_2() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Lemon
-                                    }
-                                },
+                                subst: [?0 := Lemon],
                                 constraints: []
                             },
                             binders: []
@@ -833,11 +751,7 @@ fn cached_answers_2() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vinegar
-                                    }
-                                },
+                                subst: [?0 := Vinegar],
                                 constraints: []
                             },
                             binders: []
@@ -847,11 +761,7 @@ fn cached_answers_2() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<?0>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<?0>],
                                 constraints: []
                             },
                             binders: [
@@ -863,11 +773,7 @@ fn cached_answers_2() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Lemon>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Lemon>],
                                 constraints: []
                             },
                             binders: []
@@ -877,11 +783,7 @@ fn cached_answers_2() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Vinegar>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Vinegar>],
                                 constraints: []
                             },
                             binders: []
@@ -917,11 +819,7 @@ fn cached_answers_3() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Lemon
-                                    }
-                                },
+                                subst: [?0 := Lemon],
                                 constraints: []
                             },
                             binders: []
@@ -931,11 +829,7 @@ fn cached_answers_3() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vinegar
-                                    }
-                                },
+                                subst: [?0 := Vinegar],
                                 constraints: []
                             },
                             binders: []
@@ -945,11 +839,7 @@ fn cached_answers_3() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<?0>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<?0>],
                                 constraints: []
                             },
                             binders: [
@@ -961,11 +851,7 @@ fn cached_answers_3() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Lemon>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Lemon>],
                                 constraints: []
                             },
                             binders: []
@@ -975,11 +861,7 @@ fn cached_answers_3() {
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Vinegar>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Vinegar>],
                                 constraints: []
                             },
                             binders: []
@@ -1010,15 +892,12 @@ fn negative_answer_delayed_literal() {
         goal {
             u32: P
         } with max 3 yields {
-            r"
-            1 answer(s) found: SimplifiedAnswers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
                     SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -1026,8 +905,7 @@ fn negative_answer_delayed_literal() {
                         ambiguous: true
                     }
                 ]
-            }
-            "
+            }"
         }
     }
 }

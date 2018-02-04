@@ -40,17 +40,15 @@ impl InferenceTable {
     /// C, which would be equivalent to
     /// `self.instantiate_canonical(v)`.
     pub fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
-        let mut subst = Substitution::empty();
-
-        for (i, kind) in binders.iter().enumerate() {
-            let param_infer_var = kind.map(|ui| self.new_variable(ui));
-            subst.insert(
-                InferenceVariable::from_depth(i),
-                param_infer_var.to_parameter(),
-            );
+        Substitution {
+            parameters: binders
+                .iter()
+                .map(|kind| {
+                    let param_infer_var = kind.map(|ui| self.new_variable(ui));
+                    param_infer_var.to_parameter()
+                })
+                .collect(),
         }
-
-        subst
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.

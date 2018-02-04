@@ -3,7 +3,7 @@ use fallible::Fallible;
 use fold::Fold;
 use fold::shift::Shift;
 use ir::*;
-use solve::infer::{InferenceTable, unify::UnificationResult, var::InferenceVariable};
+use solve::infer::{InferenceTable, unify::UnificationResult};
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
@@ -413,20 +413,7 @@ impl<'t> AnswerSubstitutor<'t> {
             return Ok(false);
         }
 
-        let var = InferenceVariable::from_depth(answer_depth - self.answer_binders);
-        let answer_param = if let Some(param) = self.answer_subst.parameters.get(&var) {
-            param
-        } else {
-            // In principle, substitutions don't have to
-            // be complete, so we could just return now --
-            // it would indicate that the SLG solver
-            // places no constraints on this particular
-            // variable. *However*, in practice we always
-            // return a value in the SLG solver for all
-            // inputs, even if that value is trivial, so
-            // we panic here.
-            panic!("answer-subst does not contain input variable `{:?}`", var)
-        };
+        let answer_param = &self.answer_subst.parameters[answer_depth - self.answer_binders];
 
         let pending_shifted = &pending
             .down_shift(self.pending_binders)

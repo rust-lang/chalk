@@ -2,11 +2,9 @@ use cast::Cast;
 use ir::*;
 use solve::{Guidance, Solution};
 use solve::infer::InferenceTable;
-use std::collections::BTreeMap;
-use std::collections::HashSet;
 use std::fmt::Debug;
 
-use super::{CanonicalConstrainedSubst, SimplifiedAnswer, SimplifiedAnswers, CanonicalGoal};
+use super::{CanonicalConstrainedSubst, CanonicalGoal, SimplifiedAnswer, SimplifiedAnswers};
 
 impl SimplifiedAnswers {
     pub fn into_solution(self, root_goal: &CanonicalGoal) -> Option<Solution> {
@@ -87,45 +85,46 @@ fn merge_into_guidance(
 ) -> Canonical<Substitution> {
     let mut infer = InferenceTable::new();
     let Canonical {
-            value:
-            ConstrainedSubst {
-                subst: subst1,
-                constraints: _,
-            },
-            binders: _,
+        value: ConstrainedSubst {
+            subst: subst1,
+            constraints: _,
+        },
+        binders: _,
     } = answer;
 
     // Collect the types that the two substitutions have in
     // common.
-    let mut aggr_parameters = BTreeMap::new();
-
-    for (key, value) in guidance.value.parameters {
-        let ty = match value {
-            ParameterKind::Ty(ty) => ty,
-            ParameterKind::Lifetime(_) => {
-                // Ignore the lifetimes from the substitution: we're just
-                // creating guidance here anyway.
-                continue;
-            }
-        };
-
-        if let Some(ty1) = subst1.parameters.get(&key) {
-            let ty1 = ty1.assert_ty_ref();
-
+    let aggr_parameters: Vec<_> = guidance
+        .value
+        .parameters
+        .iter()
+        .zip(&subst1.parameters)
+        .enumerate()
+        .map(|(index, (value, value1))| {
             // We have two values for some variable X that
             // appears in the root goal. Find out the universe
             // of X.
-            let universe = root_goal.binders[key.to_usize()].into_inner();
+            let universe = root_goal.binders[index].into_inner();
+
+            let ty = match value {
+                ParameterKind::Ty(ty) => ty,
+                ParameterKind::Lifetime(_) => {
+                    // Ignore the lifetimes from the substitution: we're just
+                    // creating guidance here anyway.
+                    return infer.new_variable(universe).to_lifetime().cast();
+                }
+            };
+
+            let ty1 = value1.assert_ty_ref();
 
             // Combine the two types into a new type.
             let mut aggr = AntiUnifier {
                 infer: &mut infer,
                 universe,
             };
-            let ty_aggr = aggr.aggregate_tys(&ty, ty1);
-            aggr_parameters.insert(key, ty_aggr.cast());
-        }
-    }
+            aggr.aggregate_tys(&ty, ty1).cast()
+        })
+        .collect();
 
     let aggr_subst = Substitution {
         parameters: aggr_parameters,
@@ -135,18 +134,19 @@ fn merge_into_guidance(
 }
 
 fn is_trivial(subst: &Canonical<Substitution>) -> bool {
-    let mut uniq = HashSet::new();
-
     // A subst is trivial if..
     subst
         .value
         .parameters
-        .values()
-        .all(|parameter| match parameter {
-            // All types are mapped to distinct variables.
+        .iter()
+        .enumerate()
+        .all(|(index, parameter)| match parameter {
+            // All types are mapped to distinct variables.  Since this
+            // has been canonicalized, those will also be the first N
+            // variables.
             ParameterKind::Ty(t) => match t.var() {
                 None => false,
-                Some(depth) => uniq.insert(depth),
+                Some(depth) => depth == index,
             },
 
             // And no lifetime mappings. (This is too strict, but we never
@@ -195,11 +195,11 @@ impl<'infer> AntiUnifier<'infer> {
             }
 
             // Mismatched base kinds.
-            (Ty::Var(_), _) |
-            (Ty::ForAll(_), _) |
-            (Ty::Apply(_), _) |
-            (Ty::Projection(_), _) |
-            (Ty::UnselectedProjection(_), _) => self.new_variable(),
+            (Ty::Var(_), _)
+            | (Ty::ForAll(_), _)
+            | (Ty::Apply(_), _)
+            | (Ty::Projection(_), _)
+            | (Ty::UnselectedProjection(_), _) => self.new_variable(),
         }
     }
 
@@ -214,9 +214,7 @@ impl<'infer> AntiUnifier<'infer> {
         } = apply2;
 
         self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
-            .map(|(&name, parameters)| {
-                Ty::Apply(ApplicationTy { name, parameters })
-            })
+            .map(|(&name, parameters)| Ty::Apply(ApplicationTy { name, parameters }))
             .unwrap_or_else(|| self.new_variable())
     }
 

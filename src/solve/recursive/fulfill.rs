@@ -3,7 +3,7 @@ use cast::Caster;
 use fold::Fold;
 use solve::infer::{InferenceTable, ParameterInferenceVariable, canonicalize::Canonicalized,
                    ucanonicalize::{UCanonicalized, UniverseMap}, instantiate::BindersAndValue,
-                   unify::UnificationResult, var::InferenceVariable};
+                   unify::UnificationResult};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -252,20 +252,15 @@ impl<'s> Fulfill<'s> {
         let empty_env = &Environment::new();
 
         for (i, free_var) in free_vars.into_iter().enumerate() {
-            let subst_var = InferenceVariable::from_depth(i);
-
-            // Should always be `Some(..)` unless we applied coinductive semantics
-            // somewhere and hence returned an empty substitution.
-            if let Some(subst_value) = subst.parameters.get(&subst_var) {
-                let free_value = free_var.to_parameter();
-                self.unify(empty_env, &free_value, subst_value)
-                    .unwrap_or_else(|err| {
-                        panic!(
-                            "apply_solution failed with free_var={:?}, subst_value={:?}: {:?}",
-                            free_var, subst_value, err
-                        );
-                    });
-            }
+            let subst_value = &subst.parameters[i];
+            let free_value = free_var.to_parameter();
+            self.unify(empty_env, &free_value, subst_value)
+                .unwrap_or_else(|err| {
+                    panic!(
+                        "apply_solution failed with free_var={:?}, subst_value={:?}: {:?}",
+                        free_var, subst_value, err
+                    );
+                });
         }
     }
 

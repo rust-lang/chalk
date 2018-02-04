@@ -337,20 +337,26 @@ impl Display for ConstrainedSubst {
     }
 }
 
+impl Debug for Substitution {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        Display::fmt(self, f)
+    }
+}
+
 impl Display for Substitution {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let mut first = true;
 
         write!(f, "[")?;
 
-        for (var, value) in &self.parameters {
+        for (index, value) in self.parameters.iter().enumerate() {
             if first {
                 first = false;
             } else {
                 write!(f, ", ")?;
             }
 
-            write!(f, "{:?} := {:?}", var, value)?;
+            write!(f, "?{} := {:?}", index, value)?;
         }
 
         write!(f, "]")?;
