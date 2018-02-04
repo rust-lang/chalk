@@ -3,6 +3,7 @@
 #![feature(conservative_impl_trait)]
 #![feature(catch_expr)]
 #![feature(crate_visibility_modifier)]
+#![feature(macro_vis_matcher)]
 #![feature(match_default_bindings)]
 #![feature(specialization)]
 #![feature(step_trait)]
@@ -10,6 +11,7 @@
 #![feature(use_nested_groups)]
 
 extern crate chalk_parse;
+extern crate diff;
 extern crate ena;
 #[macro_use]
 extern crate error_chain;
@@ -38,3 +40,4 @@ pub mod errors;
 pub mod fallible;
 pub mod lower;
 pub mod solve;
+mod test_util;

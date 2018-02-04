@@ -8,6 +8,8 @@ use solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+mod bench;
+
 fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<ir::Program> {
     chalk_parse::parse_program(text)?.lower(solver_choice)
 }
@@ -52,9 +54,12 @@ macro_rules! test {
         $($unparsed_goals:tt)*
     ]) => {
         test!(@program[$program]
-              @parsed_goals[$($parsed_goals)*
-                            (stringify!($goal), SolverChoice::recursive(), $expected)
-                            (stringify!($goal), SolverChoice::slg(), $expected)]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), SolverChoice::recursive(), $expected)
+                      (stringify!($goal), SolverChoice::eager_slg(), $expected)
+                      (stringify!($goal), SolverChoice::on_demand_slg(), $expected)
+              ]
               @unparsed_goals[$($unparsed_goals)*])
     };
 
@@ -66,22 +71,22 @@ macro_rules! test {
     // (this rule) for the last goal in the list (next rule). There
     // might be a more elegant fix than copy-and-paste but this works.
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
-        goal $goal:tt $(yields[$C:expr] { $expected:expr })*
+        goal $goal:tt $(yields[$($C:expr),+] { $expected:expr })*
             goal $($unparsed_goals:tt)*
     ]) => {
         test!(@program[$program]
               @parsed_goals[$($parsed_goals)*
-                            $((stringify!($goal), $C, $expected))+]
+                            $($((stringify!($goal), $C, $expected))+)+]
               @unparsed_goals[goal $($unparsed_goals)*])
     };
 
     // same as above, but for the final goal in the list.
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
-        goal $goal:tt $(yields[$C:expr] { $expected:expr })*
+        goal $goal:tt $(yields[$($C:expr),+] { $expected:expr })*
     ]) => {
         test!(@program[$program]
               @parsed_goals[$($parsed_goals)*
-                            $((stringify!($goal), $C, $expected))+]
+                            $($((stringify!($goal), $C, $expected))+)+]
               @unparsed_goals[])
     };
 }
@@ -522,7 +527,9 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::on_demand_slg()] {
+            "Unique; substitution [?0 := (Iterator::Item)<!1>]"
+        } yields[SolverChoice::eager_slg()] {
             "Unique; substitution [?0 := (Iterator::Item)<!1>]"
         }
 
@@ -605,9 +612,9 @@ fn region_equality() {
             }
         } yields {
             "Unique; substitution [],
-                     lifetime constraints [
-                       (Env([]) |- LifetimeEq('!2, '!1))
-                     ]"
+                     lifetime constraints \
+                     [InEnvironment { environment: Env([]), goal: '!2 == '!1 }]
+                     "
         }
 
         goal {
@@ -655,7 +662,7 @@ fn forall_equality() {
                 for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
         } yields {
             "Unique; substitution [], lifetime constraints [
-                 (Env([]) |- LifetimeEq('!2, '!1))
+                 InEnvironment { environment: Env([]), goal: '!2 == '!1 }
              ]"
         }
     }
@@ -1066,7 +1073,7 @@ fn normalize_under_binder() {
         } yields {
             "Unique; for<?U0> { \
              substitution [?0 := Ref<'?0, I32>], \
-             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
         }
     }
@@ -1090,7 +1097,7 @@ fn unify_quantified_lifetimes() {
         } yields {
             "Unique; for<?U0> { \
              substitution [?0 := '?0], \
-             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
         }
 
@@ -1107,13 +1114,19 @@ fn unify_quantified_lifetimes() {
         } yields[SolverChoice::recursive()] {
             "Unique; for<?U0> { \
              substitution [?0 := '?0, ?1 := '?0], \
-             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::on_demand_slg()] {
             // SLG yields this distinct, but equivalent, result
             "Unique; for<?U0> { \
              substitution [?0 := '?0, ?1 := '!1], \
-             lifetime constraints [(Env([]) |- LifetimeEq('?0, '!1))] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
+             }"
+        } yields[SolverChoice::eager_slg()] {
+            // SLG yields this distinct, but equivalent, result
+            "Unique; for<?U0> { \
+             substitution [?0 := '?0, ?1 := '!1], \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
         }
     }
@@ -1138,7 +1151,7 @@ fn equality_binder() {
         } yields {
             "Unique; for<?U1> { \
                  substitution [?0 := '?0], \
-                 lifetime constraints [(Env([]) |- LifetimeEq('!2, '?0))] \
+                 lifetime constraints [InEnvironment { environment: Env([]), goal: '!2 == '?0 }] \
              }"
         }
     }
@@ -1360,7 +1373,10 @@ fn suggested_subst() {
             }
         } yields[SolverChoice::recursive()] {
             "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::on_demand_slg()] {
+            // FIXME: SLG does not impl the logic to privilege where clauses
+            "Ambiguous; no inference guidance"
+        } yields[SolverChoice::eager_slg()] {
             // FIXME: SLG does not impl the logic to privilege where clauses
             "Ambiguous; no inference guidance"
         }
@@ -1393,7 +1409,7 @@ fn suggested_subst() {
             }
         } yields[SolverChoice::recursive()] {
             "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::on_demand_slg(), SolverChoice::eager_slg()] {
             // FIXME: SLG does not impl the logic to privilege where clauses
             "Ambiguous; no inference guidance"
         }
@@ -1448,9 +1464,9 @@ fn simple_negation() {
             exists<T> {
                 not { T: Foo }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::on_demand_slg(), SolverChoice::recursive()] {
             "Ambig"
-        } yields[SolverChoice::slg() ] {
+        } yields[SolverChoice::eager_slg() ] {
             "Exploration error: Floundered"
         }
 
@@ -1564,9 +1580,9 @@ fn negation_free_vars() {
             exists<T> {
                 not { Vec<T>: Foo }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::on_demand_slg(), SolverChoice::recursive()] {
             "Ambig"
-        } yields[SolverChoice::slg() ] {
+        } yields[SolverChoice::eager_slg() ] {
             "Exploration error: Floundered"
         }
     }
@@ -1712,7 +1728,6 @@ fn auto_trait_with_impls() {
 
 #[test]
 fn coinductive_semantics() {
-    // FIXME coinduction not implemented for SLG solver
     test! {
         program {
             #[auto] trait Send { }
@@ -1743,21 +1758,27 @@ fn coinductive_semantics() {
                     List<T>: Send
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive(), SolverChoice::on_demand_slg()] {
             "Unique"
+        } yields[SolverChoice::eager_slg()] {
+            // FIXME coinduction not implemented for eager slg
+            "No possible solution"
         }
 
         goal {
             List<i32>: Send
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive(), SolverChoice::on_demand_slg()] {
             "Unique"
+        } yields[SolverChoice::eager_slg()] {
+            // FIXME coinduction not implemented for eager slg
+            "No possible solution"
         }
 
         goal {
             exists<T> {
                 T: Send
             }
-        } yields[SolverChoice::recursive()] {
+        } yields {
             "Ambiguous"
         }
     }
@@ -1996,13 +2017,13 @@ fn overflow_universe() {
 
         goal {
             Foo: Bar
-        } yields[SolverChoice::recursive()] {
-            // The internal universe canonicalization in the recursive
+        } yields[SolverChoice::on_demand_slg(), SolverChoice::recursive()] {
+            // The internal universe canonicalization in the on-demand/recursive
             // solver means that when we are asked to solve (e.g.)
             // `!2: Bar`, we rewrite that to `!1: Bar`, identifying a
             // cycle.
             "No possible solution"
-        } yields[SolverChoice::slg()] {
+        } yields[SolverChoice::eager_slg()] {
             // The SLG solver here *currently* works a bit by
             // accident, as it does not yet do universe
             // canonicalization internally. However, we wind up with a table
@@ -2014,6 +2035,95 @@ fn overflow_universe() {
             // could induce a cycle !1: Bar to !2: Bar to !3: Bar etc,
             // the SLG solver would loop forever. Ungreat.
             "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn projection_from_env() {
+    test! {
+        program {
+            trait Sized { }
+
+            struct Slice<T> where T: Sized { }
+            impl<T> Sized for Slice<T> { }
+
+            trait SliceExt
+            {
+                type Item;
+            }
+
+            impl<T> SliceExt for Slice<T>
+            {
+                type Item = T;
+            }
+        }
+
+        goal {
+            forall<T> {
+                if (
+                    <Slice<T> as SliceExt>::Item: Sized
+                ) {
+                    T: Sized
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+// This variant of the above test used to be achingly slow on SLG
+// solvers, before the "trivial answer" green cut was introduced.
+//
+// The problem was that we wound up enumerating a goal like
+//
+//     <?0 as SliceExt>::Item = !1
+//
+// which meant "find me the types that normalize to `!1`". We had no
+// problem finding these types, but after the first such type, we had
+// the only unique answer we would ever find, and we wanted to reach
+// the point where we could say "no more answers", so we kept
+// requesting more answers.
+#[test]
+fn projection_from_env_slow() {
+    test! {
+        program {
+            trait Clone { }
+            trait Sized { }
+
+            struct Slice<T> where T: Sized { }
+            impl<T> Sized for Slice<T> { }
+
+            struct u32 { }
+            impl Clone for u32 { }
+            impl Sized for u32 { }
+
+            trait SliceExt
+                where <Self as SliceExt>::Item: Clone
+            {
+                type Item;
+            }
+
+            impl<T> SliceExt for Slice<T>
+                where T: Clone
+            {
+                type Item = T;
+            }
+        }
+
+        goal {
+            forall<T> {
+                if (
+                    <Slice<T> as SliceExt>::Item: Clone,
+                    <Slice<T> as SliceExt>::Item: Sized,
+                    T: Clone
+                ) {
+                    T: Sized
+                }
+            }
+        } yields[SolverChoice::on_demand_slg()] {
+            "Unique"
         }
     }
 }

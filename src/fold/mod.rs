@@ -355,13 +355,7 @@ pub fn super_fold_lifetime(
 impl Fold for Substitution {
     type Result = Substitution;
     fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
-        // Do not fold the keys of the substitution, just the values.
-        let parameters = self.parameters
-            .iter()
-            .map(|(&key, value)| {
-                value.fold_with(folder, binders).map(|value| (key, value))
-            })
-            .collect::<Fallible<_>>()?;
+        let parameters = self.parameters.fold_with(folder, binders)?;
         Ok(Substitution { parameters })
     }
 }
@@ -460,5 +454,10 @@ struct_fold!(ProgramClauseImplication {
     consequence,
     conditions,
 });
-struct_fold!(ConstrainedSubst { subst, constraints });
+
+struct_fold!(ConstrainedSubst {
+    subst, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
+    constraints,
+});
+
 // struct_fold!(ApplicationTy { name, parameters }); -- intentionally omitted, folded through Ty

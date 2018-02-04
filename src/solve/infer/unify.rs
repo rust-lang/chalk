@@ -274,9 +274,9 @@ impl<'t> Unifier<'t> {
     }
 
     fn unify_lifetime_lifetime(&mut self, a: &Lifetime, b: &Lifetime) -> Fallible<()> {
-        if let Some(n_a) = self.table.normalize_lifetime(a) {
+        if let Some(n_a) = self.table.normalize_lifetime(a, 0) {
             return self.unify_lifetime_lifetime(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_lifetime(b) {
+        } else if let Some(n_b) = self.table.normalize_lifetime(b, 0) {
             return self.unify_lifetime_lifetime(a, &n_b);
         }
 

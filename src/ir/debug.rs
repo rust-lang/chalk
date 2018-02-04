@@ -268,7 +268,10 @@ impl Debug for Environment {
 
 impl<G: Debug> Debug for InEnvironment<G> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "({:?} |- {:?})", self.environment, self.goal)
+        fmt.debug_struct("InEnvironment")
+           .field("environment", &self.environment)
+           .field("goal", &self.goal)
+           .finish()
     }
 }
 
@@ -304,6 +307,14 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
     }
 }
 
+impl Debug for Constraint {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match self {
+            Constraint::LifetimeEq(a, b) => write!(fmt, "{:?} == {:?}", a, b),
+        }
+    }
+}
+
 impl Debug for Parameter {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
@@ -326,20 +337,26 @@ impl Display for ConstrainedSubst {
     }
 }
 
+impl Debug for Substitution {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        Display::fmt(self, f)
+    }
+}
+
 impl Display for Substitution {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let mut first = true;
 
         write!(f, "[")?;
 
-        for (var, value) in &self.parameters {
+        for (index, value) in self.parameters.iter().enumerate() {
             if first {
                 first = false;
             } else {
                 write!(f, ", ")?;
             }
 
-            write!(f, "{:?} := {:?}", var, value)?;
+            write!(f, "?{} := {:?}", index, value)?;
         }
 
         write!(f, "]")?;

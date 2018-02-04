@@ -69,10 +69,9 @@ impl<T> Canonicalized<T> {
     ///
     /// NB. You can apply a substitution with `Q.substitute(&S)`.
     pub fn into_quantified_and_subst(self) -> (Canonical<T>, Substitution) {
-        let mut subst = Substitution::empty();
-        for (i, free_var) in self.free_vars.iter().enumerate() {
-            subst.insert(InferenceVariable::from_depth(i), free_var.to_parameter());
-        }
+        let subst = Substitution {
+            parameters: self.free_vars.iter().map(|free_var| free_var.to_parameter()).collect()
+        };
 
         (self.quantified, subst)
     }

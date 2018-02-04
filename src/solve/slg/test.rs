@@ -5,6 +5,7 @@ use errors::*;
 use ir;
 use lower::*;
 use std::sync::Arc;
+use test_util;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
     chalk_parse::parse_program(text)?.lower_without_coherence()
@@ -40,13 +41,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, &str, &str)>) {
                 Err(e) => format!("{:?}", e),
             };
 
-            println!("expected:\n{}", expected);
-            println!("actual:\n{}", result);
-
-            // remove all whitespace:
-            let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-            let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-            assert!(!expected1.is_empty() && result1.starts_with(&expected1));
+            test_util::assert_test_result_eq(&expected, &result);
         }
     });
 }
@@ -73,14 +68,12 @@ fn slg_from_env() {
         goal {
             forall<T> { if (T: Sized) { T: Sized } }
         } with max 10 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -109,44 +102,32 @@ fn positive_cycle() {
         goal {
             exists<T> { T: Sized }
         } with max 3 yields {
-            r"4 answer(s) found: Answers {
+            r"4 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: i32
-                                    }
-                                },
+                                subst: [?0 := i32],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vec<i32>
-                                    }
-                                },
+                                subst: [?0 := Vec<i32>],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vec<Vec<?0>>
-                                    }
-                                },
+                                subst: [?0 := Vec<Vec<?0>>],
                                 constraints: []
                             },
                             binders: [
@@ -155,14 +136,10 @@ fn positive_cycle() {
                         },
                         ambiguous: true
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vec<Vec<i32>>
-                                    }
-                                },
+                                subst: [?0 := Vec<Vec<i32>>],
                                 constraints: []
                             },
                             binders: []
@@ -189,7 +166,9 @@ fn subgoal_abstraction() {
         goal {
             exists<T> { T: Foo }
         } with max 50 yields {
-            r"0 answer(s) found"
+            r"0 answer(s) found: SimplifiedAnswers {
+                 answers: []
+            }"
         }
     }
 }
@@ -210,7 +189,7 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T: Foo }
         } with max 2 yields {
-            r"0 answer(s) found: Answers {
+            r"0 answer(s) found: SimplifiedAnswers {
                 answers: []
             }"
         }
@@ -219,14 +198,12 @@ fn subgoal_cycle_uninhabited() {
         goal {
             not { exists<T> { T: Foo } }
         } with max 2 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -241,14 +218,12 @@ fn subgoal_cycle_uninhabited() {
         goal {
             forall<T> { not { T: Foo } }
         } with max 2 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -271,16 +246,12 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
         } with max 4 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vec<u32>
-                                    }
-                                },
+                                subst: [?0 := Vec<u32>],
                                 constraints: []
                             },
                             binders: []
@@ -295,16 +266,12 @@ fn subgoal_cycle_uninhabited() {
         goal {
             forall<U> { if (U: Foo) { exists<T> { T: Foo } } }
         } with max 2 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: !1
-                                    }
-                                },
+                                subst: [?0 := !1],
                                 constraints: []
                             },
                             binders: []
@@ -332,16 +299,12 @@ fn subgoal_cycle_inhabited() {
         goal {
             exists<T> { T: Foo }
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: u32
-                                    }
-                                },
+                                subst: [?0 := u32],
                                 constraints: []
                             },
                             binders: []
@@ -367,16 +330,17 @@ fn basic_region_constraint_from_positive_impl() {
         goal {
             forall<'a, 'b, T> { Ref<'a, 'b, T>: Foo }
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: [
-                                    (Env([]) |- LifetimeEq('!2, '!1))
+                                    InEnvironment {
+                                        environment: Env([]),
+                                        goal: '!2 == '!1
+                                    }
                                 ]
                             },
                             binders: []
@@ -400,16 +364,17 @@ fn basic_region_constraint_from_unification_goal() {
         goal {
             forall<'a, 'b, T> { Ref<'a, 'b, T> = Ref<'a, 'a, T> }
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: [
-                                    (Env([]) |- LifetimeEq('!2, '!1))
+                                    InEnvironment {
+                                        environment: Env([]),
+                                        goal: '!2 == '!1
+                                    }
                                 ]
                             },
                             binders: []
@@ -443,44 +408,32 @@ fn example_2_1_EWFS() {
         goal {
             exists<V> { a: TransitiveClosure<V> }
         } with max 3 yields {
-            r"3 answer(s) found: Answers {
+            r"3 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: a
-                                    }
-                                },
+                                subst: [?0 := a],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: b
-                                    }
-                                },
+                                subst: [?0 := b],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: c
-                                    }
-                                },
+                                subst: [?0 := c],
                                 constraints: []
                             },
                             binders: []
@@ -516,14 +469,12 @@ fn example_2_2_EWFS() {
         goal {
             c: M
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -559,14 +510,12 @@ fn example_2_3_EWFS() {
         goal {
             a: W
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -598,14 +547,12 @@ fn example_3_3_EWFS() {
         goal {
             a: S
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -633,14 +580,12 @@ fn contradiction() {
         goal {
             u32: P
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -669,14 +614,12 @@ fn negative_loop() {
         goal {
             u32: P
         } with max 3 yields {
-            r"1 answer(s) found: Answers {
+            r"1 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {}
-                                },
+                                subst: [],
                                 constraints: []
                             },
                             binders: []
@@ -715,44 +658,32 @@ fn cached_answers_1() {
         goal {
             exists<T> { T: Sour }
         } with max 2 yields {
-            r"5 answer(s) found: Answers {
+            r"5 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Lemon
-                                    }
-                                },
+                                subst: [?0 := Lemon],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vinegar
-                                    }
-                                },
+                                subst: [?0 := Vinegar],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<?0>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<?0>],
                                 constraints: []
                             },
                             binders: [
@@ -761,28 +692,20 @@ fn cached_answers_1() {
                         },
                         ambiguous: true
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Lemon>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Lemon>],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Vinegar>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Vinegar>],
                                 constraints: []
                             },
                             binders: []
@@ -813,44 +736,32 @@ fn cached_answers_2() {
         goal {
             exists<T> { T: Sour }
         } with max 2 yields {
-            r"5 answer(s) found: Answers {
+            r"5 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Lemon
-                                    }
-                                },
+                                subst: [?0 := Lemon],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vinegar
-                                    }
-                                },
+                                subst: [?0 := Vinegar],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<?0>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<?0>],
                                 constraints: []
                             },
                             binders: [
@@ -859,28 +770,20 @@ fn cached_answers_2() {
                         },
                         ambiguous: true
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Lemon>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Lemon>],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Vinegar>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Vinegar>],
                                 constraints: []
                             },
                             binders: []
@@ -911,44 +814,32 @@ fn cached_answers_3() {
         goal {
             exists<T> { T: Sour }
         } with max 2 yields {
-            r"5 answer(s) found: Answers {
+            r"5 answer(s) found: SimplifiedAnswers {
                 answers: [
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Lemon
-                                    }
-                                },
+                                subst: [?0 := Lemon],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: Vinegar
-                                    }
-                                },
+                                subst: [?0 := Vinegar],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<?0>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<?0>],
                                 constraints: []
                             },
                             binders: [
@@ -957,33 +848,61 @@ fn cached_answers_3() {
                         },
                         ambiguous: true
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Lemon>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Lemon>],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
                     },
-                    Answer {
+                    SimplifiedAnswer {
                         subst: Canonical {
                             value: ConstrainedSubst {
-                                subst: Substitution {
-                                    parameters: {
-                                        ?0: HotSauce<Vinegar>
-                                    }
-                                },
+                                subst: [?0 := HotSauce<Vinegar>],
                                 constraints: []
                             },
                             binders: []
                         },
                         ambiguous: false
+                    }
+                ]
+            }"
+        }
+    }
+}
+
+/// Here, P depends on Q negatively, but Q depends only on itself.
+/// What happens is that P adds a negative link on Q, so that when Q
+/// delays, P is also delayed.
+#[test]
+fn negative_answer_delayed_literal() {
+    test! {
+        program {
+            trait P { }
+            trait Q { }
+            struct u32 { }
+
+            forall<> { u32: P if not { u32: Q } }
+            forall<> { u32: Q if not { u32: Q } }
+        }
+
+        goal {
+            u32: P
+        } with max 3 yields {
+            r"1 answer(s) found: SimplifiedAnswers {
+                answers: [
+                    SimplifiedAnswer {
+                        subst: Canonical {
+                            value: ConstrainedSubst {
+                                subst: [],
+                                constraints: []
+                            },
+                            binders: []
+                        },
+                        ambiguous: true
                     }
                 ]
             }"

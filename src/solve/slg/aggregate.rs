@@ -2,125 +2,151 @@ use cast::Cast;
 use ir::*;
 use solve::{Guidance, Solution};
 use solve::infer::InferenceTable;
-use std::collections::BTreeMap;
-use std::collections::HashSet;
 use std::fmt::Debug;
 
-use super::{Answer, Answers, CanonicalGoal};
+use super::{CanonicalConstrainedSubst, CanonicalGoal, SimplifiedAnswer, SimplifiedAnswers};
 
-impl Answers {
-    pub fn into_solution(mut self, root_goal: &CanonicalGoal) -> Option<Solution> {
-        // No answers at all.
-
-        if self.answers.is_empty() {
-            return None;
-        }
-
-        // Exactly 1 answer?
-
-        let Answer { subst, ambiguous } = self.answers.pop().unwrap();
-        if self.answers.is_empty() && !ambiguous {
-            return Some(Solution::Unique(subst));
-        }
-
-        // Otherwise, we either have >1 answer, or else we have
-        // ambiguity.  Either way, we are only going to be giving back
-        // **guidance**, and with guidance, the caller doesn't get
-        // back any region constraints. So drop them from our `subst`
-        // variable.
-        //
-        // FIXME-- there is actually a 3rd possibility. We could have
-        // >1 answer where all the answers have the same substitution,
-        // but different region constraints. We should collapse those
-        // cases into an `OR` region constraint at some point, but I
-        // leave that for future work. This is basically
-        // rust-lang/rust#21974.
-        let mut subst = subst.map(|cs| cs.subst);
-
-        let mut infer = InferenceTable::new();
-        while let Some(answer1) = self.answers.pop() {
-            let Answer {
-                subst:
-                    Canonical {
-                        value:
-                            ConstrainedSubst {
-                                subst: subst1,
-                                constraints: _,
-                            },
-                        binders: _,
-                    },
-                ambiguous: _,
-            } = answer1;
-
-            // While we aggregate each pair of matching types, we will
-            // make new variables, but after each round is done we
-            // will canonicalize and cleanup.
-            let snapshot = infer.snapshot();
-
-            // Collect the types that the two substitutions have in
-            // common.
-            let mut aggr_parameters = BTreeMap::new();
-            for (key, value) in subst.value.parameters {
-                let ty = match value {
-                    ParameterKind::Ty(ty) => ty,
-                    ParameterKind::Lifetime(_) => {
-                        // Ignore the lifetimes from the substitution: we're just
-                        // creating guidance here anyway.
-                        continue;
-                    }
-                };
-
-                if let Some(ty1) = subst1.parameters.get(&key) {
-                    let ty1 = ty1.assert_ty_ref();
-
-                    // We have two values for some variable X that
-                    // appears in the root goal. Find out the universe
-                    // of X.
-                    let universe = root_goal.binders[key.to_usize()].into_inner();
-
-                    // Combine the two types into a new type.
-                    let mut aggr = AntiUnifier {
-                        infer: &mut infer,
-                        universe,
-                    };
-                    let ty_aggr = aggr.aggregate_tys(&ty, ty1);
-                    aggr_parameters.insert(key, ty_aggr.cast());
-                }
-            }
-
-            let aggr_subst = Substitution {
-                parameters: aggr_parameters,
-            };
-
-            subst = infer.canonicalize(&aggr_subst).quantified;
-            infer.rollback_to(snapshot);
-        }
-
-        let guidance = if subst.value.is_empty() {
-            Guidance::Unknown
-        } else if is_trivial(&subst) {
-            Guidance::Unknown
-        } else {
-            Guidance::Definite(subst)
-        };
-
-        Some(Solution::Ambig(guidance))
+impl SimplifiedAnswers {
+    pub fn into_solution(self, root_goal: &CanonicalGoal) -> Option<Solution> {
+        make_solution(root_goal, self.answers)
     }
 }
 
-fn is_trivial(subst: &Canonical<Substitution>) -> bool {
-    let mut uniq = HashSet::new();
+/// Draws as many answers as it needs from `simplified_answers` (but
+/// no more!) in order to come up with a solution.
+pub(super) fn make_solution(
+    root_goal: &CanonicalGoal,
+    simplified_answers: impl IntoIterator<Item = SimplifiedAnswer>,
+) -> Option<Solution> {
+    let mut simplified_answers = simplified_answers.into_iter().peekable();
 
+    // No answers at all?
+    if simplified_answers.peek().is_none() {
+        return None;
+    }
+    let SimplifiedAnswer { subst, ambiguous } = simplified_answers.next().unwrap();
+
+    // Exactly 1 unconditional answer?
+    if simplified_answers.peek().is_none() && !ambiguous {
+        return Some(Solution::Unique(subst));
+    }
+
+    // Otherwise, we either have >1 answer, or else we have
+    // ambiguity.  Either way, we are only going to be giving back
+    // **guidance**, and with guidance, the caller doesn't get
+    // back any region constraints. So drop them from our `subst`
+    // variable.
+    //
+    // FIXME-- there is actually a 3rd possibility. We could have
+    // >1 answer where all the answers have the same substitution,
+    // but different region constraints. We should collapse those
+    // cases into an `OR` region constraint at some point, but I
+    // leave that for future work. This is basically
+    // rust-lang/rust#21974.
+    let mut subst = subst.map(|cs| cs.subst);
+
+    // Extract answers and merge them into `subst`. Stop once we have
+    // a trivial subst (or run out of answers).
+    //
+    // FIXME -- It would be nice if we could get some idea of the
+    // "shape" of future answers to know if they *might* disrupt
+    // existing substituion; the iterator interface is obviously too
+    // limited for that, but the on-demand SLG solver probably could
+    // give us that information.
+    let guidance = loop {
+        if subst.value.is_empty() || is_trivial(&subst) {
+            break Guidance::Unknown;
+        }
+
+        match simplified_answers.next() {
+            Some(answer1) => {
+                subst = merge_into_guidance(root_goal, subst, &answer1.subst);
+            }
+
+            None => {
+                break Guidance::Definite(subst);
+            }
+        }
+    };
+
+    Some(Solution::Ambig(guidance))
+}
+
+/// Given a current substitution used as guidance for `root_goal`, and
+/// a new possible answer to `root_goal`, returns a new set of
+/// guidance that encompasses both of them. This is often more general
+/// than the old guidance. For example, if we had a guidance of `?0 =
+/// u32` and the new answer is `?0 = i32`, then the guidance would
+/// become `?0 = ?X` (where `?X` is some fresh variable).
+fn merge_into_guidance(
+    root_goal: &CanonicalGoal,
+    guidance: Canonical<Substitution>,
+    answer: &CanonicalConstrainedSubst,
+) -> Canonical<Substitution> {
+    let mut infer = InferenceTable::new();
+    let Canonical {
+        value: ConstrainedSubst {
+            subst: subst1,
+            constraints: _,
+        },
+        binders: _,
+    } = answer;
+
+    // Collect the types that the two substitutions have in
+    // common.
+    let aggr_parameters: Vec<_> = guidance
+        .value
+        .parameters
+        .iter()
+        .zip(&subst1.parameters)
+        .enumerate()
+        .map(|(index, (value, value1))| {
+            // We have two values for some variable X that
+            // appears in the root goal. Find out the universe
+            // of X.
+            let universe = root_goal.binders[index].into_inner();
+
+            let ty = match value {
+                ParameterKind::Ty(ty) => ty,
+                ParameterKind::Lifetime(_) => {
+                    // Ignore the lifetimes from the substitution: we're just
+                    // creating guidance here anyway.
+                    return infer.new_variable(universe).to_lifetime().cast();
+                }
+            };
+
+            let ty1 = value1.assert_ty_ref();
+
+            // Combine the two types into a new type.
+            let mut aggr = AntiUnifier {
+                infer: &mut infer,
+                universe,
+            };
+            aggr.aggregate_tys(&ty, ty1).cast()
+        })
+        .collect();
+
+    let aggr_subst = Substitution {
+        parameters: aggr_parameters,
+    };
+
+    infer.canonicalize(&aggr_subst).quantified
+}
+
+fn is_trivial(subst: &Canonical<Substitution>) -> bool {
     // A subst is trivial if..
     subst
         .value
         .parameters
-        .values()
-        .all(|parameter| match parameter {
-            // All types are mapped to distinct variables.
+        .iter()
+        .enumerate()
+        .all(|(index, parameter)| match parameter {
+            // All types are mapped to distinct variables.  Since this
+            // has been canonicalized, those will also be the first N
+            // variables.
             ParameterKind::Ty(t) => match t.var() {
                 None => false,
-                Some(depth) => uniq.insert(depth),
+                Some(depth) => depth == index,
             },
 
             // And no lifetime mappings. (This is too strict, but we never
@@ -169,11 +195,11 @@ impl<'infer> AntiUnifier<'infer> {
             }
 
             // Mismatched base kinds.
-            (Ty::Var(_), _) |
-            (Ty::ForAll(_), _) |
-            (Ty::Apply(_), _) |
-            (Ty::Projection(_), _) |
-            (Ty::UnselectedProjection(_), _) => self.new_variable(),
+            (Ty::Var(_), _)
+            | (Ty::ForAll(_), _)
+            | (Ty::Apply(_), _)
+            | (Ty::Projection(_), _)
+            | (Ty::UnselectedProjection(_), _) => self.new_variable(),
         }
     }
 
@@ -188,9 +214,7 @@ impl<'infer> AntiUnifier<'infer> {
         } = apply2;
 
         self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
-            .map(|(&name, parameters)| {
-                Ty::Apply(ApplicationTy { name, parameters })
-            })
+            .map(|(&name, parameters)| Ty::Apply(ApplicationTy { name, parameters }))
             .unwrap_or_else(|| self.new_variable())
     }
 

@@ -4,8 +4,7 @@ use fallible::*;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use fold::shift::Shift;
 use lalrpop_intern::InternedString;
-use solve::infer::var::InferenceVariable;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 #[macro_use]
@@ -18,22 +17,22 @@ pub type Identifier = InternedString;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// From type-name to item-id. Used during lowering only.
-    pub type_ids: HashMap<Identifier, ItemId>,
+    pub type_ids: BTreeMap<Identifier, ItemId>,
 
     /// For each struct/trait:
-    pub type_kinds: HashMap<ItemId, TypeKind>,
+    pub type_kinds: BTreeMap<ItemId, TypeKind>,
 
     /// For each struct:
-    pub struct_data: HashMap<ItemId, StructDatum>,
+    pub struct_data: BTreeMap<ItemId, StructDatum>,
 
     /// For each impl:
-    pub impl_data: HashMap<ItemId, ImplDatum>,
+    pub impl_data: BTreeMap<ItemId, ImplDatum>,
 
     /// For each trait:
-    pub trait_data: HashMap<ItemId, TraitDatum>,
+    pub trait_data: BTreeMap<ItemId, TraitDatum>,
 
     /// For each associated ty:
-    pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
+    pub associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// For each default impl (automatically generated for auto traits):
     pub default_impl_data: Vec<DefaultImplDatum>,
@@ -64,10 +63,10 @@ impl Program {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProgramEnvironment {
     /// For each trait (used for debugging):
-    pub trait_data: HashMap<ItemId, TraitDatum>,
+    pub trait_data: BTreeMap<ItemId, TraitDatum>,
 
     /// For each associated type (used for debugging):
-    pub associated_ty_data: HashMap<ItemId, AssociatedTyDatum>,
+    pub associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// Compiled forms of the above:
     pub program_clauses: Vec<ProgramClause>,
@@ -109,7 +108,7 @@ impl Environment {
         I: IntoIterator<Item = DomainGoal>,
     {
         let mut env = self.clone();
-        let env_clauses: HashSet<_> = env.clauses.into_iter().chain(clauses).collect();
+        let env_clauses: BTreeSet<_> = env.clauses.into_iter().chain(clauses).collect();
         env.clauses = env_clauses.into_iter().collect();
         Arc::new(env)
     }
@@ -710,6 +709,41 @@ impl<T> UCanonical<T> {
     {
         self.canonical.substitute(subst)
     }
+
+    pub fn trivial_substitution(&self) -> Substitution {
+        let binders = &self.canonical.binders;
+        Substitution {
+            parameters:
+            binders
+                .iter()
+                .enumerate()
+                .map(|(index, pk)| match pk {
+                    ParameterKind::Ty(_) => ParameterKind::Ty(Ty::Var(index)),
+                    ParameterKind::Lifetime(_) => ParameterKind::Lifetime(Lifetime::Var(index)),
+                })
+                .collect()
+        }
+    }
+
+    pub fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
+        let subst = &canonical_subst.value.subst;
+        assert_eq!(self.canonical.binders.len(), subst.parameters.len());
+        // A subst is trivial if..
+        subst.parameters
+             .iter()
+             .zip(0..)
+             .all(|(parameter, index)| {
+                 // All types and lifetimes are mapped to distinct
+                 // variables.  Since this has been canonicalized, and
+                 // the substitution appears first, those will also be
+                 // the first N variables.
+                 match parameter {
+                     ParameterKind::Ty(Ty::Var(depth)) => index == *depth,
+                     ParameterKind::Lifetime(Lifetime::Var(depth)) => index == *depth,
+                     _ => false,
+                 }
+             })
+    }
 }
 
 impl UCanonical<InEnvironment<Goal>> {
@@ -830,13 +864,13 @@ pub enum QuantifierKind {
 /// lifetime constraints, instead gathering them up to return with our solution
 /// for later checking. This allows for decoupling between type and region
 /// checking in the compiler.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Constraint {
     LifetimeEq(Lifetime, Lifetime),
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Substitution {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
@@ -845,31 +879,10 @@ pub struct Substitution {
     /// This is a map because the substitution is not necessarily
     /// complete. We use a btree map to ensure that the result is in a
     /// deterministic order.
-    pub parameters: BTreeMap<InferenceVariable, Parameter>,
+    pub parameters: Vec<Parameter>,
 }
 
 impl Substitution {
-    pub fn empty() -> Substitution {
-        Substitution {
-            parameters: BTreeMap::new(),
-        }
-    }
-
-    /// Add `var := value` to the substutition.
-    ///
-    /// # Panics
-    ///
-    /// If a mapping for `var` is already present.
-    pub fn insert(&mut self, var: InferenceVariable, value: Parameter) {
-        let old_value = self.parameters.insert(var, value);
-        assert!(
-            old_value.is_none(),
-            "already had a key for {:?} in subst (old_value={:?})",
-            var,
-            old_value
-        );
-    }
-
     pub fn is_empty(&self) -> bool {
         self.parameters.is_empty()
     }
@@ -879,14 +892,9 @@ impl<'a> DefaultTypeFolder for &'a Substitution {}
 
 impl<'a> ExistentialFolder for &'a Substitution {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        let v = InferenceVariable::from_depth(depth);
-        if let Some(ty) = self.parameters.get(&v) {
-            // Substitutions do not have to be complete.
-            let ty = ty.assert_ty_ref();
-            Ok(ty.up_shift(binders))
-        } else {
-            Ok(Ty::Var(depth + binders))
-        }
+        let ty = &self.parameters[depth];
+        let ty = ty.assert_ty_ref();
+        Ok(ty.up_shift(binders))
     }
 
     fn fold_free_existential_lifetime(
@@ -894,14 +902,9 @@ impl<'a> ExistentialFolder for &'a Substitution {
         depth: usize,
         binders: usize,
     ) -> Fallible<Lifetime> {
-        let v = InferenceVariable::from_depth(depth);
-        if let Some(l) = self.parameters.get(&v) {
-            // Substitutions do not have to be complete.
-            let l = l.assert_lifetime_ref();
-            Ok(l.up_shift(binders))
-        } else {
-            Ok(Lifetime::Var(depth + binders))
-        }
+        let l = &self.parameters[depth];
+        let l = l.assert_lifetime_ref();
+        Ok(l.up_shift(binders))
     }
 }
 

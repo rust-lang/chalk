@@ -130,7 +130,7 @@ impl Solver {
                 // XXX how does caching with coinduction work?
                 if self.stack.coinductive_cycle_from(depth) {
                     let value = ConstrainedSubst {
-                        subst: Substitution::empty(),
+                        subst: goal.trivial_substitution(),
                         constraints: vec![],
                     };
                     debug!("applying coinductive semantics");

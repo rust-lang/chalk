@@ -2,9 +2,13 @@ use cast::Caster;
 use fallible::Fallible;
 use fold::Fold;
 use fold::shift::Shift;
-use solve::infer::var::InferenceVariable;
-use super::*;
-use zip::Zipper;
+use ir::*;
+use solve::infer::{InferenceTable, unify::UnificationResult};
+use std::sync::Arc;
+use zip::{Zip, Zipper};
+
+use super::{CanonicalConstrainedSubst, CanonicalGoal, CanonicalPendingExClause, DelayedLiteral,
+            ExClause, Literal, PendingExClause, Satisfiable, StackIndex, TableIndex};
 
 ///////////////////////////////////////////////////////////////////////////
 // SLG RESOLVENTS
@@ -81,7 +85,7 @@ pub(super) fn resolvent_pending(
         ex_clause,
         &selected_goal,
         answer_table_goal,
-        answer_subst
+        answer_subst,
     ).map(|r| (goal_depth, r));
 
     info!("resolvent = {:?}", result);
@@ -109,17 +113,13 @@ pub(super) fn resolvent_clause(
     //   - Also, we always select the first literal in `ex_clause.literals`, so `i` is 0.
     // - `clause` is C, except with binders for any existential variables.
 
-    // Goal here is now G.
-    let ex_clause = ExClause {
-        subst: subst.clone(),
-        delayed_literals: vec![],
-        constraints: vec![],
-        subgoals: vec![],
-    };
-
-    // The selected literal for us will always be the main goal
-    // `G`. See if we can unify that with C'.
-    let environment = &goal.environment;
+    debug_heading!(
+        "resolvent_clause(\
+         \n    goal={:?},\
+         \n    clause={:?})",
+        goal,
+        clause,
+    );
 
     // C' in the description above is `consequence :- conditions`.
     //
@@ -128,63 +128,41 @@ pub(super) fn resolvent_clause(
         consequence,
         conditions,
     } = infer.instantiate_binders_existentially(clause);
-    let consequence: InEnvironment<DomainGoal> = InEnvironment::new(&environment, consequence);
+    debug!("consequence = {:?}", consequence);
+    debug!("conditions = {:?}", conditions);
 
-    resolvent::resolvent_unify(infer, ex_clause, &goal, &consequence, conditions)
-}
-
-/// Given the goal G (`goal`) with selected literal Li
-/// (`selected_goal`), the goal environment `environment`, and
-/// the clause C' (`consequence :- conditions`), applies the SLG
-/// resolvent algorithm to yield a new `ExClause`.
-fn resolvent_unify<G>(
-    infer: &mut InferenceTable,
-    mut goal: ExClause,
-    selected_goal: &InEnvironment<G>,
-    consequence: &InEnvironment<G>,
-    conditions: Vec<Goal>,
-) -> Satisfiable<ExClause>
-where
-    G: Zip,
-{
-    let environment = &selected_goal.environment;
-
-    debug_heading!(
-        "resolvent_unify(\
-         \n    selected_goal={:?},\
-         \n    consequence={:?},\
-         \n    conditions={:?})",
-        selected_goal,
-        consequence,
-        conditions,
-    );
+    let environment = &goal.environment.clone();
 
     // Unify the selected literal Li with C'.
-    let UnificationResult { goals, constraints } = {
-        match infer.unify(&selected_goal.environment, selected_goal, consequence) {
+    let UnificationResult { goals: subgoals, constraints } = {
+        match infer.unify(environment, &goal.goal, &consequence) {
             Err(_) => return Satisfiable::No,
             Ok(v) => v,
         }
     };
 
-    goal.constraints.extend(constraints);
+    // Final X-clause that we will return.
+    let mut ex_clause = ExClause {
+        subst: subst.clone(),
+        delayed_literals: vec![],
+        constraints: vec![],
+        subgoals: vec![],
+    };
 
-    // One (minor) complication: unification for us sometimes yields further domain goals.
-    info!("subgoals={:?}", goals);
-    goal.subgoals
-        .extend(goals.into_iter().casted().map(Literal::Positive));
+    // Add the subgoals/region-constraints that unification gave us.
+    debug!("subgoals={:?}", subgoals);
+    ex_clause.subgoals
+             .extend(subgoals.into_iter().casted().map(Literal::Positive));
+    ex_clause.constraints.extend(constraints);
 
-    // Add the `conditions` into the result. One complication is
-    // that these are HH-clauses, so we have to simplify into
-    // literals first. This can product a sum-of-products. This is
-    // why we return a vector.
-    goal.subgoals
-        .extend(conditions.into_iter().map(|c| match c {
-            Goal::Not(c) => Literal::Negative(InEnvironment::new(&environment, *c)),
-            c => Literal::Positive(InEnvironment::new(&environment, c)),
-        }));
+    // Add the `conditions` from the program clause into the result too.
+    ex_clause.subgoals
+             .extend(conditions.into_iter().map(|c| match c {
+                 Goal::Not(c) => Literal::Negative(InEnvironment::new(environment, *c)),
+                 c => Literal::Positive(InEnvironment::new(environment, c)),
+             }));
 
-    Satisfiable::Yes(goal)
+    Satisfiable::Yes(ex_clause)
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -253,10 +231,9 @@ pub(super) fn factor_pending(
         answer_subst,
     ).map(|mut ex_clause| {
         // Push Li into the list of delayed literals.
-        ex_clause.delayed_literals.push(DelayedLiteral::Positive(
-            answer_table,
-            answer_subst.clone(),
-        ));
+        ex_clause
+            .delayed_literals
+            .push(DelayedLiteral::Positive(answer_table, answer_subst.clone()));
 
         (goal_depth, ex_clause)
     });
@@ -344,13 +321,19 @@ pub(super) fn factor_pending(
 // `Vec<?X>` with `u32` (from the substitution), which will fail. That
 // failure will get propagated back up.
 
-fn apply_answer_subst(
+pub(super) fn apply_answer_subst(
     infer: &mut InferenceTable,
     mut ex_clause: ExClause,
     selected_goal: &InEnvironment<Goal>,
     answer_table_goal: &CanonicalGoal,
     canonical_answer_subst: &CanonicalConstrainedSubst,
 ) -> Satisfiable<ExClause> {
+    debug_heading!("apply_answer_subst()");
+    debug!("ex_clause={:?}", ex_clause);
+    debug!("selected_goal={:?}", infer.normalize_deep(selected_goal));
+    debug!("answer_table_goal={:?}", answer_table_goal);
+    debug!("canonical_answer_subst={:?}", canonical_answer_subst);
+
     // C' is now `answer`. No variables in commmon with G.
     let ConstrainedSubst {
         subst: answer_subst,
@@ -430,20 +413,7 @@ impl<'t> AnswerSubstitutor<'t> {
             return Ok(false);
         }
 
-        let var = InferenceVariable::from_depth(answer_depth - self.answer_binders);
-        let answer_param = if let Some(param) = self.answer_subst.parameters.get(&var) {
-            param
-        } else {
-            // In principle, substitutions don't have to
-            // be complete, so we could just return now --
-            // it would indicate that the SLG solver
-            // places no constraints on this particular
-            // variable. *However*, in practice we always
-            // return a value in the SLG solver for all
-            // inputs, even if that value is trivial, so
-            // we panic here.
-            panic!("answer-subst does not contain input variable `{:?}`", var)
-        };
+        let answer_param = &self.answer_subst.parameters[answer_depth - self.answer_binders];
 
         let pending_shifted = &pending
             .down_shift(self.pending_binders)
@@ -482,6 +452,10 @@ impl<'t> AnswerSubstitutor<'t> {
 
 impl<'t> Zipper for AnswerSubstitutor<'t> {
     fn zip_tys(&mut self, answer: &Ty, pending: &Ty) -> Fallible<()> {
+        if let Some(pending) = self.table.normalize_shallow(pending, self.pending_binders) {
+            return Zip::zip_with(self, answer, &pending);
+        }
+
         // If the answer has a variable here, then this is one of the
         // "inputs" to the subgoal table. We need to extract the
         // resulting answer that the subgoal found and unify it with
@@ -530,6 +504,10 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
     }
 
     fn zip_lifetimes(&mut self, answer: &Lifetime, pending: &Lifetime) -> Fallible<()> {
+        if let Some(pending) = self.table.normalize_lifetime(pending, self.pending_binders) {
+            return Zip::zip_with(self, answer, &pending);
+        }
+
         if let Lifetime::Var(answer_depth) = answer {
             if self.unify_free_answer_var(*answer_depth, ParameterKind::Lifetime(pending))? {
                 return Ok(());

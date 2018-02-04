@@ -63,9 +63,9 @@ use std::mem;
 use std::ops::{Index, IndexMut, Range};
 use std::sync::Arc;
 use std::usize;
-use zip::Zip;
 
 mod aggregate;
+pub mod on_demand;
 mod resolvent;
 mod test;
 
@@ -75,7 +75,7 @@ mod test;
 ///
 /// If this returns `Ok`, a complete set of answers is returned, some
 /// of which may be approximated. This can be converted into a
-/// solution using the method `into_solution` on `Answers`.
+/// solution using the method `into_solution` on `SimplifiedAnswers`.
 ///
 /// If this returns `Err`, then the success or failure of the program
 /// could not be interpreted due to some execution error (typically
@@ -85,7 +85,7 @@ pub fn solve_root_goal(
     max_size: usize,
     program: &Arc<ProgramEnvironment>,
     root_goal: &UCanonicalGoal,
-) -> Result<Answers, ExplorationError> {
+) -> Result<SimplifiedAnswers, ExplorationError> {
     Forest::solve_root_goal(max_size, program, &root_goal)
 }
 
@@ -176,23 +176,21 @@ struct Stack {
     stack: Vec<StackEntry>,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct TableIndex {
-    value: usize,
+index_struct! {
+    struct TableIndex {
+        value: usize,
+    }
 }
-
-copy_fold!(TableIndex);
 
 /// The StackIndex identifies the position of a table's goal in the
 /// stack of goals that are actively being processed. Note that once a
 /// table is completely evaluated, it may be popped from the stack,
 /// and hence no longer have a stack index.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct StackIndex {
-    value: usize,
+index_struct! {
+    struct StackIndex {
+        value: usize,
+    }
 }
-
-copy_fold!(StackIndex);
 
 /// The `DepthFirstNumber` (DFN) is a sequential number assigned to
 /// each goal when it is first encountered. The naming (taken from
@@ -353,12 +351,12 @@ struct_fold!(ExClause {
 });
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Answers {
-    pub answers: Vec<Answer>,
+pub struct SimplifiedAnswers {
+    pub answers: Vec<SimplifiedAnswer>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Answer {
+pub struct SimplifiedAnswer {
     /// A fully instantiated version of the goal for which the query
     /// is true (including region constraints).
     pub subst: CanonicalConstrainedSubst,
@@ -391,7 +389,7 @@ enum DelayedLiteralSets {
 /// we get back an approximated answer with `Goal::CannotProve` as a
 /// delayed literal, which in turn forces its subgoal to be delayed,
 /// and so forth. Therefore, we store canonicalized goals.)
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 struct DelayedLiteralSet {
     delayed_literals: Vec<DelayedLiteral>,
 }
@@ -464,7 +462,7 @@ struct Minimums {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum Sign {
+enum Polarity {
     Positive,
     Negative,
 }
@@ -485,7 +483,7 @@ impl Forest {
         max_size: usize,
         program: &Arc<ProgramEnvironment>,
         root_goal: &UCanonicalGoal,
-    ) -> Result<Answers, ExplorationError> {
+    ) -> Result<SimplifiedAnswers, ExplorationError> {
         let program = program.clone();
 
         let mut forest = Forest {
@@ -520,9 +518,7 @@ impl Forest {
         let table = self.tables.insert(goal, depth);
         debug!(
             "push_new_table: depth {:?} is table {:?} with goal {:?}",
-            depth,
-            table,
-            goal
+            depth, table, goal
         );
         self.tables[table].positives.extend(positive_pending);
         self.tables[table].negatives.extend(negative_pending);
@@ -574,7 +570,7 @@ impl Forest {
         match goal {
             Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
                 let domain_goal = InEnvironment::new(&environment, domain_goal);
-                let clauses = self.clauses(&domain_goal);
+                let clauses = clauses(&self.program, &domain_goal);
 
                 for clause in clauses {
                     self.snapshotted(|this| {
@@ -604,7 +600,7 @@ impl Forest {
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
                 let hh_goal = InEnvironment::new(&environment, goal);
-                let ex_clause = match Self::simplify_hh_goal(&mut self.infer, subst, hh_goal) {
+                let ex_clause = match simplify_hh_goal(&mut self.infer, subst, hh_goal) {
                     Satisfiable::Yes(ex_clause) => ex_clause,
                     Satisfiable::No => return Ok(FullyExplored), // now way to solve
                 };
@@ -615,112 +611,9 @@ impl Forest {
 
         debug!(
             "subgoal: goal_depth={:?} minimums={:?}",
-            goal_depth,
-            minimums
+            goal_depth, minimums
         );
         self.complete(goal_depth, minimums)
-    }
-
-
-    /// Simplifies an HH goal into a series of positive domain goals
-    /// and negative HH goals. This operation may fail if the HH goal
-    /// includes unifications that cannot be completed.
-    fn simplify_hh_goal(
-        infer: &mut InferenceTable,
-        subst: Substitution,
-        initial_goal: InEnvironment<Goal>,
-    ) -> Satisfiable<ExClause> {
-        let mut ex_clause = ExClause {
-            subst,
-            delayed_literals: vec![],
-            constraints: vec![],
-            subgoals: vec![],
-        };
-
-        // A stack of higher-level goals to process.
-        let mut pending_goals = vec![initial_goal];
-
-        while let Some(InEnvironment { environment, goal }) = pending_goals.pop() {
-            match goal {
-                Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                    let subgoal = infer.instantiate_binders_universally(&subgoal);
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal));
-                }
-                Goal::Quantified(QuantifierKind::Exists, subgoal) => {
-                    let subgoal = infer.instantiate_binders_existentially(&subgoal);
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal))
-                }
-                Goal::Implies(wc, subgoal) => {
-                    let new_environment = &environment.add_clauses(wc);
-                    pending_goals.push(InEnvironment::new(&new_environment, *subgoal));
-                }
-                Goal::And(subgoal1, subgoal2) => {
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal1));
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal2));
-                }
-                Goal::Not(subgoal) => {
-                    let subgoal = (*subgoal).clone();
-                    ex_clause
-                        .subgoals
-                        .push(Literal::Negative(InEnvironment::new(&environment, subgoal)));
-                }
-                Goal::Leaf(LeafGoal::EqGoal(ref eq_goal)) => {
-                    let UnificationResult { goals, constraints } = {
-                        match infer.unify(&environment, &eq_goal.a, &eq_goal.b) {
-                            Ok(v) => v,
-                            Err(_) => return Satisfiable::No,
-                        }
-                    };
-
-                    ex_clause.constraints.extend(constraints);
-                    ex_clause
-                        .subgoals
-                        .extend(goals.into_iter().casted().map(Literal::Positive));
-                }
-                Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
-                    let domain_goal = domain_goal.cast();
-                    ex_clause.subgoals.push(Literal::Positive(
-                        InEnvironment::new(&environment, domain_goal),
-                    ));
-                }
-                Goal::CannotProve(()) => {
-                    // You can think of `CannotProve` as a special
-                    // goal that is only provable if `not {
-                    // CannotProve }`. Trying to prove this, of
-                    // course, will always create a negative cycle and
-                    // hence a delayed literal that cannot be
-                    // resolved.
-                    ex_clause
-                        .subgoals
-                        .push(Literal::Negative(InEnvironment::new(&environment, goal)));
-                }
-            }
-        }
-
-        Satisfiable::Yes(ex_clause)
-    }
-
-    /// Returns all clauses that are relevant to `goal`, either from
-    /// the environment or the program.
-    fn clauses(&mut self, goal: &InEnvironment<DomainGoal>) -> Vec<ProgramClause> {
-        let &InEnvironment {
-            ref environment,
-            ref goal,
-        } = goal;
-
-        let environment_clauses = environment
-            .clauses
-            .iter()
-            .filter(|&env_clause| env_clause.could_match(goal))
-            .map(|env_clause| env_clause.clone().into_program_clause());
-
-        let program_clauses = self.program
-            .program_clauses
-            .iter()
-            .filter(|clause| clause.could_match(goal))
-            .cloned();
-
-        environment_clauses.chain(program_clauses).collect()
     }
 
     /// Pop off the next subgoal from `ex_clause` and try to solve
@@ -808,7 +701,7 @@ impl Forest {
         // Check if we need to create a new table and (if so) stop.
         let subgoal_table = match self.select_goal(
             goal_depth,
-            Sign::Positive,
+            Polarity::Positive,
             &ex_clause,
             &selected_goal,
             truncated_subgoal,
@@ -832,7 +725,7 @@ impl Forest {
             self.tables[subgoal_table]
                 .positives
                 .push(pending_ex_clause.clone());
-            self.update_lookup(goal_depth, subgoal_depth, Sign::Positive, minimums);
+            self.update_lookup(goal_depth, subgoal_depth, Polarity::Positive, minimums);
         }
 
         // Process the answers that have already been found one by
@@ -922,7 +815,7 @@ impl Forest {
     /// # Parameters
     ///
     /// - `goal_depth`: depth of current goal that we are solving in the stack
-    /// - `sign`: is the selected literal positive or negative
+    /// - `polarity`: is the selected literal positive or negative
     /// - `ex_clause`: current X-clause we are solving
     /// - `selected_goal`: goal of current selected literal (unaltered by abstraction)
     /// - `instantiated_subgoal`: abstracted version of selected goal used for table lookup
@@ -930,7 +823,7 @@ impl Forest {
     fn select_goal(
         &mut self,
         goal_depth: StackIndex,
-        sign: Sign,
+        polarity: Polarity,
         ex_clause: &ExClause,
         selected_goal: &InEnvironment<Goal>,
         instantiated_subgoal: InEnvironment<Goal>,
@@ -938,12 +831,12 @@ impl Forest {
     ) -> Result<Option<TableIndex>, ExplorationError> {
         debug_heading!(
             "select_goal(goal_depth={:?}, \
-             sign={:?}, \
+             polarity={:?}, \
              selected_goal={:?}, \
              instantiated_subgoal={:?}, \
              minimums={:?})",
             goal_depth,
-            sign,
+            polarity,
             selected_goal,
             instantiated_subgoal,
             minimums
@@ -962,9 +855,9 @@ impl Forest {
         // Otherwise, create the new table, listing the current goal
         // as being pending. Then try to solve this new table.
         let pending_ex_clause = self.pending_ex_clause(goal_depth, ex_clause, selected_goal);
-        let (positive_link, negative_link) = match sign {
-            Sign::Positive => (Some(pending_ex_clause), None),
-            Sign::Negative => (None, Some(pending_ex_clause)),
+        let (positive_link, negative_link) = match polarity {
+            Polarity::Positive => (Some(pending_ex_clause), None),
+            Polarity::Negative => (None, Some(pending_ex_clause)),
         };
         let (subgoal_table, subgoal_depth) =
             self.push_new_table(&canonical_subgoal, positive_link, negative_link);
@@ -978,7 +871,7 @@ impl Forest {
         self.update_solution(
             goal_depth,
             subgoal_table,
-            sign,
+            polarity,
             minimums,
             &mut subgoal_minimums,
         );
@@ -1009,15 +902,13 @@ impl Forest {
         );
         let canonical_parts = self.infer.canonicalize(&parts).quantified;
         canonical_parts.map(
-            |(subst, selected_goal, delayed_literals, constraints, subgoals)| {
-                PendingExClause {
-                    goal_depth,
-                    subst,
-                    selected_goal,
-                    delayed_literals,
-                    constraints,
-                    subgoals,
-                }
+            |(subst, selected_goal, delayed_literals, constraints, subgoals)| PendingExClause {
+                goal_depth,
+                subst,
+                selected_goal,
+                delayed_literals,
+                constraints,
+                subgoals,
             },
         )
     }
@@ -1139,7 +1030,7 @@ impl Forest {
         // Check if we need to create a new table and (if so) stop.
         let subgoal_table = match self.select_goal(
             goal_depth,
-            Sign::Negative,
+            Polarity::Negative,
             &ex_clause,
             &selected_goal,
             inverted_subgoal,
@@ -1160,7 +1051,7 @@ impl Forest {
             // having interest in negative solutions and stop for now.
             let pending_ex_clause = self.pending_ex_clause(goal_depth, &ex_clause, &selected_goal);
             self.tables[subgoal_table].negatives.push(pending_ex_clause);
-            self.update_lookup(goal_depth, subgoal_depth, Sign::Negative, minimums);
+            self.update_lookup(goal_depth, subgoal_depth, Polarity::Negative, minimums);
             return Ok(FullyExplored);
         }
 
@@ -1236,8 +1127,7 @@ impl Forest {
             .quantified;
         debug!(
             "answer: goal_table={:?}, answer_subst={:?}",
-            goal_table,
-            answer_subst
+            goal_table, answer_subst
         );
 
         // Convert the `DelayedLiterals` instance representing the set
@@ -1362,22 +1252,18 @@ impl Forest {
         &mut self,
         goal_depth: StackIndex,
         subgoal_table: TableIndex,
-        sign: Sign,
+        polarity: Polarity,
         minimums: &mut Minimums,
         subgoal_minimums: &Minimums,
     ) {
         debug!(
-            "update_solution(goal_depth={:?}, subgoal_table={:?}, sign={:?}, \
+            "update_solution(goal_depth={:?}, subgoal_table={:?}, polarity={:?}, \
              minimums={:?}, subgoal_minimums={:?})",
-            goal_depth,
-            subgoal_table,
-            sign,
-            minimums,
-            subgoal_minimums
+            goal_depth, subgoal_table, polarity, minimums, subgoal_minimums
         );
 
         if let Some(subgoal_depth) = self.tables[subgoal_table].depth {
-            self.update_lookup(goal_depth, subgoal_depth, sign, minimums);
+            self.update_lookup(goal_depth, subgoal_depth, polarity, minimums);
         } else {
             self.stack[goal_depth].link.take_minimums(subgoal_minimums);
             minimums.take_minimums(subgoal_minimums);
@@ -1390,17 +1276,17 @@ impl Forest {
         &mut self,
         goal_depth: StackIndex,
         subgoal_depth: StackIndex,
-        sign: Sign,
+        polarity: Polarity,
         minimums: &mut Minimums,
     ) {
-        match sign {
-            Sign::Positive => {
+        match polarity {
+            Polarity::Positive => {
                 let subgoal_link = self.stack[subgoal_depth].link;
                 self.stack[goal_depth].link.take_minimums(&subgoal_link);
                 minimums.take_minimums(&subgoal_link);
             }
 
-            Sign::Negative => {
+            Polarity::Negative => {
                 // If `goal` depends on `not(subgoal)`, then for goal
                 // to succeed, `subgoal` must be completely
                 // evaluated. Therefore, `goal` depends (negatively)
@@ -1484,8 +1370,7 @@ impl Forest {
     ) -> ExplorationResult {
         info!(
             "complete_pop(completed_goal_depth={:?}, minimums={:?}",
-            completed_goal_depth,
-            minimums
+            completed_goal_depth, minimums
         );
 
         let completed_dfn = self.stack[completed_goal_depth].dfn;
@@ -1582,8 +1467,7 @@ impl Forest {
     ) -> ExplorationResult {
         info!(
             "complete_delay(completed_goal_depth={:?}, minimums={:?}",
-            completed_goal_depth,
-            minimums
+            completed_goal_depth, minimums
         );
 
         let mut new_clauses;
@@ -1675,66 +1559,7 @@ impl Forest {
     /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
     /// the resolvent (or factor) if it has grown too large.
     fn truncate_returned(&mut self, ex_clause: ExClause) -> ExClause {
-        // DIVERGENCE
-        //
-        // In the original RR paper, truncation is only applied
-        // when the result of resolution is a new answer (i.e.,
-        // `ex_clause.subgoals.is_empty()`).  I've chosen to be
-        // more aggressive here, precisely because or our extended
-        // semantics for unification. In particular, unification
-        // can insert new goals, so I fear that positive feedback
-        // loops could still run indefinitely in the original
-        // formulation. I would like to revise our unification
-        // mechanism to avoid that problem, in which case this could
-        // be tightened up to be more like the original RR paper.
-        //
-        // Still, I *believe* this more aggressive approx. should
-        // not interfere with any of the properties of the
-        // original paper. In particular, applying truncation only
-        // when the resolvent has no subgoals seems like it is
-        // aimed at giving us more times to eliminate this
-        // ambiguous answer.
-
-        match truncate(&mut self.infer, self.max_size, &ex_clause.subst) {
-            // No need to truncate? Just propagate the resolvent back.
-            Truncated {
-                overflow: false, ..
-            } => ex_clause,
-
-            // Resolvent got too large. Have to introduce approximation.
-            Truncated {
-                overflow: true,
-                value: truncated_subst,
-            } => {
-                // DIVERGENCE
-                //
-                // In RR, `ex_clause.delayed_literals` would be
-                // preserved. I have chosen to drop them. Keeping
-                // them does allow for the possibility of
-                // eliminating this answer if any of them turn out
-                // to be satisfiable. However, it also introduces
-                // an annoying edge case I didn't want to think
-                // about -- one which, interestingly, the paper
-                // did not discuss, which may indicate it is
-                // impossible for some subtle reason. In
-                // particular, a truncated delayed literal has a
-                // sort of inverse semantics. i.e. if we convert
-                // `Foo :- ~Bar(Rc<Rc<u32>>) |` to `Foo :-
-                // ~Bar(Rc<X>), Unknown |`, then this could be
-                // invalidated by an instance of `Bar(Rc<i32>)`,
-                // which is irrelevant to the original
-                // clause. (There is an additional annoyance,
-                // which is that we may not have tried to solve
-                // `Bar(Rc<X>)` at all.)
-
-                ExClause {
-                    subst: truncated_subst,
-                    delayed_literals: vec![DelayedLiteral::CannotProve(())],
-                    constraints: vec![],
-                    subgoals: vec![],
-                }
-            }
-        }
+        ex_clause.truncate_returned(&mut self.infer, self.max_size)
     }
 }
 
@@ -2022,7 +1847,7 @@ impl IndexMut<StackIndex> for Stack {
 
 impl Tables {
     fn indices(&self) -> Range<TableIndex> {
-        TableIndex { value: 0 }..self.next_index()
+        TableIndex::from(0)..self.next_index()
     }
 
     fn next_index(&self) -> TableIndex {
@@ -2073,15 +1898,13 @@ impl<'a> IntoIterator for &'a mut Tables {
 }
 
 impl Table {
-    fn export_answers(&self) -> Answers {
-        let mut result = Answers {
+    fn export_answers(&self) -> SimplifiedAnswers {
+        let mut result = SimplifiedAnswers {
             answers: self.answers
                 .iter()
-                .map(|(subst, delay_sets)| {
-                    Answer {
-                        subst: subst.clone(),
-                        ambiguous: !delay_sets.is_empty(),
-                    }
+                .map(|(subst, delay_sets)| SimplifiedAnswer {
+                    subst: subst.clone(),
+                    ambiguous: !delay_sets.is_empty(),
                 })
                 .collect(),
         };
@@ -2133,7 +1956,24 @@ impl DelayedLiteralSets {
     }
 }
 
+impl DelayedLiteralSet {
+    fn is_empty(&self) -> bool {
+        self.delayed_literals.is_empty()
+    }
+
+    fn is_subset(&self, other: &DelayedLiteralSet) -> bool {
+        self.delayed_literals
+            .iter()
+            .all(|elem| other.delayed_literals.binary_search(elem).is_ok())
+    }
+}
+
 impl Minimums {
+    const MAX: Minimums = Minimums {
+        positive: DepthFirstNumber::MAX,
+        negative: DepthFirstNumber::MAX,
+    };
+
     /// Update our fields to be the minimum of our current value
     /// and the values from other.
     fn take_minimums(&mut self, other: &Minimums) {
@@ -2183,38 +2023,179 @@ impl<T> Satisfiable<T> {
     }
 }
 
-impl iter::Step for TableIndex {
-    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
-        usize::steps_between(&start.value, &end.value)
-    }
+impl ExClause {
+    /// Used whenever we process an answer (whether new or cached) on
+    /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
+    /// the resolvent (or factor) if it has grown too large.
+    fn truncate_returned(self, infer: &mut InferenceTable, max_size: usize) -> ExClause {
+        // DIVERGENCE
+        //
+        // In the original RR paper, truncation is only applied
+        // when the result of resolution is a new answer (i.e.,
+        // `ex_clause.subgoals.is_empty()`).  I've chosen to be
+        // more aggressive here, precisely because or our extended
+        // semantics for unification. In particular, unification
+        // can insert new goals, so I fear that positive feedback
+        // loops could still run indefinitely in the original
+        // formulation. I would like to revise our unification
+        // mechanism to avoid that problem, in which case this could
+        // be tightened up to be more like the original RR paper.
+        //
+        // Still, I *believe* this more aggressive approx. should
+        // not interfere with any of the properties of the
+        // original paper. In particular, applying truncation only
+        // when the resolvent has no subgoals seems like it is
+        // aimed at giving us more times to eliminate this
+        // ambiguous answer.
 
-    fn replace_one(&mut self) -> Self {
-        TableIndex {
-            value: usize::replace_one(&mut self.value),
+        match truncate(infer, max_size, &self.subst) {
+            // No need to truncate? Just propagate the resolvent back.
+            Truncated {
+                overflow: false, ..
+            } => self,
+
+            // Resolvent got too large. Have to introduce approximation.
+            Truncated {
+                overflow: true,
+                value: truncated_subst,
+            } => {
+                // DIVERGENCE
+                //
+                // In RR, `self.delayed_literals` would be
+                // preserved. I have chosen to drop them. Keeping
+                // them does allow for the possibility of
+                // eliminating this answer if any of them turn out
+                // to be satisfiable. However, it also introduces
+                // an annoying edge case I didn't want to think
+                // about -- one which, interestingly, the paper
+                // did not discuss, which may indicate it is
+                // impossible for some subtle reason. In
+                // particular, a truncated delayed literal has a
+                // sort of inverse semantics. i.e. if we convert
+                // `Foo :- ~Bar(Rc<Rc<u32>>) |` to `Foo :-
+                // ~Bar(Rc<X>), Unknown |`, then this could be
+                // invalidated by an instance of `Bar(Rc<i32>)`,
+                // which is irrelevant to the original
+                // clause. (There is an additional annoyance,
+                // which is that we may not have tried to solve
+                // `Bar(Rc<X>)` at all.)
+
+                ExClause {
+                    subst: truncated_subst,
+                    delayed_literals: vec![DelayedLiteral::CannotProve(())],
+                    constraints: vec![],
+                    subgoals: vec![],
+                }
+            }
+        }
+    }
+}
+
+/// Returns all clauses that are relevant to `goal`, either from
+/// the environment or the program.
+fn clauses(
+    program: &Arc<ProgramEnvironment>,
+    goal: &InEnvironment<DomainGoal>,
+) -> Vec<ProgramClause> {
+    let &InEnvironment {
+        ref environment,
+        ref goal,
+    } = goal;
+
+    let environment_clauses = environment
+        .clauses
+        .iter()
+        .filter(|&env_clause| env_clause.could_match(goal))
+        .map(|env_clause| env_clause.clone().into_program_clause());
+
+    let program_clauses = program
+        .program_clauses
+        .iter()
+        .filter(|clause| clause.could_match(goal))
+        .cloned();
+
+    environment_clauses.chain(program_clauses).collect()
+}
+
+/// Simplifies an HH goal into a series of positive domain goals
+/// and negative HH goals. This operation may fail if the HH goal
+/// includes unifications that cannot be completed.
+fn simplify_hh_goal(
+    infer: &mut InferenceTable,
+    subst: Substitution,
+    initial_goal: InEnvironment<Goal>,
+) -> Satisfiable<ExClause> {
+    let mut ex_clause = ExClause {
+        subst,
+        delayed_literals: vec![],
+        constraints: vec![],
+        subgoals: vec![],
+    };
+
+    // A stack of higher-level goals to process.
+    let mut pending_goals = vec![initial_goal];
+
+    while let Some(InEnvironment { environment, goal }) = pending_goals.pop() {
+        match goal {
+            Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
+                let subgoal = infer.instantiate_binders_universally(&subgoal);
+                pending_goals.push(InEnvironment::new(&environment, *subgoal));
+            }
+            Goal::Quantified(QuantifierKind::Exists, subgoal) => {
+                let subgoal = infer.instantiate_binders_existentially(&subgoal);
+                pending_goals.push(InEnvironment::new(&environment, *subgoal))
+            }
+            Goal::Implies(wc, subgoal) => {
+                let new_environment = &environment.add_clauses(wc);
+                pending_goals.push(InEnvironment::new(&new_environment, *subgoal));
+            }
+            Goal::And(subgoal1, subgoal2) => {
+                pending_goals.push(InEnvironment::new(&environment, *subgoal1));
+                pending_goals.push(InEnvironment::new(&environment, *subgoal2));
+            }
+            Goal::Not(subgoal) => {
+                let subgoal = (*subgoal).clone();
+                ex_clause
+                    .subgoals
+                    .push(Literal::Negative(InEnvironment::new(&environment, subgoal)));
+            }
+            Goal::Leaf(LeafGoal::EqGoal(ref eq_goal)) => {
+                let UnificationResult { goals, constraints } = {
+                    match infer.unify(&environment, &eq_goal.a, &eq_goal.b) {
+                        Ok(v) => v,
+                        Err(_) => return Satisfiable::No,
+                    }
+                };
+
+                ex_clause.constraints.extend(constraints);
+                ex_clause
+                    .subgoals
+                    .extend(goals.into_iter().casted().map(Literal::Positive));
+            }
+            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
+                let domain_goal = domain_goal.cast();
+                ex_clause
+                    .subgoals
+                    .push(Literal::Positive(InEnvironment::new(
+                        &environment,
+                        domain_goal,
+                    )));
+            }
+            Goal::CannotProve(()) => {
+                // You can think of `CannotProve` as a special
+                // goal that is only provable if `not {
+                // CannotProve }`. Trying to prove this, of
+                // course, will always create a negative cycle and
+                // hence a delayed literal that cannot be
+                // resolved.
+                ex_clause
+                    .subgoals
+                    .push(Literal::Negative(InEnvironment::new(&environment, goal)));
+            }
         }
     }
 
-    fn replace_zero(&mut self) -> Self {
-        TableIndex {
-            value: usize::replace_zero(&mut self.value),
-        }
-    }
-
-    fn add_one(&self) -> Self {
-        TableIndex {
-            value: usize::add_one(&self.value),
-        }
-    }
-
-    fn sub_one(&self) -> Self {
-        TableIndex {
-            value: usize::sub_one(&self.value),
-        }
-    }
-
-    fn add_usize(&self, n: usize) -> Option<Self> {
-        usize::add_usize(&self.value, n).map(|value| TableIndex { value })
-    }
+    Satisfiable::Yes(ex_clause)
 }
 
 /// Because we recurse so deeply, we rely on stacker to

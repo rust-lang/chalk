@@ -157,9 +157,12 @@ impl InferenceTable {
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
-    fn normalize_lifetime(&mut self, leaf: &Lifetime) -> Option<Lifetime> {
+    pub fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime> {
         match *leaf {
-            Lifetime::Var(v) => self.probe_lifetime_var(InferenceVariable::from_depth(v)),
+            Lifetime::Var(v) => {
+                let v1 = self.probe_lifetime_var(InferenceVariable::from_depth(v))?;
+                Some(v1.up_shift(binders))
+            }
             Lifetime::ForAll(_) => None,
         }
     }
@@ -258,7 +261,7 @@ impl Substitution {
     /// Check whether this substitution is the identity substitution in the
     /// given inference context.
     pub fn is_trivial_within(&self, in_infer: &mut InferenceTable) -> bool {
-        for value in self.parameters.values() {
+        for value in &self.parameters {
             match value {
                 ParameterKind::Ty(ty) => if let Some(var) = ty.inference_var() {
                     if in_infer.var_is_bound(var) {
