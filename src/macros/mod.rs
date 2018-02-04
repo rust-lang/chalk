@@ -79,13 +79,15 @@ pub fn dump(string: &str, suffix: &str) {
     for line in string.lines() {
         if first {
             for _ in 0..indent {
-                eprint!("| ");
+                eprint!(": ");
             }
+            eprint!("| ");
         } else {
             eprintln!();
             for _ in 0..indent {
-                eprint!("  ");
+                eprint!(": ");
             }
+            eprint!(": ");
         }
         eprint!("{}", line);
         first = false;
