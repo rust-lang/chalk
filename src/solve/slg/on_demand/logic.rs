@@ -128,8 +128,8 @@ impl Forest {
         table: TableIndex,
         answer: AnswerIndex,
     ) -> RecursiveSearchResult<EnsureSuccess> {
-        info_heading!("ensure_answer(table={:?}, answer={:?})", table, answer);
-        info!("table goal = {:?}", self.tables[table].table_goal);
+        info_heading!("ensure_answer_recursively(table={:?}, answer={:?})", table, answer);
+        info!("table goal = {:#?}", self.tables[table].table_goal);
 
         // First, check for a tabled answer.
         if self.tables[table].answer(answer).is_some() {
