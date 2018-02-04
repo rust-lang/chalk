@@ -5,6 +5,7 @@ use errors::*;
 use ir;
 use lower::*;
 use std::sync::Arc;
+use test_util;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
     chalk_parse::parse_program(text)?.lower_without_coherence()
@@ -40,13 +41,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, &str, &str)>) {
                 Err(e) => format!("{:?}", e),
             };
 
-            println!("expected:\n{}", expected);
-            println!("actual:\n{}", result);
-
-            // remove all whitespace:
-            let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-            let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-            assert!(!expected1.is_empty() && result1.starts_with(&expected1));
+            test_util::assert_test_result_eq(&expected, &result);
         }
     });
 }

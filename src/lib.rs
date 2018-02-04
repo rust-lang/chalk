@@ -11,6 +11,7 @@
 #![feature(use_nested_groups)]
 
 extern crate chalk_parse;
+extern crate diff;
 extern crate ena;
 #[macro_use]
 extern crate error_chain;
@@ -39,3 +40,4 @@ pub mod errors;
 pub mod fallible;
 pub mod lower;
 pub mod solve;
+mod test_util;

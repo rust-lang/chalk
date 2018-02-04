@@ -39,13 +39,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
             let mut forest = Forest::new(env, max_size);
             let result = format!("{:#?}", forest.force_answers(peeled_goal, num_answers));
 
-            println!("expected:\n{}", expected);
-            println!("actual:\n{}", result);
-
-            // remove all whitespace:
-            let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-            let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-            assert!(!expected1.is_empty() && result1.starts_with(&expected1));
+            ::test_util::assert_test_result_eq(&expected, &result);
         }
     });
 }

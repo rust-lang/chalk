@@ -4,6 +4,7 @@ name = "chalk"
 version = "0.1.0"
 
 [dependencies]
+diff = "0.1.11"
 docopt = "0.8.1"
 ena = "0.4"
 error-chain = "0.11.0"
