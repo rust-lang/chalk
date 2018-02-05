@@ -126,26 +126,10 @@ fn cycley_recursive_uncached(b: &mut Bencher) {
 }
 
 #[bench]
-#[ignore] // FIXME SLG solver runs for too long here
-fn cycley_eager_slg(b: &mut Bencher) {
+fn cycley_slg(b: &mut Bencher) {
     run_bench(
         CYCLEY,
         SolverChoice::SLG {
-            eager: true,
-            max_size: 20,
-        },
-        CYCLEY_GOAL,
-        b,
-        "No possible solution", // FIXME
-    );
-}
-
-#[bench]
-fn cycley_on_demand_slg(b: &mut Bencher) {
-    run_bench(
-        CYCLEY,
-        SolverChoice::SLG {
-            eager: false,
             max_size: 20,
         },
         CYCLEY_GOAL,

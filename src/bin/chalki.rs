@@ -18,7 +18,6 @@ use std::process::exit;
 
 use chalk::ir;
 use chalk::lower::*;
-use chalk::solve::slg;
 use chalk::solve::SolverChoice;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
@@ -35,8 +34,7 @@ Options:
   --program=PATH      Specifies the path to the `.chalk` file containing traits/impls.
   --goal=GOAL         Specifies a goal to evaluate (may be given more than once).
   --overflow-depth=N  Specifies the overflow depth [default: 10].
-  --solver S          Selects a solver (recursive, slg-eager, or slg-on-demand) [default: recursive]
-  --all-answers       When using SLG solver, dump out each individual answer.
+  --solver S          Selects a solver (recursive, slg) [default: recursive]
   --no-cache          Disable caching.
 ";
 
@@ -46,7 +44,6 @@ struct Args {
     flag_goal: Vec<String>,
     flag_overflow_depth: usize,
     flag_solver: String,
-    flag_all_answers: bool,
     flag_no_cache: bool,
 }
 
@@ -90,24 +87,10 @@ fn run() -> Result<()> {
 
     let mut prog = None;
 
-    let solver_choice = match args.solver_choice() {
-        Some(s) => s,
-        None => {
-            eprintln!("error: invalid solver choice `{}`", args.flag_solver);
-            eprintln!("try `recursive`, `slg-eager`, or `slg-on-demand`");
-            exit(1);
-        }
-    };
-
-    if args.flag_all_answers {
-        match solver_choice {
-            SolverChoice::SLG { eager: true, .. } => { }
-            _ => {
-                eprintln!("error: in order to report all answers, \
-                           you must use the `slg-eager` solver");
-                exit(1);
-            }
-        }
+    if let None = args.solver_choice() {
+        eprintln!("error: invalid solver choice `{}`", args.flag_solver);
+        eprintln!("try `recursive` or `slg`");
+        exit(1);
     }
 
     if let Some(program) = &args.flag_program {
@@ -228,31 +211,11 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let peeled_goal = goal.into_peeled_goal();
-    if args.flag_all_answers {
-        match slg::solve_root_goal(args.flag_overflow_depth, &prog.env, &peeled_goal) {
-            Ok(slg::SimplifiedAnswers { answers }) => if answers.is_empty() {
-                println!("No answers found.");
-            } else {
-                println!("{} answer(s) found:", answers.len());
-                for answer in &answers {
-                    println!(
-                        "- {}{}",
-                        answer.subst,
-                        if answer.ambiguous { " [ambiguous]" } else { "" }
-                    );
-                }
-            },
-            Err(error) => {
-                println!("exploration error: {:?}\n", error);
-            }
-        }
-    } else {
-        let solver_choice = args.solver_choice().unwrap();
-        match solver_choice.solve_root_goal(&prog.env, &peeled_goal) {
-            Ok(Some(v)) => println!("{}\n", v),
-            Ok(None) => println!("No possible solution.\n"),
-            Err(e) => println!("Solver failed: {}", e),
-        }
+    let solver_choice = args.solver_choice().unwrap();
+    match solver_choice.solve_root_goal(&prog.env, &peeled_goal) {
+        Ok(Some(v)) => println!("{}\n", v),
+        Ok(None) => println!("No possible solution.\n"),
+        Err(e) => println!("Solver failed: {}", e),
     }
     Ok(())
 }
@@ -260,13 +223,7 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
 impl Args {
     fn solver_choice(&self) -> Option<SolverChoice> {
         match &self.flag_solver[..] {
-            "slg-eager" => Some(SolverChoice::SLG {
-                eager: true,
-                max_size: self.flag_overflow_depth,
-            }),
-
-            "slg-on-demand" => Some(SolverChoice::SLG {
-                eager: false,
+            "slg" => Some(SolverChoice::SLG {
                 max_size: self.flag_overflow_depth,
             }),
 

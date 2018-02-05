@@ -4,13 +4,7 @@ use solve::{Guidance, Solution};
 use solve::infer::InferenceTable;
 use std::fmt::Debug;
 
-use super::{CanonicalConstrainedSubst, CanonicalGoal, SimplifiedAnswer, SimplifiedAnswers};
-
-impl SimplifiedAnswers {
-    pub fn into_solution(self, root_goal: &CanonicalGoal) -> Option<Solution> {
-        make_solution(root_goal, self.answers)
-    }
-}
+use super::{CanonicalConstrainedSubst, CanonicalGoal, SimplifiedAnswer};
 
 /// Draws as many answers as it needs from `simplified_answers` (but
 /// no more!) in order to come up with a solution.

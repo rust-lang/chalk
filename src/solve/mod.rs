@@ -211,8 +211,8 @@ pub enum SolverChoice {
         caching_enabled: bool,
     },
 
-    /// Run the (eager or on-demand) SLG solver, producing a Solution.
-    SLG { eager: bool, max_size: usize },
+    /// Run the SLG solver, producing a Solution.
+    SLG { max_size: usize },
 }
 
 impl SolverChoice {
@@ -244,14 +244,7 @@ impl SolverChoice {
                 }
             }
 
-            SolverChoice::SLG { eager: true, max_size } => {
-                match slg::solve_root_goal(max_size, env, &canonical_goal) {
-                    Ok(answers) => Ok(answers.into_solution(&canonical_goal.canonical)),
-                    Err(err) => bail!("Exploration error: {:?}", err),
-                }
-            }
-
-            SolverChoice::SLG { eager: false, max_size } => {
+            SolverChoice::SLG { max_size } => {
                 Ok(slg::on_demand::solve_root_goal(max_size, env, &canonical_goal))
             }
         }
@@ -266,13 +259,8 @@ impl SolverChoice {
     }
 
     /// Returns the default SLG parameters.
-    pub fn eager_slg() -> Self {
-        SolverChoice::SLG { eager: true, max_size: 10 }
-    }
-
-    /// Returns the default SLG parameters.
-    pub fn on_demand_slg() -> Self {
-        SolverChoice::SLG { eager: false, max_size: 10 }
+    pub fn slg() -> Self {
+        SolverChoice::SLG { max_size: 10 }
     }
 }
 
