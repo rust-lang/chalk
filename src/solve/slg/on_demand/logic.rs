@@ -934,6 +934,9 @@ impl Forest {
                     }
                 }
 
+                // Apply answer abstraction.
+                let ex_clause = ex_clause.truncate_returned(&mut infer, self.max_size);
+
                 self.pursue_strand_recursively(
                     depth,
                     Strand {

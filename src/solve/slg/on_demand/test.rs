@@ -741,6 +741,287 @@ fn contradiction() {
     }
 }
 
+/// Test (along with the other `cached_answers` tests) that the
+/// ordering in which we we encounter clauses doesn't affect the final
+/// set of answers we get. In particular, all of them should get 5
+/// answers, but in Ye Olde Days Of Yore there were sometimes bugs
+/// that came up when replaying tabled answers that led to fewer
+/// answers being produced.
+///
+/// This test is also a test for ANSWER ABSTRACTION: the only reason
+/// we get 5 answers is because of the max size of 2.
+#[test]
+fn cached_answers_1() {
+    test! {
+        program {
+            trait Sour { }
+            struct Lemon { }
+            struct Vinegar { }
+            struct HotSauce<T> { }
+
+            // Use explicit program clauses here rather than traits
+            // and impls to avoid hashmaps and other things that
+            // sometimes alter the final order of the program clauses:
+            forall<> { Lemon: Sour }
+            forall<> { Vinegar: Sour }
+            forall<T> { HotSauce<T>: Sour if T: Sour }
+        }
+
+        goal {
+            exists<T> { T: Sour }
+        } first 10 with max 2 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Lemon],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Vinegar],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := HotSauce<Lemon>],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := HotSauce<Vinegar>],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := HotSauce<?0>],
+                            constraints: []
+                        },
+                        binders: [
+                            Ty(U0)
+                        ]
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: [
+                            CannotProve(
+                                ()
+                            )
+                        ]
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+/// See `cached_answers_1`.
+#[test]
+fn cached_answers_2() {
+    test! {
+        program {
+            trait Sour { }
+            struct Lemon { }
+            struct Vinegar { }
+            struct HotSauce<T> { }
+
+            forall<T> { HotSauce<T>: Sour if T: Sour }
+            forall<> { Lemon: Sour }
+            forall<> { Vinegar: Sour }
+        }
+
+        goal {
+            exists<T> { T: Sour }
+        } first 10 with max 2 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Lemon],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Vinegar],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := HotSauce<Lemon>],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := HotSauce<Vinegar>],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := HotSauce<?0>],
+                            constraints: []
+                        },
+                        binders: [
+                            Ty(U0)
+                        ]
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: [
+                            CannotProve(
+                                ()
+                            )
+                        ]
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+/// See `cached_answers_1`.
+#[test]
+fn cached_answers_3() {
+    test! {
+        program {
+            trait Sour { }
+            struct Lemon { }
+            struct Vinegar { }
+            struct HotSauce<T> { }
+
+            forall<> { Lemon: Sour }
+            forall<T> { HotSauce<T>: Sour if T: Sour }
+            forall<> { Vinegar: Sour }
+        }
+
+        goal {
+            exists<T> { T: Sour }
+        } first 10 with max 2 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Lemon],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := HotSauce<Lemon>],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Vinegar],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := HotSauce<?0>],
+                            constraints: []
+                        },
+                        binders: [
+                            Ty(U0)
+                        ]
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: [
+                            CannotProve(
+                                ()
+                            )
+                        ]
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := HotSauce<Vinegar>],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+    }
+}
+
 /// Here, P depends on Q negatively, but Q depends only on itself.
 /// What happens is that P adds a negative link on Q, so that when Q
 /// delays, P is also delayed.
