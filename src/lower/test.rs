@@ -542,3 +542,155 @@ fn overlapping_negative_impls() {
         }
     }
 }
+
+#[test]
+fn well_formed_trait_decl() {
+    lowering_success! {
+        program {
+            trait Clone { }
+            trait Copy where Self: Clone { }
+
+            struct i32 { }
+
+            impl Clone for i32 { }
+            impl Copy for i32 { }
+        }
+    }
+}
+
+#[test]
+fn ill_formed_trait_decl() {
+    lowering_error! {
+        program {
+            trait Clone { }
+            trait Copy where Self: Clone { }
+
+            struct i32 { }
+
+            impl Copy for i32 { }
+        } error_msg {
+            "trait impl for \"Copy\" does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn cyclic_traits() {
+    lowering_success! {
+        program {
+            trait A where Self: B { }
+            trait B where Self: A { }
+
+            impl<T> B for T { }
+            impl<T> A for T { }
+        }
+    }
+}
+
+#[test]
+fn cyclic_traits_error() {
+    lowering_error! {
+        program {
+            trait Copy { }
+
+            trait A where Self: B, Self: Copy {}
+            trait B where Self: A { }
+
+            impl<T> B for T {}
+            impl<T> A for T where T: B {}
+        } error_msg {
+            "trait impl for \"B\" does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn cyclic_wf_requirement() {
+    lowering_success! {
+        program {
+            trait Foo where <Self as Foo>::Value: Foo {
+                type Value;
+            }
+
+            struct Unit { }
+            impl Foo for Unit {
+                type Value = Unit;
+            }
+        }
+    }
+}
+
+#[test]
+fn ill_formed_assoc_ty() {
+    lowering_error! {
+        program {
+            trait Foo { }
+            struct OnlyFoo<T> where T: Foo { }
+
+            struct i32 { }
+
+            trait Bar {
+                type Value;
+            }
+
+            impl Bar for i32 {
+                type Value = OnlyFoo<i32>;
+            }
+        } error_msg {
+            "trait impl for \"Bar\" does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn implied_bounds() {
+    lowering_success! {
+        program {
+            trait Eq { }
+            trait Hash where Self: Eq { }
+
+            struct Set<K> where K: Hash { }
+
+            struct OnlyEq<T> where T: Eq { }
+
+            trait Foo {
+                type Value;
+            }
+
+            impl<K> Foo for Set<K> {
+                type Value = OnlyEq<K>;
+            }
+        }
+    }
+}
+
+#[test]
+fn ill_formed_ty_decl() {
+    lowering_error! {
+        program {
+            trait Hash { }
+            struct Set<K> where K: Hash { }
+
+            struct MyType<K> {
+                value: Set<K>
+            }
+        } error_msg {
+            "type declaration \"MyType\" does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn implied_bounds_on_ty_decl() {
+    lowering_success! {
+        program {
+            trait Eq { }
+            trait Hash where Self: Eq { }
+            struct OnlyEq<T> where T: Eq { }
+
+            struct MyType<K> where K: Hash {
+                value: OnlyEq<K>
+            }
+        }
+    }
+}
