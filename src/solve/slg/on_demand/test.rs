@@ -184,6 +184,26 @@ fn infinite_recursion() {
     }
 }
 
+
+/// Make sure we don't get a stack overflow or other badness for this
+/// test from scalexm.
+#[test]
+fn subgoal_abstraction() {
+    test! {
+        program {
+            trait Foo { }
+            struct Box<T> { }
+            impl<T> Foo for T where Box<T>: Foo { }
+        }
+
+        goal {
+            exists<T> { T: Foo }
+        } first 5 with max 50 {
+            r"[]"
+        }
+    }
+}
+
 #[test]
 fn flounder() {
     test! {
@@ -276,6 +296,469 @@ fn negative_loop() {
         goal {
             u32: P
         } first 5 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: [
+                            Negative(
+                                TableIndex(1)
+                            )
+                        ]
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+fn subgoal_cycle_uninhabited() {
+    test! {
+        program {
+            trait Foo { }
+            struct Box<T> { }
+            struct Vec<T> { }
+            struct u32 { }
+            impl<T> Foo for Box<T> where Box<Vec<T>>: Foo { }
+        }
+
+        // There is no solution here with a finite proof, so we get
+        // back: 0 answer(s) found.
+        goal {
+            exists<T> { T: Foo }
+        } first 10 with max 2 {
+            r"[]"
+        }
+
+        // Unsurprisingly, applying negation succeeds then.
+        goal {
+            not { exists<T> { T: Foo } }
+        } first 10 with max 2 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+
+        // Eqiuvalent to the previous.
+        goal {
+            forall<T> { not { T: Foo } }
+        } first 10 with max 2 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+
+        // However, if we come across a negative goal that exceeds our
+        // size threshold, we have a problem.
+        goal {
+            exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Vec<u32>],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: [
+                            CannotProve(
+                                ()
+                            )
+                        ]
+                    }
+                }
+            ]"
+        }
+
+        // Same query with larger threshold works fine, though.
+        goal {
+            exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
+        } first 10 with max 4 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Vec<u32>],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+
+        // Here, due to the hypothesis, there does indeed exist a suitable T, `U`.
+        goal {
+            forall<U> { if (U: Foo) { exists<T> { T: Foo } } }
+        } first 10 with max 2 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := !1],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+fn subgoal_cycle_inhabited() {
+    test! {
+        program {
+            trait Foo { }
+            struct Box<T> { }
+            struct Vec<T> { }
+            struct u32 { }
+            impl<T> Foo for Box<T> where Box<Vec<T>>: Foo { }
+            impl Foo for u32 { }
+        }
+
+        goal {
+            exists<T> { T: Foo }
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := u32],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+fn basic_region_constraint_from_positive_impl() {
+    test! {
+        program {
+            trait Foo { }
+            struct Ref<'a, 'b, T> { }
+            struct u32 { }
+            impl<'x, T> Foo for Ref<'x, 'x, T> { }
+        }
+
+        goal {
+            forall<'a, 'b, T> { Ref<'a, 'b, T>: Foo }
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: [
+                                InEnvironment {
+                                    environment: Env([]),
+                                    goal: '!2 == '!1
+                                }
+                            ]
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+#[allow(non_snake_case)]
+fn example_2_1_EWFS() {
+    test! {
+        program {
+            trait Edge<B> { }
+            trait TransitiveClosure<B> { }
+            struct a { }
+            struct b { }
+            struct c { }
+
+            forall<> { a: Edge<b> }
+            forall<> { b: Edge<c> }
+            forall<> { b: Edge<a> }
+            forall<X, Y> { X: TransitiveClosure<Y> if X: Edge<Y> }
+            forall<X, Y, Z> { X: TransitiveClosure<Y> if X: Edge<Z>, Z: TransitiveClosure<Y> }
+        }
+
+        goal {
+            exists<V> { a: TransitiveClosure<V> }
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := b],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := c],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := a],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+#[allow(non_snake_case)]
+fn example_2_2_EWFS() {
+    test! {
+        program {
+            trait M { }
+            trait P { }
+            trait Q { }
+
+            struct a { }
+            struct b { }
+            struct c { }
+
+            forall<X> { X: M if not { X: P } }
+            forall<> { a: P }
+            forall<X> { X: P if X: Q }
+            forall<> { b: Q }
+            forall<X> { X: Q if X: P }
+        }
+
+        goal {
+            c: M
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+#[allow(non_snake_case)]
+fn example_2_3_EWFS() {
+    test! {
+        program {
+            trait W { }
+            trait M<A> { }
+            trait P { }
+
+            struct a { }
+            struct b { }
+            struct c { }
+
+            forall<X, Y> { X: W if X: M<Y>, not { Y: W }, Y: P }
+            forall<> { a: M<b> }
+            forall<> { b: M<c> }
+            forall<> { c: M<b> }
+            forall<> { b: P }
+        }
+
+        goal {
+            a: W
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: []
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+#[allow(non_snake_case)]
+fn example_3_3_EWFS() {
+    test! {
+        program {
+            trait S { }
+            trait P { }
+            trait Q { }
+
+            struct a { }
+
+            forall<> { a: S if not { a: P }, not { a: Q } }
+            forall<> { a: P if not { a: S }, a: Q }
+            forall<> { a: Q if not { a: S }, a: P }
+        }
+
+        goal {
+            a: S
+        } first 10 with max 3 {
+            // We don't yet have support for **simplification** --
+            // hence we delay the negatives here but that's it.
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: [
+                            Negative(
+                                TableIndex(1)
+                            ),
+                            Negative(
+                                TableIndex(2)
+                            )
+                        ]
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+/// Here, P is neither true nor false. If it were true, then it would
+/// be false, and so forth.
+#[test]
+fn contradiction() {
+    test! {
+        program {
+            trait P { }
+            struct u32 { }
+
+            forall<> { u32: P if not { u32: P } }
+        }
+
+        goal {
+            u32: P
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: []
+                        },
+                        binders: []
+                    },
+                    delayed_literals: DelayedLiteralSet {
+                        delayed_literals: [
+                            Negative(
+                                TableIndex(0)
+                            )
+                        ]
+                    }
+                }
+            ]"
+        }
+    }
+}
+
+/// Here, P depends on Q negatively, but Q depends only on itself.
+/// What happens is that P adds a negative link on Q, so that when Q
+/// delays, P is also delayed.
+#[test]
+fn negative_answer_delayed_literal() {
+    test! {
+        program {
+            trait P { }
+            trait Q { }
+            struct u32 { }
+
+            forall<> { u32: P if not { u32: Q } }
+            forall<> { u32: Q if not { u32: Q } }
+        }
+
+        goal {
+            u32: P
+        } first 10 with max 3 {
             r"[
                 Answer {
                     subst: Canonical {
