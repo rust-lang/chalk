@@ -469,6 +469,10 @@ impl DomainGoal {
         }
     }
 
+    /// Turn a where clause into the WF version of it i.e.:
+    /// * `T: Trait` maps to `WellFormed(T: Trait)`
+    /// * `T: Trait<Item = Foo>` maps to `WellFormed(T: Trait<Item = Foo>)`
+    /// * any other clause maps to itself
     crate fn into_well_formed_clause(self) -> DomainGoal {
         match self {
             DomainGoal::Implemented(tr) => DomainGoal::WellFormed(WellFormed::TraitRef(tr)),
@@ -477,6 +481,7 @@ impl DomainGoal {
         }
     }
 
+    /// Same as `into_well_formed_clause` but with the `FromEnv` predicate instead of `WellFormed`.
     crate fn into_from_env_clause(self) -> DomainGoal {
         match self {
             DomainGoal::Implemented(tr) => DomainGoal::FromEnv(FromEnv::TraitRef(tr)),
@@ -502,6 +507,17 @@ pub struct EqGoal {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// A predicate which is true is some object is well-formed, e.g. a type or a trait ref.
+/// For example, given the following type definition:
+///
+/// ```notrust
+/// struct Set<K> where K: Hash {
+///     ...
+/// }
+/// ```
+///
+/// then we have the following rule: `WellFormed(Set<K>) :- (K: Hash)`.
+/// See the complete rules in `lower.rs`.
 pub enum WellFormed {
     Ty(Ty),
     TraitRef(TraitRef),
@@ -509,6 +525,25 @@ pub enum WellFormed {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// A predicate which enables deriving everything which should be true if we *know* that some object
+/// is well-formed. For example, given the following trait definitions:
+///
+/// ```notrust
+/// trait Clone { ... }
+/// trait Copy where Self: Clone { ... }
+/// ```
+///
+/// then we can use `FromEnv(T: Copy)` to derive that `T: Clone`, like in:
+///
+/// ```notrust
+/// forall<T> {
+///     if (FromEnv(T: Copy)) {
+///         T: Clone
+///     }
+/// }
+/// ```
+///
+/// See the complete rules in `lower.rs`.
 pub enum FromEnv {
     Ty(Ty),
     TraitRef(TraitRef),
@@ -718,8 +753,16 @@ impl<T> UCanonical<T> {
 }
 
 impl UCanonical<InEnvironment<Goal>> {
+<<<<<<< HEAD
     /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
     crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+=======
+    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`, or if it is of the
+    /// form `WellFormed(T: Trait)` where `Trait` is any trait. The latter is needed for dealing
+    /// with WF requirements and cyclic traits, which generates cycles in the proof tree which must
+    /// not be rejected but instead must be treated as a success.
+    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+>>>>>>> Add documentation
         match &self.canonical.value.goal {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Implemented(tr))) => {
                 let trait_datum = &program.trait_data[&tr.trait_id];

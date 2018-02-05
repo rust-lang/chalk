@@ -1247,8 +1247,8 @@ impl ir::StructDatum {
         //
         // we generate the following clause:
         //
-        //    for<?T> WF(Foo<?T>) :- (?T: Eq).
-        //    for<?T> FromEnv(?T: Eq) :- FromEnv(Foo<?T>).
+        //    forall<T> { WF(Foo<T>) :- (T: Eq). }
+        //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
 
         let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound_datum| {
@@ -1296,13 +1296,15 @@ impl ir::TraitDatum {
         //
         //    trait Ord<T> where Self: Eq<T> { ... }
         //
-        // we generate the following clauses:
+        // we generate the following clause:
         //
-        //    for<?Self, ?T> WF(?Self: Ord<?T>) :-
-        //        (?Self: Ord<?T>), WF(?Self: Eq<?T>)
+        //    forall<Self, T> {
+        //        WF(Self: Ord<T>) :- (Self: Ord<T>), WF(Self: Eq<T>)
+        //    }
         //
-        //    for<?Self, ?T> (?Self: Ord<T>) :- FromEnv(?Self: Ord<T>)
-        //    for<?Self, ?T> FromEnv(?Self: Ord<?T>) :- FromEnv(?Self: Ord<T>)
+        // and the reverse rules:
+        //    forall<Self, T> { (Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
+        //    forall<Self, T> { FromEnv(Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
 
         let trait_ref = self.binders.value.trait_ref.clone();
 
@@ -1387,6 +1389,9 @@ impl ir::AssociatedTyDatum {
         // `ProjectionEq` to fallback *or* normalize it. So instead we
         // handle this kind of reasoning by expanding "projection
         // equality" predicates (see `DomainGoal::expanded`).
+        //
+        // We also generate rules specific to WF requirements and implied bounds,
+        // see below.
 
         let binders: Vec<_> = self.parameter_kinds
             .iter()
@@ -1434,6 +1439,12 @@ impl ir::AssociatedTyDatum {
             },
         });
 
+        // The above application type is always well-formed, and `<T as Foo>::Assoc` will
+        // unify with `(Foo::Assoc)<T>` only if `T: Foo`, because of the above rule, so we have:
+        //
+        //    forall<T> {
+        //        WellFormed((Foo::Assoc)<T>).
+        //    }
         clauses.push(ir::ProgramClause {
             implication: ir::Binders {
                 binders: binders.clone(),
@@ -1470,6 +1481,14 @@ impl ir::AssociatedTyDatum {
             });
 
 
+        // We generate a proxy rule for the well-formedness of `T: Foo<Assoc = U>` which really
+        // means two things: `T: Foo` and `Normalize(<T as Foo>::Assoc -> U)`. So we have the
+        // following rule:
+        //
+        //    forall<T> {
+        //        WellFormed(T: Foo<Assoc = U>) :-
+        //            WellFormed(T: Foo), Normalize(<T as Foo>::Assoc -> U)
+        //    }
         clauses.push(ir::ProgramClause {
             implication: ir::Binders {
                 binders: binders.clone(),
@@ -1483,6 +1502,11 @@ impl ir::AssociatedTyDatum {
             }
         });
 
+        // We also have two proxy reverse rules, the first one being:
+        //
+        //    forall<T> {
+        //        FromEnv(T: Foo) :- FromEnv(T: Foo<Assoc = U>)
+        //    }
         clauses.push(ir::ProgramClause {
             implication: ir::Binders {
                 binders: binders.clone(),
@@ -1493,6 +1517,11 @@ impl ir::AssociatedTyDatum {
             }
         });
 
+        // And the other one being:
+        //
+        //    forall<T> {
+        //        Normalize(<T as Foo>::Assoc -> U) :- FromEnv(T: Foo<Assoc = U>)
+        //    }
         clauses.push(ir::ProgramClause {
             implication: ir::Binders {
                 binders: binders,

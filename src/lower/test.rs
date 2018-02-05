@@ -32,6 +32,8 @@ macro_rules! lowering_error {
 
 
 fn parse_and_lower(text: &str) -> Result<Program> {
+    // Use the on-demand SLG solver to avoid ambiguities on projection types encountered when
+    // using the recursive solver.
     chalk_parse::parse_program(text)?.lower(SolverChoice::on_demand_slg())
 }
 

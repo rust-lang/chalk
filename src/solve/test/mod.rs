@@ -14,6 +14,8 @@ fn parse_and_lower_program(text: &str, solver_choice: SolverChoice, skip_coheren
     -> Result<ir::Program>
 {
     if skip_coherence {
+        // We disable WF checks for the recursive solver, because of ambiguities appearing
+        // with projection types.
         chalk_parse::parse_program(text)?.lower_without_coherence()
     } else {
         chalk_parse::parse_program(text)?.lower(solver_choice)
@@ -1527,11 +1529,9 @@ fn coinductive_semantics() {
         } yields {
             "No possible solution"
         }
-
-        // `WellFormed(T)` because of the hand-written impl for `Ptr<T>`.
         goal {
             forall<T> {
-                if (WellFormed(T), T: Send) {
+                if (T: Send) {
                     List<T>: Send
                 }
             }
