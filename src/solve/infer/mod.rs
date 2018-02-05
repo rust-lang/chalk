@@ -2,36 +2,36 @@ use ena::unify as ena;
 use ir::*;
 use fold::shift::Shift;
 
-pub mod canonicalize;
-pub mod ucanonicalize;
+crate mod canonicalize;
+crate mod ucanonicalize;
 mod normalize_deep;
-pub mod instantiate;
+crate mod instantiate;
 mod invert;
-pub mod unify;
-pub mod var;
+crate mod unify;
+crate mod var;
 #[cfg(test)]
 mod test;
 
 use self::var::*;
 
 #[derive(Clone)]
-pub struct InferenceTable {
+crate struct InferenceTable {
     unify: ena::UnificationTable<InferenceVariable>,
     vars: Vec<InferenceVariable>,
     max_universe: UniverseIndex,
 }
 
-pub struct InferenceSnapshot {
+crate struct InferenceSnapshot {
     unify_snapshot: ena::Snapshot<InferenceVariable>,
     max_universe: UniverseIndex,
     vars: Vec<InferenceVariable>,
 }
 
-pub type ParameterInferenceVariable = ParameterKind<InferenceVariable>;
+crate type ParameterInferenceVariable = ParameterKind<InferenceVariable>;
 
 impl InferenceTable {
     /// Create an empty inference table with no variables.
-    pub fn new() -> Self {
+    crate fn new() -> Self {
         InferenceTable {
             unify: ena::UnificationTable::new(),
             vars: vec![],
@@ -43,7 +43,7 @@ impl InferenceTable {
     /// others created within this inference table. This universe is
     /// able to see all previously created universes (though hopefully
     /// it is only brought into contact with its logical *parents*).
-    pub fn new_universe(&mut self) -> UniverseIndex {
+    crate fn new_universe(&mut self) -> UniverseIndex {
         let u = self.max_universe.next();
         self.max_universe = u;
         u
@@ -53,7 +53,7 @@ impl InferenceTable {
     /// others created within this inference table. This universe is
     /// able to see all previously created universes (though hopefully
     /// it is only brought into contact with its logical *parents*).
-    pub fn instantiate_universes<'v, T>(&mut self, value: &'v UCanonical<T>) -> &'v Canonical<T> {
+    crate fn instantiate_universes<'v, T>(&mut self, value: &'v UCanonical<T>) -> &'v Canonical<T> {
         let UCanonical { universes, canonical } = value;
         assert!(*universes >= 1); // always have U0
         for _ in 1 .. *universes {
@@ -63,14 +63,14 @@ impl InferenceTable {
     }
 
     /// Current maximum universe -- one that can see all existing names.
-    pub fn max_universe(&self) -> UniverseIndex {
+    crate fn max_universe(&self) -> UniverseIndex {
         self.max_universe
     }
 
     /// Creates a new inference variable and returns its index. The
     /// kind of the variable should be known by the caller, but is not
     /// tracked directly by the inference table.
-    pub fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
+    crate fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
         debug!("new_variable: var={:?} ui={:?}", var, ui);
@@ -83,7 +83,7 @@ impl InferenceTable {
     /// must respect a stack discipline (i.e., rollback or commit
     /// snapshots in reverse order of that with which they were
     /// created).
-    pub fn snapshot(&mut self) -> InferenceSnapshot {
+    crate fn snapshot(&mut self) -> InferenceSnapshot {
         let unify_snapshot = self.unify.snapshot();
         let vars = self.vars.clone();
         let max_universe = self.max_universe;
@@ -95,41 +95,15 @@ impl InferenceTable {
     }
 
     /// Restore the table to the state it had when the snapshot was taken.
-    pub fn rollback_to(&mut self, snapshot: InferenceSnapshot) {
+    crate fn rollback_to(&mut self, snapshot: InferenceSnapshot) {
         self.unify.rollback_to(snapshot.unify_snapshot);
         self.vars = snapshot.vars;
         self.max_universe = snapshot.max_universe;
     }
 
     /// Make permanent the changes made since the snapshot was taken.
-    pub fn commit(&mut self, snapshot: InferenceSnapshot) {
+    crate fn commit(&mut self, snapshot: InferenceSnapshot) {
         self.unify.commit(snapshot.unify_snapshot);
-    }
-
-    /// This helper function creates a snapshot and then execues `op`;
-    /// if `op` returns `Ok(v)`, then the snapshot is committed and
-    /// `Ok(v)` is returned.  If `op` returns `Err(e)`, then the
-    /// changes are rolled back and `Err(e)` is propagated.
-    ///
-    /// This is commonly used to perform a series of smaller changes,
-    /// some of which may be fallible; the result is that either all
-    /// the changes take effect, or none.
-    pub fn commit_if_ok<F, R, E>(&mut self, op: F) -> Result<R, E>
-    where
-        F: FnOnce(&mut Self) -> Result<R, E>,
-    {
-        let snapshot = self.snapshot();
-        match op(self) {
-            Ok(v) => {
-                self.commit(snapshot);
-                Ok(v)
-            }
-
-            Err(err) => {
-                self.rollback_to(snapshot);
-                Err(err)
-            }
-        }
     }
 
     /// If type `leaf` is a free inference variable, and that variable has been
@@ -138,7 +112,7 @@ impl InferenceTable {
     /// `binders` is the number of binders under which `leaf` appears;
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
-    pub fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty> {
+    crate fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty> {
         leaf.var().and_then(|depth| {
             if depth < binders {
                 None // bound variable, not an inference var
@@ -157,7 +131,7 @@ impl InferenceTable {
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
-    pub fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime> {
+    crate fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime> {
         match *leaf {
             Lifetime::Var(v) => {
                 let v1 = self.probe_lifetime_var(InferenceVariable::from_depth(v))?;
@@ -197,7 +171,7 @@ impl InferenceTable {
     }
 
     /// True if the given inference variable is bound to a value.
-    pub fn var_is_bound(&mut self, var: InferenceVariable) -> bool {
+    crate fn var_is_bound(&mut self, var: InferenceVariable) -> bool {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => false,
             InferenceValue::Bound(_) => true,
@@ -219,7 +193,7 @@ impl InferenceTable {
 
 impl Ty {
     /// If this is a `Ty::Var(d)`, returns `Some(d)` else `None`.
-    pub fn var(&self) -> Option<usize> {
+    crate fn var(&self) -> Option<usize> {
         if let Ty::Var(depth) = *self {
             Some(depth)
         } else {
@@ -232,14 +206,14 @@ impl Ty {
     /// `self` is known not to appear inside of any binders, since
     /// otherwise the depth would have be adjusted to account for
     /// those binders.
-    pub fn inference_var(&self) -> Option<InferenceVariable> {
+    crate fn inference_var(&self) -> Option<InferenceVariable> {
         self.var().map(InferenceVariable::from_depth)
     }
 }
 
 impl Lifetime {
     /// If this is a `Lifetime::Var(d)`, returns `Some(d)` else `None`.
-    pub fn var(&self) -> Option<usize> {
+    crate fn var(&self) -> Option<usize> {
         if let Lifetime::Var(depth) = *self {
             Some(depth)
         } else {
@@ -252,7 +226,7 @@ impl Lifetime {
     /// `self` is known not to appear inside of any binders, since
     /// otherwise the depth would have be adjusted to account for
     /// those binders.
-    pub fn inference_var(&self) -> Option<InferenceVariable> {
+    crate fn inference_var(&self) -> Option<InferenceVariable> {
         self.var().map(InferenceVariable::from_depth)
     }
 }
@@ -260,7 +234,7 @@ impl Lifetime {
 impl Substitution {
     /// Check whether this substitution is the identity substitution in the
     /// given inference context.
-    pub fn is_trivial_within(&self, in_infer: &mut InferenceTable) -> bool {
+    crate fn is_trivial_within(&self, in_infer: &mut InferenceTable) -> bool {
         for value in &self.parameters {
             match value {
                 ParameterKind::Ty(ty) => if let Some(var) = ty.inference_var() {
@@ -282,7 +256,7 @@ impl Substitution {
 }
 
 impl ParameterInferenceVariable {
-    pub fn to_parameter(self) -> Parameter {
+    crate fn to_parameter(self) -> Parameter {
         match self {
             ParameterKind::Ty(v) => ParameterKind::Ty(v.to_ty()),
             ParameterKind::Lifetime(v) => ParameterKind::Lifetime(v.to_lifetime()),

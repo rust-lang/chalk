@@ -2,9 +2,9 @@ use std::fmt;
 use std::sync::Arc;
 use ir::*;
 
-pub mod infer;
-pub mod recursive;
-pub mod slg;
+crate mod infer;
+crate mod recursive;
+crate mod slg;
 mod test;
 mod truncate;
 
@@ -63,7 +63,7 @@ impl Solution {
     //    Clone`.
     //
     // But you get the idea.
-    pub fn combine(self, other: Solution) -> Solution {
+    crate fn combine(self, other: Solution) -> Solution {
         use self::Guidance::*;
 
         if self == other {
@@ -92,7 +92,7 @@ impl Solution {
     ///
     /// It should always be the case that `x.favor_over(y)` is at least as
     /// informative as `x.combine(y)`, in terms of guidance to type inference.
-    pub fn favor_over(self, other: Solution) -> Solution {
+    crate fn favor_over(self, other: Solution) -> Solution {
         use self::Guidance::*;
 
         if self == other {
@@ -108,29 +108,8 @@ impl Solution {
         Solution::Ambig(guidance)
     }
 
-    /// Implements Prolog-style failure: if we see no hope of reaching a
-    /// definite solution from `self` -- even if there might in principle be one
-    /// -- and there *is* an option by falling back to `other`, we go with
-    /// `other`.
-    pub fn fallback_to(self, other: Solution) -> Solution {
-        use self::Guidance::*;
-
-        if self == other {
-            return self;
-        }
-
-        if let Solution::Ambig(guidance) = self {
-            match guidance {
-                Definite(subst) | Suggested(subst) => Solution::Ambig(Suggested(subst)),
-                Unknown => other,
-            }
-        } else {
-            self
-        }
-    }
-
     /// View this solution purely in terms of type inference guidance
-    pub fn into_guidance(self) -> Guidance {
+    crate fn into_guidance(self) -> Guidance {
         match self {
             Solution::Unique(constrained) => Guidance::Definite(Canonical {
                 value: constrained.value.subst,
@@ -141,7 +120,7 @@ impl Solution {
     }
 
     /// Extract a constrained substitution from this solution, even if ambiguous.
-    pub fn constrained_subst(&self) -> Option<Canonical<ConstrainedSubst>> {
+    crate fn constrained_subst(&self) -> Option<Canonical<ConstrainedSubst>> {
         match *self {
             Solution::Unique(ref constrained) => Some(constrained.clone()),
             Solution::Ambig(Guidance::Definite(ref canonical)) |
@@ -161,7 +140,7 @@ impl Solution {
 
     /// Determine whether this solution contains type information that *must*
     /// hold.
-    pub fn has_definite(&self) -> bool {
+    crate fn has_definite(&self) -> bool {
         match *self {
             Solution::Unique(_) => true,
             Solution::Ambig(Guidance::Definite(_)) => true,
@@ -169,14 +148,14 @@ impl Solution {
         }
     }
 
-    pub fn is_ambig(&self) -> bool {
+    crate fn is_ambig(&self) -> bool {
         match *self {
             Solution::Ambig(_) => true,
             _ => false,
         }
     }
 
-    pub fn is_unique(&self) -> bool {
+    crate fn is_unique(&self) -> bool {
         match *self {
             Solution::Unique(..) => true,
             _ => false,

@@ -4,7 +4,7 @@ use super::*;
 
 impl Debug for ItemId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        with_current_program(|p| match p {
+        tls::with_current_program(|p| match p {
             Some(prog) => if let Some(k) = prog.type_kinds.get(self) {
                 write!(fmt, "{}", k.name)
             } else if let Some(k) = prog.associated_ty_data.get(self) {
@@ -95,7 +95,7 @@ impl Debug for TraitRef {
 
 impl Debug for ProjectionTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        with_current_program(|p| match p {
+        tls::with_current_program(|p| match p {
             Some(program) => {
                 let (associated_ty_data, trait_params, other_params) =
                     program.split_projection(self);
@@ -131,7 +131,7 @@ impl Debug for UnselectedProjectionTy {
     }
 }
 
-pub struct Angle<'a, T: 'a>(pub &'a [T]);
+crate struct Angle<'a, T: 'a>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {

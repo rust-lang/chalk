@@ -10,40 +10,40 @@ use std::sync::Arc;
 #[macro_use]
 mod macros;
 
-pub mod could_match;
+crate mod could_match;
 
-pub type Identifier = InternedString;
+crate type Identifier = InternedString;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// From type-name to item-id. Used during lowering only.
-    pub type_ids: BTreeMap<Identifier, ItemId>,
+    crate type_ids: BTreeMap<Identifier, ItemId>,
 
     /// For each struct/trait:
-    pub type_kinds: BTreeMap<ItemId, TypeKind>,
+    crate type_kinds: BTreeMap<ItemId, TypeKind>,
 
     /// For each struct:
-    pub struct_data: BTreeMap<ItemId, StructDatum>,
+    crate struct_data: BTreeMap<ItemId, StructDatum>,
 
     /// For each impl:
-    pub impl_data: BTreeMap<ItemId, ImplDatum>,
+    crate impl_data: BTreeMap<ItemId, ImplDatum>,
 
     /// For each trait:
-    pub trait_data: BTreeMap<ItemId, TraitDatum>,
+    crate trait_data: BTreeMap<ItemId, TraitDatum>,
 
     /// For each associated ty:
-    pub associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
+    crate associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// For each default impl (automatically generated for auto traits):
-    pub default_impl_data: Vec<DefaultImplDatum>,
+    crate default_impl_data: Vec<DefaultImplDatum>,
 
     /// For each user-specified clause
-    pub custom_clauses: Vec<ProgramClause>,
+    crate custom_clauses: Vec<ProgramClause>,
 }
 
 impl Program {
     /// Used for debugging output
-    pub fn split_projection<'p>(
+    crate fn split_projection<'p>(
         &self,
         projection: &'p ProjectionTy,
     ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
@@ -63,47 +63,28 @@ impl Program {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProgramEnvironment {
     /// For each trait (used for debugging):
-    pub trait_data: BTreeMap<ItemId, TraitDatum>,
+    crate trait_data: BTreeMap<ItemId, TraitDatum>,
 
     /// For each associated type (used for debugging):
-    pub associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
+    crate associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// Compiled forms of the above:
-    pub program_clauses: Vec<ProgramClause>,
-}
-
-impl ProgramEnvironment {
-    /// Used for debugging output
-    pub fn split_projection<'p>(
-        &self,
-        projection: &'p ProjectionTy,
-    ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
-        let ProjectionTy {
-            associated_ty_id,
-            ref parameters,
-        } = *projection;
-        let associated_ty_data = &self.associated_ty_data[&associated_ty_id];
-        let trait_datum = &self.trait_data[&associated_ty_data.trait_id];
-        let trait_num_params = trait_datum.binders.len();
-        let split_point = parameters.len() - trait_num_params;
-        let (other_params, trait_params) = parameters.split_at(split_point);
-        (associated_ty_data, trait_params, other_params)
-    }
+    crate program_clauses: Vec<ProgramClause>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment {
-    pub clauses: Vec<DomainGoal>,
+    crate clauses: Vec<DomainGoal>,
 }
 
 impl Environment {
-    pub fn new() -> Arc<Environment> {
+    crate fn new() -> Arc<Environment> {
         Arc::new(Environment { clauses: vec![] })
     }
 
-    pub fn add_clauses<I>(&self, clauses: I) -> Arc<Environment>
+    crate fn add_clauses<I>(&self, clauses: I) -> Arc<Environment>
     where
         I: IntoIterator<Item = DomainGoal>,
     {
@@ -116,26 +97,19 @@ impl Environment {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct InEnvironment<G> {
-    pub environment: Arc<Environment>,
-    pub goal: G,
+    crate environment: Arc<Environment>,
+    crate goal: G,
 }
 
 impl<G> InEnvironment<G> {
-    pub fn new(environment: &Arc<Environment>, goal: G) -> Self {
+    crate fn new(environment: &Arc<Environment>, goal: G) -> Self {
         InEnvironment {
             environment: environment.clone(),
             goal,
         }
     }
 
-    pub fn empty(goal: G) -> Self {
-        InEnvironment {
-            environment: Environment::new(),
-            goal,
-        }
-    }
-
-    pub fn map<OP, H>(self, op: OP) -> InEnvironment<H>
+    crate fn map<OP, H>(self, op: OP) -> InEnvironment<H>
     where
         OP: FnOnce(G) -> H,
     {
@@ -159,14 +133,7 @@ pub enum TypeName {
 }
 
 impl TypeName {
-    pub fn is_for_all(&self) -> bool {
-        match *self {
-            TypeName::ForAll(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn to_ty(self) -> Ty {
+    crate fn to_ty(self) -> Ty {
         Ty::Apply(ApplicationTy {
             name: self,
             parameters: vec![],
@@ -176,29 +143,25 @@ impl TypeName {
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UniverseIndex {
-    pub counter: usize,
+    crate counter: usize,
 }
 
 impl UniverseIndex {
-    pub const ROOT: UniverseIndex = UniverseIndex { counter: 0 };
+    crate const ROOT: UniverseIndex = UniverseIndex { counter: 0 };
 
-    pub fn root() -> UniverseIndex {
+    crate fn root() -> UniverseIndex {
         Self::ROOT
     }
 
-    pub fn can_see(self, ui: UniverseIndex) -> bool {
+    crate fn can_see(self, ui: UniverseIndex) -> bool {
         self.counter >= ui.counter
     }
 
-    pub fn is_root(self) -> bool {
-        self.counter == 0
-    }
-
-    pub fn to_lifetime(self) -> Lifetime {
+    crate fn to_lifetime(self) -> Lifetime {
         Lifetime::ForAll(self)
     }
 
-    pub fn next(self) -> UniverseIndex {
+    crate fn next(self) -> UniverseIndex {
         UniverseIndex {
             counter: self.counter + 1,
         }
@@ -207,14 +170,14 @@ impl UniverseIndex {
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ItemId {
-    pub index: usize,
+    crate index: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {
-    pub sort: TypeSort,
-    pub name: Identifier,
-    pub binders: Binders<()>,
+    crate sort: TypeSort,
+    crate name: Identifier,
+    crate binders: Binders<()>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -225,93 +188,93 @@ pub enum TypeSort {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum {
-    pub binders: Binders<ImplDatumBound>,
+    crate binders: Binders<ImplDatumBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
-    pub trait_ref: PolarizedTraitRef,
-    pub where_clauses: Vec<DomainGoal>,
-    pub associated_ty_values: Vec<AssociatedTyValue>,
-    pub specialization_priority: usize,
+    crate trait_ref: PolarizedTraitRef,
+    crate where_clauses: Vec<DomainGoal>,
+    crate associated_ty_values: Vec<AssociatedTyValue>,
+    crate specialization_priority: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DefaultImplDatum {
-    pub binders: Binders<DefaultImplDatumBound>,
+    crate binders: Binders<DefaultImplDatumBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DefaultImplDatumBound {
-    pub trait_ref: TraitRef,
-    pub accessible_tys: Vec<Ty>,
+    crate trait_ref: TraitRef,
+    crate accessible_tys: Vec<Ty>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatum {
-    pub binders: Binders<StructDatumBound>,
+    crate binders: Binders<StructDatumBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
-    pub self_ty: ApplicationTy,
-    pub fields: Vec<Ty>,
-    pub where_clauses: Vec<DomainGoal>,
+    crate self_ty: ApplicationTy,
+    crate fields: Vec<Ty>,
+    crate where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum {
-    pub binders: Binders<TraitDatumBound>,
+    crate binders: Binders<TraitDatumBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
-    pub trait_ref: TraitRef,
-    pub where_clauses: Vec<DomainGoal>,
-    pub flags: TraitFlags,
+    crate trait_ref: TraitRef,
+    crate where_clauses: Vec<DomainGoal>,
+    crate flags: TraitFlags,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitFlags {
-    pub auto: bool,
-    pub marker: bool,
+    crate auto: bool,
+    crate marker: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyDatum {
     /// The trait this associated type is defined in.
-    pub trait_id: ItemId,
+    crate trait_id: ItemId,
 
     /// The ID of this associated type
-    pub id: ItemId,
+    crate id: ItemId,
 
     /// Name of this associated type.
-    pub name: Identifier,
+    crate name: Identifier,
 
     /// Parameters on this associated type, beginning with those from the trait,
     /// but possibly including more.
-    pub parameter_kinds: Vec<ParameterKind<Identifier>>,
+    crate parameter_kinds: Vec<ParameterKind<Identifier>>,
 
     /// Where clauses that must hold for the projection be well-formed.
-    pub where_clauses: Vec<DomainGoal>,
+    crate where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyValue {
-    pub associated_ty_id: ItemId,
+    crate associated_ty_id: ItemId,
 
     // note: these binders are in addition to those from the impl
-    pub value: Binders<AssociatedTyValueBound>,
+    crate value: Binders<AssociatedTyValueBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
-    pub ty: Ty,
+    crate ty: Ty,
 
     /// Where-clauses that must hold for projection to be valid. The
     /// WC in `type Foo<'a> = X where WC`.
-    pub where_clauses: Vec<DomainGoal>,
+    crate where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -327,7 +290,7 @@ pub enum Ty {
 }
 
 impl Ty {
-    pub fn as_projection_ty_enum(&self) -> ProjectionTyRefEnum {
+    crate fn as_projection_ty_enum(&self) -> ProjectionTyRefEnum {
         match *self {
             Ty::Projection(ref proj) => ProjectionTyEnum::Selected(proj),
             Ty::UnselectedProjection(ref proj) => ProjectionTyEnum::Unselected(proj),
@@ -340,8 +303,8 @@ impl Ty {
 /// and we use deBruijn indices within `self.ty`
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct QuantifiedTy {
-    pub num_binders: usize,
-    pub ty: Ty,
+    crate num_binders: usize,
+    crate ty: Ty,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -353,8 +316,8 @@ pub enum Lifetime {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ApplicationTy {
-    pub name: TypeName,
-    pub parameters: Vec<Parameter>,
+    crate name: TypeName,
+    crate parameters: Vec<Parameter>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -364,14 +327,14 @@ pub enum ParameterKind<T, L = T> {
 }
 
 impl<T> ParameterKind<T> {
-    pub fn into_inner(self) -> T {
+    crate fn into_inner(self) -> T {
         match self {
             ParameterKind::Ty(t) => t,
             ParameterKind::Lifetime(t) => t,
         }
     }
 
-    pub fn map<OP, U>(self, op: OP) -> ParameterKind<U>
+    crate fn map<OP, U>(self, op: OP) -> ParameterKind<U>
     where
         OP: FnOnce(T) -> U,
     {
@@ -383,29 +346,29 @@ impl<T> ParameterKind<T> {
 }
 
 impl<T, L> ParameterKind<T, L> {
-    pub fn assert_ty_ref(&self) -> &T {
+    crate fn assert_ty_ref(&self) -> &T {
         self.as_ref().ty().unwrap()
     }
 
-    pub fn assert_lifetime_ref(&self) -> &L {
+    crate fn assert_lifetime_ref(&self) -> &L {
         self.as_ref().lifetime().unwrap()
     }
 
-    pub fn as_ref(&self) -> ParameterKind<&T, &L> {
+    crate fn as_ref(&self) -> ParameterKind<&T, &L> {
         match *self {
             ParameterKind::Ty(ref t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(ref l) => ParameterKind::Lifetime(l),
         }
     }
 
-    pub fn ty(self) -> Option<T> {
+    crate fn ty(self) -> Option<T> {
         match self {
             ParameterKind::Ty(t) => Some(t),
             _ => None,
         }
     }
 
-    pub fn lifetime(self) -> Option<L> {
+    crate fn lifetime(self) -> Option<L> {
         match self {
             ParameterKind::Lifetime(t) => Some(t),
             _ => None,
@@ -422,18 +385,18 @@ impl<T, L> ast::Kinded for ParameterKind<T, L> {
     }
 }
 
-pub type Parameter = ParameterKind<Ty, Lifetime>;
+crate type Parameter = ParameterKind<Ty, Lifetime>;
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ProjectionTy {
-    pub associated_ty_id: ItemId,
-    pub parameters: Vec<Parameter>,
+    crate associated_ty_id: ItemId,
+    crate parameters: Vec<Parameter>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct UnselectedProjectionTy {
-    pub type_name: Identifier,
-    pub parameters: Vec<Parameter>,
+    crate type_name: Identifier,
+    crate parameters: Vec<Parameter>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -442,12 +405,12 @@ pub enum ProjectionTyEnum<S = ProjectionTy, U = UnselectedProjectionTy> {
     Unselected(U),
 }
 
-pub type ProjectionTyRefEnum<'a> = ProjectionTyEnum<&'a ProjectionTy, &'a UnselectedProjectionTy>;
+crate type ProjectionTyRefEnum<'a> = ProjectionTyEnum<&'a ProjectionTy, &'a UnselectedProjectionTy>;
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TraitRef {
-    pub trait_id: ItemId,
-    pub parameters: Vec<Parameter>,
+    crate trait_id: ItemId,
+    crate parameters: Vec<Parameter>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
@@ -457,14 +420,14 @@ pub enum PolarizedTraitRef {
 }
 
 impl PolarizedTraitRef {
-    pub fn is_positive(&self) -> bool {
+    crate fn is_positive(&self) -> bool {
         match *self {
             PolarizedTraitRef::Positive(_) => true,
             PolarizedTraitRef::Negative(_) => false,
         }
     }
 
-    pub fn trait_ref(&self) -> &TraitRef {
+    crate fn trait_ref(&self) -> &TraitRef {
         match *self {
             PolarizedTraitRef::Positive(ref tr) | PolarizedTraitRef::Negative(ref tr) => tr,
         }
@@ -487,7 +450,7 @@ pub enum DomainGoal {
 impl DomainGoal {
     /// Lift a goal to a corresponding program clause (with a trivial
     /// antecedent).
-    pub fn into_program_clause(self) -> ProgramClause {
+    crate fn into_program_clause(self) -> ProgramClause {
         ProgramClause {
             implication: Binders {
                 value: ProgramClauseImplication {
@@ -501,7 +464,7 @@ impl DomainGoal {
 
     /// A clause of the form (T: Foo) expands to (T: Foo), WF(T: Foo).
     /// A clause of the form (T: Foo<Item = U>) expands to (T: Foo<Item = U>), T: Foo, WF(T: Foo).
-    pub fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
+    crate fn expanded(self, program: &Program) -> impl Iterator<Item = DomainGoal> {
         let mut expanded = vec![];
         match self {
             DomainGoal::Implemented(ref trait_ref) => {
@@ -534,8 +497,8 @@ pub enum LeafGoal {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct EqGoal {
-    pub a: Parameter,
-    pub b: Parameter,
+    crate a: Parameter,
+    crate b: Parameter,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -550,8 +513,8 @@ pub enum WellFormed {
 /// `U = V`.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Normalize {
-    pub projection: ProjectionTy,
-    pub ty: Ty,
+    crate projection: ProjectionTy,
+    crate ty: Ty,
 }
 
 /// Proves **equality** between a projection `T::Foo` and a type
@@ -559,8 +522,8 @@ pub struct Normalize {
 /// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ProjectionEq {
-    pub projection: ProjectionTy,
-    pub ty: Ty,
+    crate projection: ProjectionTy,
+    crate ty: Ty,
 }
 
 /// Indicates that the trait where the associated type belongs to is
@@ -582,8 +545,8 @@ pub struct ProjectionEq {
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct UnselectedNormalize {
-    pub projection: UnselectedProjectionTy,
-    pub ty: Ty,
+    crate projection: UnselectedProjectionTy,
+    crate ty: Ty,
 }
 
 /// Indicates that the `value` is universally quantified over `N`
@@ -595,12 +558,12 @@ pub struct UnselectedNormalize {
 /// of `self.binders`.)
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Binders<T> {
-    pub binders: Vec<ParameterKind<()>>,
-    pub value: T,
+    crate binders: Vec<ParameterKind<()>>,
+    crate value: T,
 }
 
 impl<T> Binders<T> {
-    pub fn map_ref<U, OP>(&self, op: OP) -> Binders<U>
+    crate fn map_ref<U, OP>(&self, op: OP) -> Binders<U>
     where
         OP: FnOnce(&T) -> U,
     {
@@ -611,14 +574,14 @@ impl<T> Binders<T> {
         }
     }
 
-    pub fn len(&self) -> usize {
+    crate fn len(&self) -> usize {
         self.binders.len()
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProgramClause {
-    pub implication: Binders<ProgramClauseImplication>,
+    crate implication: Binders<ProgramClauseImplication>,
 }
 
 /// Represents one clause of the form `consequence :- conditions` where
@@ -626,8 +589,8 @@ pub struct ProgramClause {
 /// conditions.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProgramClauseImplication {
-    pub consequence: DomainGoal,
-    pub conditions: Vec<Goal>,
+    crate consequence: DomainGoal,
+    crate conditions: Vec<Goal>,
 }
 
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
@@ -637,8 +600,8 @@ pub struct ProgramClauseImplication {
 /// `binders` field.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Canonical<T> {
-    pub value: T,
-    pub binders: Vec<ParameterKind<UniverseIndex>>,
+    crate value: T,
+    crate binders: Vec<ParameterKind<UniverseIndex>>,
 }
 
 impl<T> Canonical<T> {
@@ -649,7 +612,7 @@ impl<T> Canonical<T> {
     /// inference context) are used in place of the quantified free
     /// variables. The result should be in terms of those same
     /// inference variables and will be re-canonicalized.
-    pub fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
+    crate fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
         T: Fold,
@@ -677,7 +640,7 @@ impl<T> Canonical<T> {
     /// Substitutes the values from `subst` in place of the values
     /// bound by the binders in this canonical; the substitution should be
     /// complete.
-    pub fn substitute(&self, mut subst: &Substitution) -> T::Result
+    crate fn substitute(&self, mut subst: &Substitution) -> T::Result
     where
         T: Fold,
     {
@@ -698,19 +661,19 @@ impl<T> Canonical<T> {
 /// To produce one of these values, use the `u_canonicalize` method.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UCanonical<T> {
-    pub canonical: Canonical<T>,
-    pub universes: usize,
+    crate canonical: Canonical<T>,
+    crate universes: usize,
 }
 
 impl<T> UCanonical<T> {
-    pub fn substitute(&self, subst: &Substitution) -> T::Result
+    crate fn substitute(&self, subst: &Substitution) -> T::Result
     where
         T: Fold,
     {
         self.canonical.substitute(subst)
     }
 
-    pub fn trivial_substitution(&self) -> Substitution {
+    crate fn trivial_substitution(&self) -> Substitution {
         let binders = &self.canonical.binders;
         Substitution {
             parameters:
@@ -725,7 +688,7 @@ impl<T> UCanonical<T> {
         }
     }
 
-    pub fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
+    crate fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
         let subst = &canonical_subst.value.subst;
         assert_eq!(self.canonical.binders.len(), subst.parameters.len());
         // A subst is trivial if..
@@ -748,7 +711,7 @@ impl<T> UCanonical<T> {
 
 impl UCanonical<InEnvironment<Goal>> {
     /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
-    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+    crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
         match &self.canonical.value.goal {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Implemented(tr))) => {
                 let trait_datum = &program.trait_data[&tr.trait_id];
@@ -783,7 +746,7 @@ pub enum Goal {
 }
 
 impl Goal {
-    pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal {
+    crate fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal {
         Goal::Quantified(
             kind,
             Binders {
@@ -793,7 +756,7 @@ impl Goal {
         )
     }
 
-    pub fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
+    crate fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
         Goal::Implies(predicates, Box::new(self))
     }
 
@@ -843,7 +806,7 @@ impl Goal {
     /// # Panics
     ///
     /// Will panic if this goal does in fact contain free variables.
-    pub fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>> {
+    crate fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>> {
         use solve::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(), self);
@@ -879,11 +842,11 @@ pub struct Substitution {
     /// This is a map because the substitution is not necessarily
     /// complete. We use a btree map to ensure that the result is in a
     /// deterministic order.
-    pub parameters: Vec<Parameter>,
+    crate parameters: Vec<Parameter>,
 }
 
 impl Substitution {
-    pub fn is_empty(&self) -> bool {
+    crate fn is_empty(&self) -> bool {
         self.parameters.is_empty()
     }
 }
@@ -912,12 +875,9 @@ impl<'a> IdentityUniversalFolder for &'a Substitution {}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {
-    pub subst: Substitution,
-    pub constraints: Vec<InEnvironment<Constraint>>,
+    crate subst: Substitution,
+    crate constraints: Vec<InEnvironment<Constraint>>,
 }
 
-pub mod debug;
-mod tls;
-
-pub use self::tls::set_current_program;
-pub use self::tls::with_current_program;
+crate mod debug;
+pub mod tls;

@@ -5,26 +5,26 @@ use std::ops::IndexMut;
 use super::stack::StackDepth;
 
 #[derive(Default)]
-pub struct Tables {
+crate struct Tables {
     indices: HashMap<CanonicalLeafGoal, TableIndex>,
     tables: Vec<Table>,
 }
 
-pub struct TableIndex {
+crate struct TableIndex {
     index: usize
 }
 
-pub struct Table {
-    pub solution: Fallible<Solution>,
-    pub stack_depth: Option<StackDepth>,
+crate struct Table {
+    crate solution: Fallible<Solution>,
+    crate stack_depth: Option<StackDepth>,
 }
 
 impl Tables {
-    pub fn lookup(&self, goal: &CanonicalLeafGoal) -> Option<TableIndex> {
+    crate fn lookup(&self, goal: &CanonicalLeafGoal) -> Option<TableIndex> {
         self.indices.get(goal)
     }
 
-    pub fn insert(&mut self,
+    crate fn insert(&mut self,
                   goal: &CanonicalLeafGoal,
                   solution: Fallible<Solution>,
                   stack_depth: Option<StackDepth>)

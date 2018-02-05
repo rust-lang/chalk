@@ -20,7 +20,7 @@ fn run_bench(
 ) {
     let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
     let env = Arc::new(program.environment());
-    ir::set_current_program(&program, || {
+    ir::tls::set_current_program(&program, || {
         let goal = parse_and_lower_goal(&program, goal_text).unwrap();
         let peeled_goal = goal.into_peeled_goal();
 

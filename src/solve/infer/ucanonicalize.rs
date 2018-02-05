@@ -5,7 +5,7 @@ use ir::*;
 use super::InferenceTable;
 
 impl InferenceTable {
-    pub fn u_canonicalize<T: Fold>(&mut self, value0: &Canonical<T>) -> UCanonicalized<T::Result> {
+    crate fn u_canonicalize<T: Fold>(&mut self, value0: &Canonical<T>) -> UCanonicalized<T::Result> {
         debug!("u_canonicalize({:#?})", value0);
 
         // First, find all the universes that appear in `value`.
@@ -52,12 +52,12 @@ impl InferenceTable {
 }
 
 #[derive(Debug)]
-pub struct UCanonicalized<T> {
+crate struct UCanonicalized<T> {
     /// The canonicalized result.
-    pub quantified: UCanonical<T>,
+    crate quantified: UCanonical<T>,
 
     /// A map between the universes in `quantified` and the original universes
-    pub universes: UniverseMap,
+    crate universes: UniverseMap,
 }
 
 /// Maps the universes found in the `u_canonicalize` result (the
@@ -66,7 +66,7 @@ pub struct UCanonicalized<T> {
 /// outside this module -- converts from "canonical" universes to the
 /// original (but see the `UMapToCanonical` folder).
 #[derive(Clone, Debug)]
-pub struct UniverseMap {
+crate struct UniverseMap {
     /// A reverse map -- for each universe Ux that appears in
     /// `quantified`, the corresponding universe in the original was
     /// `universes[x]`.
@@ -204,7 +204,7 @@ impl UniverseMap {
     /// of universes, since that determines visibility, and (b) that
     /// the universe we produce does not correspond to any of the
     /// other original universes.
-    pub fn map_from_canonical<T: Fold>(&self, value: &T) -> T::Result {
+    crate fn map_from_canonical<T: Fold>(&self, value: &T) -> T::Result {
         debug!("map_from_canonical(value={:?})", value);
         debug!("map_from_canonical: universes = {:?}", self.universes);
         value.fold_with(&mut UMapFromCanonical { universes: self }, 0).unwrap()

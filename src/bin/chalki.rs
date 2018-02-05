@@ -118,7 +118,7 @@ fn run() -> Result<()> {
             }
         };
 
-        ir::set_current_program(&prog.ir, || -> Result<()> {
+        ir::tls::set_current_program(&prog.ir, || -> Result<()> {
             for g in &args.flag_goal {
                 if let Err(e) = goal(&args, g, &prog) {
                     eprintln!("error: {}", e);
@@ -168,7 +168,7 @@ fn process(
         *prog = Some(load_program(args, filename)?);
     } else {
         let prog = prog.as_ref().ok_or("no program currently loaded")?;
-        ir::set_current_program(&prog.ir, || -> Result<()> {
+        ir::tls::set_current_program(&prog.ir, || -> Result<()> {
             match command {
                 "print" => println!("{}", prog.text),
                 "lowered" => println!("{:#?}", prog.env),

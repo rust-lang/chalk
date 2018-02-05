@@ -20,30 +20,30 @@ pub(super) struct DepthFirstNumber {
 }
 
 pub(super) struct Node {
-    pub goal: UCanonicalGoal,
+    crate goal: UCanonicalGoal,
 
-    pub solution: Fallible<Solution>,
+    crate solution: Fallible<Solution>,
 
     /// This is `Some(X)` if we are actively exploring this node, or
     /// `None` otherwise.
-    pub stack_depth: Option<StackDepth>,
+    crate stack_depth: Option<StackDepth>,
 
     /// While this node is on the stack, this field will be set to
     /// contain our own depth-first number. Once the node is popped
     /// from the stack, it contains the DFN of the minimal ancestor
     /// that the table reached (or MAX if no cycle was encountered).
-    pub links: Minimums,
+    crate links: Minimums,
 }
 
 impl SearchGraph {
-    pub fn new() -> Self {
+    crate fn new() -> Self {
         SearchGraph {
             indices: HashMap::new(),
             nodes: vec![],
         }
     }
 
-    pub fn lookup(&self, goal: &UCanonicalGoal) -> Option<DepthFirstNumber> {
+    crate fn lookup(&self, goal: &UCanonicalGoal) -> Option<DepthFirstNumber> {
         self.indices.get(goal).cloned()
     }
 
@@ -53,7 +53,7 @@ impl SearchGraph {
     /// - stack depth as given
     /// - links set to its own DFN
     /// - solution is initially `NoSolution`
-    pub fn insert(&mut self, goal: &UCanonicalGoal, stack_depth: StackDepth) -> DepthFirstNumber {
+    crate fn insert(&mut self, goal: &UCanonicalGoal, stack_depth: StackDepth) -> DepthFirstNumber {
         let dfn = DepthFirstNumber {
             index: self.nodes.len(),
         };
@@ -70,7 +70,7 @@ impl SearchGraph {
     }
 
     /// Clears all nodes with a depth-first number greater than or equal `dfn`.
-    pub fn rollback_to(&mut self, dfn: DepthFirstNumber) {
+    crate fn rollback_to(&mut self, dfn: DepthFirstNumber) {
         debug!("rollback_to(dfn={:?})", dfn);
         self.indices.retain(|_key, value| *value < dfn);
         self.nodes.truncate(dfn.index);
@@ -78,7 +78,7 @@ impl SearchGraph {
 
     /// Removes all nodes with a depth-first-number greater than or
     /// equal to `dfn`, adding their final solutions into the cache.
-    pub fn move_to_cache(
+    crate fn move_to_cache(
         &mut self,
         dfn: DepthFirstNumber,
         cache: &mut HashMap<UCanonicalGoal, Fallible<Solution>>,
@@ -109,7 +109,7 @@ impl IndexMut<DepthFirstNumber> for SearchGraph {
 }
 
 impl DepthFirstNumber {
-    pub const MAX: DepthFirstNumber = DepthFirstNumber { index: usize::MAX };
+    crate const MAX: DepthFirstNumber = DepthFirstNumber { index: usize::MAX };
 }
 
 impl Add<usize> for DepthFirstNumber {

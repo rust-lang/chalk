@@ -183,7 +183,7 @@ fn goal_quantifiers() {
     let program = Arc::new(parse_and_lower("trait Foo<A, B> { }").unwrap());
     let goal =
         parse_and_lower_goal(&program, "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}").unwrap();
-    set_current_program(&program, || {
+    tls::set_current_program(&program, || {
         assert_eq!(
             format!("{:?}", goal),
             "ForAll<type> { Exists<type> { ForAll<type> { (?0: Foo<?1, ?2>) } } }"
@@ -210,7 +210,7 @@ fn atc_accounting() {
     ",
         ).unwrap(),
     );
-    set_current_program(&program, || {
+    tls::set_current_program(&program, || {
         let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
         println!("{}", impl_text);
         assert_eq!(

@@ -26,18 +26,18 @@ extern crate stacker;
 mod macros;
 
 #[macro_use]
-pub mod fold;
+crate mod fold;
 
 #[macro_use]
-pub mod zip;
+crate mod zip;
 
 #[macro_use]
 pub mod ir;
 
-pub mod cast;
-pub mod coherence;
+crate mod cast;
+crate mod coherence;
 pub mod errors;
-pub mod fallible;
+crate mod fallible;
 pub mod lower;
 pub mod solve;
 mod test_util;

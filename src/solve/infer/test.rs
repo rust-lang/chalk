@@ -4,7 +4,7 @@ use super::*;
 use super::unify::UnificationResult;
 
 impl InferenceTable {
-    pub fn normalize<T>(&mut self, value: &T) -> T::Result
+    crate fn normalize<T>(&mut self, value: &T) -> T::Result
     where
         T: Fold,
     {

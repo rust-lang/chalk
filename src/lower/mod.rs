@@ -928,7 +928,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
             Goal::Implies(ref wc, ref g, elaborate) => {
                 let mut where_clauses = wc.lower(env)?;
                 if elaborate {
-                    where_clauses = ir::with_current_program(|program| {
+                    where_clauses = ir::tls::with_current_program(|program| {
                         let program = program.expect("cannot elaborate without a program");
                         where_clauses
                             .into_iter()

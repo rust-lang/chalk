@@ -13,18 +13,14 @@ use self::fulfill::Fulfill;
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 
-pub type CanonicalLeafGoal = Canonical<InEnvironment<LeafGoal>>;
-pub type UCanonicalLeafGoal = UCanonical<InEnvironment<LeafGoal>>;
-
-pub type CanonicalGoal = Canonical<InEnvironment<Goal>>;
-pub type UCanonicalGoal = UCanonical<InEnvironment<Goal>>;
+crate type UCanonicalGoal = UCanonical<InEnvironment<Goal>>;
 
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
 /// allows for better caching, and simplifies management of the inference
 /// context.
-pub struct Solver {
+crate struct Solver {
     program: Arc<ProgramEnvironment>,
     stack: Stack,
     search_graph: SearchGraph,
@@ -64,7 +60,7 @@ impl<T> MergeWith<T> for Fallible<T> {
 }
 
 impl Solver {
-    pub fn new(
+    crate fn new(
         program: &Arc<ProgramEnvironment>,
         overflow_depth: usize,
         caching_enabled: bool,
@@ -93,7 +89,7 @@ impl Solver {
     /// }`, `into_peeled_goal` can be used to create a canonical goal
     /// `SomeType<!1>: Foo<?0>`. This function will then return a
     /// solution with the substitution `?0 := u8`.
-    pub fn solve_root_goal(
+    crate fn solve_root_goal(
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Fallible<Solution> {

@@ -26,7 +26,7 @@ use std::marker::PhantomData;
 /// as part of this, they should always use the same set of free
 /// variables (the `Canonical` implementation, for example, relies on
 /// that).
-pub trait Cast<T>: Sized {
+crate trait Cast<T>: Sized {
     fn cast(self) -> T;
 }
 
@@ -232,7 +232,7 @@ where
     }
 }
 
-pub struct Casted<I, U> {
+crate struct Casted<I, U> {
     iterator: I,
     _cast: PhantomData<U>,
 }
@@ -254,7 +254,7 @@ where
 
 /// An iterator adapter that casts each element we are iterating over
 /// to some other type.
-pub trait Caster<U>: Sized {
+crate trait Caster<U>: Sized {
     fn casted(self) -> Casted<Self, U>;
 }
 

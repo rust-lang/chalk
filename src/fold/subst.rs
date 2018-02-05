@@ -3,7 +3,7 @@ use ir::*;
 
 use super::*;
 
-pub struct Subst<'s> {
+crate struct Subst<'s> {
     /// Values to substitute. A reference to a free variable with
     /// index `i` will be mapped to `parameters[i]` -- if `i >
     /// parameters.len()`, then we will leave the variable untouched.
@@ -11,17 +11,13 @@ pub struct Subst<'s> {
 }
 
 impl<'s> Subst<'s> {
-    pub fn new(parameters: &'s [Parameter]) -> Subst<'s> {
-        Subst { parameters }
-    }
-
-    pub fn apply<T: Fold>(parameters: &[Parameter], value: &T) -> T::Result {
+    crate fn apply<T: Fold>(parameters: &[Parameter], value: &T) -> T::Result {
         value.fold_with(&mut Subst { parameters }, 0).unwrap()
     }
 }
 
 impl QuantifiedTy {
-    pub fn substitute(&self, parameters: &[Parameter]) -> Ty {
+    crate fn substitute(&self, parameters: &[Parameter]) -> Ty {
         assert_eq!(self.num_binders, parameters.len());
         Subst::apply(parameters, &self.ty)
     }
