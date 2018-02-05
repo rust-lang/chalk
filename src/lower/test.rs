@@ -605,7 +605,7 @@ fn cyclic_traits_error() {
 }
 
 #[test]
-fn cyclic_wf_requirement() {
+fn cyclic_wf_requirements() {
     lowering_success! {
         program {
             trait Foo where <Self as Foo>::Value: Foo {
@@ -691,6 +691,72 @@ fn implied_bounds_on_ty_decl() {
             struct MyType<K> where K: Hash {
                 value: OnlyEq<K>
             }
+        }
+    }
+}
+
+#[test]
+fn wf_requiremements_for_projection() {
+    lowering_error! {
+        program {
+            trait Foo {
+                type Value;
+            }
+
+            trait Iterator {
+                type Item;
+            }
+
+            impl<T> Foo for T {
+                type Value = <T as Iterator>::Item;
+            }
+        } error_msg {
+            "trait impl for \"Foo\" does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Foo {
+                type Value;
+            }
+
+            trait Iterator {
+                type Item;
+            }
+
+            impl<T> Foo for T where T: Iterator {
+                type Value = <T as Iterator>::Item;
+            }
+        }
+    }
+}
+
+#[test]
+fn projection_type_in_header() {
+    lowering_error! {
+        program {
+            trait Foo {
+                type Value;
+            }
+
+            trait Bar { }
+
+            impl<T> Bar for <T as Foo>::Value { }
+        } error_msg {
+            "trait impl for \"Bar\" does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Foo {
+                type Value;
+            }
+
+            trait Bar { }
+
+            impl<T> Bar for <T as Foo>::Value where T: Foo { }
         }
     }
 }

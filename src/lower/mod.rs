@@ -1407,34 +1407,42 @@ impl ir::AssociatedTyDatum {
             }
         };
 
+        // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
+        // we would produce `(Iterator::Item)<T>`.
+        let app = ir::ApplicationTy {
+            name: ir::TypeName::AssociatedType(self.id),
+            parameters,
+        };
+        let app_ty = ir::Ty::Apply(app);
+
+        let mut clauses = vec![];
+
         //    forall<T> {
         //        ProjectionEq(<T as Foo>::Assoc = (Foo::Assoc)<T>) :-
         //            T: Foo
         //    }
-        let fallback_clause = {
-            // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
-            // we would produce `(Iterator::Item)<T>`.
-            let app = ir::ApplicationTy {
-                name: ir::TypeName::AssociatedType(self.id),
-               parameters,
-            };
-            let app_ty = ir::Ty::Apply(app);
-
-            ir::ProgramClause {
-                implication: ir::Binders {
-                    binders: binders.clone(),
-                    value: ir::ProgramClauseImplication {
-                        consequence: ir::ProjectionEq {
-                            projection: projection.clone(),
-                            ty: app_ty,
-                        }.cast(),
-                        conditions: vec![
-                            trait_ref.clone().cast(),
-                        ],
-                    },
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::ProjectionEq {
+                        projection: projection.clone(),
+                        ty: app_ty.clone(),
+                    }.cast(),
+                    conditions: vec![trait_ref.clone().cast()],
                 },
+            },
+        });
+
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::WellFormed::Ty(app_ty).cast(),
+                    conditions: vec![],
+                }
             }
-        };
+        });
 
         // add new type parameter U
         let mut binders = binders;
@@ -1448,22 +1456,21 @@ impl ir::AssociatedTyDatum {
         //        ProjectionEq(<T as Foo>::Assoc = U) :-
         //            Normalize(<T as Foo>::Assoc -> U)
         //    }
-        let normalize_clause = 
-            ir::ProgramClause {
-                implication: ir::Binders {
-                    binders: binders.clone(),
-                    value: ir::ProgramClauseImplication {
-                        consequence: ir::ProjectionEq {
-                            projection: projection.clone(),
-                            ty,
-                        }.cast(),
-                        conditions: vec![normalize.clone().cast()],
-                    },
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::ProjectionEq {
+                        projection: projection.clone(),
+                        ty,
+                    }.cast(),
+                    conditions: vec![normalize.clone().cast()],
                 },
-             };
+            },
+            });
 
 
-        let well_formed_clause = ir::ProgramClause {
+        clauses.push(ir::ProgramClause {
             implication: ir::Binders {
                 binders: binders.clone(),
                 value: ir::ProgramClauseImplication {
@@ -1474,18 +1481,28 @@ impl ir::AssociatedTyDatum {
                     ],
                 }
             }
-        };
+        });
 
-        let from_env_clause = ir::ProgramClause {
+        clauses.push(ir::ProgramClause {
             implication: ir::Binders {
-                binders,
+                binders: binders.clone(),
                 value: ir::ProgramClauseImplication {
                     consequence: ir::FromEnv::TraitRef(trait_ref).cast(),
+                    conditions: vec![ir::FromEnv::Normalize(normalize.clone()).cast()],
+                },
+            }
+        });
+
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders,
+                value: ir::ProgramClauseImplication {
+                    consequence: normalize.clone().cast(),
                     conditions: vec![ir::FromEnv::Normalize(normalize).cast()],
                 },
             }
-        };
+        });
 
-        vec![fallback_clause, normalize_clause, well_formed_clause, from_env_clause]
+        clauses
     }
 }

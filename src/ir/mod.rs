@@ -296,6 +296,13 @@ impl Ty {
             _ => panic!("{:?} is not a projection", self),
         }
     }
+
+    pub fn is_projection(&self) -> bool {
+        match *self {
+            Ty::Projection(..) | Ty::UnselectedProjection(..) => true,
+            _ => false,
+        }
+    }
 }
 
 /// for<'a...'z> X -- all binders are instantiated at once,

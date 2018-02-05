@@ -176,18 +176,21 @@ impl WfSolver {
                       .iter()
                       .filter_map(compute_assoc_ty_goal);
 
+        let mut header_input_types = Vec::new();
+        trait_ref.fold(&mut header_input_types);
+        let (header_projection_types, header_other_types): (Vec<_>, Vec<_>) =
+            header_input_types.into_iter()
+                              .partition(|ty| ty.is_projection());
+
         let goals =
             input_types.into_iter()
+                       .chain(header_projection_types.into_iter())
                        .map(|ty| WellFormed::Ty(ty).cast())
                        .chain(assoc_ty_goals)
                        .chain(Some(WellFormed::TraitRef(trait_ref.clone())).cast());
         
         let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
                         .expect("at least one goal");
-
-        let mut input_types = Vec::new();
-        trait_ref.fold(&mut input_types);
-
         let hypotheses =
             impl_datum.binders
                       .value
@@ -195,7 +198,7 @@ impl WfSolver {
                       .iter()
                       .cloned()
                       .map(|wc| wc.into_from_env_clause())
-                      .chain(input_types.into_iter().map(|ty| FromEnv::Ty(ty).cast()))
+                      .chain(header_other_types.into_iter().map(|ty| FromEnv::Ty(ty).cast()))
                       .collect();
 
         let goal = Goal::Implies(hypotheses, Box::new(goal))
