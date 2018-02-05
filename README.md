@@ -17,7 +17,7 @@ suitable reference.
 [Aristotle]: https://en.wikipedia.org/wiki/Aristotle
 
 ## Blog posts
-
+[blog-posts]: #blog-posts
 Here are some blog posts talking about chalk:
 
 - [Lowering Rust Traits to Logic](http://smallcultfollowing.com/babysteps/blog/2017/01/26/lowering-rust-traits-to-logic/)
@@ -33,7 +33,7 @@ Here are some blog posts talking about chalk:
 - [Cyclic queries in chalk](http://smallcultfollowing.com/babysteps/blog/2017/09/12/tabling-handling-cyclic-queries-in-chalk/)
     - Handling cyclic relations and enabling the implementation of implied bounds and other long-desired features in an elegant way
 
-## Documentation
-
-In addition to the blog posts there is a [glossary](GLOSSARY.md) explaining some
-of the terminology used in *chalk*.
+## Contributing
+If you are interested in contributing to chalk, please take a look at the
+[Contribution guide](CONTRIBUTING.md). You might also want to take a look at the
+[glossary](GLOSSARY.md).
