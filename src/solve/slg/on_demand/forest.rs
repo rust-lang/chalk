@@ -133,14 +133,15 @@ impl<'forest> Iterator for ForestSolver<'forest> {
                 Ok(()) => {
                     let answer = self.forest.answer(self.table, self.answer);
 
-                    // FIXME -- if answer has delayed literals, we
-                    // *should* try to simplify here (which might
-                    // involve forcing `table` and its dependencies to
-                    // completion. But instead we'll err on the side
-                    // of ambiguity for now. This will sometimes lose
-                    // us completeness around negative reasoning
-                    // (we'll give ambig when we could have given a
-                    // concrete yes/no answer).
+                    // FIXME(rust-lang-nursery/chalk#79) -- if answer
+                    // has delayed literals, we *should* try to
+                    // simplify here (which might involve forcing
+                    // `table` and its dependencies to completion. But
+                    // instead we'll err on the side of ambiguity for
+                    // now. This will sometimes lose us completeness
+                    // around negative reasoning (we'll give ambig
+                    // when we could have given a concrete yes/no
+                    // answer).
 
                     let simplified_answer = SimplifiedAnswer {
                         subst: answer.subst.clone(),
