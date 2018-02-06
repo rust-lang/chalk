@@ -1157,10 +1157,9 @@ fn suggested_subst() {
                     Foo: SomeTrait<T>
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::slg()] {
-            // FIXME: SLG does not impl the logic to privilege where clauses
+        } yields {
+            // FIXME: we need to rework the "favor environment" heuristic.
+            // Should be: "Ambiguous; suggested substitution [?0 := bool]"
             "Ambiguous; no inference guidance"
         }
 
@@ -1190,10 +1189,8 @@ fn suggested_subst() {
                     Bar: SomeTrait<T>
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::slg()] {
-            // FIXME: SLG does not impl the logic to privilege where clauses
+        } yields {
+            // FIXME: same as above, should be: "Ambiguous; suggested substitution [?0 := bool]"
             "Ambiguous; no inference guidance"
         }
 

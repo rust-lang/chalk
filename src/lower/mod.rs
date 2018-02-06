@@ -479,17 +479,13 @@ impl LowerWhereClause<ir::LeafGoal> for WhereClause {
         Ok(match *self {
             WhereClause::Implemented { .. }
             | WhereClause::ProjectionEq { .. }
-            | WhereClause::Normalize { .. } => {
+            | WhereClause::Normalize { .. }
+            | WhereClause::TyWellFormed { .. }
+            | WhereClause::TraitRefWellFormed { .. }
+            | WhereClause::TyFromEnv { .. }
+            | WhereClause::TraitRefFromEnv { .. } => {
                 let g: ir::DomainGoal = self.lower(env)?;
                 g.cast()
-            }
-            WhereClause::TyWellFormed { ref ty } => ir::WellFormed::Ty(ty.lower(env)?).cast(),
-            WhereClause::TraitRefWellFormed { ref trait_ref } => {
-                ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
-            }
-            WhereClause::TyFromEnv { ref ty } => ir::FromEnv::Ty(ty.lower(env)?).cast(),
-            WhereClause::TraitRefFromEnv { ref trait_ref } => {
-                ir::FromEnv::TraitRef(trait_ref.lower(env)?).cast()
             }
             WhereClause::UnifyTys { ref a, ref b } => ir::EqGoal {
                 a: ir::ParameterKind::Ty(a.lower(env)?),
@@ -936,7 +932,16 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 g.lower_quantified(env, ir::QuantifierKind::Exists, ids)
             }
             Goal::Implies(ref wc, ref g) => {
-                Ok(Box::new(ir::Goal::Implies(wc.lower(env)?, g.lower(env)?)))
+                // We "elaborate" implied bounds by lowering goals like `T: Trait` and
+                // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`
+                // in the assumptions of an `if` goal, e.g. `if (T: Trait) { ... }` lowers to
+                // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
+                let where_clauses =
+                    wc.lower(env)?
+                      .into_iter()
+                      .map(|wc| wc.into_from_env_clause())
+                      .collect();
+                Ok(Box::new(ir::Goal::Implies(where_clauses, g.lower(env)?)))
             }
             Goal::And(ref g1, ref g2) => {
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?)))
