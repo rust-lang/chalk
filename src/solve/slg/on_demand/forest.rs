@@ -8,7 +8,7 @@ use solve::slg::on_demand::tables::Tables;
 use solve::slg::on_demand::table::{Answer, AnswerIndex};
 use std::sync::Arc;
 
-pub struct Forest {
+crate struct Forest {
     crate program: Arc<ProgramEnvironment>,
     crate tables: Tables,
     crate stack: Stack,
@@ -65,7 +65,7 @@ impl Forest {
     /// iterator. Each time you invoke `next`, it will do the work to
     /// extract one more answer. These answers are cached in between
     /// invocations. Invoking `next` fewer times is preferable =)
-    pub fn iter_answers<'f>(
+    pub(super) fn iter_answers<'f>(
         &'f mut self,
         goal: &UCanonicalGoal,
     ) -> impl Iterator<Item = SimplifiedAnswer> + 'f {
@@ -77,7 +77,7 @@ impl Forest {
     /// Solves a given goal, producing the solution. This will do only
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
-    pub fn solve(
+    crate fn solve(
         &mut self,
         goal: &UCanonicalGoal,
     ) -> Option<Solution> {
@@ -133,14 +133,15 @@ impl<'forest> Iterator for ForestSolver<'forest> {
                 Ok(()) => {
                     let answer = self.forest.answer(self.table, self.answer);
 
-                    // FIXME -- if answer has delayed literals, we
-                    // *should* try to simplify here (which might
-                    // involve forcing `table` and its dependencies to
-                    // completion. But instead we'll err on the side
-                    // of ambiguity for now. This will sometimes lose
-                    // us completeness around negative reasoning
-                    // (we'll give ambig when we could have given a
-                    // concrete yes/no answer).
+                    // FIXME(rust-lang-nursery/chalk#79) -- if answer
+                    // has delayed literals, we *should* try to
+                    // simplify here (which might involve forcing
+                    // `table` and its dependencies to completion. But
+                    // instead we'll err on the side of ambiguity for
+                    // now. This will sometimes lose us completeness
+                    // around negative reasoning (we'll give ambig
+                    // when we could have given a concrete yes/no
+                    // answer).
 
                     let simplified_answer = SimplifiedAnswer {
                         subst: answer.subst.clone(),

@@ -4,7 +4,7 @@
 
 #![cfg_attr(not(test), allow(dead_code))] // FOR NOW
 
-pub mod forest;
+crate mod forest;
 
 mod logic;
 mod stack;
@@ -22,7 +22,7 @@ use self::forest::Forest;
 
 /// Convenience fn for solving a root goal. It would be better to
 /// createa a `Forest` so as to enable cahcing between goals, however.
-pub fn solve_root_goal(
+crate fn solve_root_goal(
     max_size: usize,
     program: &Arc<ProgramEnvironment>,
     root_goal: &UCanonicalGoal,

@@ -4,7 +4,7 @@ use super::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder}
 
 /// Methods for converting debruijn indices to move values into or out
 /// of binders.
-pub trait Shift: Fold {
+crate trait Shift: Fold {
     /// Shifts debruijn indices in `self` **up**, which is used when a
     /// value is being placed under additional levels of binders.
     ///

@@ -25,7 +25,7 @@ impl InferenceTable {
     ///
     /// A substitution mapping from the free variables to their re-bound form is
     /// also returned.
-    pub fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T::Result> {
+    crate fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T::Result> {
         debug!("canonicalize({:#?})", value);
         let mut q = Canonicalizer {
             table: self,
@@ -48,33 +48,16 @@ impl InferenceTable {
 }
 
 #[derive(Debug)]
-pub struct Canonicalized<T> {
+crate struct Canonicalized<T> {
     /// The canonicalized result.
-    pub quantified: Canonical<T>,
+    crate quantified: Canonical<T>,
 
     /// The free existential variables, along with the universes they inhabit.
-    pub free_vars: Vec<ParameterInferenceVariable>,
+    crate free_vars: Vec<ParameterInferenceVariable>,
 
     /// The maximum universe of any universally quantified variables
     /// encountered.
-    pub max_universe: UniverseIndex,
-}
-
-impl<T> Canonicalized<T> {
-    /// Returns a tuple of:
-    ///
-    /// - the quantified value Q
-    /// - a substitution S which, if applied to Q, would yield the original value V
-    ///   from which Q was derived.
-    ///
-    /// NB. You can apply a substitution with `Q.substitute(&S)`.
-    pub fn into_quantified_and_subst(self) -> (Canonical<T>, Substitution) {
-        let subst = Substitution {
-            parameters: self.free_vars.iter().map(|free_var| free_var.to_parameter()).collect()
-        };
-
-        (self.quantified, subst)
-    }
+    crate max_universe: UniverseIndex,
 }
 
 struct Canonicalizer<'q> {

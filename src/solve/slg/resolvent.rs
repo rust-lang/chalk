@@ -7,8 +7,7 @@ use solve::infer::{InferenceTable, unify::UnificationResult};
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
-use super::{CanonicalConstrainedSubst, CanonicalGoal, CanonicalPendingExClause, DelayedLiteral,
-            ExClause, Literal, PendingExClause, Satisfiable, StackIndex, TableIndex};
+use super::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Literal, Satisfiable};
 
 ///////////////////////////////////////////////////////////////////////////
 // SLG RESOLVENTS
@@ -45,53 +44,6 @@ use super::{CanonicalConstrainedSubst, CanonicalGoal, CanonicalPendingExClause, 
 //     S(A :- D | L1...Li-1, L1'...L'm, Li+1...Ln)
 //
 // is the SLG resolvent of G with C.
-
-/// Applies the SLG resolvent algorithm to incorporate a new
-/// answer and apply it to a previously blocked ex-clause.
-pub(super) fn resolvent_pending(
-    infer: &mut InferenceTable,
-    pending_ex_clause: &CanonicalPendingExClause,
-    answer_table_goal: &CanonicalGoal,
-    answer_subst: &CanonicalConstrainedSubst,
-) -> Satisfiable<(StackIndex, ExClause)> {
-    debug_heading!(
-        "resolvent_pending(\
-         \n    pending_ex_clause={:?},\
-         \n    answer_table_goal={:?},\
-         \n    answer_subst={:?})",
-        pending_ex_clause,
-        answer_table_goal,
-        answer_subst
-    );
-
-    let PendingExClause {
-        goal_depth,
-        subst,
-        selected_goal,
-        delayed_literals,
-        constraints,
-        subgoals,
-    } = infer.instantiate_canonical(pending_ex_clause);
-
-    let ex_clause = ExClause {
-        subst,
-        delayed_literals,
-        constraints,
-        subgoals,
-    };
-
-    let result = apply_answer_subst(
-        infer,
-        ex_clause,
-        &selected_goal,
-        answer_table_goal,
-        answer_subst,
-    ).map(|r| (goal_depth, r));
-
-    info!("resolvent = {:?}", result);
-
-    result
-}
 
 /// Applies the SLG resolvent algorithm to incorporate a program
 /// clause into the main X-clause, producing a new X-clause that
@@ -199,49 +151,6 @@ pub(super) fn resolvent_clause(
 //
 // is the SLG factor of G with C. We alter the process mildly to insert
 // some clauses into `^` -- in particular, the side-effects of unification.
-
-pub(super) fn factor_pending(
-    infer: &mut InferenceTable,
-    pending_ex_clause: &CanonicalPendingExClause,
-    answer_table: TableIndex,
-    answer_table_goal: &CanonicalGoal,
-    answer_subst: &CanonicalConstrainedSubst,
-) -> Satisfiable<(StackIndex, ExClause)> {
-    let PendingExClause {
-        goal_depth,
-        subst,
-        selected_goal,
-        delayed_literals,
-        constraints,
-        subgoals,
-    } = infer.instantiate_canonical(pending_ex_clause);
-
-    let ex_clause = ExClause {
-        subst,
-        delayed_literals,
-        constraints,
-        subgoals,
-    };
-
-    let result = apply_answer_subst(
-        infer,
-        ex_clause,
-        &selected_goal,
-        answer_table_goal,
-        answer_subst,
-    ).map(|mut ex_clause| {
-        // Push Li into the list of delayed literals.
-        ex_clause
-            .delayed_literals
-            .push(DelayedLiteral::Positive(answer_table, answer_subst.clone()));
-
-        (goal_depth, ex_clause)
-    });
-
-    debug!("factor_pending: result = {:?}", result);
-
-    result
-}
 
 ///////////////////////////////////////////////////////////////////////////
 // apply_answer_subst

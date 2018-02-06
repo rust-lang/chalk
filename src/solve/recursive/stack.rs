@@ -7,19 +7,19 @@ use std::usize;
 
 use super::UCanonicalGoal;
 
-pub struct Stack {
+crate struct Stack {
     program: Arc<ProgramEnvironment>,
     entries: Vec<StackEntry>,
     overflow_depth: usize,
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct StackDepth {
+crate struct StackDepth {
     depth: usize,
 }
 
 /// The data we actively keep for each goal on the stack.
-pub struct StackEntry {
+crate struct StackEntry {
     /// Was this a coinductive goal?
     coinductive_goal: bool,
 
@@ -28,7 +28,7 @@ pub struct StackEntry {
 }
 
 impl Stack {
-    pub fn new(program: &Arc<ProgramEnvironment>, overflow_depth: usize) -> Self {
+    crate fn new(program: &Arc<ProgramEnvironment>, overflow_depth: usize) -> Self {
         Stack {
             program: program.clone(),
             entries: vec![],
@@ -36,11 +36,11 @@ impl Stack {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
+    crate fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
-    pub fn push(&mut self, goal: &UCanonicalGoal) -> StackDepth {
+    crate fn push(&mut self, goal: &UCanonicalGoal) -> StackDepth {
         let depth = StackDepth {
             depth: self.entries.len(),
         };
@@ -60,7 +60,7 @@ impl Stack {
         depth
     }
 
-    pub fn pop(&mut self, depth: StackDepth) {
+    crate fn pop(&mut self, depth: StackDepth) {
         assert_eq!(
             depth.depth + 1,
             self.entries.len(),
@@ -71,7 +71,7 @@ impl Stack {
 
     /// True if all the goals from the top of the stack down to (and
     /// including) the given depth are coinductive.
-    pub fn coinductive_cycle_from(&self, depth: StackDepth) -> bool {
+    crate fn coinductive_cycle_from(&self, depth: StackDepth) -> bool {
         self.entries[depth.depth..]
             .iter()
             .all(|entry| entry.coinductive_goal)
@@ -79,11 +79,11 @@ impl Stack {
 }
 
 impl StackEntry {
-    pub fn flag_cycle(&mut self) {
+    crate fn flag_cycle(&mut self) {
         self.cycle = true;
     }
 
-    pub fn read_and_reset_cycle_flag(&mut self) -> bool {
+    crate fn read_and_reset_cycle_flag(&mut self) -> bool {
         mem::replace(&mut self.cycle, false)
     }
 }

@@ -9,7 +9,7 @@ use std::sync::Arc;
 crate mod shift;
 mod subst;
 
-pub use self::subst::Subst;
+crate use self::subst::Subst;
 
 /// A "folder" is a transformer that can be used to make a copy of
 /// some term -- that is, some bit of IR, such as a `Goal` -- with
@@ -51,14 +51,14 @@ pub use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
+crate trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
     /// Returns a "dynamic" version of this trait. There is no
     /// **particular** reason to require this, except that I didn't
     /// feel like making `super_fold_ty` generic for no reason.
     fn to_dyn(&mut self) -> &mut Folder;
 }
 
-pub trait TypeFolder {
+crate trait TypeFolder {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty>;
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime>;
 }
@@ -74,7 +74,7 @@ impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
 /// their contents (note that free variables that are encountered in
 /// that process may still be substituted). The vast majority of
 /// folders implement this trait.
-pub trait DefaultTypeFolder {}
+crate trait DefaultTypeFolder {}
 
 impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for T {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
@@ -90,7 +90,7 @@ impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for 
 /// variables**; for example, if you folded over `Foo<?T> }`, where `?T`
 /// is an inference variable, then this would let you replace `?T` with
 /// some other type.
-pub trait ExistentialFolder {
+crate trait ExistentialFolder {
     /// Invoked for `Ty::Var` instances that are not bound within the type being folded
     /// over:
     ///
@@ -112,7 +112,7 @@ pub trait ExistentialFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `UniversalFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-pub trait IdentityExistentialFolder {}
+crate trait IdentityExistentialFolder {}
 
 impl<T: IdentityExistentialFolder> ExistentialFolder for T {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
@@ -128,7 +128,7 @@ impl<T: IdentityExistentialFolder> ExistentialFolder for T {
     }
 }
 
-pub trait UniversalFolder {
+crate trait UniversalFolder {
     /// Invoked for `Ty::Apply` instances where the type name is a `TypeName::ForAll`.
     /// Returns a type to use instead, which should be suitably shifted to account for `binders`.
     ///
@@ -147,7 +147,7 @@ pub trait UniversalFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `UniversalFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-pub trait IdentityUniversalFolder {}
+crate trait IdentityUniversalFolder {}
 
 impl<T: IdentityUniversalFolder> UniversalFolder for T {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
@@ -164,7 +164,7 @@ impl<T: IdentityUniversalFolder> UniversalFolder for T {
 }
 
 /// Applies the given folder to a value.
-pub trait Fold: Debug {
+crate trait Fold: Debug {
     /// The type of value that will be produced once folding is done.
     /// Typically this is `Self`, unless `Self` contains borrowed
     /// values, in which case owned values are produced (for example,
@@ -243,7 +243,7 @@ impl Fold for Ty {
     }
 }
 
-pub fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Fallible<Ty> {
+crate fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Fallible<Ty> {
     match *ty {
         Ty::Var(depth) => if depth >= binders {
             folder.fold_free_existential_ty(depth - binders, binders)
@@ -337,7 +337,7 @@ impl Fold for Lifetime {
     }
 }
 
-pub fn super_fold_lifetime(
+crate fn super_fold_lifetime(
     folder: &mut Folder,
     lifetime: &Lifetime,
     binders: usize,

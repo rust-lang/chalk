@@ -4,7 +4,7 @@ use std::cell::RefCell;
 mod index;
 
 lazy_static! {
-    pub static ref DEBUG_ENABLED: bool = {
+    pub(crate) static ref DEBUG_ENABLED: bool = {
         use std::env;
         env::var("CHALK_DEBUG")
             .ok()
@@ -13,7 +13,7 @@ lazy_static! {
             .unwrap_or(false)
     };
 
-    pub static ref INFO_ENABLED: bool = {
+    pub(crate) static ref INFO_ENABLED: bool = {
         use std::env;
         env::var("CHALK_DEBUG")
             .ok()
@@ -24,7 +24,7 @@ lazy_static! {
 }
 
 thread_local! {
-    pub static INDENT: RefCell<Vec<String>> = RefCell::new(vec![]);
+    crate static INDENT: RefCell<Vec<String>> = RefCell::new(vec![]);
 }
 
 // When CHALK_DEBUG is enabled, we only allow this many frames of
@@ -73,7 +73,7 @@ macro_rules! info_heading {
     }
 }
 
-pub fn dump(string: &str, suffix: &str) {
+crate fn dump(string: &str, suffix: &str) {
     let indent = ::macros::INDENT.with(|i| i.borrow().len());
     let mut first = true;
     for line in string.lines() {
@@ -96,12 +96,12 @@ pub fn dump(string: &str, suffix: &str) {
     eprintln!("{}", suffix);
 }
 
-pub struct Indent {
+crate struct Indent {
     enabled: bool,
 }
 
 impl Indent {
-    pub fn new(enabled: bool, value: String) -> Self {
+    crate fn new(enabled: bool, value: String) -> Self {
         if enabled {
             INDENT.with(|i| {
                 i.borrow_mut().push(value);

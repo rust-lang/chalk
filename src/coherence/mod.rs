@@ -9,8 +9,8 @@ mod solve;
 
 
 impl Program {
-    pub fn record_specialization_priorities(&mut self, solver_choice: SolverChoice) -> Result<()> {
-        ir::set_current_program(&Arc::new(self.clone()), || {
+    crate fn record_specialization_priorities(&mut self, solver_choice: SolverChoice) -> Result<()> {
+        ir::tls::set_current_program(&Arc::new(self.clone()), || {
             let forest = self.build_specialization_forest(solver_choice)?;
 
             // Visit every root in the forest & set specialization

@@ -20,7 +20,7 @@ fn run_bench(
 ) {
     let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
     let env = Arc::new(program.environment());
-    ir::set_current_program(&program, || {
+    ir::tls::set_current_program(&program, || {
         let goal = parse_and_lower_goal(&program, goal_text).unwrap();
         let peeled_goal = goal.into_peeled_goal();
 
@@ -126,26 +126,10 @@ fn cycley_recursive_uncached(b: &mut Bencher) {
 }
 
 #[bench]
-#[ignore] // FIXME SLG solver runs for too long here
-fn cycley_eager_slg(b: &mut Bencher) {
+fn cycley_slg(b: &mut Bencher) {
     run_bench(
         CYCLEY,
         SolverChoice::SLG {
-            eager: true,
-            max_size: 20,
-        },
-        CYCLEY_GOAL,
-        b,
-        "No possible solution", // FIXME
-    );
-}
-
-#[bench]
-fn cycley_on_demand_slg(b: &mut Bencher) {
-    run_bench(
-        CYCLEY,
-        SolverChoice::SLG {
-            eager: false,
             max_size: 20,
         },
         CYCLEY_GOAL,

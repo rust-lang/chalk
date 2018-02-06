@@ -20,7 +20,7 @@ use std::sync::Arc;
 /// represented by two distinct `ItemId` values, and the impl for
 /// `ItemId` requires that all `ItemId` in the two zipped values match
 /// up.
-pub trait Zipper {
+crate trait Zipper {
     /// Indicates that the two types `a` and `b` were found in
     /// matching spots, beneath `binders` levels of binders.
     fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Fallible<()>;
@@ -59,7 +59,7 @@ impl<'f, Z: Zipper> Zipper for &'f mut Z {
 ///
 /// To implement the trait, typically you would use one of the macros
 /// like `eq_zip!`, `struct_zip!`, or `enum_zip!`.
-pub trait Zip: Debug {
+crate trait Zip: Debug {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>;
 }
 

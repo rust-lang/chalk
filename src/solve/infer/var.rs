@@ -31,7 +31,7 @@ use std::u32;
 ///     "downcast" the resulting variable using
 ///     e.g. `value.ty().unwrap()`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct InferenceVariable {
+crate struct InferenceVariable {
     index: u32,
 }
 
@@ -43,7 +43,7 @@ impl InferenceVariable {
     /// enclosing binders B, then it refers to an inference variable,
     /// and the inference variable can be created via
     /// `InferenceVariable::from_depth(D - B)`.
-    pub fn from_depth(depth: usize) -> InferenceVariable {
+    crate fn from_depth(depth: usize) -> InferenceVariable {
         assert!(depth < u32::MAX as usize);
         InferenceVariable {
             index: depth as u32,
@@ -53,21 +53,15 @@ impl InferenceVariable {
     /// Convert this inference variable into a type. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a type (we can't check it).
-    pub fn to_ty(self) -> Ty {
+    crate fn to_ty(self) -> Ty {
         Ty::Var(self.index as usize)
     }
 
     /// Convert this inference variable into a lifetime. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a lifetime (we can't check it).
-    pub fn to_lifetime(self) -> Lifetime {
+    crate fn to_lifetime(self) -> Lifetime {
         Lifetime::Var(self.index as usize)
-    }
-
-    /// Convert this variable to its internal index. Occasionally its
-    /// useful to index into a vector.
-    pub fn to_usize(self) -> usize {
-        self.index as usize
     }
 }
 
@@ -91,18 +85,9 @@ impl UnifyKey for InferenceVariable {
 /// universe index; when the inference variable is assigned a value, it becomes
 /// bound and records that value. See `InferenceVariable` for more details.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum InferenceValue {
+crate enum InferenceValue {
     Unbound(UniverseIndex),
     Bound(Parameter),
-}
-
-impl InferenceValue {
-    pub fn unbound(&self) -> Option<UniverseIndex> {
-        match *self {
-            InferenceValue::Unbound(ui) => Some(ui),
-            _ => None,
-        }
-    }
 }
 
 impl From<Ty> for InferenceValue {

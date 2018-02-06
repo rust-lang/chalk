@@ -57,8 +57,7 @@ macro_rules! test {
               @parsed_goals[
                   $($parsed_goals)*
                       (stringify!($goal), SolverChoice::recursive(), $expected)
-                      (stringify!($goal), SolverChoice::eager_slg(), $expected)
-                      (stringify!($goal), SolverChoice::on_demand_slg(), $expected)
+                      (stringify!($goal), SolverChoice::slg(), $expected)
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };
@@ -104,7 +103,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
             (program, env)
         });
 
-        ir::set_current_program(&program, || {
+        ir::tls::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
@@ -527,9 +526,7 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::on_demand_slg()] {
-            "Unique; substitution [?0 := (Iterator::Item)<!1>]"
-        } yields[SolverChoice::eager_slg()] {
+        } yields[SolverChoice::slg()] {
             "Unique; substitution [?0 := (Iterator::Item)<!1>]"
         }
 
@@ -1116,13 +1113,7 @@ fn unify_quantified_lifetimes() {
              substitution [?0 := '?0, ?1 := '?0], \
              lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
              }"
-        } yields[SolverChoice::on_demand_slg()] {
-            // SLG yields this distinct, but equivalent, result
-            "Unique; for<?U0> { \
-             substitution [?0 := '?0, ?1 := '!1], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
-             }"
-        } yields[SolverChoice::eager_slg()] {
+        } yields[SolverChoice::slg()] {
             // SLG yields this distinct, but equivalent, result
             "Unique; for<?U0> { \
              substitution [?0 := '?0, ?1 := '!1], \
@@ -1373,10 +1364,7 @@ fn suggested_subst() {
             }
         } yields[SolverChoice::recursive()] {
             "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::on_demand_slg()] {
-            // FIXME: SLG does not impl the logic to privilege where clauses
-            "Ambiguous; no inference guidance"
-        } yields[SolverChoice::eager_slg()] {
+        } yields[SolverChoice::slg()] {
             // FIXME: SLG does not impl the logic to privilege where clauses
             "Ambiguous; no inference guidance"
         }
@@ -1409,7 +1397,7 @@ fn suggested_subst() {
             }
         } yields[SolverChoice::recursive()] {
             "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::on_demand_slg(), SolverChoice::eager_slg()] {
+        } yields[SolverChoice::slg()] {
             // FIXME: SLG does not impl the logic to privilege where clauses
             "Ambiguous; no inference guidance"
         }
@@ -1464,10 +1452,8 @@ fn simple_negation() {
             exists<T> {
                 not { T: Foo }
             }
-        } yields[SolverChoice::on_demand_slg(), SolverChoice::recursive()] {
+        } yields {
             "Ambig"
-        } yields[SolverChoice::eager_slg() ] {
-            "Exploration error: Floundered"
         }
 
         goal {
@@ -1580,10 +1566,8 @@ fn negation_free_vars() {
             exists<T> {
                 not { Vec<T>: Foo }
             }
-        } yields[SolverChoice::on_demand_slg(), SolverChoice::recursive()] {
+        } yields {
             "Ambig"
-        } yields[SolverChoice::eager_slg() ] {
-            "Exploration error: Floundered"
         }
     }
 }
@@ -1758,20 +1742,14 @@ fn coinductive_semantics() {
                     List<T>: Send
                 }
             }
-        } yields[SolverChoice::recursive(), SolverChoice::on_demand_slg()] {
+        } yields {
             "Unique"
-        } yields[SolverChoice::eager_slg()] {
-            // FIXME coinduction not implemented for eager slg
-            "No possible solution"
         }
 
         goal {
             List<i32>: Send
-        } yields[SolverChoice::recursive(), SolverChoice::on_demand_slg()] {
+        } yields {
             "Unique"
-        } yields[SolverChoice::eager_slg()] {
-            // FIXME coinduction not implemented for eager slg
-            "No possible solution"
         }
 
         goal {
@@ -2017,23 +1995,11 @@ fn overflow_universe() {
 
         goal {
             Foo: Bar
-        } yields[SolverChoice::on_demand_slg(), SolverChoice::recursive()] {
+        } yields {
             // The internal universe canonicalization in the on-demand/recursive
             // solver means that when we are asked to solve (e.g.)
             // `!2: Bar`, we rewrite that to `!1: Bar`, identifying a
             // cycle.
-            "No possible solution"
-        } yields[SolverChoice::eager_slg()] {
-            // The SLG solver here *currently* works a bit by
-            // accident, as it does not yet do universe
-            // canonicalization internally. However, we wind up with a table
-            // for the goal
-            //
-            //     forall<Y> { Y: Bar }
-            //
-            // and that table never produces any answers. But if we
-            // could induce a cycle !1: Bar to !2: Bar to !3: Bar etc,
-            // the SLG solver would loop forever. Ungreat.
             "No possible solution"
         }
     }
@@ -2122,7 +2088,7 @@ fn projection_from_env_slow() {
                     T: Sized
                 }
             }
-        } yields[SolverChoice::on_demand_slg()] {
+        } yields[SolverChoice::slg()] {
             "Unique"
         }
     }

@@ -6,7 +6,7 @@ use fold::shift::Shift;
 use ir::*;
 use solve::infer::InferenceTable;
 
-pub fn truncate<T>(
+crate fn truncate<T>(
     infer: &mut InferenceTable,
     max_size: usize,
     value: &T,
@@ -32,14 +32,14 @@ where
 }
 
 /// Result from `truncate`.
-pub struct Truncated<T> {
+crate struct Truncated<T> {
     /// If true, then `value` was truncated relative to the original
     /// (e.g., fresh inference variables were introduced). If false,
     /// then it is effectively a clone of the original.
-    pub overflow: bool,
+    crate overflow: bool,
 
     /// Possibly truncate value.
-    pub value: T,
+    crate value: T,
 }
 
 struct Truncater<'infer> {
