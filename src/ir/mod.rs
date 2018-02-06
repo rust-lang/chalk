@@ -753,16 +753,11 @@ impl<T> UCanonical<T> {
 }
 
 impl UCanonical<InEnvironment<Goal>> {
-<<<<<<< HEAD
-    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`.
-    crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
-=======
     /// A goal has coinductive semantics if it is of the form `T: AutoTrait`, or if it is of the
     /// form `WellFormed(T: Trait)` where `Trait` is any trait. The latter is needed for dealing
     /// with WF requirements and cyclic traits, which generates cycles in the proof tree which must
     /// not be rejected but instead must be treated as a success.
-    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
->>>>>>> Add documentation
+    crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
         match &self.canonical.value.goal {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Implemented(tr))) => {
                 let trait_datum = &program.trait_data[&tr.trait_id];

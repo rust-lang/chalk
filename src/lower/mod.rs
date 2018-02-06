@@ -1387,8 +1387,7 @@ impl ir::AssociatedTyDatum {
         // particular, whenever normalization is possible, we cannot
         // solve that projection uniquely, since we can now elaborate
         // `ProjectionEq` to fallback *or* normalize it. So instead we
-        // handle this kind of reasoning by expanding "projection
-        // equality" predicates (see `DomainGoal::expanded`).
+        // handle this kind of reasoning through the `FromEnv` predicate.
         //
         // We also generate rules specific to WF requirements and implied bounds,
         // see below.

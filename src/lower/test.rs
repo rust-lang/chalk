@@ -32,9 +32,9 @@ macro_rules! lowering_error {
 
 
 fn parse_and_lower(text: &str) -> Result<Program> {
-    // Use the on-demand SLG solver to avoid ambiguities on projection types encountered when
-    // using the recursive solver.
-    chalk_parse::parse_program(text)?.lower(SolverChoice::on_demand_slg())
+    // FIXME: Use the SLG solver to avoid ambiguities on projection types encountered
+    // when using the recursive solver.
+    chalk_parse::parse_program(text)?.lower(SolverChoice::slg())
 }
 
 fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
@@ -575,7 +575,6 @@ fn ill_formed_trait_decl() {
         }
     }
 }
-
 #[test]
 fn cyclic_traits() {
     lowering_success! {
@@ -587,10 +586,7 @@ fn cyclic_traits() {
             impl<T> A for T { }
         }
     }
-}
 
-#[test]
-fn cyclic_traits_error() {
     lowering_error! {
         program {
             trait Copy { }
@@ -598,10 +594,24 @@ fn cyclic_traits_error() {
             trait A where Self: B, Self: Copy {}
             trait B where Self: A { }
 
+            // This impl won't be able to prove that `T: Copy` holds.
             impl<T> B for T {}
+
             impl<T> A for T where T: B {}
         } error_msg {
             "trait impl for \"B\" does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Copy { }
+
+            trait A where Self: B, Self: Copy {}
+            trait B where Self: A { }
+
+            impl<T> B for T where T: Copy {}
+            impl<T> A for T where T: B {}
         }
     }
 }
@@ -636,6 +646,7 @@ fn ill_formed_assoc_ty() {
             }
 
             impl Bar for i32 {
+                // `OnlyFoo<i32>` is ill-formed because `i32: Foo` does not hold.
                 type Value = OnlyFoo<i32>;
             }
         } error_msg {
@@ -660,6 +671,7 @@ fn implied_bounds() {
             }
 
             impl<K> Foo for Set<K> {
+                // Here, `WF(Set<K>)` implies `K: Hash` and hence `OnlyEq<K>` is WF.
                 type Value = OnlyEq<K>;
             }
         }
@@ -710,6 +722,8 @@ fn wf_requiremements_for_projection() {
             }
 
             impl<T> Foo for T {
+                // The projection is well-formed if `T: Iterator` holds, which cannot
+                // be proved here.
                 type Value = <T as Iterator>::Item;
             }
         } error_msg {
@@ -744,6 +758,8 @@ fn projection_type_in_header() {
 
             trait Bar { }
 
+            // Projection types in an impl header are not assumed to be well-formed,
+            // an explicit where clause is needed (see below).
             impl<T> Bar for <T as Foo>::Value { }
         } error_msg {
             "trait impl for \"Bar\" does not meet well-formedness requirements"

@@ -13,7 +13,7 @@ struct WfSolver {
 
 impl Program {
     pub fn verify_well_formedness(&self, solver_choice: SolverChoice) -> Result<()> {
-        set_current_program(&Arc::new(self.clone()), || self.solve_wf_requirements(solver_choice))
+        tls::set_current_program(&Arc::new(self.clone()), || self.solve_wf_requirements(solver_choice))
     }
 
     fn solve_wf_requirements(&self, solver_choice: SolverChoice) -> Result<()> {
@@ -79,9 +79,15 @@ impl FoldInputTypes for Ty {
                 proj.parameters.fold(accumulator);
             }
 
-            // Type parameters and higher-kinded types do not carry any input types (so we can sort
-            // of assume they are always WF).
-            Ty::Var(..) | Ty::ForAll(..) => (),
+            // Type parameters do not carry any input types (so we can sort of assume they are
+            // always WF).
+            Ty::Var(..) => (),
+
+            // Higher-kinded types such as `for<'a> fn(&'a u32)` introduce their own implied
+            // bounds, and these bounds will be enforced upon calling such a function. In some
+            // sense, well-formedness requirements for the input types of an HKT will be enforced
+            // lazily, so no need to include them here.
+            Ty::ForAll(..) => (),
         }
     }
 }
@@ -244,7 +250,7 @@ impl WfSolver {
                        .map(|ty| WellFormed::Ty(ty).cast())
                        .chain(assoc_ty_goals)
                        .chain(Some(WellFormed::TraitRef(trait_ref.clone())).cast());
-        
+
         let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
                         .expect("at least one goal");
 
