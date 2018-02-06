@@ -29,6 +29,11 @@ pub struct StructDefn {
     pub parameter_kinds: Vec<ParameterKind>,
     pub where_clauses: Vec<WhereClause>,
     pub fields: Vec<Field>,
+    pub flags: StructFlags,
+}
+
+pub struct StructFlags {
+    pub external: bool,
 }
 
 pub struct TraitDefn {
@@ -42,6 +47,7 @@ pub struct TraitDefn {
 pub struct TraitFlags {
     pub auto: bool,
     pub marker: bool,
+    pub external: bool,
 }
 
 pub struct AssocTyDefn {

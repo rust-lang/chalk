@@ -535,6 +535,9 @@ impl LowerStructDefn for StructDefn {
                 self_ty,
                 fields: fields?,
                 where_clauses,
+                flags: ir::StructFlags {
+                    external: self.flags.external,
+                },
             })
         })?;
 
@@ -881,6 +884,7 @@ impl LowerTrait for TraitDefn {
                 flags: ir::TraitFlags {
                     auto: self.flags.auto,
                     marker: self.flags.marker,
+                    external: self.flags.external,
                 },
             })
         })?;
