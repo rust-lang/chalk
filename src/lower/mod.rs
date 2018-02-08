@@ -1113,7 +1113,7 @@ impl ir::AssociatedTyValue {
     ///
     /// ```notrust
     /// forall<'a, T> {
-    ///     (Vec<T>: Iterable<IntoIter<'a> = Iter<'a, T>>) :-
+    ///     Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>>) :-
     ///         (Vec<T>: Iterable),  // (1)
     ///         (T: 'a)              // (2)
     /// }
@@ -1123,9 +1123,9 @@ impl ir::AssociatedTyValue {
     ///
     /// ```notrust
     /// forall<'a, T> {
-    ///     Vec<T>::IntoIter<'a> ==> Iter<'a, T> :-
+    ///     UnselectedNormalize(Vec<T>::IntoIter<'a> -> Iter<'a, T>) :-
     ///         InScope(Iterable),
-    ///         <Vec<T> as Iterable>::IntoIter<'a> ==> Iter<'a, T>
+    ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>)
     /// }
     /// ```
     fn to_program_clauses(
@@ -1157,19 +1157,25 @@ impl ir::AssociatedTyValue {
             .chain(self.value.value.where_clauses.clone().cast())
             .collect();
 
+        // Bound parameters + `Self` type of the trait-ref
         let parameters: Vec<_> = {
             // First add refs to the bound parameters (`'a`, in above example)
             let parameters = self.value.binders.iter().zip(0..).map(|p| p.to_parameter());
 
-            // Then add the trait-ref parameters (`Vec<T>`, in above example)
+            // Then add the `Self` type (`Vec<T>`, in above example)
             parameters
-                .chain(impl_trait_ref.parameters.clone())
+                .chain(Some(impl_trait_ref.parameters[0].clone()))
                 .collect()
         };
 
         let projection = ir::ProjectionTy {
             associated_ty_id: self.associated_ty_id,
-            parameters: parameters.clone(),
+
+            // Add the remaining parameters of the trait-ref if any
+            parameters: parameters.iter()
+                                  .chain(&impl_trait_ref.parameters[1..])
+                                  .cloned()
+                                  .collect(),
         };
 
         let normalize_goal = ir::DomainGoal::Normalize(ir::Normalize {
