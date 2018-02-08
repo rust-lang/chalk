@@ -168,10 +168,11 @@ impl WfSolver {
         // We retrieve all the input types of the where clauses appearing on the trait impl,
         // e.g. in:
         // ```
-        // impl<T, K> Foo for (Set<K>, Vec<Box<T>>) { ... }
+        // impl<T, K> Foo for (T, K) where T: Iterator<Item = (HashSet<K>, Vec<Box<T>>)> { ... }
         // ```
-        // we would retrieve `Set<K>`, `Box<T>`, `Vec<Box<T>>`, `(Set<K>, Vec<Box<T>>)`.
-        // We will have to prove that these types are well-formed.
+        // we would retrieve `HashSet<K>`, `Box<T>`, `Vec<Box<T>>`, `(HashSet<K>, Vec<Box<T>>)`.
+        // We will have to prove that these types are well-formed (e.g. an additional `K: Hash`
+        // bound would be needed here).
         let mut input_types = Vec::new();
         impl_datum.binders.value.where_clauses.fold(&mut input_types);
 
