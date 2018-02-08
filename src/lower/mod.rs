@@ -1308,8 +1308,9 @@ impl ir::TraitDatum {
         //    }
         //
         // and the reverse rules:
+        //
         //    forall<Self, T> { (Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
-        //    forall<Self, T> { FromEnv(Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
+        //    forall<Self, T> { FromEnv(Self: Eq<T>) :- FromEnv(Self: Ord<T>) }
 
         let trait_ref = self.binders.value.trait_ref.clone();
 
