@@ -563,6 +563,28 @@ fn normalize_basic() {
     }
 }
 
+#[test]
+fn normalize_implied_bound() {
+    test! {
+        program {
+            trait Clone { }
+            trait Iterator where Self: Clone { type Item; }
+            struct u32 { }
+        }
+
+        goal {
+            forall<T> {
+                if (T: Iterator<Item = u32>) {
+                    T: Clone
+                }
+            }
+        } yields {
+            "Unique; substitution []"
+        }
+    }
+}
+
+
 /// Demonstrates that, given the expected value of the associated
 /// type, we can use that to narrow down the relevant impls.
 #[test]
