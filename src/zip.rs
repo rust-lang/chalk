@@ -224,8 +224,8 @@ enum_zip!(DomainGoal {
     InScope,
 });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
-enum_zip!(WellFormed { Ty, TraitRef, Normalize });
-enum_zip!(FromEnv { Ty, TraitRef, Normalize });
+enum_zip!(WellFormed { Ty, TraitRef, ProjectionEq });
+enum_zip!(FromEnv { Ty, TraitRef, ProjectionEq });
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the

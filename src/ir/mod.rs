@@ -476,7 +476,7 @@ impl DomainGoal {
     crate fn into_well_formed_clause(self) -> DomainGoal {
         match self {
             DomainGoal::Implemented(tr) => DomainGoal::WellFormed(WellFormed::TraitRef(tr)),
-            DomainGoal::Normalize(n) => DomainGoal::WellFormed(WellFormed::Normalize(n)),
+            DomainGoal::ProjectionEq(n) => DomainGoal::WellFormed(WellFormed::ProjectionEq(n)),
             goal => goal,
         }
     }
@@ -485,7 +485,7 @@ impl DomainGoal {
     crate fn into_from_env_clause(self) -> DomainGoal {
         match self {
             DomainGoal::Implemented(tr) => DomainGoal::FromEnv(FromEnv::TraitRef(tr)),
-            DomainGoal::Normalize(n) => DomainGoal::FromEnv(FromEnv::Normalize(n)),
+            DomainGoal::ProjectionEq(n) => DomainGoal::FromEnv(FromEnv::ProjectionEq(n)),
             goal => goal,
         }
     }
@@ -521,7 +521,7 @@ pub struct EqGoal {
 pub enum WellFormed {
     Ty(Ty),
     TraitRef(TraitRef),
-    Normalize(Normalize),
+    ProjectionEq(ProjectionEq),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -547,7 +547,7 @@ pub enum WellFormed {
 pub enum FromEnv {
     Ty(Ty),
     TraitRef(TraitRef),
-    Normalize(Normalize),
+    ProjectionEq(ProjectionEq),
 }
 
 /// Proves that the given projection **normalizes** to the given

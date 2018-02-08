@@ -1468,6 +1468,9 @@ impl ir::AssociatedTyDatum {
         // `Normalize(<T as Foo>::Assoc -> U)`
         let normalize = ir::Normalize { projection: projection.clone(), ty: ty.clone() };
 
+        // `ProjectionEq(<T as Foo>::Assoc = U)`
+        let projection_eq = ir::ProjectionEq { projection: projection.clone(), ty };
+
         //    forall<T> {
         //        ProjectionEq(<T as Foo>::Assoc = U) :-
         //            Normalize(<T as Foo>::Assoc -> U)
@@ -1476,10 +1479,7 @@ impl ir::AssociatedTyDatum {
             implication: ir::Binders {
                 binders: binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: ir::ProjectionEq {
-                        projection: projection.clone(),
-                        ty,
-                    }.cast(),
+                    consequence: projection_eq.clone().cast(),
                     conditions: vec![normalize.clone().cast()],
                 },
             },
@@ -1492,16 +1492,16 @@ impl ir::AssociatedTyDatum {
         //
         //    forall<T> {
         //        WellFormed(T: Foo<Assoc = U>) :-
-        //            WellFormed(T: Foo), Normalize(<T as Foo>::Assoc -> U)
+        //            WellFormed(T: Foo), ProjectionEq(<T as Foo>::Assoc = U)
         //    }
         clauses.push(ir::ProgramClause {
             implication: ir::Binders {
                 binders: binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: ir::WellFormed::Normalize(normalize.clone()).cast(),
+                    consequence: ir::WellFormed::ProjectionEq(projection_eq.clone()).cast(),
                     conditions: vec![
-                        normalize.clone().cast(),
-                        ir::WellFormed::TraitRef(trait_ref.clone()).cast()
+                        ir::WellFormed::TraitRef(trait_ref.clone()).cast(),
+                        projection_eq.clone().cast()
                     ],
                 }
             }
@@ -1517,7 +1517,7 @@ impl ir::AssociatedTyDatum {
                 binders: binders.clone(),
                 value: ir::ProgramClauseImplication {
                     consequence: ir::FromEnv::TraitRef(trait_ref).cast(),
-                    conditions: vec![ir::FromEnv::Normalize(normalize.clone()).cast()],
+                    conditions: vec![ir::FromEnv::ProjectionEq(projection_eq.clone()).cast()],
                 },
             }
         });
@@ -1525,14 +1525,14 @@ impl ir::AssociatedTyDatum {
         // And the other one being:
         //
         //    forall<T> {
-        //        Normalize(<T as Foo>::Assoc -> U) :- FromEnv(T: Foo<Assoc = U>)
+        //        ProjectionEq(<T as Foo>::Assoc = U) :- FromEnv(T: Foo<Assoc = U>)
         //    }
         clauses.push(ir::ProgramClause {
             implication: ir::Binders {
                 binders: binders,
                 value: ir::ProgramClauseImplication {
-                    consequence: normalize.clone().cast(),
-                    conditions: vec![ir::FromEnv::Normalize(normalize).cast()],
+                    consequence: projection_eq.clone().cast(),
+                    conditions: vec![ir::FromEnv::ProjectionEq(projection_eq).cast()],
                 },
             }
         });
