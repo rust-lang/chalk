@@ -694,7 +694,7 @@ fn example_3_3_EWFS() {
                                 TableIndex(1)
                             ),
                             Negative(
-                                TableIndex(2)
+                                TableIndex(4)
                             )
                         ]
                     }

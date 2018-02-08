@@ -17,12 +17,7 @@ impl<T: Zip> CouldMatch<T> for T {
             fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Fallible<()> {
                 let could_match = match (a, b) {
                     (&Ty::Apply(ref a), &Ty::Apply(ref b)) => {
-                        let names_could_match = match (a.name, b.name) {
-                            (TypeName::ItemId(item_a), TypeName::ItemId(item_b)) => {
-                                item_a == item_b
-                            }
-                            _ => true,
-                        };
+                        let names_could_match = a.name == b.name;
 
                         names_could_match
                             && a.parameters

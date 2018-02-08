@@ -17,8 +17,9 @@ fn run_bench(
     goal_text: &str,
     bencher: &mut Bencher,
     expected: &str,
+    skip_coherence: bool
 ) {
-    let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
+    let program = Arc::new(parse_and_lower_program(program_text, solver_choice, skip_coherence).unwrap());
     let env = Arc::new(program.environment());
     ir::tls::set_current_program(&program, || {
         let goal = parse_and_lower_goal(&program, goal_text).unwrap();
@@ -108,6 +109,7 @@ fn cycley_recursive_cached(b: &mut Bencher) {
         CYCLEY_GOAL,
         b,
         "Unique",
+        true
     );
 }
 
@@ -122,6 +124,7 @@ fn cycley_recursive_uncached(b: &mut Bencher) {
         CYCLEY_GOAL,
         b,
         "Unique",
+        true
     );
 }
 
@@ -135,5 +138,6 @@ fn cycley_slg(b: &mut Bencher) {
         CYCLEY_GOAL,
         b,
         "Unique",
+        false
     );
 }

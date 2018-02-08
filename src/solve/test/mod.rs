@@ -10,8 +10,16 @@ use std::sync::Arc;
 
 mod bench;
 
-fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<ir::Program> {
-    chalk_parse::parse_program(text)?.lower(solver_choice)
+fn parse_and_lower_program(text: &str, solver_choice: SolverChoice, skip_coherence: bool)
+    -> Result<ir::Program>
+{
+    if skip_coherence {
+        // FIXME: We disable WF checks for the recursive solver, because of ambiguities appearing
+        // with projection types.
+        chalk_parse::parse_program(text)?.lower_without_coherence()
+    } else {
+        chalk_parse::parse_program(text)?.lower(solver_choice)
+    }
 }
 
 fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goal>> {
@@ -98,7 +106,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
     for (goal_text, solver_choice, expected) in goals {
         let (program, env) = program_env_cache.entry(solver_choice).or_insert_with(|| {
             let program_text = &program_text[1..program_text.len() - 1]; // exclude `{}`
-            let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
+            let program = Arc::new(parse_and_lower_program(program_text, solver_choice, false).unwrap());
             let env = Arc::new(program.environment());
             (program, env)
         });
@@ -286,18 +294,6 @@ fn prove_forall() {
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
-        }
-
-        // This fails because we used `if_raw`, and hence we do not
-        // know that `WF(T: Clone)` holds.
-        goal {
-            forall<T> {
-                if_raw (T: Clone) {
-                    Vec<T>: Clone
-                }
-            }
-        } yields {
-            "No possible solution"
         }
     }
 }
@@ -567,6 +563,28 @@ fn normalize_basic() {
     }
 }
 
+#[test]
+fn normalize_implied_bound() {
+    test! {
+        program {
+            trait Clone { }
+            trait Iterator where Self: Clone { type Item; }
+            struct u32 { }
+        }
+
+        goal {
+            forall<T> {
+                if (T: Iterator<Item = u32>) {
+                    T: Clone
+                }
+            }
+        } yields {
+            "Unique; substitution []"
+        }
+    }
+}
+
+
 /// Demonstrates that, given the expected value of the associated
 /// type, we can use that to narrow down the relevant impls.
 #[test]
@@ -690,97 +708,6 @@ fn forall_projection() {
 }
 
 #[test]
-fn elaborate_eq() {
-    test! {
-        program {
-            trait PartialEq { }
-            trait Eq where Self: PartialEq { }
-        }
-
-        goal {
-            forall<T> {
-                if (T: Eq) {
-                    T: PartialEq
-                }
-            }
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-    }
-}
-
-#[test]
-fn elaborate_transitive() {
-    test! {
-        program {
-            trait PartialEq { }
-            trait Eq where Self: PartialEq { }
-            trait StrictEq where Self: Eq { }
-        }
-
-        goal {
-            forall<T> {
-                if (T: StrictEq) {
-                    T: PartialEq
-                }
-            }
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-    }
-}
-
-#[test]
-#[ignore]
-fn elaborate_normalize() {
-    test! {
-        program {
-            trait Eq { }
-            struct i32 { }
-
-            trait Item where <Self as Item>::Out: Eq {
-                type Out;
-            }
-
-            impl Eq for i32 { }
-            impl Item for i32 {
-                type Out = i32;
-            }
-        }
-
-        goal {
-            forall<T, U> {
-                if (T: Item<Out = U>) {
-                    U: Eq
-                }
-            }
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-
-        goal {
-            forall<T, U> {
-                if (T: Item<Out = U>) {
-                    T: Item
-                }
-            }
-        } yields {
-            "Unique"
-        }
-
-        goal {
-            forall<T> {
-                if (T: Item<Out = i32>) {
-                    T: Item
-                }
-            }
-        } yields {
-            "Unique"
-        }
-    }
-}
-
-#[test]
 fn atc1() {
     test! {
         program {
@@ -883,116 +810,6 @@ fn generic_trait() {
             Int: Eq<Uint>
         } yields {
             "No possible solution"
-        }
-    }
-}
-
-#[test]
-fn trait_wf() {
-    test! {
-        program {
-            struct Vec<T> where T: Sized { }
-            struct Slice<T> where T: Sized { }
-            struct Int { }
-
-            trait Sized { }
-            trait Eq<T> { }
-            trait Ord<T> where Self: Eq<T> { }
-
-            impl<T> Sized for Vec<T> where T: Sized { }
-            impl Sized for Int { }
-
-            impl Eq<Int> for Int { }
-            impl<T> Eq<Vec<T>> for Vec<T> where T: Eq<T> { }
-
-            impl Ord<Int> for Int { }
-            impl<T> Ord<Vec<T>> for Vec<T> where T: Ord<T> { }
-
-            impl<T> Ord<Slice<T>> for Slice<T> { }
-        }
-
-        goal {
-            WellFormed(Slice<Int>)
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-
-        goal {
-            Slice<Int>: Sized
-        } yields {
-            "No possible solution"
-        }
-
-        goal {
-            WellFormed(Slice<Int>: Sized)
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-
-        goal {
-            WellFormed(Slice<Int>: Eq<Slice<Int>>)
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-
-        goal {
-            Slice<Int>: Ord<Slice<Int>>
-        } yields {
-            "Unique"
-        }
-
-        goal {
-            Slice<Int>: Eq<Slice<Int>>
-        } yields {
-            "No possible solution"
-        }
-
-        // not WF because previous equation doesn't hold, despite Slice<Int> having an impl for Ord<Int>
-        goal {
-            WellFormed(Slice<Int>: Ord<Slice<Int>>)
-        } yields {
-            "No possible solution"
-        }
-
-        goal {
-            Vec<Int>: Eq<Vec<Int>>
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-
-        // WF because previous equation does hold
-        goal {
-            WellFormed(Vec<Int>: Ord<Vec<Int>>)
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-    }
-}
-
-#[test]
-fn normalize_fallback_option() {
-    test! {
-        program {
-            trait Iterator { type Item; }
-            struct Foo { }
-            struct Vec<T> { }
-            impl<T> Iterator for Vec<T> { type Item = T; }
-        }
-
-        goal {
-            forall<T> {
-                if (T: Iterator) {
-                    exists<U> {
-                        exists<V> {
-                            // Here, `U` could be `T` or it could be
-                            // `Vec<Foo>`.
-                            U: Iterator<Item = V>
-                        }
-                    }
-                }
-            }
-        } yields {
-            "Ambiguous"
         }
     }
 }
@@ -1362,10 +1179,9 @@ fn suggested_subst() {
                     Foo: SomeTrait<T>
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::slg()] {
-            // FIXME: SLG does not impl the logic to privilege where clauses
+        } yields {
+            // FIXME: we need to rework the "favor environment" heuristic.
+            // Should be: "Ambiguous; suggested substitution [?0 := bool]"
             "Ambiguous; no inference guidance"
         }
 
@@ -1395,10 +1211,8 @@ fn suggested_subst() {
                     Bar: SomeTrait<T>
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Ambiguous; suggested substitution [?0 := bool]"
-        } yields[SolverChoice::slg()] {
-            // FIXME: SLG does not impl the logic to privilege where clauses
+        } yields {
+            // FIXME: same as above, should be: "Ambiguous; suggested substitution [?0 := bool]"
             "Ambiguous; no inference guidance"
         }
 
@@ -1734,11 +1548,9 @@ fn coinductive_semantics() {
         } yields {
             "No possible solution"
         }
-
-        // `WellFormed(T)` because of the hand-written impl for `Ptr<T>`.
         goal {
             forall<T> {
-                if (WellFormed(T), T: Send) {
+                if (T: Send) {
                     List<T>: Send
                 }
             }

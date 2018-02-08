@@ -34,6 +34,16 @@ error_chain! {
             display("overlapping impls of trait {:?}", trait_id)
         }
 
+        IllFormedTypeDecl(ty_id: ir::Identifier) {
+            description("ill-formed type declaration")
+            display("type declaration {:?} does not meet well-formedness requirements", ty_id)
+        }
+
+        IllFormedTraitImpl(trait_id: ir::Identifier) {
+            description("ill-formed trait impl")
+            display("trait impl for {:?} does not meet well-formedness requirements", trait_id)
+        }
+
         CouldNotMatch {
             description("could not match")
                 display("could not match")

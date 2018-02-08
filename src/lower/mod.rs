@@ -11,6 +11,7 @@ use solve::SolverChoice;
 
 mod test;
 mod default;
+mod wf;
 
 type TypeIds = BTreeMap<ir::Identifier, ir::ItemId>;
 type TypeKinds = BTreeMap<ir::ItemId, ir::TypeKind>;
@@ -119,6 +120,7 @@ impl LowerProgram for Program {
     fn lower(&self, solver_choice: SolverChoice) -> Result<ir::Program> {
         let mut program = self.lower_without_coherence()?;
         program.record_specialization_priorities(solver_choice)?;
+        program.verify_well_formedness(solver_choice)?;
         Ok(program)
     }
 
@@ -445,6 +447,10 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
             WhereClause::TraitRefWellFormed { ref trait_ref } => {
                 ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
             }
+            WhereClause::TyFromEnv { ref ty } => ir::FromEnv::Ty(ty.lower(env)?).cast(),
+            WhereClause::TraitRefFromEnv { ref trait_ref } => {
+                ir::FromEnv::TraitRef(trait_ref.lower(env)?).cast()
+            }
             WhereClause::UnifyTys { .. } | WhereClause::UnifyLifetimes { .. } => {
                 bail!("this form of where-clause not allowed here")
             }
@@ -473,13 +479,13 @@ impl LowerWhereClause<ir::LeafGoal> for WhereClause {
         Ok(match *self {
             WhereClause::Implemented { .. }
             | WhereClause::ProjectionEq { .. }
-            | WhereClause::Normalize { .. } => {
+            | WhereClause::Normalize { .. }
+            | WhereClause::TyWellFormed { .. }
+            | WhereClause::TraitRefWellFormed { .. }
+            | WhereClause::TyFromEnv { .. }
+            | WhereClause::TraitRefFromEnv { .. } => {
                 let g: ir::DomainGoal = self.lower(env)?;
                 g.cast()
-            }
-            WhereClause::TyWellFormed { ref ty } => ir::WellFormed::Ty(ty.lower(env)?).cast(),
-            WhereClause::TraitRefWellFormed { ref trait_ref } => {
-                ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
             }
             WhereClause::UnifyTys { ref a, ref b } => ir::EqGoal {
                 a: ir::ParameterKind::Ty(a.lower(env)?),
@@ -925,18 +931,16 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
             Goal::Exists(ref ids, ref g) => {
                 g.lower_quantified(env, ir::QuantifierKind::Exists, ids)
             }
-            Goal::Implies(ref wc, ref g, elaborate) => {
-                let mut where_clauses = wc.lower(env)?;
-                if elaborate {
-                    where_clauses = ir::tls::with_current_program(|program| {
-                        let program = program.expect("cannot elaborate without a program");
-                        where_clauses
-                            .into_iter()
-                            .flat_map(|wc| wc.expanded(program))
-                            .casted()
-                            .collect()
-                    });
-                }
+            Goal::Implies(ref wc, ref g) => {
+                // We "elaborate" implied bounds by lowering goals like `T: Trait` and
+                // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`
+                // in the assumptions of an `if` goal, e.g. `if (T: Trait) { ... }` lowers to
+                // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
+                let where_clauses =
+                    wc.lower(env)?
+                      .into_iter()
+                      .map(|wc| wc.into_from_env_clause())
+                      .collect();
                 Ok(Box::new(ir::Goal::Implies(where_clauses, g.lower(env)?)))
             }
             Goal::And(ref g1, ref g2) => {
@@ -987,12 +991,12 @@ impl ir::Program {
         program_clauses.extend(
             self.struct_data
                 .values()
-                .flat_map(|d| d.to_program_clauses(self)),
+                .flat_map(|d| d.to_program_clauses()),
         );
         program_clauses.extend(
             self.trait_data
                 .values()
-                .flat_map(|d| d.to_program_clauses(self)),
+                .flat_map(|d| d.to_program_clauses()),
         );
         program_clauses.extend(
             self.associated_ty_data
@@ -1005,7 +1009,7 @@ impl ir::Program {
             // If we encounter a negative impl, do not generate any rule. Negative impls
             // are currently just there to deactivate default impls for auto traits.
             if datum.binders.value.trait_ref.is_positive() {
-                program_clauses.push(datum.to_program_clause(self));
+                program_clauses.push(datum.to_program_clause());
                 program_clauses.extend(
                     datum
                         .binders
@@ -1032,9 +1036,9 @@ impl ir::ImplDatum {
     /// Given `impl<T: Clone> Clone for Vec<T>`, generate:
     ///
     /// ```notrust
-    /// forall<T> { (Vec<T>: Clone) :- (T: Clone), WF(T: Clone) }
+    /// forall<T> { (Vec<T>: Clone) :- (T: Clone) }
     /// ```
-    fn to_program_clause(&self, program: &ir::Program) -> ir::ProgramClause {
+    fn to_program_clause(&self) -> ir::ProgramClause {
         ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
@@ -1043,7 +1047,6 @@ impl ir::ImplDatum {
                         .where_clauses
                         .iter()
                         .cloned()
-                        .flat_map(|wc| wc.expanded(program))
                         .casted()
                         .collect(),
                 }
@@ -1072,8 +1075,8 @@ impl ir::DefaultImplDatum {
     /// ```notrust
     /// forall<T> {
     ///     (MyList<T>: Send) :-
-    ///         (T: Send), WF(T: Send),
-    ///         (Box<Option<MyList<T>>>: Send), WF(Box<Option<MyList<T>>>: Send)
+    ///         (T: Send),
+    ///         (Box<Option<MyList<T>>>: Send)
     /// }
     /// ```
     fn to_program_clause(&self) -> ir::ProgramClause {
@@ -1242,14 +1245,15 @@ impl Anonymize for [ir::ParameterKind<ir::Identifier>] {
 }
 
 impl ir::StructDatum {
-    fn to_program_clauses(&self, program: &ir::Program) -> Vec<ir::ProgramClause> {
+    fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
         // Given:
         //
         //    struct Foo<T: Eq> { }
         //
         // we generate the following clause:
         //
-        //    for<?T> WF(Foo<?T>) :- WF(?T), (?T: Eq), WF(?T: Eq).
+        //    forall<T> { WF(Foo<T>) :- (T: Eq). }
+        //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
 
         let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound_datum| {
@@ -1257,88 +1261,92 @@ impl ir::StructDatum {
                     consequence: ir::WellFormed::Ty(bound_datum.self_ty.clone().cast()).cast(),
 
                     conditions: {
-                        let tys = bound_datum
-                            .self_ty
-                            .parameters
-                            .iter()
-                            .filter_map(|pk| pk.as_ref().ty())
-                            .cloned()
-                            .map(|ty| ir::WellFormed::Ty(ty))
-                            .casted();
-
-                        let where_clauses = bound_datum
-                            .where_clauses
-                            .iter()
-                            .cloned()
-                            .flat_map(|wc| wc.expanded(program))
-                            .casted();
-
-                        tys.chain(where_clauses).collect()
+                        bound_datum.where_clauses
+                                   .iter()
+                                   .cloned()
+                                   .casted()
+                                   .collect()
                     },
                 }
             }),
         };
 
-        vec![wf]
+        let mut clauses = vec![wf];
+        let condition = ir::FromEnv::Ty(self.binders.value.self_ty.clone().cast());
+
+        for wc in self.binders
+                      .value
+                      .where_clauses
+                      .iter()
+                      .cloned()
+                      .map(|wc| wc.into_from_env_clause())
+        {
+            clauses.push(ir::ProgramClause {
+                implication: self.binders.map_ref(|_| {
+                    ir::ProgramClauseImplication {
+                        consequence: wc.cast(),
+                        conditions: vec![condition.clone().cast()],
+                    }
+                })
+            });
+        }
+
+        clauses
     }
 }
 
 impl ir::TraitDatum {
-    fn to_program_clauses(&self, program: &ir::Program) -> Vec<ir::ProgramClause> {
+    fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
         // Given:
         //
         //    trait Ord<T> where Self: Eq<T> { ... }
         //
-        // we generate the following clauses:
+        // we generate the following clause:
         //
-        //    for<?Self, ?T> WF(?Self: Ord<?T>) :-
-        //        // types are well-formed:
-        //        WF(?Self),
-        //        WF(?T),
-        //        // where clauses declared on the trait are met:
-        //        (?Self: Eq<?T>), WF(?Self: Eq<?T>)
+        //    forall<Self, T> {
+        //        WF(Self: Ord<T>) :- (Self: Ord<T>), WF(Self: Eq<T>)
+        //    }
         //
-        //    for<?Self, ?T> (?Self: Eq<T>) :- WF(?Self: Ord<T>)
-        //    for<?Self, ?T> WF(?Self: Ord<?T>) :- WF(?Self: Ord<T>)
+        // and the reverse rules:
+        //
+        //    forall<Self, T> { (Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
+        //    forall<Self, T> { FromEnv(Self: Eq<T>) :- FromEnv(Self: Ord<T>) }
 
-        let where_clauses = self.binders
-            .value
-            .where_clauses
-            .iter()
-            .cloned()
-            .flat_map(|wc| wc.expanded(program))
-            .collect::<Vec<_>>();
+        let trait_ref = self.binders.value.trait_ref.clone();
 
-        let wf = ir::WellFormed::TraitRef(self.binders.value.trait_ref.clone());
-
-        let clauses = ir::ProgramClause {
+        let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
-                    consequence: wf.clone().cast(),
+                    consequence: ir::WellFormed::TraitRef(trait_ref.clone()).cast(),
 
                     conditions: {
-                        let tys = bound
-                            .trait_ref
-                            .parameters
-                            .iter()
-                            .filter_map(|pk| pk.as_ref().ty())
-                            .cloned()
-                            .map(|ty| ir::WellFormed::Ty(ty))
-                            .casted();
-
-                        tys.chain(where_clauses.iter().cloned().casted()).collect()
+                        bound.where_clauses
+                             .iter()
+                             .cloned()
+                             .map(|wc| wc.into_well_formed_clause().cast())
+                             .chain(Some(ir::DomainGoal::Implemented(trait_ref.clone()).cast()))
+                             .collect()
                     },
                 }
             }),
         };
 
-        let mut clauses = vec![clauses];
-        for wc in where_clauses {
+        let mut clauses = vec![wf];
+        let condition = ir::FromEnv::TraitRef(trait_ref.clone());
+
+        for wc in self.binders
+                      .value
+                      .where_clauses
+                      .iter()
+                      .cloned()
+                      .map(|wc| wc.into_from_env_clause().cast())
+                      .chain(Some(ir::DomainGoal::Implemented(trait_ref).cast()))
+        {
             clauses.push(ir::ProgramClause {
                 implication: self.binders.map_ref(|_| {
                     ir::ProgramClauseImplication {
                         consequence: wc,
-                        conditions: vec![wf.clone().cast()],
+                        conditions: vec![condition.clone().cast()],
                     }
                 }),
             });
@@ -1385,8 +1393,10 @@ impl ir::AssociatedTyDatum {
         // particular, whenever normalization is possible, we cannot
         // solve that projection uniquely, since we can now elaborate
         // `ProjectionEq` to fallback *or* normalize it. So instead we
-        // handle this kind of reasoning by expanding "projection
-        // equality" predicates (see `DomainGoal::expanded`).
+        // handle this kind of reasoning through the `FromEnv` predicate.
+        //
+        // We also generate rules specific to WF requirements and implied bounds,
+        // see below.
 
         let binders: Vec<_> = self.parameter_kinds
             .iter()
@@ -1407,64 +1417,126 @@ impl ir::AssociatedTyDatum {
             }
         };
 
+        // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
+        // we would produce `(Iterator::Item)<T>`.
+        let app = ir::ApplicationTy {
+            name: ir::TypeName::AssociatedType(self.id),
+            parameters,
+        };
+        let app_ty = ir::Ty::Apply(app);
+
+        let mut clauses = vec![];
+
         //    forall<T> {
         //        ProjectionEq(<T as Foo>::Assoc = (Foo::Assoc)<T>) :-
         //            T: Foo
         //    }
-        let fallback_clause = {
-            // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
-            // we would produce `(Iterator::Item)<T>`.
-            let app = ir::ApplicationTy {
-                name: ir::TypeName::AssociatedType(self.id),
-               parameters,
-            };
-            let app_ty = ir::Ty::Apply(app);
-
-            ir::ProgramClause {
-                implication: ir::Binders {
-                    binders: binders.clone(),
-                    value: ir::ProgramClauseImplication {
-                        consequence: ir::ProjectionEq {
-                            projection: projection.clone(),
-                            ty: app_ty,
-                        }.cast(),
-                        conditions: vec![
-                            trait_ref.cast(),
-                        ],
-                    },
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::ProjectionEq {
+                        projection: projection.clone(),
+                        ty: app_ty.clone(),
+                    }.cast(),
+                    conditions: vec![trait_ref.clone().cast()],
                 },
+            },
+        });
+
+        // The above application type is always well-formed, and `<T as Foo>::Assoc` will
+        // unify with `(Foo::Assoc)<T>` only if `T: Foo`, because of the above rule, so we have:
+        //
+        //    forall<T> {
+        //        WellFormed((Foo::Assoc)<T>).
+        //    }
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::WellFormed::Ty(app_ty).cast(),
+                    conditions: vec![],
+                }
             }
-        };
+        });
+
+        // add new type parameter U
+        let mut binders = binders;
+        binders.push(ir::ParameterKind::Ty(()));
+        let ty = ir::Ty::Var(binders.len() - 1);
+
+        // `Normalize(<T as Foo>::Assoc -> U)`
+        let normalize = ir::Normalize { projection: projection.clone(), ty: ty.clone() };
+
+        // `ProjectionEq(<T as Foo>::Assoc = U)`
+        let projection_eq = ir::ProjectionEq { projection: projection.clone(), ty };
 
         //    forall<T> {
         //        ProjectionEq(<T as Foo>::Assoc = U) :-
         //            Normalize(<T as Foo>::Assoc -> U)
         //    }
-        let normalize_clause = {
-            // add new type parameter U
-            let mut binders = binders.clone();
-            binders.push(ir::ParameterKind::Ty(()));
-            let ty = ir::Ty::Var(binders.len() - 1);
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: projection_eq.clone().cast(),
+                    conditions: vec![normalize.clone().cast()],
+                },
+            },
+            });
 
-            ir::ProgramClause {
-                implication: ir::Binders {
-                    binders,
-                    value: ir::ProgramClauseImplication {
-                        consequence: ir::ProjectionEq {
-                            projection: projection.clone(),
-                            ty: ty.clone(),
-                        }.cast(),
-                        conditions: vec![
-                            ir::Normalize {
-                                projection: projection.clone(),
-                                ty,
-                            }.cast()
-                        ],
-                    },
+
+        // We generate a proxy rule for the well-formedness of `T: Foo<Assoc = U>` which really
+        // means two things: `T: Foo` and `Normalize(<T as Foo>::Assoc -> U)`. So we have the
+        // following rule:
+        //
+        //    forall<T> {
+        //        WellFormed(T: Foo<Assoc = U>) :-
+        //            WellFormed(T: Foo), ProjectionEq(<T as Foo>::Assoc = U)
+        //    }
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::WellFormed::ProjectionEq(projection_eq.clone()).cast(),
+                    conditions: vec![
+                        ir::WellFormed::TraitRef(trait_ref.clone()).cast(),
+                        projection_eq.clone().cast()
+                    ],
+                }
+            }
+        });
+
+        // We also have two proxy reverse rules, the first one being:
+        //
+        //    forall<T> {
+        //        FromEnv(T: Foo) :- FromEnv(T: Foo<Assoc = U>)
+        //    }
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::FromEnv::TraitRef(trait_ref).cast(),
+                    conditions: vec![ir::FromEnv::ProjectionEq(projection_eq.clone()).cast()],
                 },
             }
-        };
+        });
 
-        vec![fallback_clause, normalize_clause]
+        // And the other one being:
+        //
+        //    forall<T> {
+        //        ProjectionEq(<T as Foo>::Assoc = U) :- FromEnv(T: Foo<Assoc = U>)
+        //    }
+        clauses.push(ir::ProgramClause {
+            implication: ir::Binders {
+                binders: binders,
+                value: ir::ProgramClauseImplication {
+                    consequence: projection_eq.clone().cast(),
+                    conditions: vec![ir::FromEnv::ProjectionEq(projection_eq).cast()],
+                },
+            }
+        });
+
+        clauses
     }
 }

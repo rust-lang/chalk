@@ -182,6 +182,7 @@ impl Debug for DomainGoal {
                 Angle(&n.parameters[1..])
             ),
             DomainGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
+            DomainGoal::FromEnv(ref n) => write!(fmt, "{:?}", n),
             DomainGoal::InScope(ref n) => write!(fmt, "InScope({:?})", n),
         }
     }
@@ -201,8 +202,20 @@ impl Debug for WellFormed {
         let value: &Debug = match *self {
             WellFormed::Ty(ref t) => t,
             WellFormed::TraitRef(ref t) => t,
+            WellFormed::ProjectionEq(ref t) => t,
         };
         write!(fmt, "WellFormed({:?})", value)
+    }
+}
+
+impl Debug for FromEnv {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let value: &Debug = match *self {
+            FromEnv::Ty(ref t) => t,
+            FromEnv::TraitRef(ref t) => t,
+            FromEnv::ProjectionEq(ref t) => t,
+        };
+        write!(fmt, "FromEnv({:?})", value)
     }
 }
 
