@@ -1791,6 +1791,57 @@ fn unselected_projection() {
 }
 
 #[test]
+fn unselected_projection_with_atc() {
+    test! {
+        program {
+            trait Foo {
+                type Item<'a>;
+            }
+
+            struct Ref<'a, T> { }
+            struct i32 { }
+
+            impl Foo for i32 {
+                type Item<'a> = Ref<'a, i32>;
+            }
+        }
+        goal {
+            forall<'a> {
+                if (InScope(Foo)) {
+                    i32::Item<'a> = Ref<'a, i32>
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn unselected_projection_with_parametric_trait() {
+    test! {
+        program {
+            trait Foo<T> {
+                type Item;
+            }
+
+            struct i32 { }
+
+            impl Foo<i32> for i32 {
+                type Item = i32;
+            }
+        }
+        goal {
+            if (InScope(Foo)) {
+                i32::Item = i32
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
 fn overflow_universe() {
     test! {
         program {
