@@ -1,6 +1,6 @@
 use ir::*;
 use solve::Solution;
-use solve::slg::aggregate;
+use solve::slg::{aggregate, Context};
 use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex, UCanonicalGoal};
 use solve::slg::logic::RootSearchFail;
 use solve::slg::stack::{Stack, StackIndex};
@@ -11,7 +11,9 @@ use std::sync::Arc;
 #[cfg(test)]
 use solve::slg::table::Answer;
 
-crate struct Forest {
+crate struct Forest<C: Context> {
+    #[allow(dead_code)]
+    crate context: C,
     crate program: Arc<ProgramEnvironment>,
     crate tables: Tables,
     crate stack: Stack,
@@ -20,20 +22,22 @@ crate struct Forest {
     dfn: DepthFirstNumber,
 }
 
-impl Forest {
+impl<C: Context> Forest<C> {
     /// Convenience fn for solving a root goal. It would be better to
     /// createa a `Forest` so as to enable cahcing between goals, however.
     crate fn solve_root_goal(
+        context: C,
         max_size: usize,
         program: &Arc<ProgramEnvironment>,
         root_goal: &UCanonicalGoal,
     ) -> Option<Solution> {
-        let mut forest = Forest::new(program, max_size);
+        let mut forest = Forest::new(context, program, max_size);
         forest.solve(root_goal)
     }
 
-    crate fn new(program: &Arc<ProgramEnvironment>, max_size: usize) -> Self {
+    crate fn new(context: C, program: &Arc<ProgramEnvironment>, max_size: usize) -> Self {
         Forest {
+            context,
             program: program.clone(),
             tables: Tables::default(),
             stack: Stack::default(),
@@ -133,13 +137,15 @@ impl Forest {
     }
 }
 
-struct ForestSolver<'forest> {
-    forest: &'forest mut Forest,
+struct ForestSolver<'forest, C: Context + 'forest> {
+    forest: &'forest mut Forest<C>,
     table: TableIndex,
     answer: AnswerIndex,
 }
 
-impl<'forest> Iterator for ForestSolver<'forest> {
+impl<'forest, C> Iterator for ForestSolver<'forest, C>
+where C: Context
+{
     type Item = SimplifiedAnswer;
 
     fn next(&mut self) -> Option<SimplifiedAnswer> {

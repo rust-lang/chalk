@@ -70,6 +70,9 @@ mod table;
 mod tables;
 mod test;
 
+pub trait Context: Copy {
+}
+
 index_struct! {
     struct TableIndex {
         value: usize,

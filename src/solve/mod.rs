@@ -224,7 +224,7 @@ impl SolverChoice {
             }
 
             SolverChoice::SLG { max_size } => {
-                Ok(slg::forest::Forest::solve_root_goal(max_size, env, &canonical_goal))
+                Ok(slg::forest::Forest::solve_root_goal(SlgContext, max_size, env, &canonical_goal))
             }
         }
     }
@@ -247,4 +247,10 @@ impl Default for SolverChoice {
     fn default() -> Self {
         SolverChoice::recursive()
     }
+}
+
+#[derive(Copy, Clone)]
+struct SlgContext;
+
+impl slg::Context for SlgContext {
 }

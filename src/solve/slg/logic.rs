@@ -1,7 +1,7 @@
 use ir::*;
 use solve::infer::InferenceTable;
 use solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
-use solve::slg::{self, CanonicalGoal, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber,
+use solve::slg::{self, CanonicalGoal, Context, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber,
                  ExClause, Literal, Minimums, Satisfiable, TableIndex, UCanonicalGoal};
 use solve::slg::resolvent;
 use solve::slg::forest::Forest;
@@ -80,7 +80,7 @@ enum EnsureSuccess {
     Coinductive,
 }
 
-impl Forest {
+impl<C: Context> Forest<C> {
     /// Ensures that answer with the given index is available from the
     /// given table. This may require activating a strand. Returns
     /// `Ok(())` if the answer is available and otherwise a
