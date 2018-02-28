@@ -3,7 +3,8 @@ use fallible::Fallible;
 use fold::Fold;
 use fold::shift::Shift;
 use ir::*;
-use solve::infer::{InferenceTable, unify::UnificationResult};
+use solve::infer::unify::UnificationResult;
+use solve::slg::context::{Context, InferenceTable};
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
@@ -53,8 +54,8 @@ use super::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Literal, Satisfi
 ///
 /// - `goal` is the goal G that we are trying to solve
 /// - `clause` is the program clause that may be useful to that end
-pub(super) fn resolvent_clause(
-    infer: &mut InferenceTable,
+pub(super) fn resolvent_clause<C: Context>(
+    infer: &mut C::InferenceTable,
     goal: &InEnvironment<DomainGoal>,
     subst: &Substitution,
     clause: &Binders<ProgramClauseImplication>,
@@ -86,7 +87,10 @@ pub(super) fn resolvent_clause(
     let environment = &goal.environment.clone();
 
     // Unify the selected literal Li with C'.
-    let UnificationResult { goals: subgoals, constraints } = {
+    let UnificationResult {
+        goals: subgoals,
+        constraints,
+    } = {
         match infer.unify(environment, &goal.goal, &consequence) {
             Err(_) => return Satisfiable::No,
             Ok(v) => v,
@@ -103,16 +107,18 @@ pub(super) fn resolvent_clause(
 
     // Add the subgoals/region-constraints that unification gave us.
     debug!("subgoals={:?}", subgoals);
-    ex_clause.subgoals
-             .extend(subgoals.into_iter().casted().map(Literal::Positive));
+    ex_clause
+        .subgoals
+        .extend(subgoals.into_iter().casted().map(Literal::Positive));
     ex_clause.constraints.extend(constraints);
 
     // Add the `conditions` from the program clause into the result too.
-    ex_clause.subgoals
-             .extend(conditions.into_iter().map(|c| match c {
-                 Goal::Not(c) => Literal::Negative(InEnvironment::new(environment, *c)),
-                 c => Literal::Positive(InEnvironment::new(environment, c)),
-             }));
+    ex_clause
+        .subgoals
+        .extend(conditions.into_iter().map(|c| match c {
+            Goal::Not(c) => Literal::Negative(InEnvironment::new(environment, *c)),
+            c => Literal::Positive(InEnvironment::new(environment, c)),
+        }));
 
     Satisfiable::Yes(ex_clause)
 }
@@ -230,8 +236,8 @@ pub(super) fn resolvent_clause(
 // `Vec<?X>` with `u32` (from the substitution), which will fail. That
 // failure will get propagated back up.
 
-pub(super) fn apply_answer_subst(
-    infer: &mut InferenceTable,
+pub(super) fn apply_answer_subst<C: Context>(
+    infer: &mut C::InferenceTable,
     mut ex_clause: ExClause,
     selected_goal: &InEnvironment<Goal>,
     answer_table_goal: &CanonicalGoal,
@@ -255,7 +261,7 @@ pub(super) fn apply_answer_subst(
         constraints: answer_constraints,
     } = infer.instantiate_canonical(&canonical_answer_subst);
 
-    let (goals, constraints) = match AnswerSubstitutor::substitute(
+    let (goals, constraints) = match AnswerSubstitutor::<C>::substitute(
         infer,
         &selected_goal.environment,
         &answer_subst,
@@ -275,8 +281,10 @@ pub(super) fn apply_answer_subst(
     Satisfiable::Yes(ex_clause)
 }
 
-struct AnswerSubstitutor<'t> {
-    table: &'t mut InferenceTable,
+struct AnswerSubstitutor<'t, C: Context>
+    where C::InferenceTable: 't
+{
+    table: &'t mut C::InferenceTable,
     environment: &'t Arc<Environment>,
     answer_subst: &'t Substitution,
     answer_binders: usize,
@@ -285,9 +293,9 @@ struct AnswerSubstitutor<'t> {
     constraints: Vec<InEnvironment<Constraint>>,
 }
 
-impl<'t> AnswerSubstitutor<'t> {
+impl<'t, C: Context> AnswerSubstitutor<'t, C> {
     fn substitute<T: Zip>(
-        table: &mut InferenceTable,
+        table: &mut C::InferenceTable,
         environment: &Arc<Environment>,
         answer_subst: &Substitution,
         answer: &T,
@@ -298,7 +306,7 @@ impl<'t> AnswerSubstitutor<'t> {
             Vec<InEnvironment<Constraint>>,
         ),
     > {
-        let mut this = AnswerSubstitutor {
+        let mut this = AnswerSubstitutor::<'_, C> {
             table,
             environment,
             answer_subst,
@@ -359,7 +367,7 @@ impl<'t> AnswerSubstitutor<'t> {
     }
 }
 
-impl<'t> Zipper for AnswerSubstitutor<'t> {
+impl<'t, C: Context> Zipper for AnswerSubstitutor<'t, C> {
     fn zip_tys(&mut self, answer: &Ty, pending: &Ty) -> Fallible<()> {
         if let Some(pending) = self.table.normalize_shallow(pending, self.pending_binders) {
             return Zip::zip_with(self, answer, &pending);

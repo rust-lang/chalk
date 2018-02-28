@@ -122,8 +122,8 @@ impl Solution {
     crate fn constrained_subst(&self) -> Option<Canonical<ConstrainedSubst>> {
         match *self {
             Solution::Unique(ref constrained) => Some(constrained.clone()),
-            Solution::Ambig(Guidance::Definite(ref canonical)) |
-            Solution::Ambig(Guidance::Suggested(ref canonical)) => {
+            Solution::Ambig(Guidance::Definite(ref canonical))
+            | Solution::Ambig(Guidance::Suggested(ref canonical)) => {
                 let value = ConstrainedSubst {
                     subst: canonical.value.clone(),
                     constraints: vec![],
@@ -165,11 +165,7 @@ impl Solution {
 impl fmt::Display for Solution {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Solution::Unique(constrained) => write!(
-                f,
-                "Unique; {}",
-                constrained,
-            ),
+            Solution::Unique(constrained) => write!(f, "Unique; {}", constrained,),
             Solution::Ambig(Guidance::Definite(subst)) => {
                 write!(f, "Ambiguous; definite substitution {}", subst)
             }
@@ -222,9 +218,12 @@ impl SolverChoice {
                 }
             }
 
-            SolverChoice::SLG { max_size } => {
-                Ok(slg::forest::Forest::solve_root_goal(SlgContext, max_size, env, &canonical_goal))
-            }
+            SolverChoice::SLG { max_size } => Ok(slg::forest::Forest::solve_root_goal(
+                slg::context::SlgContext,
+                max_size,
+                env,
+                &canonical_goal,
+            )),
         }
     }
 
@@ -246,10 +245,4 @@ impl Default for SolverChoice {
     fn default() -> Self {
         SolverChoice::recursive()
     }
-}
-
-#[derive(Copy, Clone)]
-struct SlgContext;
-
-impl slg::Context for SlgContext {
 }

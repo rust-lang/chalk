@@ -1,6 +1,7 @@
 use ir::*;
 use solve::Solution;
-use solve::slg::{aggregate, Context};
+use solve::slg::aggregate;
+use solve::slg::context::Context;
 use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex, UCanonicalGoal};
 use solve::slg::logic::RootSearchFail;
 use solve::slg::stack::{Stack, StackIndex};
@@ -15,7 +16,7 @@ crate struct Forest<C: Context> {
     #[allow(dead_code)]
     crate context: C,
     crate program: Arc<ProgramEnvironment>,
-    crate tables: Tables,
+    crate tables: Tables<C>,
     crate stack: Stack,
     crate max_size: usize,
 
@@ -39,7 +40,7 @@ impl<C: Context> Forest<C> {
         Forest {
             context,
             program: program.clone(),
-            tables: Tables::default(),
+            tables: Tables::new(),
             stack: Stack::default(),
             max_size,
             dfn: DepthFirstNumber::MIN,

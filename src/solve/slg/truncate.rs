@@ -4,26 +4,26 @@ use fallible::*;
 use fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
 use fold::shift::Shift;
 use ir::*;
-use solve::infer::InferenceTable;
+use solve::slg::context::{Context, InferenceTable};
 
-crate fn truncate<T>(
-    infer: &mut InferenceTable,
+crate fn truncate<C, T>(
+    infer: &mut C::InferenceTable,
     max_size: usize,
     value: &T,
 ) -> Truncated<T::Result>
 where
+    C: Context,
     T: Fold,
 {
     debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
 
-    let mut truncater = Truncater::new(infer, max_size);
+    let mut truncater = Truncater::<'_, C>::new(infer, max_size);
     let value = value
         .fold_with(&mut truncater, 0)
         .expect("Truncater is infallible");
     debug!(
         "truncate: overflow={} value={:?}",
-        truncater.overflow,
-        value
+        truncater.overflow, value
     );
     Truncated {
         overflow: truncater.overflow,
@@ -42,15 +42,18 @@ crate struct Truncated<T> {
     crate value: T,
 }
 
-struct Truncater<'infer> {
-    infer: &'infer mut InferenceTable,
+struct Truncater<'infer, C: Context>
+where
+    C::InferenceTable: 'infer,
+{
+    infer: &'infer mut C::InferenceTable,
     current_size: usize,
     max_size: usize,
     overflow: bool,
 }
 
-impl<'infer> Truncater<'infer> {
-    fn new(infer: &'infer mut InferenceTable, max_size: usize) -> Self {
+impl<'infer, C: Context> Truncater<'infer, C> {
+    fn new(infer: &'infer mut C::InferenceTable, max_size: usize) -> Self {
         Truncater {
             infer,
             current_size: 0,
@@ -67,7 +70,7 @@ impl<'infer> Truncater<'infer> {
     }
 }
 
-impl<'infer> TypeFolder for Truncater<'infer> {
+impl<'infer, C: Context> TypeFolder for Truncater<'infer, C> {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
         if let Some(normalized_ty) = self.infer.normalize_shallow(ty, binders) {
             return self.fold_ty(&normalized_ty, binders);
@@ -108,9 +111,9 @@ impl<'infer> TypeFolder for Truncater<'infer> {
     }
 }
 
-impl<'infer> IdentityExistentialFolder for Truncater<'infer> {}
+impl<'infer, C: Context> IdentityExistentialFolder for Truncater<'infer, C> {}
 
-impl<'infer> IdentityUniversalFolder for Truncater<'infer> {}
+impl<'infer, C: Context> IdentityUniversalFolder for Truncater<'infer, C> {}
 
 #[test]
 fn truncate_types() {

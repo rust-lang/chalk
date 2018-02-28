@@ -1,11 +1,12 @@
 use solve::slg::{CanonicalConstrainedSubst, UCanonicalGoal, DelayedLiteralSet, DelayedLiteralSets};
+use solve::slg::context::Context;
 use solve::slg::strand::Strand;
 use std::collections::{HashMap, VecDeque};
 use std::collections::hash_map::Entry;
 use std::mem;
 use std::iter;
 
-crate struct Table {
+crate struct Table<C: Context> {
     /// The goal this table is trying to solve (also the key to look
     /// it up).
     crate table_goal: UCanonicalGoal,
@@ -27,7 +28,7 @@ crate struct Table {
 
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
-    strands: VecDeque<Strand>,
+    strands: VecDeque<Strand<C>>,
 }
 
 index_struct! {
@@ -46,8 +47,8 @@ pub(super) struct Answer {
     pub(super) delayed_literals: DelayedLiteralSet,
 }
 
-impl Table {
-    crate fn new(table_goal: UCanonicalGoal, coinductive_goal: bool) -> Table {
+impl<C: Context> Table<C> {
+    crate fn new(table_goal: UCanonicalGoal, coinductive_goal: bool) -> Table<C> {
         Table {
             table_goal,
             coinductive_goal,
@@ -57,23 +58,23 @@ impl Table {
         }
     }
 
-    crate fn push_strand(&mut self, strand: Strand) {
+    crate fn push_strand(&mut self, strand: Strand<C>) {
         self.strands.push_back(strand);
     }
 
-    crate fn extend_strands(&mut self, strands: impl IntoIterator<Item = Strand>) {
+    crate fn extend_strands(&mut self, strands: impl IntoIterator<Item = Strand<C>>) {
         self.strands.extend(strands);
     }
 
-    crate fn strands_mut(&mut self) -> impl Iterator<Item = &mut Strand> {
+    crate fn strands_mut(&mut self) -> impl Iterator<Item = &mut Strand<C>> {
         self.strands.iter_mut()
     }
 
-    crate fn take_strands(&mut self) -> VecDeque<Strand> {
+    crate fn take_strands(&mut self) -> VecDeque<Strand<C>> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
-    crate fn pop_next_strand(&mut self) -> Option<Strand> {
+    crate fn pop_next_strand(&mut self) -> Option<Strand<C>> {
         self.strands.pop_front()
     }
 

@@ -50,7 +50,7 @@
 //!   Popularized by Lambda Prolog.
 
 use ir::*;
-use solve::infer::InferenceTable;
+use solve::slg::context::Context;
 use stacker;
 use std::collections::HashSet;
 use std::cmp::min;
@@ -59,6 +59,7 @@ use std::usize;
 crate mod forest;
 
 mod aggregate;
+crate mod context;
 mod clauses;
 mod logic;
 mod resolvent;
@@ -69,9 +70,6 @@ mod table;
 mod tables;
 mod test;
 mod truncate;
-
-pub trait Context: Copy {
-}
 
 index_struct! {
     struct TableIndex {
@@ -304,7 +302,11 @@ impl ExClause {
     /// Used whenever we process an answer (whether new or cached) on
     /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
     /// the resolvent (or factor) if it has grown too large.
-    fn truncate_returned(self, infer: &mut InferenceTable, max_size: usize) -> ExClause {
+    fn truncate_returned<C: Context>(
+        self,
+        infer: &mut C::InferenceTable,
+        max_size: usize,
+    ) -> ExClause {
         use self::truncate::Truncated;
 
         // DIVERGENCE
@@ -327,7 +329,7 @@ impl ExClause {
         // aimed at giving us more times to eliminate this
         // ambiguous answer.
 
-        match truncate::truncate(infer, max_size, &self.subst) {
+        match truncate::truncate::<C, _>(infer, max_size, &self.subst) {
             // No need to truncate? Just propagate the resolvent back.
             Truncated {
                 overflow: false, ..

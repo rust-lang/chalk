@@ -1,13 +1,14 @@
 use cast::{Cast, Caster};
 use ir::{LeafGoal, Goal, QuantifierKind, InEnvironment, Substitution};
-use solve::infer::{InferenceTable, unify::UnificationResult};
+use solve::infer::unify::UnificationResult;
 use solve::slg::{ExClause, Literal, Satisfiable};
+use solve::slg::context::{Context, InferenceTable};
 
 /// Simplifies an HH goal into a series of positive domain goals
 /// and negative HH goals. This operation may fail if the HH goal
 /// includes unifications that cannot be completed.
-pub(super) fn simplify_hh_goal(
-    infer: &mut InferenceTable,
+pub(super) fn simplify_hh_goal<C: Context>(
+    infer: &mut C::InferenceTable,
     subst: Substitution,
     initial_goal: InEnvironment<Goal>,
 ) -> Satisfiable<ExClause> {

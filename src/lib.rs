@@ -2,11 +2,13 @@
 #![cfg_attr(test, feature(test))]
 #![feature(conservative_impl_trait)]
 #![feature(catch_expr)]
+#![feature(crate_in_paths)]
 #![feature(crate_visibility_modifier)]
 #![feature(macro_vis_matcher)]
 #![feature(match_default_bindings)]
 #![feature(specialization)]
 #![feature(step_trait)]
+#![feature(underscore_lifetimes)]
 #![feature(universal_impl_trait)]
 
 extern crate chalk_parse;

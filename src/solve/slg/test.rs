@@ -4,7 +4,7 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::SlgContext;
+use solve::slg::context::SlgContext;
 use solve::slg::forest::Forest;
 use std::sync::Arc;
 

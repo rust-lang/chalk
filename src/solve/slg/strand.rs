@@ -1,11 +1,11 @@
-use solve::infer::InferenceTable;
 use solve::infer::ucanonicalize::UniverseMap;
 use std::fmt::{Debug, Error, Formatter};
 use solve::slg::{ExClause, TableIndex};
+use solve::slg::context::Context;
 use solve::slg::table::AnswerIndex;
 
-crate struct Strand {
-    crate infer: InferenceTable,
+crate struct Strand<C: Context> {
+    crate infer: C::InferenceTable,
 
     pub(super) ex_clause: ExClause,
 
@@ -29,7 +29,7 @@ crate struct SelectedSubgoal {
     crate universe_map: UniverseMap,
 }
 
-impl Debug for Strand {
+impl<C: Context> Debug for Strand<C> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         fmt.debug_struct("Strand")
             .field("ex_clause", &self.ex_clause)
