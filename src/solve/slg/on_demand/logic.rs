@@ -650,7 +650,7 @@ impl Forest {
                 // reduce HH goals into Domain goals.
                 let hh_goal = InEnvironment::new(&environment, goal);
                 if let Satisfiable::Yes(ex_clause) =
-                    slg::simplify_hh_goal(&mut infer, subst, hh_goal)
+                    slg::simplify::simplify_hh_goal(&mut infer, subst, hh_goal)
                 {
                     info!(
                         "pushing initial strand with ex-clause: {:#?}",
