@@ -8,7 +8,7 @@ use solve::slg::forest::Forest;
 use solve::slg::stack::StackIndex;
 use solve::slg::strand::{SelectedSubgoal, Strand};
 use solve::slg::table::{Answer, AnswerIndex};
-use solve::truncate::{self, Truncated};
+use solve::slg::truncate::{self, Truncated};
 use std::collections::HashSet;
 use std::mem;
 

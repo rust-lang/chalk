@@ -51,7 +51,6 @@
 
 use ir::*;
 use solve::infer::InferenceTable;
-use solve::truncate::{truncate, Truncated};
 use stacker;
 use std::collections::HashSet;
 use std::cmp::min;
@@ -69,6 +68,7 @@ mod strand;
 mod table;
 mod tables;
 mod test;
+mod truncate;
 
 pub trait Context: Copy {
 }
@@ -305,6 +305,8 @@ impl ExClause {
     /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
     /// the resolvent (or factor) if it has grown too large.
     fn truncate_returned(self, infer: &mut InferenceTable, max_size: usize) -> ExClause {
+        use self::truncate::Truncated;
+
         // DIVERGENCE
         //
         // In the original RR paper, truncation is only applied
@@ -325,7 +327,7 @@ impl ExClause {
         // aimed at giving us more times to eliminate this
         // ambiguous answer.
 
-        match truncate(infer, max_size, &self.subst) {
+        match truncate::truncate(infer, max_size, &self.subst) {
             // No need to truncate? Just propagate the resolvent back.
             Truncated {
                 overflow: false, ..
