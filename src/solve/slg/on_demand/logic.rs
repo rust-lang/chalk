@@ -615,7 +615,7 @@ impl Forest {
         match goal {
             Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
                 let domain_goal = InEnvironment::new(&environment, domain_goal);
-                let clauses = slg::clauses(&self.program, &domain_goal);
+                let clauses = slg::clauses::clauses(&self.program, &domain_goal);
                 for clause in clauses {
                     debug!("program clause = {:#?}", clause);
                     let mut clause_infer = infer.clone();
