@@ -224,7 +224,7 @@ impl SolverChoice {
             }
 
             SolverChoice::SLG { max_size } => {
-                Ok(slg::on_demand::solve_root_goal(max_size, env, &canonical_goal))
+                Ok(slg::forest::Forest::solve_root_goal(max_size, env, &canonical_goal))
             }
         }
     }

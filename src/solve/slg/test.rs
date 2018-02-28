@@ -4,7 +4,7 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::slg::on_demand::forest::Forest;
+use solve::slg::forest::Forest;
 use std::sync::Arc;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {

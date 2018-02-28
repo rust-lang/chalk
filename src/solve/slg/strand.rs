@@ -2,7 +2,7 @@ use solve::infer::InferenceTable;
 use solve::infer::ucanonicalize::UniverseMap;
 use std::fmt::{Debug, Error, Formatter};
 use solve::slg::{ExClause, TableIndex};
-use solve::slg::on_demand::table::AnswerIndex;
+use solve::slg::table::AnswerIndex;
 
 crate struct Strand {
     crate infer: InferenceTable,

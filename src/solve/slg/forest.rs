@@ -2,11 +2,14 @@ use ir::*;
 use solve::Solution;
 use solve::slg::aggregate;
 use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex, UCanonicalGoal};
-use solve::slg::on_demand::logic::RootSearchFail;
-use solve::slg::on_demand::stack::{Stack, StackIndex};
-use solve::slg::on_demand::tables::Tables;
-use solve::slg::on_demand::table::{Answer, AnswerIndex};
+use solve::slg::logic::RootSearchFail;
+use solve::slg::stack::{Stack, StackIndex};
+use solve::slg::tables::Tables;
+use solve::slg::table::AnswerIndex;
 use std::sync::Arc;
+
+#[cfg(test)]
+use solve::slg::table::Answer;
 
 crate struct Forest {
     crate program: Arc<ProgramEnvironment>,
@@ -18,6 +21,17 @@ crate struct Forest {
 }
 
 impl Forest {
+    /// Convenience fn for solving a root goal. It would be better to
+    /// createa a `Forest` so as to enable cahcing between goals, however.
+    crate fn solve_root_goal(
+        max_size: usize,
+        program: &Arc<ProgramEnvironment>,
+        root_goal: &UCanonicalGoal,
+    ) -> Option<Solution> {
+        let mut forest = Forest::new(program, max_size);
+        forest.solve(root_goal)
+    }
+
     crate fn new(program: &Arc<ProgramEnvironment>, max_size: usize) -> Self {
         Forest {
             program: program.clone(),
@@ -38,6 +52,7 @@ impl Forest {
     ///
     /// Thanks to subgoal abstraction and so forth, this should always
     /// terminate.
+    #[cfg(test)]
     pub(super) fn force_answers(
         &mut self,
         goal: UCanonicalGoal,

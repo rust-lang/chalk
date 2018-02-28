@@ -4,10 +4,10 @@ use solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use solve::slg::{self, CanonicalGoal, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber,
                  ExClause, Literal, Minimums, Satisfiable, TableIndex, UCanonicalGoal};
 use solve::slg::resolvent;
-use solve::slg::on_demand::forest::Forest;
-use solve::slg::on_demand::stack::StackIndex;
-use solve::slg::on_demand::strand::{SelectedSubgoal, Strand};
-use solve::slg::on_demand::table::{Answer, AnswerIndex};
+use solve::slg::forest::Forest;
+use solve::slg::stack::StackIndex;
+use solve::slg::strand::{SelectedSubgoal, Strand};
+use solve::slg::table::{Answer, AnswerIndex};
 use solve::truncate::{self, Truncated};
 use std::collections::HashSet;
 use std::mem;

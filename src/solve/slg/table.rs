@@ -1,5 +1,5 @@
 use solve::slg::{CanonicalConstrainedSubst, UCanonicalGoal, DelayedLiteralSet, DelayedLiteralSets};
-use solve::slg::on_demand::strand::Strand;
+use solve::slg::strand::Strand;
 use std::collections::{HashMap, VecDeque};
 use std::collections::hash_map::Entry;
 use std::mem;
@@ -155,6 +155,7 @@ impl Table {
         self.answers.get(index.value)
     }
 
+    #[cfg(test)]
     pub(super) fn num_cached_answers(&self) -> usize {
         self.answers.len()
     }

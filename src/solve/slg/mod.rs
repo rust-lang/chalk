@@ -57,11 +57,18 @@ use std::collections::HashSet;
 use std::cmp::min;
 use std::usize;
 
+crate mod forest;
+
 mod aggregate;
 mod clauses;
-crate mod on_demand;
+mod logic;
 mod resolvent;
 mod simplify;
+mod stack;
+mod strand;
+mod table;
+mod tables;
+mod test;
 
 index_struct! {
     struct TableIndex {
