@@ -2,7 +2,7 @@ use ir::*;
 use solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use solve::slg::{self, CanonicalGoal, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber,
                  ExClause, Literal, Minimums, Satisfiable, TableIndex, UCanonicalGoal};
-use solve::slg::context::{Context, InferenceTable};
+use solve::slg::context::prelude::*;
 use solve::slg::resolvent;
 use solve::slg::forest::Forest;
 use solve::slg::stack::StackIndex;

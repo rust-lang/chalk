@@ -50,7 +50,7 @@
 //!   Popularized by Lambda Prolog.
 
 use ir::*;
-use solve::slg::context::Context;
+use solve::slg::context::prelude::*;
 use stacker;
 use std::collections::HashSet;
 use std::cmp::min;

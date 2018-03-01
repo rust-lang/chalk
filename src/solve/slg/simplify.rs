@@ -2,7 +2,7 @@ use cast::{Cast, Caster};
 use ir::{LeafGoal, Goal, QuantifierKind, InEnvironment, Substitution};
 use solve::infer::unify::UnificationResult;
 use solve::slg::{ExClause, Literal, Satisfiable};
-use solve::slg::context::{Context, InferenceTable};
+use solve::slg::context::prelude::*;
 
 /// Simplifies an HH goal into a series of positive domain goals
 /// and negative HH goals. This operation may fail if the HH goal

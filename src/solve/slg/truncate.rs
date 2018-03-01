@@ -4,7 +4,7 @@ use fallible::*;
 use fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
 use fold::shift::Shift;
 use ir::*;
-use solve::slg::context::{Context, InferenceTable};
+use solve::slg::context::prelude::*;
 
 crate fn truncate<C, T>(
     infer: &mut C::InferenceTable,

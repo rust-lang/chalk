@@ -1,18 +1,23 @@
-use crate::fallible::Fallible;
-use crate::ir::{Canonical, Environment, Lifetime, ParameterKind, Substitution,
-                Ty, UCanonical, UniverseIndex};
-use crate::solve::infer::canonicalize::Canonicalized;
-use crate::solve::infer::instantiate::BindersAndValue;
-use crate::solve::infer::ucanonicalize::UCanonicalized;
-use crate::solve::infer::unify::UnificationResult;
-use crate::solve::infer::var::InferenceVariable;
-use crate::fold::Fold;
-use crate::zip::Zip;
-use std::fmt::Debug;
-use std::sync::Arc;
+use ::crate::fallible::Fallible;
+use ::crate::ir::{Canonical, Environment, Lifetime, ParameterKind, Substitution,
+                  Ty, UCanonical, UniverseIndex};
+use ::crate::solve::infer::canonicalize::Canonicalized;
+use ::crate::solve::infer::instantiate::BindersAndValue;
+use ::crate::solve::infer::ucanonicalize::UCanonicalized;
+use ::crate::solve::infer::unify::UnificationResult;
+use ::crate::fold::Fold;
+use ::crate::zip::Zip;
+use ::std::fmt::Debug;
+use ::std::sync::Arc;
 
 crate trait Context: Copy + Debug {
     type InferenceTable: InferenceTable<Self>;
+    type InferenceVariable: InferenceVariable<Self>;
+}
+
+crate trait InferenceVariable<C: Context>: Copy {
+    fn to_ty(self) -> Ty;
+    fn to_lifetime(self) -> Lifetime;
 }
 
 crate trait InferenceTable<C: Context>: Clone {
@@ -29,7 +34,7 @@ crate trait InferenceTable<C: Context>: Clone {
 
     fn max_universe(&self) -> UniverseIndex;
 
-    fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable;
+    fn new_variable(&mut self, ui: UniverseIndex) -> C::InferenceVariable;
 
     fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime>;
 
@@ -74,10 +79,11 @@ crate trait InferenceTable<C: Context>: Clone {
 pub struct SlgContext;
 
 impl Context for SlgContext {
-    type InferenceTable = ::solve::infer::InferenceTable;
+    type InferenceTable = ::crate::solve::infer::InferenceTable;
+    type InferenceVariable = ::crate::solve::infer::var::InferenceVariable;
 }
 
-impl InferenceTable<SlgContext> for ::solve::infer::InferenceTable {
+impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
     fn new() -> Self {
         Self::new()
     }
@@ -104,7 +110,7 @@ impl InferenceTable<SlgContext> for ::solve::infer::InferenceTable {
         self.max_universe()
     }
 
-    fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
+    fn new_variable(&mut self, ui: UniverseIndex) -> ::crate::solve::infer::var::InferenceVariable {
         self.new_variable(ui)
     }
 
@@ -163,4 +169,22 @@ impl InferenceTable<SlgContext> for ::solve::infer::InferenceTable {
     {
         self.unify(environment, a, b)
     }
+}
+
+impl InferenceVariable<SlgContext> for ::crate::solve::infer::var::InferenceVariable {
+    fn to_ty(self) -> Ty {
+        self.to_ty()
+    }
+
+    fn to_lifetime(self) -> Lifetime {
+        self.to_lifetime()
+    }
+}
+
+crate mod prelude {
+    #![allow(unused_imports)] // rustc bug
+
+    crate use super::Context;
+    crate use super::InferenceTable;
+    crate use super::InferenceVariable;
 }

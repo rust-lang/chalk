@@ -1,5 +1,5 @@
 use solve::slg::{TableIndex, UCanonicalGoal};
-use solve::slg::context::Context;
+use solve::slg::context::prelude::*;
 use solve::slg::table::Table;
 use std::collections::HashMap;
 use std::ops::{Index, IndexMut};

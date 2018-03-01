@@ -1,5 +1,5 @@
 use solve::slg::{CanonicalConstrainedSubst, UCanonicalGoal, DelayedLiteralSet, DelayedLiteralSets};
-use solve::slg::context::Context;
+use solve::slg::context::prelude::*;
 use solve::slg::strand::Strand;
 use std::collections::{HashMap, VecDeque};
 use std::collections::hash_map::Entry;

@@ -1,7 +1,7 @@
 use ir::*;
 use solve::Solution;
 use solve::slg::aggregate;
-use solve::slg::context::Context;
+use solve::slg::context::prelude::*;
 use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex, UCanonicalGoal};
 use solve::slg::logic::RootSearchFail;
 use solve::slg::stack::{Stack, StackIndex};
