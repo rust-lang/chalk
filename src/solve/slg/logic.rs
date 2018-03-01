@@ -435,8 +435,7 @@ impl<C: Context> Forest<C> {
         assert!(subgoals.is_empty());
 
         let answer_subst = infer
-            .canonicalize(&ConstrainedSubst { subst, constraints })
-            .quantified;
+            .canonicalize_constrained_subst(&ConstrainedSubst { subst, constraints });
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
         let delayed_literals = {
@@ -708,7 +707,7 @@ impl<C: Context> Forest<C> {
         } = truncate::truncate::<C, _>(infer, self.max_size, subgoal);
         debug!("truncated={:?}", truncated_subgoal);
 
-        infer.canonicalize(&truncated_subgoal).quantified
+        infer.canonicalize_goal(&truncated_subgoal)
     }
 
     /// Given a selected negative subgoal, the subgoal is "inverted"
@@ -817,7 +816,7 @@ impl<C: Context> Forest<C> {
             return None;
         }
 
-        Some(infer.canonicalize(&inverted_subgoal).quantified)
+        Some(infer.canonicalize_goal(&inverted_subgoal))
     }
 
     /// Invoked when we have selected a positive literal, created its

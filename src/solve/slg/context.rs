@@ -1,14 +1,13 @@
-use ::crate::fallible::Fallible;
-use ::crate::ir::{Canonical, Environment, Lifetime, ParameterKind, Substitution,
-                  Ty, UCanonical, UniverseIndex};
-use ::crate::solve::infer::canonicalize::Canonicalized;
-use ::crate::solve::infer::instantiate::BindersAndValue;
-use ::crate::solve::infer::ucanonicalize::UCanonicalized;
-use ::crate::solve::infer::unify::UnificationResult;
-use ::crate::fold::Fold;
-use ::crate::zip::Zip;
-use ::std::fmt::Debug;
-use ::std::sync::Arc;
+use crate::fallible::Fallible;
+use crate::ir::{Canonical, ConstrainedSubst, Environment, Goal, InEnvironment, Lifetime,
+                ParameterKind, Substitution, Ty, UCanonical, UniverseIndex};
+use crate::solve::infer::instantiate::BindersAndValue;
+use crate::solve::infer::ucanonicalize::UCanonicalized;
+use crate::solve::infer::unify::UnificationResult;
+use crate::fold::Fold;
+use crate::zip::Zip;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 crate trait Context: Copy + Debug {
     type InferenceTable: InferenceTable<Self>;
@@ -42,7 +41,12 @@ crate trait InferenceTable<C: Context>: Clone {
 
     fn normalize_deep<T: Fold>(&mut self, value: &T) -> T::Result;
 
-    fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T::Result>;
+    fn canonicalize_goal(&mut self, value: &InEnvironment<Goal>) -> Canonical<InEnvironment<Goal>>;
+
+    fn canonicalize_constrained_subst(
+        &mut self,
+        value: &ConstrainedSubst,
+    ) -> Canonical<ConstrainedSubst>;
 
     fn u_canonicalize<T: Fold>(&mut self, value: &Canonical<T>) -> UCanonicalized<T::Result>;
 
@@ -126,8 +130,15 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         self.normalize_deep(value)
     }
 
-    fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T::Result> {
-        self.canonicalize(value)
+    fn canonicalize_goal(&mut self, value: &InEnvironment<Goal>) -> Canonical<InEnvironment<Goal>> {
+        self.canonicalize(value).quantified
+    }
+
+    fn canonicalize_constrained_subst(
+        &mut self,
+        value: &ConstrainedSubst,
+    ) -> Canonical<ConstrainedSubst> {
+        self.canonicalize(value).quantified
     }
 
     fn u_canonicalize<T: Fold>(&mut self, value: &Canonical<T>) -> UCanonicalized<T::Result> {
