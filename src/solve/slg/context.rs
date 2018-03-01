@@ -67,6 +67,7 @@ crate trait InferenceTable<C: Context>: Clone {
     // Used by: logic
     fn invert_goal(&mut self, value: &InEnvironment<Goal>) -> Option<InEnvironment<Goal>>;
 
+    // Used by: simplify, resolvent
     fn instantiate_binders_existentially<T>(
         &mut self,
         arg: &impl BindersAndValue<Output = T>,
@@ -74,6 +75,7 @@ crate trait InferenceTable<C: Context>: Clone {
     where
         T: Fold;
 
+    // Used by: simplify, resolvent, truncate
     fn unify<T>(
         &mut self,
         environment: &Arc<Environment>,
@@ -83,6 +85,7 @@ crate trait InferenceTable<C: Context>: Clone {
     where
         T: ?Sized + Zip;
 
+    // Used by: resolvent
     fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
     where
         T: Fold + Debug;

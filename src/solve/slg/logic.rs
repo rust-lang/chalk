@@ -1,4 +1,4 @@
-use ir::*;
+use ir::{ConstrainedSubst, InEnvironment, Goal, LeafGoal};
 use solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use solve::slg::{self, CanonicalGoal, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber,
                  ExClause, Literal, Minimums, Satisfiable, TableIndex, UCanonicalGoal};
