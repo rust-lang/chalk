@@ -4,6 +4,7 @@ use crate::ir::{Canonical, ConstrainedSubst, Environment, Goal, InEnvironment, L
 use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::UCanonicalized;
 use crate::solve::infer::unify::UnificationResult;
+use crate::solve::slg::CanonicalGoal;
 use crate::fold::Fold;
 use crate::zip::Zip;
 use std::fmt::Debug;
@@ -48,7 +49,7 @@ crate trait InferenceTable<C: Context>: Clone {
         value: &ConstrainedSubst,
     ) -> Canonical<ConstrainedSubst>;
 
-    fn u_canonicalize<T: Fold>(&mut self, value: &Canonical<T>) -> UCanonicalized<T::Result>;
+    fn u_canonicalize_goal(&mut self, value: &CanonicalGoal) -> UCanonicalized<InEnvironment<Goal>>;
 
     fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution;
 
@@ -141,7 +142,7 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         self.canonicalize(value).quantified
     }
 
-    fn u_canonicalize<T: Fold>(&mut self, value: &Canonical<T>) -> UCanonicalized<T::Result> {
+    fn u_canonicalize_goal(&mut self, value: &CanonicalGoal) -> UCanonicalized<InEnvironment<Goal>> {
         self.u_canonicalize(value)
     }
 

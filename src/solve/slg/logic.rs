@@ -558,7 +558,7 @@ impl<C: Context> Forest<C> {
         let UCanonicalized {
             quantified: ucanonical_subgoal,
             universes: universe_map,
-        } = infer.u_canonicalize(&canonical_subgoal);
+        } = infer.u_canonicalize_goal(&canonical_subgoal);
 
         let table = self.get_or_create_table_for_ucanonical_goal(ucanonical_subgoal);
 
