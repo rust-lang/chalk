@@ -23,6 +23,7 @@ crate trait InferenceVariable<C: Context>: Copy {
 crate trait InferenceTable<C: Context>: Clone {
     fn new() -> Self;
 
+    // Used by: simplify
     fn instantiate_binders_universally<T>(
         &mut self,
         arg: &impl BindersAndValue<Output = T>,
@@ -30,32 +31,41 @@ crate trait InferenceTable<C: Context>: Clone {
     where
         T: Fold;
 
+    // Used by: logic
     fn instantiate_universes<'v, T>(&mut self, value: &'v UCanonical<T>) -> &'v Canonical<T>;
 
+    // Used by: truncate
     fn max_universe(&self) -> UniverseIndex;
 
+    // Used by: aggregate, truncate
     fn new_variable(&mut self, ui: UniverseIndex) -> C::InferenceVariable;
 
+    // Used by: resolvent
     fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime>;
 
+    // Used by: resolvent, truncate
     fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty>;
 
+    // Used by: resolvent, logic (but for debugging only)
     fn normalize_deep<T: Fold>(&mut self, value: &T) -> T::Result;
 
+    // Used by: logic
     fn canonicalize_goal(&mut self, value: &InEnvironment<Goal>) -> Canonical<InEnvironment<Goal>>;
 
+    // Used by: logic
     fn canonicalize_constrained_subst(
         &mut self,
         value: &ConstrainedSubst,
     ) -> Canonical<ConstrainedSubst>;
 
+    // Used by: logic
     fn u_canonicalize_goal(&mut self, value: &CanonicalGoal) -> UCanonicalized<InEnvironment<Goal>>;
 
+    // Used by: logic
     fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution;
 
-    fn invert<T>(&mut self, value: &T) -> Option<T::Result>
-    where
-        T: Fold<Result = T>;
+    // Used by: logic
+    fn invert_goal(&mut self, value: &InEnvironment<Goal>) -> Option<InEnvironment<Goal>>;
 
     fn instantiate_binders_existentially<T>(
         &mut self,
@@ -146,10 +156,7 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         self.u_canonicalize(value)
     }
 
-    fn invert<T>(&mut self, value: &T) -> Option<T::Result>
-    where
-        T: Fold<Result = T>,
-    {
+    fn invert_goal(&mut self, value: &InEnvironment<Goal>) -> Option<InEnvironment<Goal>> {
         self.invert(value)
     }
 

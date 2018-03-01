@@ -759,7 +759,7 @@ impl<C: Context> Forest<C> {
         // could instead generate an (imprecise) result). As you can
         // see a bit later, we also diverge in some other aspects that
         // affect completeness when it comes to subgoal abstraction.
-        let inverted_subgoal = infer.invert(subgoal)?;
+        let inverted_subgoal = infer.invert_goal(subgoal)?;
 
         // DIVERGENCE
         //
