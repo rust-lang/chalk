@@ -51,7 +51,6 @@
 
 use fold::Fold;
 use ir::*;
-use solve::slg::context::prelude::*;
 use stacker;
 use std::collections::HashSet;
 use std::cmp::min;
@@ -296,80 +295,6 @@ impl DepthFirstNumber {
         assert!(value < ::std::u64::MAX);
         self.value += 1;
         DepthFirstNumber { value }
-    }
-}
-
-impl ExClause {
-    /// Used whenever we process an answer (whether new or cached) on
-    /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
-    /// the resolvent (or factor) if it has grown too large.
-    fn truncate_returned<C: Context>(
-        self,
-        infer: &mut C::InferenceTable,
-        max_size: usize,
-    ) -> ExClause {
-        use self::truncate::Truncated;
-
-        // DIVERGENCE
-        //
-        // In the original RR paper, truncation is only applied
-        // when the result of resolution is a new answer (i.e.,
-        // `ex_clause.subgoals.is_empty()`).  I've chosen to be
-        // more aggressive here, precisely because or our extended
-        // semantics for unification. In particular, unification
-        // can insert new goals, so I fear that positive feedback
-        // loops could still run indefinitely in the original
-        // formulation. I would like to revise our unification
-        // mechanism to avoid that problem, in which case this could
-        // be tightened up to be more like the original RR paper.
-        //
-        // Still, I *believe* this more aggressive approx. should
-        // not interfere with any of the properties of the
-        // original paper. In particular, applying truncation only
-        // when the resolvent has no subgoals seems like it is
-        // aimed at giving us more times to eliminate this
-        // ambiguous answer.
-
-        match truncate::truncate::<C, _>(infer, max_size, &self.subst) {
-            // No need to truncate? Just propagate the resolvent back.
-            Truncated {
-                overflow: false, ..
-            } => self,
-
-            // Resolvent got too large. Have to introduce approximation.
-            Truncated {
-                overflow: true,
-                value: truncated_subst,
-            } => {
-                // DIVERGENCE
-                //
-                // In RR, `self.delayed_literals` would be
-                // preserved. I have chosen to drop them. Keeping
-                // them does allow for the possibility of
-                // eliminating this answer if any of them turn out
-                // to be satisfiable. However, it also introduces
-                // an annoying edge case I didn't want to think
-                // about -- one which, interestingly, the paper
-                // did not discuss, which may indicate it is
-                // impossible for some subtle reason. In
-                // particular, a truncated delayed literal has a
-                // sort of inverse semantics. i.e. if we convert
-                // `Foo :- ~Bar(Rc<Rc<u32>>) |` to `Foo :-
-                // ~Bar(Rc<X>), Unknown |`, then this could be
-                // invalidated by an instance of `Bar(Rc<i32>)`,
-                // which is irrelevant to the original
-                // clause. (There is an additional annoyance,
-                // which is that we may not have tried to solve
-                // `Bar(Rc<X>)` at all.)
-
-                ExClause {
-                    subst: truncated_subst,
-                    delayed_literals: vec![DelayedLiteral::CannotProve(())],
-                    constraints: vec![],
-                    subgoals: vec![],
-                }
-            }
-        }
     }
 }
 

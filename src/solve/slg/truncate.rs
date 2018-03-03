@@ -4,31 +4,35 @@ use fallible::*;
 use fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
 use fold::shift::Shift;
 use ir::*;
+use solve::slg::forest::Forest;
 use solve::slg::context::prelude::*;
-#[cfg(test)] use solve::slg::context::SlgContext;
+#[cfg(test)]
+use solve::slg::context::SlgContext;
 
-crate fn truncate<C, T>(
-    infer: &mut C::InferenceTable,
-    max_size: usize,
-    value: &T,
-) -> Truncated<T::Result>
-where
-    C: Context,
-    T: Fold,
-{
-    debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
+impl<C: Context> Forest<C> {
+    crate fn truncate<T>(
+        infer: &mut C::InferenceTable,
+        max_size: usize,
+        value: &T,
+    ) -> Truncated<T::Result>
+    where
+        C: Context,
+        T: Fold,
+    {
+        debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
 
-    let mut truncater = Truncater::<'_, C>::new(infer, max_size);
-    let value = value
-        .fold_with(&mut truncater, 0)
-        .expect("Truncater is infallible");
-    debug!(
-        "truncate: overflow={} value={:?}",
-        truncater.overflow, value
-    );
-    Truncated {
-        overflow: truncater.overflow,
-        value,
+        let mut truncater = Truncater::<'_, C>::new(infer, max_size);
+        let value = value
+            .fold_with(&mut truncater, 0)
+            .expect("Truncater is infallible");
+        debug!(
+            "truncate: overflow={} value={:?}",
+            truncater.overflow, value
+        );
+        Truncated {
+            overflow: truncater.overflow,
+            value,
+        }
     }
 }
 
@@ -133,7 +137,7 @@ fn truncate_types() {
     let Truncated {
         overflow,
         value: ty_no_overflow,
-    } = truncate::<SlgContext, _>(&mut table, 5, &ty0);
+    } = Forest::<SlgContext>::truncate(&mut table, 5, &ty0);
     assert!(!overflow);
     assert_eq!(ty0, ty_no_overflow);
 
@@ -144,7 +148,7 @@ fn truncate_types() {
     let Truncated {
         overflow,
         value: ty_overflow,
-    } = truncate::<SlgContext, _>(&mut table, 3, &ty0);
+    } = Forest::<SlgContext>::truncate(&mut table, 3, &ty0);
     assert!(overflow);
     assert_eq!(ty_expect, ty_overflow);
 
@@ -175,7 +179,7 @@ fn truncate_multiple_types() {
     let Truncated {
         overflow,
         value: ty_no_overflow,
-    } = truncate::<SlgContext, _>(&mut table, 5, &ty0_3);
+    } = Forest::<SlgContext>::truncate(&mut table, 5, &ty0_3);
     assert!(!overflow);
     assert_eq!(ty0_3, ty_no_overflow);
 
@@ -184,7 +188,7 @@ fn truncate_multiple_types() {
     let Truncated {
         overflow,
         value: ty_no_overflow,
-    } = truncate::<SlgContext, _>(&mut table, 6, &ty0_3);
+    } = Forest::<SlgContext>::truncate(&mut table, 6, &ty0_3);
     assert!(!overflow);
     assert_eq!(ty0_3, ty_no_overflow);
 
@@ -193,7 +197,7 @@ fn truncate_multiple_types() {
     let Truncated {
         overflow,
         value: ty_overflow,
-    } = truncate::<SlgContext, _>(&mut table, 3, &ty0_3);
+    } = Forest::<SlgContext>::truncate(&mut table, 3, &ty0_3);
     assert!(overflow);
     assert_eq!(
         vec![
@@ -224,7 +228,7 @@ fn truncate_normalizes() {
                    (apply (skol 1))));
 
     // test: truncating *before* unifying has no effect
-    assert!(!truncate::<SlgContext, _>(&mut table, 3, &ty0).overflow);
+    assert!(!Forest::<SlgContext>::truncate(&mut table, 3, &ty0).overflow);
 
     // unify X and ty1
     table.unify(environment0, &v0.to_ty(), &ty1).unwrap();
@@ -233,7 +237,7 @@ fn truncate_normalizes() {
     let Truncated {
         overflow,
         value: ty_overflow,
-    } = truncate::<SlgContext, _>(&mut table, 3, &ty0);
+    } = Forest::<SlgContext>::truncate(&mut table, 3, &ty0);
     assert!(overflow);
     assert_eq!(
         ty!(apply (item 0)
@@ -259,5 +263,5 @@ fn truncate_normalizes_under_binders() {
                     (var 1))));
 
     // the index in `(var 1)` should be adjusted to account for binders
-    assert!(!truncate::<SlgContext, _>(&mut table, 4, &ty0).overflow);
+    assert!(!Forest::<SlgContext>::truncate(&mut table, 4, &ty0).overflow);
 }

@@ -4,7 +4,8 @@ use fold::Fold;
 use fold::shift::Shift;
 use ir::*;
 use solve::infer::unify::UnificationResult;
-use solve::slg::context::{Context, InferenceTable};
+use solve::slg::forest::Forest;
+use solve::slg::context::prelude::*;
 use std::sync::Arc;
 use zip::{Zip, Zipper};
 
@@ -46,243 +47,246 @@ use super::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Literal, Satisfi
 //
 // is the SLG resolvent of G with C.
 
-/// Applies the SLG resolvent algorithm to incorporate a program
-/// clause into the main X-clause, producing a new X-clause that
-/// must be solved.
-///
-/// # Parameters
-///
-/// - `goal` is the goal G that we are trying to solve
-/// - `clause` is the program clause that may be useful to that end
-pub(super) fn resolvent_clause<C: Context>(
-    infer: &mut C::InferenceTable,
-    goal: &InEnvironment<DomainGoal>,
-    subst: &Substitution,
-    clause: &Binders<ProgramClauseImplication<DomainGoal>>,
-) -> Satisfiable<ExClause> {
-    // Relating the above description to our situation:
+impl<C: Context> Forest<C> {
+    /// Applies the SLG resolvent algorithm to incorporate a program
+    /// clause into the main X-clause, producing a new X-clause that
+    /// must be solved.
+    ///
+    /// # Parameters
+    ///
+    /// - `goal` is the goal G that we are trying to solve
+    /// - `clause` is the program clause that may be useful to that end
+    pub(super) fn resolvent_clause(
+        infer: &mut C::InferenceTable,
+        goal: &InEnvironment<DomainGoal>,
+        subst: &Substitution,
+        clause: &Binders<ProgramClauseImplication<DomainGoal>>,
+    ) -> Satisfiable<ExClause> {
+        // Relating the above description to our situation:
+        //
+        // - `goal` G, except with binders for any existential variables.
+        //   - Also, we always select the first literal in `ex_clause.literals`, so `i` is 0.
+        // - `clause` is C, except with binders for any existential variables.
+
+        debug_heading!(
+            "resolvent_clause(\
+             \n    goal={:?},\
+             \n    clause={:?})",
+            goal,
+            clause,
+        );
+
+        // C' in the description above is `consequence :- conditions`.
+        //
+        // Note that G and C' have no variables in common.
+        let ProgramClauseImplication {
+            consequence,
+            conditions,
+        } = infer.instantiate_binders_existentially(clause);
+        debug!("consequence = {:?}", consequence);
+        debug!("conditions = {:?}", conditions);
+
+        let environment = &goal.environment.clone();
+
+        // Unify the selected literal Li with C'.
+        let UnificationResult {
+            goals: subgoals,
+            constraints,
+        } = {
+            match infer.unify(environment, &goal.goal, &consequence) {
+                Err(_) => return Satisfiable::No,
+                Ok(v) => v,
+            }
+        };
+
+        // Final X-clause that we will return.
+        let mut ex_clause = ExClause {
+            subst: subst.clone(),
+            delayed_literals: vec![],
+            constraints: vec![],
+            subgoals: vec![],
+        };
+
+        // Add the subgoals/region-constraints that unification gave us.
+        debug!("subgoals={:?}", subgoals);
+        ex_clause
+            .subgoals
+            .extend(subgoals.into_iter().casted().map(Literal::Positive));
+        ex_clause.constraints.extend(constraints);
+
+        // Add the `conditions` from the program clause into the result too.
+        ex_clause
+            .subgoals
+            .extend(conditions.into_iter().map(|c| match c {
+                Goal::Not(c) => Literal::Negative(InEnvironment::new(environment, *c)),
+                c => Literal::Positive(InEnvironment::new(environment, c)),
+            }));
+
+        Satisfiable::Yes(ex_clause)
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // SLG FACTOR
     //
-    // - `goal` G, except with binders for any existential variables.
-    //   - Also, we always select the first literal in `ex_clause.literals`, so `i` is 0.
-    // - `clause` is C, except with binders for any existential variables.
-
-    debug_heading!(
-        "resolvent_clause(\
-         \n    goal={:?},\
-         \n    clause={:?})",
-        goal,
-        clause,
-    );
-
-    // C' in the description above is `consequence :- conditions`.
+    // The "SLG Factor" is used to combine a *goal* G with some answer
+    // *C*, where C contains delayed literals. It unifies the goal's
+    // selected literal with the answer and then inserts the delayed
+    // literals into the goal's list of delayed literals.
     //
-    // Note that G and C' have no variables in common.
-    let ProgramClauseImplication {
-        consequence,
-        conditions,
-    } = infer.instantiate_binders_existentially(clause);
-    debug!("consequence = {:?}", consequence);
-    debug!("conditions = {:?}", conditions);
+    // Terminology note: The NFTD and RR papers use the term
+    // "resolvent" to mean both the factor and the resolvent, but EWFS
+    // distinguishes the two. We follow EWFS here since -- in the code
+    // -- we tend to know whether there are delayed literals or not,
+    // and hence to know which code path we actually want.
+    //
+    // From EWFS:
+    //
+    // Let G be an X-clause A :- D | L1,...Ln, where N > 0, and Li be selected atom.
+    //
+    // Let C be an X-clause with delayed literals. Let
+    //
+    //     C' = A' :- D' |
+    //
+    // be a variant of C such that G and C' have no variables in
+    // common.
+    //
+    // Let Li and A' be unified with MGU S.
+    //
+    // Then:
+    //
+    //     S(A :- D,Li | L1...Li-1, Li+1...Ln)
+    //                             ^ see below
+    //
+    // is the SLG factor of G with C. We alter the process mildly to insert
+    // some clauses into `^` -- in particular, the side-effects of unification.
 
-    let environment = &goal.environment.clone();
+    ///////////////////////////////////////////////////////////////////////////
+    // apply_answer_subst
+    //
+    // Apply answer subst has the job of "plugging in" the answer to a
+    // query into the pending ex-clause. To see how it works, it's worth stepping
+    // up one level. Imagine that first we are trying to prove a goal A:
+    //
+    //     A :- T: Foo<Vec<?U>>, ?U: Bar
+    //
+    // this spawns a subgoal `T: Foo<Vec<?0>>`, and it's this subgoal that
+    // has now produced an answer `?0 = u32`. When the goal A spawned the
+    // subgoal, it will also have registered a `PendingExClause` with its
+    // current state.  At the point where *this* method has been invoked,
+    // that pending ex-clause has been instantiated with fresh variables and setup,
+    // so we have four bits of incoming information:
+    //
+    // - `ex_clause`, which is the remaining stuff to prove for the goal A.
+    //   Here, the inference variable `?U` has been instantiated with a fresh variable
+    //   `?X`.
+    //   - `A :- ?X: Bar`
+    // - `selected_goal`, which is the thing we were trying to prove when we
+    //   spawned the subgoal. It shares inference variables with `ex_clause`.
+    //   - `T: Foo<Vec<?X>>`
+    // - `answer_table_goal`, which is the subgoal in canonical form:
+    //   - `for<type> T: Foo<Vec<?0>>`
+    // - `canonical_answer_subst`, which is an answer to `answer_table_goal`.
+    //   - `[?0 = u32]`
+    //
+    // In this case, this function will (a) unify `u32` and `?X` and then
+    // (b) return `ex_clause` (extended possibly with new region constraints
+    // and subgoals).
+    //
+    // One way to do this would be to (a) substitute
+    // `canonical_answer_subst` into `answer_table_goal` (yielding `T:
+    // Foo<Vec<u32>>`) and then (b) instantiate the result with fresh
+    // variables (no effect in this instance) and then (c) unify that with
+    // `selected_goal` (yielding, indirectly, that `?X = u32`). But that
+    // is not what we do: it's inefficient, to start, but it also causes
+    // problems because unification of projections can make new
+    // sub-goals. That is, even if the answers don't involve any
+    // projections, the table goals might, and this can create an infinite
+    // loop (see also #74).
+    //
+    // What we do instead is to (a) instantiate the substitution, which
+    // may have free variables in it (in this case, it would not, and the
+    // instantiation woudl have no effect) and then (b) zip
+    // `answer_table_goal` and `selected_goal` without having done any
+    // substitution. After all, these ought to be basically the same,
+    // since `answer_table_goal` was created by canonicalizing (and
+    // possibly truncating, but we'll get to that later)
+    // `selected_goal`. Then, whenever we reach a "free variable" in
+    // `answer_table_goal`, say `?0`, we go to the instantiated answer
+    // substitution and lookup the result (in this case, `u32`). We take
+    // that result and unify it with whatever we find in `selected_goal`
+    // (in this case, `?X`).
+    //
+    // Let's cover then some corner cases. First off, what is this
+    // business of instantiating the answer? Well, the answer may not be a
+    // simple type like `u32`, it could be a "family" of types, like
+    // `for<type> Vec<?0>` -- i.e., `Vec<X>: Bar` for *any* `X`. In that
+    // case, the instantiation would produce a substitution `[?0 :=
+    // Vec<?Y>]` (note that the key is not affected, just the value). So
+    // when we do the unification, instead of unifying `?X = u32`, we
+    // would unify `?X = Vec<?Y>`.
+    //
+    // Next, truncation. One key thing is that the `answer_table_goal` may
+    // not be *exactly* the same as the `selected_goal` -- we will
+    // truncate it if it gets too deep. so, in our example, it may be that
+    // instead of `answer_table_goal` being `for<type> T: Foo<Vec<?0>>`,
+    // it could have been truncated to `for<type> T: Foo<?0>` (which is a
+    // more general goal).  In that case, let's say that the answer is
+    // still `[?0 = u32]`, meaning that `T: Foo<u32>` is true (which isn't
+    // actually interesting to our original goal). When we do the zip
+    // then, we will encounter `?0` in the `answer_table_goal` and pair
+    // that with `Vec<?X>` from the pending goal. We will attempt to unify
+    // `Vec<?X>` with `u32` (from the substitution), which will fail. That
+    // failure will get propagated back up.
 
-    // Unify the selected literal Li with C'.
-    let UnificationResult {
-        goals: subgoals,
-        constraints,
-    } = {
-        match infer.unify(environment, &goal.goal, &consequence) {
+    pub(super) fn apply_answer_subst(
+        infer: &mut C::InferenceTable,
+        mut ex_clause: ExClause,
+        selected_goal: &InEnvironment<Goal<DomainGoal>>,
+        answer_table_goal: &CanonicalGoal<DomainGoal>,
+        canonical_answer_subst: &CanonicalConstrainedSubst,
+    ) -> Satisfiable<ExClause> {
+        debug_heading!("apply_answer_subst()");
+        debug!("ex_clause={:?}", ex_clause);
+        debug!("selected_goal={:?}", infer.normalize_deep(selected_goal));
+        debug!("answer_table_goal={:?}", answer_table_goal);
+        debug!("canonical_answer_subst={:?}", canonical_answer_subst);
+
+        // C' is now `answer`. No variables in commmon with G.
+        let ConstrainedSubst {
+            subst: answer_subst,
+
+            // Assuming unification succeeds, we incorporate the
+            // region constraints from the answer into the result;
+            // we'll need them if this answer (which is not yet known
+            // to be true) winds up being true, and otherwise (if the
+            // answer is false or unknown) it doesn't matter.
+            constraints: answer_constraints,
+        } = infer.instantiate_canonical(&canonical_answer_subst);
+
+        let (goals, constraints) = match AnswerSubstitutor::<C>::substitute(
+            infer,
+            &selected_goal.environment,
+            &answer_subst,
+            &answer_table_goal.value,
+            selected_goal,
+        ) {
+            Ok((goals, constraints)) => (goals, constraints),
             Err(_) => return Satisfiable::No,
-            Ok(v) => v,
-        }
-    };
+        };
 
-    // Final X-clause that we will return.
-    let mut ex_clause = ExClause {
-        subst: subst.clone(),
-        delayed_literals: vec![],
-        constraints: vec![],
-        subgoals: vec![],
-    };
+        ex_clause.constraints.extend(constraints);
+        ex_clause.constraints.extend(answer_constraints);
+        ex_clause
+            .subgoals
+            .extend(goals.into_iter().casted().map(Literal::Positive));
 
-    // Add the subgoals/region-constraints that unification gave us.
-    debug!("subgoals={:?}", subgoals);
-    ex_clause
-        .subgoals
-        .extend(subgoals.into_iter().casted().map(Literal::Positive));
-    ex_clause.constraints.extend(constraints);
-
-    // Add the `conditions` from the program clause into the result too.
-    ex_clause
-        .subgoals
-        .extend(conditions.into_iter().map(|c| match c {
-            Goal::Not(c) => Literal::Negative(InEnvironment::new(environment, *c)),
-            c => Literal::Positive(InEnvironment::new(environment, c)),
-        }));
-
-    Satisfiable::Yes(ex_clause)
-}
-
-///////////////////////////////////////////////////////////////////////////
-// SLG FACTOR
-//
-// The "SLG Factor" is used to combine a *goal* G with some answer
-// *C*, where C contains delayed literals. It unifies the goal's
-// selected literal with the answer and then inserts the delayed
-// literals into the goal's list of delayed literals.
-//
-// Terminology note: The NFTD and RR papers use the term
-// "resolvent" to mean both the factor and the resolvent, but EWFS
-// distinguishes the two. We follow EWFS here since -- in the code
-// -- we tend to know whether there are delayed literals or not,
-// and hence to know which code path we actually want.
-//
-// From EWFS:
-//
-// Let G be an X-clause A :- D | L1,...Ln, where N > 0, and Li be selected atom.
-//
-// Let C be an X-clause with delayed literals. Let
-//
-//     C' = A' :- D' |
-//
-// be a variant of C such that G and C' have no variables in
-// common.
-//
-// Let Li and A' be unified with MGU S.
-//
-// Then:
-//
-//     S(A :- D,Li | L1...Li-1, Li+1...Ln)
-//                             ^ see below
-//
-// is the SLG factor of G with C. We alter the process mildly to insert
-// some clauses into `^` -- in particular, the side-effects of unification.
-
-///////////////////////////////////////////////////////////////////////////
-// apply_answer_subst
-//
-// Apply answer subst has the job of "plugging in" the answer to a
-// query into the pending ex-clause. To see how it works, it's worth stepping
-// up one level. Imagine that first we are trying to prove a goal A:
-//
-//     A :- T: Foo<Vec<?U>>, ?U: Bar
-//
-// this spawns a subgoal `T: Foo<Vec<?0>>`, and it's this subgoal that
-// has now produced an answer `?0 = u32`. When the goal A spawned the
-// subgoal, it will also have registered a `PendingExClause` with its
-// current state.  At the point where *this* method has been invoked,
-// that pending ex-clause has been instantiated with fresh variables and setup,
-// so we have four bits of incoming information:
-//
-// - `ex_clause`, which is the remaining stuff to prove for the goal A.
-//   Here, the inference variable `?U` has been instantiated with a fresh variable
-//   `?X`.
-//   - `A :- ?X: Bar`
-// - `selected_goal`, which is the thing we were trying to prove when we
-//   spawned the subgoal. It shares inference variables with `ex_clause`.
-//   - `T: Foo<Vec<?X>>`
-// - `answer_table_goal`, which is the subgoal in canonical form:
-//   - `for<type> T: Foo<Vec<?0>>`
-// - `canonical_answer_subst`, which is an answer to `answer_table_goal`.
-//   - `[?0 = u32]`
-//
-// In this case, this function will (a) unify `u32` and `?X` and then
-// (b) return `ex_clause` (extended possibly with new region constraints
-// and subgoals).
-//
-// One way to do this would be to (a) substitute
-// `canonical_answer_subst` into `answer_table_goal` (yielding `T:
-// Foo<Vec<u32>>`) and then (b) instantiate the result with fresh
-// variables (no effect in this instance) and then (c) unify that with
-// `selected_goal` (yielding, indirectly, that `?X = u32`). But that
-// is not what we do: it's inefficient, to start, but it also causes
-// problems because unification of projections can make new
-// sub-goals. That is, even if the answers don't involve any
-// projections, the table goals might, and this can create an infinite
-// loop (see also #74).
-//
-// What we do instead is to (a) instantiate the substitution, which
-// may have free variables in it (in this case, it would not, and the
-// instantiation woudl have no effect) and then (b) zip
-// `answer_table_goal` and `selected_goal` without having done any
-// substitution. After all, these ought to be basically the same,
-// since `answer_table_goal` was created by canonicalizing (and
-// possibly truncating, but we'll get to that later)
-// `selected_goal`. Then, whenever we reach a "free variable" in
-// `answer_table_goal`, say `?0`, we go to the instantiated answer
-// substitution and lookup the result (in this case, `u32`). We take
-// that result and unify it with whatever we find in `selected_goal`
-// (in this case, `?X`).
-//
-// Let's cover then some corner cases. First off, what is this
-// business of instantiating the answer? Well, the answer may not be a
-// simple type like `u32`, it could be a "family" of types, like
-// `for<type> Vec<?0>` -- i.e., `Vec<X>: Bar` for *any* `X`. In that
-// case, the instantiation would produce a substitution `[?0 :=
-// Vec<?Y>]` (note that the key is not affected, just the value). So
-// when we do the unification, instead of unifying `?X = u32`, we
-// would unify `?X = Vec<?Y>`.
-//
-// Next, truncation. One key thing is that the `answer_table_goal` may
-// not be *exactly* the same as the `selected_goal` -- we will
-// truncate it if it gets too deep. so, in our example, it may be that
-// instead of `answer_table_goal` being `for<type> T: Foo<Vec<?0>>`,
-// it could have been truncated to `for<type> T: Foo<?0>` (which is a
-// more general goal).  In that case, let's say that the answer is
-// still `[?0 = u32]`, meaning that `T: Foo<u32>` is true (which isn't
-// actually interesting to our original goal). When we do the zip
-// then, we will encounter `?0` in the `answer_table_goal` and pair
-// that with `Vec<?X>` from the pending goal. We will attempt to unify
-// `Vec<?X>` with `u32` (from the substitution), which will fail. That
-// failure will get propagated back up.
-
-pub(super) fn apply_answer_subst<C: Context>(
-    infer: &mut C::InferenceTable,
-    mut ex_clause: ExClause,
-    selected_goal: &InEnvironment<Goal<DomainGoal>>,
-    answer_table_goal: &CanonicalGoal<DomainGoal>,
-    canonical_answer_subst: &CanonicalConstrainedSubst,
-) -> Satisfiable<ExClause> {
-    debug_heading!("apply_answer_subst()");
-    debug!("ex_clause={:?}", ex_clause);
-    debug!("selected_goal={:?}", infer.normalize_deep(selected_goal));
-    debug!("answer_table_goal={:?}", answer_table_goal);
-    debug!("canonical_answer_subst={:?}", canonical_answer_subst);
-
-    // C' is now `answer`. No variables in commmon with G.
-    let ConstrainedSubst {
-        subst: answer_subst,
-
-        // Assuming unification succeeds, we incorporate the
-        // region constraints from the answer into the result;
-        // we'll need them if this answer (which is not yet known
-        // to be true) winds up being true, and otherwise (if the
-        // answer is false or unknown) it doesn't matter.
-        constraints: answer_constraints,
-    } = infer.instantiate_canonical(&canonical_answer_subst);
-
-    let (goals, constraints) = match AnswerSubstitutor::<C>::substitute(
-        infer,
-        &selected_goal.environment,
-        &answer_subst,
-        &answer_table_goal.value,
-        selected_goal,
-    ) {
-        Ok((goals, constraints)) => (goals, constraints),
-        Err(_) => return Satisfiable::No,
-    };
-
-    ex_clause.constraints.extend(constraints);
-    ex_clause.constraints.extend(answer_constraints);
-    ex_clause
-        .subgoals
-        .extend(goals.into_iter().casted().map(Literal::Positive));
-
-    Satisfiable::Yes(ex_clause)
+        Satisfiable::Yes(ex_clause)
+    }
 }
 
 struct AnswerSubstitutor<'t, C: Context>
-    where C::InferenceTable: 't
+where
+    C::InferenceTable: 't,
 {
     table: &'t mut C::InferenceTable,
     environment: &'t Arc<Environment<DomainGoal>>,

@@ -1,6 +1,5 @@
 use ir::*;
 use solve::Solution;
-use solve::slg::aggregate;
 use solve::slg::context::prelude::*;
 use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex, UCanonicalGoal};
 use solve::slg::logic::RootSearchFail;
@@ -102,7 +101,7 @@ impl<C: Context> Forest<C> {
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
     crate fn solve(&mut self, goal: &UCanonicalGoal<DomainGoal>) -> Option<Solution> {
-        aggregate::make_solution(&goal.canonical, self.iter_answers(goal))
+        Self::make_solution(&goal.canonical, self.iter_answers(goal))
     }
 
     /// True if all the tables on the stack starting from `depth` and
