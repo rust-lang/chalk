@@ -105,7 +105,7 @@ crate trait InferenceTable<C: Context>: Clone {
     // Used by: simplify, resolvent, truncate
     fn unify<T>(
         &mut self,
-        environment: &Arc<Environment>,
+        environment: &Arc<Environment<DomainGoal>>,
         a: &T,
         b: &T,
     ) -> Fallible<UnificationResult>
@@ -218,7 +218,7 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
 
     fn unify<T>(
         &mut self,
-        environment: &Arc<Environment>,
+        environment: &Arc<Environment<DomainGoal>>,
         a: &T,
         b: &T,
     ) -> Fallible<UnificationResult>

@@ -223,7 +223,8 @@ macro_rules! map_impl {
 }
 
 map_impl!(impl[T: Cast<U>, U] Cast<Option<U>> for Option<T>);
-map_impl!(impl[T: Cast<U>, U] Cast<InEnvironment<U>> for InEnvironment<T>);
+map_impl!(impl[T: EnvironmentArg + Cast<U>, U: EnvironmentArg<DomainGoal = T::DomainGoal>]
+          Cast<InEnvironment<U>> for InEnvironment<T>);
 map_impl!(impl[T: Cast<U>, U, E] Cast<Result<U, E>> for Result<T, E>);
 
 impl<T, U> Cast<Canonical<U>> for Canonical<T>

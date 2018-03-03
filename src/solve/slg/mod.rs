@@ -191,12 +191,12 @@ enum_fold!(DelayedLiteral[] { CannotProve(a), Negative(a), Positive(a, b) });
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-enum Literal<D> {
+enum Literal<D: EnvironmentArg> {
     Positive(InEnvironment<Goal<D>>),
     Negative(InEnvironment<Goal<D>>),
 }
 
-enum_fold!(Literal[D] { Positive(a), Negative(a) } where D: Fold);
+enum_fold!(Literal[D] { Positive(a), Negative(a) } where D: Fold<Result = D> + EnvironmentArg);
 
 /// The `Minimums` structure is used to track the dependencies between
 /// some item E on the evaluation stack. In particular, it tracks

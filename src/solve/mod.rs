@@ -203,7 +203,7 @@ impl SolverChoice {
     ///   reflect success nor failure.
     pub fn solve_root_goal(
         self,
-        env: &Arc<ProgramEnvironment>,
+        env: &Arc<ProgramEnvironment<DomainGoal>>,
         canonical_goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>,
     ) -> ::errors::Result<Option<Solution>> {
         match self {

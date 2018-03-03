@@ -273,13 +273,13 @@ impl<T: Debug> Debug for Binders<T> {
     }
 }
 
-impl Debug for Environment {
+impl<D: Debug> Debug for Environment<D> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "Env({:?})", self.clauses)
     }
 }
 
-impl<G: Debug> Debug for InEnvironment<G> {
+impl<G: EnvironmentArg> Debug for InEnvironment<G> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         fmt.debug_struct("InEnvironment")
            .field("environment", &self.environment)

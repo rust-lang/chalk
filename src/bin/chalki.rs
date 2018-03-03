@@ -62,7 +62,7 @@ error_chain! {
 struct Program {
     text: String,
     ir: Arc<ir::Program>,
-    env: Arc<ir::ProgramEnvironment>,
+    env: Arc<ir::ProgramEnvironment<ir::DomainGoal>>,
 }
 
 impl Program {

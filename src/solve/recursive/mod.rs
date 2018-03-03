@@ -21,7 +21,7 @@ crate type UCanonicalGoal = UCanonical<InEnvironment<Goal<DomainGoal>>>;
 /// allows for better caching, and simplifies management of the inference
 /// context.
 crate struct Solver {
-    program: Arc<ProgramEnvironment>,
+    program: Arc<ProgramEnvironment<DomainGoal>>,
     stack: Stack,
     search_graph: SearchGraph,
 
@@ -61,7 +61,7 @@ impl<T> MergeWith<T> for Fallible<T> {
 
 impl Solver {
     crate fn new(
-        program: &Arc<ProgramEnvironment>,
+        program: &Arc<ProgramEnvironment<DomainGoal>>,
         overflow_depth: usize,
         caching_enabled: bool,
     ) -> Self {

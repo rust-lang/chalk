@@ -979,7 +979,7 @@ impl LowerQuantifiedGoal for Goal {
 }
 
 impl ir::Program {
-    pub fn environment(&self) -> ir::ProgramEnvironment {
+    pub fn environment(&self) -> ir::ProgramEnvironment<ir::DomainGoal> {
         // Construct the set of *clauses*; these are sort of a compiled form
         // of the data above that always has the form:
         //

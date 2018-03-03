@@ -60,7 +60,7 @@ impl Program {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ProgramEnvironment {
+pub struct ProgramEnvironment<D> {
     /// For each trait (used for debugging):
     crate trait_data: BTreeMap<ItemId, TraitDatum>,
 
@@ -68,24 +68,24 @@ pub struct ProgramEnvironment {
     crate associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// Compiled forms of the above:
-    crate program_clauses: Vec<ProgramClause<DomainGoal>>,
+    crate program_clauses: Vec<ProgramClause<D>>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
-pub struct Environment {
-    crate clauses: Vec<DomainGoal>,
+pub struct Environment<D> {
+    crate clauses: Vec<D>,
 }
 
-impl Environment {
-    crate fn new() -> Arc<Environment> {
+impl<D: Clone + Ord> Environment<D> {
+    crate fn new() -> Arc<Self> {
         Arc::new(Environment { clauses: vec![] })
     }
 
-    crate fn add_clauses<I>(&self, clauses: I) -> Arc<Environment>
+    crate fn add_clauses<I>(&self, clauses: I) -> Arc<Self>
     where
-        I: IntoIterator<Item = DomainGoal>,
+        I: IntoIterator<Item = D>,
     {
         let mut env = self.clone();
         let env_clauses: BTreeSet<_> = env.clauses.into_iter().chain(clauses).collect();
@@ -95,13 +95,17 @@ impl Environment {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct InEnvironment<G> {
-    crate environment: Arc<Environment>,
+pub struct InEnvironment<G: EnvironmentArg> {
+    crate environment: Arc<Environment<G::DomainGoal>>,
     crate goal: G,
 }
 
-impl<G> InEnvironment<G> {
-    crate fn new(environment: &Arc<Environment>, goal: G) -> Self {
+pub trait EnvironmentArg: Sized + Fold<Result = Self> {
+    type DomainGoal: Fold<Result = Self::DomainGoal>;
+}
+
+impl<G: EnvironmentArg> InEnvironment<G> {
+    crate fn new(environment: &Arc<Environment<G::DomainGoal>>, goal: G) -> Self {
         InEnvironment {
             environment: environment.clone(),
             goal,
@@ -111,6 +115,7 @@ impl<G> InEnvironment<G> {
     crate fn map<OP, H>(self, op: OP) -> InEnvironment<H>
     where
         OP: FnOnce(G) -> H,
+        H: EnvironmentArg<DomainGoal = G::DomainGoal>,
     {
         InEnvironment {
             environment: self.environment,
@@ -491,6 +496,10 @@ impl DomainGoal {
     }
 }
 
+impl EnvironmentArg for DomainGoal {
+    type DomainGoal = Self;
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A goal that does not involve any logical connectives. Equality is treated
 /// specially by the logic (as with most first-order logics), since it interacts
@@ -719,15 +728,14 @@ impl<T> UCanonical<T> {
     crate fn trivial_substitution(&self) -> Substitution {
         let binders = &self.canonical.binders;
         Substitution {
-            parameters:
-            binders
+            parameters: binders
                 .iter()
                 .enumerate()
                 .map(|(index, pk)| match pk {
                     ParameterKind::Ty(_) => ParameterKind::Ty(Ty::Var(index)),
                     ParameterKind::Lifetime(_) => ParameterKind::Lifetime(Lifetime::Var(index)),
                 })
-                .collect()
+                .collect(),
         }
     }
 
@@ -735,20 +743,17 @@ impl<T> UCanonical<T> {
         let subst = &canonical_subst.value.subst;
         assert_eq!(self.canonical.binders.len(), subst.parameters.len());
         // A subst is trivial if..
-        subst.parameters
-             .iter()
-             .zip(0..)
-             .all(|(parameter, index)| {
-                 // All types and lifetimes are mapped to distinct
-                 // variables.  Since this has been canonicalized, and
-                 // the substitution appears first, those will also be
-                 // the first N variables.
-                 match parameter {
-                     ParameterKind::Ty(Ty::Var(depth)) => index == *depth,
-                     ParameterKind::Lifetime(Lifetime::Var(depth)) => index == *depth,
-                     _ => false,
-                 }
-             })
+        subst.parameters.iter().zip(0..).all(|(parameter, index)| {
+            // All types and lifetimes are mapped to distinct
+            // variables.  Since this has been canonicalized, and
+            // the substitution appears first, those will also be
+            // the first N variables.
+            match parameter {
+                ParameterKind::Ty(Ty::Var(depth)) => index == *depth,
+                ParameterKind::Lifetime(Lifetime::Var(depth)) => index == *depth,
+                _ => false,
+            }
+        })
     }
 }
 
@@ -757,7 +762,7 @@ impl UCanonical<InEnvironment<Goal<DomainGoal>>> {
     /// form `WellFormed(T: Trait)` where `Trait` is any trait. The latter is needed for dealing
     /// with WF requirements and cyclic traits, which generates cycles in the proof tree which must
     /// not be rejected but instead must be treated as a success.
-    crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+    crate fn is_coinductive(&self, program: &ProgramEnvironment<DomainGoal>) -> bool {
         match &self.canonical.value.goal {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Implemented(tr))) => {
                 let trait_datum = &program.trait_data[&tr.trait_id];
@@ -795,7 +800,11 @@ pub enum Goal<D> {
 }
 
 impl Goal<DomainGoal> {
-    crate fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal<DomainGoal> {
+    crate fn quantify(
+        self,
+        kind: QuantifierKind,
+        binders: Vec<ParameterKind<()>>,
+    ) -> Goal<DomainGoal> {
         Goal::Quantified(
             kind,
             Binders {
@@ -864,6 +873,10 @@ impl Goal<DomainGoal> {
     }
 }
 
+impl<D: EnvironmentArg> EnvironmentArg for Goal<D> {
+    type DomainGoal = D;
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum QuantifierKind {
     ForAll,
@@ -879,6 +892,10 @@ pub enum QuantifierKind {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Constraint {
     LifetimeEq(Lifetime, Lifetime),
+}
+
+impl EnvironmentArg for Constraint {
+    type DomainGoal = DomainGoal;
 }
 
 /// A mapping of inference variables to instantiations thereof.

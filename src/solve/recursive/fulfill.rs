@@ -96,7 +96,7 @@ impl<'s> Fulfill<'s> {
     /// then later be used as the answer to be returned to the user.
     ///
     /// See also `InferenceTable::fresh_subst`.
-    crate fn initial_subst<T: Fold>(
+    crate fn initial_subst<T: Fold<Result = T> + EnvironmentArg>(
         &mut self,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
     ) -> (Substitution, InEnvironment<T::Result>) {
@@ -122,7 +122,7 @@ impl<'s> Fulfill<'s> {
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    crate fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Fallible<()>
+    crate fn unify<T>(&mut self, environment: &Arc<Environment<DomainGoal>>, a: &T, b: &T) -> Fallible<()>
     where
         T: ?Sized + Zip + Debug,
     {
@@ -140,7 +140,7 @@ impl<'s> Fulfill<'s> {
     /// ultimately create any number of obligations.
     crate fn push_goal(
         &mut self,
-        environment: &Arc<Environment>,
+        environment: &Arc<Environment<DomainGoal>>,
         goal: Goal<DomainGoal>,
     ) -> Fallible<()> {
         debug!("push_goal({:?}, {:?})", goal, environment);

@@ -285,7 +285,7 @@ struct AnswerSubstitutor<'t, C: Context>
     where C::InferenceTable: 't
 {
     table: &'t mut C::InferenceTable,
-    environment: &'t Arc<Environment>,
+    environment: &'t Arc<Environment<DomainGoal>>,
     answer_subst: &'t Substitution,
     answer_binders: usize,
     pending_binders: usize,
@@ -296,7 +296,7 @@ struct AnswerSubstitutor<'t, C: Context>
 impl<'t, C: Context> AnswerSubstitutor<'t, C> {
     fn substitute<T: Zip>(
         table: &mut C::InferenceTable,
-        environment: &Arc<Environment>,
+        environment: &Arc<Environment<DomainGoal>>,
         answer_subst: &Substitution,
         answer: &T,
         pending: &T,

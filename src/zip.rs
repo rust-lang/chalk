@@ -167,7 +167,8 @@ struct_zip!(TraitRef {
     trait_id,
     parameters,
 });
-struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
+struct_zip!(InEnvironment[T] { environment, goal }
+    where T: EnvironmentArg + Zip, T::DomainGoal: Zip);
 struct_zip!(ApplicationTy { name, parameters });
 struct_zip!(ProjectionTy {
     associated_ty_id,
@@ -182,7 +183,7 @@ struct_zip!(ProjectionEq { projection, ty });
 struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
 
-impl Zip for Environment {
+impl<D: Zip> Zip for Environment<D> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
         Zip::zip_with(zipper, &a.clauses, &b.clauses)?;

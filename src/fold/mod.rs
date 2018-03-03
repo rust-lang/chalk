@@ -51,14 +51,14 @@ crate use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-crate trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
+pub trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
     /// Returns a "dynamic" version of this trait. There is no
     /// **particular** reason to require this, except that I didn't
     /// feel like making `super_fold_ty` generic for no reason.
     fn to_dyn(&mut self) -> &mut Folder;
 }
 
-crate trait TypeFolder {
+pub trait TypeFolder {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty>;
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime>;
 }
@@ -74,7 +74,7 @@ impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
 /// their contents (note that free variables that are encountered in
 /// that process may still be substituted). The vast majority of
 /// folders implement this trait.
-crate trait DefaultTypeFolder {}
+pub trait DefaultTypeFolder {}
 
 impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for T {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
@@ -90,7 +90,7 @@ impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for 
 /// variables**; for example, if you folded over `Foo<?T> }`, where `?T`
 /// is an inference variable, then this would let you replace `?T` with
 /// some other type.
-crate trait ExistentialFolder {
+pub trait ExistentialFolder {
     /// Invoked for `Ty::Var` instances that are not bound within the type being folded
     /// over:
     ///
@@ -112,7 +112,7 @@ crate trait ExistentialFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `UniversalFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-crate trait IdentityExistentialFolder {}
+pub trait IdentityExistentialFolder {}
 
 impl<T: IdentityExistentialFolder> ExistentialFolder for T {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
@@ -128,7 +128,7 @@ impl<T: IdentityExistentialFolder> ExistentialFolder for T {
     }
 }
 
-crate trait UniversalFolder {
+pub trait UniversalFolder {
     /// Invoked for `Ty::Apply` instances where the type name is a `TypeName::ForAll`.
     /// Returns a type to use instead, which should be suitably shifted to account for `binders`.
     ///
@@ -147,7 +147,7 @@ crate trait UniversalFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `UniversalFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-crate trait IdentityUniversalFolder {}
+pub trait IdentityUniversalFolder {}
 
 impl<T: IdentityUniversalFolder> UniversalFolder for T {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
@@ -164,7 +164,7 @@ impl<T: IdentityUniversalFolder> UniversalFolder for T {
 }
 
 /// Applies the given folder to a value.
-crate trait Fold: Debug {
+pub trait Fold: Debug {
     /// The type of value that will be produced once folding is done.
     /// Typically this is `Self`, unless `Self` contains borrowed
     /// values, in which case owned values are produced (for example,
@@ -448,8 +448,8 @@ struct_fold!(AssociatedTyValue {
     value,
 });
 struct_fold!(AssociatedTyValueBound { ty, where_clauses });
-struct_fold!(Environment { clauses });
-struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
+struct_fold!(Environment[D] { clauses } where D: Fold);
+struct_fold!(InEnvironment[F] { environment, goal } where F: Fold<Result = F> + EnvironmentArg);
 struct_fold!(EqGoal { a, b });
 struct_fold!(ProgramClauseImplication[D] {
     consequence,

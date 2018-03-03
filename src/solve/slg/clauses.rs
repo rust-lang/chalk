@@ -5,7 +5,7 @@ use std::sync::Arc;
 /// Returns all clauses that are relevant to `goal`, either from
 /// the environment or the program.
 pub(super) fn clauses(
-    program: &Arc<ProgramEnvironment>,
+    program: &Arc<ProgramEnvironment<DomainGoal>>,
     goal: &InEnvironment<DomainGoal>,
 ) -> Vec<ProgramClause<DomainGoal>> {
     let &InEnvironment {

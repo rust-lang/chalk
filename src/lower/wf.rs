@@ -7,7 +7,7 @@ use solve::SolverChoice;
 use itertools::Itertools;
 
 struct WfSolver {
-    env: Arc<ProgramEnvironment>,
+    env: Arc<ProgramEnvironment<DomainGoal>>,
     solver_choice: SolverChoice,
 }
 
