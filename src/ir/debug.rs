@@ -188,7 +188,7 @@ impl Debug for DomainGoal {
     }
 }
 
-impl Debug for LeafGoal {
+impl<D: Debug> Debug for LeafGoal<D> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             LeafGoal::EqGoal(ref eq) => write!(fmt, "{:?}", eq),
@@ -225,7 +225,7 @@ impl Debug for EqGoal {
     }
 }
 
-impl Debug for Goal {
+impl<D: Debug> Debug for Goal<D> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             Goal::Quantified(qkind, ref subgoal) => {

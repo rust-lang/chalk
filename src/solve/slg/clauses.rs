@@ -7,7 +7,7 @@ use std::sync::Arc;
 pub(super) fn clauses(
     program: &Arc<ProgramEnvironment>,
     goal: &InEnvironment<DomainGoal>,
-) -> Vec<ProgramClause> {
+) -> Vec<ProgramClause<DomainGoal>> {
     let &InEnvironment {
         ref environment,
         ref goal,

@@ -1,6 +1,6 @@
 use crate::fallible::Fallible;
-use crate::ir::{Canonical, ConstrainedSubst, Environment, Goal, InEnvironment, Lifetime,
-                ParameterKind, Substitution, Ty, UCanonical, UniverseIndex};
+use crate::ir::{Canonical, ConstrainedSubst, DomainGoal, Environment, Goal, InEnvironment,
+                Lifetime, ParameterKind, Substitution, Ty, UCanonical, UniverseIndex};
 use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::UCanonicalized;
 use crate::solve::infer::unify::UnificationResult;
@@ -9,6 +9,24 @@ use crate::fold::Fold;
 use crate::zip::Zip;
 use std::fmt::Debug;
 use std::sync::Arc;
+
+// Notes:
+//
+// How do we use `Substitution`:
+// - we use them as key in a hashmap
+// - we ask if they are trivial:
+//   - for a given goal
+//   - with no region constraints
+// - we apply them to a given canonical goal to yield an instantiated goal
+//
+// How do we use a `UniverseMap`:
+// - we apply it to the result we get back from an answer
+// - which is then fed into `apply_answer_subst`
+//
+// How do we use region constraints:
+// - opaquely, I imagine
+//
+// It seems clear we can extract a
 
 crate trait Context: Copy + Debug {
     type InferenceTable: InferenceTable<Self>;
@@ -50,7 +68,10 @@ crate trait InferenceTable<C: Context>: Clone {
     fn normalize_deep<T: Fold>(&mut self, value: &T) -> T::Result;
 
     // Used by: logic
-    fn canonicalize_goal(&mut self, value: &InEnvironment<Goal>) -> Canonical<InEnvironment<Goal>>;
+    fn canonicalize_goal(
+        &mut self,
+        value: &InEnvironment<Goal<DomainGoal>>,
+    ) -> Canonical<InEnvironment<Goal<DomainGoal>>>;
 
     // Used by: logic
     fn canonicalize_constrained_subst(
@@ -59,13 +80,19 @@ crate trait InferenceTable<C: Context>: Clone {
     ) -> Canonical<ConstrainedSubst>;
 
     // Used by: logic
-    fn u_canonicalize_goal(&mut self, value: &CanonicalGoal) -> UCanonicalized<InEnvironment<Goal>>;
+    fn u_canonicalize_goal(
+        &mut self,
+        value: &CanonicalGoal<DomainGoal>,
+    ) -> UCanonicalized<InEnvironment<Goal<DomainGoal>>>;
 
     // Used by: logic
     fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution;
 
     // Used by: logic
-    fn invert_goal(&mut self, value: &InEnvironment<Goal>) -> Option<InEnvironment<Goal>>;
+    fn invert_goal(
+        &mut self,
+        value: &InEnvironment<Goal<DomainGoal>>,
+    ) -> Option<InEnvironment<Goal<DomainGoal>>>;
 
     // Used by: simplify, resolvent
     fn instantiate_binders_existentially<T>(
@@ -144,7 +171,10 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         self.normalize_deep(value)
     }
 
-    fn canonicalize_goal(&mut self, value: &InEnvironment<Goal>) -> Canonical<InEnvironment<Goal>> {
+    fn canonicalize_goal(
+        &mut self,
+        value: &InEnvironment<Goal<DomainGoal>>,
+    ) -> Canonical<InEnvironment<Goal<DomainGoal>>> {
         self.canonicalize(value).quantified
     }
 
@@ -155,11 +185,17 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         self.canonicalize(value).quantified
     }
 
-    fn u_canonicalize_goal(&mut self, value: &CanonicalGoal) -> UCanonicalized<InEnvironment<Goal>> {
+    fn u_canonicalize_goal(
+        &mut self,
+        value: &CanonicalGoal<DomainGoal>,
+    ) -> UCanonicalized<InEnvironment<Goal<DomainGoal>>> {
         self.u_canonicalize(value)
     }
 
-    fn invert_goal(&mut self, value: &InEnvironment<Goal>) -> Option<InEnvironment<Goal>> {
+    fn invert_goal(
+        &mut self,
+        value: &InEnvironment<Goal<DomainGoal>>,
+    ) -> Option<InEnvironment<Goal<DomainGoal>>> {
         self.invert(value)
     }
 

@@ -30,7 +30,7 @@ impl<C: Context> Forest<C> {
         context: C,
         max_size: usize,
         program: &Arc<ProgramEnvironment>,
-        root_goal: &UCanonicalGoal,
+        root_goal: &UCanonicalGoal<DomainGoal>,
     ) -> Option<Solution> {
         let mut forest = Forest::new(context, program, max_size);
         forest.solve(root_goal)
@@ -60,7 +60,7 @@ impl<C: Context> Forest<C> {
     #[cfg(test)]
     pub(super) fn force_answers(
         &mut self,
-        goal: UCanonicalGoal,
+        goal: UCanonicalGoal<DomainGoal>,
         num_answers: usize,
     ) -> Vec<Answer> {
         let table = self.get_or_create_table_for_ucanonical_goal(goal);
@@ -87,20 +87,21 @@ impl<C: Context> Forest<C> {
     /// invocations. Invoking `next` fewer times is preferable =)
     pub(super) fn iter_answers<'f>(
         &'f mut self,
-        goal: &UCanonicalGoal,
+        goal: &UCanonicalGoal<DomainGoal>,
     ) -> impl Iterator<Item = SimplifiedAnswer> + 'f {
         let table = self.get_or_create_table_for_ucanonical_goal(goal.clone());
         let answer = AnswerIndex::ZERO;
-        ForestSolver { forest: self, table, answer }
+        ForestSolver {
+            forest: self,
+            table,
+            answer,
+        }
     }
 
     /// Solves a given goal, producing the solution. This will do only
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
-    crate fn solve(
-        &mut self,
-        goal: &UCanonicalGoal,
-    ) -> Option<Solution> {
+    crate fn solve(&mut self, goal: &UCanonicalGoal<DomainGoal>) -> Option<Solution> {
         aggregate::make_solution(&goal.canonical, self.iter_answers(goal))
     }
 
@@ -145,7 +146,8 @@ struct ForestSolver<'forest, C: Context + 'forest> {
 }
 
 impl<'forest, C> Iterator for ForestSolver<'forest, C>
-where C: Context
+where
+    C: Context,
 {
     type Item = SimplifiedAnswer;
 
@@ -179,11 +181,8 @@ where C: Context
                     return None;
                 }
 
-                Err(RootSearchFail::QuantumExceeded) => {
-                }
+                Err(RootSearchFail::QuantumExceeded) => {}
             }
         }
     }
 }
-
-

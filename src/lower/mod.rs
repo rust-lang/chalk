@@ -474,8 +474,8 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
 /// position); this is richer in terms of the legal sorts of where-clauses that
 /// can appear, because it includes all the sorts of things that the compiler
 /// must verify.
-impl LowerWhereClause<ir::LeafGoal> for WhereClause {
-    fn lower(&self, env: &Env) -> Result<ir::LeafGoal> {
+impl LowerWhereClause<ir::LeafGoal<ir::DomainGoal>> for WhereClause {
+    fn lower(&self, env: &Env) -> Result<ir::LeafGoal<ir::DomainGoal>> {
         Ok(match *self {
             WhereClause::Implemented { .. }
             | WhereClause::ProjectionEq { .. }
@@ -805,14 +805,14 @@ impl LowerImpl for Impl {
 }
 
 trait LowerClause {
-    fn lower_clause(&self, empty_env: &Env) -> Result<ir::ProgramClause>;
+    fn lower_clause(&self, empty_env: &Env) -> Result<ir::ProgramClause<ir::DomainGoal>>;
 }
 
 impl LowerClause for Clause {
-    fn lower_clause(&self, empty_env: &Env) -> Result<ir::ProgramClause> {
+    fn lower_clause(&self, empty_env: &Env) -> Result<ir::ProgramClause<ir::DomainGoal>> {
         let implication = empty_env.in_binders(self.all_parameters(), |env| {
             let consequence: ir::DomainGoal = self.consequence.lower(env)?;
-            let mut conditions: Vec<ir::Goal> = self.conditions
+            let mut conditions: Vec<ir::Goal<ir::DomainGoal>> = self.conditions
                 .iter()
                 .map(|g| g.lower(env).map(|g| *g))
                 .collect::<Result<_>>()?;
@@ -890,11 +890,11 @@ impl LowerTrait for TraitDefn {
 }
 
 pub trait LowerGoal<A> {
-    fn lower(&self, arg: &A) -> Result<Box<ir::Goal>>;
+    fn lower(&self, arg: &A) -> Result<Box<ir::Goal<ir::DomainGoal>>>;
 }
 
 impl LowerGoal<ir::Program> for Goal {
-    fn lower(&self, program: &ir::Program) -> Result<Box<ir::Goal>> {
+    fn lower(&self, program: &ir::Program) -> Result<Box<ir::Goal<ir::DomainGoal>>> {
         let associated_ty_infos: BTreeMap<_, _> = program
             .associated_ty_data
             .iter()
@@ -923,7 +923,7 @@ impl LowerGoal<ir::Program> for Goal {
 }
 
 impl<'k> LowerGoal<Env<'k>> for Goal {
-    fn lower(&self, env: &Env<'k>) -> Result<Box<ir::Goal>> {
+    fn lower(&self, env: &Env<'k>) -> Result<Box<ir::Goal<ir::DomainGoal>>> {
         match *self {
             Goal::ForAll(ref ids, ref g) => {
                 g.lower_quantified(env, ir::QuantifierKind::ForAll, ids)
@@ -958,7 +958,7 @@ trait LowerQuantifiedGoal {
         env: &Env,
         quantifier_kind: ir::QuantifierKind,
         parameter_kinds: &[ParameterKind],
-    ) -> Result<Box<ir::Goal>>;
+    ) -> Result<Box<ir::Goal<ir::DomainGoal>>>;
 }
 
 impl LowerQuantifiedGoal for Goal {
@@ -967,7 +967,7 @@ impl LowerQuantifiedGoal for Goal {
         env: &Env,
         quantifier_kind: ir::QuantifierKind,
         parameter_kinds: &[ParameterKind],
-    ) -> Result<Box<ir::Goal>> {
+    ) -> Result<Box<ir::Goal<ir::DomainGoal>>> {
         if parameter_kinds.is_empty() {
             return self.lower(env);
         }
@@ -1038,7 +1038,7 @@ impl ir::ImplDatum {
     /// ```notrust
     /// forall<T> { (Vec<T>: Clone) :- (T: Clone) }
     /// ```
-    fn to_program_clause(&self) -> ir::ProgramClause {
+    fn to_program_clause(&self) -> ir::ProgramClause<ir::DomainGoal> {
         ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
@@ -1079,7 +1079,7 @@ impl ir::DefaultImplDatum {
     ///         (Box<Option<MyList<T>>>: Send)
     /// }
     /// ```
-    fn to_program_clause(&self) -> ir::ProgramClause {
+    fn to_program_clause(&self) -> ir::ProgramClause<ir::DomainGoal> {
         ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
@@ -1132,7 +1132,7 @@ impl ir::AssociatedTyValue {
         &self,
         program: &ir::Program,
         impl_datum: &ir::ImplDatum,
-    ) -> Vec<ir::ProgramClause> {
+    ) -> Vec<ir::ProgramClause<ir::DomainGoal>> {
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
         let all_binders: Vec<_> = self.value
             .binders
@@ -1152,7 +1152,7 @@ impl ir::AssociatedTyValue {
             .trait_ref
             .trait_ref()
             .up_shift(self.value.len());
-        let conditions: Vec<ir::Goal> = Some(impl_trait_ref.clone().cast())
+        let conditions: Vec<ir::Goal<ir::DomainGoal>> = Some(impl_trait_ref.clone().cast())
             .into_iter()
             .chain(self.value.value.where_clauses.clone().cast())
             .collect();
@@ -1245,7 +1245,7 @@ impl Anonymize for [ir::ParameterKind<ir::Identifier>] {
 }
 
 impl ir::StructDatum {
-    fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
+    fn to_program_clauses(&self) -> Vec<ir::ProgramClause<ir::DomainGoal>> {
         // Given:
         //
         //    struct Foo<T: Eq> { }
@@ -1296,7 +1296,7 @@ impl ir::StructDatum {
 }
 
 impl ir::TraitDatum {
-    fn to_program_clauses(&self) -> Vec<ir::ProgramClause> {
+    fn to_program_clauses(&self) -> Vec<ir::ProgramClause<ir::DomainGoal>> {
         // Given:
         //
         //    trait Ord<T> where Self: Eq<T> { ... }
@@ -1357,7 +1357,7 @@ impl ir::TraitDatum {
 }
 
 impl ir::AssociatedTyDatum {
-    fn to_program_clauses(&self, program: &ir::Program) -> Vec<ir::ProgramClause> {
+    fn to_program_clauses(&self, program: &ir::Program) -> Vec<ir::ProgramClause<ir::DomainGoal>> {
         // For each associated type, we define the "projection
         // equality" rules. There are always two; one for a successful normalization,
         // and one for the "fallback" notion of equality.

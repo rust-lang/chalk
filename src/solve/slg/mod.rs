@@ -49,6 +49,7 @@
 //! - HH: Hereditary harrop predicates. What Chalk deals in.
 //!   Popularized by Lambda Prolog.
 
+use fold::Fold;
 use ir::*;
 use solve::slg::context::prelude::*;
 use stacker;
@@ -114,7 +115,7 @@ struct ExClause {
     constraints: Vec<InEnvironment<Constraint>>,
 
     /// Subgoals: literals that must be proven
-    subgoals: Vec<Literal>,
+    subgoals: Vec<Literal<DomainGoal>>,
 }
 
 struct_fold!(ExClause {
@@ -190,12 +191,12 @@ enum_fold!(DelayedLiteral[] { CannotProve(a), Negative(a), Positive(a, b) });
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-enum Literal {
-    Positive(InEnvironment<Goal>),
-    Negative(InEnvironment<Goal>),
+enum Literal<D> {
+    Positive(InEnvironment<Goal<D>>),
+    Negative(InEnvironment<Goal<D>>),
 }
 
-enum_fold!(Literal[] { Positive(a), Negative(a) });
+enum_fold!(Literal[D] { Positive(a), Negative(a) } where D: Fold);
 
 /// The `Minimums` structure is used to track the dependencies between
 /// some item E on the evaluation stack. In particular, it tracks
@@ -242,8 +243,8 @@ enum Satisfiable<T> {
 }
 
 type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
-type CanonicalGoal = Canonical<InEnvironment<Goal>>;
-type UCanonicalGoal = UCanonical<InEnvironment<Goal>>;
+type CanonicalGoal<D> = Canonical<InEnvironment<Goal<D>>>;
+type UCanonicalGoal<D> = UCanonical<InEnvironment<Goal<D>>>;
 
 impl DelayedLiteralSets {
     fn is_empty(&self) -> bool {

@@ -9,7 +9,7 @@ use super::{CanonicalConstrainedSubst, CanonicalGoal, SimplifiedAnswer};
 /// Draws as many answers as it needs from `simplified_answers` (but
 /// no more!) in order to come up with a solution.
 pub(super) fn make_solution(
-    root_goal: &CanonicalGoal,
+    root_goal: &CanonicalGoal<DomainGoal>,
     simplified_answers: impl IntoIterator<Item = SimplifiedAnswer>,
 ) -> Option<Solution> {
     let mut simplified_answers = simplified_answers.into_iter().peekable();
@@ -73,7 +73,7 @@ pub(super) fn make_solution(
 /// u32` and the new answer is `?0 = i32`, then the guidance would
 /// become `?0 = ?X` (where `?X` is some fresh variable).
 fn merge_into_guidance(
-    root_goal: &CanonicalGoal,
+    root_goal: &CanonicalGoal<DomainGoal>,
     guidance: Canonical<Substitution>,
     answer: &CanonicalConstrainedSubst,
 ) -> Canonical<Substitution> {

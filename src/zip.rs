@@ -223,14 +223,14 @@ enum_zip!(DomainGoal {
     FromEnv,
     InScope,
 });
-enum_zip!(LeafGoal { DomainGoal, EqGoal });
+enum_zip!(LeafGoal[D] { DomainGoal, EqGoal } where D: Zip );
 enum_zip!(WellFormed { Ty, TraitRef, ProjectionEq });
 enum_zip!(FromEnv { Ty, TraitRef, ProjectionEq });
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the
 // relevant name mangling.
-impl Zip for Goal {
+impl<D: Zip + Fold<Result = D>> Zip for Goal<D> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         match (a, b) {
             (&Goal::Quantified(ref f_a, ref g_a), &Goal::Quantified(ref f_b, ref g_b)) => {

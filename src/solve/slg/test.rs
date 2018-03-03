@@ -12,7 +12,10 @@ fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
     chalk_parse::parse_program(text)?.lower_without_coherence()
 }
 
-fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goal>> {
+fn parse_and_lower_goal(
+    program: &ir::Program,
+    text: &str,
+) -> Result<Box<ir::Goal<ir::DomainGoal>>> {
     chalk_parse::parse_goal(text)?.lower(program)
 }
 
@@ -184,7 +187,6 @@ fn infinite_recursion() {
         }
     }
 }
-
 
 /// Make sure we don't get a stack overflow or other badness for this
 /// test from scalexm.

@@ -407,10 +407,10 @@ enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
 enum_fold!(DomainGoal[] { Implemented(a), ProjectionEq(a), Normalize(a), UnselectedNormalize(a), WellFormed(a), FromEnv(a), InScope(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a), ProjectionEq(a) });
 enum_fold!(FromEnv[] { Ty(a), TraitRef(a), ProjectionEq(a) });
-enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
+enum_fold!(LeafGoal[D] { EqGoal(a), DomainGoal(a) } where D: Fold);
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
-enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g), Leaf(wc),
-                    CannotProve(a) });
+enum_fold!(Goal[D] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
+                     Leaf(wc), CannotProve(a) } where D: Fold);
 
 macro_rules! struct_fold {
     ($s:ident $([$($n:ident),*])* { $($name:ident),* $(,)* } $($w:tt)*) => {
@@ -451,10 +451,10 @@ struct_fold!(AssociatedTyValueBound { ty, where_clauses });
 struct_fold!(Environment { clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
 struct_fold!(EqGoal { a, b });
-struct_fold!(ProgramClauseImplication {
+struct_fold!(ProgramClauseImplication[D] {
     consequence,
     conditions,
-});
+} where D: Fold);
 
 struct_fold!(ConstrainedSubst {
     subst, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */

@@ -58,7 +58,7 @@ pub(super) fn resolvent_clause<C: Context>(
     infer: &mut C::InferenceTable,
     goal: &InEnvironment<DomainGoal>,
     subst: &Substitution,
-    clause: &Binders<ProgramClauseImplication>,
+    clause: &Binders<ProgramClauseImplication<DomainGoal>>,
 ) -> Satisfiable<ExClause> {
     // Relating the above description to our situation:
     //
@@ -239,8 +239,8 @@ pub(super) fn resolvent_clause<C: Context>(
 pub(super) fn apply_answer_subst<C: Context>(
     infer: &mut C::InferenceTable,
     mut ex_clause: ExClause,
-    selected_goal: &InEnvironment<Goal>,
-    answer_table_goal: &CanonicalGoal,
+    selected_goal: &InEnvironment<Goal<DomainGoal>>,
+    answer_table_goal: &CanonicalGoal<DomainGoal>,
     canonical_answer_subst: &CanonicalConstrainedSubst,
 ) -> Satisfiable<ExClause> {
     debug_heading!("apply_answer_subst()");

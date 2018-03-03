@@ -1,4 +1,4 @@
-use ir::{ConstrainedSubst, InEnvironment, Goal, LeafGoal};
+use ir::{ConstrainedSubst, DomainGoal, InEnvironment, Goal, LeafGoal};
 use solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use solve::slg::{self, CanonicalGoal, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber,
                  ExClause, Literal, Minimums, Satisfiable, TableIndex, UCanonicalGoal};
@@ -543,7 +543,7 @@ impl<C: Context> Forest<C> {
     fn get_or_create_table_for_subgoal(
         &mut self,
         infer: &mut C::InferenceTable,
-        subgoal: &Literal,
+        subgoal: &Literal<DomainGoal>,
     ) -> Option<(TableIndex, UniverseMap)> {
         debug_heading!("get_or_create_table_for_subgoal(subgoal={:?})", subgoal);
 
@@ -574,7 +574,7 @@ impl<C: Context> Forest<C> {
     /// Resolution* steps.
     pub(super) fn get_or_create_table_for_ucanonical_goal(
         &mut self,
-        goal: UCanonicalGoal,
+        goal: UCanonicalGoal<DomainGoal>,
     ) -> TableIndex {
         debug_heading!("get_or_create_table_for_ucanonical_goal({:?})", goal);
 
@@ -676,8 +676,8 @@ impl<C: Context> Forest<C> {
     fn abstract_positive_literal(
         &mut self,
         infer: &mut C::InferenceTable,
-        subgoal: &InEnvironment<Goal>,
-    ) -> CanonicalGoal {
+        subgoal: &InEnvironment<Goal<DomainGoal>>,
+    ) -> CanonicalGoal<DomainGoal> {
         // Subgoal abstraction: Rather than looking up the table for
         // `selected_goal` directly, first apply the truncation
         // function. This may introduce fresh variables, making the
@@ -720,8 +720,8 @@ impl<C: Context> Forest<C> {
     fn abstract_negative_literal(
         &mut self,
         infer: &mut C::InferenceTable,
-        subgoal: &InEnvironment<Goal>,
-    ) -> Option<CanonicalGoal> {
+        subgoal: &InEnvironment<Goal<DomainGoal>>,
+    ) -> Option<CanonicalGoal<DomainGoal>> {
         // First, we have to check that the selected negative literal
         // is ground, and invert any universally quantified variables.
         //

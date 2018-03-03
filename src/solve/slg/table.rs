@@ -1,3 +1,4 @@
+use ir::DomainGoal;
 use solve::slg::{CanonicalConstrainedSubst, UCanonicalGoal, DelayedLiteralSet, DelayedLiteralSets};
 use solve::slg::context::prelude::*;
 use solve::slg::strand::Strand;
@@ -9,7 +10,7 @@ use std::iter;
 crate struct Table<C: Context> {
     /// The goal this table is trying to solve (also the key to look
     /// it up).
-    crate table_goal: UCanonicalGoal,
+    crate table_goal: UCanonicalGoal<DomainGoal>,
 
     /// A goal is coinductive if it can assume itself to be true, more
     /// or less. This is true for auto traits.
@@ -48,7 +49,7 @@ pub(super) struct Answer {
 }
 
 impl<C: Context> Table<C> {
-    crate fn new(table_goal: UCanonicalGoal, coinductive_goal: bool) -> Table<C> {
+    crate fn new(table_goal: UCanonicalGoal<DomainGoal>, coinductive_goal: bool) -> Table<C> {
         Table {
             table_goal,
             coinductive_goal,

@@ -204,7 +204,7 @@ impl SolverChoice {
     pub fn solve_root_goal(
         self,
         env: &Arc<ProgramEnvironment>,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
+        canonical_goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>,
     ) -> ::errors::Result<Option<Solution>> {
         match self {
             SolverChoice::Recursive {

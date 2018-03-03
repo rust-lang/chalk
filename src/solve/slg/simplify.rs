@@ -1,5 +1,5 @@
 use cast::{Cast, Caster};
-use ir::{LeafGoal, Goal, QuantifierKind, InEnvironment, Substitution};
+use ir::{DomainGoal, LeafGoal, Goal, QuantifierKind, InEnvironment, Substitution};
 use solve::infer::unify::UnificationResult;
 use solve::slg::{ExClause, Literal, Satisfiable};
 use solve::slg::context::prelude::*;
@@ -10,7 +10,7 @@ use solve::slg::context::prelude::*;
 pub(super) fn simplify_hh_goal<C: Context>(
     infer: &mut C::InferenceTable,
     subst: Substitution,
-    initial_goal: InEnvironment<Goal>,
+    initial_goal: InEnvironment<Goal<DomainGoal>>,
 ) -> Satisfiable<ExClause> {
     let mut ex_clause = ExClause {
         subst,

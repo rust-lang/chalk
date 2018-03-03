@@ -37,7 +37,7 @@ pub struct Program {
     crate default_impl_data: Vec<DefaultImplDatum>,
 
     /// For each user-specified clause
-    crate custom_clauses: Vec<ProgramClause>,
+    crate custom_clauses: Vec<ProgramClause<DomainGoal>>,
 }
 
 impl Program {
@@ -68,7 +68,7 @@ pub struct ProgramEnvironment {
     crate associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// Compiled forms of the above:
-    crate program_clauses: Vec<ProgramClause>,
+    crate program_clauses: Vec<ProgramClause<DomainGoal>>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -457,7 +457,7 @@ pub enum DomainGoal {
 impl DomainGoal {
     /// Lift a goal to a corresponding program clause (with a trivial
     /// antecedent).
-    crate fn into_program_clause(self) -> ProgramClause {
+    crate fn into_program_clause(self) -> ProgramClause<DomainGoal> {
         ProgramClause {
             implication: Binders {
                 value: ProgramClauseImplication {
@@ -495,9 +495,9 @@ impl DomainGoal {
 /// A goal that does not involve any logical connectives. Equality is treated
 /// specially by the logic (as with most first-order logics), since it interacts
 /// with unification etc.
-pub enum LeafGoal {
+pub enum LeafGoal<D> {
     EqGoal(EqGoal),
-    DomainGoal(DomainGoal),
+    DomainGoal(D),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -623,17 +623,17 @@ impl<T> Binders<T> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ProgramClause {
-    crate implication: Binders<ProgramClauseImplication>,
+pub struct ProgramClause<D> {
+    crate implication: Binders<ProgramClauseImplication<D>>,
 }
 
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ProgramClauseImplication {
-    crate consequence: DomainGoal,
-    crate conditions: Vec<Goal>,
+pub struct ProgramClauseImplication<D> {
+    crate consequence: D,
+    crate conditions: Vec<Goal<D>>,
 }
 
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
@@ -752,7 +752,7 @@ impl<T> UCanonical<T> {
     }
 }
 
-impl UCanonical<InEnvironment<Goal>> {
+impl UCanonical<InEnvironment<Goal<DomainGoal>>> {
     /// A goal has coinductive semantics if it is of the form `T: AutoTrait`, or if it is of the
     /// form `WellFormed(T: Trait)` where `Trait` is any trait. The latter is needed for dealing
     /// with WF requirements and cyclic traits, which generates cycles in the proof tree which must
@@ -773,14 +773,14 @@ impl UCanonical<InEnvironment<Goal>> {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
-pub enum Goal {
+pub enum Goal<D> {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
-    Quantified(QuantifierKind, Binders<Box<Goal>>),
-    Implies(Vec<DomainGoal>, Box<Goal>),
-    And(Box<Goal>, Box<Goal>),
-    Not(Box<Goal>),
-    Leaf(LeafGoal),
+    Quantified(QuantifierKind, Binders<Box<Goal<D>>>),
+    Implies(Vec<D>, Box<Goal<D>>),
+    And(Box<Goal<D>>, Box<Goal<D>>),
+    Not(Box<Goal<D>>),
+    Leaf(LeafGoal<D>),
 
     /// Indicates something that cannot be proven to be true or false
     /// definitively. This can occur with overflow but also with
@@ -794,8 +794,8 @@ pub enum Goal {
     CannotProve(()),
 }
 
-impl Goal {
-    crate fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal {
+impl Goal<DomainGoal> {
+    crate fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal<DomainGoal> {
         Goal::Quantified(
             kind,
             Binders {
@@ -805,7 +805,7 @@ impl Goal {
         )
     }
 
-    crate fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
+    crate fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal<DomainGoal> {
         Goal::Implies(predicates, Box::new(self))
     }
 
@@ -815,7 +815,7 @@ impl Goal {
     /// variables. Assumes that this goal is a "closed goal" which
     /// does not -- at present -- contain any variables. Useful for
     /// REPLs and tests but not much else.
-    pub fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal>> {
+    pub fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<DomainGoal>>> {
         use solve::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let peeled_goal = {
@@ -855,7 +855,7 @@ impl Goal {
     /// # Panics
     ///
     /// Will panic if this goal does in fact contain free variables.
-    crate fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>> {
+    crate fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<DomainGoal>>> {
         use solve::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(), self);

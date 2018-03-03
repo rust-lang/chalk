@@ -13,7 +13,7 @@ use self::fulfill::Fulfill;
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 
-crate type UCanonicalGoal = UCanonical<InEnvironment<Goal>>;
+crate type UCanonicalGoal = UCanonical<InEnvironment<Goal<DomainGoal>>>;
 
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
@@ -91,7 +91,7 @@ impl Solver {
     /// solution with the substitution `?0 := u8`.
     crate fn solve_root_goal(
         &mut self,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
+        canonical_goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>,
     ) -> Fallible<Solution> {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.stack.is_empty());
@@ -104,7 +104,7 @@ impl Solver {
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
     fn solve_goal(
         &mut self,
-        goal: UCanonical<InEnvironment<Goal>>,
+        goal: UCanonical<InEnvironment<Goal<DomainGoal>>>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         info_heading!("solve_goal({:?})", goal);
@@ -335,7 +335,7 @@ impl Solver {
 
     fn solve_via_simplification(
         &mut self,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
+        canonical_goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
@@ -355,7 +355,7 @@ impl Solver {
         minimums: &mut Minimums,
     ) -> Fallible<Solution>
     where
-        C: IntoIterator<Item = ProgramClause>,
+        C: IntoIterator<Item = ProgramClause<DomainGoal>>,
     {
         let mut cur_solution = None;
         for ProgramClause { implication, .. } in clauses {
@@ -379,7 +379,7 @@ impl Solver {
     fn solve_via_implication(
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal>>,
-        clause: Binders<ProgramClauseImplication>,
+        clause: Binders<ProgramClauseImplication<DomainGoal>>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution> {
         info_heading!(
