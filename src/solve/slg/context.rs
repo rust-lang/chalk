@@ -1,7 +1,5 @@
 use crate::fallible::Fallible;
-use crate::ir::{Canonical, ConstrainedSubst, DomainGoal, Environment, Goal, InEnvironment,
-                Lifetime, ParameterKind, ProgramClause, ProgramEnvironment, Substitution, Ty,
-                UCanonical, UniverseIndex};
+use crate::ir;
 use crate::ir::could_match::CouldMatch;
 use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::UCanonicalized;
@@ -35,16 +33,19 @@ crate trait Context: Sized {
     type InferenceVariable: InferenceVariable<Self>;
 
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
-    fn is_coinductive(&self, goal: &UCanonicalGoal<DomainGoal>) -> bool;
+    fn is_coinductive(&self, goal: &UCanonicalGoal<ir::DomainGoal>) -> bool;
 
     /// Returns the set of program clauses that might apply to
     /// `goal`. (This set can be over-approximated, naturally.)
-    fn program_clauses(&self, goal: &InEnvironment<DomainGoal>) -> Vec<ProgramClause<DomainGoal>>;
+    fn program_clauses(
+        &self,
+        goal: &ir::InEnvironment<ir::DomainGoal>,
+    ) -> Vec<ir::ProgramClause<ir::DomainGoal>>;
 }
 
 crate trait InferenceVariable<C: Context>: Copy {
-    fn to_ty(self) -> Ty;
-    fn to_lifetime(self) -> Lifetime;
+    fn to_ty(self) -> ir::Ty;
+    fn to_lifetime(self) -> ir::Lifetime;
 }
 
 crate trait InferenceTable<C: Context>: Clone {
@@ -59,19 +60,22 @@ crate trait InferenceTable<C: Context>: Clone {
         T: Fold;
 
     // Used by: logic
-    fn instantiate_universes<'v, T>(&mut self, value: &'v UCanonical<T>) -> &'v Canonical<T>;
+    fn instantiate_universes<'v, T>(
+        &mut self,
+        value: &'v ir::UCanonical<T>,
+    ) -> &'v ir::Canonical<T>;
 
     // Used by: truncate
-    fn max_universe(&self) -> UniverseIndex;
+    fn max_universe(&self) -> ir::UniverseIndex;
 
     // Used by: aggregate, truncate
-    fn new_variable(&mut self, ui: UniverseIndex) -> C::InferenceVariable;
+    fn new_variable(&mut self, ui: ir::UniverseIndex) -> C::InferenceVariable;
 
     // Used by: resolvent
-    fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime>;
+    fn normalize_lifetime(&mut self, leaf: &ir::Lifetime, binders: usize) -> Option<ir::Lifetime>;
 
     // Used by: resolvent, truncate
-    fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty>;
+    fn normalize_shallow(&mut self, leaf: &ir::Ty, binders: usize) -> Option<ir::Ty>;
 
     // Used by: resolvent, logic (but for debugging only)
     fn normalize_deep<T: Fold>(&mut self, value: &T) -> T::Result;
@@ -79,29 +83,30 @@ crate trait InferenceTable<C: Context>: Clone {
     // Used by: logic
     fn canonicalize_goal(
         &mut self,
-        value: &InEnvironment<Goal<DomainGoal>>,
-    ) -> Canonical<InEnvironment<Goal<DomainGoal>>>;
+        value: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
+    ) -> ir::Canonical<ir::InEnvironment<ir::Goal<ir::DomainGoal>>>;
 
     // Used by: logic
     fn canonicalize_constrained_subst(
         &mut self,
-        value: &ConstrainedSubst,
-    ) -> Canonical<ConstrainedSubst>;
+        value: &ir::ConstrainedSubst,
+    ) -> ir::Canonical<ir::ConstrainedSubst>;
 
     // Used by: logic
     fn u_canonicalize_goal(
         &mut self,
-        value: &CanonicalGoal<DomainGoal>,
-    ) -> UCanonicalized<InEnvironment<Goal<DomainGoal>>>;
+        value: &CanonicalGoal<ir::DomainGoal>,
+    ) -> UCanonicalized<ir::InEnvironment<ir::Goal<ir::DomainGoal>>>;
 
     // Used by: logic
-    fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution;
+    fn fresh_subst(&mut self, binders: &[ir::ParameterKind<ir::UniverseIndex>])
+        -> ir::Substitution;
 
     // Used by: logic
     fn invert_goal(
         &mut self,
-        value: &InEnvironment<Goal<DomainGoal>>,
-    ) -> Option<InEnvironment<Goal<DomainGoal>>>;
+        value: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
+    ) -> Option<ir::InEnvironment<ir::Goal<ir::DomainGoal>>>;
 
     // Used by: simplify, resolvent
     fn instantiate_binders_existentially<T>(
@@ -114,7 +119,7 @@ crate trait InferenceTable<C: Context>: Clone {
     // Used by: simplify, resolvent, truncate
     fn unify<T>(
         &mut self,
-        environment: &Arc<Environment<DomainGoal>>,
+        environment: &Arc<ir::Environment<ir::DomainGoal>>,
         a: &T,
         b: &T,
     ) -> Fallible<UnificationResult>
@@ -122,7 +127,7 @@ crate trait InferenceTable<C: Context>: Clone {
         T: ?Sized + Zip;
 
     // Used by: resolvent
-    fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
+    fn instantiate_canonical<T>(&mut self, bound: &ir::Canonical<T>) -> T::Result
     where
         T: Fold + Debug;
 }
@@ -130,18 +135,21 @@ crate trait InferenceTable<C: Context>: Clone {
 ///////////////////////////////////////////////////////////////////////////
 
 #[allow(dead_code)] // for some reason rustc reports this as dead??
-pub type SlgContext = Arc<ProgramEnvironment<DomainGoal>>;
+pub type SlgContext = Arc<ir::ProgramEnvironment<ir::DomainGoal>>;
 
-impl Context for Arc<ProgramEnvironment<DomainGoal>> {
+impl Context for Arc<ir::ProgramEnvironment<ir::DomainGoal>> {
     type InferenceTable = ::crate::solve::infer::InferenceTable;
     type InferenceVariable = ::crate::solve::infer::var::InferenceVariable;
 
-    fn is_coinductive(&self, goal: &UCanonicalGoal<DomainGoal>) -> bool {
+    fn is_coinductive(&self, goal: &UCanonicalGoal<ir::DomainGoal>) -> bool {
         goal.is_coinductive(self)
     }
 
-    fn program_clauses(&self, goal: &InEnvironment<DomainGoal>) -> Vec<ProgramClause<DomainGoal>> {
-        let &InEnvironment {
+    fn program_clauses(
+        &self,
+        goal: &ir::InEnvironment<ir::DomainGoal>,
+    ) -> Vec<ir::ProgramClause<ir::DomainGoal>> {
+        let &ir::InEnvironment {
             ref environment,
             ref goal,
         } = goal;
@@ -166,7 +174,10 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         Self::new()
     }
 
-    fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
+    fn fresh_subst(
+        &mut self,
+        binders: &[ir::ParameterKind<ir::UniverseIndex>],
+    ) -> ir::Substitution {
         self.fresh_subst(binders)
     }
 
@@ -180,23 +191,29 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         self.instantiate_binders_universally(arg)
     }
 
-    fn instantiate_universes<'v, T>(&mut self, value: &'v UCanonical<T>) -> &'v Canonical<T> {
+    fn instantiate_universes<'v, T>(
+        &mut self,
+        value: &'v ir::UCanonical<T>,
+    ) -> &'v ir::Canonical<T> {
         self.instantiate_universes(value)
     }
 
-    fn max_universe(&self) -> UniverseIndex {
+    fn max_universe(&self) -> ir::UniverseIndex {
         self.max_universe()
     }
 
-    fn new_variable(&mut self, ui: UniverseIndex) -> ::crate::solve::infer::var::InferenceVariable {
+    fn new_variable(
+        &mut self,
+        ui: ir::UniverseIndex,
+    ) -> ::crate::solve::infer::var::InferenceVariable {
         self.new_variable(ui)
     }
 
-    fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime> {
+    fn normalize_lifetime(&mut self, leaf: &ir::Lifetime, binders: usize) -> Option<ir::Lifetime> {
         self.normalize_lifetime(leaf, binders)
     }
 
-    fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty> {
+    fn normalize_shallow(&mut self, leaf: &ir::Ty, binders: usize) -> Option<ir::Ty> {
         self.normalize_shallow(leaf, binders)
     }
 
@@ -206,29 +223,29 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
 
     fn canonicalize_goal(
         &mut self,
-        value: &InEnvironment<Goal<DomainGoal>>,
-    ) -> Canonical<InEnvironment<Goal<DomainGoal>>> {
+        value: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
+    ) -> ir::Canonical<ir::InEnvironment<ir::Goal<ir::DomainGoal>>> {
         self.canonicalize(value).quantified
     }
 
     fn canonicalize_constrained_subst(
         &mut self,
-        value: &ConstrainedSubst,
-    ) -> Canonical<ConstrainedSubst> {
+        value: &ir::ConstrainedSubst,
+    ) -> ir::Canonical<ir::ConstrainedSubst> {
         self.canonicalize(value).quantified
     }
 
     fn u_canonicalize_goal(
         &mut self,
-        value: &CanonicalGoal<DomainGoal>,
-    ) -> UCanonicalized<InEnvironment<Goal<DomainGoal>>> {
+        value: &CanonicalGoal<ir::DomainGoal>,
+    ) -> UCanonicalized<ir::InEnvironment<ir::Goal<ir::DomainGoal>>> {
         self.u_canonicalize(value)
     }
 
     fn invert_goal(
         &mut self,
-        value: &InEnvironment<Goal<DomainGoal>>,
-    ) -> Option<InEnvironment<Goal<DomainGoal>>> {
+        value: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
+    ) -> Option<ir::InEnvironment<ir::Goal<ir::DomainGoal>>> {
         self.invert(value)
     }
 
@@ -242,7 +259,7 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         self.instantiate_binders_existentially(arg)
     }
 
-    fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
+    fn instantiate_canonical<T>(&mut self, bound: &ir::Canonical<T>) -> T::Result
     where
         T: Fold + Debug,
     {
@@ -251,7 +268,7 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
 
     fn unify<T>(
         &mut self,
-        environment: &Arc<Environment<DomainGoal>>,
+        environment: &Arc<ir::Environment<ir::DomainGoal>>,
         a: &T,
         b: &T,
     ) -> Fallible<UnificationResult>
@@ -263,11 +280,11 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
 }
 
 impl InferenceVariable<SlgContext> for ::crate::solve::infer::var::InferenceVariable {
-    fn to_ty(self) -> Ty {
+    fn to_ty(self) -> ir::Ty {
         self.to_ty()
     }
 
-    fn to_lifetime(self) -> Lifetime {
+    fn to_lifetime(self) -> ir::Lifetime {
         self.to_lifetime()
     }
 }
