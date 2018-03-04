@@ -612,14 +612,14 @@ impl<C: Context> Forest<C> {
 
         match goal {
             Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
-                let domain_goal = InEnvironment::new(&environment, domain_goal);
-                let clauses = self.context.program_clauses(&domain_goal);
+                let clauses = self.context.program_clauses(&environment, &domain_goal);
                 for clause in clauses {
                     debug!("program clause = {:#?}", clause);
                     let mut clause_infer = infer.clone();
 
                     if let Satisfiable::Yes(resolvent) = Self::resolvent_clause(
                         &mut clause_infer,
+                        &environment,
                         &domain_goal,
                         &subst,
                         &clause.implication,

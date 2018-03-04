@@ -38,7 +38,8 @@ crate trait Context: Sized + Clone {
     /// `goal`. (This set can be over-approximated, naturally.)
     fn program_clauses(
         &self,
-        goal: &ir::InEnvironment<ir::DomainGoal>,
+        environment: &ir::Environment<ir::DomainGoal>,
+        goal: &ir::DomainGoal,
     ) -> Vec<ir::ProgramClause<ir::DomainGoal>>;
 }
 
@@ -156,13 +157,9 @@ impl Context for Arc<ir::ProgramEnvironment<ir::DomainGoal>> {
 
     fn program_clauses(
         &self,
-        goal: &ir::InEnvironment<ir::DomainGoal>,
+        environment: &ir::Environment<ir::DomainGoal>,
+        goal: &ir::DomainGoal,
     ) -> Vec<ir::ProgramClause<ir::DomainGoal>> {
-        let &ir::InEnvironment {
-            ref environment,
-            ref goal,
-        } = goal;
-
         let environment_clauses = environment
             .clauses
             .iter()

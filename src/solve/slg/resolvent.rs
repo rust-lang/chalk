@@ -56,7 +56,8 @@ impl<C: Context> Forest<C> {
     /// - `clause` is the program clause that may be useful to that end
     pub(super) fn resolvent_clause(
         infer: &mut C::InferenceTable,
-        goal: &InEnvironment<DomainGoal>,
+        environment: &Arc<Environment<DomainGoal>>,
+        goal: &DomainGoal,
         subst: &Substitution,
         clause: &Binders<ProgramClauseImplication<DomainGoal>>,
     ) -> Satisfiable<ExClause> {
@@ -84,11 +85,9 @@ impl<C: Context> Forest<C> {
         debug!("consequence = {:?}", consequence);
         debug!("conditions = {:?}", conditions);
 
-        let environment = &goal.environment.clone();
-
         // Unify the selected literal Li with C'.
         let unification_result =
-            match infer.unify_domain_goals(environment, &goal.goal, &consequence) {
+            match infer.unify_domain_goals(environment, goal, &consequence) {
                 Err(_) => return Satisfiable::No,
                 Ok(v) => v,
             };
