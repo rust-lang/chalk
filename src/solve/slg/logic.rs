@@ -583,7 +583,7 @@ impl<C: Context> Forest<C> {
         }
 
         info_heading!("creating new table {:?} and goal {:#?}", self.tables.next_index(), goal);
-        let coinductive_goal = goal.is_coinductive(&self.program);
+        let coinductive_goal = self.context.is_coinductive(&goal);
         let table = self.tables.insert(goal, coinductive_goal);
         self.push_initial_strands(table);
         table
@@ -613,7 +613,7 @@ impl<C: Context> Forest<C> {
         match goal {
             Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
                 let domain_goal = InEnvironment::new(&environment, domain_goal);
-                let clauses = Self::clauses(&self.program, &domain_goal);
+                let clauses = self.context.program_clauses(&domain_goal);
                 for clause in clauses {
                     debug!("program clause = {:#?}", clause);
                     let mut clause_infer = infer.clone();

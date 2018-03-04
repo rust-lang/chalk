@@ -6,7 +6,6 @@ use solve::slg::logic::RootSearchFail;
 use solve::slg::stack::{Stack, StackIndex};
 use solve::slg::tables::Tables;
 use solve::slg::table::AnswerIndex;
-use std::sync::Arc;
 
 #[cfg(test)]
 use solve::slg::table::Answer;
@@ -14,7 +13,6 @@ use solve::slg::table::Answer;
 crate struct Forest<C: Context> {
     #[allow(dead_code)]
     crate context: C,
-    crate program: Arc<ProgramEnvironment<DomainGoal>>,
     crate tables: Tables<C>,
     crate stack: Stack,
     crate max_size: usize,
@@ -28,17 +26,15 @@ impl<C: Context> Forest<C> {
     crate fn solve_root_goal(
         context: C,
         max_size: usize,
-        program: &Arc<ProgramEnvironment<DomainGoal>>,
         root_goal: &UCanonicalGoal<DomainGoal>,
     ) -> Option<Solution> {
-        let mut forest = Forest::new(context, program, max_size);
+        let mut forest = Forest::new(context, max_size);
         forest.solve(root_goal)
     }
 
-    crate fn new(context: C, program: &Arc<ProgramEnvironment<DomainGoal>>, max_size: usize) -> Self {
+    crate fn new(context: C, max_size: usize) -> Self {
         Forest {
             context,
-            program: program.clone(),
             tables: Tables::new(),
             stack: Stack::default(),
             max_size,

@@ -1,10 +1,12 @@
 use crate::fallible::Fallible;
 use crate::ir::{Canonical, ConstrainedSubst, DomainGoal, Environment, Goal, InEnvironment,
-                Lifetime, ParameterKind, Substitution, Ty, UCanonical, UniverseIndex};
+                Lifetime, ParameterKind, ProgramClause, ProgramEnvironment, Substitution, Ty,
+                UCanonical, UniverseIndex};
+use crate::ir::could_match::CouldMatch;
 use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::UCanonicalized;
 use crate::solve::infer::unify::UnificationResult;
-use crate::solve::slg::CanonicalGoal;
+use crate::solve::slg::{CanonicalGoal, UCanonicalGoal};
 use crate::fold::Fold;
 use crate::zip::Zip;
 use std::fmt::Debug;
@@ -28,9 +30,16 @@ use std::sync::Arc;
 //
 // It seems clear we can extract a
 
-crate trait Context: Copy + Debug {
+crate trait Context: Sized {
     type InferenceTable: InferenceTable<Self>;
     type InferenceVariable: InferenceVariable<Self>;
+
+    /// True if this is a coinductive goal -- e.g., proving an auto trait.
+    fn is_coinductive(&self, goal: &UCanonicalGoal<DomainGoal>) -> bool;
+
+    /// Returns the set of program clauses that might apply to
+    /// `goal`. (This set can be over-approximated, naturally.)
+    fn program_clauses(&self, goal: &InEnvironment<DomainGoal>) -> Vec<ProgramClause<DomainGoal>>;
 }
 
 crate trait InferenceVariable<C: Context>: Copy {
@@ -120,12 +129,36 @@ crate trait InferenceTable<C: Context>: Clone {
 
 ///////////////////////////////////////////////////////////////////////////
 
-#[derive(Copy, Clone, Debug, Default)]
-pub struct SlgContext;
+#[allow(dead_code)] // for some reason rustc reports this as dead??
+pub type SlgContext = Arc<ProgramEnvironment<DomainGoal>>;
 
-impl Context for SlgContext {
+impl Context for Arc<ProgramEnvironment<DomainGoal>> {
     type InferenceTable = ::crate::solve::infer::InferenceTable;
     type InferenceVariable = ::crate::solve::infer::var::InferenceVariable;
+
+    fn is_coinductive(&self, goal: &UCanonicalGoal<DomainGoal>) -> bool {
+        goal.is_coinductive(self)
+    }
+
+    fn program_clauses(&self, goal: &InEnvironment<DomainGoal>) -> Vec<ProgramClause<DomainGoal>> {
+        let &InEnvironment {
+            ref environment,
+            ref goal,
+        } = goal;
+
+        let environment_clauses = environment
+            .clauses
+            .iter()
+            .filter(|&env_clause| env_clause.could_match(goal))
+            .map(|env_clause| env_clause.clone().into_program_clause());
+
+        let program_clauses = self.program_clauses
+            .iter()
+            .filter(|clause| clause.could_match(goal))
+            .cloned();
+
+        environment_clauses.chain(program_clauses).collect()
+    }
 }
 
 impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {

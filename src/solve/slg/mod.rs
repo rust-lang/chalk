@@ -60,7 +60,6 @@ crate mod forest;
 
 mod aggregate;
 crate mod context;
-mod clauses;
 mod logic;
 mod resolvent;
 mod simplify;

@@ -219,9 +219,8 @@ impl SolverChoice {
             }
 
             SolverChoice::SLG { max_size } => Ok(slg::forest::Forest::solve_root_goal(
-                slg::context::SlgContext,
+                env.clone(),
                 max_size,
-                env,
                 &canonical_goal,
             )),
         }

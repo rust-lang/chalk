@@ -4,7 +4,6 @@ use chalk_parse;
 use errors::*;
 use ir;
 use lower::*;
-use solve::slg::context::SlgContext;
 use solve::slg::forest::Forest;
 use std::sync::Arc;
 
@@ -40,7 +39,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
             assert!(goal_text.ends_with("}"));
             let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let mut forest = Forest::new(SlgContext, env, max_size);
+            let mut forest = Forest::new(env.clone(), max_size);
             let result = format!("{:#?}", forest.force_answers(peeled_goal, num_answers));
 
             ::test_util::assert_test_result_eq(&expected, &result);
@@ -271,7 +270,7 @@ fn only_draw_so_many() {
     ir::tls::set_current_program(&program, || {
         let goal = parse_and_lower_goal(&program, goal_text).unwrap();
         let peeled_goal = goal.into_peeled_goal();
-        let mut forest = Forest::new(SlgContext, env, 10);
+        let mut forest = Forest::new(env.clone(), 10);
         let solution = forest.solve(&peeled_goal);
 
         // First, check we got the expected solution.
