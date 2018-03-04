@@ -1,9 +1,7 @@
-use cast::Caster;
 use fallible::Fallible;
 use fold::Fold;
 use fold::shift::Shift;
 use ir::*;
-use solve::infer::unify::UnificationResult;
 use solve::slg::forest::Forest;
 use solve::slg::context::prelude::*;
 use std::sync::Arc;
@@ -89,15 +87,11 @@ impl<C: Context> Forest<C> {
         let environment = &goal.environment.clone();
 
         // Unify the selected literal Li with C'.
-        let UnificationResult {
-            goals: subgoals,
-            constraints,
-        } = {
-            match infer.unify(environment, &goal.goal, &consequence) {
+        let unification_result =
+            match infer.unify_domain_goals(environment, &goal.goal, &consequence) {
                 Err(_) => return Satisfiable::No,
                 Ok(v) => v,
-            }
-        };
+            };
 
         // Final X-clause that we will return.
         let mut ex_clause = ExClause {
@@ -108,11 +102,7 @@ impl<C: Context> Forest<C> {
         };
 
         // Add the subgoals/region-constraints that unification gave us.
-        debug!("subgoals={:?}", subgoals);
-        ex_clause
-            .subgoals
-            .extend(subgoals.into_iter().casted().map(Literal::Positive));
-        ex_clause.constraints.extend(constraints);
+        unification_result.into_ex_clause(&mut ex_clause);
 
         // Add the `conditions` from the program clause into the result too.
         ex_clause
@@ -240,7 +230,7 @@ impl<C: Context> Forest<C> {
 
     pub(super) fn apply_answer_subst(
         infer: &mut C::InferenceTable,
-        mut ex_clause: ExClause,
+        ex_clause: ExClause,
         selected_goal: &InEnvironment<Goal<DomainGoal>>,
         answer_table_goal: &CanonicalGoal<DomainGoal>,
         canonical_answer_subst: &CanonicalConstrainedSubst,
@@ -263,24 +253,20 @@ impl<C: Context> Forest<C> {
             constraints: answer_constraints,
         } = infer.instantiate_canonical(&canonical_answer_subst);
 
-        let (goals, constraints) = match AnswerSubstitutor::<C>::substitute(
+        match AnswerSubstitutor::<C>::substitute(
             infer,
             &selected_goal.environment,
             &answer_subst,
+            ex_clause,
             &answer_table_goal.value,
             selected_goal,
         ) {
-            Ok((goals, constraints)) => (goals, constraints),
-            Err(_) => return Satisfiable::No,
-        };
-
-        ex_clause.constraints.extend(constraints);
-        ex_clause.constraints.extend(answer_constraints);
-        ex_clause
-            .subgoals
-            .extend(goals.into_iter().casted().map(Literal::Positive));
-
-        Satisfiable::Yes(ex_clause)
+            Ok(mut ex_clause) => {
+                ex_clause.constraints.extend(answer_constraints);
+                Satisfiable::Yes(ex_clause)
+            }
+            Err(_) => Satisfiable::No,
+        }
     }
 }
 
@@ -293,8 +279,7 @@ where
     answer_subst: &'t Substitution,
     answer_binders: usize,
     pending_binders: usize,
-    goals: Vec<InEnvironment<DomainGoal>>,
-    constraints: Vec<InEnvironment<Constraint>>,
+    ex_clause: ExClause,
 }
 
 impl<'t, C: Context> AnswerSubstitutor<'t, C> {
@@ -302,25 +287,20 @@ impl<'t, C: Context> AnswerSubstitutor<'t, C> {
         table: &mut C::InferenceTable,
         environment: &Arc<Environment<DomainGoal>>,
         answer_subst: &Substitution,
+        ex_clause: ExClause,
         answer: &T,
         pending: &T,
-    ) -> Fallible<
-        (
-            Vec<InEnvironment<DomainGoal>>,
-            Vec<InEnvironment<Constraint>>,
-        ),
-    > {
+    ) -> Fallible<ExClause> {
         let mut this = AnswerSubstitutor::<'_, C> {
             table,
             environment,
             answer_subst,
+            ex_clause,
             answer_binders: 0,
             pending_binders: 0,
-            goals: vec![],
-            constraints: vec![],
         };
         Zip::zip_with(&mut this, answer, pending)?;
-        Ok((this.goals, this.constraints))
+        Ok(this.ex_clause)
     }
 
     fn unify_free_answer_var(
@@ -345,12 +325,10 @@ impl<'t, C: Context> AnswerSubstitutor<'t, C> {
                 )
             });
 
-        let UnificationResult { goals, constraints } =
-            self.table
-                .unify(&self.environment, answer_param, pending_shifted)?;
+        self.table
+            .unify_parameters(&self.environment, answer_param, pending_shifted)?
+            .into_ex_clause(&mut self.ex_clause);
 
-        self.constraints.extend(constraints);
-        self.goals.extend(goals);
         Ok(true)
     }
 

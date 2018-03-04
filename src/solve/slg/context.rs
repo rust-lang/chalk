@@ -1,12 +1,11 @@
+use crate::cast::Caster;
 use crate::fallible::Fallible;
 use crate::ir;
 use crate::ir::could_match::CouldMatch;
 use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::UCanonicalized;
-use crate::solve::infer::unify::UnificationResult;
-use crate::solve::slg::{CanonicalGoal, UCanonicalGoal};
+use crate::solve::slg::{CanonicalGoal, Literal, ExClause, UCanonicalGoal};
 use crate::fold::Fold;
-use crate::zip::Zip;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -28,7 +27,7 @@ use std::sync::Arc;
 //
 // It seems clear we can extract a
 
-crate trait Context: Sized {
+crate trait Context: Sized + Clone {
     type InferenceTable: InferenceTable<Self>;
     type InferenceVariable: InferenceVariable<Self>;
 
@@ -49,6 +48,8 @@ crate trait InferenceVariable<C: Context>: Copy {
 }
 
 crate trait InferenceTable<C: Context>: Clone {
+    type UnificationResult: UnificationResult<C>;
+
     fn new() -> Self;
 
     // Used by: simplify
@@ -116,20 +117,28 @@ crate trait InferenceTable<C: Context>: Clone {
     where
         T: Fold;
 
-    // Used by: simplify, resolvent, truncate
-    fn unify<T>(
-        &mut self,
-        environment: &Arc<ir::Environment<ir::DomainGoal>>,
-        a: &T,
-        b: &T,
-    ) -> Fallible<UnificationResult>
-    where
-        T: ?Sized + Zip;
-
     // Used by: resolvent
     fn instantiate_canonical<T>(&mut self, bound: &ir::Canonical<T>) -> T::Result
     where
         T: Fold + Debug;
+
+    fn unify_domain_goals(
+        &mut self,
+        environment: &Arc<ir::Environment<ir::DomainGoal>>,
+        a: &ir::DomainGoal,
+        b: &ir::DomainGoal,
+    ) -> Fallible<Self::UnificationResult>;
+
+    fn unify_parameters(
+        &mut self,
+        environment: &Arc<ir::Environment<ir::DomainGoal>>,
+        a: &ir::Parameter,
+        b: &ir::Parameter,
+    ) -> Fallible<Self::UnificationResult>;
+}
+
+crate trait UnificationResult<C: Context> {
+    fn into_ex_clause(self, ex_clause: &mut ExClause);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -170,6 +179,8 @@ impl Context for Arc<ir::ProgramEnvironment<ir::DomainGoal>> {
 }
 
 impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
+    type UnificationResult = ::crate::solve::infer::unify::UnificationResult;
+
     fn new() -> Self {
         Self::new()
     }
@@ -266,16 +277,31 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         self.instantiate_canonical(bound)
     }
 
-    fn unify<T>(
+    fn unify_domain_goals(
         &mut self,
         environment: &Arc<ir::Environment<ir::DomainGoal>>,
-        a: &T,
-        b: &T,
-    ) -> Fallible<UnificationResult>
-    where
-        T: ?Sized + Zip,
-    {
+        a: &ir::DomainGoal,
+        b: &ir::DomainGoal,
+    ) -> Fallible<Self::UnificationResult> {
         self.unify(environment, a, b)
+    }
+
+    fn unify_parameters(
+        &mut self,
+        environment: &Arc<ir::Environment<ir::DomainGoal>>,
+        a: &ir::Parameter,
+        b: &ir::Parameter,
+    ) -> Fallible<Self::UnificationResult> {
+        self.unify(environment, a, b)
+    }
+}
+
+impl UnificationResult<SlgContext> for ::crate::solve::infer::unify::UnificationResult {
+    fn into_ex_clause(self, ex_clause: &mut ExClause) {
+        ex_clause
+            .subgoals
+            .extend(self.goals.into_iter().casted().map(Literal::Positive));
+        ex_clause.constraints.extend(self.constraints);
     }
 }
 
@@ -295,4 +321,5 @@ crate mod prelude {
     crate use super::Context;
     crate use super::InferenceTable;
     crate use super::InferenceVariable;
+    crate use super::UnificationResult;
 }

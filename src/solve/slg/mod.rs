@@ -100,7 +100,7 @@ copy_fold!(DepthFirstNumber);
 
 /// The paper describes these as `A :- D | G`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct ExClause {
+crate struct ExClause {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
     subst: Substitution,

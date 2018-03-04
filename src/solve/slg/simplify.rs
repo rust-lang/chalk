@@ -1,6 +1,6 @@
-use cast::{Cast, Caster};
+use cast::Cast;
+use fallible::NoSolution;
 use ir::{DomainGoal, Goal, InEnvironment, LeafGoal, QuantifierKind, Substitution};
-use solve::infer::unify::UnificationResult;
 use solve::slg::{ExClause, Literal, Satisfiable};
 use solve::slg::forest::Forest;
 use solve::slg::context::prelude::*;
@@ -49,17 +49,10 @@ impl<C: Context> Forest<C> {
                         .push(Literal::Negative(InEnvironment::new(&environment, subgoal)));
                 }
                 Goal::Leaf(LeafGoal::EqGoal(ref eq_goal)) => {
-                    let UnificationResult { goals, constraints } = {
-                        match infer.unify(&environment, &eq_goal.a, &eq_goal.b) {
-                            Ok(v) => v,
-                            Err(_) => return Satisfiable::No,
-                        }
-                    };
-
-                    ex_clause.constraints.extend(constraints);
-                    ex_clause
-                        .subgoals
-                        .extend(goals.into_iter().casted().map(Literal::Positive));
+                    match infer.unify_parameters(&environment, &eq_goal.a, &eq_goal.b) {
+                        Ok(result) => result.into_ex_clause(&mut ex_clause),
+                        Err(NoSolution) => return Satisfiable::No,
+                    }
                 }
                 Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
                     let domain_goal = domain_goal.cast();
