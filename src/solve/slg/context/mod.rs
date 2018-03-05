@@ -5,26 +5,7 @@ use crate::solve::infer::ucanonicalize::UCanonicalized;
 use crate::solve::slg::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Satisfiable,
                         UCanonicalGoal};
 use crate::fold::Fold;
-use std::fmt::Debug;
 use std::sync::Arc;
-
-// Notes:
-//
-// How do we use `Substitution`:
-// - we use them as key in a hashmap
-// - we ask if they are trivial:
-//   - for a given goal
-//   - with no region constraints
-// - we apply them to a given canonical goal to yield an instantiated goal
-//
-// How do we use a `UniverseMap`:
-// - we apply it to the result we get back from an answer
-// - which is then fed into `apply_answer_subst`
-//
-// How do we use region constraints:
-// - opaquely, I imagine
-//
-// It seems clear we can extract a
 
 crate mod implementation;
 
@@ -102,19 +83,10 @@ crate trait InferenceTable<C: Context>: Clone {
         value: &'v ir::UCanonical<T>,
     ) -> &'v ir::Canonical<T>;
 
-    // Used by: truncate
-    fn max_universe(&self) -> ir::UniverseIndex;
-
-    // Used by: aggregate, truncate
+    // Used by: aggregate
     fn new_variable(&mut self, ui: ir::UniverseIndex) -> C::InferenceVariable;
 
-    // Used by: resolvent
-    fn normalize_lifetime(&mut self, leaf: &ir::Lifetime, binders: usize) -> Option<ir::Lifetime>;
-
-    // Used by: resolvent, truncate
-    fn normalize_shallow(&mut self, leaf: &ir::Ty, binders: usize) -> Option<ir::Ty>;
-
-    // Used by: resolvent, logic (but for debugging only)
+    // Used by: logic (but for debugging only)
     fn normalize_deep<T: Fold>(&mut self, value: &T) -> T::Result;
 
     // Used by: logic
@@ -145,7 +117,7 @@ crate trait InferenceTable<C: Context>: Clone {
         value: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
     ) -> Option<ir::InEnvironment<ir::Goal<ir::DomainGoal>>>;
 
-    // Used by: simplify, resolvent
+    // Used by: simplify
     fn instantiate_binders_existentially<T>(
         &mut self,
         arg: &impl BindersAndValue<Output = T>,
@@ -153,18 +125,7 @@ crate trait InferenceTable<C: Context>: Clone {
     where
         T: Fold;
 
-    // Used by: resolvent
-    fn instantiate_canonical<T>(&mut self, bound: &ir::Canonical<T>) -> T::Result
-    where
-        T: Fold + Debug;
-
-    fn unify_domain_goals(
-        &mut self,
-        environment: &Arc<ir::Environment<ir::DomainGoal>>,
-        a: &ir::DomainGoal,
-        b: &ir::DomainGoal,
-    ) -> Fallible<Self::UnificationResult>;
-
+    // Used by: simplify
     fn unify_parameters(
         &mut self,
         environment: &Arc<ir::Environment<ir::DomainGoal>>,

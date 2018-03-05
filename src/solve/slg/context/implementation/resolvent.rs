@@ -85,7 +85,7 @@ pub(super) fn resolvent_clause(
     debug!("conditions = {:?}", conditions);
 
     // Unify the selected literal Li with C'.
-    let unification_result = match infer.unify_domain_goals(environment, goal, &consequence) {
+    let unification_result = match infer.unify(environment, goal, &consequence) {
         Err(_) => return Satisfiable::No,
         Ok(v) => v,
     };

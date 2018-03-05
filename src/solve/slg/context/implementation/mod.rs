@@ -9,7 +9,6 @@ use crate::solve::slg::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Lite
 use crate::solve::slg::context::prelude::*;
 use crate::solve::truncate::{self, Truncated};
 use crate::fold::Fold;
-use std::fmt::Debug;
 use std::sync::Arc;
 
 mod resolvent;
@@ -150,23 +149,11 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         self.instantiate_universes(value)
     }
 
-    fn max_universe(&self) -> ir::UniverseIndex {
-        self.max_universe()
-    }
-
     fn new_variable(
         &mut self,
         ui: ir::UniverseIndex,
     ) -> ::crate::solve::infer::var::InferenceVariable {
         self.new_variable(ui)
-    }
-
-    fn normalize_lifetime(&mut self, leaf: &ir::Lifetime, binders: usize) -> Option<ir::Lifetime> {
-        self.normalize_lifetime(leaf, binders)
-    }
-
-    fn normalize_shallow(&mut self, leaf: &ir::Ty, binders: usize) -> Option<ir::Ty> {
-        self.normalize_shallow(leaf, binders)
     }
 
     fn normalize_deep<T: Fold>(&mut self, value: &T) -> T::Result {
@@ -209,22 +196,6 @@ impl InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
         T: Fold,
     {
         self.instantiate_binders_existentially(arg)
-    }
-
-    fn instantiate_canonical<T>(&mut self, bound: &ir::Canonical<T>) -> T::Result
-    where
-        T: Fold + Debug,
-    {
-        self.instantiate_canonical(bound)
-    }
-
-    fn unify_domain_goals(
-        &mut self,
-        environment: &Arc<ir::Environment<ir::DomainGoal>>,
-        a: &ir::DomainGoal,
-        b: &ir::DomainGoal,
-    ) -> Fallible<Self::UnificationResult> {
-        self.unify(environment, a, b)
     }
 
     fn unify_parameters(
