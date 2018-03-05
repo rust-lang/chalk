@@ -49,7 +49,7 @@
 //! - HH: Hereditary harrop predicates. What Chalk deals in.
 //!   Popularized by Lambda Prolog.
 
-use ir::{InEnvironment, Constraint, Canonical, Goal, UCanonical};
+use ir::{InEnvironment, Canonical, Goal, UCanonical};
 use stacker;
 use std::collections::HashSet;
 use std::cmp::min;
@@ -109,7 +109,7 @@ crate struct ExClause<C: Context> {
     delayed_literals: Vec<DelayedLiteral<C>>,
 
     /// Region constraints we have accumulated.
-    constraints: Vec<InEnvironment<Constraint>>,
+    constraints: Vec<C::ConstraintInEnvironment>,
 
     /// Subgoals: literals that must be proven
     subgoals: Vec<Literal<C>>,

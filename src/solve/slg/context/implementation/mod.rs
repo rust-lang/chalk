@@ -57,6 +57,7 @@ impl context::Context for SlgContext {
     type UniverseMap = UniverseMap;
     type Substitution = Substitution;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
+    type ConstraintInEnvironment = InEnvironment<Constraint>;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -290,6 +291,9 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
     ) -> Canonical<ConstrainedSubst> {
         self.map_from_canonical(value)
     }
+}
+
+impl context::ConstraintInEnvironment<SlgContext> for InEnvironment<Constraint> {
 }
 
 impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSubst> {

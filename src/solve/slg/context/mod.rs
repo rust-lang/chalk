@@ -25,6 +25,7 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type UniverseMap: UniverseMap<Self>;
     type Substitution: Substitution<Self>;
     type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
+    type ConstraintInEnvironment: ConstraintInEnvironment<Self>;
 }
 
 crate trait ContextOps<C: Context> {
@@ -152,7 +153,7 @@ crate trait InferenceTable<C: Context>: Clone {
     fn canonicalize_constrained_subst(
         &mut self,
         subst: C::Substitution,
-        constraints: Vec<ir::InEnvironment<ir::Constraint>>,
+        constraints: Vec<C::ConstraintInEnvironment>,
     ) -> C::CanonicalConstrainedSubst;
 
     // Used by: logic
@@ -190,6 +191,9 @@ crate trait Substitution<C: Context>: Clone + Debug {
 
 crate trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
     fn empty_constraints(&self) -> bool;
+}
+
+crate trait ConstraintInEnvironment<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
 crate trait UniverseMap<C: Context>: Clone + Debug {
