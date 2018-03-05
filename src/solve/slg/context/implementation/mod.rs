@@ -59,6 +59,7 @@ impl context::Context for SlgContext {
     type DomainGoal = DomainGoal;
     type Goal = Goal<DomainGoal>;
     type BindersGoal = Binders<Box<Goal<DomainGoal>>>;
+    type Parameter = Parameter;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -271,6 +272,8 @@ impl context::Environment<SlgContext> for Arc<Environment<DomainGoal>> {
 }
 
 impl context::Substitution<SlgContext> for Substitution {}
+
+impl context::Parameter<SlgContext> for Parameter {}
 
 impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::UniverseMap {
     fn map_goal_from_canonical(

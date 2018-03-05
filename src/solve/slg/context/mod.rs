@@ -28,6 +28,7 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type DomainGoal: DomainGoal<Self>;
     type Goal: Goal<Self>;
     type BindersGoal: BindersGoal<Self>;
+    type Parameter: Parameter<Self>;
 }
 
 crate trait ContextOps<C: Context> {
@@ -179,8 +180,8 @@ crate trait InferenceTable<C: Context>: Clone {
     fn unify_parameters(
         &mut self,
         environment: &C::Environment,
-        a: &ir::Parameter,
-        b: &ir::Parameter,
+        a: &C::Parameter,
+        b: &C::Parameter,
     ) -> Fallible<Self::UnificationResult>;
 }
 
@@ -201,6 +202,9 @@ crate trait DomainGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
 crate trait Goal<C: Context>: Clone + Debug + Eq + Hash + Ord {
     fn cannot_prove() -> Self;
     fn into_hh_goal(self) -> HhGoal<C>;
+}
+
+crate trait Parameter<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
 crate trait BindersGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {

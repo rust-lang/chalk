@@ -1,4 +1,3 @@
-use ir::Parameter;
 use solve::slg::context::Context;
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -11,7 +10,7 @@ crate enum HhGoal<C: Context> {
     Implies(Vec<C::DomainGoal>, C::Goal),
     And(C::Goal, C::Goal),
     Not(C::Goal),
-    Unify(Parameter, Parameter),
+    Unify(C::Parameter, C::Parameter),
     DomainGoal(C::DomainGoal),
 
     /// Indicates something that cannot be proven to be true or false
