@@ -120,8 +120,6 @@ crate trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
 }
 
 crate trait InferenceVariable<C: Context>: Copy {
-    fn to_ty(self) -> ir::Ty;
-    fn to_lifetime(self) -> ir::Lifetime;
 }
 
 crate trait InferenceTable<C: Context>: Clone {

@@ -250,13 +250,6 @@ impl context::UnificationResult<SlgContext> for ::crate::solve::infer::unify::Un
 }
 
 impl context::InferenceVariable<SlgContext> for ::crate::solve::infer::var::InferenceVariable {
-    fn to_ty(self) -> Ty {
-        self.to_ty()
-    }
-
-    fn to_lifetime(self) -> Lifetime {
-        self.to_lifetime()
-    }
 }
 
 impl context::GoalInEnvironment<SlgContext> for InEnvironment<Goal<DomainGoal>> {
