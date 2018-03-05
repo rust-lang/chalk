@@ -59,7 +59,6 @@ use std::usize;
 
 crate mod forest;
 
-mod aggregate;
 crate mod context;
 use self::context::Context;
 mod logic;
@@ -122,7 +121,7 @@ struct SimplifiedAnswers {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct SimplifiedAnswer {
+crate struct SimplifiedAnswer {
     /// A fully instantiated version of the goal for which the query
     /// is true (including region constraints).
     subst: CanonicalConstrainedSubst,

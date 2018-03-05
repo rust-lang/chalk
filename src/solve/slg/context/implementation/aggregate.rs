@@ -2,17 +2,18 @@ use cast::Cast;
 use ir::*;
 use solve::{Guidance, Solution};
 use solve::infer::InferenceTable;
-use solve::slg::forest::Forest;
-use solve::slg::context::prelude::*;
+use solve::slg::context;
+use solve::slg::{CanonicalConstrainedSubst, SimplifiedAnswer};
 use std::fmt::Debug;
 
-use super::{CanonicalConstrainedSubst, SimplifiedAnswer};
+use super::SlgContext;
 
-impl<C: Context> Forest<C> {
-    /// Draws as many answers as it needs from `simplified_answers` (but
-    /// no more!) in order to come up with a solution.
-    pub(super) fn make_solution(
-        root_goal: &C::CanonicalGoalInEnvironment,
+/// Draws as many answers as it needs from `simplified_answers` (but
+/// no more!) in order to come up with a solution.
+impl context::Aggregate<SlgContext> for SlgContext {
+    fn make_solution(
+        &self,
+        root_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
         simplified_answers: impl IntoIterator<Item = SimplifiedAnswer>,
     ) -> Option<Solution> {
         let mut simplified_answers = simplified_answers.into_iter().peekable();
@@ -57,7 +58,7 @@ impl<C: Context> Forest<C> {
 
             match simplified_answers.next() {
                 Some(answer1) => {
-                    subst = Self::merge_into_guidance(root_goal, subst, &answer1.subst);
+                    subst = merge_into_guidance(root_goal, subst, &answer1.subst);
                 }
 
                 None => {
@@ -68,68 +69,67 @@ impl<C: Context> Forest<C> {
 
         Some(Solution::Ambig(guidance))
     }
+}
 
-    /// Given a current substitution used as guidance for `root_goal`, and
-    /// a new possible answer to `root_goal`, returns a new set of
-    /// guidance that encompasses both of them. This is often more general
-    /// than the old guidance. For example, if we had a guidance of `?0 =
-    /// u32` and the new answer is `?0 = i32`, then the guidance would
-    /// become `?0 = ?X` (where `?X` is some fresh variable).
-    fn merge_into_guidance(
-        root_goal: &C::CanonicalGoalInEnvironment,
-        guidance: Canonical<Substitution>,
-        answer: &CanonicalConstrainedSubst,
-    ) -> Canonical<Substitution> {
-        let mut infer = InferenceTable::new();
-        let Canonical {
-            value:
-                ConstrainedSubst {
-                    subst: subst1,
-                    constraints: _,
-                },
-            binders: _,
-        } = answer;
+/// Given a current substitution used as guidance for `root_goal`, and
+/// a new possible answer to `root_goal`, returns a new set of
+/// guidance that encompasses both of them. This is often more general
+/// than the old guidance. For example, if we had a guidance of `?0 =
+/// u32` and the new answer is `?0 = i32`, then the guidance would
+/// become `?0 = ?X` (where `?X` is some fresh variable).
+fn merge_into_guidance(
+    root_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
+    guidance: Canonical<Substitution>,
+    answer: &CanonicalConstrainedSubst,
+) -> Canonical<Substitution> {
+    let mut infer = InferenceTable::new();
+    let Canonical {
+        value: ConstrainedSubst {
+            subst: subst1,
+            constraints: _,
+        },
+        binders: _,
+    } = answer;
 
-        // Collect the types that the two substitutions have in
-        // common.
-        let aggr_parameters: Vec<_> = guidance
-            .value
-            .parameters
-            .iter()
-            .zip(&subst1.parameters)
-            .enumerate()
-            .map(|(index, (value, value1))| {
-                // We have two values for some variable X that
-                // appears in the root goal. Find out the universe
-                // of X.
-                let universe = root_goal.binders()[index].into_inner();
+    // Collect the types that the two substitutions have in
+    // common.
+    let aggr_parameters: Vec<_> = guidance
+        .value
+        .parameters
+        .iter()
+        .zip(&subst1.parameters)
+        .enumerate()
+        .map(|(index, (value, value1))| {
+            // We have two values for some variable X that
+            // appears in the root goal. Find out the universe
+            // of X.
+            let universe = root_goal.binders[index].into_inner();
 
-                let ty = match value {
-                    ParameterKind::Ty(ty) => ty,
-                    ParameterKind::Lifetime(_) => {
-                        // Ignore the lifetimes from the substitution: we're just
-                        // creating guidance here anyway.
-                        return infer.new_variable(universe).to_lifetime().cast();
-                    }
-                };
+            let ty = match value {
+                ParameterKind::Ty(ty) => ty,
+                ParameterKind::Lifetime(_) => {
+                    // Ignore the lifetimes from the substitution: we're just
+                    // creating guidance here anyway.
+                    return infer.new_variable(universe).to_lifetime().cast();
+                }
+            };
 
-                let ty1 = value1.assert_ty_ref();
+            let ty1 = value1.assert_ty_ref();
 
-                // Combine the two types into a new type.
-                let mut aggr = AntiUnifier {
-                    infer: &mut infer,
-                    universe,
-                };
-                aggr.aggregate_tys(&ty, ty1).cast()
-            })
-            .collect();
+            // Combine the two types into a new type.
+            let mut aggr = AntiUnifier {
+                infer: &mut infer,
+                universe,
+            };
+            aggr.aggregate_tys(&ty, ty1).cast()
+        })
+        .collect();
 
-        let aggr_subst = Substitution {
-            parameters: aggr_parameters,
-        };
+    let aggr_subst = Substitution {
+        parameters: aggr_parameters,
+    };
 
-        infer.canonicalize(&aggr_subst).quantified
-    }
+    infer.canonicalize(&aggr_subst).quantified
 }
 
 fn is_trivial(subst: &Canonical<Substitution>) -> bool {

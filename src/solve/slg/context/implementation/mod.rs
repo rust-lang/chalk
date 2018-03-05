@@ -15,6 +15,7 @@ use crate::fold::Fold;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+mod aggregate;
 mod resolvent;
 
 #[derive(Clone, Debug)]
@@ -176,13 +177,6 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         value: &'v UCanonical<InEnvironment<Goal<DomainGoal>>>,
     ) -> &'v Canonical<InEnvironment<Goal<DomainGoal>>> {
         self.instantiate_universes(value)
-    }
-
-    fn new_variable(
-        &mut self,
-        ui: UniverseIndex,
-    ) -> ::crate::solve::infer::var::InferenceVariable {
-        self.new_variable(ui)
     }
 
     fn debug_ex_clause(&mut self, value: &'v ExClause<SlgContext>) -> Box<Debug + 'v> {

@@ -1,7 +1,8 @@
 use crate::fallible::Fallible;
 use crate::ir;
+use crate::solve::Solution;
 use crate::solve::infer::instantiate::BindersAndValue;
-use crate::solve::slg::{CanonicalConstrainedSubst, ExClause, Satisfiable};
+use crate::solve::slg::{CanonicalConstrainedSubst, ExClause, Satisfiable, SimplifiedAnswer};
 use crate::fold::Fold;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -9,7 +10,7 @@ use std::hash::Hash;
 crate mod implementation;
 crate mod prelude;
 
-crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Resolvent<Self> {
+crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     type Environment: Environment<Self>;
     type GoalInEnvironment: GoalInEnvironment<Self>;
     type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
@@ -71,6 +72,14 @@ crate trait ContextOps<C: Context> {
     ) -> C::GoalInEnvironment;
 }
 
+crate trait Aggregate<C: Context> {
+    fn make_solution(
+        &self,
+        root_goal: &C::CanonicalGoalInEnvironment,
+        simplified_answers: impl IntoIterator<Item = SimplifiedAnswer>,
+    ) -> Option<Solution>;
+}
+
 crate trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
     fn canonical(&self) -> &C::CanonicalGoalInEnvironment;
     fn is_trivial_substitution(
@@ -122,9 +131,6 @@ crate trait InferenceTable<C: Context>: Clone {
         &mut self,
         value: &'v C::UCanonicalGoalInEnvironment,
     ) -> &'v C::CanonicalGoalInEnvironment;
-
-    // Used by: aggregate
-    fn new_variable(&mut self, ui: ir::UniverseIndex) -> C::InferenceVariable;
 
     // Used by: logic (but for debugging only)
     fn debug_ex_clause(&mut self, value: &'v ExClause<C>) -> Box<Debug + 'v>;
