@@ -627,7 +627,7 @@ impl<C: Context> Forest<C> {
                         &environment,
                         &domain_goal,
                         &subst,
-                        &clause.implication,
+                        &clause,
                     ) {
                         info!(
                             "pushing initial strand with ex-clause: {:#?}",

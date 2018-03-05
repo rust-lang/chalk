@@ -60,6 +60,7 @@ impl context::Context for SlgContext {
     type Goal = Goal<DomainGoal>;
     type BindersGoal = Binders<Box<Goal<DomainGoal>>>;
     type Parameter = Parameter;
+    type ProgramClause = ProgramClause<DomainGoal>;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -123,9 +124,9 @@ impl context::ContextOps<SlgContext> for SlgContext {
         environment: &Arc<Environment<DomainGoal>>,
         goal: &DomainGoal,
         subst: &Substitution,
-        clause: &Binders<ProgramClauseImplication<DomainGoal>>,
+        clause: &ProgramClause<DomainGoal>,
     ) -> Satisfiable<ExClause<Self>> {
-        resolvent::resolvent_clause(infer, environment, goal, subst, clause)
+        resolvent::resolvent_clause(infer, environment, goal, subst, &clause.implication)
     }
 
     fn apply_answer_subst(
@@ -322,6 +323,8 @@ impl context::UCanonicalGoalInEnvironment<SlgContext>
 }
 
 impl context::BindersGoal<SlgContext> for Binders<Box<Goal<DomainGoal>>> {}
+
+impl context::ProgramClause<SlgContext> for ProgramClause<DomainGoal> {}
 
 impl context::Goal<SlgContext> for Goal<DomainGoal> {
     fn cannot_prove() -> Goal<DomainGoal> {

@@ -1,5 +1,4 @@
 use crate::fallible::Fallible;
-use crate::ir;
 use crate::solve::Solution;
 use crate::solve::slg::{ExClause, Satisfiable, SimplifiedAnswer};
 use crate::solve::slg::hh::HhGoal;
@@ -29,6 +28,7 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type Goal: Goal<Self>;
     type BindersGoal: BindersGoal<Self>;
     type Parameter: Parameter<Self>;
+    type ProgramClause: ProgramClause<Self>;
 }
 
 crate trait ContextOps<C: Context> {
@@ -41,7 +41,7 @@ crate trait ContextOps<C: Context> {
         &self,
         environment: &C::Environment,
         goal: &C::DomainGoal,
-    ) -> Vec<ir::ProgramClause<C::DomainGoal>>;
+    ) -> Vec<C::ProgramClause>;
 
     /// If `subgoal` is too large, return a truncated variant (else
     /// return `None`).
@@ -65,7 +65,7 @@ crate trait ContextOps<C: Context> {
         environment: &C::Environment,
         goal: &C::DomainGoal,
         subst: &C::Substitution,
-        clause: &ir::Binders<ir::ProgramClauseImplication<C::DomainGoal>>,
+        clause: &C::ProgramClause,
     ) -> Satisfiable<ExClause<C>>;
 
     fn apply_answer_subst(
@@ -202,6 +202,9 @@ crate trait Goal<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
 crate trait Parameter<C: Context>: Clone + Debug + Eq + Hash + Ord {
+}
+
+crate trait ProgramClause<C: Context>: Debug {
 }
 
 crate trait BindersGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
