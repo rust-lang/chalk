@@ -19,16 +19,6 @@ crate struct Forest<C: Context> {
 }
 
 impl<C: Context> Forest<C> {
-    /// Convenience fn for solving a root goal. It would be better to
-    /// createa a `Forest` so as to enable cahcing between goals, however.
-    crate fn solve_root_goal(
-        context: C,
-        root_goal: &C::UCanonicalGoalInEnvironment,
-    ) -> Option<Solution> {
-        let mut forest = Forest::new(context);
-        forest.solve(root_goal)
-    }
-
     crate fn new(context: C) -> Self {
         Forest {
             context,
