@@ -60,7 +60,6 @@ impl context::Context for SlgContext {
     type Goal = Goal<DomainGoal>;
     type BindersGoal = Binders<Box<Goal<DomainGoal>>>;
     type Parameter = Parameter;
-    type CanonicalBinders = Vec<ParameterKind<UniverseIndex>>;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -161,8 +160,11 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         Self::new()
     }
 
-    fn fresh_subst(&mut self, binders: &Vec<ParameterKind<UniverseIndex>>) -> Substitution {
-        self.fresh_subst(binders)
+    fn fresh_subst_for_goal(
+        &mut self,
+        goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
+    ) -> Substitution {
+        self.fresh_subst(&goal.binders)
     }
 
     fn instantiate_binders_universally(
@@ -250,8 +252,7 @@ impl context::UnificationResult<SlgContext> for ::crate::solve::infer::unify::Un
     }
 }
 
-impl context::InferenceVariable<SlgContext> for ::crate::solve::infer::var::InferenceVariable {
-}
+impl context::InferenceVariable<SlgContext> for ::crate::solve::infer::var::InferenceVariable {}
 
 impl context::GoalInEnvironment<SlgContext> for InEnvironment<Goal<DomainGoal>> {
     fn environment(&self) -> &Arc<Environment<DomainGoal>> {
@@ -285,8 +286,7 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
     }
 }
 
-impl context::ConstraintInEnvironment<SlgContext> for InEnvironment<Constraint> {
-}
+impl context::ConstraintInEnvironment<SlgContext> for InEnvironment<Constraint> {}
 
 impl context::DomainGoal<SlgContext> for DomainGoal {
     fn into_goal(self) -> Goal<DomainGoal> {
@@ -303,10 +303,6 @@ impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSub
 impl context::CanonicalGoalInEnvironment<SlgContext>
     for Canonical<InEnvironment<Goal<DomainGoal>>>
 {
-    fn binders(&self) -> &Vec<ParameterKind<UniverseIndex>> {
-        &self.binders
-    }
-
     fn substitute(&self, subst: &Substitution) -> (Arc<Environment<DomainGoal>>, Goal<DomainGoal>) {
         let InEnvironment { environment, goal } = self.substitute(subst);
         (environment, goal)
@@ -325,8 +321,7 @@ impl context::UCanonicalGoalInEnvironment<SlgContext>
     }
 }
 
-impl context::BindersGoal<SlgContext> for Binders<Box<Goal<DomainGoal>>> {
-}
+impl context::BindersGoal<SlgContext> for Binders<Box<Goal<DomainGoal>>> {}
 
 impl context::Goal<SlgContext> for Goal<DomainGoal> {
     fn cannot_prove() -> Goal<DomainGoal> {
@@ -345,9 +340,6 @@ impl context::Goal<SlgContext> for Goal<DomainGoal> {
             Goal::CannotProve(()) => HhGoal::CannotProve,
         }
     }
-}
-
-impl context::CanonicalBinders<SlgContext> for Vec<ParameterKind<UniverseIndex>> {
 }
 
 type ExClauseSlgContext = ExClause<SlgContext>;
@@ -378,8 +370,7 @@ impl PartialEq for SlgContext {
     }
 }
 
-impl Eq for SlgContext {
-}
+impl Eq for SlgContext {}
 
 impl PartialOrd for SlgContext {
     fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
@@ -396,9 +387,8 @@ impl Ord for SlgContext {
 impl Hash for SlgContext {
     fn hash<H>(&self, _state: &mut H)
     where
-        H: Hasher
+        H: Hasher,
     {
         panic!("dummy impl");
     }
 }
-

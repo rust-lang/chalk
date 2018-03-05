@@ -29,7 +29,6 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type Goal: Goal<Self>;
     type BindersGoal: BindersGoal<Self>;
     type Parameter: Parameter<Self>;
-    type CanonicalBinders: CanonicalBinders<Self>;
 }
 
 crate trait ContextOps<C: Context> {
@@ -101,8 +100,6 @@ crate trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
 }
 
 crate trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
-    fn binders(&self) -> &C::CanonicalBinders;
-
     fn substitute(
         &self,
         subst: &C::Substitution,
@@ -170,7 +167,7 @@ crate trait InferenceTable<C: Context>: Clone {
     ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     // Used by: logic
-    fn fresh_subst(&mut self, binders: &C::CanonicalBinders)
+    fn fresh_subst_for_goal(&mut self, goal: &C::CanonicalGoalInEnvironment)
         -> C::Substitution;
 
     // Used by: logic
@@ -205,9 +202,6 @@ crate trait Goal<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
 crate trait Parameter<C: Context>: Clone + Debug + Eq + Hash + Ord {
-}
-
-crate trait CanonicalBinders<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
 crate trait BindersGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {

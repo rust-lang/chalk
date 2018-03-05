@@ -611,7 +611,7 @@ impl<C: Context> Forest<C> {
         let table_ref = &mut self.tables[table];
         let subst = {
             let table_goal = infer.instantiate_universes(&table_ref.table_goal);
-            infer.fresh_subst(table_goal.binders())
+            infer.fresh_subst_for_goal(table_goal)
         };
         let (environment, goal) = table_ref.table_goal.canonical().substitute(&subst);
 
