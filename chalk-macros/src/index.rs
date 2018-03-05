@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! index_struct {
     ($v:vis struct $n:ident {
         $vf:vis value: usize,

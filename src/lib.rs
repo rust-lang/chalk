@@ -15,19 +15,16 @@
 #![feature(universal_impl_trait)]
 
 extern crate chalk_parse;
+#[macro_use]
+extern crate chalk_macros;
 extern crate diff;
 extern crate ena;
 #[macro_use]
 extern crate error_chain;
 extern crate itertools;
 extern crate lalrpop_intern;
-#[macro_use]
-extern crate lazy_static;
 extern crate petgraph;
 extern crate stacker;
-
-#[macro_use]
-mod macros;
 
 #[macro_use]
 crate mod fold;
