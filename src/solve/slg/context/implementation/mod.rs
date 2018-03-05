@@ -2,6 +2,8 @@ use crate::cast::Caster;
 use crate::fallible::Fallible;
 use crate::ir::*;
 use crate::ir::could_match::CouldMatch;
+use crate::solve::infer::InferenceTable;
+use crate::solve::infer::unify::UnificationResult;
 use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::UCanonicalized;
 use crate::solve::Solution;
@@ -52,7 +54,9 @@ impl context::Context for SlgContext {
     type InferenceTable = ::crate::solve::infer::InferenceTable;
     type InferenceVariable = ::crate::solve::infer::var::InferenceVariable;
     type UniverseMap = ::crate::solve::infer::ucanonicalize::UniverseMap;
+}
 
+impl context::ContextOps<SlgContext> for SlgContext {
     fn is_coinductive(&self, goal: &UCanonicalGoal<DomainGoal>) -> bool {
         goal.is_coinductive(&self.program)
     }
@@ -81,7 +85,7 @@ impl context::Context for SlgContext {
     /// return `None`).
     fn truncate_goal(
         &self,
-        infer: &mut Self::InferenceTable,
+        infer: &mut InferenceTable,
         subgoal: &InEnvironment<Goal<DomainGoal>>,
     ) -> Option<InEnvironment<Goal<DomainGoal>>> {
         let Truncated { overflow, value } = truncate::truncate(infer, self.max_size, subgoal);
@@ -96,7 +100,7 @@ impl context::Context for SlgContext {
     /// return `None`).
     fn truncate_answer(
         &self,
-        infer: &mut Self::InferenceTable,
+        infer: &mut InferenceTable,
         subst: &Substitution,
     ) -> Option<Substitution> {
         let Truncated { overflow, value } = truncate::truncate(infer, self.max_size, subst);
@@ -109,7 +113,7 @@ impl context::Context for SlgContext {
 
     fn resolvent_clause(
         &self,
-        infer: &mut Self::InferenceTable,
+        infer: &mut InferenceTable,
         environment: &Arc<Environment<DomainGoal>>,
         goal: &DomainGoal,
         subst: &Substitution,
@@ -120,7 +124,7 @@ impl context::Context for SlgContext {
 
     fn apply_answer_subst(
         &self,
-        infer: &mut Self::InferenceTable,
+        infer: &mut InferenceTable,
         ex_clause: ExClause<Self>,
         selected_goal: &InEnvironment<Goal<DomainGoal>>,
         answer_table_goal: &CanonicalGoal<DomainGoal>,
@@ -143,8 +147,8 @@ impl context::Context for SlgContext {
     }
 }
 
-impl context::InferenceTable<SlgContext> for ::crate::solve::infer::InferenceTable {
-    type UnificationResult = ::crate::solve::infer::unify::UnificationResult;
+impl context::InferenceTable<SlgContext> for InferenceTable {
+    type UnificationResult = UnificationResult;
 
     fn new() -> Self {
         Self::new()

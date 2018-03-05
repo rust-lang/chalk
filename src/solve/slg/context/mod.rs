@@ -9,7 +9,7 @@ use std::hash::Hash;
 crate mod implementation;
 crate mod prelude;
 
-crate trait Context: Sized + Clone + Debug {
+crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Resolvent<Self> {
     type Environment: Environment<Self>;
     type GoalInEnvironment: GoalInEnvironment<Self>;
     type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
@@ -17,15 +17,17 @@ crate trait Context: Sized + Clone + Debug {
     type InferenceTable: InferenceTable<Self>;
     type InferenceVariable: InferenceVariable<Self>;
     type UniverseMap: UniverseMap<Self>;
+}
 
+crate trait ContextOps<C: Context> {
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
-    fn is_coinductive(&self, goal: &Self::UCanonicalGoalInEnvironment) -> bool;
+    fn is_coinductive(&self, goal: &C::UCanonicalGoalInEnvironment) -> bool;
 
     /// Returns the set of program clauses that might apply to
     /// `goal`. (This set can be over-approximated, naturally.)
     fn program_clauses(
         &self,
-        environment: &Self::Environment,
+        environment: &C::Environment,
         goal: &ir::DomainGoal,
     ) -> Vec<ir::ProgramClause<ir::DomainGoal>>;
 
@@ -33,40 +35,40 @@ crate trait Context: Sized + Clone + Debug {
     /// return `None`).
     fn truncate_goal(
         &self,
-        infer: &mut Self::InferenceTable,
-        subgoal: &Self::GoalInEnvironment,
-    ) -> Option<Self::GoalInEnvironment>;
+        infer: &mut C::InferenceTable,
+        subgoal: &C::GoalInEnvironment,
+    ) -> Option<C::GoalInEnvironment>;
 
     /// If `subst` is too large, return a truncated variant (else
     /// return `None`).
     fn truncate_answer(
         &self,
-        infer: &mut Self::InferenceTable,
+        infer: &mut C::InferenceTable,
         subst: &ir::Substitution,
     ) -> Option<ir::Substitution>;
 
     fn resolvent_clause(
         &self,
-        infer: &mut Self::InferenceTable,
-        environment: &Self::Environment,
+        infer: &mut C::InferenceTable,
+        environment: &C::Environment,
         goal: &ir::DomainGoal,
         subst: &ir::Substitution,
         clause: &ir::Binders<ir::ProgramClauseImplication<ir::DomainGoal>>,
-    ) -> Satisfiable<ExClause<Self>>;
+    ) -> Satisfiable<ExClause<C>>;
 
     fn apply_answer_subst(
         &self,
-        infer: &mut Self::InferenceTable,
-        ex_clause: ExClause<Self>,
-        selected_goal: &Self::GoalInEnvironment,
-        answer_table_goal: &Self::CanonicalGoalInEnvironment,
+        infer: &mut C::InferenceTable,
+        ex_clause: ExClause<C>,
+        selected_goal: &C::GoalInEnvironment,
+        answer_table_goal: &C::CanonicalGoalInEnvironment,
         canonical_answer_subst: &CanonicalConstrainedSubst,
-    ) -> Satisfiable<ExClause<Self>>;
+    ) -> Satisfiable<ExClause<C>>;
 
     fn goal_in_environment(
-        environment: &Self::Environment,
+        environment: &C::Environment,
         goal: ir::Goal<ir::DomainGoal>,
-    ) -> Self::GoalInEnvironment;
+    ) -> C::GoalInEnvironment;
 }
 
 crate trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
