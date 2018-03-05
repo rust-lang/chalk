@@ -2,6 +2,7 @@ use crate::fallible::Fallible;
 use crate::ir;
 use crate::solve::Solution;
 use crate::solve::slg::{ExClause, Satisfiable, SimplifiedAnswer};
+use crate::solve::slg::hh::HhGoal;
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -25,6 +26,8 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
     type ConstraintInEnvironment: ConstraintInEnvironment<Self>;
     type DomainGoal: DomainGoal<Self>;
+    type Goal: Goal<Self>;
+    type BindersGoal: BindersGoal<Self>;
 }
 
 crate trait ContextOps<C: Context> {
@@ -75,7 +78,7 @@ crate trait ContextOps<C: Context> {
 
     fn goal_in_environment(
         environment: &C::Environment,
-        goal: ir::Goal<C::DomainGoal>,
+        goal: C::Goal,
     ) -> C::GoalInEnvironment;
 }
 
@@ -102,7 +105,7 @@ crate trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
         subst: &C::Substitution,
     ) -> (
         C::Environment,
-        ir::Goal<C::DomainGoal>,
+        C::Goal,
     );
 }
 
@@ -128,14 +131,14 @@ crate trait InferenceTable<C: Context>: Clone {
     // Used by: simplify
     fn instantiate_binders_universally(
         &mut self,
-        arg: &ir::Binders<Box<ir::Goal<C::DomainGoal>>>,
-    ) -> Box<ir::Goal<C::DomainGoal>>;
+        arg: &C::BindersGoal,
+    ) -> C::Goal;
 
     // Used by: simplify
     fn instantiate_binders_existentially(
         &mut self,
-        arg: &ir::Binders<Box<ir::Goal<C::DomainGoal>>>,
-    ) -> Box<ir::Goal<C::DomainGoal>>;
+        arg: &C::BindersGoal,
+    ) -> C::Goal;
 
     // Used by: logic
     fn instantiate_universes<'v>(
@@ -192,6 +195,15 @@ crate trait ConstraintInEnvironment<C: Context>: Clone + Debug + Eq + Hash + Ord
 }
 
 crate trait DomainGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
+    fn into_goal(self) -> C::Goal;
+}
+
+crate trait Goal<C: Context>: Clone + Debug + Eq + Hash + Ord {
+    fn cannot_prove() -> Self;
+    fn into_hh_goal(self) -> HhGoal<C>;
+}
+
+crate trait BindersGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
 crate trait UniverseMap<C: Context>: Clone + Debug {

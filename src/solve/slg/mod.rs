@@ -60,6 +60,7 @@ crate mod forest;
 
 crate mod context;
 use self::context::Context;
+mod hh;
 mod logic;
 mod simplify;
 mod stack;

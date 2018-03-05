@@ -1,4 +1,4 @@
-use crate::cast::Caster;
+use crate::cast::{Cast, Caster};
 use crate::fallible::Fallible;
 use crate::ir::*;
 use crate::ir::could_match::CouldMatch;
@@ -9,6 +9,7 @@ use crate::solve::infer::var::InferenceVariable;
 use crate::solve::Solution;
 use crate::solve::slg::{DelayedLiteral, ExClause, Literal, Satisfiable};
 use crate::solve::slg::context;
+use crate::solve::slg::hh::HhGoal;
 use crate::solve::truncate::{self, Truncated};
 use std::cmp::Ordering;
 use std::fmt::Debug;
@@ -56,6 +57,8 @@ impl context::Context for SlgContext {
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
     type ConstraintInEnvironment = InEnvironment<Constraint>;
     type DomainGoal = DomainGoal;
+    type Goal = Goal<DomainGoal>;
+    type BindersGoal = Binders<Box<Goal<DomainGoal>>>;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -163,15 +166,15 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
     fn instantiate_binders_universally(
         &mut self,
         arg: &Binders<Box<Goal<DomainGoal>>>,
-    ) -> Box<Goal<DomainGoal>> {
-        self.instantiate_binders_universally(arg)
+    ) -> Goal<DomainGoal> {
+        *self.instantiate_binders_universally(arg)
     }
 
     fn instantiate_binders_existentially(
         &mut self,
         arg: &Binders<Box<Goal<DomainGoal>>>,
-    ) -> Box<Goal<DomainGoal>> {
-        self.instantiate_binders_existentially(arg)
+    ) -> Goal<DomainGoal> {
+        *self.instantiate_binders_existentially(arg)
     }
 
     fn instantiate_universes<'v>(
@@ -289,6 +292,9 @@ impl context::ConstraintInEnvironment<SlgContext> for InEnvironment<Constraint> 
 }
 
 impl context::DomainGoal<SlgContext> for DomainGoal {
+    fn into_goal(self) -> Goal<DomainGoal> {
+        self.cast()
+    }
 }
 
 impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSubst> {
@@ -319,6 +325,28 @@ impl context::UCanonicalGoalInEnvironment<SlgContext>
 
     fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
         self.is_trivial_substitution(canonical_subst)
+    }
+}
+
+impl context::BindersGoal<SlgContext> for Binders<Box<Goal<DomainGoal>>> {
+}
+
+impl context::Goal<SlgContext> for Goal<DomainGoal> {
+    fn cannot_prove() -> Goal<DomainGoal> {
+        Goal::CannotProve(())
+    }
+
+    fn into_hh_goal(self) -> HhGoal<SlgContext> {
+        match self {
+            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
+            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
+            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
+            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
+            Goal::Not(g1) => HhGoal::Not(*g1),
+            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
+            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
+            Goal::CannotProve(()) => HhGoal::CannotProve,
+        }
     }
 }
 

@@ -1,8 +1,8 @@
-use ir::{Goal, LeafGoal};
 use solve::slg::{self, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal,
                  Minimums, Satisfiable, TableIndex};
 use solve::slg::context::prelude::*;
 use solve::slg::forest::Forest;
+use solve::slg::hh::HhGoal;
 use solve::slg::stack::StackIndex;
 use solve::slg::strand::{SelectedSubgoal, Strand};
 use solve::slg::table::{Answer, AnswerIndex};
@@ -615,8 +615,8 @@ impl<C: Context> Forest<C> {
         };
         let (environment, goal) = table_ref.table_goal.canonical().substitute(&subst);
 
-        match goal {
-            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
+        match goal.into_hh_goal() {
+            HhGoal::DomainGoal(domain_goal) => {
                 let clauses = self.context.program_clauses(&environment, &domain_goal);
                 for clause in clauses {
                     debug!("program clause = {:#?}", clause);
@@ -642,7 +642,7 @@ impl<C: Context> Forest<C> {
                 }
             }
 
-            _ => {
+            hh_goal => {
                 // `canonical_goal` is an HH goal. We can simplify it
                 // into a series of *literals*, all of which must be
                 // true. Thus, in EWFS terms, we are effectively
@@ -652,7 +652,7 @@ impl<C: Context> Forest<C> {
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
                 if let Satisfiable::Yes(ex_clause) =
-                    Self::simplify_hh_goal(&mut infer, subst, &environment, goal)
+                    Self::simplify_hh_goal(&mut infer, subst, &environment, hh_goal)
                 {
                     info!(
                         "pushing initial strand with ex-clause: {:#?}",

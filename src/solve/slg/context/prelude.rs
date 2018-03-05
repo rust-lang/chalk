@@ -12,3 +12,5 @@ crate use super::UCanonicalGoalInEnvironment;
 crate use super::UniverseMap;
 crate use super::Substitution;
 crate use super::CanonicalConstrainedSubst;
+crate use super::Goal;
+crate use super::DomainGoal;
