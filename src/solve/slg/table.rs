@@ -1,4 +1,4 @@
-use solve::slg::{CanonicalConstrainedSubst, DelayedLiteralSet, DelayedLiteralSets};
+use solve::slg::{DelayedLiteralSet, DelayedLiteralSets};
 use solve::slg::context::prelude::*;
 use solve::slg::strand::Strand;
 use std::collections::{HashMap, VecDeque};
@@ -17,14 +17,14 @@ crate struct Table<C: Context> {
 
     /// Stores the answers that we have found thus far. When we get a request
     /// for an answer N, we will first check this vector.
-    answers: Vec<Answer>,
+    answers: Vec<Answer<C>>,
 
     /// An alternative storage for the answers we have so far, used to
     /// detect duplicates. Not every answer in `answers` will be
     /// represented here -- we discard answers from `answers_hash`
     /// (but not `answers`) when better answers arrive (in particular,
     /// answers with fewer delayed literals).
-    answers_hash: HashMap<CanonicalConstrainedSubst, DelayedLiteralSets>,
+    answers_hash: HashMap<C::CanonicalConstrainedSubst, DelayedLiteralSets<C>>,
 
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
@@ -42,9 +42,9 @@ index_struct! {
 /// goal for a particular table (modulo delayed literals). It contains
 /// a substitution
 #[derive(Clone, Debug)]
-pub(super) struct Answer {
-    pub(super) subst: CanonicalConstrainedSubst,
-    pub(super) delayed_literals: DelayedLiteralSet,
+pub(super) struct Answer<C: Context> {
+    pub(super) subst: C::CanonicalConstrainedSubst,
+    pub(super) delayed_literals: DelayedLiteralSet<C>,
 }
 
 impl<C: Context> Table<C> {
@@ -84,7 +84,7 @@ impl<C: Context> Table<C> {
     /// of the delayed literals that B does.
     ///
     /// Returns true if `answer` was added.
-    pub(super) fn push_answer(&mut self, answer: Answer) -> bool {
+    pub(super) fn push_answer(&mut self, answer: Answer<C>) -> bool {
         debug_heading!("push_answer(answer={:?})", answer);
         debug!(
             "pre-existing entry: {:?}",
@@ -152,7 +152,7 @@ impl<C: Context> Table<C> {
         true
     }
 
-    pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer> {
+    pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer<C>> {
         self.answers.get(index.value)
     }
 
@@ -170,7 +170,7 @@ impl AnswerIndex {
     crate const ZERO: AnswerIndex = AnswerIndex { value: 0 };
 }
 
-impl Answer {
+impl<C: Context> Answer<C> {
     /// An "unconditional" answer is one that must be true -- this is
     /// the case so long as we have no delayed literals.
     pub(super) fn is_unconditional(&self) -> bool {

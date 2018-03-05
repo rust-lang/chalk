@@ -3,7 +3,7 @@ use ir::*;
 use solve::{Guidance, Solution};
 use solve::infer::InferenceTable;
 use solve::slg::context;
-use solve::slg::{CanonicalConstrainedSubst, SimplifiedAnswer};
+use solve::slg::SimplifiedAnswer;
 use std::fmt::Debug;
 
 use super::SlgContext;
@@ -14,7 +14,7 @@ impl context::Aggregate<SlgContext> for SlgContext {
     fn make_solution(
         &self,
         root_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
-        simplified_answers: impl IntoIterator<Item = SimplifiedAnswer>,
+        simplified_answers: impl IntoIterator<Item = SimplifiedAnswer<SlgContext>>,
     ) -> Option<Solution> {
         let mut simplified_answers = simplified_answers.into_iter().peekable();
 
@@ -80,7 +80,7 @@ impl context::Aggregate<SlgContext> for SlgContext {
 fn merge_into_guidance(
     root_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
     guidance: Canonical<Substitution>,
-    answer: &CanonicalConstrainedSubst,
+    answer: &Canonical<ConstrainedSubst>,
 ) -> Canonical<Substitution> {
     let mut infer = InferenceTable::new();
     let Canonical {

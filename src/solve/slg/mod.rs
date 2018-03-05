@@ -106,7 +106,7 @@ crate struct ExClause<C: Context> {
 
     /// Delayed literals: things that we depend on negatively,
     /// but which have not yet been fully evaluated.
-    delayed_literals: Vec<DelayedLiteral>,
+    delayed_literals: Vec<DelayedLiteral<C>>,
 
     /// Region constraints we have accumulated.
     constraints: Vec<InEnvironment<Constraint>>,
@@ -116,15 +116,15 @@ crate struct ExClause<C: Context> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct SimplifiedAnswers {
-    answers: Vec<SimplifiedAnswer>,
+struct SimplifiedAnswers<C: Context> {
+    answers: Vec<SimplifiedAnswer<C>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-crate struct SimplifiedAnswer {
+crate struct SimplifiedAnswer<C: Context> {
     /// A fully instantiated version of the goal for which the query
     /// is true (including region constraints).
-    subst: CanonicalConstrainedSubst,
+    subst: C::CanonicalConstrainedSubst,
 
     /// If this flag is set, then the answer could be neither proven
     /// nor disproven. In general, the existence of a non-empty set of
@@ -135,12 +135,12 @@ crate struct SimplifiedAnswer {
 }
 
 #[derive(Clone, Debug)]
-enum DelayedLiteralSets {
+enum DelayedLiteralSets<C: Context> {
     /// Corresponds to a single, empty set.
     None,
 
     /// Some (non-zero) number of non-empty sets.
-    Some(HashSet<DelayedLiteralSet>),
+    Some(HashSet<DelayedLiteralSet<C>>),
 }
 
 /// A set of delayed literals. The vector in this struct must
@@ -155,12 +155,12 @@ enum DelayedLiteralSets {
 /// delayed literal, which in turn forces its subgoal to be delayed,
 /// and so forth. Therefore, we store canonicalized goals.)
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
-struct DelayedLiteralSet {
-    delayed_literals: Vec<DelayedLiteral>,
+struct DelayedLiteralSet<C: Context> {
+    delayed_literals: Vec<DelayedLiteral<C>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum DelayedLiteral {
+enum DelayedLiteral<C: Context> {
     /// Something which can never be proven nor disproven. Inserted
     /// when truncation triggers; doesn't arise normally.
     CannotProve(()),
@@ -174,10 +174,8 @@ enum DelayedLiteral {
     /// **conditional** answer (the `CanonicalConstrainedSubst`) within the
     /// given table, but we have to come back later and see whether
     /// that answer turns out to be true.
-    Positive(TableIndex, CanonicalConstrainedSubst),
+    Positive(TableIndex, C::CanonicalConstrainedSubst),
 }
-
-enum_fold!(DelayedLiteral[] { CannotProve(a), Negative(a), Positive(a, b) });
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
 #[derive(Clone, Debug)]
@@ -255,11 +253,10 @@ crate enum Satisfiable<T> {
     No,
 }
 
-type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
 type CanonicalGoal<D> = Canonical<InEnvironment<Goal<D>>>;
 type UCanonicalGoal<D> = UCanonical<InEnvironment<Goal<D>>>;
 
-impl DelayedLiteralSets {
+impl<C: Context> DelayedLiteralSets<C> {
     fn is_empty(&self) -> bool {
         match *self {
             DelayedLiteralSets::None => true,
@@ -268,12 +265,12 @@ impl DelayedLiteralSets {
     }
 }
 
-impl DelayedLiteralSet {
+impl<C: Context> DelayedLiteralSet<C> {
     fn is_empty(&self) -> bool {
         self.delayed_literals.is_empty()
     }
 
-    fn is_subset(&self, other: &DelayedLiteralSet) -> bool {
+    fn is_subset(&self, other: &DelayedLiteralSet<C>) -> bool {
         self.delayed_literals
             .iter()
             .all(|elem| other.delayed_literals.binary_search(elem).is_ok())

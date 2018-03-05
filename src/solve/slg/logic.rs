@@ -165,7 +165,7 @@ impl<C: Context> Forest<C> {
         result.map(|()| EnsureSuccess::AnswerAvailable)
     }
 
-    pub(super) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer {
+    pub(super) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<C> {
         self.tables[table].answer(answer).unwrap()
     }
 
@@ -515,7 +515,7 @@ impl<C: Context> Forest<C> {
                 && self.tables[table]
                     .table_goal
                     .is_trivial_substitution(&answer.subst)
-                && answer.subst.value.constraints.is_empty()
+                && answer.subst.empty_constraints()
         };
 
         if self.tables[table].push_answer(answer) {
@@ -1071,7 +1071,7 @@ impl<C: Context> Forest<C> {
         // literal (in which case the negative literal *may* be true).
         // Before exiting the match, then, we set `delayed_literal` to
         // either `Some` or `None` depending.
-        let delayed_literal: Option<DelayedLiteral>;
+        let delayed_literal: Option<DelayedLiteral<C>>;
         match self.ensure_answer_recursively(subgoal_table, answer_index) {
             Ok(EnsureSuccess::AnswerAvailable) => {
                 if self.answer(subgoal_table, answer_index).is_unconditional() {

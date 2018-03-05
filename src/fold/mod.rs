@@ -399,6 +399,25 @@ macro_rules! enum_fold {
                 }
             }
         }
+    };
+
+    // Hacky variant for use in slg::context::implementation
+    ($s:ty { $p:ident :: { $($variant:ident($($name:ident),*)),* } }) => {
+        impl ::fold::Fold for $s {
+            type Result = $s;
+            fn fold_with(&self,
+                         folder: &mut ::fold::Folder,
+                         binders: usize)
+                         -> ::fallible::Fallible<Self::Result> {
+                match *self {
+                    $(
+                        $p::$variant( $(ref $name),* ) => {
+                            Ok($p::$variant( $($name.fold_with(folder, binders)?),* ))
+                        }
+                    )*
+                }
+            }
+        }
     }
 }
 

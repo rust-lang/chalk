@@ -8,12 +8,14 @@ use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::solve::infer::unify::UnificationResult;
 use crate::solve::infer::var::InferenceVariable;
 use crate::solve::Solution;
-use crate::solve::slg::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Literal, Satisfiable,
+use crate::solve::slg::{CanonicalGoal, DelayedLiteral, ExClause, Literal, Satisfiable,
                         UCanonicalGoal};
 use crate::solve::slg::context;
 use crate::solve::truncate::{self, Truncated};
 use crate::fold::Fold;
+use std::cmp::Ordering;
 use std::fmt::Debug;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 mod aggregate;
@@ -26,10 +28,7 @@ pub struct SlgContext {
 }
 
 impl SlgContext {
-    crate fn new(
-        program: &Arc<ProgramEnvironment<DomainGoal>>,
-        max_size: usize,
-    ) -> SlgContext {
+    crate fn new(program: &Arc<ProgramEnvironment<DomainGoal>>, max_size: usize) -> SlgContext {
         SlgContext {
             program: program.clone(),
             max_size,
@@ -57,6 +56,7 @@ impl context::Context for SlgContext {
     type InferenceVariable = InferenceVariable;
     type UniverseMap = UniverseMap;
     type Substitution = Substitution;
+    type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -131,7 +131,7 @@ impl context::ContextOps<SlgContext> for SlgContext {
         ex_clause: ExClause<Self>,
         selected_goal: &InEnvironment<Goal<DomainGoal>>,
         answer_table_goal: &CanonicalGoal<DomainGoal>,
-        canonical_answer_subst: &CanonicalConstrainedSubst,
+        canonical_answer_subst: &Canonical<ConstrainedSubst>,
     ) -> Satisfiable<ExClause<Self>> {
         resolvent::apply_answer_subst(
             infer,
@@ -157,10 +157,7 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         Self::new()
     }
 
-    fn fresh_subst(
-        &mut self,
-        binders: &[ParameterKind<UniverseIndex>],
-    ) -> Substitution {
+    fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
         self.fresh_subst(binders)
     }
 
@@ -185,10 +182,7 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         Box::new(self.normalize_deep(value))
     }
 
-    fn debug_goal(
-        &mut self,
-        value: &'v InEnvironment<Goal<DomainGoal>>,
-    ) -> Box<Debug + 'v> {
+    fn debug_goal(&mut self, value: &'v InEnvironment<Goal<DomainGoal>>) -> Box<Debug + 'v> {
         Box::new(self.normalize_deep(value))
     }
 
@@ -204,7 +198,8 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         subst: Substitution,
         constraints: Vec<InEnvironment<Constraint>>,
     ) -> Canonical<ConstrainedSubst> {
-        self.canonicalize(&ConstrainedSubst { subst, constraints }).quantified
+        self.canonicalize(&ConstrainedSubst { subst, constraints })
+            .quantified
     }
 
     fn u_canonicalize_goal(
@@ -279,8 +274,7 @@ impl context::Environment<SlgContext> for Arc<Environment<DomainGoal>> {
     }
 }
 
-impl context::Substitution<SlgContext> for Substitution {
-}
+impl context::Substitution<SlgContext> for Substitution {}
 
 impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::UniverseMap {
     fn map_goal_from_canonical(
@@ -292,9 +286,15 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
 
     fn map_subst_from_canonical(
         &self,
-        value: &CanonicalConstrainedSubst,
-    ) -> CanonicalConstrainedSubst {
+        value: &Canonical<ConstrainedSubst>,
+    ) -> Canonical<ConstrainedSubst> {
         self.map_from_canonical(value)
+    }
+}
+
+impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSubst> {
+    fn empty_constraints(&self) -> bool {
+        self.value.constraints.is_empty()
     }
 }
 
@@ -305,13 +305,7 @@ impl context::CanonicalGoalInEnvironment<SlgContext>
         &self.binders
     }
 
-    fn substitute(
-        &self,
-        subst: &Substitution,
-    ) -> (
-        Arc<Environment<DomainGoal>>,
-        Goal<DomainGoal>,
-    ) {
+    fn substitute(&self, subst: &Substitution) -> (Arc<Environment<DomainGoal>>, Goal<DomainGoal>) {
         let InEnvironment { environment, goal } = self.substitute(subst);
         (environment, goal)
     }
@@ -324,10 +318,7 @@ impl context::UCanonicalGoalInEnvironment<SlgContext>
         &self.canonical
     }
 
-    fn is_trivial_substitution(
-        &self,
-        canonical_subst: &Canonical<ConstrainedSubst>,
-    ) -> bool {
+    fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
         self.is_trivial_substitution(canonical_subst)
     }
 }
@@ -341,12 +332,46 @@ struct_fold!(ExClauseSlgContext {
 });
 
 type LiteralSlgContext = Literal<SlgContext>;
-impl Fold for LiteralSlgContext {
-    type Result = LiteralSlgContext;
-    fn fold_with(&self, folder: &mut ::fold::Folder, binders: usize) -> Fallible<Self::Result> {
-        match self {
-            Literal::Positive(goal) => Ok(Literal::Positive(goal.fold_with(folder, binders)?)),
-            Literal::Negative(goal) => Ok(Literal::Negative(goal.fold_with(folder, binders)?)),
-        }
+enum_fold!(LiteralSlgContext {
+    Literal :: {
+        Positive(a), Negative(a)
+    }
+});
+
+type DelayedLiteralSlgContext = DelayedLiteral<SlgContext>;
+enum_fold!(DelayedLiteralSlgContext {
+    DelayedLiteral :: {
+        CannotProve(a), Negative(a), Positive(a, b)
+    }
+});
+
+impl PartialEq for SlgContext {
+    fn eq(&self, _other: &Self) -> bool {
+        panic!("dummy impl");
     }
 }
+
+impl Eq for SlgContext {
+}
+
+impl PartialOrd for SlgContext {
+    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
+        panic!("dummy impl");
+    }
+}
+
+impl Ord for SlgContext {
+    fn cmp(&self, _other: &Self) -> Ordering {
+        panic!("dummy impl");
+    }
+}
+
+impl Hash for SlgContext {
+    fn hash<H>(&self, _state: &mut H)
+    where
+        H: Hasher
+    {
+        panic!("dummy impl");
+    }
+}
+

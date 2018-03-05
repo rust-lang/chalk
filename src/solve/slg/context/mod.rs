@@ -2,7 +2,7 @@ use crate::fallible::Fallible;
 use crate::ir;
 use crate::solve::Solution;
 use crate::solve::infer::instantiate::BindersAndValue;
-use crate::solve::slg::{CanonicalConstrainedSubst, ExClause, Satisfiable, SimplifiedAnswer};
+use crate::solve::slg::{ExClause, Satisfiable, SimplifiedAnswer};
 use crate::fold::Fold;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -10,7 +10,12 @@ use std::hash::Hash;
 crate mod implementation;
 crate mod prelude;
 
-crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
+crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> +
+    // these aren't really needed; they are used to make derive happy
+    Eq +
+    Ord +
+    Hash
+{
     type Environment: Environment<Self>;
     type GoalInEnvironment: GoalInEnvironment<Self>;
     type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
@@ -19,6 +24,7 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type InferenceVariable: InferenceVariable<Self>;
     type UniverseMap: UniverseMap<Self>;
     type Substitution: Substitution<Self>;
+    type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
 }
 
 crate trait ContextOps<C: Context> {
@@ -64,7 +70,7 @@ crate trait ContextOps<C: Context> {
         ex_clause: ExClause<C>,
         selected_goal: &C::GoalInEnvironment,
         answer_table_goal: &C::CanonicalGoalInEnvironment,
-        canonical_answer_subst: &CanonicalConstrainedSubst,
+        canonical_answer_subst: &C::CanonicalConstrainedSubst,
     ) -> Satisfiable<ExClause<C>>;
 
     fn goal_in_environment(
@@ -77,7 +83,7 @@ crate trait Aggregate<C: Context> {
     fn make_solution(
         &self,
         root_goal: &C::CanonicalGoalInEnvironment,
-        simplified_answers: impl IntoIterator<Item = SimplifiedAnswer>,
+        simplified_answers: impl IntoIterator<Item = SimplifiedAnswer<C>>,
     ) -> Option<Solution>;
 }
 
@@ -85,7 +91,7 @@ crate trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
     fn canonical(&self) -> &C::CanonicalGoalInEnvironment;
     fn is_trivial_substitution(
         &self,
-        canonical_subst: &ir::Canonical<ir::ConstrainedSubst>,
+        canonical_subst: &C::CanonicalConstrainedSubst,
     ) -> bool;
 }
 
@@ -147,7 +153,7 @@ crate trait InferenceTable<C: Context>: Clone {
         &mut self,
         subst: C::Substitution,
         constraints: Vec<ir::InEnvironment<ir::Constraint>>,
-    ) -> ir::Canonical<ir::ConstrainedSubst>;
+    ) -> C::CanonicalConstrainedSubst;
 
     // Used by: logic
     fn u_canonicalize_goal(
@@ -182,6 +188,10 @@ crate trait InferenceTable<C: Context>: Clone {
 crate trait Substitution<C: Context>: Clone + Debug {
 }
 
+crate trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
+    fn empty_constraints(&self) -> bool;
+}
+
 crate trait UniverseMap<C: Context>: Clone + Debug {
     fn map_goal_from_canonical(
         &self,
@@ -190,8 +200,8 @@ crate trait UniverseMap<C: Context>: Clone + Debug {
 
     fn map_subst_from_canonical(
         &self,
-        value: &CanonicalConstrainedSubst,
-    ) -> CanonicalConstrainedSubst;
+        value: &C::CanonicalConstrainedSubst,
+    ) -> C::CanonicalConstrainedSubst;
 }
 
 crate trait UnificationResult<C: Context> {

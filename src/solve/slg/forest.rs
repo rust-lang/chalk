@@ -43,7 +43,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         goal: C::UCanonicalGoalInEnvironment,
         num_answers: usize,
-    ) -> Vec<Answer> {
+    ) -> Vec<Answer<C>> {
         let table = self.get_or_create_table_for_ucanonical_goal(goal);
         let mut answers = Vec::with_capacity(num_answers);
         for i in 0..num_answers {
@@ -69,7 +69,7 @@ impl<C: Context> Forest<C> {
     pub(super) fn iter_answers<'f>(
         &'f mut self,
         goal: &C::UCanonicalGoalInEnvironment,
-    ) -> impl Iterator<Item = SimplifiedAnswer> + 'f {
+    ) -> impl Iterator<Item = SimplifiedAnswer<C>> + 'f {
         let table = self.get_or_create_table_for_ucanonical_goal(goal.clone());
         let answer = AnswerIndex::ZERO;
         ForestSolver {
@@ -130,9 +130,9 @@ impl<'forest, C> Iterator for ForestSolver<'forest, C>
 where
     C: Context,
 {
-    type Item = SimplifiedAnswer;
+    type Item = SimplifiedAnswer<C>;
 
-    fn next(&mut self) -> Option<SimplifiedAnswer> {
+    fn next(&mut self) -> Option<SimplifiedAnswer<C>> {
         loop {
             match self.forest.ensure_root_answer(self.table, self.answer) {
                 Ok(()) => {
