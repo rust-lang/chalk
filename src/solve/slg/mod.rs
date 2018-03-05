@@ -49,7 +49,7 @@
 //! - HH: Hereditary harrop predicates. What Chalk deals in.
 //!   Popularized by Lambda Prolog.
 
-use ir::*;
+use ir::{InEnvironment, Constraint, Canonical, Goal, UCanonical};
 use stacker;
 use std::collections::HashSet;
 use std::cmp::min;
