@@ -15,3 +15,4 @@ crate use super::CanonicalConstrainedSubst;
 crate use super::Goal;
 crate use super::DomainGoal;
 crate use super::Parameter;
+crate use super::CanonicalBinders;

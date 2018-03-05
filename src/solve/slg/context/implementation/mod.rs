@@ -60,6 +60,7 @@ impl context::Context for SlgContext {
     type Goal = Goal<DomainGoal>;
     type BindersGoal = Binders<Box<Goal<DomainGoal>>>;
     type Parameter = Parameter;
+    type CanonicalBinders = Vec<ParameterKind<UniverseIndex>>;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -160,7 +161,7 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         Self::new()
     }
 
-    fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
+    fn fresh_subst(&mut self, binders: &Vec<ParameterKind<UniverseIndex>>) -> Substitution {
         self.fresh_subst(binders)
     }
 
@@ -302,7 +303,7 @@ impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSub
 impl context::CanonicalGoalInEnvironment<SlgContext>
     for Canonical<InEnvironment<Goal<DomainGoal>>>
 {
-    fn binders(&self) -> &[ParameterKind<UniverseIndex>] {
+    fn binders(&self) -> &Vec<ParameterKind<UniverseIndex>> {
         &self.binders
     }
 
@@ -344,6 +345,9 @@ impl context::Goal<SlgContext> for Goal<DomainGoal> {
             Goal::CannotProve(()) => HhGoal::CannotProve,
         }
     }
+}
+
+impl context::CanonicalBinders<SlgContext> for Vec<ParameterKind<UniverseIndex>> {
 }
 
 type ExClauseSlgContext = ExClause<SlgContext>;
