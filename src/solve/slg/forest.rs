@@ -15,7 +15,6 @@ crate struct Forest<C: Context> {
     crate context: C,
     crate tables: Tables<C>,
     crate stack: Stack,
-    crate max_size: usize,
 
     dfn: DepthFirstNumber,
 }
@@ -25,19 +24,17 @@ impl<C: Context> Forest<C> {
     /// createa a `Forest` so as to enable cahcing between goals, however.
     crate fn solve_root_goal(
         context: C,
-        max_size: usize,
         root_goal: &UCanonicalGoal<DomainGoal>,
     ) -> Option<Solution> {
-        let mut forest = Forest::new(context, max_size);
+        let mut forest = Forest::new(context);
         forest.solve(root_goal)
     }
 
-    crate fn new(context: C, max_size: usize) -> Self {
+    crate fn new(context: C) -> Self {
         Forest {
             context,
             tables: Tables::new(),
             stack: Stack::default(),
-            max_size,
             dfn: DepthFirstNumber::MIN,
         }
     }

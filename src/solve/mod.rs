@@ -207,6 +207,9 @@ impl SolverChoice {
         env: &Arc<ProgramEnvironment<DomainGoal>>,
         canonical_goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>,
     ) -> ::errors::Result<Option<Solution>> {
+        use self::slg::context::implementation::SlgContext;
+        use self::slg::forest::Forest;
+
         match self {
             SolverChoice::Recursive {
                 overflow_depth,
@@ -219,9 +222,8 @@ impl SolverChoice {
                 }
             }
 
-            SolverChoice::SLG { max_size } => Ok(slg::forest::Forest::solve_root_goal(
-                env.clone(),
-                max_size,
+            SolverChoice::SLG { max_size } => Ok(Forest::solve_root_goal(
+                SlgContext::new(env, max_size),
                 &canonical_goal,
             )),
         }

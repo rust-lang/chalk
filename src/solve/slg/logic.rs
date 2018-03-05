@@ -699,7 +699,7 @@ impl<C: Context> Forest<C> {
         // irrelevant answers (e.g., `Vec<Vec<u32>>: Sized`), they
         // will fail to unify with our selected goal, producing no
         // resolvent.
-        match self.context.truncate_goal(infer, self.max_size, subgoal) {
+        match self.context.truncate_goal(infer, subgoal) {
             None => infer.canonicalize_goal(subgoal),
             Some(truncated_subgoal) => {
                 debug!("truncated={:?}", truncated_subgoal);
@@ -810,7 +810,7 @@ impl<C: Context> Forest<C> {
         // variables that have been inverted, as discussed in the
         // prior paragraph above.) I just didn't feel like dealing
         // with it yet.
-        match self.context.truncate_goal(infer, self.max_size, &inverted_subgoal) {
+        match self.context.truncate_goal(infer, &inverted_subgoal) {
             Some(_) => return None,
             None => Some(infer.canonicalize_goal(&inverted_subgoal)),
         }
@@ -981,7 +981,7 @@ impl<C: Context> Forest<C> {
         // aimed at giving us more times to eliminate this
         // ambiguous answer.
 
-        match self.context.truncate_answer(infer, self.max_size, &ex_clause.subst) {
+        match self.context.truncate_answer(infer, &ex_clause.subst) {
             // No need to truncate? Just propagate the resolvent back.
             None => ex_clause,
 
