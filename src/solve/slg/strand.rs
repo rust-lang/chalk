@@ -1,4 +1,3 @@
-use solve::infer::ucanonicalize::UniverseMap;
 use std::fmt::{Debug, Error, Formatter};
 use solve::slg::{ExClause, TableIndex};
 use solve::slg::context::Context;
@@ -7,14 +6,14 @@ use solve::slg::table::AnswerIndex;
 crate struct Strand<C: Context> {
     crate infer: C::InferenceTable,
 
-    pub(super) ex_clause: ExClause,
+    pub(super) ex_clause: ExClause<C>,
 
     /// Index into `ex_clause.subgoals`.
-    crate selected_subgoal: Option<SelectedSubgoal>,
+    crate selected_subgoal: Option<SelectedSubgoal<C>>,
 }
 
 #[derive(Clone, Debug)]
-crate struct SelectedSubgoal {
+crate struct SelectedSubgoal<C: Context> {
     /// The index of the subgoal in `ex_clause.subgoals`
     crate subgoal_index: usize,
 
@@ -26,7 +25,7 @@ crate struct SelectedSubgoal {
 
     /// Maps the universes of the subgoal to the canonical universes
     /// used in the table
-    crate universe_map: UniverseMap,
+    crate universe_map: C::UniverseMap,
 }
 
 impl<C: Context> Debug for Strand<C> {

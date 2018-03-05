@@ -1,5 +1,4 @@
-use ir::DomainGoal;
-use solve::slg::{TableIndex, UCanonicalGoal};
+use solve::slg::TableIndex;
 use solve::slg::context::prelude::*;
 use solve::slg::table::Table;
 use std::collections::HashMap;
@@ -8,7 +7,7 @@ use std::ops::{Index, IndexMut};
 /// See `Forest`.
 crate struct Tables<C: Context> {
     /// Maps from a canonical goal to the index of its table.
-    table_indices: HashMap<UCanonicalGoal<DomainGoal>, TableIndex>,
+    table_indices: HashMap<C::UCanonicalGoalInEnvironment, TableIndex>,
 
     /// Table: as described above, stores the key information for each
     /// tree in the forest.
@@ -30,14 +29,14 @@ impl<C: Context> Tables<C> {
         }
     }
 
-    pub(super) fn insert(&mut self, goal: UCanonicalGoal<DomainGoal>, coinductive_goal: bool) -> TableIndex {
+    pub(super) fn insert(&mut self, goal: C::UCanonicalGoalInEnvironment, coinductive_goal: bool) -> TableIndex {
         let index = self.next_index();
         self.tables.push(Table::new(goal.clone(), coinductive_goal));
         self.table_indices.insert(goal, index);
         index
     }
 
-    pub(super) fn index_of(&self, literal: &UCanonicalGoal<DomainGoal>) -> Option<TableIndex> {
+    pub(super) fn index_of(&self, literal: &C::UCanonicalGoalInEnvironment) -> Option<TableIndex> {
         self.table_indices.get(literal).cloned()
     }
 }

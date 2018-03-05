@@ -413,19 +413,119 @@ enum_fold!(Goal[D] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g
                      Leaf(wc), CannotProve(a) } where D: Fold);
 
 macro_rules! struct_fold {
-    ($s:ident $([$($n:ident),*])* { $($name:ident),* $(,)* } $($w:tt)*) => {
-        impl $(<$($n),*>)* ::fold::Fold for $s $(<$($n),*>)* $($w)* {
-            type Result = $s $(<$($n :: Result),*>)* ;
+    ($s:ident $([$($tt_args:tt)*])? { $($name:ident),* $(,)* } $($w:tt)*) => {
+        struct_fold! {
+            @parse_tt_args($($($tt_args)*)?)
+                struct_name($s)
+                parameters()
+                self_args()
+                result_args()
+                field_names($($name),*)
+                where_clauses($($w)*)
+        }
+    };
+
+    (
+        @parse_tt_args()
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_args($($self_args:tt)*)
+            result_args($($result_args:tt)*)
+            field_names($($field_names:tt)*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        struct_fold! {
+            @parsed_tt_args
+                struct_name($s)
+                parameters($($parameters)*)
+                self_ty($s < $($self_args)* >)
+                result_ty($s < $($result_args)* >)
+                field_names($($field_names)*)
+                where_clauses($($where_clauses)*)
+        }
+    };
+
+    (
+        @parse_tt_args(, $($input:tt)*)
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_args($($self_args:tt)*)
+            result_args($($result_args:tt)*)
+            field_names($($field_names:tt)*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        struct_fold! {
+            @parse_tt_args($($input)*)
+                struct_name($s)
+                parameters($($parameters)*,)
+                self_args($($self_args)*,)
+                result_args($($result_args)*,)
+                field_names($($field_names)*)
+            where_clauses($($where_clauses)*)
+        }
+    };
+
+    (
+        @parse_tt_args(- $n:ident $($input:tt)*)
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_args($($self_args:tt)*)
+            result_args($($result_args:tt)*)
+            field_names($($field_names:tt)*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        struct_fold! {
+            @parse_tt_args($($input)*)
+                struct_name($s)
+                parameters($($parameters)* $n)
+                self_args($($self_args)* $n)
+                result_args($($result_args)* $n)
+                field_names($($field_names)*)
+            where_clauses($($where_clauses)*)
+        }
+    };
+
+    (
+        @parse_tt_args($n:ident $($input:tt)*)
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_args($($self_args:tt)*)
+            result_args($($result_args:tt)*)
+            field_names($($field_names:tt)*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        struct_fold! {
+            @parse_tt_args($($input)*)
+                struct_name($s)
+                parameters($($parameters)* $n)
+                self_args($($self_args)* $n)
+                result_args($($result_args)* $n :: Result)
+                field_names($($field_names)*)
+            where_clauses($($where_clauses)*)
+        }
+    };
+
+    (
+        @parsed_tt_args
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_ty($self_ty:ty)
+            result_ty($result_ty:ty)
+            field_names($($field_name:ident),*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        impl<$($parameters)*> ::fold::Fold for $self_ty $($where_clauses)* {
+            type Result = $result_ty;
             fn fold_with(&self,
                          folder: &mut ::fold::Folder,
                          binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
                 Ok($s {
-                    $($name: self.$name.fold_with(folder, binders)?),*
+                    $($field_name: self.$field_name.fold_with(folder, binders)?),*
                 })
             }
         }
-    }
+    };
 }
 
 struct_fold!(ProjectionTy {

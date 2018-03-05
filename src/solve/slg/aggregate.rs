@@ -6,13 +6,13 @@ use solve::slg::forest::Forest;
 use solve::slg::context::prelude::*;
 use std::fmt::Debug;
 
-use super::{CanonicalConstrainedSubst, CanonicalGoal, SimplifiedAnswer};
+use super::{CanonicalConstrainedSubst, SimplifiedAnswer};
 
 impl<C: Context> Forest<C> {
     /// Draws as many answers as it needs from `simplified_answers` (but
     /// no more!) in order to come up with a solution.
     pub(super) fn make_solution(
-        root_goal: &CanonicalGoal<DomainGoal>,
+        root_goal: &C::CanonicalGoalInEnvironment,
         simplified_answers: impl IntoIterator<Item = SimplifiedAnswer>,
     ) -> Option<Solution> {
         let mut simplified_answers = simplified_answers.into_iter().peekable();
@@ -76,7 +76,7 @@ impl<C: Context> Forest<C> {
     /// u32` and the new answer is `?0 = i32`, then the guidance would
     /// become `?0 = ?X` (where `?X` is some fresh variable).
     fn merge_into_guidance(
-        root_goal: &CanonicalGoal<DomainGoal>,
+        root_goal: &C::CanonicalGoalInEnvironment,
         guidance: Canonical<Substitution>,
         answer: &CanonicalConstrainedSubst,
     ) -> Canonical<Substitution> {
@@ -102,7 +102,7 @@ impl<C: Context> Forest<C> {
                 // We have two values for some variable X that
                 // appears in the root goal. Find out the universe
                 // of X.
-                let universe = root_goal.binders[index].into_inner();
+                let universe = root_goal.binders()[index].into_inner();
 
                 let ty = match value {
                     ParameterKind::Ty(ty) => ty,

@@ -1,6 +1,6 @@
 use cast::Cast;
 use fallible::NoSolution;
-use ir::{DomainGoal, Goal, InEnvironment, LeafGoal, QuantifierKind, Substitution};
+use ir::{DomainGoal, Goal, LeafGoal, QuantifierKind, Substitution};
 use solve::slg::{ExClause, Literal, Satisfiable};
 use solve::slg::forest::Forest;
 use solve::slg::context::prelude::*;
@@ -12,8 +12,9 @@ impl<C: Context> Forest<C> {
     pub(super) fn simplify_hh_goal(
         infer: &mut C::InferenceTable,
         subst: Substitution,
-        initial_goal: InEnvironment<Goal<DomainGoal>>,
-    ) -> Satisfiable<ExClause> {
+        initial_environment: &C::Environment,
+        initial_goal: Goal<DomainGoal>,
+    ) -> Satisfiable<ExClause<C>> {
         let mut ex_clause = ExClause {
             subst,
             delayed_literals: vec![],
@@ -22,31 +23,31 @@ impl<C: Context> Forest<C> {
         };
 
         // A stack of higher-level goals to process.
-        let mut pending_goals = vec![initial_goal];
+        let mut pending_goals = vec![(initial_environment.clone(), initial_goal)];
 
-        while let Some(InEnvironment { environment, goal }) = pending_goals.pop() {
+        while let Some((environment, goal)) = pending_goals.pop() {
             match goal {
                 Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
                     let subgoal = infer.instantiate_binders_universally(&subgoal);
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal));
+                    pending_goals.push((environment, *subgoal));
                 }
                 Goal::Quantified(QuantifierKind::Exists, subgoal) => {
                     let subgoal = infer.instantiate_binders_existentially(&subgoal);
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal))
+                    pending_goals.push((environment, *subgoal))
                 }
                 Goal::Implies(wc, subgoal) => {
-                    let new_environment = &environment.add_clauses(wc);
-                    pending_goals.push(InEnvironment::new(&new_environment, *subgoal));
+                    let new_environment = environment.add_clauses(wc);
+                    pending_goals.push((new_environment, *subgoal));
                 }
                 Goal::And(subgoal1, subgoal2) => {
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal1));
-                    pending_goals.push(InEnvironment::new(&environment, *subgoal2));
+                    pending_goals.push((environment.clone(), *subgoal1));
+                    pending_goals.push((environment, *subgoal2));
                 }
                 Goal::Not(subgoal) => {
                     let subgoal = (*subgoal).clone();
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(InEnvironment::new(&environment, subgoal)));
+                        .push(Literal::Negative(C::goal_in_environment(&environment, subgoal)));
                 }
                 Goal::Leaf(LeafGoal::EqGoal(ref eq_goal)) => {
                     match infer.unify_parameters(&environment, &eq_goal.a, &eq_goal.b) {
@@ -58,7 +59,7 @@ impl<C: Context> Forest<C> {
                     let domain_goal = domain_goal.cast();
                     ex_clause
                         .subgoals
-                        .push(Literal::Positive(InEnvironment::new(
+                        .push(Literal::Positive(C::goal_in_environment(
                             &environment,
                             domain_goal,
                         )));
@@ -72,7 +73,7 @@ impl<C: Context> Forest<C> {
                     // resolved.
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(InEnvironment::new(&environment, goal)));
+                        .push(Literal::Negative(C::goal_in_environment(&environment, goal)));
                 }
             }
         }

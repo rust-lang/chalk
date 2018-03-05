@@ -1,26 +1,31 @@
 use crate::fallible::Fallible;
 use crate::ir;
 use crate::solve::infer::instantiate::BindersAndValue;
-use crate::solve::infer::ucanonicalize::UCanonicalized;
-use crate::solve::slg::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Satisfiable,
-                        UCanonicalGoal};
+use crate::solve::slg::{CanonicalConstrainedSubst, ExClause, Satisfiable};
 use crate::fold::Fold;
-use std::sync::Arc;
+use std::fmt::Debug;
+use std::hash::Hash;
 
 crate mod implementation;
+crate mod prelude;
 
-crate trait Context: Sized + Clone {
+crate trait Context: Sized + Clone + Debug {
+    type Environment: Environment<Self>;
+    type GoalInEnvironment: GoalInEnvironment<Self>;
+    type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
+    type UCanonicalGoalInEnvironment: UCanonicalGoalInEnvironment<Self>;
     type InferenceTable: InferenceTable<Self>;
     type InferenceVariable: InferenceVariable<Self>;
+    type UniverseMap: UniverseMap<Self>;
 
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
-    fn is_coinductive(&self, goal: &UCanonicalGoal<ir::DomainGoal>) -> bool;
+    fn is_coinductive(&self, goal: &Self::UCanonicalGoalInEnvironment) -> bool;
 
     /// Returns the set of program clauses that might apply to
     /// `goal`. (This set can be over-approximated, naturally.)
     fn program_clauses(
         &self,
-        environment: &ir::Environment<ir::DomainGoal>,
+        environment: &Self::Environment,
         goal: &ir::DomainGoal,
     ) -> Vec<ir::ProgramClause<ir::DomainGoal>>;
 
@@ -29,8 +34,8 @@ crate trait Context: Sized + Clone {
     fn truncate_goal(
         &self,
         infer: &mut Self::InferenceTable,
-        subgoal: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
-    ) -> Option<ir::InEnvironment<ir::Goal<ir::DomainGoal>>>;
+        subgoal: &Self::GoalInEnvironment,
+    ) -> Option<Self::GoalInEnvironment>;
 
     /// If `subst` is too large, return a truncated variant (else
     /// return `None`).
@@ -43,20 +48,53 @@ crate trait Context: Sized + Clone {
     fn resolvent_clause(
         &self,
         infer: &mut Self::InferenceTable,
-        environment: &Arc<ir::Environment<ir::DomainGoal>>,
+        environment: &Self::Environment,
         goal: &ir::DomainGoal,
         subst: &ir::Substitution,
         clause: &ir::Binders<ir::ProgramClauseImplication<ir::DomainGoal>>,
-    ) -> Satisfiable<ExClause>;
+    ) -> Satisfiable<ExClause<Self>>;
 
     fn apply_answer_subst(
         &self,
         infer: &mut Self::InferenceTable,
-        ex_clause: ExClause,
-        selected_goal: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
-        answer_table_goal: &CanonicalGoal<ir::DomainGoal>,
+        ex_clause: ExClause<Self>,
+        selected_goal: &Self::GoalInEnvironment,
+        answer_table_goal: &Self::CanonicalGoalInEnvironment,
         canonical_answer_subst: &CanonicalConstrainedSubst,
-    ) -> Satisfiable<ExClause>;
+    ) -> Satisfiable<ExClause<Self>>;
+
+    fn goal_in_environment(
+        environment: &Self::Environment,
+        goal: ir::Goal<ir::DomainGoal>,
+    ) -> Self::GoalInEnvironment;
+}
+
+crate trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
+    fn canonical(&self) -> &C::CanonicalGoalInEnvironment;
+    fn is_trivial_substitution(
+        &self,
+        canonical_subst: &ir::Canonical<ir::ConstrainedSubst>,
+    ) -> bool;
+}
+
+crate trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
+    fn binders(&self) -> &[ir::ParameterKind<ir::UniverseIndex>];
+    fn substitute(
+        &self,
+        subst: &ir::Substitution,
+    ) -> (
+        C::Environment,
+        ir::Goal<ir::DomainGoal>,
+    );
+}
+
+crate trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
+    fn environment(&self) -> &C::Environment;
+}
+
+crate trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
+    // Used by: simplify
+    fn add_clauses(&self, clauses: impl IntoIterator<Item = ir::DomainGoal>) -> Self;
 }
 
 crate trait InferenceVariable<C: Context>: Copy {
@@ -78,22 +116,22 @@ crate trait InferenceTable<C: Context>: Clone {
         T: Fold;
 
     // Used by: logic
-    fn instantiate_universes<'v, T>(
+    fn instantiate_universes<'v>(
         &mut self,
-        value: &'v ir::UCanonical<T>,
-    ) -> &'v ir::Canonical<T>;
+        value: &'v C::UCanonicalGoalInEnvironment,
+    ) -> &'v C::CanonicalGoalInEnvironment;
 
     // Used by: aggregate
     fn new_variable(&mut self, ui: ir::UniverseIndex) -> C::InferenceVariable;
 
     // Used by: logic (but for debugging only)
-    fn normalize_deep<T: Fold>(&mut self, value: &T) -> T::Result;
+    fn debug_ex_clause(&mut self, value: &'v ExClause<C>) -> Box<Debug + 'v>;
+
+    // Used by: logic (but for debugging only)
+    fn debug_goal(&mut self, goal: &'v C::GoalInEnvironment) -> Box<Debug + 'v>;
 
     // Used by: logic
-    fn canonicalize_goal(
-        &mut self,
-        value: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
-    ) -> ir::Canonical<ir::InEnvironment<ir::Goal<ir::DomainGoal>>>;
+    fn canonicalize_goal(&mut self, value: &C::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;
 
     // Used by: logic
     fn canonicalize_constrained_subst(
@@ -104,18 +142,15 @@ crate trait InferenceTable<C: Context>: Clone {
     // Used by: logic
     fn u_canonicalize_goal(
         &mut self,
-        value: &CanonicalGoal<ir::DomainGoal>,
-    ) -> UCanonicalized<ir::InEnvironment<ir::Goal<ir::DomainGoal>>>;
+        value: &C::CanonicalGoalInEnvironment,
+    ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     // Used by: logic
     fn fresh_subst(&mut self, binders: &[ir::ParameterKind<ir::UniverseIndex>])
         -> ir::Substitution;
 
     // Used by: logic
-    fn invert_goal(
-        &mut self,
-        value: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
-    ) -> Option<ir::InEnvironment<ir::Goal<ir::DomainGoal>>>;
+    fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
 
     // Used by: simplify
     fn instantiate_binders_existentially<T>(
@@ -128,21 +163,24 @@ crate trait InferenceTable<C: Context>: Clone {
     // Used by: simplify
     fn unify_parameters(
         &mut self,
-        environment: &Arc<ir::Environment<ir::DomainGoal>>,
+        environment: &C::Environment,
         a: &ir::Parameter,
         b: &ir::Parameter,
     ) -> Fallible<Self::UnificationResult>;
 }
 
-crate trait UnificationResult<C: Context> {
-    fn into_ex_clause(self, ex_clause: &mut ExClause);
+crate trait UniverseMap<C: Context>: Clone + Debug {
+    fn map_goal_from_canonical(
+        &self,
+        value: &C::CanonicalGoalInEnvironment,
+    ) -> C::CanonicalGoalInEnvironment;
+
+    fn map_subst_from_canonical(
+        &self,
+        value: &CanonicalConstrainedSubst,
+    ) -> CanonicalConstrainedSubst;
 }
 
-crate mod prelude {
-    #![allow(unused_imports)] // rustc bug
-
-    crate use super::Context;
-    crate use super::InferenceTable;
-    crate use super::InferenceVariable;
-    crate use super::UnificationResult;
+crate trait UnificationResult<C: Context> {
+    fn into_ex_clause(self, ex_clause: &mut ExClause<C>);
 }

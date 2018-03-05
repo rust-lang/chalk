@@ -718,13 +718,6 @@ pub struct UCanonical<T> {
 }
 
 impl<T> UCanonical<T> {
-    crate fn substitute(&self, subst: &Substitution) -> T::Result
-    where
-        T: Fold,
-    {
-        self.canonical.substitute(subst)
-    }
-
     crate fn trivial_substitution(&self) -> Substitution {
         let binders = &self.canonical.binders;
         Substitution {

@@ -1,7 +1,6 @@
-use ir::*;
 use solve::Solution;
 use solve::slg::context::prelude::*;
-use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex, UCanonicalGoal};
+use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
 use solve::slg::logic::RootSearchFail;
 use solve::slg::stack::{Stack, StackIndex};
 use solve::slg::tables::Tables;
@@ -24,7 +23,7 @@ impl<C: Context> Forest<C> {
     /// createa a `Forest` so as to enable cahcing between goals, however.
     crate fn solve_root_goal(
         context: C,
-        root_goal: &UCanonicalGoal<DomainGoal>,
+        root_goal: &C::UCanonicalGoalInEnvironment,
     ) -> Option<Solution> {
         let mut forest = Forest::new(context);
         forest.solve(root_goal)
@@ -52,7 +51,7 @@ impl<C: Context> Forest<C> {
     #[cfg(test)]
     pub(super) fn force_answers(
         &mut self,
-        goal: UCanonicalGoal<DomainGoal>,
+        goal: C::UCanonicalGoalInEnvironment,
         num_answers: usize,
     ) -> Vec<Answer> {
         let table = self.get_or_create_table_for_ucanonical_goal(goal);
@@ -79,7 +78,7 @@ impl<C: Context> Forest<C> {
     /// invocations. Invoking `next` fewer times is preferable =)
     pub(super) fn iter_answers<'f>(
         &'f mut self,
-        goal: &UCanonicalGoal<DomainGoal>,
+        goal: &C::UCanonicalGoalInEnvironment,
     ) -> impl Iterator<Item = SimplifiedAnswer> + 'f {
         let table = self.get_or_create_table_for_ucanonical_goal(goal.clone());
         let answer = AnswerIndex::ZERO;
@@ -93,8 +92,8 @@ impl<C: Context> Forest<C> {
     /// Solves a given goal, producing the solution. This will do only
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
-    crate fn solve(&mut self, goal: &UCanonicalGoal<DomainGoal>) -> Option<Solution> {
-        Self::make_solution(&goal.canonical, self.iter_answers(goal))
+    crate fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<Solution> {
+        Self::make_solution(goal.canonical(), self.iter_answers(goal))
     }
 
     /// True if all the tables on the stack starting from `depth` and

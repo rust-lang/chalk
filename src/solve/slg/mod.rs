@@ -49,17 +49,19 @@
 //! - HH: Hereditary harrop predicates. What Chalk deals in.
 //!   Popularized by Lambda Prolog.
 
-use fold::Fold;
 use ir::*;
 use stacker;
 use std::collections::HashSet;
 use std::cmp::min;
+use std::hash::{Hash, Hasher};
+use std::mem;
 use std::usize;
 
 crate mod forest;
 
 mod aggregate;
 crate mod context;
+use self::context::Context;
 mod logic;
 mod simplify;
 mod stack;
@@ -98,7 +100,7 @@ copy_fold!(DepthFirstNumber);
 
 /// The paper describes these as `A :- D | G`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-crate struct ExClause {
+crate struct ExClause<C: Context> {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
     subst: Substitution,
@@ -111,15 +113,8 @@ crate struct ExClause {
     constraints: Vec<InEnvironment<Constraint>>,
 
     /// Subgoals: literals that must be proven
-    subgoals: Vec<Literal<DomainGoal>>,
+    subgoals: Vec<Literal<C>>,
 }
-
-struct_fold!(ExClause {
-    subst,
-    delayed_literals,
-    constraints,
-    subgoals,
-});
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct SimplifiedAnswers {
@@ -186,13 +181,36 @@ enum DelayedLiteral {
 enum_fold!(DelayedLiteral[] { CannotProve(a), Negative(a), Positive(a, b) });
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-enum Literal<D: EnvironmentArg> {
-    Positive(InEnvironment<Goal<D>>),
-    Negative(InEnvironment<Goal<D>>),
+#[derive(Clone, Debug)]
+enum Literal<C: Context> {
+    Positive(C::GoalInEnvironment),
+    Negative(C::GoalInEnvironment),
 }
 
-enum_fold!(Literal[D] { Positive(a), Negative(a) } where D: Fold<Result = D> + EnvironmentArg);
+impl<C: Context> PartialEq for Literal<C> {
+    fn eq(&self, other: &Literal<C>) -> bool {
+        match (self, other) {
+            (Literal::Positive(goal1), Literal::Positive(goal2))
+            | (Literal::Negative(goal1), Literal::Negative(goal2)) => goal1 == goal2,
+
+            _ => false,
+        }
+    }
+}
+
+impl<C: Context> Eq for Literal<C> {
+}
+
+impl<C: Context> Hash for Literal<C> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        mem::discriminant(self).hash(state);
+        match self {
+            Literal::Positive(goal) | Literal::Negative(goal) => {
+                goal.hash(state);
+            }
+        }
+    }
+}
 
 /// The `Minimums` structure is used to track the dependencies between
 /// some item E on the evaluation stack. In particular, it tracks
