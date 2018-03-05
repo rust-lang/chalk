@@ -1,4 +1,4 @@
-use ir::{ConstrainedSubst, Goal, LeafGoal};
+use ir::{Goal, LeafGoal};
 use solve::slg::{self, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal,
                  Minimums, Satisfiable, TableIndex};
 use solve::slg::context::prelude::*;
@@ -436,7 +436,7 @@ impl<C: Context> Forest<C> {
         assert!(subgoals.is_empty());
 
         let answer_subst =
-            infer.canonicalize_constrained_subst(&ConstrainedSubst { subst, constraints });
+            infer.canonicalize_constrained_subst(subst, constraints);
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
         let delayed_literals = {

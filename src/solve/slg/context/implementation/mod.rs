@@ -3,9 +3,10 @@ use crate::fallible::Fallible;
 use crate::ir::*;
 use crate::ir::could_match::CouldMatch;
 use crate::solve::infer::InferenceTable;
-use crate::solve::infer::unify::UnificationResult;
 use crate::solve::infer::instantiate::BindersAndValue;
-use crate::solve::infer::ucanonicalize::UCanonicalized;
+use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
+use crate::solve::infer::unify::UnificationResult;
+use crate::solve::infer::var::InferenceVariable;
 use crate::solve::Solution;
 use crate::solve::slg::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Literal, Satisfiable,
                         UCanonicalGoal};
@@ -52,9 +53,10 @@ impl context::Context for SlgContext {
     type GoalInEnvironment = InEnvironment<Goal<DomainGoal>>;
     type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal<DomainGoal>>>;
     type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal<DomainGoal>>>;
-    type InferenceTable = ::crate::solve::infer::InferenceTable;
-    type InferenceVariable = ::crate::solve::infer::var::InferenceVariable;
-    type UniverseMap = ::crate::solve::infer::ucanonicalize::UniverseMap;
+    type InferenceTable = InferenceTable;
+    type InferenceVariable = InferenceVariable;
+    type UniverseMap = UniverseMap;
+    type Substitution = Substitution;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -199,9 +201,10 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
 
     fn canonicalize_constrained_subst(
         &mut self,
-        value: &ConstrainedSubst,
+        subst: Substitution,
+        constraints: Vec<InEnvironment<Constraint>>,
     ) -> Canonical<ConstrainedSubst> {
-        self.canonicalize(value).quantified
+        self.canonicalize(&ConstrainedSubst { subst, constraints }).quantified
     }
 
     fn u_canonicalize_goal(
@@ -274,6 +277,9 @@ impl context::Environment<SlgContext> for Arc<Environment<DomainGoal>> {
     fn add_clauses(&self, clauses: impl IntoIterator<Item = DomainGoal>) -> Self {
         Environment::add_clauses(self, clauses)
     }
+}
+
+impl context::Substitution<SlgContext> for Substitution {
 }
 
 impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::UniverseMap {

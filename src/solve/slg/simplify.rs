@@ -1,6 +1,6 @@
 use cast::Cast;
 use fallible::NoSolution;
-use ir::{DomainGoal, Goal, LeafGoal, QuantifierKind, Substitution};
+use ir::{DomainGoal, Goal, LeafGoal, QuantifierKind};
 use solve::slg::{ExClause, Literal, Satisfiable};
 use solve::slg::forest::Forest;
 use solve::slg::context::prelude::*;
@@ -11,7 +11,7 @@ impl<C: Context> Forest<C> {
     /// includes unifications that cannot be completed.
     pub(super) fn simplify_hh_goal(
         infer: &mut C::InferenceTable,
-        subst: Substitution,
+        subst: C::Substitution,
         initial_environment: &C::Environment,
         initial_goal: Goal<DomainGoal>,
     ) -> Satisfiable<ExClause<C>> {

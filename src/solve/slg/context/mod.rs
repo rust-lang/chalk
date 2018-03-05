@@ -18,6 +18,7 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type InferenceTable: InferenceTable<Self>;
     type InferenceVariable: InferenceVariable<Self>;
     type UniverseMap: UniverseMap<Self>;
+    type Substitution: Substitution<Self>;
 }
 
 crate trait ContextOps<C: Context> {
@@ -45,15 +46,15 @@ crate trait ContextOps<C: Context> {
     fn truncate_answer(
         &self,
         infer: &mut C::InferenceTable,
-        subst: &ir::Substitution,
-    ) -> Option<ir::Substitution>;
+        subst: &C::Substitution,
+    ) -> Option<C::Substitution>;
 
     fn resolvent_clause(
         &self,
         infer: &mut C::InferenceTable,
         environment: &C::Environment,
         goal: &ir::DomainGoal,
-        subst: &ir::Substitution,
+        subst: &C::Substitution,
         clause: &ir::Binders<ir::ProgramClauseImplication<ir::DomainGoal>>,
     ) -> Satisfiable<ExClause<C>>;
 
@@ -92,7 +93,7 @@ crate trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
     fn binders(&self) -> &[ir::ParameterKind<ir::UniverseIndex>];
     fn substitute(
         &self,
-        subst: &ir::Substitution,
+        subst: &C::Substitution,
     ) -> (
         C::Environment,
         ir::Goal<ir::DomainGoal>,
@@ -144,7 +145,8 @@ crate trait InferenceTable<C: Context>: Clone {
     // Used by: logic
     fn canonicalize_constrained_subst(
         &mut self,
-        value: &ir::ConstrainedSubst,
+        subst: C::Substitution,
+        constraints: Vec<ir::InEnvironment<ir::Constraint>>,
     ) -> ir::Canonical<ir::ConstrainedSubst>;
 
     // Used by: logic
@@ -155,7 +157,7 @@ crate trait InferenceTable<C: Context>: Clone {
 
     // Used by: logic
     fn fresh_subst(&mut self, binders: &[ir::ParameterKind<ir::UniverseIndex>])
-        -> ir::Substitution;
+        -> C::Substitution;
 
     // Used by: logic
     fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
@@ -175,6 +177,9 @@ crate trait InferenceTable<C: Context>: Clone {
         a: &ir::Parameter,
         b: &ir::Parameter,
     ) -> Fallible<Self::UnificationResult>;
+}
+
+crate trait Substitution<C: Context>: Clone + Debug {
 }
 
 crate trait UniverseMap<C: Context>: Clone + Debug {

@@ -102,7 +102,7 @@ copy_fold!(DepthFirstNumber);
 crate struct ExClause<C: Context> {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
-    subst: Substitution,
+    subst: C::Substitution,
 
     /// Delayed literals: things that we depend on negatively,
     /// but which have not yet been fully evaluated.

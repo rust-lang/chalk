@@ -10,3 +10,4 @@ crate use super::GoalInEnvironment;
 crate use super::CanonicalGoalInEnvironment;
 crate use super::UCanonicalGoalInEnvironment;
 crate use super::UniverseMap;
+crate use super::Substitution;
