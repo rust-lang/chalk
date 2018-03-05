@@ -4,12 +4,15 @@ use crate::ir;
 use crate::ir::could_match::CouldMatch;
 use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::UCanonicalized;
-use crate::solve::slg::{CanonicalGoal, Literal, ExClause, UCanonicalGoal};
+use crate::solve::slg::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Literal, Satisfiable,
+                        UCanonicalGoal};
 use crate::solve::slg::context::prelude::*;
 use crate::solve::truncate::{self, Truncated};
 use crate::fold::Fold;
 use std::fmt::Debug;
 use std::sync::Arc;
+
+mod resolvent;
 
 #[derive(Clone)]
 pub struct SlgContext {
@@ -65,7 +68,11 @@ impl Context for SlgContext {
         subgoal: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
     ) -> Option<ir::InEnvironment<ir::Goal<ir::DomainGoal>>> {
         let Truncated { overflow, value } = truncate::truncate(infer, self.max_size, subgoal);
-        if overflow { Some(value) } else { None }
+        if overflow {
+            Some(value)
+        } else {
+            None
+        }
     }
 
     /// If `subst` is too large, return a truncated variant (else
@@ -76,7 +83,39 @@ impl Context for SlgContext {
         subst: &ir::Substitution,
     ) -> Option<ir::Substitution> {
         let Truncated { overflow, value } = truncate::truncate(infer, self.max_size, subst);
-        if overflow { Some(value) } else { None }
+        if overflow {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    fn resolvent_clause(
+        &self,
+        infer: &mut Self::InferenceTable,
+        environment: &Arc<ir::Environment<ir::DomainGoal>>,
+        goal: &ir::DomainGoal,
+        subst: &ir::Substitution,
+        clause: &ir::Binders<ir::ProgramClauseImplication<ir::DomainGoal>>,
+    ) -> Satisfiable<ExClause> {
+        resolvent::resolvent_clause(infer, environment, goal, subst, clause)
+    }
+
+    fn apply_answer_subst(
+        &self,
+        infer: &mut Self::InferenceTable,
+        ex_clause: ExClause,
+        selected_goal: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
+        answer_table_goal: &CanonicalGoal<ir::DomainGoal>,
+        canonical_answer_subst: &CanonicalConstrainedSubst,
+    ) -> Satisfiable<ExClause> {
+        resolvent::apply_answer_subst(
+            infer,
+            ex_clause,
+            selected_goal,
+            answer_table_goal,
+            canonical_answer_subst,
+        )
     }
 }
 

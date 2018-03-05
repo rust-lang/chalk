@@ -2,7 +2,8 @@ use crate::fallible::Fallible;
 use crate::ir;
 use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::UCanonicalized;
-use crate::solve::slg::{CanonicalGoal, ExClause, UCanonicalGoal};
+use crate::solve::slg::{CanonicalConstrainedSubst, CanonicalGoal, ExClause, Satisfiable,
+                        UCanonicalGoal};
 use crate::fold::Fold;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -57,6 +58,24 @@ crate trait Context: Sized + Clone {
         infer: &mut Self::InferenceTable,
         subst: &ir::Substitution,
     ) -> Option<ir::Substitution>;
+
+    fn resolvent_clause(
+        &self,
+        infer: &mut Self::InferenceTable,
+        environment: &Arc<ir::Environment<ir::DomainGoal>>,
+        goal: &ir::DomainGoal,
+        subst: &ir::Substitution,
+        clause: &ir::Binders<ir::ProgramClauseImplication<ir::DomainGoal>>,
+    ) -> Satisfiable<ExClause>;
+
+    fn apply_answer_subst(
+        &self,
+        infer: &mut Self::InferenceTable,
+        ex_clause: ExClause,
+        selected_goal: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
+        answer_table_goal: &CanonicalGoal<ir::DomainGoal>,
+        canonical_answer_subst: &CanonicalConstrainedSubst,
+    ) -> Satisfiable<ExClause>;
 }
 
 crate trait InferenceVariable<C: Context>: Copy {

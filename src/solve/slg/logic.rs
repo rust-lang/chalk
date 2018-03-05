@@ -616,7 +616,7 @@ impl<C: Context> Forest<C> {
                     debug!("program clause = {:#?}", clause);
                     let mut clause_infer = infer.clone();
 
-                    if let Satisfiable::Yes(resolvent) = Self::resolvent_clause(
+                    if let Satisfiable::Yes(resolvent) = self.context.resolvent_clause(
                         &mut clause_infer,
                         &environment,
                         &domain_goal,
@@ -908,7 +908,7 @@ impl<C: Context> Forest<C> {
             &universe_map.map_from_canonical(&self.tables[subgoal_table].table_goal.canonical);
         let answer_subst =
             &universe_map.map_from_canonical(&self.answer(subgoal_table, answer_index).subst);
-        match Self::apply_answer_subst(
+        match self.context.apply_answer_subst(
             &mut infer,
             ex_clause,
             &subgoal,

@@ -61,7 +61,6 @@ crate mod forest;
 mod aggregate;
 crate mod context;
 mod logic;
-mod resolvent;
 mod simplify;
 mod stack;
 mod strand;
@@ -234,7 +233,7 @@ struct Minimums {
 }
 
 #[derive(Copy, Clone, Debug)]
-enum Satisfiable<T> {
+crate enum Satisfiable<T> {
     Yes(T),
     No,
 }
