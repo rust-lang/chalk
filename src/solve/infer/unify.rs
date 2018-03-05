@@ -45,7 +45,7 @@ struct Unifier<'t> {
 }
 
 #[derive(Debug)]
-crate struct UnificationResult {
+pub struct UnificationResult { // FIXME pub b/c of trait impl for SLG
     crate goals: Vec<InEnvironment<DomainGoal>>,
     crate constraints: Vec<InEnvironment<Constraint>>,
 }

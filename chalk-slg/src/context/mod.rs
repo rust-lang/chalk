@@ -1,13 +1,12 @@
 use crate::fallible::Fallible;
-use crate::solve::slg::{ExClause, Satisfiable, SimplifiedAnswer};
-use crate::solve::slg::hh::HhGoal;
+use crate::{ExClause, SimplifiedAnswer};
+use crate::hh::HhGoal;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-crate mod implementation;
 crate mod prelude;
 
-crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> +
+pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> +
     // these aren't really needed; they are used to make derive happy
     Eq +
     Ord +
@@ -31,7 +30,7 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type Solution;
 }
 
-crate trait ContextOps<C: Context> {
+pub trait ContextOps<C: Context> {
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
     fn is_coinductive(&self, goal: &C::UCanonicalGoalInEnvironment) -> bool;
 
@@ -66,7 +65,7 @@ crate trait ContextOps<C: Context> {
         goal: &C::DomainGoal,
         subst: &C::Substitution,
         clause: &C::ProgramClause,
-    ) -> Satisfiable<ExClause<C>>;
+    ) -> Fallible<ExClause<C>>;
 
     fn apply_answer_subst(
         &self,
@@ -75,7 +74,7 @@ crate trait ContextOps<C: Context> {
         selected_goal: &C::GoalInEnvironment,
         answer_table_goal: &C::CanonicalGoalInEnvironment,
         canonical_answer_subst: &C::CanonicalConstrainedSubst,
-    ) -> Satisfiable<ExClause<C>>;
+    ) -> Fallible<ExClause<C>>;
 
     fn goal_in_environment(
         environment: &C::Environment,
@@ -83,7 +82,7 @@ crate trait ContextOps<C: Context> {
     ) -> C::GoalInEnvironment;
 }
 
-crate trait Aggregate<C: Context> {
+pub trait Aggregate<C: Context> {
     fn make_solution(
         &self,
         root_goal: &C::CanonicalGoalInEnvironment,
@@ -91,7 +90,7 @@ crate trait Aggregate<C: Context> {
     ) -> Option<C::Solution>;
 }
 
-crate trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
+pub trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
     fn canonical(&self) -> &C::CanonicalGoalInEnvironment;
     fn is_trivial_substitution(
         &self,
@@ -99,7 +98,7 @@ crate trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
     ) -> bool;
 }
 
-crate trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
+pub trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
     fn substitute(
         &self,
         subst: &C::Substitution,
@@ -109,19 +108,19 @@ crate trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
     );
 }
 
-crate trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
+pub trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
     fn environment(&self) -> &C::Environment;
 }
 
-crate trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
+pub trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
     // Used by: simplify
     fn add_clauses(&self, clauses: impl IntoIterator<Item = C::DomainGoal>) -> Self;
 }
 
-crate trait InferenceVariable<C: Context>: Copy {
+pub trait InferenceVariable<C: Context>: Copy {
 }
 
-crate trait InferenceTable<C: Context>: Clone {
+pub trait InferenceTable<C: Context>: Clone {
     type UnificationResult: UnificationResult<C>;
 
     fn new() -> Self;
@@ -182,35 +181,35 @@ crate trait InferenceTable<C: Context>: Clone {
     ) -> Fallible<Self::UnificationResult>;
 }
 
-crate trait Substitution<C: Context>: Clone + Debug {
+pub trait Substitution<C: Context>: Clone + Debug {
 }
 
-crate trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
+pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
     fn empty_constraints(&self) -> bool;
 }
 
-crate trait ConstraintInEnvironment<C: Context>: Clone + Debug + Eq + Hash + Ord {
+pub trait ConstraintInEnvironment<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
-crate trait DomainGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
+pub trait DomainGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
     fn into_goal(self) -> C::Goal;
 }
 
-crate trait Goal<C: Context>: Clone + Debug + Eq + Hash + Ord {
+pub trait Goal<C: Context>: Clone + Debug + Eq + Hash + Ord {
     fn cannot_prove() -> Self;
     fn into_hh_goal(self) -> HhGoal<C>;
 }
 
-crate trait Parameter<C: Context>: Clone + Debug + Eq + Hash + Ord {
+pub trait Parameter<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
-crate trait ProgramClause<C: Context>: Debug {
+pub trait ProgramClause<C: Context>: Debug {
 }
 
-crate trait BindersGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
+pub trait BindersGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
-crate trait UniverseMap<C: Context>: Clone + Debug {
+pub trait UniverseMap<C: Context>: Clone + Debug {
     fn map_goal_from_canonical(
         &self,
         value: &C::CanonicalGoalInEnvironment,
@@ -222,6 +221,6 @@ crate trait UniverseMap<C: Context>: Clone + Debug {
     ) -> C::CanonicalConstrainedSubst;
 }
 
-crate trait UnificationResult<C: Context> {
+pub trait UnificationResult<C: Context> {
     fn into_ex_clause(self, ex_clause: &mut ExClause<C>);
 }

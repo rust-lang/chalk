@@ -1,8 +1,8 @@
-use solve::slg::context::Context;
+use crate::context::Context;
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
-crate enum HhGoal<C: Context> {
+pub enum HhGoal<C: Context> {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
     ForAll(C::BindersGoal),

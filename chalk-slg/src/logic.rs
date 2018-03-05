@@ -1,11 +1,12 @@
-use solve::slg::{self, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal,
-                 Minimums, Satisfiable, TableIndex};
-use solve::slg::context::prelude::*;
-use solve::slg::forest::Forest;
-use solve::slg::hh::HhGoal;
-use solve::slg::stack::StackIndex;
-use solve::slg::strand::{SelectedSubgoal, Strand};
-use solve::slg::table::{Answer, AnswerIndex};
+use crate::{DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal,
+            Minimums, TableIndex};
+use crate::fallible::NoSolution;
+use crate::context::prelude::*;
+use crate::forest::Forest;
+use crate::hh::HhGoal;
+use crate::stack::StackIndex;
+use crate::strand::{SelectedSubgoal, Strand};
+use crate::table::{Answer, AnswerIndex};
 use std::collections::HashSet;
 use std::mem;
 
@@ -165,7 +166,7 @@ impl<C: Context> Forest<C> {
         result.map(|()| EnsureSuccess::AnswerAvailable)
     }
 
-    pub(super) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<C> {
+    crate fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<C> {
         self.tables[table].answer(answer).unwrap()
     }
 
@@ -435,8 +436,7 @@ impl<C: Context> Forest<C> {
         } = strand;
         assert!(subgoals.is_empty());
 
-        let answer_subst =
-            infer.canonicalize_constrained_subst(subst, constraints);
+        let answer_subst = infer.canonicalize_constrained_subst(subst, constraints);
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
         let delayed_literals = {
@@ -572,7 +572,7 @@ impl<C: Context> Forest<C> {
     /// In terms of the NFTD paper, creating a new table corresponds
     /// to the *New Subgoal* step as well as the *Program Clause
     /// Resolution* steps.
-    pub(super) fn get_or_create_table_for_ucanonical_goal(
+    crate fn get_or_create_table_for_ucanonical_goal(
         &mut self,
         goal: C::UCanonicalGoalInEnvironment,
     ) -> TableIndex {
@@ -622,7 +622,7 @@ impl<C: Context> Forest<C> {
                     debug!("program clause = {:#?}", clause);
                     let mut clause_infer = infer.clone();
 
-                    if let Satisfiable::Yes(resolvent) = self.context.resolvent_clause(
+                    if let Ok(resolvent) = self.context.resolvent_clause(
                         &mut clause_infer,
                         &environment,
                         &domain_goal,
@@ -651,7 +651,7 @@ impl<C: Context> Forest<C> {
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
-                if let Satisfiable::Yes(ex_clause) =
+                if let Ok(ex_clause) =
                     Self::simplify_hh_goal(&mut infer, subst, &environment, hh_goal)
                 {
                     info!(
@@ -916,8 +916,14 @@ impl<C: Context> Forest<C> {
             .map_goal_from_canonical(&self.tables[subgoal_table].table_goal.canonical());
         let answer_subst =
             &universe_map.map_subst_from_canonical(&self.answer(subgoal_table, answer_index).subst);
-        match self.context.apply_answer_subst(&mut infer, ex_clause, &subgoal, table_goal, answer_subst) {
-            Satisfiable::Yes(mut ex_clause) => {
+        match self.context.apply_answer_subst(
+            &mut infer,
+            ex_clause,
+            &subgoal,
+            table_goal,
+            answer_subst,
+        ) {
+            Ok(mut ex_clause) => {
                 // If the answer had delayed literals, we have to
                 // ensure that `ex_clause` is also delayed. This is
                 // the SLG FACTOR operation, though NFTD just makes it
@@ -948,7 +954,7 @@ impl<C: Context> Forest<C> {
             // This answer led nowhere. Give up for now, but of course
             // there may still be other strands to pursue, so return
             // `QuantumExceeded`.
-            Satisfiable::No => {
+            Err(NoSolution) => {
                 info!("pursue_positive_subgoal: answer not unifiable -> NoSolution");
                 Err(StrandFail::NoSolution)
             }
@@ -1027,7 +1033,7 @@ impl<C: Context> Forest<C> {
         depth: StackIndex,
         strand: Strand<C>,
     ) -> StrandResult<C, ()> {
-        slg::maybe_grow_stack(|| self.pursue_strand(depth, strand))
+        ::crate::maybe_grow_stack(|| self.pursue_strand(depth, strand))
     }
 
     /// Invoked when we have found a successful answer to the given

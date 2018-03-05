@@ -1,6 +1,6 @@
-use solve::slg::TableIndex;
-use solve::slg::context::prelude::*;
-use solve::slg::table::Table;
+use crate::TableIndex;
+use crate::context::prelude::*;
+use crate::table::Table;
 use std::collections::HashMap;
 use std::ops::{Index, IndexMut};
 

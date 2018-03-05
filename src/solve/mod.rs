@@ -207,7 +207,7 @@ impl SolverChoice {
         env: &Arc<ProgramEnvironment<DomainGoal>>,
         canonical_goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>,
     ) -> ::errors::Result<Option<Solution>> {
-        use self::slg::context::implementation::SlgContext;
+        use self::slg::implementation::SlgContext;
 
         match self {
             SolverChoice::Recursive {

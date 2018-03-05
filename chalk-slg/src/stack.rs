@@ -1,4 +1,4 @@
-use solve::slg::{DepthFirstNumber, TableIndex};
+use crate::{DepthFirstNumber, TableIndex};
 use std::ops::{Index, IndexMut, Range};
 
 /// See `Forest`.

@@ -1,6 +1,6 @@
-use solve::slg::{DelayedLiteralSet, DelayedLiteralSets};
-use solve::slg::context::prelude::*;
-use solve::slg::strand::Strand;
+use crate::{DelayedLiteralSet, DelayedLiteralSets};
+use crate::context::prelude::*;
+use crate::strand::Strand;
 use std::collections::{HashMap, VecDeque};
 use std::collections::hash_map::Entry;
 use std::mem;
@@ -42,9 +42,9 @@ index_struct! {
 /// goal for a particular table (modulo delayed literals). It contains
 /// a substitution
 #[derive(Clone, Debug)]
-pub(super) struct Answer<C: Context> {
-    pub(super) subst: C::CanonicalConstrainedSubst,
-    pub(super) delayed_literals: DelayedLiteralSet<C>,
+pub struct Answer<C: Context> {
+    crate subst: C::CanonicalConstrainedSubst,
+    crate delayed_literals: DelayedLiteralSet<C>,
 }
 
 impl<C: Context> Table<C> {
@@ -156,8 +156,8 @@ impl<C: Context> Table<C> {
         self.answers.get(index.value)
     }
 
-    #[cfg(test)]
-    pub(super) fn num_cached_answers(&self) -> usize {
+    /// Useful for testing.
+    pub fn num_cached_answers(&self) -> usize {
         self.answers.len()
     }
 

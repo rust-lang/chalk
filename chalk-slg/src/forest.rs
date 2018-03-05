@@ -1,14 +1,11 @@
-use solve::slg::context::prelude::*;
-use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
-use solve::slg::logic::RootSearchFail;
-use solve::slg::stack::{Stack, StackIndex};
-use solve::slg::tables::Tables;
-use solve::slg::table::AnswerIndex;
+use crate::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
+use crate::context::prelude::*;
+use crate::logic::RootSearchFail;
+use crate::stack::{Stack, StackIndex};
+use crate::tables::Tables;
+use crate::table::{Answer, AnswerIndex};
 
-#[cfg(test)]
-use solve::slg::table::Answer;
-
-crate struct Forest<C: Context> {
+pub struct Forest<C: Context> {
     #[allow(dead_code)]
     crate context: C,
     crate tables: Tables<C>,
@@ -18,7 +15,7 @@ crate struct Forest<C: Context> {
 }
 
 impl<C: Context> Forest<C> {
-    crate fn new(context: C) -> Self {
+    pub fn new(context: C) -> Self {
         Forest {
             context,
             tables: Tables::new(),
@@ -37,8 +34,7 @@ impl<C: Context> Forest<C> {
     ///
     /// Thanks to subgoal abstraction and so forth, this should always
     /// terminate.
-    #[cfg(test)]
-    pub(super) fn force_answers(
+    pub fn force_answers(
         &mut self,
         goal: C::UCanonicalGoalInEnvironment,
         num_answers: usize,
@@ -65,7 +61,7 @@ impl<C: Context> Forest<C> {
     /// iterator. Each time you invoke `next`, it will do the work to
     /// extract one more answer. These answers are cached in between
     /// invocations. Invoking `next` fewer times is preferable =)
-    pub(super) fn iter_answers<'f>(
+    fn iter_answers<'f>(
         &'f mut self,
         goal: &C::UCanonicalGoalInEnvironment,
     ) -> impl Iterator<Item = SimplifiedAnswer<C>> + 'f {
@@ -81,7 +77,7 @@ impl<C: Context> Forest<C> {
     /// Solves a given goal, producing the solution. This will do only
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
-    crate fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<C::Solution> {
+    pub fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<C::Solution> {
         self.context.clone().make_solution(goal.canonical(), self.iter_answers(goal))
     }
 
@@ -116,6 +112,12 @@ impl<C: Context> Forest<C> {
             let table = self.stack[d].table;
             self.tables[table].coinductive_goal
         })
+    }
+
+    /// Useful for testing.
+    pub fn num_cached_answers_for_goal(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> usize {
+        let table = self.get_or_create_table_for_ucanonical_goal(goal.clone());
+        self.tables[table].num_cached_answers()
     }
 }
 

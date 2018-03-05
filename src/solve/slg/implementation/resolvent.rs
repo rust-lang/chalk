@@ -3,13 +3,14 @@ use crate::fold::Fold;
 use crate::fold::shift::Shift;
 use crate::ir::*;
 use crate::solve::infer::InferenceTable;
-use crate::solve::slg::{ExClause, Literal, Satisfiable};
-use crate::solve::slg::context::{
-    implementation::SlgContext,
+use crate::solve::slg::implementation::SlgContext;
+use crate::zip::{Zip, Zipper};
+
+use chalk_slg::{ExClause, Literal};
+use chalk_slg::context::{
     InferenceTable as InferenceTableTrait,
     UnificationResult as UnificationResultTrait,
 };
-use crate::zip::{Zip, Zipper};
 use std::sync::Arc;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -62,7 +63,7 @@ pub(super) fn resolvent_clause(
     goal: &DomainGoal,
     subst: &Substitution,
     clause: &Binders<ProgramClauseImplication<DomainGoal>>,
-) -> Satisfiable<ExClause<SlgContext>> {
+) -> Fallible<ExClause<SlgContext>> {
     // Relating the above description to our situation:
     //
     // - `goal` G, except with binders for any existential variables.
@@ -88,10 +89,7 @@ pub(super) fn resolvent_clause(
     debug!("conditions = {:?}", conditions);
 
     // Unify the selected literal Li with C'.
-    let unification_result = match infer.unify(environment, goal, &consequence) {
-        Err(_) => return Satisfiable::No,
-        Ok(v) => v,
-    };
+    let unification_result = infer.unify(environment, goal, &consequence)?;
 
     // Final X-clause that we will return.
     let mut ex_clause = ExClause {
@@ -112,7 +110,7 @@ pub(super) fn resolvent_clause(
             c => Literal::Positive(InEnvironment::new(environment, c)),
         }));
 
-    Satisfiable::Yes(ex_clause)
+    Ok(ex_clause)
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -234,7 +232,7 @@ pub(super) fn apply_answer_subst(
     selected_goal: &InEnvironment<Goal<DomainGoal>>,
     answer_table_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
     canonical_answer_subst: &Canonical<ConstrainedSubst>,
-) -> Satisfiable<ExClause<SlgContext>> {
+) -> Fallible<ExClause<SlgContext>> {
     debug_heading!("apply_answer_subst()");
     debug!("ex_clause={:?}", ex_clause);
     debug!("selected_goal={:?}", infer.normalize_deep(selected_goal));
@@ -253,20 +251,16 @@ pub(super) fn apply_answer_subst(
         constraints: answer_constraints,
     } = infer.instantiate_canonical(&canonical_answer_subst);
 
-    match AnswerSubstitutor::substitute(
+    let mut ex_clause = AnswerSubstitutor::substitute(
         infer,
         &selected_goal.environment,
         &answer_subst,
         ex_clause,
         &answer_table_goal.value,
         selected_goal,
-    ) {
-        Ok(mut ex_clause) => {
-            ex_clause.constraints.extend(answer_constraints);
-            Satisfiable::Yes(ex_clause)
-        }
-        Err(_) => Satisfiable::No,
-    }
+    )?;
+    ex_clause.constraints.extend(answer_constraints);
+    Ok(ex_clause)
 }
 
 struct AnswerSubstitutor<'t> {

@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Error, Formatter};
-use solve::slg::{ExClause, TableIndex};
-use solve::slg::context::Context;
-use solve::slg::table::AnswerIndex;
+use crate::{ExClause, TableIndex};
+use crate::context::Context;
+use crate::table::AnswerIndex;
 
 crate struct Strand<C: Context> {
     crate infer: C::InferenceTable,

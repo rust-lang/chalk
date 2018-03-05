@@ -1,9 +1,10 @@
-use cast::Cast;
-use ir::*;
-use solve::{Guidance, Solution};
-use solve::infer::InferenceTable;
-use solve::slg::context;
-use solve::slg::SimplifiedAnswer;
+use crate::cast::Cast;
+use crate::ir::*;
+use crate::solve::{Guidance, Solution};
+use crate::solve::infer::InferenceTable;
+
+use chalk_slg::context;
+use chalk_slg::SimplifiedAnswer;
 use std::fmt::Debug;
 
 use super::SlgContext;

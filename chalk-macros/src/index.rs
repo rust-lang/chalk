@@ -8,8 +8,6 @@ macro_rules! index_struct {
             $vf value: usize,
         }
 
-        copy_fold!($n);
-
         impl $n {
             // Not all index structs need this, so allow it to be dead
             // code.

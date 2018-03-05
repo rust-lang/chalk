@@ -7,10 +7,13 @@ use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::solve::infer::unify::UnificationResult;
 use crate::solve::infer::var::InferenceVariable;
 use crate::solve::Solution;
-use crate::solve::slg::{DelayedLiteral, ExClause, Literal, Satisfiable};
-use crate::solve::slg::context;
-use crate::solve::slg::hh::HhGoal;
 use crate::solve::truncate::{self, Truncated};
+
+use chalk_slg::{DelayedLiteral, ExClause, Literal};
+use chalk_slg::context;
+use chalk_slg::forest::Forest;
+use chalk_slg::hh::HhGoal;
+
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
@@ -38,8 +41,6 @@ impl SlgContext {
         self,
         root_goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>,
     ) -> Option<Solution> {
-        use crate::solve::slg::forest::Forest;
-
         let mut forest = Forest::new(self);
         forest.solve(root_goal)
     }
@@ -126,7 +127,7 @@ impl context::ContextOps<SlgContext> for SlgContext {
         goal: &DomainGoal,
         subst: &Substitution,
         clause: &ProgramClause<DomainGoal>,
-    ) -> Satisfiable<ExClause<Self>> {
+    ) -> Fallible<ExClause<Self>> {
         resolvent::resolvent_clause(infer, environment, goal, subst, &clause.implication)
     }
 
@@ -137,7 +138,7 @@ impl context::ContextOps<SlgContext> for SlgContext {
         selected_goal: &InEnvironment<Goal<DomainGoal>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
         canonical_answer_subst: &Canonical<ConstrainedSubst>,
-    ) -> Satisfiable<ExClause<Self>> {
+    ) -> Fallible<ExClause<Self>> {
         resolvent::apply_answer_subst(
             infer,
             ex_clause,
@@ -360,6 +361,8 @@ enum_fold!(LiteralSlgContext {
         Positive(a), Negative(a)
     }
 });
+
+copy_fold!(::chalk_slg::TableIndex);
 
 type DelayedLiteralSlgContext = DelayedLiteral<SlgContext>;
 enum_fold!(DelayedLiteralSlgContext {

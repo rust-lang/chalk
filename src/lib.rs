@@ -17,6 +17,7 @@
 extern crate chalk_parse;
 #[macro_use]
 extern crate chalk_macros;
+extern crate chalk_slg;
 extern crate diff;
 extern crate ena;
 #[macro_use]
@@ -38,7 +39,8 @@ pub mod ir;
 crate mod cast;
 crate mod coherence;
 pub mod errors;
-crate mod fallible;
 pub mod lower;
 pub mod solve;
 mod test_util;
+
+pub use crate::chalk_slg::fallible;

@@ -66,7 +66,7 @@ crate struct UCanonicalized<T> {
 /// outside this module -- converts from "canonical" universes to the
 /// original (but see the `UMapToCanonical` folder).
 #[derive(Clone, Debug)]
-crate struct UniverseMap {
+pub struct UniverseMap { // FIXME pub b/c of trait impl for SLG
     /// A reverse map -- for each universe Ux that appears in
     /// `quantified`, the corresponding universe in the original was
     /// `universes[x]`.

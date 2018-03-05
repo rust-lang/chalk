@@ -1,11 +1,12 @@
 #![cfg(test)]
 
-use chalk_parse;
-use errors::*;
-use ir;
-use lower::*;
-use solve::slg::forest::Forest;
-use solve::slg::context::implementation::SlgContext;
+use crate::chalk_parse;
+use crate::errors::*;
+use crate::ir;
+use crate::lower::*;
+use crate::solve::slg::implementation::SlgContext;
+
+use chalk_slg::forest::Forest;
 use std::sync::Arc;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
@@ -278,8 +279,8 @@ fn only_draw_so_many() {
         assert_eq!(format!("{:?}", solution), "Some(Ambig(Unknown))");
 
         // Next, check how many answers we had to peel to get it.
-        let table = forest.get_or_create_table_for_ucanonical_goal(peeled_goal.clone());
-        assert_eq!(forest.tables[table].num_cached_answers(), 2);
+        let num_cached_answers_for_goal = forest.num_cached_answers_for_goal(&peeled_goal);
+        assert_eq!(num_cached_answers_for_goal, 2);
     });
 }
 

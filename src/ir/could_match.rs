@@ -1,4 +1,3 @@
-use fallible::*;
 use ir::*;
 use zip::{Zip, Zipper};
 

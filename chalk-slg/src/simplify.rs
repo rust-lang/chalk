@@ -1,8 +1,8 @@
-use fallible::NoSolution;
-use solve::slg::{ExClause, Literal, Satisfiable};
-use solve::slg::forest::Forest;
-use solve::slg::hh::HhGoal;
-use solve::slg::context::prelude::*;
+use crate::fallible::Fallible;
+use crate::{ExClause, Literal};
+use crate::forest::Forest;
+use crate::hh::HhGoal;
+use crate::context::prelude::*;
 
 impl<C: Context> Forest<C> {
     /// Simplifies an HH goal into a series of positive domain goals
@@ -13,7 +13,7 @@ impl<C: Context> Forest<C> {
         subst: C::Substitution,
         initial_environment: &C::Environment,
         initial_hh_goal: HhGoal<C>,
-    ) -> Satisfiable<ExClause<C>> {
+    ) -> Fallible<ExClause<C>> {
         let mut ex_clause = ExClause {
             subst,
             delayed_literals: vec![],
@@ -48,10 +48,8 @@ impl<C: Context> Forest<C> {
                         .push(Literal::Negative(C::goal_in_environment(&environment, subgoal)));
                 }
                 HhGoal::Unify(a, b) => {
-                    match infer.unify_parameters(&environment, &a, &b) {
-                        Ok(result) => result.into_ex_clause(&mut ex_clause),
-                        Err(NoSolution) => return Satisfiable::No,
-                    }
+                    infer.unify_parameters(&environment, &a, &b)?
+                        .into_ex_clause(&mut ex_clause)
                 }
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause
@@ -76,6 +74,6 @@ impl<C: Context> Forest<C> {
             }
         }
 
-        Satisfiable::Yes(ex_clause)
+        Ok(ex_clause)
     }
 }
