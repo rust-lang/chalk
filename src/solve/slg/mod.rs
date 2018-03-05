@@ -49,7 +49,6 @@
 //! - HH: Hereditary harrop predicates. What Chalk deals in.
 //!   Popularized by Lambda Prolog.
 
-use ir::{InEnvironment, Canonical, Goal, UCanonical};
 use stacker;
 use std::collections::HashSet;
 use std::cmp::min;
@@ -252,9 +251,6 @@ crate enum Satisfiable<T> {
     Yes(T),
     No,
 }
-
-type CanonicalGoal<D> = Canonical<InEnvironment<Goal<D>>>;
-type UCanonicalGoal<D> = UCanonical<InEnvironment<Goal<D>>>;
 
 impl<C: Context> DelayedLiteralSets<C> {
     fn is_empty(&self) -> bool {

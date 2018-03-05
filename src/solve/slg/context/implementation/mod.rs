@@ -8,8 +8,7 @@ use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::solve::infer::unify::UnificationResult;
 use crate::solve::infer::var::InferenceVariable;
 use crate::solve::Solution;
-use crate::solve::slg::{CanonicalGoal, DelayedLiteral, ExClause, Literal, Satisfiable,
-                        UCanonicalGoal};
+use crate::solve::slg::{DelayedLiteral, ExClause, Literal, Satisfiable};
 use crate::solve::slg::context;
 use crate::solve::truncate::{self, Truncated};
 use crate::fold::Fold;
@@ -61,7 +60,7 @@ impl context::Context for SlgContext {
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
-    fn is_coinductive(&self, goal: &UCanonicalGoal<DomainGoal>) -> bool {
+    fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>) -> bool {
         goal.is_coinductive(&self.program)
     }
 
@@ -131,7 +130,7 @@ impl context::ContextOps<SlgContext> for SlgContext {
         infer: &mut InferenceTable,
         ex_clause: ExClause<Self>,
         selected_goal: &InEnvironment<Goal<DomainGoal>>,
-        answer_table_goal: &CanonicalGoal<DomainGoal>,
+        answer_table_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
         canonical_answer_subst: &Canonical<ConstrainedSubst>,
     ) -> Satisfiable<ExClause<Self>> {
         resolvent::apply_answer_subst(
@@ -205,7 +204,7 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
 
     fn u_canonicalize_goal(
         &mut self,
-        value: &CanonicalGoal<DomainGoal>,
+        value: &Canonical<InEnvironment<Goal<DomainGoal>>>,
     ) -> (
         UCanonical<InEnvironment<Goal<DomainGoal>>>,
         ::crate::solve::infer::ucanonicalize::UniverseMap,

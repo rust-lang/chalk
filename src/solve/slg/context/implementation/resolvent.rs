@@ -3,7 +3,7 @@ use crate::fold::Fold;
 use crate::fold::shift::Shift;
 use crate::ir::*;
 use crate::solve::infer::InferenceTable;
-use crate::solve::slg::{CanonicalGoal, ExClause, Literal, Satisfiable};
+use crate::solve::slg::{ExClause, Literal, Satisfiable};
 use crate::solve::slg::context::{
     implementation::SlgContext,
     InferenceTable as InferenceTableTrait,
@@ -232,7 +232,7 @@ pub(super) fn apply_answer_subst(
     infer: &mut InferenceTable,
     ex_clause: ExClause<SlgContext>,
     selected_goal: &InEnvironment<Goal<DomainGoal>>,
-    answer_table_goal: &CanonicalGoal<DomainGoal>,
+    answer_table_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
     canonical_answer_subst: &Canonical<ConstrainedSubst>,
 ) -> Satisfiable<ExClause<SlgContext>> {
     debug_heading!("apply_answer_subst()");
