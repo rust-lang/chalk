@@ -1,9 +1,7 @@
 use crate::fallible::Fallible;
 use crate::ir;
 use crate::solve::Solution;
-use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::slg::{ExClause, Satisfiable, SimplifiedAnswer};
-use crate::fold::Fold;
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -26,6 +24,7 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type Substitution: Substitution<Self>;
     type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
     type ConstraintInEnvironment: ConstraintInEnvironment<Self>;
+    type DomainGoal: DomainGoal<Self>;
 }
 
 crate trait ContextOps<C: Context> {
@@ -37,8 +36,8 @@ crate trait ContextOps<C: Context> {
     fn program_clauses(
         &self,
         environment: &C::Environment,
-        goal: &ir::DomainGoal,
-    ) -> Vec<ir::ProgramClause<ir::DomainGoal>>;
+        goal: &C::DomainGoal,
+    ) -> Vec<ir::ProgramClause<C::DomainGoal>>;
 
     /// If `subgoal` is too large, return a truncated variant (else
     /// return `None`).
@@ -60,9 +59,9 @@ crate trait ContextOps<C: Context> {
         &self,
         infer: &mut C::InferenceTable,
         environment: &C::Environment,
-        goal: &ir::DomainGoal,
+        goal: &C::DomainGoal,
         subst: &C::Substitution,
-        clause: &ir::Binders<ir::ProgramClauseImplication<ir::DomainGoal>>,
+        clause: &ir::Binders<ir::ProgramClauseImplication<C::DomainGoal>>,
     ) -> Satisfiable<ExClause<C>>;
 
     fn apply_answer_subst(
@@ -76,7 +75,7 @@ crate trait ContextOps<C: Context> {
 
     fn goal_in_environment(
         environment: &C::Environment,
-        goal: ir::Goal<ir::DomainGoal>,
+        goal: ir::Goal<C::DomainGoal>,
     ) -> C::GoalInEnvironment;
 }
 
@@ -103,7 +102,7 @@ crate trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
         subst: &C::Substitution,
     ) -> (
         C::Environment,
-        ir::Goal<ir::DomainGoal>,
+        ir::Goal<C::DomainGoal>,
     );
 }
 
@@ -113,7 +112,7 @@ crate trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
 
 crate trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
     // Used by: simplify
-    fn add_clauses(&self, clauses: impl IntoIterator<Item = ir::DomainGoal>) -> Self;
+    fn add_clauses(&self, clauses: impl IntoIterator<Item = C::DomainGoal>) -> Self;
 }
 
 crate trait InferenceVariable<C: Context>: Copy {
@@ -127,12 +126,16 @@ crate trait InferenceTable<C: Context>: Clone {
     fn new() -> Self;
 
     // Used by: simplify
-    fn instantiate_binders_universally<T>(
+    fn instantiate_binders_universally(
         &mut self,
-        arg: &impl BindersAndValue<Output = T>,
-    ) -> T::Result
-    where
-        T: Fold;
+        arg: &ir::Binders<Box<ir::Goal<C::DomainGoal>>>,
+    ) -> Box<ir::Goal<C::DomainGoal>>;
+
+    // Used by: simplify
+    fn instantiate_binders_existentially(
+        &mut self,
+        arg: &ir::Binders<Box<ir::Goal<C::DomainGoal>>>,
+    ) -> Box<ir::Goal<C::DomainGoal>>;
 
     // Used by: logic
     fn instantiate_universes<'v>(
@@ -170,14 +173,6 @@ crate trait InferenceTable<C: Context>: Clone {
     fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
 
     // Used by: simplify
-    fn instantiate_binders_existentially<T>(
-        &mut self,
-        arg: &impl BindersAndValue<Output = T>,
-    ) -> T::Result
-    where
-        T: Fold;
-
-    // Used by: simplify
     fn unify_parameters(
         &mut self,
         environment: &C::Environment,
@@ -194,6 +189,9 @@ crate trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + O
 }
 
 crate trait ConstraintInEnvironment<C: Context>: Clone + Debug + Eq + Hash + Ord {
+}
+
+crate trait DomainGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
 }
 
 crate trait UniverseMap<C: Context>: Clone + Debug {

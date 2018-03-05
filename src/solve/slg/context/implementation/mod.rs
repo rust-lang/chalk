@@ -3,7 +3,6 @@ use crate::fallible::Fallible;
 use crate::ir::*;
 use crate::ir::could_match::CouldMatch;
 use crate::solve::infer::InferenceTable;
-use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::solve::infer::unify::UnificationResult;
 use crate::solve::infer::var::InferenceVariable;
@@ -11,7 +10,6 @@ use crate::solve::Solution;
 use crate::solve::slg::{DelayedLiteral, ExClause, Literal, Satisfiable};
 use crate::solve::slg::context;
 use crate::solve::truncate::{self, Truncated};
-use crate::fold::Fold;
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
@@ -57,6 +55,7 @@ impl context::Context for SlgContext {
     type Substitution = Substitution;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
     type ConstraintInEnvironment = InEnvironment<Constraint>;
+    type DomainGoal = DomainGoal;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -161,14 +160,18 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         self.fresh_subst(binders)
     }
 
-    fn instantiate_binders_universally<T>(
+    fn instantiate_binders_universally(
         &mut self,
-        arg: &impl BindersAndValue<Output = T>,
-    ) -> T::Result
-    where
-        T: Fold,
-    {
+        arg: &Binders<Box<Goal<DomainGoal>>>,
+    ) -> Box<Goal<DomainGoal>> {
         self.instantiate_binders_universally(arg)
+    }
+
+    fn instantiate_binders_existentially(
+        &mut self,
+        arg: &Binders<Box<Goal<DomainGoal>>>,
+    ) -> Box<Goal<DomainGoal>> {
+        self.instantiate_binders_existentially(arg)
     }
 
     fn instantiate_universes<'v>(
@@ -221,16 +224,6 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         value: &InEnvironment<Goal<DomainGoal>>,
     ) -> Option<InEnvironment<Goal<DomainGoal>>> {
         self.invert(value)
-    }
-
-    fn instantiate_binders_existentially<T>(
-        &mut self,
-        arg: &impl BindersAndValue<Output = T>,
-    ) -> T::Result
-    where
-        T: Fold,
-    {
-        self.instantiate_binders_existentially(arg)
     }
 
     fn unify_parameters(
@@ -293,6 +286,9 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
 }
 
 impl context::ConstraintInEnvironment<SlgContext> for InEnvironment<Constraint> {
+}
+
+impl context::DomainGoal<SlgContext> for DomainGoal {
 }
 
 impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSubst> {

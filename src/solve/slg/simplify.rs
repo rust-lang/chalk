@@ -1,6 +1,5 @@
-use cast::Cast;
 use fallible::NoSolution;
-use ir::{DomainGoal, Goal, LeafGoal, QuantifierKind};
+use ir::{Goal, LeafGoal, QuantifierKind};
 use solve::slg::{ExClause, Literal, Satisfiable};
 use solve::slg::forest::Forest;
 use solve::slg::context::prelude::*;
@@ -13,7 +12,7 @@ impl<C: Context> Forest<C> {
         infer: &mut C::InferenceTable,
         subst: C::Substitution,
         initial_environment: &C::Environment,
-        initial_goal: Goal<DomainGoal>,
+        initial_goal: Goal<C::DomainGoal>,
     ) -> Satisfiable<ExClause<C>> {
         let mut ex_clause = ExClause {
             subst,
@@ -56,7 +55,7 @@ impl<C: Context> Forest<C> {
                     }
                 }
                 Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
-                    let domain_goal = domain_goal.cast();
+                    let domain_goal = Goal::Leaf(LeafGoal::DomainGoal(domain_goal));
                     ex_clause
                         .subgoals
                         .push(Literal::Positive(C::goal_in_environment(
