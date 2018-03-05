@@ -61,6 +61,7 @@ impl context::Context for SlgContext {
     type BindersGoal = Binders<Box<Goal<DomainGoal>>>;
     type Parameter = Parameter;
     type ProgramClause = ProgramClause<DomainGoal>;
+    type Solution = Solution;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {

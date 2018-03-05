@@ -1,5 +1,4 @@
 use crate::fallible::Fallible;
-use crate::solve::Solution;
 use crate::solve::slg::{ExClause, Satisfiable, SimplifiedAnswer};
 use crate::solve::slg::hh::HhGoal;
 use std::fmt::Debug;
@@ -29,6 +28,7 @@ crate trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> 
     type BindersGoal: BindersGoal<Self>;
     type Parameter: Parameter<Self>;
     type ProgramClause: ProgramClause<Self>;
+    type Solution;
 }
 
 crate trait ContextOps<C: Context> {
@@ -88,7 +88,7 @@ crate trait Aggregate<C: Context> {
         &self,
         root_goal: &C::CanonicalGoalInEnvironment,
         simplified_answers: impl IntoIterator<Item = SimplifiedAnswer<C>>,
-    ) -> Option<Solution>;
+    ) -> Option<C::Solution>;
 }
 
 crate trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {

@@ -1,4 +1,3 @@
-use solve::Solution;
 use solve::slg::context::prelude::*;
 use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
 use solve::slg::logic::RootSearchFail;
@@ -82,7 +81,7 @@ impl<C: Context> Forest<C> {
     /// Solves a given goal, producing the solution. This will do only
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
-    crate fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<Solution> {
+    crate fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<C::Solution> {
         self.context.clone().make_solution(goal.canonical(), self.iter_answers(goal))
     }
 
