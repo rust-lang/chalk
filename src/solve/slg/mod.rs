@@ -68,7 +68,6 @@ mod strand;
 mod table;
 mod tables;
 mod test;
-mod truncate;
 
 index_struct! {
     struct TableIndex {

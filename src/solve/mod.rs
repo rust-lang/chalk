@@ -6,6 +6,7 @@ crate mod infer;
 crate mod recursive;
 crate mod slg;
 mod test;
+mod truncate;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 /// A (possible) solution for a proposed goal. Usually packaged in a `Result`,

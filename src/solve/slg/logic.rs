@@ -7,7 +7,6 @@ use solve::slg::forest::Forest;
 use solve::slg::stack::StackIndex;
 use solve::slg::strand::{SelectedSubgoal, Strand};
 use solve::slg::table::{Answer, AnswerIndex};
-use solve::slg::truncate::Truncated;
 use std::collections::HashSet;
 use std::mem;
 
@@ -700,13 +699,13 @@ impl<C: Context> Forest<C> {
         // irrelevant answers (e.g., `Vec<Vec<u32>>: Sized`), they
         // will fail to unify with our selected goal, producing no
         // resolvent.
-        let Truncated {
-            overflow: _,
-            value: truncated_subgoal,
-        } = Self::truncate(infer, self.max_size, subgoal);
-        debug!("truncated={:?}", truncated_subgoal);
-
-        infer.canonicalize_goal(&truncated_subgoal)
+        match self.context.truncate_goal(infer, self.max_size, subgoal) {
+            None => infer.canonicalize_goal(subgoal),
+            Some(truncated_subgoal) => {
+                debug!("truncated={:?}", truncated_subgoal);
+                infer.canonicalize_goal(&truncated_subgoal)
+            }
+        }
     }
 
     /// Given a selected negative subgoal, the subgoal is "inverted"
@@ -811,11 +810,10 @@ impl<C: Context> Forest<C> {
         // variables that have been inverted, as discussed in the
         // prior paragraph above.) I just didn't feel like dealing
         // with it yet.
-        if Self::truncate(infer, self.max_size, &inverted_subgoal).overflow {
-            return None;
+        match self.context.truncate_goal(infer, self.max_size, &inverted_subgoal) {
+            Some(_) => return None,
+            None => Some(infer.canonicalize_goal(&inverted_subgoal)),
         }
-
-        Some(infer.canonicalize_goal(&inverted_subgoal))
     }
 
     /// Invoked when we have selected a positive literal, created its
@@ -983,17 +981,12 @@ impl<C: Context> Forest<C> {
         // aimed at giving us more times to eliminate this
         // ambiguous answer.
 
-        match Self::truncate(infer, self.max_size, &ex_clause.subst) {
+        match self.context.truncate_answer(infer, self.max_size, &ex_clause.subst) {
             // No need to truncate? Just propagate the resolvent back.
-            Truncated {
-                overflow: false, ..
-            } => ex_clause,
+            None => ex_clause,
 
             // Resolvent got too large. Have to introduce approximation.
-            Truncated {
-                overflow: true,
-                value: truncated_subst,
-            } => {
+            Some(truncated_subst) => {
                 // DIVERGENCE
                 //
                 // In RR, `self.delayed_literals` would be

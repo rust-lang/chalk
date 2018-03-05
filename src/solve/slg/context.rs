@@ -5,6 +5,7 @@ use crate::ir::could_match::CouldMatch;
 use crate::solve::infer::instantiate::BindersAndValue;
 use crate::solve::infer::ucanonicalize::UCanonicalized;
 use crate::solve::slg::{CanonicalGoal, Literal, ExClause, UCanonicalGoal};
+use crate::solve::truncate::{self, Truncated};
 use crate::fold::Fold;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -41,6 +42,24 @@ crate trait Context: Sized + Clone {
         environment: &ir::Environment<ir::DomainGoal>,
         goal: &ir::DomainGoal,
     ) -> Vec<ir::ProgramClause<ir::DomainGoal>>;
+
+    /// If `subgoal` is too large, return a truncated variant (else
+    /// return `None`).
+    fn truncate_goal(
+        &self,
+        infer: &mut Self::InferenceTable,
+        max_size: usize,
+        subgoal: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
+    ) -> Option<ir::InEnvironment<ir::Goal<ir::DomainGoal>>>;
+
+    /// If `subst` is too large, return a truncated variant (else
+    /// return `None`).
+    fn truncate_answer(
+        &self,
+        infer: &mut Self::InferenceTable,
+        max_size: usize,
+        subst: &ir::Substitution,
+    ) -> Option<ir::Substitution>;
 }
 
 crate trait InferenceVariable<C: Context>: Copy {
@@ -172,6 +191,30 @@ impl Context for Arc<ir::ProgramEnvironment<ir::DomainGoal>> {
             .cloned();
 
         environment_clauses.chain(program_clauses).collect()
+    }
+
+    /// If `subgoal` is too large, return a truncated variant (else
+    /// return `None`).
+    fn truncate_goal(
+        &self,
+        infer: &mut Self::InferenceTable,
+        max_size: usize,
+        subgoal: &ir::InEnvironment<ir::Goal<ir::DomainGoal>>,
+    ) -> Option<ir::InEnvironment<ir::Goal<ir::DomainGoal>>> {
+        let Truncated { overflow, value } = truncate::truncate(infer, max_size, subgoal);
+        if overflow { Some(value) } else { None }
+    }
+
+    /// If `subst` is too large, return a truncated variant (else
+    /// return `None`).
+    fn truncate_answer(
+        &self,
+        infer: &mut Self::InferenceTable,
+        max_size: usize,
+        subst: &ir::Substitution,
+    ) -> Option<ir::Substitution> {
+        let Truncated { overflow, value } = truncate::truncate(infer, max_size, subst);
+        if overflow { Some(value) } else { None }
     }
 }
 
