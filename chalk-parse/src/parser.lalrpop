@@ -139,8 +139,8 @@ ProjectionTy: ProjectionTy = {
 
 UnselectedProjectionTy: UnselectedProjectionTy = {
     <ty:TyWithoutFor> "::" <name:Id> <a:Angle<Parameter>> => {
-        let mut args = vec![Parameter::Ty(ty)];
-        args.extend(a);
+        let mut args = a;
+        args.push(Parameter::Ty(ty));
         UnselectedProjectionTy {
             name: name,
             args: args,

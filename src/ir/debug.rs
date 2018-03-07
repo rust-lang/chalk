@@ -121,12 +121,13 @@ impl Debug for ProjectionTy {
 
 impl Debug for UnselectedProjectionTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let len = self.parameters.len();
         write!(
             fmt,
             "{:?}::{}{:?}",
-            self.parameters[0],
+            self.parameters[len - 1],
             self.type_name,
-            Angle(&self.parameters[1..])
+            Angle(&self.parameters[0..(len - 1)])
         )
     }
 }
