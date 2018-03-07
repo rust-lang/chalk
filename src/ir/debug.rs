@@ -199,7 +199,7 @@ impl<D: Debug> Debug for LeafGoal<D> {
 
 impl Debug for WellFormed {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let value: &Debug = match *self {
+        let value: &dyn Debug = match *self {
             WellFormed::Ty(ref t) => t,
             WellFormed::TraitRef(ref t) => t,
             WellFormed::ProjectionEq(ref t) => t,
@@ -210,7 +210,7 @@ impl Debug for WellFormed {
 
 impl Debug for FromEnv {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let value: &Debug = match *self {
+        let value: &dyn Debug = match *self {
             FromEnv::Ty(ref t) => t,
             FromEnv::TraitRef(ref t) => t,
             FromEnv::ProjectionEq(ref t) => t,

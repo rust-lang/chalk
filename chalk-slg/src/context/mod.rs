@@ -139,10 +139,10 @@ pub trait InferenceTable<C: Context>: Clone {
     ) -> &'v C::CanonicalGoalInEnvironment;
 
     // Used by: logic (but for debugging only)
-    fn debug_ex_clause(&mut self, value: &'v ExClause<C>) -> Box<Debug + 'v>;
+    fn debug_ex_clause(&mut self, value: &'v ExClause<C>) -> Box<dyn Debug + 'v>;
 
     // Used by: logic (but for debugging only)
-    fn debug_goal(&mut self, goal: &'v C::GoalInEnvironment) -> Box<Debug + 'v>;
+    fn debug_goal(&mut self, goal: &'v C::GoalInEnvironment) -> Box<dyn Debug + 'v>;
 
     // Used by: logic
     fn canonicalize_goal(&mut self, value: &C::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;

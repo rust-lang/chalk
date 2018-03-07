@@ -189,11 +189,11 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         self.instantiate_universes(value)
     }
 
-    fn debug_ex_clause(&mut self, value: &'v ExClause<SlgContext>) -> Box<Debug + 'v> {
+    fn debug_ex_clause(&mut self, value: &'v ExClause<SlgContext>) -> Box<dyn Debug + 'v> {
         Box::new(self.normalize_deep(value))
     }
 
-    fn debug_goal(&mut self, value: &'v InEnvironment<Goal<DomainGoal>>) -> Box<Debug + 'v> {
+    fn debug_goal(&mut self, value: &'v InEnvironment<Goal<DomainGoal>>) -> Box<dyn Debug + 'v> {
         Box::new(self.normalize_deep(value))
     }
 
