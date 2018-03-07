@@ -224,6 +224,12 @@ pub struct StructDatumBound {
     crate self_ty: ApplicationTy,
     crate fields: Vec<Ty>,
     crate where_clauses: Vec<DomainGoal>,
+    crate flags: StructFlags,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct StructFlags {
+    crate external: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -242,6 +248,7 @@ pub struct TraitDatumBound {
 pub struct TraitFlags {
     crate auto: bool,
     crate marker: bool,
+    crate external: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

@@ -778,3 +778,13 @@ fn projection_type_in_header() {
         }
     }
 }
+
+#[test]
+fn external_items() {
+    lowering_success! {
+        program {
+            extern trait Send { }
+            extern struct Vec<T> { }
+        }
+    }
+}

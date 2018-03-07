@@ -35,20 +35,24 @@ Goal1: Box<Goal> = {
     "(" <Goal> ")",
 };
 
+ExternalKeyword: () = "extern";
+AutoKeyword: () = "#" "[" "auto" "]";
+MarkerKeyword: () = "#" "[" "marker" "]";
+
 StructDefn: StructDefn = {
-    "struct" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{" <f:Fields> "}" => StructDefn {
+    <external:ExternalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{" <f:Fields> "}" => StructDefn {
         name: n,
         parameter_kinds: p,
         where_clauses: w,
         fields: f,
+        flags: StructFlags {
+            external: external.is_some(),
+        },
     }
 };
 
-AutoKeyword: () = "#" "[" "auto" "]";
-MarkerKeyword: () = "#" "[" "marker" "]";
-
 TraitDefn: TraitDefn = {
-    <auto:AutoKeyword?> <marker:MarkerKeyword?> "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{"
+    <external:ExternalKeyword?> <auto:AutoKeyword?> <marker:MarkerKeyword?> "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{"
         <a:AssocTyDefn*> "}" =>
     TraitDefn {
         name: n,
@@ -58,6 +62,7 @@ TraitDefn: TraitDefn = {
         flags: TraitFlags {
             auto: auto.is_some(),
             marker: marker.is_some(),
+            external: external.is_some(),
         },
     }
 };
