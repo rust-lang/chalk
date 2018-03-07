@@ -1,10 +1,16 @@
+#![feature(crate_visibility_modifier)]
+#![feature(macro_vis_matcher)]
+
 use std::cell::RefCell;
+
+#[macro_use]
+extern crate lazy_static;
 
 #[macro_use]
 mod index;
 
 lazy_static! {
-    pub(crate) static ref DEBUG_ENABLED: bool = {
+    pub static ref DEBUG_ENABLED: bool = {
         use std::env;
         env::var("CHALK_DEBUG")
             .ok()
@@ -13,7 +19,7 @@ lazy_static! {
             .unwrap_or(false)
     };
 
-    pub(crate) static ref INFO_ENABLED: bool = {
+    pub static ref INFO_ENABLED: bool = {
         use std::env;
         env::var("CHALK_DEBUG")
             .ok()
@@ -32,49 +38,52 @@ thread_local! {
 // awry.
 const OVERFLOW_DEPTH: usize = 100;
 
+#[macro_export]
 macro_rules! debug {
     ($($t:tt)*) => {
-        if *::macros::DEBUG_ENABLED {
-            ::macros::dump(&format!($($t)*), "");
+        if *$crate::DEBUG_ENABLED {
+            $crate::dump(&format!($($t)*), "");
         }
     }
 }
 
+#[macro_export]
 macro_rules! debug_heading {
     ($($t:tt)*) => {
-        let _ = &if *::macros::DEBUG_ENABLED {
+        let _ = &if *$crate::DEBUG_ENABLED {
             let string = format!($($t)*);
-            ::macros::dump(&string, " {");
-            ::macros::Indent::new(true, string)
+            $crate::dump(&string, " {");
+            $crate::Indent::new(true, string)
         } else {
-            ::macros::Indent::new(false, String::new())
+            $crate::Indent::new(false, String::new())
         };
     }
 }
 
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! info {
     ($($t:tt)*) => {
-        if *::macros::INFO_ENABLED {
-            ::macros::dump(&format!($($t)*), "");
+        if *$crate::INFO_ENABLED {
+            $crate::dump(&format!($($t)*), "");
         }
     }
 }
 
+#[macro_export]
 macro_rules! info_heading {
     ($($t:tt)*) => {
-        let _ = &if *::macros::INFO_ENABLED {
+        let _ = &if *$crate::INFO_ENABLED {
             let string = format!($($t)*);
-            ::macros::dump(&string, " {");
-            ::macros::Indent::new(true, string)
+            $crate::dump(&string, " {");
+            $crate::Indent::new(true, string)
         } else {
-            ::macros::Indent::new(false, String::new())
+            $crate::Indent::new(false, String::new())
         };
     }
 }
 
-crate fn dump(string: &str, suffix: &str) {
-    let indent = ::macros::INDENT.with(|i| i.borrow().len());
+pub fn dump(string: &str, suffix: &str) {
+    let indent = INDENT.with(|i| i.borrow().len());
     let mut first = true;
     for line in string.lines() {
         if first {
@@ -96,12 +105,12 @@ crate fn dump(string: &str, suffix: &str) {
     eprintln!("{}", suffix);
 }
 
-crate struct Indent {
+pub struct Indent {
     enabled: bool,
 }
 
 impl Indent {
-    crate fn new(enabled: bool, value: String) -> Self {
+    pub fn new(enabled: bool, value: String) -> Self {
         if enabled {
             INDENT.with(|i| {
                 i.borrow_mut().push(value);
@@ -122,7 +131,7 @@ impl Drop for Indent {
     fn drop(&mut self) {
         if self.enabled {
             INDENT.with(|i| i.borrow_mut().pop().unwrap());
-            ::macros::dump("}", "");
+            dump("}", "");
         }
     }
 }

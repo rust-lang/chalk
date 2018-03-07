@@ -1,0 +1,7 @@
+[package]
+name = "chalk-macros"
+version = "0.1.0"
+authors = ["Niko Matsakis <niko@alum.mit.edu>"]
+
+[dependencies]
+lazy_static = "0.2.2"

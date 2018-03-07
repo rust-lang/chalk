@@ -1,69 +1,75 @@
-use cast::Cast;
-use ir::*;
-use solve::{Guidance, Solution};
-use solve::infer::InferenceTable;
+use crate::cast::Cast;
+use crate::ir::*;
+use crate::solve::{Guidance, Solution};
+use crate::solve::infer::InferenceTable;
+
+use chalk_slg::context;
+use chalk_slg::SimplifiedAnswer;
 use std::fmt::Debug;
 
-use super::{CanonicalConstrainedSubst, CanonicalGoal, SimplifiedAnswer};
+use super::SlgContext;
 
 /// Draws as many answers as it needs from `simplified_answers` (but
 /// no more!) in order to come up with a solution.
-pub(super) fn make_solution(
-    root_goal: &CanonicalGoal,
-    simplified_answers: impl IntoIterator<Item = SimplifiedAnswer>,
-) -> Option<Solution> {
-    let mut simplified_answers = simplified_answers.into_iter().peekable();
+impl context::Aggregate<SlgContext> for SlgContext {
+    fn make_solution(
+        &self,
+        root_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
+        simplified_answers: impl IntoIterator<Item = SimplifiedAnswer<SlgContext>>,
+    ) -> Option<Solution> {
+        let mut simplified_answers = simplified_answers.into_iter().peekable();
 
-    // No answers at all?
-    if simplified_answers.peek().is_none() {
-        return None;
-    }
-    let SimplifiedAnswer { subst, ambiguous } = simplified_answers.next().unwrap();
+        // No answers at all?
+        if simplified_answers.peek().is_none() {
+            return None;
+        }
+        let SimplifiedAnswer { subst, ambiguous } = simplified_answers.next().unwrap();
 
-    // Exactly 1 unconditional answer?
-    if simplified_answers.peek().is_none() && !ambiguous {
-        return Some(Solution::Unique(subst));
-    }
-
-    // Otherwise, we either have >1 answer, or else we have
-    // ambiguity.  Either way, we are only going to be giving back
-    // **guidance**, and with guidance, the caller doesn't get
-    // back any region constraints. So drop them from our `subst`
-    // variable.
-    //
-    // FIXME-- there is actually a 3rd possibility. We could have
-    // >1 answer where all the answers have the same substitution,
-    // but different region constraints. We should collapse those
-    // cases into an `OR` region constraint at some point, but I
-    // leave that for future work. This is basically
-    // rust-lang/rust#21974.
-    let mut subst = subst.map(|cs| cs.subst);
-
-    // Extract answers and merge them into `subst`. Stop once we have
-    // a trivial subst (or run out of answers).
-    //
-    // FIXME -- It would be nice if we could get some idea of the
-    // "shape" of future answers to know if they *might* disrupt
-    // existing substituion; the iterator interface is obviously too
-    // limited for that, but the on-demand SLG solver probably could
-    // give us that information.
-    let guidance = loop {
-        if subst.value.is_empty() || is_trivial(&subst) {
-            break Guidance::Unknown;
+        // Exactly 1 unconditional answer?
+        if simplified_answers.peek().is_none() && !ambiguous {
+            return Some(Solution::Unique(subst));
         }
 
-        match simplified_answers.next() {
-            Some(answer1) => {
-                subst = merge_into_guidance(root_goal, subst, &answer1.subst);
+        // Otherwise, we either have >1 answer, or else we have
+        // ambiguity.  Either way, we are only going to be giving back
+        // **guidance**, and with guidance, the caller doesn't get
+        // back any region constraints. So drop them from our `subst`
+        // variable.
+        //
+        // FIXME-- there is actually a 3rd possibility. We could have
+        // >1 answer where all the answers have the same substitution,
+        // but different region constraints. We should collapse those
+        // cases into an `OR` region constraint at some point, but I
+        // leave that for future work. This is basically
+        // rust-lang/rust#21974.
+        let mut subst = subst.map(|cs| cs.subst);
+
+        // Extract answers and merge them into `subst`. Stop once we have
+        // a trivial subst (or run out of answers).
+        //
+        // FIXME -- It would be nice if we could get some idea of the
+        // "shape" of future answers to know if they *might* disrupt
+        // existing substituion; the iterator interface is obviously too
+        // limited for that, but the on-demand SLG solver probably could
+        // give us that information.
+        let guidance = loop {
+            if subst.value.is_empty() || is_trivial(&subst) {
+                break Guidance::Unknown;
             }
 
-            None => {
-                break Guidance::Definite(subst);
-            }
-        }
-    };
+            match simplified_answers.next() {
+                Some(answer1) => {
+                    subst = merge_into_guidance(root_goal, subst, &answer1.subst);
+                }
 
-    Some(Solution::Ambig(guidance))
+                None => {
+                    break Guidance::Definite(subst);
+                }
+            }
+        };
+
+        Some(Solution::Ambig(guidance))
+    }
 }
 
 /// Given a current substitution used as guidance for `root_goal`, and
@@ -73,9 +79,9 @@ pub(super) fn make_solution(
 /// u32` and the new answer is `?0 = i32`, then the guidance would
 /// become `?0 = ?X` (where `?X` is some fresh variable).
 fn merge_into_guidance(
-    root_goal: &CanonicalGoal,
+    root_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
     guidance: Canonical<Substitution>,
-    answer: &CanonicalConstrainedSubst,
+    answer: &Canonical<ConstrainedSubst>,
 ) -> Canonical<Substitution> {
     let mut infer = InferenceTable::new();
     let Canonical {

@@ -22,8 +22,7 @@ where
         .expect("Truncater is infallible");
     debug!(
         "truncate: overflow={} value={:?}",
-        truncater.overflow,
-        value
+        truncater.overflow, value
     );
     Truncated {
         overflow: truncater.overflow,

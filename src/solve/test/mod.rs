@@ -10,9 +10,11 @@ use std::sync::Arc;
 
 mod bench;
 
-fn parse_and_lower_program(text: &str, solver_choice: SolverChoice, skip_coherence: bool)
-    -> Result<ir::Program>
-{
+fn parse_and_lower_program(
+    text: &str,
+    solver_choice: SolverChoice,
+    skip_coherence: bool,
+) -> Result<ir::Program> {
     if skip_coherence {
         // FIXME: We disable WF checks for the recursive solver, because of ambiguities appearing
         // with projection types.
@@ -22,7 +24,10 @@ fn parse_and_lower_program(text: &str, solver_choice: SolverChoice, skip_coheren
     }
 }
 
-fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goal>> {
+fn parse_and_lower_goal(
+    program: &ir::Program,
+    text: &str,
+) -> Result<Box<ir::Goal<ir::DomainGoal>>> {
     chalk_parse::parse_goal(text)?.lower(program)
 }
 
@@ -106,7 +111,8 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
     for (goal_text, solver_choice, expected) in goals {
         let (program, env) = program_env_cache.entry(solver_choice).or_insert_with(|| {
             let program_text = &program_text[1..program_text.len() - 1]; // exclude `{}`
-            let program = Arc::new(parse_and_lower_program(program_text, solver_choice, false).unwrap());
+            let program =
+                Arc::new(parse_and_lower_program(program_text, solver_choice, false).unwrap());
             let env = Arc::new(program.environment());
             (program, env)
         });
@@ -583,7 +589,6 @@ fn normalize_implied_bound() {
         }
     }
 }
-
 
 /// Demonstrates that, given the expected value of the associated
 /// type, we can use that to narrow down the relevant impls.
@@ -1093,7 +1098,6 @@ fn deep_success() {
         }
     }
 }
-
 
 #[test]
 fn definite_guidance() {

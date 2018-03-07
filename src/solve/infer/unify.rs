@@ -10,7 +10,7 @@ use super::var::*;
 impl InferenceTable {
     crate fn unify<T>(
         &mut self,
-        environment: &Arc<Environment>,
+        environment: &Arc<Environment<DomainGoal>>,
         a: &T,
         b: &T,
     ) -> Fallible<UnificationResult>
@@ -39,19 +39,19 @@ impl InferenceTable {
 
 struct Unifier<'t> {
     table: &'t mut InferenceTable,
-    environment: &'t Arc<Environment>,
+    environment: &'t Arc<Environment<DomainGoal>>,
     goals: Vec<InEnvironment<DomainGoal>>,
     constraints: Vec<InEnvironment<Constraint>>,
 }
 
 #[derive(Debug)]
-crate struct UnificationResult {
+pub struct UnificationResult { // FIXME pub b/c of trait impl for SLG
     crate goals: Vec<InEnvironment<DomainGoal>>,
     crate constraints: Vec<InEnvironment<Constraint>>,
 }
 
 impl<'t> Unifier<'t> {
-    fn new(table: &'t mut InferenceTable, environment: &'t Arc<Environment>) -> Self {
+    fn new(table: &'t mut InferenceTable, environment: &'t Arc<Environment<DomainGoal>>) -> Self {
         Unifier {
             environment: environment,
             table: table,

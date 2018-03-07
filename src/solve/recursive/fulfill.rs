@@ -2,7 +2,7 @@ use super::*;
 use cast::Caster;
 use fold::Fold;
 use solve::infer::{InferenceTable, ParameterInferenceVariable, canonicalize::Canonicalized,
-                   ucanonicalize::{UCanonicalized, UniverseMap}, instantiate::BindersAndValue,
+                   instantiate::BindersAndValue, ucanonicalize::{UCanonicalized, UniverseMap},
                    unify::UnificationResult};
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -28,12 +28,12 @@ impl Outcome {
 enum Obligation {
     /// For "positive" goals, we flatten all the way out to leafs within the
     /// current `Fulfill`
-    Prove(InEnvironment<Goal>),
+    Prove(InEnvironment<Goal<DomainGoal>>),
 
     /// For "negative" goals, we don't flatten in *this* `Fulfill`, which would
     /// require having a logical "or" operator. Instead, we recursively solve in
     /// a fresh `Fulfill`.
-    Refute(InEnvironment<Goal>),
+    Refute(InEnvironment<Goal<DomainGoal>>),
 }
 
 /// When proving a leaf goal, we record the free variables that appear within it
@@ -96,7 +96,7 @@ impl<'s> Fulfill<'s> {
     /// then later be used as the answer to be returned to the user.
     ///
     /// See also `InferenceTable::fresh_subst`.
-    crate fn initial_subst<T: Fold>(
+    crate fn initial_subst<T: Fold<Result = T> + EnvironmentArg>(
         &mut self,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
     ) -> (Substitution, InEnvironment<T::Result>) {
@@ -122,7 +122,7 @@ impl<'s> Fulfill<'s> {
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    crate fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Fallible<()>
+    crate fn unify<T>(&mut self, environment: &Arc<Environment<DomainGoal>>, a: &T, b: &T) -> Fallible<()>
     where
         T: ?Sized + Zip + Debug,
     {
@@ -138,7 +138,11 @@ impl<'s> Fulfill<'s> {
 
     /// Create obligations for the given goal in the given environment. This may
     /// ultimately create any number of obligations.
-    crate fn push_goal(&mut self, environment: &Arc<Environment>, goal: Goal) -> Fallible<()> {
+    crate fn push_goal(
+        &mut self,
+        environment: &Arc<Environment<DomainGoal>>,
+        goal: Goal<DomainGoal>,
+    ) -> Fallible<()> {
         debug!("push_goal({:?}, {:?})", goal, environment);
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
@@ -177,7 +181,7 @@ impl<'s> Fulfill<'s> {
 
     fn prove(
         &mut self,
-        wc: &InEnvironment<Goal>,
+        wc: &InEnvironment<Goal<DomainGoal>>,
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution> {
         let Canonicalized {
@@ -196,7 +200,7 @@ impl<'s> Fulfill<'s> {
         })
     }
 
-    fn refute(&mut self, goal: &InEnvironment<Goal>) -> Fallible<NegativeSolution> {
+    fn refute(&mut self, goal: &InEnvironment<Goal<DomainGoal>>) -> Fallible<NegativeSolution> {
         let canonicalized = match self.infer.invert_then_canonicalize(goal) {
             Some(v) => v,
             None => {

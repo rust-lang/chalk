@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! index_struct {
     ($v:vis struct $n:ident {
         $vf:vis value: usize,
@@ -6,8 +7,6 @@ macro_rules! index_struct {
         $v struct $n {
             $vf value: usize,
         }
-
-        copy_fold!($n);
 
         impl $n {
             // Not all index structs need this, so allow it to be dead

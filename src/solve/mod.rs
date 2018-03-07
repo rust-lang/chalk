@@ -123,8 +123,8 @@ impl Solution {
     crate fn constrained_subst(&self) -> Option<Canonical<ConstrainedSubst>> {
         match *self {
             Solution::Unique(ref constrained) => Some(constrained.clone()),
-            Solution::Ambig(Guidance::Definite(ref canonical)) |
-            Solution::Ambig(Guidance::Suggested(ref canonical)) => {
+            Solution::Ambig(Guidance::Definite(ref canonical))
+            | Solution::Ambig(Guidance::Suggested(ref canonical)) => {
                 let value = ConstrainedSubst {
                     subst: canonical.value.clone(),
                     constraints: vec![],
@@ -166,11 +166,7 @@ impl Solution {
 impl fmt::Display for Solution {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Solution::Unique(constrained) => write!(
-                f,
-                "Unique; {}",
-                constrained,
-            ),
+            Solution::Unique(constrained) => write!(f, "Unique; {}", constrained,),
             Solution::Ambig(Guidance::Definite(subst)) => {
                 write!(f, "Ambiguous; definite substitution {}", subst)
             }
@@ -208,9 +204,11 @@ impl SolverChoice {
     ///   reflect success nor failure.
     pub fn solve_root_goal(
         self,
-        env: &Arc<ProgramEnvironment>,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
+        env: &Arc<ProgramEnvironment<DomainGoal>>,
+        canonical_goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>,
     ) -> ::errors::Result<Option<Solution>> {
+        use self::slg::implementation::SlgContext;
+
         match self {
             SolverChoice::Recursive {
                 overflow_depth,
@@ -224,7 +222,7 @@ impl SolverChoice {
             }
 
             SolverChoice::SLG { max_size } => {
-                Ok(slg::on_demand::solve_root_goal(max_size, env, &canonical_goal))
+                Ok(SlgContext::new(env, max_size).solve_root_goal(&canonical_goal))
             }
         }
     }

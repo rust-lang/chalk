@@ -15,7 +15,7 @@ mod test;
 use self::var::*;
 
 #[derive(Clone)]
-crate struct InferenceTable {
+pub struct InferenceTable { // FIXME pub b/c of trait impl for SLG
     unify: ena::UnificationTable<InferenceVariable>,
     vars: Vec<InferenceVariable>,
     max_universe: UniverseIndex,

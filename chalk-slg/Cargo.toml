@@ -1,6 +1,6 @@
 [package]
 authors = ["Niko Matsakis <niko@alum.mit.edu>"]
-name = "chalk"
+name = "chalk-slg"
 version = "0.1.0"
 
 [dependencies]
@@ -10,19 +10,12 @@ ena = "0.4"
 error-chain = "0.11.0"
 itertools = "0.6.0"
 lalrpop-intern = "0.14"
+lazy_static = "0.2.2"
 petgraph = "0.4.5"
 rustyline = "1.0"
 serde = "1.0"
 serde_derive = "1.0"
 stacker = "0.1.2"
 
-[dependencies.chalk-parse]
-path = "chalk-parse"
-
 [dependencies.chalk-macros]
-path = "chalk-macros"
-
-[dependencies.chalk-slg]
-path = "chalk-slg"
-
-[workspace]
+path = "../chalk-macros"

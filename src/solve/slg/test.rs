@@ -1,17 +1,22 @@
 #![cfg(test)]
 
-use chalk_parse;
-use errors::*;
-use ir;
-use lower::*;
-use solve::slg::on_demand::forest::Forest;
+use crate::chalk_parse;
+use crate::errors::*;
+use crate::ir;
+use crate::lower::*;
+use crate::solve::slg::implementation::SlgContext;
+
+use chalk_slg::forest::Forest;
 use std::sync::Arc;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
     chalk_parse::parse_program(text)?.lower_without_coherence()
 }
 
-fn parse_and_lower_goal(program: &ir::Program, text: &str) -> Result<Box<ir::Goal>> {
+fn parse_and_lower_goal(
+    program: &ir::Program,
+    text: &str,
+) -> Result<Box<ir::Goal<ir::DomainGoal>>> {
     chalk_parse::parse_goal(text)?.lower(program)
 }
 
@@ -36,7 +41,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
             assert!(goal_text.ends_with("}"));
             let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let mut forest = Forest::new(env, max_size);
+            let mut forest = Forest::new(SlgContext::new(env, max_size));
             let result = format!("{:#?}", forest.force_answers(peeled_goal, num_answers));
 
             ::test_util::assert_test_result_eq(&expected, &result);
@@ -184,7 +189,6 @@ fn infinite_recursion() {
     }
 }
 
-
 /// Make sure we don't get a stack overflow or other badness for this
 /// test from scalexm.
 #[test]
@@ -268,15 +272,15 @@ fn only_draw_so_many() {
     ir::tls::set_current_program(&program, || {
         let goal = parse_and_lower_goal(&program, goal_text).unwrap();
         let peeled_goal = goal.into_peeled_goal();
-        let mut forest = Forest::new(env, 10);
+        let mut forest = Forest::new(SlgContext::new(env, 10));
         let solution = forest.solve(&peeled_goal);
 
         // First, check we got the expected solution.
         assert_eq!(format!("{:?}", solution), "Some(Ambig(Unknown))");
 
         // Next, check how many answers we had to peel to get it.
-        let table = forest.get_or_create_table_for_ucanonical_goal(peeled_goal.clone());
-        assert_eq!(forest.tables[table].num_cached_answers(), 2);
+        let num_cached_answers_for_goal = forest.num_cached_answers_for_goal(&peeled_goal);
+        assert_eq!(num_cached_answers_for_goal, 2);
     });
 }
 

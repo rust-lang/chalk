@@ -1,29 +1,25 @@
-use ir::*;
-use solve::Solution;
-use solve::slg::aggregate;
-use solve::slg::{DepthFirstNumber, SimplifiedAnswer, TableIndex, UCanonicalGoal};
-use solve::slg::on_demand::logic::RootSearchFail;
-use solve::slg::on_demand::stack::{Stack, StackIndex};
-use solve::slg::on_demand::tables::Tables;
-use solve::slg::on_demand::table::{Answer, AnswerIndex};
-use std::sync::Arc;
+use crate::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
+use crate::context::prelude::*;
+use crate::logic::RootSearchFail;
+use crate::stack::{Stack, StackIndex};
+use crate::tables::Tables;
+use crate::table::{Answer, AnswerIndex};
 
-crate struct Forest {
-    crate program: Arc<ProgramEnvironment>,
-    crate tables: Tables,
+pub struct Forest<C: Context> {
+    #[allow(dead_code)]
+    crate context: C,
+    crate tables: Tables<C>,
     crate stack: Stack,
-    crate max_size: usize,
 
     dfn: DepthFirstNumber,
 }
 
-impl Forest {
-    crate fn new(program: &Arc<ProgramEnvironment>, max_size: usize) -> Self {
+impl<C: Context> Forest<C> {
+    pub fn new(context: C) -> Self {
         Forest {
-            program: program.clone(),
-            tables: Tables::default(),
+            context,
+            tables: Tables::new(),
             stack: Stack::default(),
-            max_size,
             dfn: DepthFirstNumber::MIN,
         }
     }
@@ -38,11 +34,11 @@ impl Forest {
     ///
     /// Thanks to subgoal abstraction and so forth, this should always
     /// terminate.
-    pub(super) fn force_answers(
+    pub fn force_answers(
         &mut self,
-        goal: UCanonicalGoal,
+        goal: C::UCanonicalGoalInEnvironment,
         num_answers: usize,
-    ) -> Vec<Answer> {
+    ) -> Vec<Answer<C>> {
         let table = self.get_or_create_table_for_ucanonical_goal(goal);
         let mut answers = Vec::with_capacity(num_answers);
         for i in 0..num_answers {
@@ -65,23 +61,24 @@ impl Forest {
     /// iterator. Each time you invoke `next`, it will do the work to
     /// extract one more answer. These answers are cached in between
     /// invocations. Invoking `next` fewer times is preferable =)
-    pub(super) fn iter_answers<'f>(
+    fn iter_answers<'f>(
         &'f mut self,
-        goal: &UCanonicalGoal,
-    ) -> impl Iterator<Item = SimplifiedAnswer> + 'f {
+        goal: &C::UCanonicalGoalInEnvironment,
+    ) -> impl Iterator<Item = SimplifiedAnswer<C>> + 'f {
         let table = self.get_or_create_table_for_ucanonical_goal(goal.clone());
         let answer = AnswerIndex::ZERO;
-        ForestSolver { forest: self, table, answer }
+        ForestSolver {
+            forest: self,
+            table,
+            answer,
+        }
     }
 
     /// Solves a given goal, producing the solution. This will do only
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
-    crate fn solve(
-        &mut self,
-        goal: &UCanonicalGoal,
-    ) -> Option<Solution> {
-        aggregate::make_solution(&goal.canonical, self.iter_answers(goal))
+    pub fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<C::Solution> {
+        self.context.clone().make_solution(goal.canonical(), self.iter_answers(goal))
     }
 
     /// True if all the tables on the stack starting from `depth` and
@@ -116,18 +113,27 @@ impl Forest {
             self.tables[table].coinductive_goal
         })
     }
+
+    /// Useful for testing.
+    pub fn num_cached_answers_for_goal(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> usize {
+        let table = self.get_or_create_table_for_ucanonical_goal(goal.clone());
+        self.tables[table].num_cached_answers()
+    }
 }
 
-struct ForestSolver<'forest> {
-    forest: &'forest mut Forest,
+struct ForestSolver<'forest, C: Context + 'forest> {
+    forest: &'forest mut Forest<C>,
     table: TableIndex,
     answer: AnswerIndex,
 }
 
-impl<'forest> Iterator for ForestSolver<'forest> {
-    type Item = SimplifiedAnswer;
+impl<'forest, C> Iterator for ForestSolver<'forest, C>
+where
+    C: Context,
+{
+    type Item = SimplifiedAnswer<C>;
 
-    fn next(&mut self) -> Option<SimplifiedAnswer> {
+    fn next(&mut self) -> Option<SimplifiedAnswer<C>> {
         loop {
             match self.forest.ensure_root_answer(self.table, self.answer) {
                 Ok(()) => {
@@ -157,11 +163,8 @@ impl<'forest> Iterator for ForestSolver<'forest> {
                     return None;
                 }
 
-                Err(RootSearchFail::QuantumExceeded) => {
-                }
+                Err(RootSearchFail::QuantumExceeded) => {}
             }
         }
     }
 }
-
-

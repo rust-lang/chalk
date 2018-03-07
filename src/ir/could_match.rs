@@ -1,4 +1,3 @@
-use fallible::*;
 use ir::*;
 use zip::{Zip, Zipper};
 
@@ -50,7 +49,7 @@ impl<T: Zip> CouldMatch<T> for T {
     }
 }
 
-impl CouldMatch<DomainGoal> for ProgramClause {
+impl CouldMatch<DomainGoal> for ProgramClause<DomainGoal> {
     fn could_match(&self, other: &DomainGoal) -> bool {
         self.implication.value.consequence.could_match(other)
     }

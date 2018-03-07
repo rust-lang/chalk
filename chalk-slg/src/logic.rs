@@ -1,14 +1,12 @@
-use ir::*;
-use solve::infer::InferenceTable;
-use solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
-use solve::slg::{self, CanonicalGoal, DelayedLiteral, DelayedLiteralSet, DepthFirstNumber,
-                 ExClause, Literal, Minimums, Satisfiable, TableIndex, UCanonicalGoal};
-use solve::slg::resolvent;
-use solve::slg::on_demand::forest::Forest;
-use solve::slg::on_demand::stack::StackIndex;
-use solve::slg::on_demand::strand::{SelectedSubgoal, Strand};
-use solve::slg::on_demand::table::{Answer, AnswerIndex};
-use solve::truncate::{self, Truncated};
+use crate::{DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal,
+            Minimums, TableIndex};
+use crate::fallible::NoSolution;
+use crate::context::prelude::*;
+use crate::forest::Forest;
+use crate::hh::HhGoal;
+use crate::stack::StackIndex;
+use crate::strand::{SelectedSubgoal, Strand};
+use crate::table::{Answer, AnswerIndex};
 use std::collections::HashSet;
 use std::mem;
 
@@ -57,11 +55,11 @@ enum RecursiveSearchFail {
     QuantumExceeded,
 }
 
-type StrandResult<T> = Result<T, StrandFail>;
+type StrandResult<C, T> = Result<T, StrandFail<C>>;
 
 /// Possible failures from pursuing a particular strand.
 #[derive(Debug)]
-pub(super) enum StrandFail {
+pub(super) enum StrandFail<C: Context> {
     /// The strand has no solution.
     NoSolution,
 
@@ -71,7 +69,7 @@ pub(super) enum StrandFail {
 
     /// The strand hit a cyclic dependency. In this case,
     /// we return the strand, as well as a `Minimums` struct.
-    Cycle(Strand, Minimums),
+    Cycle(Strand<C>, Minimums),
 }
 
 #[derive(Debug)]
@@ -80,7 +78,7 @@ enum EnsureSuccess {
     Coinductive,
 }
 
-impl Forest {
+impl<C: Context> Forest<C> {
     /// Ensures that answer with the given index is available from the
     /// given table. This may require activating a strand. Returns
     /// `Ok(())` if the answer is available and otherwise a
@@ -128,7 +126,11 @@ impl Forest {
         table: TableIndex,
         answer: AnswerIndex,
     ) -> RecursiveSearchResult<EnsureSuccess> {
-        info_heading!("ensure_answer_recursively(table={:?}, answer={:?})", table, answer);
+        info_heading!(
+            "ensure_answer_recursively(table={:?}, answer={:?})",
+            table,
+            answer
+        );
         info!("table goal = {:#?}", self.tables[table].table_goal);
 
         // First, check for a tabled answer.
@@ -164,7 +166,7 @@ impl Forest {
         result.map(|()| EnsureSuccess::AnswerAvailable)
     }
 
-    pub(super) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer {
+    crate fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<C> {
         self.tables[table].answer(answer).unwrap()
     }
 
@@ -245,7 +247,7 @@ impl Forest {
     fn cycle(
         &mut self,
         depth: StackIndex,
-        strands: Vec<Strand>,
+        strands: Vec<Strand<C>>,
         minimums: Minimums,
     ) -> Option<RecursiveSearchFail> {
         let table = self.stack[depth].table;
@@ -280,7 +282,7 @@ impl Forest {
     fn clear_strands_after_cycle(
         &mut self,
         table: TableIndex,
-        strands: impl IntoIterator<Item = Strand>,
+        strands: impl IntoIterator<Item = Strand<C>>,
     ) {
         assert!(self.tables[table].pop_next_strand().is_none());
         for strand in strands {
@@ -349,12 +351,12 @@ impl Forest {
     /// by selecting a new subgoal or by checking to see if the
     /// selected subgoal has an answer. `strand` is associated with
     /// the table on the stack at the given `depth`.
-    fn pursue_strand(&mut self, depth: StackIndex, mut strand: Strand) -> StrandResult<()> {
+    fn pursue_strand(&mut self, depth: StackIndex, mut strand: Strand<C>) -> StrandResult<C, ()> {
         info_heading!(
             "pursue_strand(table={:?}, depth={:?}, ex_clause={:#?}, selected_subgoal={:?})",
             self.stack[depth].table,
             depth,
-            strand.infer.normalize_deep(&strand.ex_clause),
+            strand.infer.debug_ex_clause(&strand.ex_clause),
             strand.selected_subgoal,
         );
 
@@ -419,7 +421,7 @@ impl Forest {
     ///   strand led nowhere of interest.
     /// - the strand may represent a new answer, in which case it is
     ///   added to the table and `Ok` is returned.
-    fn pursue_answer(&mut self, depth: StackIndex, strand: Strand) -> StrandResult<()> {
+    fn pursue_answer(&mut self, depth: StackIndex, strand: Strand<C>) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
         let Strand {
             mut infer,
@@ -434,9 +436,7 @@ impl Forest {
         } = strand;
         assert!(subgoals.is_empty());
 
-        let answer_subst = infer
-            .canonicalize(&ConstrainedSubst { subst, constraints })
-            .quantified;
+        let answer_subst = infer.canonicalize_constrained_subst(subst, constraints);
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
         let delayed_literals = {
@@ -511,9 +511,11 @@ impl Forest {
         // is a *bit* suspect; e.g., those things in the environment
         // must be backed by an impl *eventually*).
         let is_trivial_answer = {
-            answer.delayed_literals.is_empty() &&
-                self.tables[table].table_goal.is_trivial_substitution(&answer.subst) &&
-                answer.subst.value.constraints.is_empty()
+            answer.delayed_literals.is_empty()
+                && self.tables[table]
+                    .table_goal
+                    .is_trivial_substitution(&answer.subst)
+                && answer.subst.empty_constraints()
         };
 
         if self.tables[table].push_answer(answer) {
@@ -543,9 +545,9 @@ impl Forest {
     /// Resolution* steps.
     fn get_or_create_table_for_subgoal(
         &mut self,
-        infer: &mut InferenceTable,
-        subgoal: &Literal,
-    ) -> Option<(TableIndex, UniverseMap)> {
+        infer: &mut C::InferenceTable,
+        subgoal: &Literal<C>,
+    ) -> Option<(TableIndex, C::UniverseMap)> {
         debug_heading!("get_or_create_table_for_subgoal(subgoal={:?})", subgoal);
 
         // Subgoal abstraction:
@@ -556,10 +558,7 @@ impl Forest {
 
         debug!("canonical_subgoal={:?}", canonical_subgoal);
 
-        let UCanonicalized {
-            quantified: ucanonical_subgoal,
-            universes: universe_map,
-        } = infer.u_canonicalize(&canonical_subgoal);
+        let (ucanonical_subgoal, universe_map) = infer.u_canonicalize_goal(&canonical_subgoal);
 
         let table = self.get_or_create_table_for_ucanonical_goal(ucanonical_subgoal);
 
@@ -573,9 +572,9 @@ impl Forest {
     /// In terms of the NFTD paper, creating a new table corresponds
     /// to the *New Subgoal* step as well as the *Program Clause
     /// Resolution* steps.
-    pub(super) fn get_or_create_table_for_ucanonical_goal(
+    crate fn get_or_create_table_for_ucanonical_goal(
         &mut self,
-        goal: UCanonicalGoal,
+        goal: C::UCanonicalGoalInEnvironment,
     ) -> TableIndex {
         debug_heading!("get_or_create_table_for_ucanonical_goal({:?})", goal);
 
@@ -584,8 +583,12 @@ impl Forest {
             return table;
         }
 
-        info_heading!("creating new table {:?} and goal {:#?}", self.tables.next_index(), goal);
-        let coinductive_goal = goal.is_coinductive(&self.program);
+        info_heading!(
+            "creating new table {:?} and goal {:#?}",
+            self.tables.next_index(),
+            goal
+        );
+        let coinductive_goal = self.context.is_coinductive(&goal);
         let table = self.tables.insert(goal, coinductive_goal);
         self.push_initial_strands(table);
         table
@@ -604,31 +607,31 @@ impl Forest {
     /// as possible.
     fn push_initial_strands(&mut self, table: TableIndex) {
         // Instantiate the table goal with fresh inference variables.
-        let mut infer = InferenceTable::new();
+        let mut infer = C::InferenceTable::new();
         let table_ref = &mut self.tables[table];
         let subst = {
             let table_goal = infer.instantiate_universes(&table_ref.table_goal);
-            infer.fresh_subst(&table_goal.binders)
+            infer.fresh_subst_for_goal(table_goal)
         };
-        let InEnvironment { environment, goal } = table_ref.table_goal.substitute(&subst);
+        let (environment, goal) = table_ref.table_goal.canonical().substitute(&subst);
 
-        match goal {
-            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
-                let domain_goal = InEnvironment::new(&environment, domain_goal);
-                let clauses = slg::clauses(&self.program, &domain_goal);
+        match goal.into_hh_goal() {
+            HhGoal::DomainGoal(domain_goal) => {
+                let clauses = self.context.program_clauses(&environment, &domain_goal);
                 for clause in clauses {
                     debug!("program clause = {:#?}", clause);
                     let mut clause_infer = infer.clone();
 
-                    if let Satisfiable::Yes(resolvent) = resolvent::resolvent_clause(
+                    if let Ok(resolvent) = self.context.resolvent_clause(
                         &mut clause_infer,
+                        &environment,
                         &domain_goal,
                         &subst,
-                        &clause.implication,
+                        &clause,
                     ) {
                         info!(
                             "pushing initial strand with ex-clause: {:#?}",
-                            clause_infer.normalize_deep(&resolvent),
+                            clause_infer.debug_ex_clause(&resolvent),
                         );
                         table_ref.push_strand(Strand {
                             infer: clause_infer,
@@ -639,7 +642,7 @@ impl Forest {
                 }
             }
 
-            _ => {
+            hh_goal => {
                 // `canonical_goal` is an HH goal. We can simplify it
                 // into a series of *literals*, all of which must be
                 // true. Thus, in EWFS terms, we are effectively
@@ -648,13 +651,12 @@ impl Forest {
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
-                let hh_goal = InEnvironment::new(&environment, goal);
-                if let Satisfiable::Yes(ex_clause) =
-                    slg::simplify_hh_goal(&mut infer, subst, hh_goal)
+                if let Ok(ex_clause) =
+                    Self::simplify_hh_goal(&mut infer, subst, &environment, hh_goal)
                 {
                     info!(
                         "pushing initial strand with ex-clause: {:#?}",
-                        infer.normalize_deep(&ex_clause),
+                        infer.debug_ex_clause(&ex_clause),
                     );
                     table_ref.push_strand(Strand {
                         infer,
@@ -676,9 +678,9 @@ impl Forest {
     /// This technique is described in the SA paper.
     fn abstract_positive_literal(
         &mut self,
-        infer: &mut InferenceTable,
-        subgoal: &InEnvironment<Goal>,
-    ) -> CanonicalGoal {
+        infer: &mut C::InferenceTable,
+        subgoal: &C::GoalInEnvironment,
+    ) -> C::CanonicalGoalInEnvironment {
         // Subgoal abstraction: Rather than looking up the table for
         // `selected_goal` directly, first apply the truncation
         // function. This may introduce fresh variables, making the
@@ -702,17 +704,17 @@ impl Forest {
         // irrelevant answers (e.g., `Vec<Vec<u32>>: Sized`), they
         // will fail to unify with our selected goal, producing no
         // resolvent.
-        let Truncated {
-            overflow: _,
-            value: truncated_subgoal,
-        } = truncate::truncate(infer, self.max_size, subgoal);
-        debug!("truncated={:?}", truncated_subgoal);
-
-        infer.canonicalize(&truncated_subgoal).quantified
+        match self.context.truncate_goal(infer, subgoal) {
+            None => infer.canonicalize_goal(subgoal),
+            Some(truncated_subgoal) => {
+                debug!("truncated={:?}", truncated_subgoal);
+                infer.canonicalize_goal(&truncated_subgoal)
+            }
+        }
     }
 
     /// Given a selected negative subgoal, the subgoal is "inverted"
-    /// (see `InferenceTable::invert`) and then potentially truncated
+    /// (see `C::InferenceTable::invert`) and then potentially truncated
     /// (see `abstract_positive_literal`). The result subgoal is
     /// canonicalized. In some cases, this may return `None` and hence
     /// fail to yield a useful result, for example if free existential
@@ -720,9 +722,9 @@ impl Forest {
     /// said to "flounder").
     fn abstract_negative_literal(
         &mut self,
-        infer: &mut InferenceTable,
-        subgoal: &InEnvironment<Goal>,
-    ) -> Option<CanonicalGoal> {
+        infer: &mut C::InferenceTable,
+        subgoal: &C::GoalInEnvironment,
+    ) -> Option<C::CanonicalGoalInEnvironment> {
         // First, we have to check that the selected negative literal
         // is ground, and invert any universally quantified variables.
         //
@@ -760,7 +762,7 @@ impl Forest {
         // could instead generate an (imprecise) result). As you can
         // see a bit later, we also diverge in some other aspects that
         // affect completeness when it comes to subgoal abstraction.
-        let inverted_subgoal = infer.invert(subgoal)?;
+        let inverted_subgoal = infer.invert_goal(subgoal)?;
 
         // DIVERGENCE
         //
@@ -813,11 +815,10 @@ impl Forest {
         // variables that have been inverted, as discussed in the
         // prior paragraph above.) I just didn't feel like dealing
         // with it yet.
-        if truncate::truncate(infer, self.max_size, &inverted_subgoal).overflow {
-            return None;
+        match self.context.truncate_goal(infer, &inverted_subgoal) {
+            Some(_) => None,
+            None => Some(infer.canonicalize_goal(&inverted_subgoal)),
         }
-
-        Some(infer.canonicalize(&inverted_subgoal).quantified)
     }
 
     /// Invoked when we have selected a positive literal, created its
@@ -834,9 +835,9 @@ impl Forest {
     fn pursue_positive_subgoal(
         &mut self,
         depth: StackIndex,
-        strand: Strand,
-        selected_subgoal: &SelectedSubgoal,
-    ) -> StrandResult<()> {
+        strand: Strand<C>,
+        selected_subgoal: &SelectedSubgoal<C>,
+    ) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
         let SelectedSubgoal {
             subgoal_index,
@@ -885,8 +886,11 @@ impl Forest {
                 return Err(StrandFail::QuantumExceeded);
             }
             Err(RecursiveSearchFail::Cycle(minimums)) => {
-                info!("pursue_positive_subgoal: cycle with minimums {:?}", minimums);
-                return Err(StrandFail::Cycle(strand, minimums))
+                info!(
+                    "pursue_positive_subgoal: cycle with minimums {:?}",
+                    minimums
+                );
+                return Err(StrandFail::Cycle(strand, minimums));
             }
         }
 
@@ -908,18 +912,18 @@ impl Forest {
             ),
         };
 
-        let table_goal =
-            &universe_map.map_from_canonical(&self.tables[subgoal_table].table_goal.canonical);
+        let table_goal = &universe_map
+            .map_goal_from_canonical(&self.tables[subgoal_table].table_goal.canonical());
         let answer_subst =
-            &universe_map.map_from_canonical(&self.answer(subgoal_table, answer_index).subst);
-        match resolvent::apply_answer_subst(
+            &universe_map.map_subst_from_canonical(&self.answer(subgoal_table, answer_index).subst);
+        match self.context.apply_answer_subst(
             &mut infer,
             ex_clause,
             &subgoal,
             table_goal,
             answer_subst,
         ) {
-            Satisfiable::Yes(mut ex_clause) => {
+            Ok(mut ex_clause) => {
                 // If the answer had delayed literals, we have to
                 // ensure that `ex_clause` is also delayed. This is
                 // the SLG FACTOR operation, though NFTD just makes it
@@ -935,7 +939,7 @@ impl Forest {
                 }
 
                 // Apply answer abstraction.
-                let ex_clause = ex_clause.truncate_returned(&mut infer, self.max_size);
+                let ex_clause = self.truncate_returned(ex_clause, &mut infer);
 
                 self.pursue_strand_recursively(
                     depth,
@@ -950,17 +954,86 @@ impl Forest {
             // This answer led nowhere. Give up for now, but of course
             // there may still be other strands to pursue, so return
             // `QuantumExceeded`.
-            Satisfiable::No => {
+            Err(NoSolution) => {
                 info!("pursue_positive_subgoal: answer not unifiable -> NoSolution");
                 Err(StrandFail::NoSolution)
             }
         }
     }
 
+    /// Used whenever we process an answer (whether new or cached) on
+    /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
+    /// the resolvent (or factor) if it has grown too large.
+    fn truncate_returned(
+        &self,
+        ex_clause: ExClause<C>,
+        infer: &mut C::InferenceTable,
+    ) -> ExClause<C> {
+        // DIVERGENCE
+        //
+        // In the original RR paper, truncation is only applied
+        // when the result of resolution is a new answer (i.e.,
+        // `ex_clause.subgoals.is_empty()`).  I've chosen to be
+        // more aggressive here, precisely because or our extended
+        // semantics for unification. In particular, unification
+        // can insert new goals, so I fear that positive feedback
+        // loops could still run indefinitely in the original
+        // formulation. I would like to revise our unification
+        // mechanism to avoid that problem, in which case this could
+        // be tightened up to be more like the original RR paper.
+        //
+        // Still, I *believe* this more aggressive approx. should
+        // not interfere with any of the properties of the
+        // original paper. In particular, applying truncation only
+        // when the resolvent has no subgoals seems like it is
+        // aimed at giving us more times to eliminate this
+        // ambiguous answer.
+
+        match self.context.truncate_answer(infer, &ex_clause.subst) {
+            // No need to truncate? Just propagate the resolvent back.
+            None => ex_clause,
+
+            // Resolvent got too large. Have to introduce approximation.
+            Some(truncated_subst) => {
+                // DIVERGENCE
+                //
+                // In RR, `self.delayed_literals` would be
+                // preserved. I have chosen to drop them. Keeping
+                // them does allow for the possibility of
+                // eliminating this answer if any of them turn out
+                // to be satisfiable. However, it also introduces
+                // an annoying edge case I didn't want to think
+                // about -- one which, interestingly, the paper
+                // did not discuss, which may indicate it is
+                // impossible for some subtle reason. In
+                // particular, a truncated delayed literal has a
+                // sort of inverse semantics. i.e. if we convert
+                // `Foo :- ~Bar(Rc<Rc<u32>>) |` to `Foo :-
+                // ~Bar(Rc<X>), Unknown |`, then this could be
+                // invalidated by an instance of `Bar(Rc<i32>)`,
+                // which is irrelevant to the original
+                // clause. (There is an additional annoyance,
+                // which is that we may not have tried to solve
+                // `Bar(Rc<X>)` at all.)
+
+                ExClause {
+                    subst: truncated_subst,
+                    delayed_literals: vec![DelayedLiteral::CannotProve(())],
+                    constraints: vec![],
+                    subgoals: vec![],
+                }
+            }
+        }
+    }
+
     // We can recursive arbitrarily deep while pursuing a strand, so
     // check in case we have to grow the stack.
-    fn pursue_strand_recursively(&mut self, depth: StackIndex, strand: Strand) -> StrandResult<()> {
-        slg::maybe_grow_stack(|| self.pursue_strand(depth, strand))
+    fn pursue_strand_recursively(
+        &mut self,
+        depth: StackIndex,
+        strand: Strand<C>,
+    ) -> StrandResult<C, ()> {
+        ::crate::maybe_grow_stack(|| self.pursue_strand(depth, strand))
     }
 
     /// Invoked when we have found a successful answer to the given
@@ -969,8 +1042,8 @@ impl Forest {
     fn push_strand_pursuing_next_answer(
         &mut self,
         depth: StackIndex,
-        strand: &Strand,
-        selected_subgoal: &SelectedSubgoal,
+        strand: &Strand<C>,
+        selected_subgoal: &SelectedSubgoal<C>,
     ) {
         let table = self.stack[depth].table;
         let mut selected_subgoal = selected_subgoal.clone();
@@ -985,9 +1058,9 @@ impl Forest {
     fn pursue_negative_subgoal(
         &mut self,
         depth: StackIndex,
-        strand: Strand,
-        selected_subgoal: &SelectedSubgoal,
-    ) -> StrandResult<()> {
+        strand: Strand<C>,
+        selected_subgoal: &SelectedSubgoal<C>,
+    ) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
         let SelectedSubgoal {
             subgoal_index: _,
@@ -1004,7 +1077,7 @@ impl Forest {
         // literal (in which case the negative literal *may* be true).
         // Before exiting the match, then, we set `delayed_literal` to
         // either `Some` or `None` depending.
-        let delayed_literal: Option<DelayedLiteral>;
+        let delayed_literal: Option<DelayedLiteral<C>>;
         match self.ensure_answer_recursively(subgoal_table, answer_index) {
             Ok(EnsureSuccess::AnswerAvailable) => {
                 if self.answer(subgoal_table, answer_index).is_unconditional() {
@@ -1050,7 +1123,10 @@ impl Forest {
                 // `subgoal` as a whole -- it doesn't matter whether
                 // it's pos or neg.
                 let min = minimums.minimum_of_pos_and_neg();
-                info!("pursue_negative_subgoal: found neg cycle at depth {:?}", min);
+                info!(
+                    "pursue_negative_subgoal: found neg cycle at depth {:?}",
+                    min
+                );
                 return Err(StrandFail::Cycle(
                     strand,
                     Minimums {

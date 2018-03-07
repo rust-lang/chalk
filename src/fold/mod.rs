@@ -51,20 +51,20 @@ crate use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-crate trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
+pub trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
     /// Returns a "dynamic" version of this trait. There is no
     /// **particular** reason to require this, except that I didn't
     /// feel like making `super_fold_ty` generic for no reason.
-    fn to_dyn(&mut self) -> &mut Folder;
+    fn to_dyn(&mut self) -> &mut dyn Folder;
 }
 
-crate trait TypeFolder {
+pub trait TypeFolder {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty>;
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime>;
 }
 
 impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
-    fn to_dyn(&mut self) -> &mut Folder {
+    fn to_dyn(&mut self) -> &mut dyn Folder {
         self
     }
 }
@@ -74,7 +74,7 @@ impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
 /// their contents (note that free variables that are encountered in
 /// that process may still be substituted). The vast majority of
 /// folders implement this trait.
-crate trait DefaultTypeFolder {}
+pub trait DefaultTypeFolder {}
 
 impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for T {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
@@ -90,7 +90,7 @@ impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for 
 /// variables**; for example, if you folded over `Foo<?T> }`, where `?T`
 /// is an inference variable, then this would let you replace `?T` with
 /// some other type.
-crate trait ExistentialFolder {
+pub trait ExistentialFolder {
     /// Invoked for `Ty::Var` instances that are not bound within the type being folded
     /// over:
     ///
@@ -112,7 +112,7 @@ crate trait ExistentialFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `UniversalFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-crate trait IdentityExistentialFolder {}
+pub trait IdentityExistentialFolder {}
 
 impl<T: IdentityExistentialFolder> ExistentialFolder for T {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
@@ -128,7 +128,7 @@ impl<T: IdentityExistentialFolder> ExistentialFolder for T {
     }
 }
 
-crate trait UniversalFolder {
+pub trait UniversalFolder {
     /// Invoked for `Ty::Apply` instances where the type name is a `TypeName::ForAll`.
     /// Returns a type to use instead, which should be suitably shifted to account for `binders`.
     ///
@@ -147,7 +147,7 @@ crate trait UniversalFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `UniversalFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-crate trait IdentityUniversalFolder {}
+pub trait IdentityUniversalFolder {}
 
 impl<T: IdentityUniversalFolder> UniversalFolder for T {
     fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
@@ -164,7 +164,7 @@ impl<T: IdentityUniversalFolder> UniversalFolder for T {
 }
 
 /// Applies the given folder to a value.
-crate trait Fold: Debug {
+pub trait Fold: Debug {
     /// The type of value that will be produced once folding is done.
     /// Typically this is `Self`, unless `Self` contains borrowed
     /// values, in which case owned values are produced (for example,
@@ -177,33 +177,33 @@ crate trait Fold: Debug {
     /// folder. Typically `binders` starts as 0, but is adjusted when
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result>;
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result>;
 }
 
 impl<'a, T: Fold> Fold for &'a T {
     type Result = T::Result;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         (**self).fold_with(folder, binders)
     }
 }
 
 impl<T: Fold> Fold for Vec<T> {
     type Result = Vec<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         self.iter().map(|e| e.fold_with(folder, binders)).collect()
     }
 }
 
 impl<T: Fold> Fold for Box<T> {
     type Result = Box<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         Ok(Box::new((**self).fold_with(folder, binders)?))
     }
 }
 
 impl<T: Fold> Fold for Arc<T> {
     type Result = Arc<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         Ok(Arc::new((**self).fold_with(folder, binders)?))
     }
 }
@@ -212,7 +212,7 @@ macro_rules! tuple_fold {
     ($($n:ident),*) => {
         impl<$($n: Fold,)*> Fold for ($($n,)*) {
             type Result = ($($n::Result,)*);
-            fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+            fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
                 #[allow(non_snake_case)]
                 let &($(ref $n),*) = self;
                 Ok(($($n.fold_with(folder, binders)?,)*))
@@ -228,7 +228,7 @@ tuple_fold!(A, B, C, D, E);
 
 impl<T: Fold> Fold for Option<T> {
     type Result = Option<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         match *self {
             None => Ok(None),
             Some(ref e) => Ok(Some(e.fold_with(folder, binders)?)),
@@ -238,12 +238,12 @@ impl<T: Fold> Fold for Option<T> {
 
 impl Fold for Ty {
     type Result = Self;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         folder.fold_ty(self, binders)
     }
 }
 
-crate fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Fallible<Ty> {
+crate fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fallible<Ty> {
     match *ty {
         Ty::Var(depth) => if depth >= binders {
             folder.fold_free_existential_ty(depth - binders, binders)
@@ -282,7 +282,7 @@ crate fn super_fold_ty(folder: &mut Folder, ty: &Ty, binders: usize) -> Fallible
 
 impl Fold for QuantifiedTy {
     type Result = Self;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         let QuantifiedTy {
             num_binders,
             ref ty,
@@ -299,7 +299,7 @@ where
     T: Fold,
 {
     type Result = Binders<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         let Binders {
             binders: ref self_binders,
             value: ref self_value,
@@ -317,7 +317,7 @@ where
     T: Fold,
 {
     type Result = Canonical<T::Result>;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         let Canonical {
             binders: ref self_binders,
             value: ref self_value,
@@ -332,13 +332,13 @@ where
 
 impl Fold for Lifetime {
     type Result = Self;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         folder.fold_lifetime(self, binders)
     }
 }
 
 crate fn super_fold_lifetime(
-    folder: &mut Folder,
+    folder: &mut dyn Folder,
     lifetime: &Lifetime,
     binders: usize,
 ) -> Fallible<Lifetime> {
@@ -354,7 +354,7 @@ crate fn super_fold_lifetime(
 
 impl Fold for Substitution {
     type Result = Substitution;
-    fn fold_with(&self, folder: &mut Folder, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         let parameters = self.parameters.fold_with(folder, binders)?;
         Ok(Substitution { parameters })
     }
@@ -365,7 +365,7 @@ macro_rules! copy_fold {
         impl ::fold::Fold for $t {
             type Result = Self;
             fn fold_with(&self,
-                         _folder: &mut ::fold::Folder,
+                         _folder: &mut dyn (::fold::Folder),
                          _binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
                 Ok(*self)
@@ -387,13 +387,32 @@ macro_rules! enum_fold {
         impl<$($n),*> ::fold::Fold for $s<$($n),*> $($w)* {
             type Result = $s<$($n :: Result),*>;
             fn fold_with(&self,
-                         folder: &mut ::fold::Folder,
+                         folder: &mut dyn (::fold::Folder),
                          binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
                 match *self {
                     $(
                         $s::$variant( $(ref $name),* ) => {
                             Ok($s::$variant( $($name.fold_with(folder, binders)?),* ))
+                        }
+                    )*
+                }
+            }
+        }
+    };
+
+    // Hacky variant for use in slg::context::implementation
+    ($s:ty { $p:ident :: { $($variant:ident($($name:ident),*)),* } }) => {
+        impl ::fold::Fold for $s {
+            type Result = $s;
+            fn fold_with(&self,
+                         folder: &mut dyn (::fold::Folder),
+                         binders: usize)
+                         -> ::fallible::Fallible<Self::Result> {
+                match *self {
+                    $(
+                        $p::$variant( $(ref $name),* ) => {
+                            Ok($p::$variant( $($name.fold_with(folder, binders)?),* ))
                         }
                     )*
                 }
@@ -407,25 +426,125 @@ enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
 enum_fold!(DomainGoal[] { Implemented(a), ProjectionEq(a), Normalize(a), UnselectedNormalize(a), WellFormed(a), FromEnv(a), InScope(a) });
 enum_fold!(WellFormed[] { Ty(a), TraitRef(a), ProjectionEq(a) });
 enum_fold!(FromEnv[] { Ty(a), TraitRef(a), ProjectionEq(a) });
-enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
+enum_fold!(LeafGoal[D] { EqGoal(a), DomainGoal(a) } where D: Fold);
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
-enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g), Leaf(wc),
-                    CannotProve(a) });
+enum_fold!(Goal[D] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
+                     Leaf(wc), CannotProve(a) } where D: Fold);
 
 macro_rules! struct_fold {
-    ($s:ident $([$($n:ident),*])* { $($name:ident),* $(,)* } $($w:tt)*) => {
-        impl $(<$($n),*>)* ::fold::Fold for $s $(<$($n),*>)* $($w)* {
-            type Result = $s $(<$($n :: Result),*>)* ;
+    ($s:ident $([$($tt_args:tt)*])? { $($name:ident),* $(,)* } $($w:tt)*) => {
+        struct_fold! {
+            @parse_tt_args($($($tt_args)*)?)
+                struct_name($s)
+                parameters()
+                self_args()
+                result_args()
+                field_names($($name),*)
+                where_clauses($($w)*)
+        }
+    };
+
+    (
+        @parse_tt_args()
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_args($($self_args:tt)*)
+            result_args($($result_args:tt)*)
+            field_names($($field_names:tt)*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        struct_fold! {
+            @parsed_tt_args
+                struct_name($s)
+                parameters($($parameters)*)
+                self_ty($s < $($self_args)* >)
+                result_ty($s < $($result_args)* >)
+                field_names($($field_names)*)
+                where_clauses($($where_clauses)*)
+        }
+    };
+
+    (
+        @parse_tt_args(, $($input:tt)*)
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_args($($self_args:tt)*)
+            result_args($($result_args:tt)*)
+            field_names($($field_names:tt)*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        struct_fold! {
+            @parse_tt_args($($input)*)
+                struct_name($s)
+                parameters($($parameters)*,)
+                self_args($($self_args)*,)
+                result_args($($result_args)*,)
+                field_names($($field_names)*)
+            where_clauses($($where_clauses)*)
+        }
+    };
+
+    (
+        @parse_tt_args(- $n:ident $($input:tt)*)
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_args($($self_args:tt)*)
+            result_args($($result_args:tt)*)
+            field_names($($field_names:tt)*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        struct_fold! {
+            @parse_tt_args($($input)*)
+                struct_name($s)
+                parameters($($parameters)* $n)
+                self_args($($self_args)* $n)
+                result_args($($result_args)* $n)
+                field_names($($field_names)*)
+            where_clauses($($where_clauses)*)
+        }
+    };
+
+    (
+        @parse_tt_args($n:ident $($input:tt)*)
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_args($($self_args:tt)*)
+            result_args($($result_args:tt)*)
+            field_names($($field_names:tt)*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        struct_fold! {
+            @parse_tt_args($($input)*)
+                struct_name($s)
+                parameters($($parameters)* $n)
+                self_args($($self_args)* $n)
+                result_args($($result_args)* $n :: Result)
+                field_names($($field_names)*)
+            where_clauses($($where_clauses)*)
+        }
+    };
+
+    (
+        @parsed_tt_args
+            struct_name($s:ident)
+            parameters($($parameters:tt)*)
+            self_ty($self_ty:ty)
+            result_ty($result_ty:ty)
+            field_names($($field_name:ident),*)
+        where_clauses($($where_clauses:tt)*)
+    ) => {
+        impl<$($parameters)*> ::fold::Fold for $self_ty $($where_clauses)* {
+            type Result = $result_ty;
             fn fold_with(&self,
-                         folder: &mut ::fold::Folder,
+                         folder: &mut dyn (::fold::Folder),
                          binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
                 Ok($s {
-                    $($name: self.$name.fold_with(folder, binders)?),*
+                    $($field_name: self.$field_name.fold_with(folder, binders)?),*
                 })
             }
         }
-    }
+    };
 }
 
 struct_fold!(ProjectionTy {
@@ -448,13 +567,13 @@ struct_fold!(AssociatedTyValue {
     value,
 });
 struct_fold!(AssociatedTyValueBound { ty, where_clauses });
-struct_fold!(Environment { clauses });
-struct_fold!(InEnvironment[F] { environment, goal } where F: Fold);
+struct_fold!(Environment[D] { clauses } where D: Fold);
+struct_fold!(InEnvironment[F] { environment, goal } where F: Fold<Result = F> + EnvironmentArg);
 struct_fold!(EqGoal { a, b });
-struct_fold!(ProgramClauseImplication {
+struct_fold!(ProgramClauseImplication[D] {
     consequence,
     conditions,
-});
+} where D: Fold);
 
 struct_fold!(ConstrainedSubst {
     subst, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
