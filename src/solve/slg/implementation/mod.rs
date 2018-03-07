@@ -14,9 +14,7 @@ use chalk_slg::context;
 use chalk_slg::forest::Forest;
 use chalk_slg::hh::HhGoal;
 
-use std::cmp::Ordering;
 use std::fmt::Debug;
-use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 mod aggregate;
@@ -370,32 +368,3 @@ enum_fold!(DelayedLiteralSlgContext {
         CannotProve(a), Negative(a), Positive(a, b)
     }
 });
-
-impl PartialEq for SlgContext {
-    fn eq(&self, _other: &Self) -> bool {
-        panic!("dummy impl");
-    }
-}
-
-impl Eq for SlgContext {}
-
-impl PartialOrd for SlgContext {
-    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
-        panic!("dummy impl");
-    }
-}
-
-impl Ord for SlgContext {
-    fn cmp(&self, _other: &Self) -> Ordering {
-        panic!("dummy impl");
-    }
-}
-
-impl Hash for SlgContext {
-    fn hash<H>(&self, _state: &mut H)
-    where
-        H: Hasher,
-    {
-        panic!("dummy impl");
-    }
-}

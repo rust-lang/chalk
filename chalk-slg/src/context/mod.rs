@@ -6,12 +6,7 @@ use std::hash::Hash;
 
 crate mod prelude;
 
-pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> +
-    // these aren't really needed; they are used to make derive happy
-    Eq +
-    Ord +
-    Hash
-{
+pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     type Environment: Environment<Self>;
     type GoalInEnvironment: GoalInEnvironment<Self>;
     type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;

@@ -64,14 +64,13 @@ extern crate stacker;
 use crate::context::Context;
 use std::collections::HashSet;
 use std::cmp::min;
-use std::hash::{Hash, Hasher};
-use std::mem;
 use std::usize;
 
 pub mod context;
 pub mod fallible;
 pub mod forest;
 pub mod hh;
+mod derived;
 mod logic;
 mod simplify;
 mod stack;
@@ -162,13 +161,13 @@ enum DelayedLiteralSets<C: Context> {
 /// we get back an approximated answer with `Goal::CannotProve` as a
 /// delayed literal, which in turn forces its subgoal to be delayed,
 /// and so forth. Therefore, we store canonicalized goals.)
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default)]
 struct DelayedLiteralSet<C: Context> {
     delayed_literals: Vec<DelayedLiteral<C>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum DelayedLiteral<C: Context> { // FIXME: pub b/c fold
+#[derive(Clone, Debug)]
+pub enum DelayedLiteral<C: Context> {
     /// Something which can never be proven nor disproven. Inserted
     /// when truncation triggers; doesn't arise normally.
     CannotProve(()),
@@ -190,31 +189,6 @@ pub enum DelayedLiteral<C: Context> { // FIXME: pub b/c fold
 pub enum Literal<C: Context> { // FIXME: pub b/c fold
     Positive(C::GoalInEnvironment),
     Negative(C::GoalInEnvironment),
-}
-
-impl<C: Context> PartialEq for Literal<C> {
-    fn eq(&self, other: &Literal<C>) -> bool {
-        match (self, other) {
-            (Literal::Positive(goal1), Literal::Positive(goal2))
-            | (Literal::Negative(goal1), Literal::Negative(goal2)) => goal1 == goal2,
-
-            _ => false,
-        }
-    }
-}
-
-impl<C: Context> Eq for Literal<C> {
-}
-
-impl<C: Context> Hash for Literal<C> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        mem::discriminant(self).hash(state);
-        match self {
-            Literal::Positive(goal) | Literal::Negative(goal) => {
-                goal.hash(state);
-            }
-        }
-    }
 }
 
 /// The `Minimums` structure is used to track the dependencies between
