@@ -10,8 +10,12 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     /// Represents an inference table.
     type InferenceTable: InferenceTable<Self>;
 
+    /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Environment<Self>;
+
+    /// Represents a goal along with an environment.
     type GoalInEnvironment: GoalInEnvironment<Self>;
+
     type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
     type UCanonicalGoalInEnvironment: UCanonicalGoalInEnvironment<Self>;
     type UniverseMap: UniverseMap<Self>;
