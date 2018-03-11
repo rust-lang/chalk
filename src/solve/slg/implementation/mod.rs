@@ -52,7 +52,7 @@ impl context::Context for SlgContext {
     type UniverseMap = UniverseMap;
     type Substitution = Substitution;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
-    type ConstraintInEnvironment = InEnvironment<Constraint>;
+    type RegionConstraint = InEnvironment<Constraint>;
     type DomainGoal = DomainGoal;
     type Goal = Goal<DomainGoal>;
     type BindersGoal = Binders<Box<Goal<DomainGoal>>>;

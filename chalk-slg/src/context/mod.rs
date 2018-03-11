@@ -18,10 +18,14 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
 
     type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
     type UCanonicalGoalInEnvironment: UCanonicalGoalInEnvironment<Self>;
+
+    /// Represents a region constraint that will be propagated back
+    /// (but not verified).
+    type RegionConstraint: ConstraintInEnvironment<Self>;
+
     type UniverseMap: UniverseMap<Self>;
     type Substitution: Substitution<Self>;
     type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
-    type ConstraintInEnvironment: ConstraintInEnvironment<Self>;
     type DomainGoal: DomainGoal<Self>;
     type Goal: Goal<Self>;
     type BindersGoal: BindersGoal<Self>;
@@ -153,7 +157,7 @@ pub trait InferenceTable<C: Context>: Clone {
     fn canonicalize_constrained_subst(
         &mut self,
         subst: C::Substitution,
-        constraints: Vec<C::ConstraintInEnvironment>,
+        constraints: Vec<C::RegionConstraint>,
     ) -> C::CanonicalConstrainedSubst;
 
     // Used by: logic

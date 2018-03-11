@@ -117,7 +117,7 @@ pub struct ExClause<C: Context> {
     pub delayed_literals: Vec<DelayedLiteral<C>>,
 
     /// Region constraints we have accumulated.
-    pub constraints: Vec<C::ConstraintInEnvironment>,
+    pub constraints: Vec<C::RegionConstraint>,
 
     /// Subgoals: literals that must be proven
     pub subgoals: Vec<Literal<C>>,
