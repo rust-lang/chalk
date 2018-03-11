@@ -18,6 +18,11 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     /// "meta" goals like `G1 && G2` and so forth natively.
     type DomainGoal: DomainGoal<Self>;
 
+    /// A map between universes. These are produced when
+    /// u-canonicalizing something; they map canonical results back to
+    /// the universes from the original.
+    type UniverseMap: UniverseMap<Self>;
+
     /// Represents a goal along with an environment.
     type GoalInEnvironment: GoalInEnvironment<Self>;
 
@@ -28,7 +33,6 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     /// (but not verified).
     type RegionConstraint: ConstraintInEnvironment<Self>;
 
-    type UniverseMap: UniverseMap<Self>;
     type Substitution: Substitution<Self>;
     type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
     type Goal: Goal<Self>;
