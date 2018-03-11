@@ -13,6 +13,11 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Environment<Self>;
 
+    /// A goal that can be targeted by a program clause. The SLG
+    /// solver treats these opaquely; in contrast, it understands
+    /// "meta" goals like `G1 && G2` and so forth natively.
+    type DomainGoal: DomainGoal<Self>;
+
     /// Represents a goal along with an environment.
     type GoalInEnvironment: GoalInEnvironment<Self>;
 
@@ -26,7 +31,6 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     type UniverseMap: UniverseMap<Self>;
     type Substitution: Substitution<Self>;
     type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
-    type DomainGoal: DomainGoal<Self>;
     type Goal: Goal<Self>;
     type BindersGoal: BindersGoal<Self>;
     type Parameter: Parameter<Self>;
