@@ -5,7 +5,6 @@ use crate::ir::could_match::CouldMatch;
 use crate::solve::infer::InferenceTable;
 use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::solve::infer::unify::UnificationResult;
-use crate::solve::infer::var::InferenceVariable;
 use crate::solve::Solution;
 use crate::solve::truncate::{self, Truncated};
 
@@ -50,7 +49,6 @@ impl context::Context for SlgContext {
     type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal<DomainGoal>>>;
     type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal<DomainGoal>>>;
     type InferenceTable = InferenceTable;
-    type InferenceVariable = InferenceVariable;
     type UniverseMap = UniverseMap;
     type Substitution = Substitution;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
@@ -252,8 +250,6 @@ impl context::UnificationResult<SlgContext> for ::crate::solve::infer::unify::Un
         ex_clause.constraints.extend(self.constraints);
     }
 }
-
-impl context::InferenceVariable<SlgContext> for ::crate::solve::infer::var::InferenceVariable {}
 
 impl context::GoalInEnvironment<SlgContext> for InEnvironment<Goal<DomainGoal>> {
     fn environment(&self) -> &Arc<Environment<DomainGoal>> {

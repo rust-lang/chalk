@@ -7,12 +7,13 @@ use std::hash::Hash;
 crate mod prelude;
 
 pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
+    /// Represents an inference table.
+    type InferenceTable: InferenceTable<Self>;
+
     type Environment: Environment<Self>;
     type GoalInEnvironment: GoalInEnvironment<Self>;
     type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
     type UCanonicalGoalInEnvironment: UCanonicalGoalInEnvironment<Self>;
-    type InferenceTable: InferenceTable<Self>;
-    type InferenceVariable: InferenceVariable<Self>;
     type UniverseMap: UniverseMap<Self>;
     type Substitution: Substitution<Self>;
     type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
@@ -110,9 +111,6 @@ pub trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
 pub trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
     // Used by: simplify
     fn add_clauses(&self, clauses: impl IntoIterator<Item = C::DomainGoal>) -> Self;
-}
-
-pub trait InferenceVariable<C: Context>: Copy {
 }
 
 pub trait InferenceTable<C: Context>: Clone {
