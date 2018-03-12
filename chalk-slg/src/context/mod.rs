@@ -13,6 +13,9 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Environment<Self>;
 
+    /// Goals correspond to things we can prove.
+    type Goal: Goal<Self>;
+
     /// A goal that can be targeted by a program clause. The SLG
     /// solver treats these opaquely; in contrast, it understands
     /// "meta" goals like `G1 && G2` and so forth natively.
@@ -26,19 +29,53 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     /// Represents a goal along with an environment.
     type GoalInEnvironment: GoalInEnvironment<Self>;
 
+    /// A canonicalized `GoalInEnvironment` -- that is, one where all
+    /// free inference variables have been bound into the canonical
+    /// binder. See [the rustc-guide] for more information.
+    ///
+    /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html
     type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
+
+    /// A u-canonicalized `GoalInEnvironment` -- this is one where the
+    /// free universes are renumbered to consecutive integers starting
+    /// from U1 (but preserving their relative order).
     type UCanonicalGoalInEnvironment: UCanonicalGoalInEnvironment<Self>;
 
     /// Represents a region constraint that will be propagated back
     /// (but not verified).
     type RegionConstraint: ConstraintInEnvironment<Self>;
 
+    /// Represents a substitution from the "canonical variables" found
+    /// in a canonical goal to specific values.
     type Substitution: Substitution<Self>;
+
+    /// Part of an answer: represents a canonicalized substitution,
+    /// combined with region constraints. See [the rustc-guide] for more information.
+    ///
+    /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html#canonicalizing-the-query-result
     type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
-    type Goal: Goal<Self>;
+
+    /// A "higher-order" goal, quantified over some types and/or
+    /// lifetimes. When you have a quantification, like `forall<T> { G
+    /// }` or `exists<T> { G }`, this represents the `<T> { G }` part.
+    ///
+    /// (In Lambda Prolog, this would be a "lambda predicate", like `T
+    /// \ Goal`).
     type BindersGoal: BindersGoal<Self>;
+
+    /// A term that can be quantified over and unified -- in current
+    /// Chalk, either a type or lifetime.
     type Parameter: Parameter<Self>;
+
+    /// A rule like `DomainGoal :- Goal`.
+    ///
+    /// `resolvent_clause` combines a program-clause and a concrete
+    /// goal we are trying to solve to produce an ex-clause.
     type ProgramClause: ProgramClause<Self>;
+
+    /// A final solution that is passed back to the user. This is
+    /// completely opaque to the SLG solver; it is produced by
+    /// `make_solution`.
     type Solution;
 }
 
