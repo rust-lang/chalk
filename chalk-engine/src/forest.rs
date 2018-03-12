@@ -1,5 +1,6 @@
 use crate::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
 use crate::context::prelude::*;
+use crate::context::AnswerStream;
 use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
 use crate::tables::Tables;
@@ -64,7 +65,7 @@ impl<C: Context> Forest<C> {
     fn iter_answers<'f>(
         &'f mut self,
         goal: &C::UCanonicalGoalInEnvironment,
-    ) -> impl Iterator<Item = SimplifiedAnswer<C>> + 'f {
+    ) -> impl AnswerStream<C> + 'f {
         let table = self.get_or_create_table_for_ucanonical_goal(goal.clone());
         let answer = AnswerIndex::ZERO;
         ForestSolver {
@@ -127,13 +128,11 @@ struct ForestSolver<'forest, C: Context + 'forest> {
     answer: AnswerIndex,
 }
 
-impl<'forest, C> Iterator for ForestSolver<'forest, C>
+impl<'forest, C> AnswerStream<C> for ForestSolver<'forest, C>
 where
     C: Context,
 {
-    type Item = SimplifiedAnswer<C>;
-
-    fn next(&mut self) -> Option<SimplifiedAnswer<C>> {
+    fn peek_answer(&mut self) -> Option<SimplifiedAnswer<C>> {
         loop {
             match self.forest.ensure_root_answer(self.table, self.answer) {
                 Ok(()) => {
@@ -154,8 +153,6 @@ where
                         ambiguous: !answer.delayed_literals.is_empty(),
                     };
 
-                    self.answer.increment();
-
                     return Some(simplified_answer);
                 }
 
@@ -166,5 +163,19 @@ where
                 Err(RootSearchFail::QuantumExceeded) => {}
             }
         }
+    }
+
+    fn next_answer(&mut self) -> Option<SimplifiedAnswer<C>> {
+        self.peek_answer().map(|answer| {
+            self.answer.increment();
+            answer
+        })
+    }
+
+    fn any_future_answer(
+        &mut self,
+        test: impl FnMut(&mut C::CanonicalExClause) -> bool,
+    ) -> bool {
+        self.forest.any_future_answer(self.table, test)
     }
 }

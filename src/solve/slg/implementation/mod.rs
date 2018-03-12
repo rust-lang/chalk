@@ -238,6 +238,179 @@ impl context::Environment<SlgContext, SlgContext> for Arc<Environment> {
     }
 }
 
+impl Canonical<ExClause<SlgContext, SlgContext>> {
+    fn may_invalidate(&mut self, subst: &Canonical<Substitution>) -> bool {
+        self.value
+            .subst
+            .parameters
+            .iter()
+            .zip(&subst.value.parameters)
+            .any(|(p1, p2)| MayInvalidate.aggregate_parameters(p1, p2))
+    }
+}
+
+// This is a struct in case we need to add state at any point like in AntiUnifier
+struct MayInvalidate;
+
+impl MayInvalidate {
+    fn aggregate_parameters(&mut self, p1: &Parameter, p2: &Parameter) -> bool {
+        match (p1, p2) {
+            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => {
+                self.aggregate_tys(ty1, ty2)
+            }
+            (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
+                self.aggregate_lifetimes(l1, l2)
+            }
+            (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
+                panic!("mismatched parameter kinds: p1={:?} p2={:?}", p1, p2)
+            }
+        }
+    }
+
+    // Returns true if the two types could be unequal.
+    fn aggregate_tys(&mut self, ty0: &Ty, ty1: &Ty) -> bool {
+        match (ty0, ty1) {
+            (Ty::Var(_), Ty::Var(_)) => false,
+
+            // Aggregating universally-quantified types seems hard according to Niko. ;)
+            (Ty::ForAll(_), Ty::ForAll(_)) => true,
+
+            (Ty::Apply(apply1), Ty::Apply(apply2)) => {
+                self.aggregate_application_tys(apply1, apply2)
+            }
+
+            (Ty::Projection(apply1), Ty::Projection(apply2)) => {
+                self.aggregate_projection_tys(apply1, apply2)
+            }
+
+            (Ty::UnselectedProjection(apply1), Ty::UnselectedProjection(apply2)) => {
+                self.aggregate_unselected_projection_tys(apply1, apply2)
+            }
+
+            (Ty::Var(_), ty) | (ty, Ty::Var(_)) => {
+                !self.recurse_ty(ty)
+            }
+
+            (Ty::ForAll(_), _)
+                | (Ty::Apply(_), _)
+                | (Ty::Projection(_), _)
+                | (Ty::UnselectedProjection(_), _) => true,
+        }
+    }
+
+    /// Returns true if ty contains variables
+    fn recurse_ty(&mut self, ty: &Ty) -> bool {
+        match ty {
+            Ty::Var(_) => true,
+            Ty::ForAll(_) => false, // This probably doesn't make sense.
+            Ty::Apply(apply) => apply.parameters.iter().any(|p| {
+                match p {
+                    ParameterKind::Ty(ty2) => {
+                        println!("{:?}", ty2);
+                        self.recurse_ty(ty2)
+                    },
+                    _ => true,
+                }
+            }),
+            Ty::Projection(apply) => apply.parameters.iter().any(|p| {
+                match p {
+                    ParameterKind::Ty(ty2) => self.recurse_ty(ty2),
+                    _ => true,
+                }
+            }),
+
+            Ty::UnselectedProjection(apply) => apply.parameters.iter().any(|p| {
+                match p {
+                    ParameterKind::Ty(ty2) => self.recurse_ty(ty2),
+                    _ => true,
+                }
+            }),
+        }
+    }
+
+    fn aggregate_lifetimes(&mut self, l1: &Lifetime, l2: &Lifetime) -> bool {
+        true
+    }
+
+    fn aggregate_application_tys(
+        &mut self,
+        apply1: &ApplicationTy,
+        apply2: &ApplicationTy
+    ) -> bool {
+        let ApplicationTy {
+            name: name1,
+            parameters: parameters1,
+        } = apply1;
+        let ApplicationTy {
+            name: name2,
+            parameters: parameters2,
+        } = apply2;
+
+        self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
+    }
+
+    fn aggregate_projection_tys(&mut self, proj1: &ProjectionTy, proj2: &ProjectionTy) -> bool {
+        let ProjectionTy {
+            associated_ty_id: name1,
+            parameters: parameters1,
+        } = proj1;
+        let ProjectionTy {
+            associated_ty_id: name2,
+            parameters: parameters2,
+        } = proj2;
+
+        self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
+    }
+
+    fn aggregate_unselected_projection_tys(
+        &mut self,
+        proj1: &UnselectedProjectionTy,
+        proj2: &UnselectedProjectionTy,
+    ) -> bool {
+        let UnselectedProjectionTy {
+            type_name: name1,
+            parameters: parameters1,
+        } = proj1;
+        let UnselectedProjectionTy {
+            type_name: name2,
+            parameters: parameters2,
+        } = proj2;
+
+        self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
+    }
+
+    fn aggregate_name_and_substs<N>(
+        &mut self,
+        name1: N,
+        parameters1: &[Parameter],
+        name2: N,
+        parameters2: &[Parameter],
+    ) -> bool
+    where
+        N: Copy + Eq + Debug,
+    {
+        if name1 != name2 {
+            return true;
+        }
+
+        let name = name1;
+
+        assert_eq!(
+            parameters1.len(),
+            parameters2.len(),
+            "does {:?} take {} parameters or {}? can't both be right",
+            name,
+            parameters1.len(),
+            parameters2.len()
+        );
+
+        parameters1
+            .iter()
+            .zip(parameters2)
+            .any(|(p1, p2)| self.aggregate_parameters(p1, p2))
+    }
+}
+
 impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::UniverseMap {
     fn map_goal_from_canonical(
         &self,

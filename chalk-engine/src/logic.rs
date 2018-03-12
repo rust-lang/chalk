@@ -103,6 +103,25 @@ impl<C: Context> Forest<C> {
         }
     }
 
+    pub(super) fn any_future_answer(
+        &mut self,
+        table: TableIndex,
+        mut test: impl FnMut(&mut C::CanonicalExClause) -> bool,
+    ) -> bool {
+        let mut strands = self.tables[table].strands_mut();
+
+        // If we don't have any strands at all, then we are
+        // intentionally conservative and say it may_invalidate.
+        match strands.next() {
+            None => return true,
+            Some(strand) => if test(&mut strand.canonical_ex_clause) {
+                return true
+            },
+        }
+
+        strands.any(|strand| test(&mut strand.canonical_ex_clause))
+    }
+
     /// Ensures that answer with the given index is available from the
     /// given table. Returns `Ok` if there is an answer:
     ///

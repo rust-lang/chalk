@@ -157,7 +157,7 @@ pub trait AggregateOps<C: Context> {
     fn make_solution(
         &self,
         root_goal: &C::CanonicalGoalInEnvironment,
-        simplified_answers: impl IntoIterator<Item = SimplifiedAnswer<C>>,
+        simplified_answers: impl AnswerStream<C>,
     ) -> Option<C::Solution>;
 }
 
@@ -336,4 +336,16 @@ pub trait UnificationResult<C: Context, I: InferenceContext<C>> {
     /// Add the residual subgoals as new subgoals of the ex-clause.
     /// Also add region constraints.
     fn into_ex_clause(self, ex_clause: &mut ExClause<C, I>);
+}
+
+pub trait AnswerStream<C: Context> {
+    fn peek_answer(&mut self) -> Option<SimplifiedAnswer<C>>;
+    fn next_answer(&mut self) -> Option<SimplifiedAnswer<C>>;
+
+    /// Invokes `test` with each possible future answer, returning true immediately
+    /// if we find any answer for which `test` returns true.
+    fn any_future_answer(
+        &mut self,
+        test: impl FnMut(&mut C::CanonicalExClause) -> bool,
+    ) -> bool;
 }
