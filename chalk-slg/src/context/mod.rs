@@ -6,7 +6,9 @@ use std::hash::Hash;
 
 crate mod prelude;
 
-pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> + TruncateOps<Self> {
+pub trait Context
+    : Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> + TruncateOps<Self> + ResolventOps<Self>
+    {
     /// Represents an inference table.
     type InferenceTable: InferenceTable<Self>;
 
@@ -121,6 +123,10 @@ pub trait ContextOps<C: Context> {
         goal: &C::DomainGoal,
     ) -> Vec<C::ProgramClause>;
 
+    fn goal_in_environment(environment: &C::Environment, goal: C::Goal) -> C::GoalInEnvironment;
+}
+
+pub trait ResolventOps<C: Context> {
     fn resolvent_clause(
         &self,
         infer: &mut C::InferenceTable,
@@ -138,11 +144,6 @@ pub trait ContextOps<C: Context> {
         answer_table_goal: &C::CanonicalGoalInEnvironment,
         canonical_answer_subst: &C::CanonicalConstrainedSubst,
     ) -> Fallible<ExClause<C>>;
-
-    fn goal_in_environment(
-        environment: &C::Environment,
-        goal: C::Goal,
-    ) -> C::GoalInEnvironment;
 }
 
 pub trait Aggregate<C: Context> {
@@ -155,20 +156,11 @@ pub trait Aggregate<C: Context> {
 
 pub trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
     fn canonical(&self) -> &C::CanonicalGoalInEnvironment;
-    fn is_trivial_substitution(
-        &self,
-        canonical_subst: &C::CanonicalConstrainedSubst,
-    ) -> bool;
+    fn is_trivial_substitution(&self, canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
 }
 
 pub trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
-    fn substitute(
-        &self,
-        subst: &C::Substitution,
-    ) -> (
-        C::Environment,
-        C::Goal,
-    );
+    fn substitute(&self, subst: &C::Substitution) -> (C::Environment, C::Goal);
 }
 
 pub trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
@@ -186,16 +178,10 @@ pub trait InferenceTable<C: Context>: Clone {
     fn new() -> Self;
 
     // Used by: simplify
-    fn instantiate_binders_universally(
-        &mut self,
-        arg: &C::BindersGoal,
-    ) -> C::Goal;
+    fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
     // Used by: simplify
-    fn instantiate_binders_existentially(
-        &mut self,
-        arg: &C::BindersGoal,
-    ) -> C::Goal;
+    fn instantiate_binders_existentially(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
     // Used by: logic
     fn instantiate_universes<'v>(
@@ -226,8 +212,7 @@ pub trait InferenceTable<C: Context>: Clone {
     ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     // Used by: logic
-    fn fresh_subst_for_goal(&mut self, goal: &C::CanonicalGoalInEnvironment)
-        -> C::Substitution;
+    fn fresh_subst_for_goal(&mut self, goal: &C::CanonicalGoalInEnvironment) -> C::Substitution;
 
     // Used by: logic
     fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
@@ -241,15 +226,13 @@ pub trait InferenceTable<C: Context>: Clone {
     ) -> Fallible<Self::UnificationResult>;
 }
 
-pub trait Substitution<C: Context>: Clone + Debug {
-}
+pub trait Substitution<C: Context>: Clone + Debug {}
 
 pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
     fn empty_constraints(&self) -> bool;
 }
 
-pub trait ConstraintInEnvironment<C: Context>: Clone + Debug + Eq + Hash + Ord {
-}
+pub trait ConstraintInEnvironment<C: Context>: Clone + Debug + Eq + Hash + Ord {}
 
 pub trait DomainGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
     fn into_goal(self) -> C::Goal;
@@ -260,14 +243,11 @@ pub trait Goal<C: Context>: Clone + Debug + Eq + Hash + Ord {
     fn into_hh_goal(self) -> HhGoal<C>;
 }
 
-pub trait Parameter<C: Context>: Clone + Debug + Eq + Hash + Ord {
-}
+pub trait Parameter<C: Context>: Clone + Debug + Eq + Hash + Ord {}
 
-pub trait ProgramClause<C: Context>: Debug {
-}
+pub trait ProgramClause<C: Context>: Debug {}
 
-pub trait BindersGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
-}
+pub trait BindersGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {}
 
 pub trait UniverseMap<C: Context>: Clone + Debug {
     fn map_goal_from_canonical(

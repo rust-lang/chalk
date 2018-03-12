@@ -86,34 +86,6 @@ impl context::ContextOps<SlgContext> for SlgContext {
         environment_clauses.chain(program_clauses).collect()
     }
 
-    fn resolvent_clause(
-        &self,
-        infer: &mut InferenceTable,
-        environment: &Arc<Environment<DomainGoal>>,
-        goal: &DomainGoal,
-        subst: &Substitution,
-        clause: &ProgramClause<DomainGoal>,
-    ) -> Fallible<ExClause<Self>> {
-        resolvent::resolvent_clause(infer, environment, goal, subst, &clause.implication)
-    }
-
-    fn apply_answer_subst(
-        &self,
-        infer: &mut InferenceTable,
-        ex_clause: ExClause<Self>,
-        selected_goal: &InEnvironment<Goal<DomainGoal>>,
-        answer_table_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
-        canonical_answer_subst: &Canonical<ConstrainedSubst>,
-    ) -> Fallible<ExClause<Self>> {
-        resolvent::apply_answer_subst(
-            infer,
-            ex_clause,
-            selected_goal,
-            answer_table_goal,
-            canonical_answer_subst,
-        )
-    }
-
     fn goal_in_environment(
         environment: &Arc<Environment<DomainGoal>>,
         goal: Goal<DomainGoal>,
