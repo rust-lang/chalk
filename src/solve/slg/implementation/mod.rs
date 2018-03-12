@@ -86,36 +86,6 @@ impl context::ContextOps<SlgContext> for SlgContext {
         environment_clauses.chain(program_clauses).collect()
     }
 
-    /// If `subgoal` is too large, return a truncated variant (else
-    /// return `None`).
-    fn truncate_goal(
-        &self,
-        infer: &mut InferenceTable,
-        subgoal: &InEnvironment<Goal<DomainGoal>>,
-    ) -> Option<InEnvironment<Goal<DomainGoal>>> {
-        let Truncated { overflow, value } = truncate::truncate(infer, self.max_size, subgoal);
-        if overflow {
-            Some(value)
-        } else {
-            None
-        }
-    }
-
-    /// If `subst` is too large, return a truncated variant (else
-    /// return `None`).
-    fn truncate_answer(
-        &self,
-        infer: &mut InferenceTable,
-        subst: &Substitution,
-    ) -> Option<Substitution> {
-        let Truncated { overflow, value } = truncate::truncate(infer, self.max_size, subst);
-        if overflow {
-            Some(value)
-        } else {
-            None
-        }
-    }
-
     fn resolvent_clause(
         &self,
         infer: &mut InferenceTable,
@@ -149,6 +119,34 @@ impl context::ContextOps<SlgContext> for SlgContext {
         goal: Goal<DomainGoal>,
     ) -> InEnvironment<Goal<DomainGoal>> {
         InEnvironment::new(environment, goal)
+    }
+}
+
+impl context::TruncateOps<SlgContext> for SlgContext {
+    fn truncate_goal(
+        &self,
+        infer: &mut InferenceTable,
+        subgoal: &InEnvironment<Goal<DomainGoal>>,
+    ) -> Option<InEnvironment<Goal<DomainGoal>>> {
+        let Truncated { overflow, value } = truncate::truncate(infer, self.max_size, subgoal);
+        if overflow {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    fn truncate_answer(
+        &self,
+        infer: &mut InferenceTable,
+        subst: &Substitution,
+    ) -> Option<Substitution> {
+        let Truncated { overflow, value } = truncate::truncate(infer, self.max_size, subst);
+        if overflow {
+            Some(value)
+        } else {
+            None
+        }
     }
 }
 

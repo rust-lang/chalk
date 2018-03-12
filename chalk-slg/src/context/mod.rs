@@ -6,7 +6,7 @@ use std::hash::Hash;
 
 crate mod prelude;
 
-pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
+pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> + TruncateOps<Self> {
     /// Represents an inference table.
     type InferenceTable: InferenceTable<Self>;
 
@@ -79,18 +79,19 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> {
     type Solution;
 }
 
-pub trait ContextOps<C: Context> {
-    /// True if this is a coinductive goal -- e.g., proving an auto trait.
-    fn is_coinductive(&self, goal: &C::UCanonicalGoalInEnvironment) -> bool;
-
-    /// Returns the set of program clauses that might apply to
-    /// `goal`. (This set can be over-approximated, naturally.)
-    fn program_clauses(
-        &self,
-        environment: &C::Environment,
-        goal: &C::DomainGoal,
-    ) -> Vec<C::ProgramClause>;
-
+/// "Truncation" (called "abstraction" in the papers referenced below)
+/// refers to the act of modifying a goal or answer that has become
+/// too large in order to guarantee termination. The SLG solver
+/// doesn't care about the precise truncation function, so long as
+/// it's deterministic and so forth.
+///
+/// Citations:
+///
+/// - Terminating Evaluation of Logic Programs with Finite Three-Valued Models
+///   - Riguzzi and Swift; ACM Transactions on Computational Logic 2013
+/// - Radial Restraint
+///   - Grosof and Swift; 2013
+pub trait TruncateOps<C: Context> {
     /// If `subgoal` is too large, return a truncated variant (else
     /// return `None`).
     fn truncate_goal(
@@ -106,6 +107,19 @@ pub trait ContextOps<C: Context> {
         infer: &mut C::InferenceTable,
         subst: &C::Substitution,
     ) -> Option<C::Substitution>;
+}
+
+pub trait ContextOps<C: Context> {
+    /// True if this is a coinductive goal -- e.g., proving an auto trait.
+    fn is_coinductive(&self, goal: &C::UCanonicalGoalInEnvironment) -> bool;
+
+    /// Returns the set of program clauses that might apply to
+    /// `goal`. (This set can be over-approximated, naturally.)
+    fn program_clauses(
+        &self,
+        environment: &C::Environment,
+        goal: &C::DomainGoal,
+    ) -> Vec<C::ProgramClause>;
 
     fn resolvent_clause(
         &self,
