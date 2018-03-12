@@ -189,7 +189,7 @@ impl Debug for DomainGoal {
     }
 }
 
-impl<D: Debug> Debug for LeafGoal<D> {
+impl Debug for LeafGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             LeafGoal::EqGoal(ref eq) => write!(fmt, "{:?}", eq),
@@ -226,7 +226,7 @@ impl Debug for EqGoal {
     }
 }
 
-impl<D: Debug> Debug for Goal<D> {
+impl Debug for Goal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
             Goal::Quantified(qkind, ref subgoal) => {
@@ -274,18 +274,9 @@ impl<T: Debug> Debug for Binders<T> {
     }
 }
 
-impl<D: Debug> Debug for Environment<D> {
+impl Debug for Environment {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "Env({:?})", self.clauses)
-    }
-}
-
-impl<G: EnvironmentArg> Debug for InEnvironment<G> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        fmt.debug_struct("InEnvironment")
-           .field("environment", &self.environment)
-           .field("goal", &self.goal)
-           .finish()
     }
 }
 

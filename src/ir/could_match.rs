@@ -49,7 +49,7 @@ impl<T: Zip> CouldMatch<T> for T {
     }
 }
 
-impl CouldMatch<DomainGoal> for ProgramClause<DomainGoal> {
+impl CouldMatch<DomainGoal> for ProgramClause {
     fn could_match(&self, other: &DomainGoal) -> bool {
         self.implication.value.consequence.could_match(other)
     }

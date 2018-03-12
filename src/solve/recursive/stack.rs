@@ -1,4 +1,4 @@
-use ir::{DomainGoal, ProgramEnvironment};
+use ir::ProgramEnvironment;
 use std::mem;
 use std::ops::Index;
 use std::ops::IndexMut;
@@ -8,7 +8,7 @@ use std::usize;
 use super::UCanonicalGoal;
 
 crate struct Stack {
-    program: Arc<ProgramEnvironment<DomainGoal>>,
+    program: Arc<ProgramEnvironment>,
     entries: Vec<StackEntry>,
     overflow_depth: usize,
 }
@@ -28,7 +28,7 @@ crate struct StackEntry {
 }
 
 impl Stack {
-    crate fn new(program: &Arc<ProgramEnvironment<DomainGoal>>, overflow_depth: usize) -> Self {
+    crate fn new(program: &Arc<ProgramEnvironment>, overflow_depth: usize) -> Self {
         Stack {
             program: program.clone(),
             entries: vec![],

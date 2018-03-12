@@ -37,7 +37,7 @@ fn parse_and_lower(text: &str) -> Result<Program> {
     chalk_parse::parse_program(text)?.lower(SolverChoice::slg())
 }
 
-fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal<DomainGoal>>> {
+fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
     chalk_parse::parse_goal(text)?.lower(program)
 }
 

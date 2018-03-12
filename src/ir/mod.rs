@@ -37,7 +37,7 @@ pub struct Program {
     crate default_impl_data: Vec<DefaultImplDatum>,
 
     /// For each user-specified clause
-    crate custom_clauses: Vec<ProgramClause<DomainGoal>>,
+    crate custom_clauses: Vec<ProgramClause>,
 }
 
 impl Program {
@@ -60,7 +60,7 @@ impl Program {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ProgramEnvironment<D> {
+pub struct ProgramEnvironment {
     /// For each trait (used for debugging):
     crate trait_data: BTreeMap<ItemId, TraitDatum>,
 
@@ -68,24 +68,24 @@ pub struct ProgramEnvironment<D> {
     crate associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// Compiled forms of the above:
-    crate program_clauses: Vec<ProgramClause<D>>,
+    crate program_clauses: Vec<ProgramClause>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
-pub struct Environment<D> {
-    crate clauses: Vec<D>,
+pub struct Environment {
+    crate clauses: Vec<DomainGoal>,
 }
 
-impl<D: Clone + Ord> Environment<D> {
+impl Environment {
     crate fn new() -> Arc<Self> {
         Arc::new(Environment { clauses: vec![] })
     }
 
     crate fn add_clauses<I>(&self, clauses: I) -> Arc<Self>
     where
-        I: IntoIterator<Item = D>,
+        I: IntoIterator<Item = DomainGoal>,
     {
         let mut env = self.clone();
         let env_clauses: BTreeSet<_> = env.clauses.into_iter().chain(clauses).collect();
@@ -94,18 +94,14 @@ impl<D: Clone + Ord> Environment<D> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct InEnvironment<G: EnvironmentArg> {
-    crate environment: Arc<Environment<G::DomainGoal>>,
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct InEnvironment<G> {
+    crate environment: Arc<Environment>,
     crate goal: G,
 }
 
-pub trait EnvironmentArg: Sized + Fold<Result = Self> {
-    type DomainGoal: Fold<Result = Self::DomainGoal>;
-}
-
-impl<G: EnvironmentArg> InEnvironment<G> {
-    crate fn new(environment: &Arc<Environment<G::DomainGoal>>, goal: G) -> Self {
+impl<G> InEnvironment<G> {
+    crate fn new(environment: &Arc<Environment>, goal: G) -> Self {
         InEnvironment {
             environment: environment.clone(),
             goal,
@@ -115,7 +111,6 @@ impl<G: EnvironmentArg> InEnvironment<G> {
     crate fn map<OP, H>(self, op: OP) -> InEnvironment<H>
     where
         OP: FnOnce(G) -> H,
-        H: EnvironmentArg<DomainGoal = G::DomainGoal>,
     {
         InEnvironment {
             environment: self.environment,
@@ -469,7 +464,7 @@ pub enum DomainGoal {
 impl DomainGoal {
     /// Lift a goal to a corresponding program clause (with a trivial
     /// antecedent).
-    crate fn into_program_clause(self) -> ProgramClause<DomainGoal> {
+    crate fn into_program_clause(self) -> ProgramClause {
         ProgramClause {
             implication: Binders {
                 value: ProgramClauseImplication {
@@ -503,17 +498,13 @@ impl DomainGoal {
     }
 }
 
-impl EnvironmentArg for DomainGoal {
-    type DomainGoal = Self;
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A goal that does not involve any logical connectives. Equality is treated
 /// specially by the logic (as with most first-order logics), since it interacts
 /// with unification etc.
-pub enum LeafGoal<D> {
+pub enum LeafGoal {
     EqGoal(EqGoal),
-    DomainGoal(D),
+    DomainGoal(DomainGoal),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -639,17 +630,17 @@ impl<T> Binders<T> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ProgramClause<D> {
-    crate implication: Binders<ProgramClauseImplication<D>>,
+pub struct ProgramClause {
+    crate implication: Binders<ProgramClauseImplication>,
 }
 
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ProgramClauseImplication<D> {
-    crate consequence: D,
-    crate conditions: Vec<Goal<D>>,
+pub struct ProgramClauseImplication {
+    crate consequence: DomainGoal,
+    crate conditions: Vec<Goal>,
 }
 
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
@@ -757,12 +748,12 @@ impl<T> UCanonical<T> {
     }
 }
 
-impl UCanonical<InEnvironment<Goal<DomainGoal>>> {
+impl UCanonical<InEnvironment<Goal>> {
     /// A goal has coinductive semantics if it is of the form `T: AutoTrait`, or if it is of the
     /// form `WellFormed(T: Trait)` where `Trait` is any trait. The latter is needed for dealing
     /// with WF requirements and cyclic traits, which generates cycles in the proof tree which must
     /// not be rejected but instead must be treated as a success.
-    crate fn is_coinductive(&self, program: &ProgramEnvironment<DomainGoal>) -> bool {
+    crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
         match &self.canonical.value.goal {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Implemented(tr))) => {
                 let trait_datum = &program.trait_data[&tr.trait_id];
@@ -778,14 +769,14 @@ impl UCanonical<InEnvironment<Goal<DomainGoal>>> {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
-pub enum Goal<D> {
+pub enum Goal {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
-    Quantified(QuantifierKind, Binders<Box<Goal<D>>>),
-    Implies(Vec<D>, Box<Goal<D>>),
-    And(Box<Goal<D>>, Box<Goal<D>>),
-    Not(Box<Goal<D>>),
-    Leaf(LeafGoal<D>),
+    Quantified(QuantifierKind, Binders<Box<Goal>>),
+    Implies(Vec<DomainGoal>, Box<Goal>),
+    And(Box<Goal>, Box<Goal>),
+    Not(Box<Goal>),
+    Leaf(LeafGoal),
 
     /// Indicates something that cannot be proven to be true or false
     /// definitively. This can occur with overflow but also with
@@ -799,12 +790,12 @@ pub enum Goal<D> {
     CannotProve(()),
 }
 
-impl Goal<DomainGoal> {
+impl Goal {
     crate fn quantify(
         self,
         kind: QuantifierKind,
         binders: Vec<ParameterKind<()>>,
-    ) -> Goal<DomainGoal> {
+    ) -> Goal {
         Goal::Quantified(
             kind,
             Binders {
@@ -814,7 +805,7 @@ impl Goal<DomainGoal> {
         )
     }
 
-    crate fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal<DomainGoal> {
+    crate fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
         Goal::Implies(predicates, Box::new(self))
     }
 
@@ -824,7 +815,7 @@ impl Goal<DomainGoal> {
     /// variables. Assumes that this goal is a "closed goal" which
     /// does not -- at present -- contain any variables. Useful for
     /// REPLs and tests but not much else.
-    pub fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<DomainGoal>>> {
+    pub fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal>> {
         use solve::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let peeled_goal = {
@@ -864,17 +855,13 @@ impl Goal<DomainGoal> {
     /// # Panics
     ///
     /// Will panic if this goal does in fact contain free variables.
-    crate fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<DomainGoal>>> {
+    crate fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>> {
         use solve::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(), self);
         let canonical_goal = infer.canonicalize(&env_goal).quantified;
         infer.u_canonicalize(&canonical_goal).quantified
     }
-}
-
-impl<D: EnvironmentArg> EnvironmentArg for Goal<D> {
-    type DomainGoal = D;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -892,10 +879,6 @@ pub enum QuantifierKind {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Constraint {
     LifetimeEq(Lifetime, Lifetime),
-}
-
-impl EnvironmentArg for Constraint {
-    type DomainGoal = DomainGoal;
 }
 
 /// A mapping of inference variables to instantiations thereof.

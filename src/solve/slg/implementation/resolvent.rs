@@ -58,10 +58,10 @@ impl context::ResolventOps<SlgContext> for SlgContext {
     fn resolvent_clause(
         &self,
         infer: &mut InferenceTable,
-        environment: &Arc<Environment<DomainGoal>>,
+        environment: &Arc<Environment>,
         goal: &DomainGoal,
         subst: &Substitution,
-        clause: &ProgramClause<DomainGoal>,
+        clause: &ProgramClause,
     ) -> Fallible<ExClause<Self>> {
         // Relating the above description to our situation:
         //
@@ -194,8 +194,8 @@ impl context::ResolventOps<SlgContext> for SlgContext {
         &self,
         infer: &mut InferenceTable,
         ex_clause: ExClause<SlgContext>,
-        selected_goal: &InEnvironment<Goal<DomainGoal>>,
-        answer_table_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
+        selected_goal: &InEnvironment<Goal>,
+        answer_table_goal: &Canonical<InEnvironment<Goal>>,
         canonical_answer_subst: &Canonical<ConstrainedSubst>,
     ) -> Fallible<ExClause<SlgContext>> {
         debug_heading!("apply_answer_subst()");
@@ -231,7 +231,7 @@ impl context::ResolventOps<SlgContext> for SlgContext {
 
 struct AnswerSubstitutor<'t> {
     table: &'t mut InferenceTable,
-    environment: &'t Arc<Environment<DomainGoal>>,
+    environment: &'t Arc<Environment>,
     answer_subst: &'t Substitution,
     answer_binders: usize,
     pending_binders: usize,
@@ -241,7 +241,7 @@ struct AnswerSubstitutor<'t> {
 impl<'t> AnswerSubstitutor<'t> {
     fn substitute<T: Zip>(
         table: &mut InferenceTable,
-        environment: &Arc<Environment<DomainGoal>>,
+        environment: &Arc<Environment>,
         answer_subst: &Substitution,
         ex_clause: ExClause<SlgContext>,
         answer: &T,

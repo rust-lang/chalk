@@ -14,7 +14,7 @@ use super::SlgContext;
 impl context::Aggregate<SlgContext> for SlgContext {
     fn make_solution(
         &self,
-        root_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
+        root_goal: &Canonical<InEnvironment<Goal>>,
         simplified_answers: impl IntoIterator<Item = SimplifiedAnswer<SlgContext>>,
     ) -> Option<Solution> {
         let mut simplified_answers = simplified_answers.into_iter().peekable();
@@ -79,7 +79,7 @@ impl context::Aggregate<SlgContext> for SlgContext {
 /// u32` and the new answer is `?0 = i32`, then the guidance would
 /// become `?0 = ?X` (where `?X` is some fresh variable).
 fn merge_into_guidance(
-    root_goal: &Canonical<InEnvironment<Goal<DomainGoal>>>,
+    root_goal: &Canonical<InEnvironment<Goal>>,
     guidance: Canonical<Substitution>,
     answer: &Canonical<ConstrainedSubst>,
 ) -> Canonical<Substitution> {

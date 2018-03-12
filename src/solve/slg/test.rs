@@ -16,7 +16,7 @@ fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
 fn parse_and_lower_goal(
     program: &ir::Program,
     text: &str,
-) -> Result<Box<ir::Goal<ir::DomainGoal>>> {
+) -> Result<Box<ir::Goal>> {
     chalk_parse::parse_goal(text)?.lower(program)
 }
 
