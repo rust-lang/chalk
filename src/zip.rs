@@ -167,8 +167,7 @@ struct_zip!(TraitRef {
     trait_id,
     parameters,
 });
-struct_zip!(InEnvironment[T] { environment, goal }
-    where T: EnvironmentArg + Zip, T::DomainGoal: Zip);
+struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
 struct_zip!(ApplicationTy { name, parameters });
 struct_zip!(ProjectionTy {
     associated_ty_id,
@@ -183,7 +182,7 @@ struct_zip!(ProjectionEq { projection, ty });
 struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
 
-impl<D: Zip> Zip for Environment<D> {
+impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
         Zip::zip_with(zipper, &a.clauses, &b.clauses)?;
@@ -224,14 +223,14 @@ enum_zip!(DomainGoal {
     FromEnv,
     InScope,
 });
-enum_zip!(LeafGoal[D] { DomainGoal, EqGoal } where D: Zip );
+enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(WellFormed { Ty, TraitRef, ProjectionEq });
 enum_zip!(FromEnv { Ty, TraitRef, ProjectionEq });
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the
 // relevant name mangling.
-impl<D: Zip + Fold<Result = D>> Zip for Goal<D> {
+impl Zip for Goal {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         match (a, b) {
             (&Goal::Quantified(ref f_a, ref g_a), &Goal::Quantified(ref f_b, ref g_b)) => {

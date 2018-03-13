@@ -7,7 +7,7 @@ use ir::*;
 use solve::SolverChoice;
 
 struct OverlapSolver {
-    env: Arc<ProgramEnvironment<DomainGoal>>,
+    env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,
 }
 

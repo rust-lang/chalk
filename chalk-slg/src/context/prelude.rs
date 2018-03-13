@@ -2,9 +2,10 @@
 
 crate use super::Context;
 crate use super::ContextOps;
+crate use super::ResolventOps;
+crate use super::TruncateOps;
 crate use super::Environment;
 crate use super::InferenceTable;
-crate use super::InferenceVariable;
 crate use super::UnificationResult;
 crate use super::GoalInEnvironment;
 crate use super::CanonicalGoalInEnvironment;

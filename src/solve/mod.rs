@@ -204,8 +204,8 @@ impl SolverChoice {
     ///   reflect success nor failure.
     pub fn solve_root_goal(
         self,
-        env: &Arc<ProgramEnvironment<DomainGoal>>,
-        canonical_goal: &UCanonical<InEnvironment<Goal<DomainGoal>>>,
+        env: &Arc<ProgramEnvironment>,
+        canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> ::errors::Result<Option<Solution>> {
         use self::slg::implementation::SlgContext;
 
