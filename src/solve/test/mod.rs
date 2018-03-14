@@ -10,18 +10,8 @@ use std::sync::Arc;
 
 mod bench;
 
-fn parse_and_lower_program(
-    text: &str,
-    solver_choice: SolverChoice,
-    skip_coherence: bool,
-) -> Result<ir::Program> {
-    if skip_coherence {
-        // FIXME: We disable WF checks for the recursive solver, because of ambiguities appearing
-        // with projection types.
-        chalk_parse::parse_program(text)?.lower_without_coherence()
-    } else {
-        chalk_parse::parse_program(text)?.lower(solver_choice)
-    }
+fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<ir::Program> {
+    chalk_parse::parse_program(text)?.lower(solver_choice)
 }
 
 fn parse_and_lower_goal(
@@ -111,7 +101,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
         let (program, env) = program_env_cache.entry(solver_choice).or_insert_with(|| {
             let program_text = &program_text[1..program_text.len() - 1]; // exclude `{}`
             let program =
-                Arc::new(parse_and_lower_program(program_text, solver_choice, false).unwrap());
+                Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
             let env = Arc::new(program.environment());
             (program, env)
         });
