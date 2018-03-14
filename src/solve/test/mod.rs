@@ -69,7 +69,6 @@ macro_rules! test {
         test!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::recursive(), $expected)
                       (stringify!($goal), SolverChoice::slg(), $expected)
               ]
               @unparsed_goals[$($unparsed_goals)*])
@@ -930,11 +929,6 @@ fn unify_quantified_lifetimes() {
                     }
                 }
             }
-        } yields[SolverChoice::recursive()] {
-            "Unique; for<?U0> { \
-             substitution [?0 := '?0, ?1 := '?0], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
-             }"
         } yields[SolverChoice::slg()] {
             // SLG yields this distinct, but equivalent, result
             "Unique; for<?U0> { \

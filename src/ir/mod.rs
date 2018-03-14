@@ -716,20 +716,6 @@ pub struct UCanonical<T> {
 }
 
 impl<T> UCanonical<T> {
-    crate fn trivial_substitution(&self) -> Substitution {
-        let binders = &self.canonical.binders;
-        Substitution {
-            parameters: binders
-                .iter()
-                .enumerate()
-                .map(|(index, pk)| match pk {
-                    ParameterKind::Ty(_) => ParameterKind::Ty(Ty::Var(index)),
-                    ParameterKind::Lifetime(_) => ParameterKind::Lifetime(Lifetime::Var(index)),
-                })
-                .collect(),
-        }
-    }
-
     crate fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
         let subst = &canonical_subst.value.subst;
         assert_eq!(self.canonical.binders.len(), subst.parameters.len());
