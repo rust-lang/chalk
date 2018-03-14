@@ -170,14 +170,6 @@ impl InferenceTable {
         }
     }
 
-    /// True if the given inference variable is bound to a value.
-    crate fn var_is_bound(&mut self, var: InferenceVariable) -> bool {
-        match self.unify.probe_value(var) {
-            InferenceValue::Unbound(_) => false,
-            InferenceValue::Bound(_) => true,
-        }
-    }
-
     /// Given an unbound variable, returns its universe.
     ///
     /// # Panics
@@ -199,59 +191,6 @@ impl Ty {
         } else {
             None
         }
-    }
-
-    /// If this is a `Ty::Var`, returns the
-    /// `TyInferenceVariable` it represents. Only makes sense if
-    /// `self` is known not to appear inside of any binders, since
-    /// otherwise the depth would have be adjusted to account for
-    /// those binders.
-    crate fn inference_var(&self) -> Option<InferenceVariable> {
-        self.var().map(InferenceVariable::from_depth)
-    }
-}
-
-impl Lifetime {
-    /// If this is a `Lifetime::Var(d)`, returns `Some(d)` else `None`.
-    crate fn var(&self) -> Option<usize> {
-        if let Lifetime::Var(depth) = *self {
-            Some(depth)
-        } else {
-            None
-        }
-    }
-
-    /// If this is a `Lifetime::Var`, returns the
-    /// `LifetimeInferenceVariable` it represents. Only makes sense if
-    /// `self` is known not to appear inside of any binders, since
-    /// otherwise the depth would have be adjusted to account for
-    /// those binders.
-    crate fn inference_var(&self) -> Option<InferenceVariable> {
-        self.var().map(InferenceVariable::from_depth)
-    }
-}
-
-impl Substitution {
-    /// Check whether this substitution is the identity substitution in the
-    /// given inference context.
-    crate fn is_trivial_within(&self, in_infer: &mut InferenceTable) -> bool {
-        for value in &self.parameters {
-            match value {
-                ParameterKind::Ty(ty) => if let Some(var) = ty.inference_var() {
-                    if in_infer.var_is_bound(var) {
-                        return false;
-                    }
-                },
-
-                ParameterKind::Lifetime(lifetime) => if let Some(var) = lifetime.inference_var() {
-                    if in_infer.var_is_bound(var) {
-                        return false;
-                    }
-                },
-            }
-        }
-
-        true
     }
 }
 
