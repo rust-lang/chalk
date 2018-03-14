@@ -16,10 +16,9 @@ fn run_bench(
     solver_choice: SolverChoice,
     goal_text: &str,
     bencher: &mut Bencher,
-    expected: &str,
-    skip_coherence: bool
+    expected: &str
 ) {
-    let program = Arc::new(parse_and_lower_program(program_text, solver_choice, skip_coherence).unwrap());
+    let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
     let env = Arc::new(program.environment());
     ir::tls::set_current_program(&program, || {
         let goal = parse_and_lower_goal(&program, goal_text).unwrap();
@@ -107,7 +106,6 @@ fn cycley_slg(b: &mut Bencher) {
         },
         CYCLEY_GOAL,
         b,
-        "Unique",
-        false
+        "Unique"
     );
 }
