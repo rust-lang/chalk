@@ -34,7 +34,6 @@ Options:
   --program=PATH      Specifies the path to the `.chalk` file containing traits/impls.
   --goal=GOAL         Specifies a goal to evaluate (may be given more than once).
   --overflow-depth=N  Specifies the overflow depth [default: 10].
-  --solver S          Selects a solver (recursive, slg) [default: recursive]
   --no-cache          Disable caching.
 ";
 
@@ -44,7 +43,6 @@ struct Args {
     flag_program: Option<String>,
     flag_goal: Vec<String>,
     flag_overflow_depth: usize,
-    flag_solver: String,
     flag_no_cache: bool,
 }
 
@@ -90,12 +88,6 @@ fn run() -> Result<()> {
     // Validate arguments.
     if args.flag_overflow_depth == 0 {
         eprintln!("error: overflow depth must be at least 1");
-        exit(1);
-    }
-
-    if let None = args.solver_choice() {
-        eprintln!("error: invalid solver choice `{}`", args.flag_solver);
-        eprintln!("try `recursive` or `slg`");
         exit(1);
     }
 
@@ -187,8 +179,7 @@ fn process(
 
     } else if command == "program" {
         // Load a .chalk file via stdin, until EOF is found.
-        let solver_choice = args.solver_choice().unwrap();
-        *prog = Some(Program::new(read_program(rl)?, solver_choice)?);
+        *prog = Some(Program::new(read_program(rl)?, args.solver_choice())?);
 
     } else if command.starts_with("load ") {
         // Load a .chalk file.
@@ -229,8 +220,7 @@ fn process(
 fn load_program(args: &Args, filename: &str) -> Result<Program> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
-    let solver_choice = args.solver_choice().unwrap();
-    Ok(Program::new(text, solver_choice)?)
+    Ok(Program::new(text, args.solver_choice())?)
 }
 
 /// Print out help for commands in interpreter mode.
@@ -263,8 +253,7 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let peeled_goal = goal.into_peeled_goal();
-    let solver_choice = args.solver_choice().unwrap();
-    match solver_choice.solve_root_goal(&prog.env, &peeled_goal) {
+    match args.solver_choice().solve_root_goal(&prog.env, &peeled_goal) {
         Ok(Some(v)) => println!("{}\n", v),
         Ok(None) => println!("No possible solution.\n"),
         Err(e) => println!("Solver failed: {}", e),
@@ -273,13 +262,7 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
 }
 
 impl Args {
-    fn solver_choice(&self) -> Option<SolverChoice> {
-        match &self.flag_solver[..] {
-            "slg" => Some(SolverChoice::SLG {
-                max_size: self.flag_overflow_depth,
-            }),
-
-            _ => None
-        }
+    fn solver_choice(&self) -> SolverChoice {
+        SolverChoice::SLG { max_size: self.flag_overflow_depth }
     }
 }
