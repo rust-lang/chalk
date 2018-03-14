@@ -607,13 +607,10 @@ impl<C: Context> Forest<C> {
     /// as possible.
     fn push_initial_strands(&mut self, table: TableIndex) {
         // Instantiate the table goal with fresh inference variables.
-        let mut infer = C::InferenceTable::new();
         let table_ref = &mut self.tables[table];
-        let subst = {
-            let table_goal = infer.instantiate_universes(&table_ref.table_goal);
-            infer.fresh_subst_for_goal(table_goal)
-        };
-        let (environment, goal) = table_ref.table_goal.canonical().substitute(&subst);
+        let (mut infer, subst, environment, goal) = self.context.instantiate_ucanonical_goal(
+            &table_ref.table_goal
+        );
 
         match goal.into_hh_goal() {
             HhGoal::DomainGoal(domain_goal) => {

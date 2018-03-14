@@ -36,7 +36,7 @@ pub trait Context
     /// binder. See [the rustc-guide] for more information.
     ///
     /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html
-    type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
+    type CanonicalGoalInEnvironment: Debug + Clone;
 
     /// A u-canonicalized `GoalInEnvironment` -- this is one where the
     /// free universes are renumbered to consecutive integers starting
@@ -124,6 +124,25 @@ pub trait ContextOps<C: Context> {
     ) -> Vec<C::ProgramClause>;
 
     fn goal_in_environment(environment: &C::Environment, goal: C::Goal) -> C::GoalInEnvironment;
+
+    /// Create an inference table for processing a new goal and instantiate that goal
+    /// in that context, returning "all the pieces".
+    ///
+    /// More specifically: given a u-canonical goal `arg`, creates a
+    /// new inference table `T` and populates it with the universes
+    /// found in `arg`. Then, creates a substitution `S` that maps
+    /// each bound variable in `arg` to a fresh inference variable
+    /// from T. Returns:
+    ///
+    /// - the table `T`
+    /// - the substitution `S`
+    /// - the environment and goal found by substitution `S` into `arg`
+    fn instantiate_ucanonical_goal(&self, arg: &C::UCanonicalGoalInEnvironment) -> (
+        C::InferenceTable,
+        C::Substitution,
+        C::Environment,
+        C::Goal,
+    );
 }
 
 pub trait ResolventOps<C: Context> {
@@ -159,10 +178,6 @@ pub trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
     fn is_trivial_substitution(&self, canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
 }
 
-pub trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
-    fn substitute(&self, subst: &C::Substitution) -> (C::Environment, C::Goal);
-}
-
 pub trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
     fn environment(&self) -> &C::Environment;
 }
@@ -175,19 +190,11 @@ pub trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
 pub trait InferenceTable<C: Context>: Clone {
     type UnificationResult: UnificationResult<C>;
 
-    fn new() -> Self;
-
     // Used by: simplify
     fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
     // Used by: simplify
     fn instantiate_binders_existentially(&mut self, arg: &C::BindersGoal) -> C::Goal;
-
-    // Used by: logic
-    fn instantiate_universes<'v>(
-        &mut self,
-        value: &'v C::UCanonicalGoalInEnvironment,
-    ) -> &'v C::CanonicalGoalInEnvironment;
 
     // Used by: logic (but for debugging only)
     fn debug_ex_clause(&mut self, value: &'v ExClause<C>) -> Box<dyn Debug + 'v>;
@@ -210,9 +217,6 @@ pub trait InferenceTable<C: Context>: Clone {
         &mut self,
         value: &C::CanonicalGoalInEnvironment,
     ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
-
-    // Used by: logic
-    fn fresh_subst_for_goal(&mut self, goal: &C::CanonicalGoalInEnvironment) -> C::Substitution;
 
     // Used by: logic
     fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;

@@ -92,6 +92,19 @@ impl context::ContextOps<SlgContext> for SlgContext {
     ) -> InEnvironment<Goal> {
         InEnvironment::new(environment, goal)
     }
+
+    fn instantiate_ucanonical_goal(&self, arg: &UCanonical<InEnvironment<Goal>>) -> (
+        InferenceTable,
+        Substitution,
+        Arc<Environment>,
+        Goal,
+    ) {
+        let mut infer = InferenceTable::new();
+        let canonical_goal = infer.instantiate_universes(arg);
+        let subst = infer.fresh_subst(&canonical_goal.binders);
+        let InEnvironment { environment, goal } = canonical_goal.substitute(&subst);
+        (infer, subst, environment, goal)
+    }
 }
 
 impl context::TruncateOps<SlgContext> for SlgContext {
@@ -125,17 +138,6 @@ impl context::TruncateOps<SlgContext> for SlgContext {
 impl context::InferenceTable<SlgContext> for InferenceTable {
     type UnificationResult = UnificationResult;
 
-    fn new() -> Self {
-        Self::new()
-    }
-
-    fn fresh_subst_for_goal(
-        &mut self,
-        goal: &Canonical<InEnvironment<Goal>>,
-    ) -> Substitution {
-        self.fresh_subst(&goal.binders)
-    }
-
     fn instantiate_binders_universally(
         &mut self,
         arg: &Binders<Box<Goal>>,
@@ -148,13 +150,6 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         arg: &Binders<Box<Goal>>,
     ) -> Goal {
         *self.instantiate_binders_existentially(arg)
-    }
-
-    fn instantiate_universes<'v>(
-        &mut self,
-        value: &'v UCanonical<InEnvironment<Goal>>,
-    ) -> &'v Canonical<InEnvironment<Goal>> {
-        self.instantiate_universes(value)
     }
 
     fn debug_ex_clause(&mut self, value: &'v ExClause<SlgContext>) -> Box<dyn Debug + 'v> {
@@ -264,15 +259,6 @@ impl context::DomainGoal<SlgContext> for DomainGoal {
 impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSubst> {
     fn empty_constraints(&self) -> bool {
         self.value.constraints.is_empty()
-    }
-}
-
-impl context::CanonicalGoalInEnvironment<SlgContext>
-    for Canonical<InEnvironment<Goal>>
-{
-    fn substitute(&self, subst: &Substitution) -> (Arc<Environment>, Goal) {
-        let InEnvironment { environment, goal } = self.substitute(subst);
-        (environment, goal)
     }
 }
 
