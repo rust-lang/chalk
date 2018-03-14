@@ -99,36 +99,6 @@ forall<T> {
 ";
 
 #[bench]
-fn cycley_recursive_cached(b: &mut Bencher) {
-    run_bench(
-        CYCLEY,
-        SolverChoice::Recursive {
-            overflow_depth: 20,
-            caching_enabled: true,
-        },
-        CYCLEY_GOAL,
-        b,
-        "Unique",
-        true
-    );
-}
-
-#[bench]
-fn cycley_recursive_uncached(b: &mut Bencher) {
-    run_bench(
-        CYCLEY,
-        SolverChoice::Recursive {
-            overflow_depth: 20,
-            caching_enabled: false,
-        },
-        CYCLEY_GOAL,
-        b,
-        "Unique",
-        true
-    );
-}
-
-#[bench]
 fn cycley_slg(b: &mut Bencher) {
     run_bench(
         CYCLEY,

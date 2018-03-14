@@ -3,7 +3,6 @@ use std::sync::Arc;
 use ir::*;
 
 crate mod infer;
-crate mod recursive;
 crate mod slg;
 mod test;
 mod truncate;
@@ -180,12 +179,6 @@ impl fmt::Display for Solution {
 
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum SolverChoice {
-    /// Chalk's recursive solving strategy.
-    Recursive {
-        overflow_depth: usize,
-        caching_enabled: bool,
-    },
-
     /// Run the SLG solver, producing a Solution.
     SLG { max_size: usize },
 }
@@ -210,28 +203,9 @@ impl SolverChoice {
         use self::slg::implementation::SlgContext;
 
         match self {
-            SolverChoice::Recursive {
-                overflow_depth,
-                caching_enabled,
-            } => {
-                let mut solver = recursive::Solver::new(env, overflow_depth, caching_enabled);
-                match solver.solve_root_goal(canonical_goal) {
-                    Ok(v) => Ok(Some(v)),
-                    Err(_) => Ok(None),
-                }
-            }
-
             SolverChoice::SLG { max_size } => {
                 Ok(SlgContext::new(env, max_size).solve_root_goal(&canonical_goal))
             }
-        }
-    }
-
-    /// Returns the default recursive parameters.
-    pub fn recursive() -> Self {
-        SolverChoice::Recursive {
-            overflow_depth: 10,
-            caching_enabled: true,
         }
     }
 
@@ -243,6 +217,6 @@ impl SolverChoice {
 
 impl Default for SolverChoice {
     fn default() -> Self {
-        SolverChoice::recursive()
+        SolverChoice::slg()
     }
 }

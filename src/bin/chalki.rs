@@ -279,11 +279,6 @@ impl Args {
                 max_size: self.flag_overflow_depth,
             }),
 
-            "recursive" => Some(SolverChoice::Recursive {
-                overflow_depth: self.flag_overflow_depth,
-                caching_enabled: !self.flag_no_cache,
-            }),
-
             _ => None
         }
     }
