@@ -60,6 +60,7 @@ impl context::Context for SlgContext {
     type Parameter = Parameter;
     type ProgramClause = ProgramClause;
     type Solution = Solution;
+    type UnificationResult = UnificationResult;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -140,8 +141,6 @@ impl context::TruncateOps<SlgContext> for SlgContext {
 }
 
 impl context::InferenceTable<SlgContext> for InferenceTable {
-    type UnificationResult = UnificationResult;
-
     fn instantiate_binders_universally(&mut self, arg: &Binders<Box<Goal>>) -> Goal {
         *self.instantiate_binders_universally(arg)
     }
@@ -198,7 +197,7 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         environment: &Arc<Environment>,
         a: &Parameter,
         b: &Parameter,
-    ) -> Fallible<Self::UnificationResult> {
+    ) -> Fallible<UnificationResult> {
         self.unify(environment, a, b)
     }
 }

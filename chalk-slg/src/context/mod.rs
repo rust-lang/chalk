@@ -77,6 +77,10 @@ pub trait Context
     /// goal we are trying to solve to produce an ex-clause.
     type ProgramClause: ProgramClause<Self>;
 
+    /// The successful result from unification: contains new subgoals
+    /// and things that can be attached to an ex-clause.
+    type UnificationResult: UnificationResult<Self>;
+
     /// A final solution that is passed back to the user. This is
     /// completely opaque to the SLG solver; it is produced by
     /// `make_solution`.
@@ -195,8 +199,6 @@ pub trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
 }
 
 pub trait InferenceTable<C: Context>: Clone {
-    type UnificationResult: UnificationResult<C>;
-
     // Used by: simplify
     fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
@@ -237,7 +239,7 @@ pub trait InferenceTable<C: Context>: Clone {
         environment: &C::Environment,
         a: &C::Parameter,
         b: &C::Parameter,
-    ) -> Fallible<Self::UnificationResult>;
+    ) -> Fallible<C::UnificationResult>;
 }
 
 pub trait Substitution<C: Context>: Clone + Debug {}
