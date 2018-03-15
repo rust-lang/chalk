@@ -674,10 +674,8 @@ impl<C: Context> Forest<C> {
                 let clauses = self.context.program_clauses(&environment, &domain_goal);
                 for clause in clauses {
                     debug!("program clause = {:#?}", clause);
-                    let mut clause_infer = infer.clone();
-
                     if let Ok(resolvent) = self.context.resolvent_clause(
-                        &mut clause_infer,
+                        &mut infer,
                         &environment,
                         &domain_goal,
                         &subst,
@@ -685,13 +683,12 @@ impl<C: Context> Forest<C> {
                     ) {
                         info!(
                             "pushing initial strand with ex-clause: {:#?}",
-                            clause_infer.debug_ex_clause(&resolvent),
+                            &resolvent,
                         );
-                        table_ref.push_strand(Self::canonicalize_strand(Strand {
-                            infer: clause_infer,
-                            ex_clause: resolvent,
+                        table_ref.push_strand(CanonicalStrand {
+                            canonical_ex_clause: resolvent,
                             selected_subgoal: None,
-                        }));
+                        });
                     }
                 }
             }

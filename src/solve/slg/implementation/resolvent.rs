@@ -62,7 +62,7 @@ impl context::ResolventOps<SlgContext> for SlgContext {
         goal: &DomainGoal,
         subst: &Substitution,
         clause: &ProgramClause,
-    ) -> Fallible<ExClause<Self>> {
+    ) -> Fallible<Canonical<ExClause<Self>>> {
         // Relating the above description to our situation:
         //
         // - `goal` G, except with binders for any existential variables.
@@ -76,6 +76,8 @@ impl context::ResolventOps<SlgContext> for SlgContext {
             goal,
             clause,
         );
+
+        let snapshot = infer.snapshot();
 
         // C' in the description above is `consequence :- conditions`.
         //
@@ -109,7 +111,11 @@ impl context::ResolventOps<SlgContext> for SlgContext {
                 c => Literal::Positive(InEnvironment::new(environment, c)),
             }));
 
-        Ok(ex_clause)
+        let canonical_ex_clause = infer.canonicalize(&ex_clause).quantified;
+
+        infer.rollback_to(snapshot);
+
+        Ok(canonical_ex_clause)
     }
 
     ///////////////////////////////////////////////////////////////////////////

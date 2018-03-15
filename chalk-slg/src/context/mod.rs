@@ -156,6 +156,11 @@ pub trait ContextOps<C: Context> {
 }
 
 pub trait ResolventOps<C: Context> {
+    /// Combines the `goal` (instantiated within `infer`) with the
+    /// given program clause to yield the start of a new strand (a
+    /// canonical ex-clause).
+    ///
+    /// The bindings in `infer` are unaffected by this operation.
     fn resolvent_clause(
         &self,
         infer: &mut C::InferenceTable,
@@ -163,7 +168,7 @@ pub trait ResolventOps<C: Context> {
         goal: &C::DomainGoal,
         subst: &C::Substitution,
         clause: &C::ProgramClause,
-    ) -> Fallible<ExClause<C>>;
+    ) -> Fallible<C::CanonicalExClause>;
 
     fn apply_answer_subst(
         &self,
@@ -198,7 +203,7 @@ pub trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
     fn add_clauses(&self, clauses: impl IntoIterator<Item = C::DomainGoal>) -> Self;
 }
 
-pub trait InferenceTable<C: Context>: Clone {
+pub trait InferenceTable<C: Context> {
     // Used by: simplify
     fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
