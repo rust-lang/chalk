@@ -86,23 +86,16 @@ impl context::ContextOps<SlgContext> for SlgContext {
         environment_clauses.chain(program_clauses).collect()
     }
 
-    fn goal_in_environment(
-        environment: &Arc<Environment>,
-        goal: Goal,
-    ) -> InEnvironment<Goal> {
+    fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
         InEnvironment::new(environment, goal)
     }
 
-    fn instantiate_ucanonical_goal(&self, arg: &UCanonical<InEnvironment<Goal>>) -> (
-        InferenceTable,
-        Substitution,
-        Arc<Environment>,
-        Goal,
-    ) {
-        let mut infer = InferenceTable::new();
-        let canonical_goal = infer.instantiate_universes(arg);
-        let subst = infer.fresh_subst(&canonical_goal.binders);
-        let InEnvironment { environment, goal } = canonical_goal.substitute(&subst);
+    fn instantiate_ucanonical_goal(
+        &self,
+        arg: &UCanonical<InEnvironment<Goal>>,
+    ) -> (InferenceTable, Substitution, Arc<Environment>, Goal) {
+        let (infer, subst, InEnvironment { environment, goal }) =
+            InferenceTable::from_canonical(arg.universes, &arg.canonical);
         (infer, subst, environment, goal)
     }
 }
@@ -138,32 +131,23 @@ impl context::TruncateOps<SlgContext> for SlgContext {
 impl context::InferenceTable<SlgContext> for InferenceTable {
     type UnificationResult = UnificationResult;
 
-    fn instantiate_binders_universally(
-        &mut self,
-        arg: &Binders<Box<Goal>>,
-    ) -> Goal {
+    fn instantiate_binders_universally(&mut self, arg: &Binders<Box<Goal>>) -> Goal {
         *self.instantiate_binders_universally(arg)
     }
 
-    fn instantiate_binders_existentially(
-        &mut self,
-        arg: &Binders<Box<Goal>>,
-    ) -> Goal {
+    fn instantiate_binders_existentially(&mut self, arg: &Binders<Box<Goal>>) -> Goal {
         *self.instantiate_binders_existentially(arg)
     }
 
-    fn debug_ex_clause(&mut self, value: &'v ExClause<SlgContext>) -> Box<dyn Debug + 'v> {
+    fn debug_ex_clause(&mut self, value: &'v ExClause<SlgContext>) -> Box<Debug + 'v> {
         Box::new(self.normalize_deep(value))
     }
 
-    fn debug_goal(&mut self, value: &'v InEnvironment<Goal>) -> Box<dyn Debug + 'v> {
+    fn debug_goal(&mut self, value: &'v InEnvironment<Goal>) -> Box<Debug + 'v> {
         Box::new(self.normalize_deep(value))
     }
 
-    fn canonicalize_goal(
-        &mut self,
-        value: &InEnvironment<Goal>,
-    ) -> Canonical<InEnvironment<Goal>> {
+    fn canonicalize_goal(&mut self, value: &InEnvironment<Goal>) -> Canonical<InEnvironment<Goal>> {
         self.canonicalize(value).quantified
     }
 
@@ -190,10 +174,7 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
         (quantified, universes)
     }
 
-    fn invert_goal(
-        &mut self,
-        value: &InEnvironment<Goal>,
-    ) -> Option<InEnvironment<Goal>> {
+    fn invert_goal(&mut self, value: &InEnvironment<Goal>) -> Option<InEnvironment<Goal>> {
         self.invert(value)
     }
 
@@ -262,9 +243,7 @@ impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSub
     }
 }
 
-impl context::UCanonicalGoalInEnvironment<SlgContext>
-    for UCanonical<InEnvironment<Goal>>
-{
+impl context::UCanonicalGoalInEnvironment<SlgContext> for UCanonical<InEnvironment<Goal>> {
     fn canonical(&self) -> &Canonical<InEnvironment<Goal>> {
         &self.canonical
     }
