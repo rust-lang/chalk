@@ -47,6 +47,7 @@ impl context::Context for SlgContext {
     type Environment = Arc<Environment>;
     type GoalInEnvironment = InEnvironment<Goal>;
     type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal>>;
+    type CanonicalExClause = Canonical<ExClause<Self>>;
     type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal>>;
     type InferenceTable = InferenceTable;
     type UniverseMap = UniverseMap;
@@ -98,6 +99,16 @@ impl context::ContextOps<SlgContext> for SlgContext {
             InferenceTable::from_canonical(arg.universes, &arg.canonical);
         (infer, subst, environment, goal)
     }
+
+    fn instantiate_ex_clause(
+        &self,
+        num_universes: usize,
+        arg: &Canonical<ExClause<Self>>,
+    ) -> (InferenceTable, ExClause<Self>) {
+        let (infer, _subst, ex_cluse) =
+            InferenceTable::from_canonical(num_universes, arg);
+        (infer, ex_cluse)
+    }
 }
 
 impl context::TruncateOps<SlgContext> for SlgContext {
@@ -148,6 +159,10 @@ impl context::InferenceTable<SlgContext> for InferenceTable {
     }
 
     fn canonicalize_goal(&mut self, value: &InEnvironment<Goal>) -> Canonical<InEnvironment<Goal>> {
+        self.canonicalize(value).quantified
+    }
+
+    fn canonicalize_ex_clause(&mut self, value: &ExClause<SlgContext>) -> Canonical<ExClause<SlgContext>> {
         self.canonicalize(value).quantified
     }
 
@@ -244,6 +259,10 @@ impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSub
 }
 
 impl context::UCanonicalGoalInEnvironment<SlgContext> for UCanonical<InEnvironment<Goal>> {
+    fn num_universes(&self) -> usize {
+        self.universes
+    }
+
     fn canonical(&self) -> &Canonical<InEnvironment<Goal>> {
         &self.canonical
     }

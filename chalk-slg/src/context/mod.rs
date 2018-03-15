@@ -8,7 +8,7 @@ crate mod prelude;
 
 pub trait Context
     : Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> + TruncateOps<Self> + ResolventOps<Self>
-    {
+{
     /// Represents an inference table.
     type InferenceTable: InferenceTable<Self>;
 
@@ -30,6 +30,8 @@ pub trait Context
 
     /// Represents a goal along with an environment.
     type GoalInEnvironment: GoalInEnvironment<Self>;
+
+    type CanonicalExClause: Debug + Clone;
 
     /// A canonicalized `GoalInEnvironment` -- that is, one where all
     /// free inference variables have been bound into the canonical
@@ -137,12 +139,16 @@ pub trait ContextOps<C: Context> {
     /// - the table `T`
     /// - the substitution `S`
     /// - the environment and goal found by substitution `S` into `arg`
-    fn instantiate_ucanonical_goal(&self, arg: &C::UCanonicalGoalInEnvironment) -> (
-        C::InferenceTable,
-        C::Substitution,
-        C::Environment,
-        C::Goal,
-    );
+    fn instantiate_ucanonical_goal(
+        &self,
+        arg: &C::UCanonicalGoalInEnvironment,
+    ) -> (C::InferenceTable, C::Substitution, C::Environment, C::Goal);
+
+    fn instantiate_ex_clause(
+        &self,
+        num_universes: usize,
+        strand: &C::CanonicalExClause,
+    ) -> (C::InferenceTable, ExClause<C>);
 }
 
 pub trait ResolventOps<C: Context> {
@@ -176,6 +182,7 @@ pub trait Aggregate<C: Context> {
 pub trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
     fn canonical(&self) -> &C::CanonicalGoalInEnvironment;
     fn is_trivial_substitution(&self, canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
+    fn num_universes(&self) -> usize;
 }
 
 pub trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
@@ -197,13 +204,16 @@ pub trait InferenceTable<C: Context>: Clone {
     fn instantiate_binders_existentially(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
     // Used by: logic (but for debugging only)
-    fn debug_ex_clause(&mut self, value: &'v ExClause<C>) -> Box<dyn Debug + 'v>;
+    fn debug_ex_clause(&mut self, value: &'v ExClause<C>) -> Box<Debug + 'v>;
 
     // Used by: logic (but for debugging only)
-    fn debug_goal(&mut self, goal: &'v C::GoalInEnvironment) -> Box<dyn Debug + 'v>;
+    fn debug_goal(&mut self, goal: &'v C::GoalInEnvironment) -> Box<Debug + 'v>;
 
     // Used by: logic
     fn canonicalize_goal(&mut self, value: &C::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;
+
+    // Used by: logic
+    fn canonicalize_ex_clause(&mut self, value: &ExClause<C>) -> C::CanonicalExClause;
 
     // Used by: logic
     fn canonicalize_constrained_subst(

@@ -3,6 +3,14 @@ use crate::{ExClause, TableIndex};
 use crate::context::Context;
 use crate::table::AnswerIndex;
 
+#[derive(Debug)]
+crate struct CanonicalStrand<C: Context> {
+    pub(super) canonical_ex_clause: C::CanonicalExClause,
+
+    /// Index into `ex_clause.subgoals`.
+    crate selected_subgoal: Option<SelectedSubgoal<C>>,
+}
+
 crate struct Strand<C: Context> {
     crate infer: C::InferenceTable,
 
