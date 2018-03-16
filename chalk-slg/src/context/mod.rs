@@ -141,14 +141,14 @@ pub trait ContextOps<C: Context> {
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &C::UCanonicalGoalInEnvironment,
-        op: impl FnOnce(Box<dyn InferenceTable<C>>, C::Substitution, C::Environment, C::Goal) -> R,
+        op: impl FnOnce(&mut dyn InferenceTable<C>, C::Substitution, C::Environment, C::Goal) -> R,
     ) -> R;
 
     fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
         canonical_ex_clause: &C::CanonicalExClause,
-        op: impl FnOnce(Box<dyn InferenceTable<C>>, ExClause<C>) -> R
+        op: impl FnOnce(&mut dyn InferenceTable<C>, ExClause<C>) -> R
     ) -> R;
 }
 

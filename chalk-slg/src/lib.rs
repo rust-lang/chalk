@@ -58,6 +58,7 @@
 #![feature(macro_vis_matcher)]
 #![feature(step_trait)]
 #![feature(universal_impl_trait)]
+#![feature(underscore_lifetimes)]
 
 #![allow(bare_trait_object)] // FIXME
 

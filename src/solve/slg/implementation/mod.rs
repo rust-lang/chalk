@@ -99,11 +99,11 @@ impl context::ContextOps<SlgContext> for SlgContext {
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &UCanonical<InEnvironment<Goal>>,
-        op: impl FnOnce(Box<dyn context::InferenceTable<SlgContext>>, Substitution, Arc<Environment>, Goal) -> R
+        op: impl FnOnce(&mut dyn context::InferenceTable<SlgContext>, Substitution, Arc<Environment>, Goal) -> R
     ) -> R {
         let (infer, subst, InEnvironment { environment, goal }) =
             InferenceTable::from_canonical(arg.universes, &arg.canonical);
-        let dyn_infer = Box::new(TruncatingInferenceTable::new(self.max_size, infer));
+        let dyn_infer = &mut TruncatingInferenceTable::new(self.max_size, infer);
         op(dyn_infer, subst, environment, goal)
     }
 
@@ -111,11 +111,11 @@ impl context::ContextOps<SlgContext> for SlgContext {
         &self,
         num_universes: usize,
         canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
-        op: impl FnOnce(Box<dyn context::InferenceTable<SlgContext>>, ExClause<SlgContext>) -> R
+        op: impl FnOnce(&mut dyn context::InferenceTable<SlgContext>, ExClause<SlgContext>) -> R
     ) -> R {
         let (infer, _subst, ex_cluse) =
             InferenceTable::from_canonical(num_universes, canonical_ex_clause);
-        let dyn_infer = Box::new(TruncatingInferenceTable::new(self.max_size, infer));
+        let dyn_infer = &mut TruncatingInferenceTable::new(self.max_size, infer);
         op(dyn_infer, ex_cluse)
     }
 }

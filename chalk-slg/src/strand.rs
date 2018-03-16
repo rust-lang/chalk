@@ -11,8 +11,8 @@ crate struct CanonicalStrand<C: Context> {
     crate selected_subgoal: Option<SelectedSubgoal<C>>,
 }
 
-crate struct Strand<C: Context> {
-    crate infer: Box<dyn InferenceTable<C>>,
+crate struct Strand<'table, C: Context + 'table> {
+    crate infer: &'table mut dyn InferenceTable<C>,
 
     pub(super) ex_clause: ExClause<C>,
 
@@ -36,7 +36,7 @@ crate struct SelectedSubgoal<C: Context> {
     crate universe_map: C::UniverseMap,
 }
 
-impl<C: Context> Debug for Strand<C> {
+impl<'table, C: Context> Debug for Strand<'table, C> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         fmt.debug_struct("Strand")
             .field("ex_clause", &self.ex_clause)

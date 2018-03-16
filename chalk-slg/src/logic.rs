@@ -69,7 +69,7 @@ pub(super) enum StrandFail<C: Context> {
 
     /// The strand hit a cyclic dependency. In this case,
     /// we return the strand, as well as a `Minimums` struct.
-    Cycle(Strand<C>, Minimums),
+    Cycle(CanonicalStrand<C>, Minimums),
 }
 
 #[derive(Debug)]
@@ -212,12 +212,12 @@ impl<C: Context> Forest<C> {
                             return Err(RecursiveSearchFail::QuantumExceeded);
                         }
 
-                        Err(StrandFail::Cycle(strand, strand_minimums)) => {
+                        Err(StrandFail::Cycle(canonical_strand, strand_minimums)) => {
                             // This strand encountered a cycle. Stash
                             // it for later and try the next one until
                             // we know that *all* available strands
                             // are hitting a cycle.
-                            cyclic_strands.push(Self::canonicalize_strand(strand));
+                            cyclic_strands.push(canonical_strand);
                             cyclic_minimums.take_minimums(&strand_minimums);
                         }
                     }
@@ -245,7 +245,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         table: TableIndex,
         canonical_strand: &CanonicalStrand<C>,
-        op: impl FnOnce(&mut Self, Strand<C>) -> R,
+        op: impl FnOnce(&mut Self, Strand<'_, C>) -> R,
     ) -> R {
         let num_universes = self.tables[table].table_goal.num_universes();
         Self::with_instantiated_strand(self.context.clone(), num_universes, canonical_strand, |strand| {
@@ -257,7 +257,7 @@ impl<C: Context> Forest<C> {
         context: C,
         num_universes: usize,
         canonical_strand: &CanonicalStrand<C>,
-        op: impl FnOnce(Strand<C>) -> R,
+        op: impl FnOnce(Strand<'_, C>) -> R,
     ) -> R {
         let CanonicalStrand {
             canonical_ex_clause,
@@ -272,9 +272,9 @@ impl<C: Context> Forest<C> {
         })
     }
 
-    fn canonicalize_strand(strand: Strand<C>) -> CanonicalStrand<C> {
+    fn canonicalize_strand(strand: Strand<'_, C>) -> CanonicalStrand<C> {
         let Strand {
-            mut infer,
+            infer,
             ex_clause,
             selected_subgoal,
         } = strand;
@@ -396,7 +396,7 @@ impl<C: Context> Forest<C> {
 
     fn delay_strand_after_cycle(
         table: TableIndex,
-        mut strand: Strand<C>,
+        mut strand: Strand<'_, C>,
     ) -> (CanonicalStrand<C>, TableIndex) {
         let (subgoal_index, subgoal_table) = match &strand.selected_subgoal {
             Some(selected_subgoal) => (
@@ -429,7 +429,7 @@ impl<C: Context> Forest<C> {
     /// by selecting a new subgoal or by checking to see if the
     /// selected subgoal has an answer. `strand` is associated with
     /// the table on the stack at the given `depth`.
-    fn pursue_strand(&mut self, depth: StackIndex, mut strand: Strand<C>) -> StrandResult<C, ()> {
+    fn pursue_strand(&mut self, depth: StackIndex, mut strand: Strand<'_, C>) -> StrandResult<C, ()> {
         info_heading!(
             "pursue_strand(table={:?}, depth={:?}, ex_clause={:#?}, selected_subgoal={:?})",
             self.stack[depth].table,
@@ -499,10 +499,10 @@ impl<C: Context> Forest<C> {
     ///   strand led nowhere of interest.
     /// - the strand may represent a new answer, in which case it is
     ///   added to the table and `Ok` is returned.
-    fn pursue_answer(&mut self, depth: StackIndex, strand: Strand<C>) -> StrandResult<C, ()> {
+    fn pursue_answer(&mut self, depth: StackIndex, strand: Strand<'_, C>) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
         let Strand {
-            mut infer,
+            infer,
             ex_clause:
                 ExClause {
                     subst,
@@ -688,7 +688,7 @@ impl<C: Context> Forest<C> {
         let table_goal = self.tables[table].table_goal.clone();
         self.context.clone().instantiate_ucanonical_goal(
             &table_goal,
-            |mut infer, subst, environment, goal| {
+            |infer, subst, environment, goal| {
                 let table_ref = &mut self.tables[table];
                 match goal.into_hh_goal() {
                     HhGoal::DomainGoal(domain_goal) => {
@@ -902,7 +902,7 @@ impl<C: Context> Forest<C> {
     fn pursue_positive_subgoal(
         &mut self,
         depth: StackIndex,
-        mut strand: Strand<C>,
+        mut strand: Strand<'_, C>,
         selected_subgoal: &SelectedSubgoal<C>,
     ) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
@@ -957,7 +957,8 @@ impl<C: Context> Forest<C> {
                     "pursue_positive_subgoal: cycle with minimums {:?}",
                     minimums
                 );
-                return Err(StrandFail::Cycle(strand, minimums));
+                let canonical_strand = Self::canonicalize_strand(strand);
+                return Err(StrandFail::Cycle(canonical_strand, minimums));
             }
         }
 
@@ -967,7 +968,7 @@ impl<C: Context> Forest<C> {
 
         // OK, let's follow *this* answer and see where it leads.
         let Strand {
-            mut infer,
+            infer,
             mut ex_clause,
             selected_subgoal: _,
         } = strand;
@@ -1092,7 +1093,7 @@ impl<C: Context> Forest<C> {
     fn pursue_strand_recursively(
         &mut self,
         depth: StackIndex,
-        strand: Strand<C>,
+        strand: Strand<'_, C>,
     ) -> StrandResult<C, ()> {
         ::crate::maybe_grow_stack(|| self.pursue_strand(depth, strand))
     }
@@ -1103,7 +1104,7 @@ impl<C: Context> Forest<C> {
     fn push_strand_pursuing_next_answer(
         &mut self,
         depth: StackIndex,
-        strand: &mut Strand<C>,
+        strand: &mut Strand<'_, C>,
         selected_subgoal: &SelectedSubgoal<C>,
     ) {
         let table = self.stack[depth].table;
@@ -1119,7 +1120,7 @@ impl<C: Context> Forest<C> {
     fn pursue_negative_subgoal(
         &mut self,
         depth: StackIndex,
-        strand: Strand<C>,
+        strand: Strand<'_, C>,
         selected_subgoal: &SelectedSubgoal<C>,
     ) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
@@ -1188,8 +1189,9 @@ impl<C: Context> Forest<C> {
                     "pursue_negative_subgoal: found neg cycle at depth {:?}",
                     min
                 );
+                let canonical_strand = Self::canonicalize_strand(strand);
                 return Err(StrandFail::Cycle(
-                    strand,
+                    canonical_strand,
                     Minimums {
                         positive: self.stack[depth].dfn,
                         negative: min,
