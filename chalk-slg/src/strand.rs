@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Error, Formatter};
 use crate::{ExClause, TableIndex};
-use crate::context::Context;
+use crate::context::{Context, InferenceTable};
 use crate::table::AnswerIndex;
 
 #[derive(Debug)]
@@ -12,7 +12,7 @@ crate struct CanonicalStrand<C: Context> {
 }
 
 crate struct Strand<C: Context> {
-    crate infer: C::InferenceTable,
+    crate infer: Box<dyn InferenceTable<C>>,
 
     pub(super) ex_clause: ExClause<C>,
 

@@ -9,9 +9,6 @@ crate mod prelude;
 pub trait Context
     : Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self>
 {
-    /// Represents an inference table.
-    type InferenceTable: InferenceTable<Self> + TruncateOps<Self> + ResolventOps<Self>;
-
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Environment<Self>;
 
@@ -144,14 +141,14 @@ pub trait ContextOps<C: Context> {
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &C::UCanonicalGoalInEnvironment,
-        op: impl FnOnce(C::InferenceTable, C::Substitution, C::Environment, C::Goal) -> R,
+        op: impl FnOnce(Box<dyn InferenceTable<C>>, C::Substitution, C::Environment, C::Goal) -> R,
     ) -> R;
 
     fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
         canonical_ex_clause: &C::CanonicalExClause,
-        op: impl FnOnce(C::InferenceTable, ExClause<C>) -> R
+        op: impl FnOnce(Box<dyn InferenceTable<C>>, ExClause<C>) -> R
     ) -> R;
 }
 
@@ -201,7 +198,7 @@ pub trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
     fn add_clauses(&self, clauses: impl IntoIterator<Item = C::DomainGoal>) -> Self;
 }
 
-pub trait InferenceTable<C: Context> {
+pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> {
     // Used by: simplify
     fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
 

@@ -278,11 +278,11 @@ impl<C: Context> Forest<C> {
             ex_clause,
             selected_subgoal,
         } = strand;
-        Self::canonicalize_strand_from(&mut infer, &ex_clause, selected_subgoal)
+        Self::canonicalize_strand_from(&mut *infer, &ex_clause, selected_subgoal)
     }
 
     fn canonicalize_strand_from(
-        infer: &mut C::InferenceTable,
+        infer: &mut dyn InferenceTable<C>,
         ex_clause: &ExClause<C>,
         selected_subgoal: Option<SelectedSubgoal<C>>,
     ) -> CanonicalStrand<C> {
@@ -455,7 +455,7 @@ impl<C: Context> Forest<C> {
 
             // Get or create table for this subgoal.
             match self.get_or_create_table_for_subgoal(
-                &mut strand.infer,
+                &mut *strand.infer,
                 &strand.ex_clause.subgoals[subgoal_index],
             ) {
                 Some((subgoal_table, universe_map)) => {
@@ -623,7 +623,7 @@ impl<C: Context> Forest<C> {
     /// Resolution* steps.
     fn get_or_create_table_for_subgoal(
         &mut self,
-        infer: &mut C::InferenceTable,
+        infer: &mut dyn InferenceTable<C>,
         subgoal: &Literal<C>,
     ) -> Option<(TableIndex, C::UniverseMap)> {
         debug_heading!("get_or_create_table_for_subgoal(subgoal={:?})", subgoal);
@@ -717,7 +717,7 @@ impl<C: Context> Forest<C> {
                         // applying built-in "meta program clauses" that
                         // reduce HH goals into Domain goals.
                         if let Ok(ex_clause) =
-                            Self::simplify_hh_goal(&mut infer, subst, &environment, hh_goal)
+                            Self::simplify_hh_goal(&mut *infer, subst, &environment, hh_goal)
                         {
                             info!(
                                 "pushing initial strand with ex-clause: {:#?}",
@@ -745,7 +745,7 @@ impl<C: Context> Forest<C> {
     /// This technique is described in the SA paper.
     fn abstract_positive_literal(
         &mut self,
-        infer: &mut C::InferenceTable,
+        infer: &mut dyn InferenceTable<C>,
         subgoal: &C::GoalInEnvironment,
     ) -> C::CanonicalGoalInEnvironment {
         // Subgoal abstraction: Rather than looking up the table for
@@ -781,7 +781,7 @@ impl<C: Context> Forest<C> {
     }
 
     /// Given a selected negative subgoal, the subgoal is "inverted"
-    /// (see `C::InferenceTable::invert`) and then potentially truncated
+    /// (see `dyn InferenceTable<C>::invert`) and then potentially truncated
     /// (see `abstract_positive_literal`). The result subgoal is
     /// canonicalized. In some cases, this may return `None` and hence
     /// fail to yield a useful result, for example if free existential
@@ -789,7 +789,7 @@ impl<C: Context> Forest<C> {
     /// said to "flounder").
     fn abstract_negative_literal(
         &mut self,
-        infer: &mut C::InferenceTable,
+        infer: &mut dyn InferenceTable<C>,
         subgoal: &C::GoalInEnvironment,
     ) -> Option<C::CanonicalGoalInEnvironment> {
         // First, we have to check that the selected negative literal
@@ -1000,7 +1000,7 @@ impl<C: Context> Forest<C> {
                 }
 
                 // Apply answer abstraction.
-                let ex_clause = self.truncate_returned(ex_clause, &mut infer);
+                let ex_clause = self.truncate_returned(ex_clause, &mut *infer);
 
                 self.pursue_strand_recursively(
                     depth,
@@ -1028,7 +1028,7 @@ impl<C: Context> Forest<C> {
     fn truncate_returned(
         &self,
         ex_clause: ExClause<C>,
-        infer: &mut C::InferenceTable,
+        infer: &mut dyn InferenceTable<C>,
     ) -> ExClause<C> {
         // DIVERGENCE
         //
@@ -1110,7 +1110,7 @@ impl<C: Context> Forest<C> {
         let mut selected_subgoal = selected_subgoal.clone();
         selected_subgoal.answer_index.increment();
         self.tables[table].push_strand(Self::canonicalize_strand_from(
-            &mut strand.infer,
+            &mut *strand.infer,
             &strand.ex_clause,
             Some(selected_subgoal),
         ));

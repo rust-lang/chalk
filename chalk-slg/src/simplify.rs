@@ -9,7 +9,7 @@ impl<C: Context> Forest<C> {
     /// and negative HH goals. This operation may fail if the HH goal
     /// includes unifications that cannot be completed.
     pub(super) fn simplify_hh_goal(
-        infer: &mut C::InferenceTable,
+        infer: &mut dyn InferenceTable<C>,
         subst: C::Substitution,
         initial_environment: &C::Environment,
         initial_hh_goal: HhGoal<C>,

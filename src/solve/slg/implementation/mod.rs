@@ -54,7 +54,6 @@ impl context::Context for SlgContext {
     type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal>>;
     type CanonicalExClause = Canonical<ExClause<Self>>;
     type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal>>;
-    type InferenceTable = TruncatingInferenceTable;
     type UniverseMap = UniverseMap;
     type Substitution = Substitution;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
@@ -100,22 +99,24 @@ impl context::ContextOps<SlgContext> for SlgContext {
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &UCanonical<InEnvironment<Goal>>,
-        op: impl FnOnce(TruncatingInferenceTable, Substitution, Arc<Environment>, Goal) -> R
+        op: impl FnOnce(Box<dyn context::InferenceTable<SlgContext>>, Substitution, Arc<Environment>, Goal) -> R
     ) -> R {
         let (infer, subst, InEnvironment { environment, goal }) =
             InferenceTable::from_canonical(arg.universes, &arg.canonical);
-        op(TruncatingInferenceTable::new(self.max_size, infer), subst, environment, goal)
+        let dyn_infer = Box::new(TruncatingInferenceTable::new(self.max_size, infer));
+        op(dyn_infer, subst, environment, goal)
     }
 
     fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
         canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
-        op: impl FnOnce(TruncatingInferenceTable, ExClause<SlgContext>) -> R
+        op: impl FnOnce(Box<dyn context::InferenceTable<SlgContext>>, ExClause<SlgContext>) -> R
     ) -> R {
         let (infer, _subst, ex_cluse) =
             InferenceTable::from_canonical(num_universes, canonical_ex_clause);
-        op(TruncatingInferenceTable::new(self.max_size, infer), ex_cluse)
+        let dyn_infer = Box::new(TruncatingInferenceTable::new(self.max_size, infer));
+        op(dyn_infer, ex_cluse)
     }
 }
 
