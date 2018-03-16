@@ -674,8 +674,7 @@ impl<C: Context> Forest<C> {
                 let clauses = self.context.program_clauses(&environment, &domain_goal);
                 for clause in clauses {
                     debug!("program clause = {:#?}", clause);
-                    if let Ok(resolvent) = self.context.resolvent_clause(
-                        &mut infer,
+                    if let Ok(resolvent) = infer.resolvent_clause(
                         &environment,
                         &domain_goal,
                         &subst,
@@ -755,7 +754,7 @@ impl<C: Context> Forest<C> {
         // irrelevant answers (e.g., `Vec<Vec<u32>>: Sized`), they
         // will fail to unify with our selected goal, producing no
         // resolvent.
-        match self.context.truncate_goal(infer, subgoal) {
+        match infer.truncate_goal(subgoal) {
             None => infer.canonicalize_goal(subgoal),
             Some(truncated_subgoal) => {
                 debug!("truncated={:?}", truncated_subgoal);
@@ -866,7 +865,7 @@ impl<C: Context> Forest<C> {
         // variables that have been inverted, as discussed in the
         // prior paragraph above.) I just didn't feel like dealing
         // with it yet.
-        match self.context.truncate_goal(infer, &inverted_subgoal) {
+        match infer.truncate_goal(&inverted_subgoal) {
             Some(_) => None,
             None => Some(infer.canonicalize_goal(&inverted_subgoal)),
         }
@@ -967,8 +966,7 @@ impl<C: Context> Forest<C> {
             .map_goal_from_canonical(&self.tables[subgoal_table].table_goal.canonical());
         let answer_subst =
             &universe_map.map_subst_from_canonical(&self.answer(subgoal_table, answer_index).subst);
-        match self.context.apply_answer_subst(
-            &mut infer,
+        match infer.apply_answer_subst(
             ex_clause,
             &subgoal,
             table_goal,
@@ -1040,7 +1038,7 @@ impl<C: Context> Forest<C> {
         // aimed at giving us more times to eliminate this
         // ambiguous answer.
 
-        match self.context.truncate_answer(infer, &ex_clause.subst) {
+        match infer.truncate_answer(&ex_clause.subst) {
             // No need to truncate? Just propagate the resolvent back.
             None => ex_clause,
 

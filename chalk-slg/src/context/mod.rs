@@ -7,10 +7,10 @@ use std::hash::Hash;
 crate mod prelude;
 
 pub trait Context
-    : Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> + TruncateOps<Self> + ResolventOps<Self>
+    : Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self>
 {
     /// Represents an inference table.
-    type InferenceTable: InferenceTable<Self>;
+    type InferenceTable: InferenceTable<Self> + TruncateOps<Self> + ResolventOps<Self>;
 
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Environment<Self>;
@@ -103,16 +103,14 @@ pub trait TruncateOps<C: Context> {
     /// If `subgoal` is too large, return a truncated variant (else
     /// return `None`).
     fn truncate_goal(
-        &self,
-        infer: &mut C::InferenceTable,
+        &mut self,
         subgoal: &C::GoalInEnvironment,
     ) -> Option<C::GoalInEnvironment>;
 
     /// If `subst` is too large, return a truncated variant (else
     /// return `None`).
     fn truncate_answer(
-        &self,
-        infer: &mut C::InferenceTable,
+        &mut self,
         subst: &C::Substitution,
     ) -> Option<C::Substitution>;
 }
@@ -162,8 +160,7 @@ pub trait ResolventOps<C: Context> {
     ///
     /// The bindings in `infer` are unaffected by this operation.
     fn resolvent_clause(
-        &self,
-        infer: &mut C::InferenceTable,
+        &mut self,
         environment: &C::Environment,
         goal: &C::DomainGoal,
         subst: &C::Substitution,
@@ -171,8 +168,7 @@ pub trait ResolventOps<C: Context> {
     ) -> Fallible<C::CanonicalExClause>;
 
     fn apply_answer_subst(
-        &self,
-        infer: &mut C::InferenceTable,
+        &mut self,
         ex_clause: ExClause<C>,
         selected_goal: &C::GoalInEnvironment,
         answer_table_goal: &C::CanonicalGoalInEnvironment,
