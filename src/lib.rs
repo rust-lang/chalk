@@ -14,8 +14,6 @@
 #![feature(underscore_lifetimes)]
 #![feature(universal_impl_trait)]
 
-#![allow(bare_trait_object)] // FIXME
-
 extern crate chalk_parse;
 #[macro_use]
 extern crate chalk_macros;

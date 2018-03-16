@@ -161,11 +161,7 @@ impl context::InferenceTable<SlgContext> for TruncatingInferenceTable {
         *self.infer.instantiate_binders_existentially(arg)
     }
 
-    fn debug_ex_clause(&mut self, value: &'v ExClause<SlgContext>) -> Box<Debug + 'v> {
-        Box::new(self.infer.normalize_deep(value))
-    }
-
-    fn debug_goal(&mut self, value: &'v InEnvironment<Goal>) -> Box<Debug + 'v> {
+    fn debug_ex_clause(&mut self, value: &'v ExClause<SlgContext>) -> Box<dyn Debug + 'v> {
         Box::new(self.infer.normalize_deep(value))
     }
 

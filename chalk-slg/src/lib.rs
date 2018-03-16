@@ -60,8 +60,6 @@
 #![feature(universal_impl_trait)]
 #![feature(underscore_lifetimes)]
 
-#![allow(bare_trait_object)] // FIXME
-
 #[macro_use] extern crate chalk_macros;
 extern crate stacker;
 
