@@ -97,23 +97,25 @@ impl context::ContextOps<SlgContext> for SlgContext {
         InEnvironment::new(environment, goal)
     }
 
-    fn instantiate_ucanonical_goal(
+    fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &UCanonical<InEnvironment<Goal>>,
-    ) -> (TruncatingInferenceTable, Substitution, Arc<Environment>, Goal) {
+        op: impl FnOnce(TruncatingInferenceTable, Substitution, Arc<Environment>, Goal) -> R
+    ) -> R {
         let (infer, subst, InEnvironment { environment, goal }) =
             InferenceTable::from_canonical(arg.universes, &arg.canonical);
-        (TruncatingInferenceTable::new(self.max_size, infer), subst, environment, goal)
+        op(TruncatingInferenceTable::new(self.max_size, infer), subst, environment, goal)
     }
 
-    fn instantiate_ex_clause(
+    fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
-        arg: &Canonical<ExClause<Self>>,
-    ) -> (TruncatingInferenceTable, ExClause<Self>) {
+        canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
+        op: impl FnOnce(TruncatingInferenceTable, ExClause<SlgContext>) -> R
+    ) -> R {
         let (infer, _subst, ex_cluse) =
-            InferenceTable::from_canonical(num_universes, arg);
-        (TruncatingInferenceTable::new(self.max_size, infer), ex_cluse)
+            InferenceTable::from_canonical(num_universes, canonical_ex_clause);
+        op(TruncatingInferenceTable::new(self.max_size, infer), ex_cluse)
     }
 }
 

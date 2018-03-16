@@ -141,16 +141,18 @@ pub trait ContextOps<C: Context> {
     /// - the table `T`
     /// - the substitution `S`
     /// - the environment and goal found by substitution `S` into `arg`
-    fn instantiate_ucanonical_goal(
+    fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &C::UCanonicalGoalInEnvironment,
-    ) -> (C::InferenceTable, C::Substitution, C::Environment, C::Goal);
+        op: impl FnOnce(C::InferenceTable, C::Substitution, C::Environment, C::Goal) -> R,
+    ) -> R;
 
-    fn instantiate_ex_clause(
+    fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
-        strand: &C::CanonicalExClause,
-    ) -> (C::InferenceTable, ExClause<C>);
+        canonical_ex_clause: &C::CanonicalExClause,
+        op: impl FnOnce(C::InferenceTable, ExClause<C>) -> R
+    ) -> R;
 }
 
 pub trait ResolventOps<C: Context> {

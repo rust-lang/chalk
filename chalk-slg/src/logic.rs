@@ -189,8 +189,12 @@ impl<C: Context> Forest<C> {
         loop {
             match self.tables[table].pop_next_strand() {
                 Some(canonical_strand) => {
-                    let strand = self.instantiate_strand_from_table(table, &canonical_strand);
-                    match self.pursue_strand(depth, strand) {
+                    let result = self.with_instantiated_strand_from_table(
+                        table,
+                        &canonical_strand,
+                        |this, strand| this.pursue_strand(depth, strand),
+                    );
+                    match result {
                         Ok(answer) => {
                             // Now that we produced an answer, these
                             // cyclic strands need to be retried.
@@ -237,30 +241,35 @@ impl<C: Context> Forest<C> {
         }
     }
 
-    fn instantiate_strand_from_table(
+    fn with_instantiated_strand_from_table<R>(
         &mut self,
         table: TableIndex,
         canonical_strand: &CanonicalStrand<C>,
-    ) -> Strand<C> {
+        op: impl FnOnce(&mut Self, Strand<C>) -> R,
+    ) -> R {
         let num_universes = self.tables[table].table_goal.num_universes();
-        Self::instantiate_strand(&mut self.context, num_universes, canonical_strand)
+        Self::with_instantiated_strand(self.context.clone(), num_universes, canonical_strand, |strand| {
+            op(self, strand)
+        })
     }
 
-    fn instantiate_strand(
-        context: &mut C,
+    fn with_instantiated_strand<R>(
+        context: C,
         num_universes: usize,
         canonical_strand: &CanonicalStrand<C>,
-    ) -> Strand<C> {
+        op: impl FnOnce(Strand<C>) -> R,
+    ) -> R {
         let CanonicalStrand {
             canonical_ex_clause,
             selected_subgoal,
         } = canonical_strand;
-        let (infer, ex_clause) = context.instantiate_ex_clause(num_universes, &canonical_ex_clause);
-        Strand {
-            infer,
-            ex_clause,
-            selected_subgoal: selected_subgoal.clone(),
-        }
+        context.instantiate_ex_clause(num_universes, &canonical_ex_clause, |infer, ex_clause| {
+            op(Strand {
+                infer,
+                ex_clause,
+                selected_subgoal: selected_subgoal.clone(),
+            })
+        })
     }
 
     fn canonicalize_strand(strand: Strand<C>) -> CanonicalStrand<C> {
@@ -366,34 +375,14 @@ impl<C: Context> Forest<C> {
             // `instantiate_strand` could take ownership), since we
             // don't really need to instantiate here to do this
             // operation.
-            let mut strand =
-                Self::instantiate_strand(&mut self.context, num_universes, canonical_strand);
+            let (delayed_strand, subgoal_table) = Self::with_instantiated_strand(
+                self.context.clone(),
+                num_universes,
+                canonical_strand,
+                |strand| Self::delay_strand_after_cycle(table, strand),
+            );
 
-            let (subgoal_index, subgoal_table) = match &strand.selected_subgoal {
-                Some(selected_subgoal) => (
-                    selected_subgoal.subgoal_index,
-                    selected_subgoal.subgoal_table,
-                ),
-                None => {
-                    panic!(
-                        "delay_strands_after_cycle invoked on strand in table {:?} \
-                         without a selected subgoal: {:?}",
-                        table, strand,
-                    );
-                }
-            };
-
-            // Delay negative literals.
-            if let Literal::Negative(_) = strand.ex_clause.subgoals[subgoal_index] {
-                strand.ex_clause.subgoals.remove(subgoal_index);
-                strand
-                    .ex_clause
-                    .delayed_literals
-                    .push(DelayedLiteral::Negative(subgoal_table));
-                strand.selected_subgoal = None;
-            }
-
-            *canonical_strand = Self::canonicalize_strand(strand);
+            *canonical_strand = delayed_strand;
 
             if visited.insert(subgoal_table) {
                 tables.push(subgoal_table);
@@ -403,6 +392,37 @@ impl<C: Context> Forest<C> {
         for table in tables {
             self.delay_strands_after_cycle(table, visited);
         }
+    }
+
+    fn delay_strand_after_cycle(
+        table: TableIndex,
+        mut strand: Strand<C>,
+    ) -> (CanonicalStrand<C>, TableIndex) {
+        let (subgoal_index, subgoal_table) = match &strand.selected_subgoal {
+            Some(selected_subgoal) => (
+                selected_subgoal.subgoal_index,
+                selected_subgoal.subgoal_table,
+            ),
+            None => {
+                panic!(
+                    "delay_strands_after_cycle invoked on strand in table {:?} \
+                     without a selected subgoal: {:?}",
+                    table, strand,
+                );
+            }
+        };
+
+        // Delay negative literals.
+        if let Literal::Negative(_) = strand.ex_clause.subgoals[subgoal_index] {
+            strand.ex_clause.subgoals.remove(subgoal_index);
+            strand
+                .ex_clause
+                .delayed_literals
+                .push(DelayedLiteral::Negative(subgoal_table));
+            strand.selected_subgoal = None;
+        }
+
+        (Self::canonicalize_strand(strand), subgoal_table)
     }
 
     /// Pursues `strand` to see if it leads us to a new answer, either
@@ -665,57 +685,54 @@ impl<C: Context> Forest<C> {
     /// as possible.
     fn push_initial_strands(&mut self, table: TableIndex) {
         // Instantiate the table goal with fresh inference variables.
-        let table_ref = &mut self.tables[table];
-        let (mut infer, subst, environment, goal) = self.context
-            .instantiate_ucanonical_goal(&table_ref.table_goal);
+        let table_goal = self.tables[table].table_goal.clone();
+        self.context.clone().instantiate_ucanonical_goal(
+            &table_goal,
+            |mut infer, subst, environment, goal| {
+                let table_ref = &mut self.tables[table];
+                match goal.into_hh_goal() {
+                    HhGoal::DomainGoal(domain_goal) => {
+                        let clauses = self.context.program_clauses(&environment, &domain_goal);
+                        for clause in clauses {
+                            debug!("program clause = {:#?}", clause);
+                            if let Ok(resolvent) =
+                                infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
+                            {
+                                info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
+                                table_ref.push_strand(CanonicalStrand {
+                                    canonical_ex_clause: resolvent,
+                                    selected_subgoal: None,
+                                });
+                            }
+                        }
+                    }
 
-        match goal.into_hh_goal() {
-            HhGoal::DomainGoal(domain_goal) => {
-                let clauses = self.context.program_clauses(&environment, &domain_goal);
-                for clause in clauses {
-                    debug!("program clause = {:#?}", clause);
-                    if let Ok(resolvent) = infer.resolvent_clause(
-                        &environment,
-                        &domain_goal,
-                        &subst,
-                        &clause,
-                    ) {
-                        info!(
-                            "pushing initial strand with ex-clause: {:#?}",
-                            &resolvent,
-                        );
-                        table_ref.push_strand(CanonicalStrand {
-                            canonical_ex_clause: resolvent,
-                            selected_subgoal: None,
-                        });
+                    hh_goal => {
+                        // `canonical_goal` is an HH goal. We can simplify it
+                        // into a series of *literals*, all of which must be
+                        // true. Thus, in EWFS terms, we are effectively
+                        // creating a single child of the `A :- A` goal that
+                        // is like `A :- B, C, D` where B, C, and D are the
+                        // simplified subgoals. You can think of this as
+                        // applying built-in "meta program clauses" that
+                        // reduce HH goals into Domain goals.
+                        if let Ok(ex_clause) =
+                            Self::simplify_hh_goal(&mut infer, subst, &environment, hh_goal)
+                        {
+                            info!(
+                                "pushing initial strand with ex-clause: {:#?}",
+                                infer.debug_ex_clause(&ex_clause),
+                            );
+                            table_ref.push_strand(Self::canonicalize_strand(Strand {
+                                infer,
+                                ex_clause,
+                                selected_subgoal: None,
+                            }));
+                        }
                     }
                 }
-            }
-
-            hh_goal => {
-                // `canonical_goal` is an HH goal. We can simplify it
-                // into a series of *literals*, all of which must be
-                // true. Thus, in EWFS terms, we are effectively
-                // creating a single child of the `A :- A` goal that
-                // is like `A :- B, C, D` where B, C, and D are the
-                // simplified subgoals. You can think of this as
-                // applying built-in "meta program clauses" that
-                // reduce HH goals into Domain goals.
-                if let Ok(ex_clause) =
-                    Self::simplify_hh_goal(&mut infer, subst, &environment, hh_goal)
-                {
-                    info!(
-                        "pushing initial strand with ex-clause: {:#?}",
-                        infer.debug_ex_clause(&ex_clause),
-                    );
-                    table_ref.push_strand(Self::canonicalize_strand(Strand {
-                        infer,
-                        ex_clause,
-                        selected_subgoal: None,
-                    }));
-                }
-            }
-        }
+            },
+        );
     }
 
     /// Given a selected positive subgoal, applies the subgoal
@@ -966,12 +983,7 @@ impl<C: Context> Forest<C> {
             .map_goal_from_canonical(&self.tables[subgoal_table].table_goal.canonical());
         let answer_subst =
             &universe_map.map_subst_from_canonical(&self.answer(subgoal_table, answer_index).subst);
-        match infer.apply_answer_subst(
-            ex_clause,
-            &subgoal,
-            table_goal,
-            answer_subst,
-        ) {
+        match infer.apply_answer_subst(ex_clause, &subgoal, table_goal, answer_subst) {
             Ok(mut ex_clause) => {
                 // If the answer had delayed literals, we have to
                 // ensure that `ex_clause` is also delayed. This is
