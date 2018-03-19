@@ -1,5 +1,6 @@
 use ena::unify as ena;
 use ir::*;
+use fold::Fold;
 use fold::shift::Shift;
 
 crate mod canonicalize;
@@ -15,7 +16,8 @@ mod test;
 use self::var::*;
 
 #[derive(Clone)]
-pub struct InferenceTable { // FIXME pub b/c of trait impl for SLG
+pub struct InferenceTable {
+    // FIXME pub b/c of trait impl for SLG
     unify: ena::UnificationTable<InferenceVariable>,
     vars: Vec<InferenceVariable>,
     max_universe: UniverseIndex,
@@ -39,6 +41,47 @@ impl InferenceTable {
         }
     }
 
+    /// Creates a new inference table, pre-populated with
+    /// `num_universes` fresh universes. Instantiates the canonical
+    /// value `canonical` within those universes (which must not
+    /// reference any universe greater than `num_universes`). Returns
+    /// the substitution mapping from each canonical binder to its
+    /// corresponding existential variable, along with the
+    /// instantiated result.
+    crate fn from_canonical<T>(
+        num_universes: usize,
+        canonical: &Canonical<T>,
+    ) -> (Self, Substitution, T)
+    where
+        T: Fold<Result = T> + Clone,
+    {
+        let mut table = InferenceTable::new();
+
+        assert!(num_universes >= 1); // always have U0
+        for _ in 1..num_universes {
+            table.new_universe();
+        }
+
+        let subst = table.fresh_subst(&canonical.binders);
+
+        // Pointless micro-optimization: The fully correct way to
+        // instantiate `value` is to substitute `subst` like so:
+        //
+        //     let value = canonical.substitute(&subst);
+        //
+        // However, because (a) this is a canonical value, and hence
+        // contains no free variables except for those bound in the
+        // canonical binders and (b) we just create the inference
+        // table, and we created all of its variables from those same
+        // binders, we know that this substitution will have the form
+        // `?0 := ?0` and so forth.  So we can just "clone" the
+        // canonical value rather than actually substituting.
+        assert!(subst.is_identity_subst());
+        let value = canonical.value.clone();
+
+        (table, subst, value)
+    }
+
     /// Creates and returns a fresh universe that is distinct from all
     /// others created within this inference table. This universe is
     /// able to see all previously created universes (though hopefully
@@ -47,19 +90,6 @@ impl InferenceTable {
         let u = self.max_universe.next();
         self.max_universe = u;
         u
-    }
-
-    /// Creates and returns a fresh universe that is distinct from all
-    /// others created within this inference table. This universe is
-    /// able to see all previously created universes (though hopefully
-    /// it is only brought into contact with its logical *parents*).
-    crate fn instantiate_universes<'v, T>(&mut self, value: &'v UCanonical<T>) -> &'v Canonical<T> {
-        let UCanonical { universes, canonical } = value;
-        assert!(*universes >= 1); // always have U0
-        for _ in 1 .. *universes {
-            self.new_universe();
-        }
-        canonical
     }
 
     /// Current maximum universe -- one that can see all existing names.

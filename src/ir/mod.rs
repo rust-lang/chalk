@@ -686,21 +686,6 @@ impl<T> Canonical<T> {
         infer.rollback_to(snapshot);
         result.quantified
     }
-
-    /// Substitutes the values from `subst` in place of the values
-    /// bound by the binders in this canonical; the substitution should be
-    /// complete.
-    crate fn substitute(&self, mut subst: &Substitution) -> T::Result
-    where
-        T: Fold,
-    {
-        assert_eq!(
-            subst.parameters.len(),
-            self.binders.len(),
-            "substitute invoked with incomplete substitution",
-        );
-        self.value.fold_with(&mut subst, 0).unwrap()
-    }
 }
 
 /// A "universe canonical" value. This is a wrapper around a
@@ -719,18 +704,7 @@ impl<T> UCanonical<T> {
     crate fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
         let subst = &canonical_subst.value.subst;
         assert_eq!(self.canonical.binders.len(), subst.parameters.len());
-        // A subst is trivial if..
-        subst.parameters.iter().zip(0..).all(|(parameter, index)| {
-            // All types and lifetimes are mapped to distinct
-            // variables.  Since this has been canonicalized, and
-            // the substitution appears first, those will also be
-            // the first N variables.
-            match parameter {
-                ParameterKind::Ty(Ty::Var(depth)) => index == *depth,
-                ParameterKind::Lifetime(Lifetime::Var(depth)) => index == *depth,
-                _ => false,
-            }
-        })
+        subst.is_identity_subst()
     }
 }
 
@@ -883,6 +857,28 @@ pub struct Substitution {
 impl Substitution {
     crate fn is_empty(&self) -> bool {
         self.parameters.is_empty()
+    }
+
+    /// A substitution is an **identity substitution** if it looks
+    /// like this
+    ///
+    /// ```text
+    /// ?0 := ?0
+    /// ?1 := ?1
+    /// ?2 := ?2
+    /// ...
+    /// ```
+    ///
+    /// Basically, each value is mapped to a type or lifetime with its
+    /// same index.
+    crate fn is_identity_subst(&self) -> bool {
+        self.parameters.iter().zip(0..).all(|(parameter, index)| {
+            match parameter {
+                ParameterKind::Ty(Ty::Var(depth)) => index == *depth,
+                ParameterKind::Lifetime(Lifetime::Var(depth)) => index == *depth,
+                _ => false,
+            }
+        })
     }
 }
 

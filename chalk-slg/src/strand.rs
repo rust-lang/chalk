@@ -1,10 +1,18 @@
 use std::fmt::{Debug, Error, Formatter};
 use crate::{ExClause, TableIndex};
-use crate::context::Context;
+use crate::context::{Context, InferenceTable};
 use crate::table::AnswerIndex;
 
-crate struct Strand<C: Context> {
-    crate infer: C::InferenceTable,
+#[derive(Debug)]
+crate struct CanonicalStrand<C: Context> {
+    pub(super) canonical_ex_clause: C::CanonicalExClause,
+
+    /// Index into `ex_clause.subgoals`.
+    crate selected_subgoal: Option<SelectedSubgoal<C>>,
+}
+
+crate struct Strand<'table, C: Context + 'table> {
+    crate infer: &'table mut dyn InferenceTable<C>,
 
     pub(super) ex_clause: ExClause<C>,
 
@@ -28,7 +36,7 @@ crate struct SelectedSubgoal<C: Context> {
     crate universe_map: C::UniverseMap,
 }
 
-impl<C: Context> Debug for Strand<C> {
+impl<'table, C: Context> Debug for Strand<'table, C> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         fmt.debug_struct("Strand")
             .field("ex_clause", &self.ex_clause)

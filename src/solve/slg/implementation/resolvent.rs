@@ -3,7 +3,7 @@ use crate::fold::Fold;
 use crate::fold::shift::Shift;
 use crate::ir::*;
 use crate::solve::infer::InferenceTable;
-use crate::solve::slg::implementation::SlgContext;
+use crate::solve::slg::implementation::{SlgContext, TruncatingInferenceTable};
 use crate::zip::{Zip, Zipper};
 
 use chalk_slg::{ExClause, Literal};
@@ -46,7 +46,7 @@ use std::sync::Arc;
 //
 // is the SLG resolvent of G with C.
 
-impl context::ResolventOps<SlgContext> for SlgContext {
+impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
     /// Applies the SLG resolvent algorithm to incorporate a program
     /// clause into the main X-clause, producing a new X-clause that
     /// must be solved.
@@ -56,13 +56,12 @@ impl context::ResolventOps<SlgContext> for SlgContext {
     /// - `goal` is the goal G that we are trying to solve
     /// - `clause` is the program clause that may be useful to that end
     fn resolvent_clause(
-        &self,
-        infer: &mut InferenceTable,
+        &mut self,
         environment: &Arc<Environment>,
         goal: &DomainGoal,
         subst: &Substitution,
         clause: &ProgramClause,
-    ) -> Fallible<ExClause<Self>> {
+    ) -> Fallible<Canonical<ExClause<SlgContext>>> {
         // Relating the above description to our situation:
         //
         // - `goal` G, except with binders for any existential variables.
@@ -77,18 +76,20 @@ impl context::ResolventOps<SlgContext> for SlgContext {
             clause,
         );
 
+        let snapshot = self.infer.snapshot();
+
         // C' in the description above is `consequence :- conditions`.
         //
         // Note that G and C' have no variables in common.
         let ProgramClauseImplication {
             consequence,
             conditions,
-        } = infer.instantiate_binders_existentially(&clause.implication);
+        } = self.infer.instantiate_binders_existentially(&clause.implication);
         debug!("consequence = {:?}", consequence);
         debug!("conditions = {:?}", conditions);
 
         // Unify the selected literal Li with C'.
-        let unification_result = infer.unify(environment, goal, &consequence)?;
+        let unification_result = self.infer.unify(environment, goal, &consequence)?;
 
         // Final X-clause that we will return.
         let mut ex_clause = ExClause {
@@ -109,7 +110,11 @@ impl context::ResolventOps<SlgContext> for SlgContext {
                 c => Literal::Positive(InEnvironment::new(environment, c)),
             }));
 
-        Ok(ex_clause)
+        let canonical_ex_clause = self.infer.canonicalize(&ex_clause).quantified;
+
+        self.infer.rollback_to(snapshot);
+
+        Ok(canonical_ex_clause)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -191,8 +196,7 @@ impl context::ResolventOps<SlgContext> for SlgContext {
     // failure will get propagated back up.
 
     fn apply_answer_subst(
-        &self,
-        infer: &mut InferenceTable,
+        &mut self,
         ex_clause: ExClause<SlgContext>,
         selected_goal: &InEnvironment<Goal>,
         answer_table_goal: &Canonical<InEnvironment<Goal>>,
@@ -200,7 +204,7 @@ impl context::ResolventOps<SlgContext> for SlgContext {
     ) -> Fallible<ExClause<SlgContext>> {
         debug_heading!("apply_answer_subst()");
         debug!("ex_clause={:?}", ex_clause);
-        debug!("selected_goal={:?}", infer.normalize_deep(selected_goal));
+        debug!("selected_goal={:?}", self.infer.normalize_deep(selected_goal));
         debug!("answer_table_goal={:?}", answer_table_goal);
         debug!("canonical_answer_subst={:?}", canonical_answer_subst);
 
@@ -214,10 +218,10 @@ impl context::ResolventOps<SlgContext> for SlgContext {
             // to be true) winds up being true, and otherwise (if the
             // answer is false or unknown) it doesn't matter.
             constraints: answer_constraints,
-        } = infer.instantiate_canonical(&canonical_answer_subst);
+        } = self.infer.instantiate_canonical(&canonical_answer_subst);
 
         let mut ex_clause = AnswerSubstitutor::substitute(
-            infer,
+            &mut self.infer,
             &selected_goal.environment,
             &answer_subst,
             ex_clause,

@@ -1,6 +1,6 @@
 use crate::{DelayedLiteralSet, DelayedLiteralSets};
 use crate::context::prelude::*;
-use crate::strand::Strand;
+use crate::strand::CanonicalStrand;
 use std::collections::{HashMap, VecDeque};
 use std::collections::hash_map::Entry;
 use std::mem;
@@ -28,7 +28,7 @@ crate struct Table<C: Context> {
 
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
-    strands: VecDeque<Strand<C>>,
+    strands: VecDeque<CanonicalStrand<C>>,
 }
 
 index_struct! {
@@ -58,23 +58,23 @@ impl<C: Context> Table<C> {
         }
     }
 
-    crate fn push_strand(&mut self, strand: Strand<C>) {
+    crate fn push_strand(&mut self, strand: CanonicalStrand<C>) {
         self.strands.push_back(strand);
     }
 
-    crate fn extend_strands(&mut self, strands: impl IntoIterator<Item = Strand<C>>) {
+    crate fn extend_strands(&mut self, strands: impl IntoIterator<Item = CanonicalStrand<C>>) {
         self.strands.extend(strands);
     }
 
-    crate fn strands_mut(&mut self) -> impl Iterator<Item = &mut Strand<C>> {
+    crate fn strands_mut(&mut self) -> impl Iterator<Item = &mut CanonicalStrand<C>> {
         self.strands.iter_mut()
     }
 
-    crate fn take_strands(&mut self) -> VecDeque<Strand<C>> {
+    crate fn take_strands(&mut self) -> VecDeque<CanonicalStrand<C>> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
-    crate fn pop_next_strand(&mut self) -> Option<Strand<C>> {
+    crate fn pop_next_strand(&mut self) -> Option<CanonicalStrand<C>> {
         self.strands.pop_front()
     }
 

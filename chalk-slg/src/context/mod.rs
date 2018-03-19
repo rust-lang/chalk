@@ -7,11 +7,8 @@ use std::hash::Hash;
 crate mod prelude;
 
 pub trait Context
-    : Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self> + TruncateOps<Self> + ResolventOps<Self>
-    {
-    /// Represents an inference table.
-    type InferenceTable: InferenceTable<Self>;
-
+    : Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self>
+{
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Environment<Self>;
 
@@ -31,12 +28,14 @@ pub trait Context
     /// Represents a goal along with an environment.
     type GoalInEnvironment: GoalInEnvironment<Self>;
 
+    type CanonicalExClause: Debug + Clone;
+
     /// A canonicalized `GoalInEnvironment` -- that is, one where all
     /// free inference variables have been bound into the canonical
     /// binder. See [the rustc-guide] for more information.
     ///
     /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html
-    type CanonicalGoalInEnvironment: CanonicalGoalInEnvironment<Self>;
+    type CanonicalGoalInEnvironment: Debug + Clone;
 
     /// A u-canonicalized `GoalInEnvironment` -- this is one where the
     /// free universes are renumbered to consecutive integers starting
@@ -75,6 +74,10 @@ pub trait Context
     /// goal we are trying to solve to produce an ex-clause.
     type ProgramClause: ProgramClause<Self>;
 
+    /// The successful result from unification: contains new subgoals
+    /// and things that can be attached to an ex-clause.
+    type UnificationResult: UnificationResult<Self>;
+
     /// A final solution that is passed back to the user. This is
     /// completely opaque to the SLG solver; it is produced by
     /// `make_solution`.
@@ -97,16 +100,14 @@ pub trait TruncateOps<C: Context> {
     /// If `subgoal` is too large, return a truncated variant (else
     /// return `None`).
     fn truncate_goal(
-        &self,
-        infer: &mut C::InferenceTable,
+        &mut self,
         subgoal: &C::GoalInEnvironment,
     ) -> Option<C::GoalInEnvironment>;
 
     /// If `subst` is too large, return a truncated variant (else
     /// return `None`).
     fn truncate_answer(
-        &self,
-        infer: &mut C::InferenceTable,
+        &mut self,
         subst: &C::Substitution,
     ) -> Option<C::Substitution>;
 }
@@ -124,21 +125,49 @@ pub trait ContextOps<C: Context> {
     ) -> Vec<C::ProgramClause>;
 
     fn goal_in_environment(environment: &C::Environment, goal: C::Goal) -> C::GoalInEnvironment;
+
+    /// Create an inference table for processing a new goal and instantiate that goal
+    /// in that context, returning "all the pieces".
+    ///
+    /// More specifically: given a u-canonical goal `arg`, creates a
+    /// new inference table `T` and populates it with the universes
+    /// found in `arg`. Then, creates a substitution `S` that maps
+    /// each bound variable in `arg` to a fresh inference variable
+    /// from T. Returns:
+    ///
+    /// - the table `T`
+    /// - the substitution `S`
+    /// - the environment and goal found by substitution `S` into `arg`
+    fn instantiate_ucanonical_goal<R>(
+        &self,
+        arg: &C::UCanonicalGoalInEnvironment,
+        op: impl FnOnce(&mut dyn InferenceTable<C>, C::Substitution, C::Environment, C::Goal) -> R,
+    ) -> R;
+
+    fn instantiate_ex_clause<R>(
+        &self,
+        num_universes: usize,
+        canonical_ex_clause: &C::CanonicalExClause,
+        op: impl FnOnce(&mut dyn InferenceTable<C>, ExClause<C>) -> R
+    ) -> R;
 }
 
 pub trait ResolventOps<C: Context> {
+    /// Combines the `goal` (instantiated within `infer`) with the
+    /// given program clause to yield the start of a new strand (a
+    /// canonical ex-clause).
+    ///
+    /// The bindings in `infer` are unaffected by this operation.
     fn resolvent_clause(
-        &self,
-        infer: &mut C::InferenceTable,
+        &mut self,
         environment: &C::Environment,
         goal: &C::DomainGoal,
         subst: &C::Substitution,
         clause: &C::ProgramClause,
-    ) -> Fallible<ExClause<C>>;
+    ) -> Fallible<C::CanonicalExClause>;
 
     fn apply_answer_subst(
-        &self,
-        infer: &mut C::InferenceTable,
+        &mut self,
         ex_clause: ExClause<C>,
         selected_goal: &C::GoalInEnvironment,
         answer_table_goal: &C::CanonicalGoalInEnvironment,
@@ -157,10 +186,7 @@ pub trait Aggregate<C: Context> {
 pub trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
     fn canonical(&self) -> &C::CanonicalGoalInEnvironment;
     fn is_trivial_substitution(&self, canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
-}
-
-pub trait CanonicalGoalInEnvironment<C: Context>: Debug + Clone {
-    fn substitute(&self, subst: &C::Substitution) -> (C::Environment, C::Goal);
+    fn num_universes(&self) -> usize;
 }
 
 pub trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
@@ -172,31 +198,21 @@ pub trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
     fn add_clauses(&self, clauses: impl IntoIterator<Item = C::DomainGoal>) -> Self;
 }
 
-pub trait InferenceTable<C: Context>: Clone {
-    type UnificationResult: UnificationResult<C>;
-
-    fn new() -> Self;
-
+pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> {
     // Used by: simplify
     fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
     // Used by: simplify
     fn instantiate_binders_existentially(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
-    // Used by: logic
-    fn instantiate_universes<'v>(
-        &mut self,
-        value: &'v C::UCanonicalGoalInEnvironment,
-    ) -> &'v C::CanonicalGoalInEnvironment;
-
     // Used by: logic (but for debugging only)
     fn debug_ex_clause(&mut self, value: &'v ExClause<C>) -> Box<dyn Debug + 'v>;
 
-    // Used by: logic (but for debugging only)
-    fn debug_goal(&mut self, goal: &'v C::GoalInEnvironment) -> Box<dyn Debug + 'v>;
-
     // Used by: logic
     fn canonicalize_goal(&mut self, value: &C::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;
+
+    // Used by: logic
+    fn canonicalize_ex_clause(&mut self, value: &ExClause<C>) -> C::CanonicalExClause;
 
     // Used by: logic
     fn canonicalize_constrained_subst(
@@ -212,9 +228,6 @@ pub trait InferenceTable<C: Context>: Clone {
     ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     // Used by: logic
-    fn fresh_subst_for_goal(&mut self, goal: &C::CanonicalGoalInEnvironment) -> C::Substitution;
-
-    // Used by: logic
     fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
 
     // Used by: simplify
@@ -223,7 +236,7 @@ pub trait InferenceTable<C: Context>: Clone {
         environment: &C::Environment,
         a: &C::Parameter,
         b: &C::Parameter,
-    ) -> Fallible<Self::UnificationResult>;
+    ) -> Fallible<C::UnificationResult>;
 }
 
 pub trait Substitution<C: Context>: Clone + Debug {}
