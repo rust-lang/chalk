@@ -3,8 +3,8 @@ use crate::ir::*;
 use crate::solve::{Guidance, Solution};
 use crate::solve::infer::InferenceTable;
 
-use chalk_slg::context;
-use chalk_slg::SimplifiedAnswer;
+use chalk_engine::context;
+use chalk_engine::SimplifiedAnswer;
 use std::fmt::Debug;
 
 use super::SlgContext;

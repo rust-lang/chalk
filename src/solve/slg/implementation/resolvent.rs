@@ -6,8 +6,8 @@ use crate::solve::infer::InferenceTable;
 use crate::solve::slg::implementation::{SlgContext, TruncatingInferenceTable};
 use crate::zip::{Zip, Zipper};
 
-use chalk_slg::{ExClause, Literal};
-use chalk_slg::context::{self, UnificationResult as UnificationResultTrait};
+use chalk_engine::{ExClause, Literal};
+use chalk_engine::context::{self, UnificationResult as UnificationResultTrait};
 use std::sync::Arc;
 
 ///////////////////////////////////////////////////////////////////////////
