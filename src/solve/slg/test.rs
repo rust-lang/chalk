@@ -6,7 +6,7 @@ use crate::ir;
 use crate::lower::*;
 use crate::solve::slg::implementation::SlgContext;
 
-use chalk_slg::forest::Forest;
+use chalk_engine::forest::Forest;
 use std::sync::Arc;
 
 fn parse_and_lower_program(text: &str) -> Result<ir::Program> {

@@ -1,6 +1,6 @@
 [package]
 authors = ["Niko Matsakis <niko@alum.mit.edu>"]
-name = "chalk-slg"
+name = "chalk-engine"
 version = "0.1.0"
 
 [dependencies]

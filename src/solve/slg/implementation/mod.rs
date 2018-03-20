@@ -8,10 +8,10 @@ use crate::solve::infer::unify::UnificationResult;
 use crate::solve::Solution;
 use crate::solve::truncate::{self, Truncated};
 
-use chalk_slg::{DelayedLiteral, ExClause, Literal};
-use chalk_slg::context;
-use chalk_slg::forest::Forest;
-use chalk_slg::hh::HhGoal;
+use chalk_engine::{DelayedLiteral, ExClause, Literal};
+use chalk_engine::context;
+use chalk_engine::forest::Forest;
+use chalk_engine::hh::HhGoal;
 
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -317,7 +317,7 @@ enum_fold!(LiteralSlgContext {
     }
 });
 
-copy_fold!(::chalk_slg::TableIndex);
+copy_fold!(::chalk_engine::TableIndex);
 
 type DelayedLiteralSlgContext = DelayedLiteral<SlgContext>;
 enum_fold!(DelayedLiteralSlgContext {

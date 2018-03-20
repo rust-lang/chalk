@@ -22,7 +22,7 @@ path = "chalk-parse"
 [dependencies.chalk-macros]
 path = "chalk-macros"
 
-[dependencies.chalk-slg]
-path = "chalk-slg"
+[dependencies.chalk-engine]
+path = "chalk-engine"
 
 [workspace]
