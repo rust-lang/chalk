@@ -231,10 +231,6 @@ impl context::Environment<SlgContext> for Arc<Environment> {
     }
 }
 
-impl context::Substitution<SlgContext> for Substitution {}
-
-impl context::Parameter<SlgContext> for Parameter {}
-
 impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::UniverseMap {
     fn map_goal_from_canonical(
         &self,
@@ -250,8 +246,6 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
         self.map_from_canonical(value)
     }
 }
-
-impl context::ConstraintInEnvironment<SlgContext> for InEnvironment<Constraint> {}
 
 impl context::DomainGoal<SlgContext> for DomainGoal {
     fn into_goal(self) -> Goal {
@@ -278,10 +272,6 @@ impl context::UCanonicalGoalInEnvironment<SlgContext> for UCanonical<InEnvironme
         self.is_trivial_substitution(canonical_subst)
     }
 }
-
-impl context::BindersGoal<SlgContext> for Binders<Box<Goal>> {}
-
-impl context::ProgramClause<SlgContext> for ProgramClause {}
 
 impl context::Goal<SlgContext> for Goal {
     fn cannot_prove() -> Goal {
