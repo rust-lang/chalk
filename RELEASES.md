@@ -3,6 +3,12 @@ crates.io periodically for use by the compiler. The rest of chalk is
 not yet published, though it might be nice to publish the interpreter
 at some point.
 
+# Release 0.2.0
+
+**Tag:** `chalk-engine-v0.2.0`
+
+Remove some pointless traits from Chalk engine context.
+
 # Release 0.1.0
 
 **Tag:** `chalk-engine-v0.1.0`
