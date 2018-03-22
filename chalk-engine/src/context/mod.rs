@@ -28,14 +28,14 @@ pub trait Context
     /// Represents a goal along with an environment.
     type GoalInEnvironment: GoalInEnvironment<Self>;
 
-    type CanonicalExClause: Debug + Clone;
+    type CanonicalExClause: Debug;
 
     /// A canonicalized `GoalInEnvironment` -- that is, one where all
     /// free inference variables have been bound into the canonical
     /// binder. See [the rustc-guide] for more information.
     ///
     /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html
-    type CanonicalGoalInEnvironment: Debug + Clone;
+    type CanonicalGoalInEnvironment: Debug;
 
     /// A u-canonicalized `GoalInEnvironment` -- this is one where the
     /// free universes are renumbered to consecutive integers starting
@@ -44,11 +44,11 @@ pub trait Context
 
     /// Represents a region constraint that will be propagated back
     /// (but not verified).
-    type RegionConstraint: ConstraintInEnvironment<Self>;
+    type RegionConstraint: Debug;
 
     /// Represents a substitution from the "canonical variables" found
     /// in a canonical goal to specific values.
-    type Substitution: Substitution<Self>;
+    type Substitution: Debug;
 
     /// Part of an answer: represents a canonicalized substitution,
     /// combined with region constraints. See [the rustc-guide] for more information.
@@ -62,17 +62,17 @@ pub trait Context
     ///
     /// (In Lambda Prolog, this would be a "lambda predicate", like `T
     /// \ Goal`).
-    type BindersGoal: BindersGoal<Self>;
+    type BindersGoal: Debug;
 
     /// A term that can be quantified over and unified -- in current
     /// Chalk, either a type or lifetime.
-    type Parameter: Parameter<Self>;
+    type Parameter: Debug;
 
     /// A rule like `DomainGoal :- Goal`.
     ///
     /// `resolvent_clause` combines a program-clause and a concrete
     /// goal we are trying to solve to produce an ex-clause.
-    type ProgramClause: ProgramClause<Self>;
+    type ProgramClause: Debug;
 
     /// The successful result from unification: contains new subgoals
     /// and things that can be attached to an ex-clause.
@@ -193,7 +193,7 @@ pub trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
     fn environment(&self) -> &C::Environment;
 }
 
-pub trait Environment<C: Context>: Debug + Clone + Eq + Ord + Hash {
+pub trait Environment<C: Context>: Debug + Clone {
     // Used by: simplify
     fn add_clauses(&self, clauses: impl IntoIterator<Item = C::DomainGoal>) -> Self;
 }
@@ -239,28 +239,18 @@ pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> {
     ) -> Fallible<C::UnificationResult>;
 }
 
-pub trait Substitution<C: Context>: Clone + Debug {}
-
 pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
     fn empty_constraints(&self) -> bool;
 }
 
-pub trait ConstraintInEnvironment<C: Context>: Clone + Debug + Eq + Hash + Ord {}
-
-pub trait DomainGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {
+pub trait DomainGoal<C: Context>: Debug {
     fn into_goal(self) -> C::Goal;
 }
 
-pub trait Goal<C: Context>: Clone + Debug + Eq + Hash + Ord {
+pub trait Goal<C: Context>: Clone + Debug + Eq {
     fn cannot_prove() -> Self;
     fn into_hh_goal(self) -> HhGoal<C>;
 }
-
-pub trait Parameter<C: Context>: Clone + Debug + Eq + Hash + Ord {}
-
-pub trait ProgramClause<C: Context>: Debug {}
-
-pub trait BindersGoal<C: Context>: Clone + Debug + Eq + Hash + Ord {}
 
 pub trait UniverseMap<C: Context>: Clone + Debug {
     fn map_goal_from_canonical(
