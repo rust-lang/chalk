@@ -1,7 +1,12 @@
 [package]
-authors = ["Niko Matsakis <niko@alum.mit.edu>"]
 name = "chalk"
 version = "0.1.0"
+description = "Model of the Rust trait system"
+license = "Apache-2.0/MIT"
+authors = ["Rust Compiler Team", "Chalk developers"]
+repository = "https://github.com/rust-lang-nursery/chalk"
+readme = "README.md"
+keywords = ["compiler", "traits", "prolog"]
 
 [dependencies]
 diff = "0.1.11"
@@ -17,12 +22,15 @@ serde_derive = "1.0"
 stacker = "0.1.2"
 
 [dependencies.chalk-parse]
+version = "0.1.0"
 path = "chalk-parse"
 
 [dependencies.chalk-macros]
+version = "0.1.0"
 path = "chalk-macros"
 
 [dependencies.chalk-engine]
+version = "0.1.0"
 path = "chalk-engine"
 
 [workspace]

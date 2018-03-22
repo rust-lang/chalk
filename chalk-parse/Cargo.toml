@@ -1,7 +1,12 @@
 [package]
 name = "chalk-parse"
 version = "0.1.0"
-authors = ["Niko Matsakis <niko@alum.mit.edu>"]
+description = "Parser for the Chalk project"
+license = "Apache-2.0/MIT"
+authors = ["Rust Compiler Team", "Chalk developers"]
+repository = "https://github.com/rust-lang-nursery/chalk"
+readme = "README.md"
+keywords = ["compiler", "traits", "prolog"]
 build = "build.rs" # LALRPOP preprocessing
 
 # Add a dependency on the LALRPOP runtime library:
