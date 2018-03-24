@@ -36,9 +36,9 @@ canonical form but `?0: A && ?1: B` is.
 (See [*DeBruijn Index*](#debrujin-index).)
 
 ## Clause
-In the A clause is the disjunction of several expressions. For example the clause
-`condition_1 || condition_2 || ...` states that at least one of the conditions
-holds.
+In the A clause is the disjunction of several expressions. For example the
+clause `condition_1 || condition_2 || ...` states that at least one of the
+conditions holds.
 
 There are two notable special cases of clauses. A *Horn clause* has at most one
 positive literal. A *Definite clause* has exactly one positive literal.
