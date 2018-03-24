@@ -67,6 +67,10 @@ impl C for A {}
 is expressed as the *Horn clause* `(A: B) && (A: C)`. Note the missing
 consequence.
 
+The rules in chalk are expressed as *hereditary Harrop* clauses which are an
+extension to the *Horn clauses*. They allow to express *universial
+quantification*
+
 ## DeBruijn Index
 DeBruijn indices numerate literals that are bound in an unambiguous way. The
 literal is given the number of its binder. The indices start at zero from the
