@@ -30,11 +30,10 @@ Examples for binders:
 - A sum `\sum_n x_n` binds the index variable `n`.
 
 ## Canonical Form
-A formula in canonical form has the property that its DeBruijn indices are
-minimized. For example when the formula `forall<0, 1> { 0: A && 1: B }` is
-processed, both "branches" `0: A` and `1: B` are processed individually. Then
-the first branch would be in canonical form, the second branch not since the
-occurring DeBruijn index `1` could be replaced with `0`.
+For a formula in canonical form all its variables are assigned integer IDs with
+increasing values starting at zero. For example `?3: A && ?4: B` is not in
+canonical form but `?0: A && ?1: B` is.
+(See [*DeBruijn Index*](#debrujin-index).)
 
 ## Clause
 In the A clause is the disjunction of several expressions. For example the clause
@@ -79,6 +78,8 @@ innermost binder increasing from the inside out.
 Given the example `forall<T> { exists<U> { T: Foo<Item=U> } }` the
 literal names `U` and `T` are replaced with `0` and `1` respectively: `forall<0>
 { exists<1> { 0: Foo<Item=1> } }`.
+
+See also [*Canonical form*](#canonical-form).
 
 ## Formula
 A formula is a logical expression consisting of literals and constants connected
