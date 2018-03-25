@@ -1,7 +1,7 @@
 use crate::{DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal, Minimums,
             TableIndex};
 use crate::fallible::NoSolution;
-use crate::context::{self, prelude::*};
+use crate::context::{WithInstantiatedUCanonicalGoal, WithInstantiatedExClause, prelude::*};
 use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::stack::StackIndex;
@@ -194,7 +194,7 @@ impl<C: Context> Forest<C> {
                         self.context.clone(),
                         num_universes,
                         &canonical_strand,
-                        |strand| self.pursue_strand(depth, strand),
+                        PursueStrand { forest: self, depth },
                     );
                     match result {
                         Ok(answer) => {
@@ -247,19 +247,37 @@ impl<C: Context> Forest<C> {
         context: C,
         num_universes: usize,
         canonical_strand: &CanonicalStrand<C>,
-        op: impl FnOnce(Strand<'_, C>) -> R,
+        op: impl WithInstantiatedStrand<C, Output = R>,
     ) -> R {
         let CanonicalStrand {
             canonical_ex_clause,
             selected_subgoal,
         } = canonical_strand;
-        context.instantiate_ex_clause(num_universes, &canonical_ex_clause, |infer, ex_clause| {
-            op(Strand {
-                infer,
-                ex_clause,
-                selected_subgoal: selected_subgoal.clone(),
-            })
-        })
+        return context.instantiate_ex_clause(num_universes, &canonical_ex_clause, With {
+            op,
+            selected_subgoal: selected_subgoal.clone(),
+        });
+
+        struct With<C: Context, OP: WithInstantiatedStrand<C>> {
+            op: OP,
+            selected_subgoal: Option<SelectedSubgoal<C>>,
+        }
+
+        impl<C: Context, OP: WithInstantiatedStrand<C>> WithInstantiatedExClause<C> for With<C, OP> {
+            type Output = OP::Output;
+
+            fn with(
+                self,
+                infer: &mut dyn InferenceTable<C>,
+                ex_clause: ExClause<C>,
+            ) -> OP::Output {
+                self.op.with(Strand {
+                    infer,
+                    ex_clause,
+                    selected_subgoal: self.selected_subgoal.clone(),
+                })
+            }
+        }
     }
 
     fn canonicalize_strand(strand: Strand<'_, C>) -> CanonicalStrand<C> {
@@ -369,7 +387,7 @@ impl<C: Context> Forest<C> {
                 self.context.clone(),
                 num_universes,
                 canonical_strand,
-                |strand| Self::delay_strand_after_cycle(table, strand),
+                DelayStrandAfterCycle { table },
             );
 
             *canonical_strand = delayed_strand;
@@ -690,9 +708,7 @@ impl<C: Context> Forest<C> {
             this: &'a mut Forest<C>,
         }
 
-        impl<'a, C: Context> context::WithInstantiatedUCanonicalGoal<C>
-            for PushInitialStrandsInstantiated<'a, C>
-        {
+        impl<C: Context> WithInstantiatedUCanonicalGoal<C> for PushInitialStrandsInstantiated<'a, C> {
             type Output = ();
 
             fn with(
@@ -1259,5 +1275,36 @@ impl<C: Context> Forest<C> {
                 selected_subgoal: None,
             },
         )
+    }
+}
+
+trait WithInstantiatedStrand<C: Context> {
+    type Output;
+
+    fn with(self, strand: Strand<'_, C>) -> Self::Output;
+}
+
+struct PursueStrand<'a, C: Context + 'a> {
+    forest: &'a mut Forest<C>,
+    depth: StackIndex,
+}
+
+impl<C: Context> WithInstantiatedStrand<C> for PursueStrand<'a, C> {
+    type Output = StrandResult<C, ()>;
+
+    fn with(self, strand: Strand<'_, C>) -> Self::Output {
+        self.forest.pursue_strand(self.depth, strand)
+    }
+}
+
+struct DelayStrandAfterCycle {
+    table: TableIndex,
+}
+
+impl<C: Context> WithInstantiatedStrand<C> for DelayStrandAfterCycle {
+    type Output = (CanonicalStrand<C>, TableIndex);
+
+    fn with(self, strand: Strand<'_, C>) -> Self::Output {
+        <Forest<C>>::delay_strand_after_cycle(self.table, strand)
     }
 }

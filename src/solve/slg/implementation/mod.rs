@@ -111,12 +111,12 @@ impl context::ContextOps<SlgContext> for SlgContext {
         &self,
         num_universes: usize,
         canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
-        op: impl FnOnce(&mut dyn context::InferenceTable<SlgContext>, ExClause<SlgContext>) -> R
+        op: impl context::WithInstantiatedExClause<Self, Output = R>,
     ) -> R {
         let (infer, _subst, ex_cluse) =
             InferenceTable::from_canonical(num_universes, canonical_ex_clause);
         let dyn_infer = &mut TruncatingInferenceTable::new(self.max_size, infer);
-        op(dyn_infer, ex_cluse)
+        op.with(dyn_infer, ex_cluse)
     }
 }
 

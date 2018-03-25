@@ -148,10 +148,16 @@ pub trait ContextOps<C: Context> {
         &self,
         num_universes: usize,
         canonical_ex_clause: &C::CanonicalExClause,
-        op: impl FnOnce(&mut dyn InferenceTable<C>, ExClause<C>) -> R
+        op: impl WithInstantiatedExClause<C, Output = R>,
     ) -> R;
 }
 
+/// Callback trait for `instantiate_ucanonical_goal`. Unlike the other
+/// traits in this file, this is not implemented by the context crate, but rather
+/// by code in this crate.
+///
+/// This basically plays the role of an `FnOnce` -- but unlike an
+/// `FnOnce`, the `with` method is generic.
 pub trait WithInstantiatedUCanonicalGoal<C: Context> {
     type Output;
 
@@ -161,6 +167,22 @@ pub trait WithInstantiatedUCanonicalGoal<C: Context> {
         subst: C::Substitution,
         environment: C::Environment,
         goal: C::Goal,
+    ) -> Self::Output;
+}
+
+/// Callback trait for `instantiate_ex_clause`. Unlike the other
+/// traits in this file, this is not implemented by the context crate,
+/// but rather by code in this crate.
+///
+/// This basically plays the role of an `FnOnce` -- but unlike an
+/// `FnOnce`, the `with` method is generic.
+pub trait WithInstantiatedExClause<C: Context> {
+    type Output;
+
+    fn with(
+        self,
+        infer: &mut dyn InferenceTable<C>,
+        ex_clause: ExClause<C>,
     ) -> Self::Output;
 }
 
