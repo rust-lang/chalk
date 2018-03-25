@@ -189,10 +189,12 @@ impl<C: Context> Forest<C> {
         loop {
             match self.tables[table].pop_next_strand() {
                 Some(canonical_strand) => {
-                    let result = self.with_instantiated_strand_from_table(
-                        table,
+                    let num_universes = self.tables[table].table_goal.num_universes();
+                    let result = Self::with_instantiated_strand(
+                        self.context.clone(),
+                        num_universes,
                         &canonical_strand,
-                        |this, strand| this.pursue_strand(depth, strand),
+                        |strand| self.pursue_strand(depth, strand),
                     );
                     match result {
                         Ok(answer) => {
@@ -239,21 +241,6 @@ impl<C: Context> Forest<C> {
                 }
             }
         }
-    }
-
-    fn with_instantiated_strand_from_table<R>(
-        &mut self,
-        table: TableIndex,
-        canonical_strand: &CanonicalStrand<C>,
-        op: impl FnOnce(&mut Self, Strand<'_, C>) -> R,
-    ) -> R {
-        let num_universes = self.tables[table].table_goal.num_universes();
-        Self::with_instantiated_strand(
-            self.context.clone(),
-            num_universes,
-            canonical_strand,
-            |strand| op(self, strand),
-        )
     }
 
     fn with_instantiated_strand<R>(
