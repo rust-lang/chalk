@@ -99,12 +99,12 @@ impl context::ContextOps<SlgContext> for SlgContext {
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &UCanonical<InEnvironment<Goal>>,
-        op: impl FnOnce(&mut dyn context::InferenceTable<SlgContext>, Substitution, Arc<Environment>, Goal) -> R
+        op: impl context::WithInstantiatedUCanonicalGoal<Self, Output = R>,
     ) -> R {
         let (infer, subst, InEnvironment { environment, goal }) =
             InferenceTable::from_canonical(arg.universes, &arg.canonical);
         let dyn_infer = &mut TruncatingInferenceTable::new(self.max_size, infer);
-        op(dyn_infer, subst, environment, goal)
+        op.with(dyn_infer, subst, environment, goal)
     }
 
     fn instantiate_ex_clause<R>(

@@ -141,7 +141,7 @@ pub trait ContextOps<C: Context> {
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &C::UCanonicalGoalInEnvironment,
-        op: impl FnOnce(&mut dyn InferenceTable<C>, C::Substitution, C::Environment, C::Goal) -> R,
+        op: impl WithInstantiatedUCanonicalGoal<C, Output = R>,
     ) -> R;
 
     fn instantiate_ex_clause<R>(
@@ -150,6 +150,18 @@ pub trait ContextOps<C: Context> {
         canonical_ex_clause: &C::CanonicalExClause,
         op: impl FnOnce(&mut dyn InferenceTable<C>, ExClause<C>) -> R
     ) -> R;
+}
+
+pub trait WithInstantiatedUCanonicalGoal<C: Context> {
+    type Output;
+
+    fn with(
+        self,
+        infer: &mut impl InferenceTable<C>,
+        subst: C::Substitution,
+        environment: C::Environment,
+        goal: C::Goal,
+    ) -> Self::Output;
 }
 
 pub trait ResolventOps<C: Context> {

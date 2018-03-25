@@ -1,7 +1,7 @@
 use crate::{DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal, Minimums,
             TableIndex};
 use crate::fallible::NoSolution;
-use crate::context::prelude::*;
+use crate::context::{self, prelude::*};
 use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::stack::StackIndex;
@@ -248,9 +248,12 @@ impl<C: Context> Forest<C> {
         op: impl FnOnce(&mut Self, Strand<'_, C>) -> R,
     ) -> R {
         let num_universes = self.tables[table].table_goal.num_universes();
-        Self::with_instantiated_strand(self.context.clone(), num_universes, canonical_strand, |strand| {
-            op(self, strand)
-        })
+        Self::with_instantiated_strand(
+            self.context.clone(),
+            num_universes,
+            canonical_strand,
+            |strand| op(self, strand),
+        )
     }
 
     fn with_instantiated_strand<R>(
@@ -429,7 +432,11 @@ impl<C: Context> Forest<C> {
     /// by selecting a new subgoal or by checking to see if the
     /// selected subgoal has an answer. `strand` is associated with
     /// the table on the stack at the given `depth`.
-    fn pursue_strand(&mut self, depth: StackIndex, mut strand: Strand<'_, C>) -> StrandResult<C, ()> {
+    fn pursue_strand(
+        &mut self,
+        depth: StackIndex,
+        mut strand: Strand<'_, C>,
+    ) -> StrandResult<C, ()> {
         info_heading!(
             "pursue_strand(table={:?}, depth={:?}, ex_clause={:#?}, selected_subgoal={:?})",
             self.stack[depth].table,
@@ -688,51 +695,82 @@ impl<C: Context> Forest<C> {
         let table_goal = self.tables[table].table_goal.clone();
         self.context.clone().instantiate_ucanonical_goal(
             &table_goal,
-            |infer, subst, environment, goal| {
-                let table_ref = &mut self.tables[table];
-                match goal.into_hh_goal() {
-                    HhGoal::DomainGoal(domain_goal) => {
-                        let clauses = self.context.program_clauses(&environment, &domain_goal);
-                        for clause in clauses {
-                            debug!("program clause = {:#?}", clause);
-                            if let Ok(resolvent) =
-                                infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
-                            {
-                                info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
-                                table_ref.push_strand(CanonicalStrand {
-                                    canonical_ex_clause: resolvent,
-                                    selected_subgoal: None,
-                                });
-                            }
-                        }
-                    }
+            PushInitialStrandsInstantiated { table, this: self },
+        );
 
-                    hh_goal => {
-                        // `canonical_goal` is an HH goal. We can simplify it
-                        // into a series of *literals*, all of which must be
-                        // true. Thus, in EWFS terms, we are effectively
-                        // creating a single child of the `A :- A` goal that
-                        // is like `A :- B, C, D` where B, C, and D are the
-                        // simplified subgoals. You can think of this as
-                        // applying built-in "meta program clauses" that
-                        // reduce HH goals into Domain goals.
-                        if let Ok(ex_clause) =
-                            Self::simplify_hh_goal(&mut *infer, subst, &environment, hh_goal)
-                        {
-                            info!(
-                                "pushing initial strand with ex-clause: {:#?}",
-                                infer.debug_ex_clause(&ex_clause),
-                            );
-                            table_ref.push_strand(Self::canonicalize_strand(Strand {
-                                infer,
-                                ex_clause,
-                                selected_subgoal: None,
-                            }));
-                        }
+        struct PushInitialStrandsInstantiated<'a, C: Context + 'a> {
+            table: TableIndex,
+            this: &'a mut Forest<C>,
+        }
+
+        impl<'a, C: Context> context::WithInstantiatedUCanonicalGoal<C>
+            for PushInitialStrandsInstantiated<'a, C>
+        {
+            type Output = ();
+
+            fn with(
+                self,
+                infer: &mut impl InferenceTable<C>,
+                subst: C::Substitution,
+                environment: C::Environment,
+                goal: C::Goal,
+            ) {
+                let PushInitialStrandsInstantiated { table, this } = self;
+                this.push_initial_strands_instantiated(table, infer, subst, environment, goal);
+            }
+        }
+    }
+
+    fn push_initial_strands_instantiated(
+        &mut self,
+        table: TableIndex,
+        infer: &mut impl InferenceTable<C>,
+        subst: C::Substitution,
+        environment: C::Environment,
+        goal: C::Goal,
+    ) {
+        let table_ref = &mut self.tables[table];
+        match goal.into_hh_goal() {
+            HhGoal::DomainGoal(domain_goal) => {
+                let clauses = self.context.program_clauses(&environment, &domain_goal);
+                for clause in clauses {
+                    debug!("program clause = {:#?}", clause);
+                    if let Ok(resolvent) =
+                        infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
+                    {
+                        info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
+                        table_ref.push_strand(CanonicalStrand {
+                            canonical_ex_clause: resolvent,
+                            selected_subgoal: None,
+                        });
                     }
                 }
-            },
-        );
+            }
+
+            hh_goal => {
+                // `canonical_goal` is an HH goal. We can simplify it
+                // into a series of *literals*, all of which must be
+                // true. Thus, in EWFS terms, we are effectively
+                // creating a single child of the `A :- A` goal that
+                // is like `A :- B, C, D` where B, C, and D are the
+                // simplified subgoals. You can think of this as
+                // applying built-in "meta program clauses" that
+                // reduce HH goals into Domain goals.
+                if let Ok(ex_clause) =
+                    Self::simplify_hh_goal(&mut *infer, subst, &environment, hh_goal)
+                {
+                    info!(
+                        "pushing initial strand with ex-clause: {:#?}",
+                        infer.debug_ex_clause(&ex_clause),
+                    );
+                    table_ref.push_strand(Self::canonicalize_strand(Strand {
+                        infer,
+                        ex_clause,
+                        selected_subgoal: None,
+                    }));
+                }
+            }
+        }
     }
 
     /// Given a selected positive subgoal, applies the subgoal
