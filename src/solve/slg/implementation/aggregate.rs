@@ -11,7 +11,7 @@ use super::SlgContext;
 
 /// Draws as many answers as it needs from `simplified_answers` (but
 /// no more!) in order to come up with a solution.
-impl context::Aggregate<SlgContext> for SlgContext {
+impl context::AggregateOps<SlgContext> for SlgContext {
     fn make_solution(
         &self,
         root_goal: &Canonical<InEnvironment<Goal>>,

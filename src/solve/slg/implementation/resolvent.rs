@@ -46,7 +46,7 @@ use std::sync::Arc;
 //
 // is the SLG resolvent of G with C.
 
-impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
+impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable {
     /// Applies the SLG resolvent algorithm to incorporate a program
     /// clause into the main X-clause, producing a new X-clause that
     /// must be solved.
@@ -61,7 +61,7 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
         goal: &DomainGoal,
         subst: &Substitution,
         clause: &ProgramClause,
-    ) -> Fallible<Canonical<ExClause<SlgContext>>> {
+    ) -> Fallible<Canonical<ExClause<SlgContext, SlgContext>>> {
         // Relating the above description to our situation:
         //
         // - `goal` G, except with binders for any existential variables.
@@ -197,11 +197,11 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
 
     fn apply_answer_subst(
         &mut self,
-        ex_clause: ExClause<SlgContext>,
+        ex_clause: ExClause<SlgContext, SlgContext>,
         selected_goal: &InEnvironment<Goal>,
         answer_table_goal: &Canonical<InEnvironment<Goal>>,
         canonical_answer_subst: &Canonical<ConstrainedSubst>,
-    ) -> Fallible<ExClause<SlgContext>> {
+    ) -> Fallible<ExClause<SlgContext, SlgContext>> {
         debug_heading!("apply_answer_subst()");
         debug!("ex_clause={:?}", ex_clause);
         debug!("selected_goal={:?}", self.infer.normalize_deep(selected_goal));
@@ -239,7 +239,7 @@ struct AnswerSubstitutor<'t> {
     answer_subst: &'t Substitution,
     answer_binders: usize,
     pending_binders: usize,
-    ex_clause: ExClause<SlgContext>,
+    ex_clause: ExClause<SlgContext, SlgContext>,
 }
 
 impl<'t> AnswerSubstitutor<'t> {
@@ -247,10 +247,10 @@ impl<'t> AnswerSubstitutor<'t> {
         table: &mut InferenceTable,
         environment: &Arc<Environment>,
         answer_subst: &Substitution,
-        ex_clause: ExClause<SlgContext>,
+        ex_clause: ExClause<SlgContext, SlgContext>,
         answer: &T,
         pending: &T,
-    ) -> Fallible<ExClause<SlgContext>> {
+    ) -> Fallible<ExClause<SlgContext, SlgContext>> {
         let mut this = AnswerSubstitutor {
             table,
             environment,

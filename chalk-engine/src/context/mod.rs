@@ -1,34 +1,25 @@
 use crate::fallible::Fallible;
-use crate::{ExClause, SimplifiedAnswer};
 use crate::hh::HhGoal;
+use crate::{ExClause, SimplifiedAnswer};
 use std::fmt::Debug;
 use std::hash::Hash;
 
 crate mod prelude;
 
-pub trait Context
-    : Sized + Clone + Debug + ContextOps<Self> + Aggregate<Self>
-{
-    /// Represents a set of hypotheses that are assumed to be true.
-    type Environment: Environment<Self>;
-
-    /// Goals correspond to things we can prove.
-    type Goal: Goal<Self>;
-
-    /// A goal that can be targeted by a program clause. The SLG
-    /// solver treats these opaquely; in contrast, it understands
-    /// "meta" goals like `G1 && G2` and so forth natively.
-    type DomainGoal: DomainGoal<Self>;
+/// The "context" in which the SLG solver operates.
+pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self> {
+    type CanonicalExClause: Debug;
 
     /// A map between universes. These are produced when
     /// u-canonicalizing something; they map canonical results back to
     /// the universes from the original.
     type UniverseMap: UniverseMap<Self>;
 
-    /// Represents a goal along with an environment.
-    type GoalInEnvironment: GoalInEnvironment<Self>;
-
-    type CanonicalExClause: Debug;
+    /// Part of an answer: represents a canonicalized substitution,
+    /// combined with region constraints. See [the rustc-guide] for more information.
+    ///
+    /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html#canonicalizing-the-query-result
+    type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
 
     /// A canonicalized `GoalInEnvironment` -- that is, one where all
     /// free inference variables have been bound into the canonical
@@ -42,6 +33,30 @@ pub trait Context
     /// from U1 (but preserving their relative order).
     type UCanonicalGoalInEnvironment: UCanonicalGoalInEnvironment<Self>;
 
+    /// A final solution that is passed back to the user. This is
+    /// completely opaque to the SLG solver; it is produced by
+    /// `make_solution`.
+    type Solution;
+}
+
+/// The set of types belonging to an "inference context"; in rustc,
+/// these types are tied to the lifetime of the arena within which an
+/// inference context operates.
+pub trait InferenceContext<C: Context>: Sized + Debug {
+    /// Represents a set of hypotheses that are assumed to be true.
+    type Environment: Environment<C, Self>;
+
+    /// Goals correspond to things we can prove.
+    type Goal: Goal<C, Self>;
+
+    /// A goal that can be targeted by a program clause. The SLG
+    /// solver treats these opaquely; in contrast, it understands
+    /// "meta" goals like `G1 && G2` and so forth natively.
+    type DomainGoal: DomainGoal<C, Self>;
+
+    /// Represents a goal along with an environment.
+    type GoalInEnvironment: GoalInEnvironment<C, Self>;
+
     /// Represents a region constraint that will be propagated back
     /// (but not verified).
     type RegionConstraint: Debug;
@@ -49,12 +64,6 @@ pub trait Context
     /// Represents a substitution from the "canonical variables" found
     /// in a canonical goal to specific values.
     type Substitution: Debug;
-
-    /// Part of an answer: represents a canonicalized substitution,
-    /// combined with region constraints. See [the rustc-guide] for more information.
-    ///
-    /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html#canonicalizing-the-query-result
-    type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
 
     /// A "higher-order" goal, quantified over some types and/or
     /// lifetimes. When you have a quantification, like `forall<T> { G
@@ -76,55 +85,12 @@ pub trait Context
 
     /// The successful result from unification: contains new subgoals
     /// and things that can be attached to an ex-clause.
-    type UnificationResult: UnificationResult<Self>;
-
-    /// A final solution that is passed back to the user. This is
-    /// completely opaque to the SLG solver; it is produced by
-    /// `make_solution`.
-    type Solution;
-}
-
-/// "Truncation" (called "abstraction" in the papers referenced below)
-/// refers to the act of modifying a goal or answer that has become
-/// too large in order to guarantee termination. The SLG solver
-/// doesn't care about the precise truncation function, so long as
-/// it's deterministic and so forth.
-///
-/// Citations:
-///
-/// - Terminating Evaluation of Logic Programs with Finite Three-Valued Models
-///   - Riguzzi and Swift; ACM Transactions on Computational Logic 2013
-/// - Radial Restraint
-///   - Grosof and Swift; 2013
-pub trait TruncateOps<C: Context> {
-    /// If `subgoal` is too large, return a truncated variant (else
-    /// return `None`).
-    fn truncate_goal(
-        &mut self,
-        subgoal: &C::GoalInEnvironment,
-    ) -> Option<C::GoalInEnvironment>;
-
-    /// If `subst` is too large, return a truncated variant (else
-    /// return `None`).
-    fn truncate_answer(
-        &mut self,
-        subst: &C::Substitution,
-    ) -> Option<C::Substitution>;
+    type UnificationResult: UnificationResult<C, Self>;
 }
 
 pub trait ContextOps<C: Context> {
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
     fn is_coinductive(&self, goal: &C::UCanonicalGoalInEnvironment) -> bool;
-
-    /// Returns the set of program clauses that might apply to
-    /// `goal`. (This set can be over-approximated, naturally.)
-    fn program_clauses(
-        &self,
-        environment: &C::Environment,
-        goal: &C::DomainGoal,
-    ) -> Vec<C::ProgramClause>;
-
-    fn goal_in_environment(environment: &C::Environment, goal: C::Goal) -> C::GoalInEnvironment;
 
     /// Create an inference table for processing a new goal and instantiate that goal
     /// in that context, returning "all the pieces".
@@ -161,12 +127,12 @@ pub trait ContextOps<C: Context> {
 pub trait WithInstantiatedUCanonicalGoal<C: Context> {
     type Output;
 
-    fn with(
+    fn with<I: InferenceContext<C>>(
         self,
-        infer: &mut impl InferenceTable<C>,
-        subst: C::Substitution,
-        environment: C::Environment,
-        goal: C::Goal,
+        infer: &mut dyn InferenceTable<C, I>,
+        subst: I::Substitution,
+        environment: I::Environment,
+        goal: I::Goal,
     ) -> Self::Output;
 }
 
@@ -179,37 +145,15 @@ pub trait WithInstantiatedUCanonicalGoal<C: Context> {
 pub trait WithInstantiatedExClause<C: Context> {
     type Output;
 
-    fn with(
+    fn with<I: InferenceContext<C>>(
         self,
-        infer: &mut dyn InferenceTable<C>,
-        ex_clause: ExClause<C>,
+        infer: &mut dyn InferenceTable<C, I>,
+        ex_clause: ExClause<C, I>,
     ) -> Self::Output;
 }
 
-pub trait ResolventOps<C: Context> {
-    /// Combines the `goal` (instantiated within `infer`) with the
-    /// given program clause to yield the start of a new strand (a
-    /// canonical ex-clause).
-    ///
-    /// The bindings in `infer` are unaffected by this operation.
-    fn resolvent_clause(
-        &mut self,
-        environment: &C::Environment,
-        goal: &C::DomainGoal,
-        subst: &C::Substitution,
-        clause: &C::ProgramClause,
-    ) -> Fallible<C::CanonicalExClause>;
-
-    fn apply_answer_subst(
-        &mut self,
-        ex_clause: ExClause<C>,
-        selected_goal: &C::GoalInEnvironment,
-        answer_table_goal: &C::CanonicalGoalInEnvironment,
-        canonical_answer_subst: &C::CanonicalConstrainedSubst,
-    ) -> Fallible<ExClause<C>>;
-}
-
-pub trait Aggregate<C: Context> {
+/// Methods for combining solutions to yield an aggregate solution.
+pub trait AggregateOps<C: Context> {
     fn make_solution(
         &self,
         root_goal: &C::CanonicalGoalInEnvironment,
@@ -223,36 +167,43 @@ pub trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
     fn num_universes(&self) -> usize;
 }
 
-pub trait GoalInEnvironment<C: Context>: Debug + Clone + Eq + Ord + Hash {
-    fn environment(&self) -> &C::Environment;
+/// An "inference table" contains the state to support unification and
+/// other operations on terms.
+pub trait InferenceTable<C: Context, I: InferenceContext<C>>:
+    ResolventOps<C, I> + TruncateOps<C, I> + UnificationOps<C, I>
+{
 }
 
-pub trait Environment<C: Context>: Debug + Clone {
-    // Used by: simplify
-    fn add_clauses(&self, clauses: impl IntoIterator<Item = C::DomainGoal>) -> Self;
-}
+/// Methods for unifying and manipulating terms and binders.
+pub trait UnificationOps<C: Context, I: InferenceContext<C>> {
+    /// Returns the set of program clauses that might apply to
+    /// `goal`. (This set can be over-approximated, naturally.)
+    fn program_clauses(
+        &self,
+        environment: &I::Environment,
+        goal: &I::DomainGoal,
+    ) -> Vec<I::ProgramClause>;
 
-pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> {
     // Used by: simplify
-    fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
+    fn instantiate_binders_universally(&mut self, arg: &I::BindersGoal) -> I::Goal;
 
     // Used by: simplify
-    fn instantiate_binders_existentially(&mut self, arg: &C::BindersGoal) -> C::Goal;
+    fn instantiate_binders_existentially(&mut self, arg: &I::BindersGoal) -> I::Goal;
 
     // Used by: logic (but for debugging only)
-    fn debug_ex_clause(&mut self, value: &'v ExClause<C>) -> Box<dyn Debug + 'v>;
+    fn debug_ex_clause(&mut self, value: &'v ExClause<C, I>) -> Box<dyn Debug + 'v>;
 
     // Used by: logic
-    fn canonicalize_goal(&mut self, value: &C::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;
+    fn canonicalize_goal(&mut self, value: &I::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;
 
     // Used by: logic
-    fn canonicalize_ex_clause(&mut self, value: &ExClause<C>) -> C::CanonicalExClause;
+    fn canonicalize_ex_clause(&mut self, value: &ExClause<C, I>) -> C::CanonicalExClause;
 
     // Used by: logic
     fn canonicalize_constrained_subst(
         &mut self,
-        subst: C::Substitution,
-        constraints: Vec<C::RegionConstraint>,
+        subst: I::Substitution,
+        constraints: Vec<I::RegionConstraint>,
     ) -> C::CanonicalConstrainedSubst;
 
     // Used by: logic
@@ -262,42 +213,127 @@ pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> {
     ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     // Used by: logic
-    fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
+    fn invert_goal(&mut self, value: &I::GoalInEnvironment) -> Option<I::GoalInEnvironment>;
 
     // Used by: simplify
     fn unify_parameters(
         &mut self,
-        environment: &C::Environment,
-        a: &C::Parameter,
-        b: &C::Parameter,
-    ) -> Fallible<C::UnificationResult>;
+        environment: &I::Environment,
+        a: &I::Parameter,
+        b: &I::Parameter,
+    ) -> Fallible<I::UnificationResult>;
+}
+
+/// "Truncation" (called "abstraction" in the papers referenced below)
+/// refers to the act of modifying a goal or answer that has become
+/// too large in order to guarantee termination. The SLG solver
+/// doesn't care about the precise truncation function, so long as
+/// it's deterministic and so forth.
+///
+/// Citations:
+///
+/// - Terminating Evaluation of Logic Programs with Finite Three-Valued Models
+///   - Riguzzi and Swift; ACM Transactions on Computational Logic 2013
+/// - Radial Restraint
+///   - Grosof and Swift; 2013
+pub trait TruncateOps<C: Context, I: InferenceContext<C>> {
+    /// If `subgoal` is too large, return a truncated variant (else
+    /// return `None`).
+    fn truncate_goal(&mut self, subgoal: &I::GoalInEnvironment) -> Option<I::GoalInEnvironment>;
+
+    /// If `subst` is too large, return a truncated variant (else
+    /// return `None`).
+    fn truncate_answer(&mut self, subst: &I::Substitution) -> Option<I::Substitution>;
+}
+
+pub trait ResolventOps<C: Context, I: InferenceContext<C>> {
+    /// Combines the `goal` (instantiated within `infer`) with the
+    /// given program clause to yield the start of a new strand (a
+    /// canonical ex-clause).
+    ///
+    /// The bindings in `infer` are unaffected by this operation.
+    fn resolvent_clause(
+        &mut self,
+        environment: &I::Environment,
+        goal: &I::DomainGoal,
+        subst: &I::Substitution,
+        clause: &I::ProgramClause,
+    ) -> Fallible<C::CanonicalExClause>;
+
+    fn apply_answer_subst(
+        &mut self,
+        ex_clause: ExClause<C, I>,
+        selected_goal: &I::GoalInEnvironment,
+        answer_table_goal: &C::CanonicalGoalInEnvironment,
+        canonical_answer_subst: &C::CanonicalConstrainedSubst,
+    ) -> Fallible<ExClause<C, I>>;
+}
+
+pub trait GoalInEnvironment<C: Context, I: InferenceContext<C>>:
+    Debug + Clone + Eq + Ord + Hash
+{
+    fn new(
+        environment: &I::Environment,
+        goal: I::Goal,
+    ) -> Self;
+
+    fn environment(&self) -> &I::Environment;
+}
+
+pub trait Environment<C: Context, I: InferenceContext<C>>: Debug + Clone {
+    // Used by: simplify
+    fn add_clauses(&self, clauses: impl IntoIterator<Item = I::DomainGoal>) -> Self;
 }
 
 pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
+    /// True if this solution has no region constraints.
     fn empty_constraints(&self) -> bool;
 }
 
-pub trait DomainGoal<C: Context>: Debug {
-    fn into_goal(self) -> C::Goal;
+pub trait DomainGoal<C: Context, I: InferenceContext<C>>: Debug {
+    /// Upcast this domain goal into a more general goal.
+    fn into_goal(self) -> I::Goal;
 }
 
-pub trait Goal<C: Context>: Clone + Debug + Eq {
+pub trait Goal<C: Context, I: InferenceContext<C>>: Clone + Debug + Eq {
+    /// Create a "cannot prove" goal (see `HhGoal::CannotProve`).
     fn cannot_prove() -> Self;
-    fn into_hh_goal(self) -> HhGoal<C>;
+
+    /// Convert the context's goal type into the `HhGoal` type that
+    /// the SLG solver understands. The expectation is that the
+    /// context's goal type has the same set of variants, but with
+    /// different names and a different setup. If you inspect
+    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
+    /// conversion -- that is, we convert the outermost goal into an
+    /// `HhGoal`, but the goals contained within are left as context
+    /// goals.
+    fn into_hh_goal(self) -> HhGoal<C, I>;
 }
 
 pub trait UniverseMap<C: Context>: Clone + Debug {
+    /// Convert a goal G *from* the canonical universes *into* our
+    /// local universes. This will yield a goal G' that is the same
+    /// but for the universes of universally quantified names.
     fn map_goal_from_canonical(
         &self,
         value: &C::CanonicalGoalInEnvironment,
     ) -> C::CanonicalGoalInEnvironment;
 
+    /// Convert a substitution *from* the canonical universes *into*
+    /// our local universes. This will yield a substitution S' that is
+    /// the same but for the universes of universally quantified
+    /// names.
     fn map_subst_from_canonical(
         &self,
         value: &C::CanonicalConstrainedSubst,
     ) -> C::CanonicalConstrainedSubst;
 }
 
-pub trait UnificationResult<C: Context> {
-    fn into_ex_clause(self, ex_clause: &mut ExClause<C>);
+/// Embodies the result of a unification operation: we presume that
+/// unification may produce new residual subgoals, which must be
+/// further proven, as well as region constraints.
+pub trait UnificationResult<C: Context, I: InferenceContext<C>> {
+    /// Add the residual subgoals as new subgoals of the ex-clause.
+    /// Also add region constraints.
+    fn into_ex_clause(self, ex_clause: &mut ExClause<C, I>);
 }

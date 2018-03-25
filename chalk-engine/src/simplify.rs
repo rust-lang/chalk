@@ -8,12 +8,12 @@ impl<C: Context> Forest<C> {
     /// Simplifies an HH goal into a series of positive domain goals
     /// and negative HH goals. This operation may fail if the HH goal
     /// includes unifications that cannot be completed.
-    pub(super) fn simplify_hh_goal(
-        infer: &mut dyn InferenceTable<C>,
-        subst: C::Substitution,
-        initial_environment: &C::Environment,
-        initial_hh_goal: HhGoal<C>,
-    ) -> Fallible<ExClause<C>> {
+    pub(super) fn simplify_hh_goal<I: InferenceContext<C>>(
+        infer: &mut dyn InferenceTable<C, I>,
+        subst: I::Substitution,
+        initial_environment: &I::Environment,
+        initial_hh_goal: HhGoal<C, I>,
+    ) -> Fallible<ExClause<C, I>> {
         let mut ex_clause = ExClause {
             subst,
             delayed_literals: vec![],
@@ -45,7 +45,7 @@ impl<C: Context> Forest<C> {
                 HhGoal::Not(subgoal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(C::goal_in_environment(&environment, subgoal)));
+                        .push(Literal::Negative(I::GoalInEnvironment::new(&environment, subgoal)));
                 }
                 HhGoal::Unify(a, b) => {
                     infer.unify_parameters(&environment, &a, &b)?
@@ -54,7 +54,7 @@ impl<C: Context> Forest<C> {
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Positive(C::goal_in_environment(
+                        .push(Literal::Positive(I::GoalInEnvironment::new(
                             &environment,
                             domain_goal.into_goal(),
                         )));
@@ -66,10 +66,10 @@ impl<C: Context> Forest<C> {
                     // course, will always create a negative cycle and
                     // hence a delayed literal that cannot be
                     // resolved.
-                    let goal = C::Goal::cannot_prove();
+                    let goal = I::Goal::cannot_prove();
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(C::goal_in_environment(&environment, goal)));
+                        .push(Literal::Negative(I::GoalInEnvironment::new(&environment, goal)));
                 }
             }
         }
