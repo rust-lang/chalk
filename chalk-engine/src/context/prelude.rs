@@ -6,6 +6,7 @@ crate use super::ResolventOps;
 crate use super::TruncateOps;
 crate use super::Environment;
 crate use super::InferenceTable;
+crate use super::InferenceContext;
 crate use super::UnificationResult;
 crate use super::GoalInEnvironment;
 crate use super::UCanonicalGoalInEnvironment;
