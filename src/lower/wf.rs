@@ -56,8 +56,8 @@ impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
 
 impl FoldInputTypes for Parameter {
     fn fold(&self, accumulator: &mut Vec<Ty>) {
-        match *self {
-            ParameterKind::Ty(ref ty) => ty.fold(accumulator),
+        match self {
+            ParameterKind::Ty(ty) => ty.fold(accumulator),
             _ => (),
         }
     }
@@ -65,16 +65,16 @@ impl FoldInputTypes for Parameter {
 
 impl FoldInputTypes for Ty {
     fn fold(&self, accumulator: &mut Vec<Ty>) {
-        match *self {
-            Ty::Apply(ref app) => {
+        match self {
+            Ty::Apply(app) => {
                 accumulator.push(self.clone());
                 app.parameters.fold(accumulator);
             }
-            Ty::Projection(ref proj) => {
+            Ty::Projection(proj) => {
                 accumulator.push(self.clone());
                 proj.parameters.fold(accumulator);
             }
-            Ty::UnselectedProjection(ref proj) => {
+            Ty::UnselectedProjection(proj) => {
                 accumulator.push(self.clone());
                 proj.parameters.fold(accumulator);
             }
@@ -98,6 +98,22 @@ impl FoldInputTypes for TraitRef {
     }
 }
 
+impl FoldInputTypes for ProjectionEq {
+    fn fold(&self, accumulator: &mut Vec<Ty>) {
+        Ty::Projection(self.projection.clone()).fold(accumulator);
+        self.ty.fold(accumulator);
+    }
+}
+
+impl FoldInputTypes for WhereClauseAtom {
+    fn fold(&self, accumulator: &mut Vec<Ty>) {
+        match self {
+            WhereClauseAtom::Implemented(tr) => tr.fold(accumulator),
+            WhereClauseAtom::ProjectionEq(p) => p.fold(accumulator),
+        }
+    }
+}
+
 impl FoldInputTypes for Normalize {
     fn fold(&self, accumulator: &mut Vec<Ty>) {
         self.projection.parameters.fold(accumulator);
@@ -114,12 +130,17 @@ impl FoldInputTypes for UnselectedNormalize {
 
 impl FoldInputTypes for DomainGoal {
     fn fold(&self, accumulator: &mut Vec<Ty>) {
-        match *self {
-            DomainGoal::Implemented(ref tr) => tr.fold(accumulator),
-            DomainGoal::Normalize(ref n) => n.fold(accumulator),
-            DomainGoal::UnselectedNormalize(ref n) => n.fold(accumulator),
-            DomainGoal::WellFormed(..) | DomainGoal::FromEnv(..) => panic!("unexpected where clause"),
-            _ => (),
+        match self {
+            DomainGoal::Holds(wca) => wca.fold(accumulator),
+            DomainGoal::Normalize(n) => n.fold(accumulator),
+            DomainGoal::UnselectedNormalize(n) => n.fold(accumulator),
+
+            DomainGoal::WellFormed(..) |
+            DomainGoal::FromEnv(..) |
+            DomainGoal::WellFormedTy(..) |
+            DomainGoal::FromEnvTy(..) => panic!("unexpected where clause"),
+
+            DomainGoal::InScope(..) => (),
         }
     }
 }
@@ -135,7 +156,7 @@ impl WfSolver {
             return true;
         }
 
-        let goals = input_types.into_iter().map(|ty| WellFormed::Ty(ty).cast());
+        let goals = input_types.into_iter().map(|ty| DomainGoal::WellFormedTy(ty).cast());
         let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
                         .expect("at least one goal");
 
@@ -230,7 +251,7 @@ impl WfSolver {
                 return None;
             }
 
-            let goals = input_types.into_iter().map(|ty| WellFormed::Ty(ty).cast());
+            let goals = input_types.into_iter().map(|ty| DomainGoal::WellFormedTy(ty).cast());
             let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
                             .expect("at least one goal");
             Some(goal.quantify(QuantifierKind::ForAll, assoc_ty.value.binders.clone()))
@@ -245,12 +266,15 @@ impl WfSolver {
 
         // Things to prove well-formed: input types of the where-clauses, projection types
         // appearing in the header, associated type values, and of course the trait ref.
+        let trait_ref_wf = DomainGoal::WellFormed(
+            WhereClauseAtom::Implemented(trait_ref.clone())
+        );
         let goals =
             input_types.into_iter()
                        .chain(header_projection_types.into_iter())
-                       .map(|ty| WellFormed::Ty(ty).cast())
+                       .map(|ty| DomainGoal::WellFormedTy(ty).cast())
                        .chain(assoc_ty_goals)
-                       .chain(Some(WellFormed::TraitRef(trait_ref.clone())).cast());
+                       .chain(Some(trait_ref_wf).cast());
 
         let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
                         .expect("at least one goal");
@@ -265,7 +289,7 @@ impl WfSolver {
                       .iter()
                       .cloned()
                       .map(|wc| wc.into_from_env_clause())
-                      .chain(header_other_types.into_iter().map(|ty| FromEnv::Ty(ty).cast()))
+                      .chain(header_other_types.into_iter().map(|ty| DomainGoal::FromEnvTy(ty).cast()))
                       .collect();
 
         let goal = Goal::Implies(hypotheses, Box::new(goal))

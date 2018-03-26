@@ -35,7 +35,7 @@ impl Debug for UniverseIndex {
 
 impl Debug for TypeName {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
+        match self {
             TypeName::ItemId(id) => write!(fmt, "{:?}", id),
             TypeName::ForAll(universe) => write!(fmt, "!{}", universe.counter),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
@@ -45,12 +45,12 @@ impl Debug for TypeName {
 
 impl Debug for Ty {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
+        match self {
             Ty::Var(depth) => write!(fmt, "?{}", depth),
-            Ty::Apply(ref apply) => write!(fmt, "{:?}", apply),
-            Ty::Projection(ref proj) => write!(fmt, "{:?}", proj),
-            Ty::UnselectedProjection(ref proj) => write!(fmt, "{:?}", proj),
-            Ty::ForAll(ref quantified_ty) => write!(fmt, "{:?}", quantified_ty),
+            Ty::Apply(apply) => write!(fmt, "{:?}", apply),
+            Ty::Projection(proj) => write!(fmt, "{:?}", proj),
+            Ty::UnselectedProjection(proj) => write!(fmt, "{:?}", proj),
+            Ty::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
         }
     }
 }
@@ -60,15 +60,15 @@ impl Debug for QuantifiedTy {
         // FIXME -- we should introduce some names or something here
         let QuantifiedTy {
             num_binders,
-            ref ty,
-        } = *self;
+            ty,
+        } = self;
         write!(fmt, "for<{}> {:?}", num_binders, ty)
     }
 }
 
 impl Debug for Lifetime {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
+        match self {
             Lifetime::Var(depth) => write!(fmt, "'?{}", depth),
             Lifetime::ForAll(universe) => write!(fmt, "'!{}", universe.counter),
         }
@@ -169,22 +169,42 @@ impl Debug for UnselectedNormalize {
     }
 }
 
+impl Debug for WhereClauseAtom {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match self {
+            WhereClauseAtom::Implemented(tr) => write!(
+                fmt,
+                "Implemented({:?}: {:?}{:?})",
+                tr.parameters[0],
+                tr.trait_id,
+                Angle(&tr.parameters[1..])
+            ),
+            WhereClauseAtom::ProjectionEq(p) => write!(fmt, "{:?}", p),
+        }
+    }
+}
+
 impl Debug for DomainGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
-            DomainGoal::Normalize(ref n) => write!(fmt, "{:?}", n),
-            DomainGoal::ProjectionEq(ref n) => write!(fmt, "{:?}", n),
-            DomainGoal::UnselectedNormalize(ref n) => write!(fmt, "{:?}", n),
-            DomainGoal::Implemented(ref n) => write!(
-                fmt,
-                "({:?}: {:?}{:?})",
-                n.parameters[0],
-                n.trait_id,
-                Angle(&n.parameters[1..])
-            ),
-            DomainGoal::WellFormed(ref n) => write!(fmt, "{:?}", n),
-            DomainGoal::FromEnv(ref n) => write!(fmt, "{:?}", n),
-            DomainGoal::InScope(ref n) => write!(fmt, "InScope({:?})", n),
+        match self {
+            DomainGoal::Holds(wca) => write!(fmt, "{:?}", wca),
+            DomainGoal::WellFormed(WhereClauseAtom::Implemented(tr)) => {
+                write!(fmt, "WellFormed({:?})", tr)
+            }
+            DomainGoal::WellFormed(WhereClauseAtom::ProjectionEq(p)) => {
+                write!(fmt, "WellFormed({:?})", p)
+            }
+            DomainGoal::FromEnv(WhereClauseAtom::Implemented(tr)) => {
+                write!(fmt, "FromEnv({:?})", tr)
+            }
+            DomainGoal::FromEnv(WhereClauseAtom::ProjectionEq(p)) => {
+                write!(fmt, "FromEnv({:?})", p)
+            }
+            DomainGoal::Normalize(n) => write!(fmt, "{:?}", n),
+            DomainGoal::UnselectedNormalize(n) => write!(fmt, "{:?}", n),
+            DomainGoal::WellFormedTy(t) => write!(fmt, "WellFormed({:?})", t),
+            DomainGoal::FromEnvTy(t) => write!(fmt, "FromEnv({:?})", t),
+            DomainGoal::InScope(n) => write!(fmt, "InScope({:?})", n),
         }
     }
 }
@@ -195,28 +215,6 @@ impl Debug for LeafGoal {
             LeafGoal::EqGoal(ref eq) => write!(fmt, "{:?}", eq),
             LeafGoal::DomainGoal(ref dom) => write!(fmt, "{:?}", dom),
         }
-    }
-}
-
-impl Debug for WellFormed {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let value: &dyn Debug = match *self {
-            WellFormed::Ty(ref t) => t,
-            WellFormed::TraitRef(ref t) => t,
-            WellFormed::ProjectionEq(ref t) => t,
-        };
-        write!(fmt, "WellFormed({:?})", value)
-    }
-}
-
-impl Debug for FromEnv {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let value: &dyn Debug = match *self {
-            FromEnv::Ty(ref t) => t,
-            FromEnv::TraitRef(ref t) => t,
-            FromEnv::ProjectionEq(ref t) => t,
-        };
-        write!(fmt, "FromEnv({:?})", value)
     }
 }
 
