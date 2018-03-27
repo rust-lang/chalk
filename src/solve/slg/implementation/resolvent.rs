@@ -305,10 +305,10 @@ impl<'t> AnswerSubstitutor<'t> {
     /// case.
     fn assert_matching_vars(&mut self, answer_depth: usize, pending_depth: usize) -> Fallible<()> {
         assert!(answer_depth < self.answer_binders);
-        assert!(pending_depth < self.answer_binders);
+        assert!(pending_depth < self.pending_binders);
         assert_eq!(
-            answer_depth - self.answer_binders,
-            pending_depth - self.pending_binders
+            self.answer_binders - answer_depth,
+            self.pending_binders - pending_depth
         );
         Ok(())
     }

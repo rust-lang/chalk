@@ -523,15 +523,15 @@ impl DomainGoal {
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
     /// * `ProjectionEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
-    crate fn into_well_formed_clause(self) -> DomainGoal {
+    crate fn into_well_formed_goal(self) -> DomainGoal {
         match self {
             DomainGoal::Holds(wca) => DomainGoal::WellFormed(wca),
             goal => goal,
         }
     }
 
-    /// Same as `into_well_formed_clause` but with the `FromEnv` predicate instead of `WellFormed`.
-    crate fn into_from_env_clause(self) -> DomainGoal {
+    /// Same as `into_well_formed_goal` but with the `FromEnv` predicate instead of `WellFormed`.
+    crate fn into_from_env_goal(self) -> DomainGoal {
         match self {
             DomainGoal::Holds(wca) => DomainGoal::FromEnv(wca),
             goal => goal,
@@ -639,6 +639,24 @@ pub struct ProgramClauseImplication {
 pub enum ProgramClause {
     Implies(ProgramClauseImplication),
     ForAll(Binders<ProgramClauseImplication>),
+}
+
+impl ProgramClause {
+    crate fn into_from_env_clause(self) -> ProgramClause {
+        match self {
+            ProgramClause::Implies(implication) => {
+                if implication.conditions.is_empty() {
+                    ProgramClause::Implies(ProgramClauseImplication {
+                        consequence: implication.consequence.into_from_env_goal(),
+                        conditions: vec![],
+                    })
+                } else {
+                    ProgramClause::Implies(implication)
+                }
+            }
+            clause => clause,
+        }
+    }
 }
 
 /// Wraps a "canonicalized item". Items are canonicalized as follows:

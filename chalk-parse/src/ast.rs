@@ -210,7 +210,7 @@ pub struct Clause {
 pub enum Goal {
     ForAll(Vec<ParameterKind>, Box<Goal>),
     Exists(Vec<ParameterKind>, Box<Goal>),
-    Implies(Vec<WhereClause>, Box<Goal>),
+    Implies(Vec<Clause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
     Not(Box<Goal>),
 

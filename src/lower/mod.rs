@@ -808,12 +808,12 @@ impl LowerImpl for Impl {
 }
 
 trait LowerClause {
-    fn lower_clause(&self, empty_env: &Env) -> Result<ir::ProgramClause>;
+    fn lower_clause(&self, env: &Env) -> Result<ir::ProgramClause>;
 }
 
 impl LowerClause for Clause {
-    fn lower_clause(&self, empty_env: &Env) -> Result<ir::ProgramClause> {
-        let implication = empty_env.in_binders(self.all_parameters(), |env| {
+    fn lower_clause(&self, env: &Env) -> Result<ir::ProgramClause> {
+        let implication = env.in_binders(self.all_parameters(), |env| {
             let consequence: ir::DomainGoal = self.consequence.lower(env)?;
             let mut conditions: Vec<ir::Goal> = self.conditions
                 .iter()
@@ -831,7 +831,11 @@ impl LowerClause for Clause {
             })
         })?;
 
-        Ok(implication.cast())
+        if implication.binders.is_empty() {
+            Ok(ir::ProgramClause::Implies(implication.value))
+        } else {
+            Ok(ir::ProgramClause::ForAll(implication))
+        }
     }
 }
 
@@ -926,31 +930,29 @@ impl LowerGoal<ir::Program> for Goal {
 
 impl<'k> LowerGoal<Env<'k>> for Goal {
     fn lower(&self, env: &Env<'k>) -> Result<Box<ir::Goal>> {
-        match *self {
-            Goal::ForAll(ref ids, ref g) => {
+        match self {
+            Goal::ForAll(ids, g) => {
                 g.lower_quantified(env, ir::QuantifierKind::ForAll, ids)
             }
-            Goal::Exists(ref ids, ref g) => {
+            Goal::Exists(ids, g) => {
                 g.lower_quantified(env, ir::QuantifierKind::Exists, ids)
             }
-            Goal::Implies(ref wc, ref g) => {
+            Goal::Implies(wc, g) => {
                 // We "elaborate" implied bounds by lowering goals like `T: Trait` and
                 // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`
                 // in the assumptions of an `if` goal, e.g. `if (T: Trait) { ... }` lowers to
                 // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
-                let where_clauses =
-                    wc.lower(env)?
-                      .into_iter()
-                      .map(|wc| wc.into_from_env_clause())
-                      .casted()
+                let where_clauses: Result<Vec<_>> =
+                    wc.into_iter()
+                      .map(|wc| Ok(wc.lower_clause(env)?.into_from_env_clause()))
                       .collect();
-                Ok(Box::new(ir::Goal::Implies(where_clauses, g.lower(env)?)))
+                Ok(Box::new(ir::Goal::Implies(where_clauses?, g.lower(env)?)))
             }
-            Goal::And(ref g1, ref g2) => {
+            Goal::And(g1, g2) => {
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?)))
             }
-            Goal::Not(ref g) => Ok(Box::new(ir::Goal::Not(g.lower(env)?))),
-            Goal::Leaf(ref wc) => Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
+            Goal::Not(g) => Ok(Box::new(ir::Goal::Not(g.lower(env)?))),
+            Goal::Leaf(wc) => Ok(Box::new(ir::Goal::Leaf(wc.lower(env)?))),
         }
     }
 }
@@ -1278,7 +1280,7 @@ impl ir::StructDatum {
                       .where_clauses
                       .iter()
                       .cloned()
-                      .map(|wc| wc.into_from_env_clause())
+                      .map(|wc| wc.into_from_env_goal())
         {
             clauses.push(self.binders.map_ref(|_| {
                 ir::ProgramClauseImplication {
@@ -1321,7 +1323,7 @@ impl ir::TraitDatum {
                     bound.where_clauses
                             .iter()
                             .cloned()
-                            .map(|wc| wc.into_well_formed_clause().cast())
+                            .map(|wc| wc.into_well_formed_goal().cast())
                             .chain(Some(ir::DomainGoal::Holds(trait_ref_impl.clone()).cast()))
                             .collect()
                 },
@@ -1336,8 +1338,8 @@ impl ir::TraitDatum {
                       .where_clauses
                       .iter()
                       .cloned()
-                      .map(|wc| wc.into_from_env_clause().cast())
-                      .chain(Some(ir::DomainGoal::Holds(trait_ref_impl).cast()))
+                      .map(|wc| wc.into_from_env_goal())
+                      .chain(Some(ir::DomainGoal::Holds(trait_ref_impl)))
         {
             clauses.push(self.binders.map_ref(|_| {
                 ir::ProgramClauseImplication {

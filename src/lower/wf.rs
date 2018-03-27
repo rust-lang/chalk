@@ -166,7 +166,7 @@ impl WfSolver {
                         .where_clauses
                         .iter()
                         .cloned()
-                        .map(|wc| wc.into_from_env_clause())
+                        .map(|wc| wc.into_from_env_goal())
                         .casted()
                         .collect();
 
@@ -289,7 +289,7 @@ impl WfSolver {
                       .where_clauses
                       .iter()
                       .cloned()
-                      .map(|wc| wc.into_from_env_clause())
+                      .map(|wc| wc.into_from_env_goal())
                       .chain(header_other_types.into_iter().map(|ty| DomainGoal::FromEnvTy(ty).cast()))
                       .casted()
                       .collect();

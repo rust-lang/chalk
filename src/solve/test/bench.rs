@@ -87,9 +87,9 @@ impl<T> SliceExt for Slice<T>
 const CYCLEY_GOAL: &str = "
 forall<T> {
     if (
-        <Slice<T> as SliceExt>::Item: Clone,
-        <Slice<T> as SliceExt>::Item: Sized,
-        T: Clone,
+        <Slice<T> as SliceExt>::Item: Clone;
+        <Slice<T> as SliceExt>::Item: Sized;
+        T: Clone;
         T: Sized
     ) {
         T: Sized

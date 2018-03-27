@@ -517,7 +517,7 @@ fn normalize_basic() {
                     }
                 }
             }
-        } yields[SolverChoice::slg()] {
+        } yields {
             "Unique; substitution [?0 := (Iterator::Item)<!1>]"
         }
 
@@ -919,8 +919,7 @@ fn unify_quantified_lifetimes() {
                     }
                 }
             }
-        } yields[SolverChoice::slg()] {
-            // SLG yields this distinct, but equivalent, result
+        } yields {
             "Unique; for<?U0> { \
              substitution [?0 := '?0, ?1 := '!1], \
              lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
@@ -1607,7 +1606,7 @@ fn partial_overlap_1() {
 
         goal {
             forall<T> {
-                if (T: Foo, T: Bar) { T: Marker }
+                if (T: Foo; T: Bar) { T: Marker }
             }
         } yields {
             "Unique"
@@ -1632,7 +1631,7 @@ fn partial_overlap_2() {
 
         goal {
             forall<T> {
-                if (T: Foo, T: Bar) {
+                if (T: Foo; T: Bar) {
                     exists<A> { T: Marker<A> }
                 }
             }
@@ -1642,7 +1641,7 @@ fn partial_overlap_2() {
 
         goal {
             forall<T> {
-                if (T: Foo, T: Bar) {
+                if (T: Foo; T: Bar) {
                     T: Marker<u32>
                 }
             }
@@ -1652,7 +1651,7 @@ fn partial_overlap_2() {
 
         goal {
             forall<T> {
-                if (T: Foo, T: Bar) {
+                if (T: Foo; T: Bar) {
                     T: Marker<i32>
                 }
             }
@@ -1680,7 +1679,7 @@ fn partial_overlap_3() {
 
         goal {
             forall<T> {
-                if (T: Foo, T: Bar) { T: Marker }
+                if (T: Foo; T: Bar) { T: Marker }
             }
         } yields {
             "Unique"
@@ -1768,7 +1767,7 @@ fn unselected_projection() {
 
         goal {
             exists<T> {
-                if (InScope(Iterator), InScope(Iterator2)) {
+                if (InScope(Iterator); InScope(Iterator2)) {
                     Chars::Item = T
                 }
             }
@@ -1932,15 +1931,64 @@ fn projection_from_env_slow() {
         goal {
             forall<T> {
                 if (
-                    <Slice<T> as SliceExt>::Item: Clone,
-                    <Slice<T> as SliceExt>::Item: Sized,
+                    <Slice<T> as SliceExt>::Item: Clone;
+                    <Slice<T> as SliceExt>::Item: Sized;
                     T: Clone
                 ) {
                     T: Sized
                 }
             }
-        } yields[SolverChoice::slg()] {
+        } yields {
             "Unique"
+        }
+    }
+}
+
+#[test]
+fn clauses_in_if_goals() {
+    test! {
+        program { 
+            trait Foo { }
+            struct Vec<T> { }
+            struct i32 { }
+        }
+
+        goal {
+            if (forall<T> { T: Foo }) {
+                forall<T> { T: Foo }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> {
+                if (Vec<T>: Foo :- T: Foo) {
+                    if (T: Foo) {
+                        Vec<T>: Foo
+                    }
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            if (forall<T> { Vec<T>: Foo :- T: Foo }) {
+                if (i32: Foo) {
+                    Vec<i32>: Foo
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            if (forall<T> { Vec<T>: Foo :- T: Foo }) {
+                Vec<i32>: Foo
+            }
+        } yields {
+            "No possible solution"
         }
     }
 }

@@ -29,7 +29,7 @@ pub Goal: Box<Goal> = {
 Goal1: Box<Goal> = {
     "forall" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
     "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
-    "if" "(" <w:Comma<WhereClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
+    "if" "(" <w:SemiColon<InlineClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
     "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
     <w:WhereClause> => Box::new(Goal::Leaf(w)),
     "(" <Goal> ")",
@@ -177,6 +177,36 @@ Clause: Clause = {
     },
 };
 
+InlineClause1: Clause = {
+    <wc:WhereClause> => {
+        Clause {
+            parameter_kinds: vec![],
+            consequence: wc,
+            conditions: vec![],
+        }
+    },
+
+    <wc:WhereClause> ":" "-" <g:Comma<Goal1>> => {
+        Clause {
+            parameter_kinds: vec![],
+            consequence: wc,
+            conditions: g,
+        }
+    },
+};
+
+InlineClause: Clause = {
+    <InlineClause1>,
+
+    "forall" "<" <pk:Comma<ParameterKind>> ">" "{" <c:InlineClause1> "}" => {
+        Clause {
+            parameter_kinds: pk,
+            consequence: c.consequence,
+            conditions: c.conditions,
+        }
+    },
+};
+
 WhereClauses: Vec<WhereClause> = {
     "where" <Comma<WhereClause>>,
     () => vec![],
@@ -225,17 +255,27 @@ TraitRef<S>: TraitRef = {
     },
 };
 
-Comma<T>: Vec<T> = {
-    Comma1<T>? => <>.unwrap_or(vec![])
+Separator<S, T>: Vec<T> = {
+    Separator1<S, T>? => <>.unwrap_or(vec![])
 };
 
-Comma1<T>: Vec<T> = {
+Separator1<S, T>: Vec<T> = {
     <t:T> => vec![t],
-    <v:Comma<T>> "," <t:T> => {
+    <v:Separator<S, T>> S <t:T> => {
         let mut v = v;
         v.push(t);
         v
     }
+};
+
+#[inline]
+Comma<T>: Vec<T> = {
+    <Separator<",", T>>
+};
+
+#[inline]
+SemiColon<T>: Vec<T> = {
+    <Separator<";", T>>
 };
 
 Angle<T>: Vec<T> = {
