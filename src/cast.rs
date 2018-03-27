@@ -124,6 +124,27 @@ impl Cast<Parameter> for Lifetime {
     }
 }
 
+impl Cast<ProgramClause> for DomainGoal {
+    fn cast(self) -> ProgramClause {
+        ProgramClause::Implies(ProgramClauseImplication {
+            consequence: self,
+            conditions: vec![],
+        })
+    }
+}
+
+impl Cast<ProgramClause> for ProgramClauseImplication {
+    fn cast(self) -> ProgramClause {
+        ProgramClause::Implies(self)
+    }
+}
+
+impl Cast<ProgramClause> for Binders<ProgramClauseImplication> {
+    fn cast(self) -> ProgramClause {
+        ProgramClause::ForAll(self)
+    }
+}
+
 macro_rules! map_impl {
     (impl[$($t:tt)*] Cast<$b:ty> for $a:ty) => {
         impl<$($t)*> Cast<$b> for $a {

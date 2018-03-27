@@ -84,7 +84,12 @@ impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable 
         let ProgramClauseImplication {
             consequence,
             conditions,
-        } = self.infer.instantiate_binders_existentially(&clause.implication);
+        } = match clause {
+            ProgramClause::Implies(implication) => implication.clone(),
+            ProgramClause::ForAll(implication) => {
+                self.infer.instantiate_binders_existentially(implication)
+            }
+        };
         debug!("consequence = {:?}", consequence);
         debug!("conditions = {:?}", conditions);
 
