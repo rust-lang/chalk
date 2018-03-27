@@ -50,16 +50,35 @@ macro_rules! reflexive_impl {
 reflexive_impl!(TraitRef);
 reflexive_impl!(LeafGoal);
 reflexive_impl!(DomainGoal);
+reflexive_impl!(WhereClauseAtom);
 
-impl Cast<DomainGoal> for TraitRef {
-    fn cast(self) -> DomainGoal {
-        DomainGoal::Implemented(self)
+impl Cast<WhereClauseAtom> for TraitRef {
+    fn cast(self) -> WhereClauseAtom {
+        WhereClauseAtom::Implemented(self)
     }
 }
 
-impl Cast<LeafGoal> for TraitRef {
+impl Cast<WhereClauseAtom> for ProjectionEq {
+    fn cast(self) -> WhereClauseAtom {
+        WhereClauseAtom::ProjectionEq(self)
+    }
+}
+
+impl<T> Cast<DomainGoal> for T where T: Cast<WhereClauseAtom> {
+    fn cast(self) -> DomainGoal {
+        DomainGoal::Holds(self.cast())
+    }
+}
+
+impl<T> Cast<LeafGoal> for T where T: Cast<DomainGoal> {
     fn cast(self) -> LeafGoal {
         LeafGoal::DomainGoal(self.cast())
+    }
+}
+
+impl<T> Cast<Goal> for T where T: Cast<LeafGoal> {
+    fn cast(self) -> Goal {
+        Goal::Leaf(self.cast())
     }
 }
 
@@ -69,116 +88,9 @@ impl Cast<DomainGoal> for Normalize {
     }
 }
 
-impl Cast<LeafGoal> for Normalize {
-    fn cast(self) -> LeafGoal {
-        LeafGoal::DomainGoal(self.cast())
-    }
-}
-
-impl Cast<DomainGoal> for ProjectionEq {
-    fn cast(self) -> DomainGoal {
-        DomainGoal::ProjectionEq(self)
-    }
-}
-
-impl Cast<LeafGoal> for ProjectionEq {
-    fn cast(self) -> LeafGoal {
-        LeafGoal::DomainGoal(self.cast())
-    }
-}
-
 impl Cast<DomainGoal> for UnselectedNormalize {
     fn cast(self) -> DomainGoal {
         DomainGoal::UnselectedNormalize(self)
-    }
-}
-
-impl Cast<LeafGoal> for UnselectedNormalize {
-    fn cast(self) -> LeafGoal {
-        LeafGoal::DomainGoal(self.cast())
-    }
-}
-
-impl Cast<DomainGoal> for WellFormed {
-    fn cast(self) -> DomainGoal {
-        DomainGoal::WellFormed(self)
-    }
-}
-
-impl Cast<LeafGoal> for WellFormed {
-    fn cast(self) -> LeafGoal {
-        LeafGoal::DomainGoal(self.cast())
-    }
-}
-
-impl Cast<DomainGoal> for FromEnv {
-    fn cast(self) -> DomainGoal {
-        DomainGoal::FromEnv(self)
-    }
-}
-
-impl Cast<LeafGoal> for FromEnv {
-    fn cast(self) -> LeafGoal {
-        LeafGoal::DomainGoal(self.cast())
-    }
-}
-
-impl Cast<Goal> for WellFormed {
-    fn cast(self) -> Goal {
-        let wcg: LeafGoal = self.cast();
-        wcg.cast()
-    }
-}
-
-impl Cast<Goal> for FromEnv {
-    fn cast(self) -> Goal {
-        let wcg: LeafGoal = self.cast();
-        wcg.cast()
-    }
-}
-
-impl Cast<Goal> for Normalize {
-    fn cast(self) -> Goal {
-        let wcg: LeafGoal = self.cast();
-        wcg.cast()
-    }
-}
-
-impl Cast<Goal> for ProjectionEq {
-    fn cast(self) -> Goal {
-        let wcg: LeafGoal = self.cast();
-        wcg.cast()
-    }
-}
-
-impl Cast<Goal> for UnselectedNormalize {
-    fn cast(self) -> Goal {
-        let wcg: LeafGoal = self.cast();
-        wcg.cast()
-    }
-}
-
-impl Cast<LeafGoal> for DomainGoal {
-    fn cast(self) -> LeafGoal {
-        LeafGoal::DomainGoal(self)
-    }
-}
-
-impl Cast<Goal> for TraitRef {
-    fn cast(self) -> Goal {
-        Goal::Leaf(self.cast())
-    }
-}
-
-impl Cast<Goal> for DomainGoal {
-    fn cast(self) -> Goal {
-        Goal::Leaf(self.cast())
-    }
-}
-
-impl Cast<Goal> for LeafGoal {
-    fn cast(self) -> Goal {
-        Goal::Leaf(self)
     }
 }
 

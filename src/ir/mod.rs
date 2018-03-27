@@ -447,17 +447,74 @@ impl PolarizedTraitRef {
     }
 }
 
+/// "Basic" where clauses which have a WF/FromEnv version of themselves.
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum WhereClauseAtom {
+    Implemented(TraitRef),
+    ProjectionEq(ProjectionEq),
+}
+
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DomainGoal {
-    Implemented(TraitRef),
-    ProjectionEq(ProjectionEq),
+    Holds(WhereClauseAtom),
+
+    /// A predicate which is true is some trait ref is well-formed.
+    /// For example, given the following trait definitions:
+    /// 
+    /// ```notrust
+    /// trait Clone { ... }
+    /// trait Copy where Self: Clone { ... }
+    /// ```
+    ///
+    /// then we have the following rule:
+    /// `WellFormed(?Self: Copy) :- ?Self: Copy, WellFormed(?Self: Clone)`.
+    WellFormed(WhereClauseAtom),
+
+    /// A predicate which enables deriving everything which should be true if we *know* that
+    /// some trait ref is well-formed. For example given the above trait definitions, we can use
+    /// `FromEnv(T: Copy)` to derive that `T: Clone`, like in:
+    ///
+    /// ```notrust
+    /// forall<T> {
+    ///     if (FromEnv(T: Copy)) {
+    ///         T: Clone
+    ///     }
+    /// }
+    /// ```
+    FromEnv(WhereClauseAtom),
+
+
     Normalize(Normalize),
     UnselectedNormalize(UnselectedNormalize),
-    WellFormed(WellFormed),
-    FromEnv(FromEnv),
+
+    /// A predicate which is true is some type is well-formed.
+    /// For example, given the following type definition:
+    ///
+    /// ```notrust
+    /// struct Set<K> where K: Hash {
+    ///     ...
+    /// }
+    /// ```
+    ///
+    /// then we have the following rule: `WellFormedTy(Set<K>) :- Implemented(K: Hash)`.
+    WellFormedTy(Ty),
+
+    /// A predicate which enables deriving everything which should be true if we *know* that
+    /// some type is well-formed. For example given the above type definition, we can use
+    /// `FromEnv(Set<K>)` to derive that `K: Hash`, like in:
+    /// 
+    /// ```notrust
+    /// forall<K> {
+    ///     if (FromEnv(Set<K>)) {
+    ///         K: Hash
+    ///     }
+    /// }
+    /// ```
+    FromEnvTy(Ty),
+
     InScope(ItemId),
 }
 
@@ -477,13 +534,12 @@ impl DomainGoal {
     }
 
     /// Turn a where clause into the WF version of it i.e.:
-    /// * `T: Trait` maps to `WellFormed(T: Trait)`
-    /// * `T: Trait<Item = Foo>` maps to `WellFormed(T: Trait<Item = Foo>)`
+    /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
+    /// * `ProjectionEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
     crate fn into_well_formed_clause(self) -> DomainGoal {
         match self {
-            DomainGoal::Implemented(tr) => DomainGoal::WellFormed(WellFormed::TraitRef(tr)),
-            DomainGoal::ProjectionEq(n) => DomainGoal::WellFormed(WellFormed::ProjectionEq(n)),
+            DomainGoal::Holds(wca) => DomainGoal::WellFormed(wca),
             goal => goal,
         }
     }
@@ -491,8 +547,7 @@ impl DomainGoal {
     /// Same as `into_well_formed_clause` but with the `FromEnv` predicate instead of `WellFormed`.
     crate fn into_from_env_clause(self) -> DomainGoal {
         match self {
-            DomainGoal::Implemented(tr) => DomainGoal::FromEnv(FromEnv::TraitRef(tr)),
-            DomainGoal::ProjectionEq(n) => DomainGoal::FromEnv(FromEnv::ProjectionEq(n)),
+            DomainGoal::Holds(wca) => DomainGoal::FromEnv(wca),
             goal => goal,
         }
     }
@@ -511,50 +566,6 @@ pub enum LeafGoal {
 pub struct EqGoal {
     crate a: Parameter,
     crate b: Parameter,
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-/// A predicate which is true is some object is well-formed, e.g. a type or a trait ref.
-/// For example, given the following type definition:
-///
-/// ```notrust
-/// struct Set<K> where K: Hash {
-///     ...
-/// }
-/// ```
-///
-/// then we have the following rule: `WellFormed(Set<K>) :- (K: Hash)`.
-/// See the complete rules in `lower.rs`.
-pub enum WellFormed {
-    Ty(Ty),
-    TraitRef(TraitRef),
-    ProjectionEq(ProjectionEq),
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-/// A predicate which enables deriving everything which should be true if we *know* that some object
-/// is well-formed. For example, given the following trait definitions:
-///
-/// ```notrust
-/// trait Clone { ... }
-/// trait Copy where Self: Clone { ... }
-/// ```
-///
-/// then we can use `FromEnv(T: Copy)` to derive that `T: Clone`, like in:
-///
-/// ```notrust
-/// forall<T> {
-///     if (FromEnv(T: Copy)) {
-///         T: Clone
-///     }
-/// }
-/// ```
-///
-/// See the complete rules in `lower.rs`.
-pub enum FromEnv {
-    Ty(Ty),
-    TraitRef(TraitRef),
-    ProjectionEq(ProjectionEq),
 }
 
 /// Proves that the given projection **normalizes** to the given
@@ -715,11 +726,16 @@ impl UCanonical<InEnvironment<Goal>> {
     /// not be rejected but instead must be treated as a success.
     crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
         match &self.canonical.value.goal {
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Implemented(tr))) => {
-                let trait_datum = &program.trait_data[&tr.trait_id];
-                trait_datum.binders.value.flags.auto
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => {
+                match wca {
+                    WhereClauseAtom::Implemented(tr) => {
+                        let trait_datum = &program.trait_data[&tr.trait_id];
+                        trait_datum.binders.value.flags.auto
+                    }
+                    WhereClauseAtom::ProjectionEq(..) => false,
+                }
             }
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::TraitRef(_)))) => {
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(..))) => {
                 true
             }
             _ => false,

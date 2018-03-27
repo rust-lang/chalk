@@ -425,36 +425,36 @@ trait LowerWhereClause<T> {
 /// type in Rust and well-formedness checks.
 impl LowerWhereClause<ir::DomainGoal> for WhereClause {
     fn lower(&self, env: &Env) -> Result<ir::DomainGoal> {
-        Ok(match *self {
-            WhereClause::Implemented { ref trait_ref } => {
-                ir::DomainGoal::Implemented(trait_ref.lower(env)?)
+        Ok(match self {
+            WhereClause::Implemented { trait_ref } => {
+                ir::DomainGoal::Holds(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))
             }
             WhereClause::ProjectionEq {
-                ref projection,
-                ref ty,
-            } => ir::DomainGoal::ProjectionEq(ir::ProjectionEq {
+                projection,
+                ty,
+            } => ir::DomainGoal::Holds(ir::WhereClauseAtom::ProjectionEq(ir::ProjectionEq {
                 projection: projection.lower(env)?,
                 ty: ty.lower(env)?,
-            }),
+            })),
             WhereClause::Normalize {
-                ref projection,
-                ref ty,
+                projection,
+                ty,
             } => ir::DomainGoal::Normalize(ir::Normalize {
                 projection: projection.lower(env)?,
                 ty: ty.lower(env)?,
             }),
-            WhereClause::TyWellFormed { ref ty } => ir::WellFormed::Ty(ty.lower(env)?).cast(),
-            WhereClause::TraitRefWellFormed { ref trait_ref } => {
-                ir::WellFormed::TraitRef(trait_ref.lower(env)?).cast()
+            WhereClause::TyWellFormed { ty } => ir::DomainGoal::WellFormedTy(ty.lower(env)?),
+            WhereClause::TraitRefWellFormed { trait_ref } => {
+                ir::DomainGoal::WellFormed(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))
             }
-            WhereClause::TyFromEnv { ref ty } => ir::FromEnv::Ty(ty.lower(env)?).cast(),
-            WhereClause::TraitRefFromEnv { ref trait_ref } => {
-                ir::FromEnv::TraitRef(trait_ref.lower(env)?).cast()
+            WhereClause::TyFromEnv { ty } => ir::DomainGoal::FromEnvTy(ty.lower(env)?),
+            WhereClause::TraitRefFromEnv { trait_ref } => {
+                ir::DomainGoal::FromEnv(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))
             }
             WhereClause::UnifyTys { .. } | WhereClause::UnifyLifetimes { .. } => {
                 bail!("this form of where-clause not allowed here")
             }
-            WhereClause::TraitInScope { trait_name } => {
+            &WhereClause::TraitInScope { trait_name } => {
                 let id = match env.lookup(trait_name)? {
                     NameLookup::Type(id) => id,
                     NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(trait_name)),
@@ -1268,7 +1268,7 @@ impl ir::StructDatum {
         let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound_datum| {
                 ir::ProgramClauseImplication {
-                    consequence: ir::WellFormed::Ty(bound_datum.self_ty.clone().cast()).cast(),
+                    consequence: ir::DomainGoal::WellFormedTy(bound_datum.self_ty.clone().cast()),
 
                     conditions: {
                         bound_datum.where_clauses
@@ -1282,7 +1282,7 @@ impl ir::StructDatum {
         };
 
         let mut clauses = vec![wf];
-        let condition = ir::FromEnv::Ty(self.binders.value.self_ty.clone().cast());
+        let condition = ir::DomainGoal::FromEnvTy(self.binders.value.self_ty.clone().cast());
 
         for wc in self.binders
                       .value
@@ -1322,19 +1322,21 @@ impl ir::TraitDatum {
         //    forall<Self, T> { (Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
         //    forall<Self, T> { FromEnv(Self: Eq<T>) :- FromEnv(Self: Ord<T>) }
 
-        let trait_ref = self.binders.value.trait_ref.clone();
+        let trait_ref_impl = ir::WhereClauseAtom::Implemented(
+           self.binders.value.trait_ref.clone()
+        );
 
         let wf = ir::ProgramClause {
             implication: self.binders.map_ref(|bound| {
                 ir::ProgramClauseImplication {
-                    consequence: ir::WellFormed::TraitRef(trait_ref.clone()).cast(),
+                    consequence: ir::DomainGoal::WellFormed(trait_ref_impl.clone()),
 
                     conditions: {
                         bound.where_clauses
                              .iter()
                              .cloned()
                              .map(|wc| wc.into_well_formed_clause().cast())
-                             .chain(Some(ir::DomainGoal::Implemented(trait_ref.clone()).cast()))
+                             .chain(Some(ir::DomainGoal::Holds(trait_ref_impl.clone()).cast()))
                              .collect()
                     },
                 }
@@ -1342,7 +1344,7 @@ impl ir::TraitDatum {
         };
 
         let mut clauses = vec![wf];
-        let condition = ir::FromEnv::TraitRef(trait_ref.clone());
+        let condition = ir::DomainGoal::FromEnv(trait_ref_impl.clone());
 
         for wc in self.binders
                       .value
@@ -1350,7 +1352,7 @@ impl ir::TraitDatum {
                       .iter()
                       .cloned()
                       .map(|wc| wc.into_from_env_clause().cast())
-                      .chain(Some(ir::DomainGoal::Implemented(trait_ref).cast()))
+                      .chain(Some(ir::DomainGoal::Holds(trait_ref_impl).cast()))
         {
             clauses.push(ir::ProgramClause {
                 implication: self.binders.map_ref(|_| {
@@ -1464,7 +1466,7 @@ impl ir::AssociatedTyDatum {
             implication: ir::Binders {
                 binders: binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: ir::WellFormed::Ty(app_ty).cast(),
+                    consequence: ir::DomainGoal::WellFormedTy(app_ty).cast(),
                     conditions: vec![],
                 }
             }
@@ -1495,6 +1497,9 @@ impl ir::AssociatedTyDatum {
             },
             });
 
+        
+        let projection_wc = ir::WhereClauseAtom::ProjectionEq(projection_eq.clone());
+        let trait_ref_wc = ir::WhereClauseAtom::Implemented(trait_ref.clone());
 
         // We generate a proxy rule for the well-formedness of `T: Foo<Assoc = U>` which really
         // means two things: `T: Foo` and `Normalize(<T as Foo>::Assoc -> U)`. So we have the
@@ -1508,9 +1513,9 @@ impl ir::AssociatedTyDatum {
             implication: ir::Binders {
                 binders: binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: ir::WellFormed::ProjectionEq(projection_eq.clone()).cast(),
+                    consequence: ir::DomainGoal::WellFormed(projection_wc.clone()),
                     conditions: vec![
-                        ir::WellFormed::TraitRef(trait_ref.clone()).cast(),
+                        ir::DomainGoal::WellFormed(trait_ref_wc.clone()).cast(),
                         projection_eq.clone().cast()
                     ],
                 }
@@ -1526,8 +1531,8 @@ impl ir::AssociatedTyDatum {
             implication: ir::Binders {
                 binders: binders.clone(),
                 value: ir::ProgramClauseImplication {
-                    consequence: ir::FromEnv::TraitRef(trait_ref).cast(),
-                    conditions: vec![ir::FromEnv::ProjectionEq(projection_eq.clone()).cast()],
+                    consequence: ir::DomainGoal::FromEnv(trait_ref_wc).cast(),
+                    conditions: vec![ir::DomainGoal::FromEnv(projection_wc.clone()).cast()],
                 },
             }
         });
@@ -1542,7 +1547,7 @@ impl ir::AssociatedTyDatum {
                 binders: binders,
                 value: ir::ProgramClauseImplication {
                     consequence: projection_eq.clone().cast(),
-                    conditions: vec![ir::FromEnv::ProjectionEq(projection_eq).cast()],
+                    conditions: vec![ir::DomainGoal::FromEnv(projection_wc).cast()],
                 },
             }
         });

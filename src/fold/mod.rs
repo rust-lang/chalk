@@ -229,9 +229,9 @@ tuple_fold!(A, B, C, D, E);
 impl<T: Fold> Fold for Option<T> {
     type Result = Option<T::Result>;
     fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
-        match *self {
+        match self {
             None => Ok(None),
-            Some(ref e) => Ok(Some(e.fold_with(folder, binders)?)),
+            Some(e) => Ok(Some(e.fold_with(folder, binders)?)),
         }
     }
 }
@@ -251,10 +251,10 @@ crate fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fall
             Ok(Ty::Var(depth))
         },
         Ty::Apply(ref apply) => {
-            let &ApplicationTy {
+            let ApplicationTy {
                 name,
                 ref parameters,
-            } = apply;
+            } = *apply;
             match name {
                 TypeName::ForAll(ui) => {
                     assert!(
@@ -390,9 +390,9 @@ macro_rules! enum_fold {
                          folder: &mut dyn (::fold::Folder),
                          binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
-                match *self {
+                match self {
                     $(
-                        $s::$variant( $(ref $name),* ) => {
+                        $s::$variant( $($name),* ) => {
                             Ok($s::$variant( $($name.fold_with(folder, binders)?),* ))
                         }
                     )*
@@ -409,9 +409,9 @@ macro_rules! enum_fold {
                          folder: &mut dyn (::fold::Folder),
                          binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
-                match *self {
+                match self {
                     $(
-                        $p::$variant( $(ref $name),* ) => {
+                        $p::$variant( $($name),* ) => {
                             Ok($p::$variant( $($name.fold_with(folder, binders)?),* ))
                         }
                     )*
@@ -423,9 +423,9 @@ macro_rules! enum_fold {
 
 enum_fold!(PolarizedTraitRef[] { Positive(a), Negative(a) });
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
-enum_fold!(DomainGoal[] { Implemented(a), ProjectionEq(a), Normalize(a), UnselectedNormalize(a), WellFormed(a), FromEnv(a), InScope(a) });
-enum_fold!(WellFormed[] { Ty(a), TraitRef(a), ProjectionEq(a) });
-enum_fold!(FromEnv[] { Ty(a), TraitRef(a), ProjectionEq(a) });
+enum_fold!(WhereClauseAtom[] { Implemented(a), ProjectionEq(a) });
+enum_fold!(DomainGoal[] { Holds(a), WellFormed(a), FromEnv(a), Normalize(a), UnselectedNormalize(a),
+                          WellFormedTy(a), FromEnvTy(a), InScope(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),

@@ -186,7 +186,7 @@ fn goal_quantifiers() {
     tls::set_current_program(&program, || {
         assert_eq!(
             format!("{:?}", goal),
-            "ForAll<type> { Exists<type> { ForAll<type> { (?0: Foo<?1, ?2>) } } }"
+            "ForAll<type> { Exists<type> { ForAll<type> { Implemented(?0: Foo<?1, ?2>) } } }"
         );
     });
 }
