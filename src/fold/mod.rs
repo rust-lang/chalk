@@ -430,6 +430,7 @@ enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
                     Leaf(wc), CannotProve(a) });
+enum_fold!(ProgramClause[] { Implies(a), ForAll(a) });
 
 macro_rules! struct_fold {
     ($s:ident $([$($tt_args:tt)*])? { $($name:ident),* $(,)* } $($w:tt)*) => {

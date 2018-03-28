@@ -4,6 +4,7 @@ use fold::shift::Shift;
 use itertools::Itertools;
 use errors::*;
 use ir::*;
+use cast::*;
 use solve::SolverChoice;
 
 struct OverlapSolver {
@@ -202,7 +203,14 @@ impl OverlapSolver {
             .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
 
         // Create the where clause goals.
-        let more_special_wc = more_special.binders.value.where_clauses.clone();
+        let more_special_wc = more_special
+            .binders
+            .value
+            .where_clauses
+            .iter()
+            .cloned()
+            .casted()
+            .collect();
         let less_special_wc = less_special
             .binders
             .value

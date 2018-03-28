@@ -282,7 +282,7 @@ pub trait GoalInEnvironment<C: Context, I: InferenceContext<C>>:
 
 pub trait Environment<C: Context, I: InferenceContext<C>>: Debug + Clone {
     // Used by: simplify
-    fn add_clauses(&self, clauses: impl IntoIterator<Item = I::DomainGoal>) -> Self;
+    fn add_clauses(&self, clauses: impl IntoIterator<Item = I::ProgramClause>) -> Self;
 }
 
 pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {

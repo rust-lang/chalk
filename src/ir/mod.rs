@@ -75,7 +75,7 @@ pub struct ProgramEnvironment {
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment {
-    crate clauses: Vec<DomainGoal>,
+    crate clauses: Vec<ProgramClause>,
 }
 
 impl Environment {
@@ -85,7 +85,7 @@ impl Environment {
 
     crate fn add_clauses<I>(&self, clauses: I) -> Arc<Self>
     where
-        I: IntoIterator<Item = DomainGoal>,
+        I: IntoIterator<Item = ProgramClause>,
     {
         let mut env = self.clone();
         let env_clauses: BTreeSet<_> = env.clauses.into_iter().chain(clauses).collect();
@@ -519,33 +519,19 @@ pub enum DomainGoal {
 }
 
 impl DomainGoal {
-    /// Lift a goal to a corresponding program clause (with a trivial
-    /// antecedent).
-    crate fn into_program_clause(self) -> ProgramClause {
-        ProgramClause {
-            implication: Binders {
-                value: ProgramClauseImplication {
-                    consequence: self,
-                    conditions: vec![],
-                },
-                binders: vec![],
-            },
-        }
-    }
-
     /// Turn a where clause into the WF version of it i.e.:
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
     /// * `ProjectionEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
-    crate fn into_well_formed_clause(self) -> DomainGoal {
+    crate fn into_well_formed_goal(self) -> DomainGoal {
         match self {
             DomainGoal::Holds(wca) => DomainGoal::WellFormed(wca),
             goal => goal,
         }
     }
 
-    /// Same as `into_well_formed_clause` but with the `FromEnv` predicate instead of `WellFormed`.
-    crate fn into_from_env_clause(self) -> DomainGoal {
+    /// Same as `into_well_formed_goal` but with the `FromEnv` predicate instead of `WellFormed`.
+    crate fn into_from_env_goal(self) -> DomainGoal {
         match self {
             DomainGoal::Holds(wca) => DomainGoal::FromEnv(wca),
             goal => goal,
@@ -640,18 +626,37 @@ impl<T> Binders<T> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ProgramClause {
-    crate implication: Binders<ProgramClauseImplication>,
-}
-
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ProgramClauseImplication {
     crate consequence: DomainGoal,
     crate conditions: Vec<Goal>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ProgramClause {
+    Implies(ProgramClauseImplication),
+    ForAll(Binders<ProgramClauseImplication>),
+}
+
+impl ProgramClause {
+    crate fn into_from_env_clause(self) -> ProgramClause {
+        match self {
+            ProgramClause::Implies(implication) => {
+                if implication.conditions.is_empty() {
+                    ProgramClause::Implies(ProgramClauseImplication {
+                        consequence: implication.consequence.into_from_env_goal(),
+                        conditions: vec![],
+                    })
+                } else {
+                    ProgramClause::Implies(implication)
+                }
+            }
+            clause => clause,
+        }
+    }
 }
 
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
@@ -749,7 +754,7 @@ pub enum Goal {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
     Quantified(QuantifierKind, Binders<Box<Goal>>),
-    Implies(Vec<DomainGoal>, Box<Goal>),
+    Implies(Vec<ProgramClause>, Box<Goal>),
     And(Box<Goal>, Box<Goal>),
     Not(Box<Goal>),
     Leaf(LeafGoal),
@@ -781,7 +786,7 @@ impl Goal {
         )
     }
 
-    crate fn implied_by(self, predicates: Vec<DomainGoal>) -> Goal {
+    crate fn implied_by(self, predicates: Vec<ProgramClause>) -> Goal {
         Goal::Implies(predicates, Box::new(self))
     }
 

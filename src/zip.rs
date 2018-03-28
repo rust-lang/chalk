@@ -181,6 +181,7 @@ struct_zip!(Normalize { projection, ty });
 struct_zip!(ProjectionEq { projection, ty });
 struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
+struct_zip!(ProgramClauseImplication { consequence, conditions });
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
@@ -226,6 +227,7 @@ enum_zip!(DomainGoal {
     InScope,
 });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
+enum_zip!(ProgramClause { Implies, ForAll });
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the

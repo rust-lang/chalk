@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ir::*;
 use errors::*;
-use cast::Cast;
+use cast::*;
 use solve::SolverChoice;
 use itertools::Itertools;
 
@@ -166,7 +166,8 @@ impl WfSolver {
                         .where_clauses
                         .iter()
                         .cloned()
-                        .map(|wc| wc.into_from_env_clause())
+                        .map(|wc| wc.into_from_env_goal())
+                        .casted()
                         .collect();
 
         // We ask that the above input types are well-formed provided that all the where-clauses
@@ -288,8 +289,9 @@ impl WfSolver {
                       .where_clauses
                       .iter()
                       .cloned()
-                      .map(|wc| wc.into_from_env_clause())
+                      .map(|wc| wc.into_from_env_goal())
                       .chain(header_other_types.into_iter().map(|ty| DomainGoal::FromEnvTy(ty).cast()))
+                      .casted()
                       .collect();
 
         let goal = Goal::Implies(hypotheses, Box::new(goal))

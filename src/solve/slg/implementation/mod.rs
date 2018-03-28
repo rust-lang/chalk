@@ -145,12 +145,12 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
             .clauses
             .iter()
             .filter(|&env_clause| env_clause.could_match(goal))
-            .map(|env_clause| env_clause.clone().into_program_clause());
+            .cloned();
 
         let program_clauses = self.program
             .program_clauses
             .iter()
-            .filter(|clause| clause.could_match(goal))
+            .filter(|&clause| clause.could_match(goal))
             .cloned();
 
         environment_clauses.chain(program_clauses).collect()
@@ -233,7 +233,7 @@ impl context::GoalInEnvironment<SlgContext, SlgContext> for InEnvironment<Goal> 
 }
 
 impl context::Environment<SlgContext, SlgContext> for Arc<Environment> {
-    fn add_clauses(&self, clauses: impl IntoIterator<Item = DomainGoal>) -> Self {
+    fn add_clauses(&self, clauses: impl IntoIterator<Item = ProgramClause>) -> Self {
         Environment::add_clauses(self, clauses)
     }
 }

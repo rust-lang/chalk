@@ -51,6 +51,13 @@ impl<T: Zip> CouldMatch<T> for T {
 
 impl CouldMatch<DomainGoal> for ProgramClause {
     fn could_match(&self, other: &DomainGoal) -> bool {
-        self.implication.value.consequence.could_match(other)
+        match self {
+            ProgramClause::Implies(implication) => {
+                implication.consequence.could_match(other)
+            }
+            ProgramClause::ForAll(clause) => {
+                clause.value.consequence.could_match(other)
+            }
+        }
     }
 }
