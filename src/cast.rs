@@ -100,6 +100,34 @@ impl Cast<LeafGoal> for EqGoal {
     }
 }
 
+impl Cast<Goal> for QuantifiedDomainGoal {
+    fn cast(self) -> Goal {
+        if self.binders.is_empty() {
+            self.value.cast()
+        } else {
+            Goal::Quantified(
+                QuantifierKind::ForAll,
+                self.map(|bound| Box::new(bound.cast()))
+            )
+        }
+    }
+}
+
+impl Cast<ProgramClause> for QuantifiedDomainGoal {
+    fn cast(self) -> ProgramClause {
+        if self.binders.is_empty() {
+            self.value.cast()
+        } else {
+            ProgramClause::ForAll(
+                self.map(|bound| ProgramClauseImplication {
+                    consequence: bound,
+                    conditions: vec![],
+                })
+            )
+        }
+    }
+}
+
 impl Cast<Ty> for ApplicationTy {
     fn cast(self) -> Ty {
         Ty::Apply(self)

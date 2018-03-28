@@ -1,5 +1,3 @@
-#![feature(match_default_bindings)]
-
 extern crate chalk;
 extern crate chalk_parse;
 extern crate docopt;

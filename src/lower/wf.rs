@@ -145,6 +145,12 @@ impl FoldInputTypes for DomainGoal {
     }
 }
 
+impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
+    fn fold(&self, accumulator: &mut Vec<Ty>) {
+        self.value.fold(accumulator);
+    }
+}
+
 impl WfSolver {
     fn verify_struct_decl(&self, struct_datum: &StructDatum) -> bool {
         // We retrieve all the input types of the struct fields.
@@ -166,7 +172,7 @@ impl WfSolver {
                         .where_clauses
                         .iter()
                         .cloned()
-                        .map(|wc| wc.into_from_env_goal())
+                        .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
                         .casted()
                         .collect();
 
@@ -289,9 +295,9 @@ impl WfSolver {
                       .where_clauses
                       .iter()
                       .cloned()
-                      .map(|wc| wc.into_from_env_goal())
-                      .chain(header_other_types.into_iter().map(|ty| DomainGoal::FromEnvTy(ty).cast()))
+                      .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
                       .casted()
+                      .chain(header_other_types.into_iter().map(|ty| DomainGoal::FromEnvTy(ty).cast()))
                       .collect();
 
         let goal = Goal::Implies(hypotheses, Box::new(goal))

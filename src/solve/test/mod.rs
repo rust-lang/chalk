@@ -2017,3 +2017,44 @@ fn quantified_types() {
         }
     }
 }
+
+#[test]
+fn higher_ranked_implied_bounds() {
+    test! {
+        program {
+            trait Foo<'a> { }
+            trait Bar where forall<'a> Self: Foo<'a> { }
+        }
+
+        goal {
+            forall<T> {
+                if (T: Bar) {
+                    forall<'a> {
+                        T: Foo<'a>
+                    }
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+
+    test! {
+        program {
+            trait Foo<T> { }
+            trait Bar where forall<T> Self: Foo<T> { }
+        }
+
+        goal {
+            forall<T> {
+                if (T: Bar) {
+                    forall<U> {
+                        T: Foo<U>
+                    }
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
