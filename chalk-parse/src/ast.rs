@@ -27,7 +27,7 @@ pub enum Item {
 pub struct StructDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
-    pub where_clauses: Vec<WhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
     pub fields: Vec<Field>,
     pub flags: StructFlags,
 }
@@ -39,7 +39,7 @@ pub struct StructFlags {
 pub struct TraitDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
-    pub where_clauses: Vec<WhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_defns: Vec<AssocTyDefn>,
     pub flags: TraitFlags,
 }
@@ -107,7 +107,7 @@ impl Kinded for Parameter {
 pub struct Impl {
     pub parameter_kinds: Vec<ParameterKind>,
     pub trait_ref: PolarizedTraitRef,
-    pub where_clauses: Vec<WhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
 }
 
@@ -192,6 +192,11 @@ pub enum WhereClause {
     UnifyTys { a: Ty, b: Ty },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
     TraitInScope { trait_name: Identifier },
+}
+
+pub struct QuantifiedWhereClause {
+    pub parameter_kinds: Vec<ParameterKind>,
+    pub where_clause: WhereClause,
 }
 
 pub struct Field {

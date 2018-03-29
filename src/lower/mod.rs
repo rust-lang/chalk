@@ -353,9 +353,9 @@ impl LowerParameterKind for ParameterKind {
 }
 
 trait LowerWhereClauses {
-    fn where_clauses(&self) -> &[WhereClause];
+    fn where_clauses(&self) -> &[QuantifiedWhereClause];
 
-    fn lower_where_clauses(&self, env: &Env) -> Result<Vec<ir::DomainGoal>> {
+    fn lower_where_clauses(&self, env: &Env) -> Result<Vec<ir::QuantifiedDomainGoal>> {
         self.where_clauses().lower(env)
     }
 }
@@ -374,7 +374,7 @@ impl LowerTypeKind for StructDefn {
 }
 
 impl LowerWhereClauses for StructDefn {
-    fn where_clauses(&self) -> &[WhereClause] {
+    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
         &self.where_clauses
     }
 }
@@ -395,23 +395,29 @@ impl LowerTypeKind for TraitDefn {
 }
 
 impl LowerWhereClauses for TraitDefn {
-    fn where_clauses(&self) -> &[WhereClause] {
+    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
         &self.where_clauses
     }
 }
 
 impl LowerWhereClauses for Impl {
-    fn where_clauses(&self) -> &[WhereClause] {
+    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
         &self.where_clauses
     }
 }
 
-trait LowerWhereClauseVec {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>>;
+trait LowerWhereClauseVec<T> {
+    fn lower(&self, env: &Env) -> Result<Vec<T>>;
 }
 
-impl LowerWhereClauseVec for [WhereClause] {
+impl LowerWhereClauseVec<ir::DomainGoal> for [WhereClause] {
     fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>> {
+        self.iter().map(|wc| wc.lower(env)).collect()
+    }
+}
+
+impl LowerWhereClauseVec<ir::QuantifiedDomainGoal> for [QuantifiedWhereClause] {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::QuantifiedDomainGoal>> {
         self.iter().map(|wc| wc.lower(env)).collect()
     }
 }
@@ -467,6 +473,16 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
                 ir::DomainGoal::InScope(id)
             }
         })
+    }
+}
+
+impl LowerWhereClause<ir::QuantifiedDomainGoal> for QuantifiedWhereClause {
+    fn lower(&self, env: &Env) -> Result<ir::QuantifiedDomainGoal> {
+        let parameter_kinds = self.parameter_kinds.iter().map(|pk| pk.lower());
+        let binders = env.in_binders(parameter_kinds, |env| {
+            Ok(self.where_clause.lower(env)?)
+        })?;
+        Ok(binders)
     }
 }
 
@@ -1280,14 +1296,24 @@ impl ir::StructDatum {
                       .where_clauses
                       .iter()
                       .cloned()
-                      .map(|wc| wc.into_from_env_goal())
+                      .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
         {
-            clauses.push(self.binders.map_ref(|_| {
-                ir::ProgramClauseImplication {
-                    consequence: wc.cast(),
-                    conditions: vec![condition.clone().cast()],
+            // We move the binders of the where-clause to the left, e.g. if we had:
+            //
+            // `forall<T> { WellFormed(Foo<T>) :- forall<'a> Implemented(T: Fn(&'a i32)) }`
+            //
+            // then the reverse rule will be:
+            //
+            // `forall<'a, T> { FromEnv(T: Fn(&'a i32)) :- FromEnv(Foo<T>) }`
+            //
+            let shift = wc.binders.len();
+            clauses.push(ir::Binders {
+                binders: wc.binders.into_iter().chain(self.binders.binders.clone()).collect(),
+                value: ir::ProgramClauseImplication {
+                    consequence: wc.value,
+                    conditions: vec![condition.clone().up_shift(shift).cast()],
                 }
-            }).cast())
+            }.cast());
         }
 
         clauses
@@ -1323,7 +1349,7 @@ impl ir::TraitDatum {
                     bound.where_clauses
                             .iter()
                             .cloned()
-                            .map(|wc| wc.into_well_formed_goal().cast())
+                            .map(|wc| wc.map(|bound| bound.into_well_formed_goal()).cast())
                             .chain(Some(ir::DomainGoal::Holds(trait_ref_impl.clone()).cast()))
                             .collect()
                 },
@@ -1338,16 +1364,26 @@ impl ir::TraitDatum {
                       .where_clauses
                       .iter()
                       .cloned()
-                      .map(|wc| wc.into_from_env_goal())
-                      .chain(Some(ir::DomainGoal::Holds(trait_ref_impl)))
+                      .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
         {
-            clauses.push(self.binders.map_ref(|_| {
-                ir::ProgramClauseImplication {
-                    consequence: wc,
-                    conditions: vec![condition.clone().cast()],
+            // We move the binders of the where-clause to the left for the reverse rules,
+            // cf `StructDatum::to_program_clauses`.
+            let shift = wc.binders.len();
+            clauses.push(ir::Binders {
+                binders: wc.binders.into_iter().chain(self.binders.binders.clone()).collect(),
+                value: ir::ProgramClauseImplication {
+                    consequence: wc.value,
+                    conditions: vec![condition.clone().up_shift(shift).cast()],
                 }
-            }).cast())
+            }.cast());
         }
+
+        clauses.push(self.binders.map_ref(|_| {
+            ir::ProgramClauseImplication {
+                consequence: ir::DomainGoal::Holds(trait_ref_impl),
+                conditions: vec![condition.cast()],
+            }
+        }).cast());
 
         clauses
     }

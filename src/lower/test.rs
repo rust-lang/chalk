@@ -786,3 +786,67 @@ fn external_items() {
         }
     }
 }
+
+#[test]
+fn higher_ranked_trait_bounds() {
+    lowering_error! {
+        program {
+            trait Foo<'a> { }
+            trait Bar where forall<'a> Self: Foo<'a> { }
+            struct i32 { }
+
+            impl Bar for i32 { }
+        } error_msg {
+            "trait impl for \"Bar\" does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Foo<'a> { }
+            trait Bar where forall<'a> Self: Foo<'a> { }
+            struct i32 { }
+
+            impl<'a> Foo<'a> for i32 { }
+            impl Bar for i32 { }
+        }
+    }
+}
+
+// See `cyclic_traits`, this is essentially the same but with higher-ranked co-inductive WF goals.
+#[test]
+fn higher_ranked_cyclic_requirements() {
+    lowering_success! {
+        program {
+            trait Foo<T> where forall<U> Self: Bar<U> { }
+            trait Bar<T> where forall<U> Self: Foo<T> { }
+
+            impl<T, U> Foo<T> for U { }
+            impl<T, U> Bar<T> for U { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Copy { }
+            trait Foo<T> where forall<U> Self: Bar<U>, Self: Copy { }
+            trait Bar<T> where forall<U> Self: Foo<T> { }
+
+            impl<T, U> Foo<T> for U { }
+            impl<T, U> Bar<T> for U where U: Foo<T> { }
+        } error_msg {
+            "trait impl for \"Foo\" does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Copy { }
+            trait Foo<T> where forall<U> Self: Bar<U>, Self: Copy { }
+            trait Bar<T> where forall<U> Self: Foo<T> { }
+
+            impl<T, U> Foo<T> for U where U: Copy { }
+            impl<T, U> Bar<T> for U where U: Foo<T> { }
+        }
+    }
+}

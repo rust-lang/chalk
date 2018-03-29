@@ -193,7 +193,7 @@ pub struct ImplDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
     crate trait_ref: PolarizedTraitRef,
-    crate where_clauses: Vec<DomainGoal>,
+    crate where_clauses: Vec<QuantifiedDomainGoal>,
     crate associated_ty_values: Vec<AssociatedTyValue>,
     crate specialization_priority: usize,
 }
@@ -218,7 +218,7 @@ pub struct StructDatum {
 pub struct StructDatumBound {
     crate self_ty: ApplicationTy,
     crate fields: Vec<Ty>,
-    crate where_clauses: Vec<DomainGoal>,
+    crate where_clauses: Vec<QuantifiedDomainGoal>,
     crate flags: StructFlags,
 }
 
@@ -235,7 +235,7 @@ pub struct TraitDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
     crate trait_ref: TraitRef,
-    crate where_clauses: Vec<DomainGoal>,
+    crate where_clauses: Vec<QuantifiedDomainGoal>,
     crate flags: TraitFlags,
 }
 
@@ -518,6 +518,8 @@ pub enum DomainGoal {
     InScope(ItemId),
 }
 
+pub type QuantifiedDomainGoal = Binders<DomainGoal>;
+
 impl DomainGoal {
     /// Turn a where clause into the WF version of it i.e.:
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
@@ -610,14 +612,19 @@ pub struct Binders<T> {
 }
 
 impl<T> Binders<T> {
-    crate fn map_ref<U, OP>(&self, op: OP) -> Binders<U>
-    where
-        OP: FnOnce(&T) -> U,
-    {
+    crate fn map<U, OP>(self, op: OP) -> Binders<U> where OP: FnOnce(T) -> U {
+        let value = op(self.value);
+        Binders {
+            binders: self.binders,
+            value,
+        }
+    }
+
+    crate fn map_ref<U, OP>(&self, op: OP) -> Binders<U> where OP: FnOnce(&T) -> U {
         let value = op(&self.value);
         Binders {
             binders: self.binders.clone(),
-            value: value,
+            value,
         }
     }
 
@@ -730,21 +737,7 @@ impl UCanonical<InEnvironment<Goal>> {
     /// with WF requirements and cyclic traits, which generates cycles in the proof tree which must
     /// not be rejected but instead must be treated as a success.
     crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
-        match &self.canonical.value.goal {
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => {
-                match wca {
-                    WhereClauseAtom::Implemented(tr) => {
-                        let trait_datum = &program.trait_data[&tr.trait_id];
-                        trait_datum.binders.value.flags.auto
-                    }
-                    WhereClauseAtom::ProjectionEq(..) => false,
-                }
-            }
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(..))) => {
-                true
-            }
-            _ => false,
-        }
+        self.canonical.value.goal.is_coinductive(program)
     }
 }
 
@@ -842,6 +835,25 @@ impl Goal {
         let env_goal = InEnvironment::new(&Environment::new(), self);
         let canonical_goal = infer.canonicalize(&env_goal).quantified;
         infer.u_canonicalize(&canonical_goal).quantified
+    }
+
+    crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+        match self {
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => {
+                match wca {
+                    WhereClauseAtom::Implemented(tr) => {
+                        let trait_datum = &program.trait_data[&tr.trait_id];
+                        trait_datum.binders.value.flags.auto
+                    }
+                    WhereClauseAtom::ProjectionEq(..) => false,
+                }
+            }
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(..))) => {
+                true
+            }
+            Goal::Quantified(QuantifierKind::ForAll, goal) => goal.value.is_coinductive(program),
+            _ => false,
+        }
     }
 }
 

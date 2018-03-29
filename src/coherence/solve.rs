@@ -143,7 +143,7 @@ impl OverlapSolver {
         // Create a goal for each clause in both where clauses
         let wc_goals = lhs_where_clauses
             .chain(rhs_where_clauses)
-            .map(|wc| Goal::Leaf(LeafGoal::DomainGoal(wc)));
+            .map(|wc| wc.cast());
 
         // Join all the goals we've created together with And, then quantify them
         // over the joined binders. This is our query.
@@ -216,7 +216,7 @@ impl OverlapSolver {
             .value
             .where_clauses
             .iter()
-            .map(|wc| Goal::Leaf(LeafGoal::DomainGoal(wc.up_shift(more_len))));
+            .map(|wc| wc.up_shift(more_len).cast());
 
         // Join all of the goals together.
         let goal = params_goals

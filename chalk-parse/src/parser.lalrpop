@@ -40,7 +40,9 @@ AutoKeyword: () = "#" "[" "auto" "]";
 MarkerKeyword: () = "#" "[" "marker" "]";
 
 StructDefn: StructDefn = {
-    <external:ExternalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{" <f:Fields> "}" => StructDefn {
+    <external:ExternalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
+        <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
+    {
         name: n,
         parameter_kinds: p,
         where_clauses: w,
@@ -52,9 +54,9 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    <external:ExternalKeyword?> <auto:AutoKeyword?> <marker:MarkerKeyword?> "trait" <n:Id><p:Angle<ParameterKind>> <w:WhereClauses> "{"
-        <a:AssocTyDefn*> "}" =>
-    TraitDefn {
+    <external:ExternalKeyword?> <auto:AutoKeyword?> <marker:MarkerKeyword?> "trait" <n:Id><p:Angle<ParameterKind>>
+        <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
+    {
         name: n,
         parameter_kinds: p,
         where_clauses: w,
@@ -75,8 +77,8 @@ AssocTyDefn: AssocTyDefn = {
 };
 
 Impl: Impl = {
-    "impl" <p:Angle<ParameterKind>> <mark:"!"?> <t:Id> <a:Angle<Parameter>> "for" <s:Ty> <w:WhereClauses> "{"
-        <assoc:AssocTyValue*> "}" =>
+    "impl" <p:Angle<ParameterKind>> <mark:"!"?> <t:Id> <a:Angle<Parameter>> "for" <s:Ty>
+        <w:QuantifiedWhereClauses> "{" <assoc:AssocTyValue*> "}" =>
     {
         let mut args = vec![Parameter::Ty(s)];
         args.extend(a);
@@ -160,55 +162,50 @@ Field: Field = {
 };
 
 Clause: Clause = {
-    "forall" <pk:Angle<ParameterKind>> "{" <wc:WhereClause> "if" <g:Comma<Goal1>> "}" => {
-        Clause {
-            parameter_kinds: pk,
-            consequence: wc,
-            conditions: g,
-        }
+    "forall" <pk:Angle<ParameterKind>> "{" <wc:WhereClause> "if" <g:Comma<Goal1>> "}" => Clause {
+        parameter_kinds: pk,
+        consequence: wc,
+        conditions: g,
     },
 
-    "forall" <pk:Angle<ParameterKind>> "{" <wc:WhereClause> "}" => {
-        Clause {
-            parameter_kinds: pk,
-            consequence: wc,
-            conditions: vec![],
-        }
+    "forall" <pk:Angle<ParameterKind>> "{" <wc:WhereClause> "}" => Clause {
+        parameter_kinds: pk,
+        consequence: wc,
+        conditions: vec![],
     },
 };
 
 InlineClause1: Clause = {
-    <wc:WhereClause> => {
-        Clause {
-            parameter_kinds: vec![],
-            consequence: wc,
-            conditions: vec![],
-        }
+    <wc:WhereClause> => Clause {
+        parameter_kinds: vec![],
+        consequence: wc,
+        conditions: vec![],
     },
 
-    <wc:WhereClause> ":" "-" <g:Comma<Goal1>> => {
-        Clause {
-            parameter_kinds: vec![],
-            consequence: wc,
-            conditions: g,
-        }
+    <wc:WhereClause> ":" "-" <g:Comma<Goal1>> => Clause {
+        parameter_kinds: vec![],
+        consequence: wc,
+        conditions: g,
     },
 };
 
 InlineClause: Clause = {
     <InlineClause1>,
 
-    "forall" "<" <pk:Comma<ParameterKind>> ">" "{" <c:InlineClause1> "}" => {
-        Clause {
-            parameter_kinds: pk,
-            consequence: c.consequence,
-            conditions: c.conditions,
-        }
-    },
+    "forall" "<" <pk:Comma<ParameterKind>> ">" "{" <c:InlineClause1> "}" => Clause {
+        parameter_kinds: pk,
+        consequence: c.consequence,
+        conditions: c.conditions,
+    }
 };
 
 WhereClauses: Vec<WhereClause> = {
     "where" <Comma<WhereClause>>,
+    () => vec![],
+};
+
+QuantifiedWhereClauses: Vec<QuantifiedWhereClause> = {
+    "where" <Comma<QuantifiedWhereClause>>,
     () => vec![],
 };
 
@@ -242,6 +239,18 @@ WhereClause: WhereClause = {
     },
 
     "InScope" "(" <t:Id> ")" => WhereClause::TraitInScope { trait_name: t },
+};
+
+QuantifiedWhereClause: QuantifiedWhereClause = {
+    <wc:WhereClause> => QuantifiedWhereClause {
+        parameter_kinds: vec![],
+        where_clause: wc,
+    },
+
+    "forall" "<" <pk:Comma<ParameterKind>> ">" <wc:WhereClause> => QuantifiedWhereClause {
+        parameter_kinds: pk,
+        where_clause: wc,
+    },
 };
 
 TraitRef<S>: TraitRef = {
