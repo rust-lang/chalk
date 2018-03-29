@@ -164,7 +164,10 @@ impl InferenceTable {
     crate fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime> {
         match *leaf {
             Lifetime::Var(v) => {
-                let v1 = self.probe_lifetime_var(InferenceVariable::from_depth(v))?;
+                if v < binders {
+                    return None;
+                }
+                let v1 = self.probe_lifetime_var(InferenceVariable::from_depth(v - binders))?;
                 Some(v1.up_shift(binders))
             }
             Lifetime::ForAll(_) => None,
