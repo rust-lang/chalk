@@ -1,6 +1,5 @@
 #![recursion_limit = "1024"]
 #![cfg_attr(test, feature(test))]
-#![feature(conservative_impl_trait)]
 #![feature(catch_expr)]
 #![feature(crate_in_paths)]
 #![feature(crate_visibility_modifier)]
@@ -8,11 +7,9 @@
 #![feature(in_band_lifetimes)]
 #![feature(macro_at_most_once_rep)]
 #![feature(macro_vis_matcher)]
-#![feature(match_default_bindings)]
 #![feature(specialization)]
 #![feature(step_trait)]
 #![feature(underscore_lifetimes)]
-#![feature(universal_impl_trait)]
 
 extern crate chalk_parse;
 #[macro_use]

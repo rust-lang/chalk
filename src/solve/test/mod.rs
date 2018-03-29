@@ -1992,3 +1992,28 @@ fn clauses_in_if_goals() {
         }
     }
 }
+
+#[test]
+fn quantified_types() {
+    test! {
+        program {
+            trait Foo { }
+            struct fn<'a> { }
+            impl Foo for for<'a> fn<'a> { }
+        }
+
+        goal {
+            for<'a> fn<'a>: Foo
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<'a> { fn<'a>: Foo }
+        } yields {
+            // Lifetime constraints are unsatisfiable
+            "Unique; substitution [], \
+            lifetime constraints [InEnvironment { environment: Env([]), goal: '!2 == '!1 }]"
+        }
+    }
+}
