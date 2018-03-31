@@ -1,3 +1,5 @@
+
+// Up the recursion limit, because the lalrpop parser is recursive.
 #![recursion_limit = "1024"]
 
 #[macro_use]
@@ -14,6 +16,7 @@ use errors::Result;
 use lalrpop_util::ParseError;
 use std::fmt::Write;
 
+/// Parse a .chalk file with the lalrpop parser.
 pub fn parse_program(text: &str) -> Result<ast::Program> {
     match parser::parse_Program(text) {
         Ok(v) => Ok(v),
@@ -21,6 +24,7 @@ pub fn parse_program(text: &str) -> Result<ast::Program> {
     }
 }
 
+/// Parse a type entered on the command line.
 pub fn parse_ty(text: &str) -> Result<ast::Ty> {
     match parser::parse_Ty(text) {
         Ok(v) => Ok(v),
@@ -28,15 +32,19 @@ pub fn parse_ty(text: &str) -> Result<ast::Ty> {
     }
 }
 
+/// Parse a goal entered on the command line.
 pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
     match parser::parse_Goal(text) {
         Ok(v) => Ok(v),
+
+        // Make the error pretty.
         Err(e) => {
+            // A closure that underlines the given range with "^^^" marks.
             let position_string = |start: usize, end: usize| {
                 let mut output = String::new();
                 let text = text.replace("\n", " ").replace("\r", " ");
-                write!(output, "position: `{}`\n", text).expect("str-write cannot fail");
-                write!(output, "           ").expect("str-write cannot fail");
+                write!(output, "position: `{}`\n", text).expect("str-write cannot fail unless OOM");
+                write!(output, "           ").expect("str-write cannot fail unless OOM");
                 for _ in 0..start { output.push_str(" "); }
                 for _ in start..end { output.push_str("^"); }
                 output.push_str("\n");
