@@ -103,11 +103,13 @@ pub struct AssocTyDefn {
 ///
 /// Not to be confused with `Parameter`, which is a concrete type parameter.
 /// For example, for the code:
-/// ```
+/// 
+/// ``` ignore
 /// impl<T> Foo for Vec<T> {
 ///     // ...
 /// }
 /// ```
+/// 
 /// The `T` in `impl<T>` is a generic type parameter.
 pub enum ParameterKind {
     Ty(Identifier),
@@ -118,11 +120,13 @@ pub enum ParameterKind {
 ///
 /// Not to be confused with `ParameterKind`, which is a generic type parameter.
 /// For example, for the code:
-/// ```
+/// 
+/// ``` ignore
 /// impl<T> Foo for Vec<T> {
 ///     // ...
 /// }
 /// ```
+/// 
 /// The `T` in `Vec<T>` is a concrete type parameter.
 pub enum Parameter {
     Ty(Ty),
@@ -264,12 +268,13 @@ pub struct UnselectedProjectionTy {
 /// is "recieving" the trait is the first element of the args array. For example,
 /// for a trait bound (e.g. `Foo: Bar<T>`), the `TraitRef` would look like:
 ///
-/// ```
+/// ``` ignore
 /// TraitRef {
 ///     trait_name: "Bar",
 ///     args: ["Foo", "T"]
 /// }
 /// ```
+///
 /// (Using strings instead of actual structures for clarity.)
 ///
 pub struct TraitRef {
