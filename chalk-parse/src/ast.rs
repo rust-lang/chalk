@@ -1,6 +1,7 @@
 use lalrpop_intern::InternedString;
 use std::fmt;
 
+/// A span is a range of characters in a string where an error occured.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Span {
     pub lo: usize,
@@ -8,6 +9,7 @@ pub struct Span {
 }
 
 impl Span {
+    /// Make a new span.
     pub fn new(lo: usize, hi: usize) -> Self {
         Span { lo: lo, hi: hi }
     }
