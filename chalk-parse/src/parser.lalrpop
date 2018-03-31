@@ -3,14 +3,23 @@ use lalrpop_intern::intern;
 
 grammar;
 
+//////////////////////////
+// Parsing a .chalk file
+
+// The Program struct is the top-level container for the parsed file.
+// See ast::Program for more info.
 pub Program: Program = {
     Items => Program { items: <> }
 };
 
+// Each item is parsed as an Option<Item>. Before storing these into the Program
+// struct, this will filter out any None entries and flatten the result.
 Items: Vec<Item> = {
     Item* => <>.into_iter().filter_map(|v| v).collect()
 };
 
+// Items are parsed as an Option to make ignoring comments easier. See ast::Item
+// for more info.
 Item: Option<Item> = {
     Comment => None,
     StructDefn => Some(Item::StructDefn(<>)),
@@ -19,6 +28,8 @@ Item: Option<Item> = {
     Clause => Some(Item::Clause(<>)),
 };
 
+// Line Comment.
+// TODO: Support block comments.
 Comment: () = r"//.*";
 
 pub Goal: Box<Goal> = {
@@ -35,10 +46,13 @@ Goal1: Box<Goal> = {
     "(" <Goal> ")",
 };
 
+// The various keywords that can be used in structs. They have no values; instead,
+// they're parsed as an Option, and then converted to a boolean via is_some.
 ExternalKeyword: () = "extern";
 AutoKeyword: () = "#" "[" "auto" "]";
 MarkerKeyword: () = "#" "[" "marker" "]";
 
+// Parse a struct. See ast::StructDefn.
 StructDefn: StructDefn = {
     <external:ExternalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
@@ -53,6 +67,8 @@ StructDefn: StructDefn = {
     }
 };
 
+// Parse a trait. See ast::TraitDefn.
+// TODO: Currently, traits cannot have functions; only associated types.
 TraitDefn: TraitDefn = {
     <external:ExternalKeyword?> <auto:AutoKeyword?> <marker:MarkerKeyword?> "trait" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
@@ -69,6 +85,7 @@ TraitDefn: TraitDefn = {
     }
 };
 
+// Parse an associated type. See ast::AssocTyDefn and ast::TraitDefn.
 AssocTyDefn: AssocTyDefn = {
     "type" <name:Id> <p:Angle<ParameterKind>> ";" => AssocTyDefn {
         name: name,
@@ -76,6 +93,14 @@ AssocTyDefn: AssocTyDefn = {
     }
 };
 
+// Parse an impl. Impls could be for a type by themselves, or they could be a
+// trait implementation for a type. Currently, impls are assumed to be trait
+// implementations.
+//
+// Currently, impls with functions are not supported; they may only contain
+// associated types.
+//
+// See ast::Impl.
 Impl: Impl = {
     "impl" <p:Angle<ParameterKind>> <mark:"!"?> <t:Id> <a:Angle<Parameter>> "for" <s:Ty>
         <w:QuantifiedWhereClauses> "{" <assoc:AssocTyValue*> "}" =>
@@ -94,11 +119,19 @@ Impl: Impl = {
     },
 };
 
+// Parse a generic name for a type or lifetime. Not to be confused with
+// ast::Parameter, which is concrete type or lifetime.
+//
+// See ast::ParameterKind.
+//
+// Note: Inline trait bounds are not supported. All trait bounds must occur in
+// where clauses.
 ParameterKind: ParameterKind = {
     Id => ParameterKind::Ty(<>),
     LifetimeId => ParameterKind::Lifetime(<>),
 };
 
+// Parse an associated type. See ast::AssocTyValue.
 AssocTyValue: AssocTyValue = {
     "type" <n:Id> <a:Angle<ParameterKind>> <wc:WhereClauses> "=" <v:Ty> ";" => AssocTyValue {
         name: n,
@@ -108,13 +141,22 @@ AssocTyValue: AssocTyValue = {
     },
 };
 
+// Parse a type name, possibly with type parameters. See ast::Ty.
 pub Ty: Ty = {
+	
+	// This option parses a type that starts with "for <lifetime> ...", also
+	// known as Higher-Ranked Trait Bounds. It then recurses to parse the rest
+	// of the type.
+	//
+	// Note that the lifetime inside the for is a generic lifetime.
     "for" "<" <l:Comma<LifetimeId>> ">" <t:Ty> => Ty::ForAll {
         lifetime_names: l,
         ty: Box::new(t)
     },
+
     TyWithoutFor,
 };
+
 
 TyWithoutFor: Ty = {
     <n:Id> => Ty::Id { name: n},
@@ -124,21 +166,27 @@ TyWithoutFor: Ty = {
     "(" <Ty> ")",
 };
 
+// Parse a concrete lifetime name. For parsing purposes, they look identical to
+// generic lifetime names.
 Lifetime: Lifetime = {
     <n:LifetimeId> => Lifetime::Id { name: n },
 };
 
+// Parse a concrete type parameter.
 Parameter: Parameter = {
     Ty => Parameter::Ty(<>),
     Lifetime => Parameter::Lifetime(<>),
 };
 
+// Parse a reference to the associated type of a trait. See ast::ProjectionTy.
+// This version parses a fully-qualified associated type, i.e. "<Foo as Bar>::Baz"
 ProjectionTy: ProjectionTy = {
     "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => ProjectionTy {
         trait_ref: t, name: n, args: a
     },
 };
 
+// Parse a reference to the associated type of a trait. See ast::ProjectionTy.
 UnselectedProjectionTy: UnselectedProjectionTy = {
     <ty:TyWithoutFor> "::" <name:Id> <a:Angle<Parameter>> => {
         let mut args = a;
@@ -150,10 +198,12 @@ UnselectedProjectionTy: UnselectedProjectionTy = {
     },
 };
 
+// Parse a comma-separated list of struct fields. See ast::StructDefn.
 Fields: Vec<Field> = {
     <Comma<Field>>,
 };
 
+// Parse a struct field. See ast::StructDefn.
 Field: Field = {
     <n:Id> ":" <t: Ty> => Field {
         name: n,
@@ -161,6 +211,7 @@ Field: Field = {
     }
 };
 
+// Parse a forall clause. This syntax is unique to Chalk queries.
 Clause: Clause = {
     "forall" <pk:Angle<ParameterKind>> "{" <wc:WhereClause> "if" <g:Comma<Goal1>> "}" => Clause {
         parameter_kinds: pk,
@@ -199,6 +250,8 @@ InlineClause: Clause = {
     }
 };
 
+// Parse a comma-separated list of where clauses. This includes any mix of normal
+// rust where-clauses and clauses used for Chalk queries.
 WhereClauses: Vec<WhereClause> = {
     "where" <Comma<WhereClause>>,
     () => vec![],
@@ -209,9 +262,19 @@ QuantifiedWhereClauses: Vec<QuantifiedWhereClause> = {
     () => vec![],
 };
 
+// Parse a where clause. This includes normal rust where-clauses and
+// chalk-specific ones.
+//
+// TODO: Clauses with multiple traits like "A: TraitB + TraitC" are not
+// supported yet.
+//
+// TODO: Lifetime bounds are not supported yet (e.g. "`a: `b").
 WhereClause: WhereClause = {
+	// Normal rust trait bounds.
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
 
+	// Chalk-specific where clauses.
+	// TODO: Add a "See" comment that points to a list of 
     "WellFormed" "(" <t:Ty> ")" => WhereClause::TyWellFormed { ty: t },
 
     "WellFormed" "(" <t:TraitRef<":">> ")" => WhereClause::TraitRefWellFormed { trait_ref: t },
@@ -253,6 +316,9 @@ QuantifiedWhereClause: QuantifiedWhereClause = {
     },
 };
 
+// Parses a Trait applied to a type, separated by S. For example, a trait bound
+// uses S=":" (e.g. `Foo: Bar<T>`), while a fully qualified reference uses S="as"
+// (e.g. `<Foo as Bar<T>>::Item`).
 TraitRef<S>: TraitRef = {
     <s:Ty> S <t:Id> <a:Angle<Parameter>> => {
         let mut args = vec![Parameter::Ty(s)];
@@ -277,6 +343,7 @@ Separator1<S, T>: Vec<T> = {
     }
 };
 
+// A comma separated list of 0 or more T's.
 #[inline]
 Comma<T>: Vec<T> = {
     <Separator<",", T>>
@@ -287,11 +354,13 @@ SemiColon<T>: Vec<T> = {
     <Separator<";", T>>
 };
 
+// A T inside of angle brackets.
 Angle<T>: Vec<T> = {
     "<" <Comma<T>> ">",
     () => vec![],
 };
 
+// A valid name in Rust.
 Id: Identifier = {
     <l:@L> <s:r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
         str: intern(s),
@@ -299,9 +368,33 @@ Id: Identifier = {
     }
 };
 
+// A valid lifetime name in Rust.
 LifetimeId: Identifier = {
     <l:@L> <s:r"'([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
         str: intern(s),
         span: Span::new(l, r),
     }
 };
+
+/////////////////////////////
+// Parsing goal statements
+
+// A comma separated list of 1 or more Goals.
+pub Goal: Box<Goal> = {
+    Goal1,
+    <g1:Goal1> "," <g2:Goal> => Box::new(Goal::And(g1, g2)),
+};
+
+// Parse a Chalk goal. See ast::Goal. 
+Goal1: Box<Goal> = {
+    "forall" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
+    "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
+    "if" "(" <w:Comma<WhereClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
+    "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
+    <w:WhereClause> => Box::new(Goal::Leaf(w)),
+    "(" <Goal> ")",
+};
+
+
+
+
