@@ -3,9 +3,6 @@ use lalrpop_intern::intern;
 
 grammar;
 
-//////////////////////////
-// Parsing a .chalk file
-
 // The Program struct is the top-level container for the parsed file.
 // See ast::Program for more info.
 pub Program: Program = {
@@ -32,11 +29,13 @@ Item: Option<Item> = {
 // TODO: Support block comments.
 Comment: () = r"//.*";
 
+// A comma separated list of 1 or more Goals.
 pub Goal: Box<Goal> = {
     Goal1,
     <g1:Goal1> "," <g2:Goal> => Box::new(Goal::And(g1, g2)),
 };
 
+// Parse a Chalk goal. See ast::Goal.
 Goal1: Box<Goal> = {
     "forall" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
     "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
@@ -143,12 +142,12 @@ AssocTyValue: AssocTyValue = {
 
 // Parse a type name, possibly with type parameters. See ast::Ty.
 pub Ty: Ty = {
-	
-	// This option parses a type that starts with "for <lifetime> ...", also
-	// known as Higher-Ranked Trait Bounds. It then recurses to parse the rest
-	// of the type.
-	//
-	// Note that the lifetime inside the for is a generic lifetime.
+
+    // This option parses a type that starts with "for <lifetime> ...", also
+    // known as Higher-Ranked Trait Bounds. It then recurses to parse the rest
+    // of the type.
+    //
+    // Note that the lifetime inside the for is a generic lifetime.
     "for" "<" <l:Comma<LifetimeId>> ">" <t:Ty> => Ty::ForAll {
         lifetime_names: l,
         ty: Box::new(t)
@@ -270,11 +269,12 @@ QuantifiedWhereClauses: Vec<QuantifiedWhereClause> = {
 //
 // TODO: Lifetime bounds are not supported yet (e.g. "`a: `b").
 WhereClause: WhereClause = {
-	// Normal rust trait bounds.
+    // Normal rust trait bounds.
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
 
-	// Chalk-specific where clauses.
-	// TODO: Add a "See" comment that points to a list of 
+    // Chalk-specific where clauses.
+    // TODO: Add a "See" comment that points to a list of chalk where clauses
+	// and their descriptions.
     "WellFormed" "(" <t:Ty> ")" => WhereClause::TyWellFormed { ty: t },
 
     "WellFormed" "(" <t:TraitRef<":">> ")" => WhereClause::TraitRefWellFormed { trait_ref: t },
@@ -304,6 +304,9 @@ WhereClause: WhereClause = {
     "InScope" "(" <t:Id> ")" => WhereClause::TraitInScope { trait_name: t },
 };
 
+// Parses a where clause, optionally with a "forall <...>" quantifier.
+//
+// See ast::QuantifiedWhereClause
 QuantifiedWhereClause: QuantifiedWhereClause = {
     <wc:WhereClause> => QuantifiedWhereClause {
         parameter_kinds: vec![],
@@ -330,10 +333,14 @@ TraitRef<S>: TraitRef = {
     },
 };
 
+// A list of 0 or more T's, separated by the string S. (For example, S="," gives
+// a comma-separated list.)
 Separator<S, T>: Vec<T> = {
     Separator1<S, T>? => <>.unwrap_or(vec![])
 };
 
+// A list of 1 or more T's, separated by the string S. (For example, S="," gives
+// a comma-separated list.)
 Separator1<S, T>: Vec<T> = {
     <t:T> => vec![t],
     <v:Separator<S, T>> S <t:T> => {
@@ -349,6 +356,7 @@ Comma<T>: Vec<T> = {
     <Separator<",", T>>
 };
 
+// A semicolon separated list of 0 or more T's.
 #[inline]
 SemiColon<T>: Vec<T> = {
     <Separator<";", T>>
@@ -375,26 +383,3 @@ LifetimeId: Identifier = {
         span: Span::new(l, r),
     }
 };
-
-/////////////////////////////
-// Parsing goal statements
-
-// A comma separated list of 1 or more Goals.
-pub Goal: Box<Goal> = {
-    Goal1,
-    <g1:Goal1> "," <g2:Goal> => Box::new(Goal::And(g1, g2)),
-};
-
-// Parse a Chalk goal. See ast::Goal. 
-Goal1: Box<Goal> = {
-    "forall" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
-    "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
-    "if" "(" <w:Comma<WhereClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
-    "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
-    <w:WhereClause> => Box::new(Goal::Leaf(w)),
-    "(" <Goal> ")",
-};
-
-
-
-

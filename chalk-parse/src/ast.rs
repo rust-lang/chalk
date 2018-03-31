@@ -18,7 +18,7 @@ pub struct Program {
     pub items: Vec<Item>
 }
 
-/// The `Item` enum represents a statement in a .chalk file. 
+/// The `Item` enum represents a statement in a .chalk file.
 pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
@@ -98,7 +98,7 @@ pub struct AssocTyDefn {
 }
 
 /// A generic type parameter.
-/// 
+///
 /// Not to be confused with `Parameter`, which is a concrete type parameter.
 /// For example, for the code:
 /// ```
@@ -183,7 +183,7 @@ pub struct Impl {
     /// Any trait bounds on type parameters.
     pub where_clauses: Vec<QuantifiedWhereClause>,
 
-    /// Associated type definitions, 
+    /// Associated type definitions.
     pub assoc_ty_values: Vec<AssocTyValue>,
 }
 
@@ -203,7 +203,7 @@ pub struct AssocTyValue {
     pub value: Ty,
 }
 
-/// This enum represents a type. 
+/// This enum represents a type.
 pub enum Ty {
     /// A type with just a name.
     Id {
@@ -261,7 +261,7 @@ pub struct UnselectedProjectionTy {
 /// Represents a Trait applied to a type, separated by some string. The type that
 /// is "recieving" the trait is the first element of the args array. For example,
 /// for a trait bound (e.g. `Foo: Bar<T>`), the `TraitRef` would look like:
-/// 
+///
 /// ```
 /// TraitRef {
 ///     trait_name: "Bar",
@@ -276,7 +276,7 @@ pub struct TraitRef {
 }
 
 /// This enum specifies whether a trait ref is included or excluded from a type.
-/// 
+///
 /// For example, `Foo: Sized` is `Positive`, but `Foo: !Sized` is negative.
 /// Trait bounds are `Positive` unless `!` is prepended to their name.
 pub enum PolarizedTraitRef {
@@ -339,6 +339,10 @@ pub enum WhereClause {
     TraitInScope { trait_name: Identifier },
 }
 
+/// This struct represents a where clause with a "forall <...>" quantifier.
+/// If there is no quantifier, the `parameter_kinds` array is empty.
+// TODO: Add a "See" that points to an explanation of what "forall <...>" means
+// before a where clause.
 pub struct QuantifiedWhereClause {
     pub parameter_kinds: Vec<ParameterKind>,
     pub where_clause: WhereClause,
