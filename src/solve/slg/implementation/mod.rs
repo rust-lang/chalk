@@ -270,9 +270,23 @@ impl MayInvalidate {
     // Returns true if the two types could be unequal.
     fn aggregate_tys(&mut self, new: &Ty, current: &Ty) -> bool {
         match (new, current) {
-            (Ty::Var(_), Ty::Var(_)) => false,
+            (_, Ty::Var(_)) => {
+                // If the aggregate solution already has an inference variable here, then no matter
+                // what type we produce, the aggregate cannot get 'more generalized' than it already
+                // is. So return false, we cannot invalidate.
+                false
+            }
+
+            (Ty::Var(_), _) => {
+                // If we see a type variable in the potential future solution, we have to be
+                // conservative. We don't know what type variable will wind up being! Remember that
+                // the future solution could be any instantiation of `ty0` -- or it could leave this
+                // variable unbound, if the result is true for all types.
+                true
+            }
 
             // Aggregating universally-quantified types seems hard according to Niko. ;)
+            // Since this is the case, we are conservative here and just say we may invalidate.
             (Ty::ForAll(_), Ty::ForAll(_)) => true,
 
             (Ty::Apply(apply1), Ty::Apply(apply2)) => {
@@ -287,44 +301,10 @@ impl MayInvalidate {
                 self.aggregate_unselected_projection_tys(apply1, apply2)
             }
 
-            (Ty::Var(_), ty) | (ty, Ty::Var(_)) => {
-                !self.recurse_ty(ty)
-            }
-
             (Ty::ForAll(_), _)
-                | (Ty::Apply(_), _)
-                | (Ty::Projection(_), _)
-                | (Ty::UnselectedProjection(_), _) => true,
-        }
-    }
-
-    /// Returns true if ty contains variables
-    fn recurse_ty(&mut self, ty: &Ty) -> bool {
-        match ty {
-            Ty::Var(_) => true,
-            Ty::ForAll(_) => false, // This probably doesn't make sense.
-            Ty::Apply(apply) => apply.parameters.iter().any(|p| {
-                match p {
-                    ParameterKind::Ty(ty2) => {
-                        println!("{:?}", ty2);
-                        self.recurse_ty(ty2)
-                    },
-                    _ => true,
-                }
-            }),
-            Ty::Projection(apply) => apply.parameters.iter().any(|p| {
-                match p {
-                    ParameterKind::Ty(ty2) => self.recurse_ty(ty2),
-                    _ => true,
-                }
-            }),
-
-            Ty::UnselectedProjection(apply) => apply.parameters.iter().any(|p| {
-                match p {
-                    ParameterKind::Ty(ty2) => self.recurse_ty(ty2),
-                    _ => true,
-                }
-            }),
+            | (Ty::Apply(_), _)
+            | (Ty::Projection(_), _)
+            | (Ty::UnselectedProjection(_), _) => true,
         }
     }
 
