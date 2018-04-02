@@ -50,5 +50,10 @@ error_chain! {
             description("could not match")
                 display("could not match")
         }
+
+        DuplicateLangItem(item: ir::LangItem) {
+            description("Duplicate lang item")
+                display("Duplicate lang item `{:?}`", item)
+        }
     }
 }

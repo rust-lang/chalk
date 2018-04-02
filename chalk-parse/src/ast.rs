@@ -48,6 +48,7 @@ pub struct TraitFlags {
     pub auto: bool,
     pub marker: bool,
     pub external: bool,
+    pub deref: bool,
 }
 
 pub struct AssocTyDefn {

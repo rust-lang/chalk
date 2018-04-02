@@ -172,6 +172,7 @@ impl LowerProgram for Program {
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut custom_clauses = Vec::new();
+        let mut lang_items = BTreeMap::new();
         for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let empty_env = Env {
                 type_ids: &type_ids,
@@ -204,6 +205,16 @@ impl LowerProgram for Program {
                             },
                         );
                     }
+
+                    if d.flags.deref {
+                        use std::collections::btree_map::Entry::*;
+                        match lang_items.entry(ir::LangItem::DerefTrait) {
+                            Vacant(entry) => { entry.insert(item_id); },
+                            Occupied(_) => {
+                                bail!(ErrorKind::DuplicateLangItem(ir::LangItem::DerefTrait))
+                            }
+                        }
+                    }
                 }
                 Item::Impl(ref d) => {
                     impl_data.insert(item_id, d.lower_impl(&empty_env)?);
@@ -222,6 +233,7 @@ impl LowerProgram for Program {
             impl_data,
             associated_ty_data,
             custom_clauses,
+            lang_items,
             default_impl_data: Vec::new(),
         };
         program.add_default_impls();
@@ -903,6 +915,7 @@ impl LowerTrait for TraitDefn {
                     auto: self.flags.auto,
                     marker: self.flags.marker,
                     external: self.flags.external,
+                    deref: self.flags.deref,
                 },
             })
         })?;

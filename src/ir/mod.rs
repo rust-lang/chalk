@@ -38,6 +38,9 @@ pub struct Program {
 
     /// For each user-specified clause
     crate custom_clauses: Vec<ProgramClause>,
+
+    /// Special types and traits.
+    crate lang_items: BTreeMap<LangItem, ItemId>,
 }
 
 impl Program {
@@ -69,6 +72,11 @@ pub struct ProgramEnvironment {
 
     /// Compiled forms of the above:
     crate program_clauses: Vec<ProgramClause>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LangItem {
+    DerefTrait,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -244,6 +252,7 @@ pub struct TraitFlags {
     crate auto: bool,
     crate marker: bool,
     crate external: bool,
+    pub deref: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
