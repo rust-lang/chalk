@@ -291,7 +291,7 @@ pub trait Environment<C: Context, I: InferenceContext<C>>: Debug + Clone {
 
 pub trait CanonicalExClause<C: Context>: Debug {
     /// Extracts the inner normalized substitution.
-    fn inference_normalized_subst(&self) -> C::InferenceNormalizedSubst;
+    fn inference_normalized_subst(&self) -> &C::InferenceNormalizedSubst;
 }
 
 pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
@@ -299,7 +299,7 @@ pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord
     fn empty_constraints(&self) -> bool;
 
     /// Extracts the inner normalized substitution.
-    fn inference_normalized_subst(&self) -> C::InferenceNormalizedSubst;
+    fn inference_normalized_subst(&self) -> &C::InferenceNormalizedSubst;
 }
 
 pub trait DomainGoal<C: Context, I: InferenceContext<C>>: Debug {
@@ -358,6 +358,6 @@ pub trait AnswerStream<C: Context> {
     /// if we find any answer for which `test` returns true.
     fn any_future_answer(
         &mut self,
-        test: impl FnMut(&mut C::InferenceNormalizedSubst) -> bool,
+        test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
     ) -> bool;
 }

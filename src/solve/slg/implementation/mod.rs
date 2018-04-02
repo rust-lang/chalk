@@ -240,7 +240,7 @@ impl context::Environment<SlgContext, SlgContext> for Arc<Environment> {
 }
 
 impl Substitution {
-    fn may_invalidate(&mut self, subst: &Canonical<Substitution>) -> bool {
+    fn may_invalidate(&self, subst: &Canonical<Substitution>) -> bool {
         self.parameters
             .iter()
             .zip(&subst.value.parameters)
@@ -413,8 +413,8 @@ impl context::DomainGoal<SlgContext, SlgContext> for DomainGoal {
 }
 
 impl context::CanonicalExClause<SlgContext> for Canonical<ExClause<SlgContext, SlgContext>> {
-    fn inference_normalized_subst(&self) -> Substitution {
-        self.value.subst.clone()
+    fn inference_normalized_subst(&self) -> &Substitution {
+        &self.value.subst
     }
 }
 
@@ -423,8 +423,8 @@ impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSub
         self.value.constraints.is_empty()
     }
 
-    fn inference_normalized_subst(&self) -> Substitution {
-        self.value.subst.clone()
+    fn inference_normalized_subst(&self) -> &Substitution {
+        &self.value.subst
     }
 }
 

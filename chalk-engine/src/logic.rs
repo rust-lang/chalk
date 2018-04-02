@@ -107,15 +107,15 @@ impl<C: Context> Forest<C> {
         &mut self,
         table: TableIndex,
         answer: AnswerIndex,
-        mut test: impl FnMut(&mut C::InferenceNormalizedSubst) -> bool,
+        mut test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
     ) -> bool {
         if let Some(answer) = self.tables[table].answer(answer) {
             info!("answer cached = {:?}", answer);
-            return test(&mut answer.subst.inference_normalized_subst());
+            return test(answer.subst.inference_normalized_subst());
         }
 
         self.tables[table].strands_mut().any(|strand| {
-            test(&mut strand.canonical_ex_clause.inference_normalized_subst())
+            test(strand.canonical_ex_clause.inference_normalized_subst())
         })
     }
 

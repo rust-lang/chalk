@@ -174,7 +174,7 @@ where
 
     fn any_future_answer(
         &mut self,
-        test: impl FnMut(&mut C::InferenceNormalizedSubst) -> bool,
+        test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
     ) -> bool {
         self.forest.any_future_answer(self.table, self.answer, test)
     }
