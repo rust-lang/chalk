@@ -1039,6 +1039,31 @@ impl ir::Program {
         );
         program_clauses.extend(self.default_impl_data.iter().map(|d| d.to_program_clause()));
 
+        // Adds clause that defines Deref:
+        // forall<T, U> { Deref(T, U) :- ProjectionEq(<T as Deref>::Target = U>) }
+        if let Some(trait_id) = self.lang_items.get(&ir::LangItem::DerefTrait) {
+            // Find `Deref::Target`.
+            let associated_ty_id = self.associated_ty_data.values()
+                                                        .find(|d| d.trait_id == *trait_id)
+                                                        .expect("Deref has no assoc item")
+                                                        .id;
+            let t = || ir::Ty::Var(0);
+            let u = || ir::Ty::Var(1);
+            program_clauses.push(ir::Binders {
+                binders: vec![ir::ParameterKind::Ty(()), ir::ParameterKind::Ty(())],
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::DomainGoal::Deref(ir::Deref { source: t(), target: u() }),
+                    conditions: vec![ir::ProjectionEq {
+                        projection: ir::ProjectionTy { 
+                            associated_ty_id,
+                            parameters: vec![t().cast()]
+                        },
+                        ty: u(),
+                    }.cast()]
+                },
+            }.cast());
+        }
+
         for datum in self.impl_data.values() {
             // If we encounter a negative impl, do not generate any rule. Negative impls
             // are currently just there to deactivate default impls for auto traits.
