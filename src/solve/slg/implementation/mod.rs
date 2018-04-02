@@ -245,7 +245,7 @@ impl Canonical<ExClause<SlgContext, SlgContext>> {
             .parameters
             .iter()
             .zip(&subst.value.parameters)
-            .any(|(p1, p2)| MayInvalidate.aggregate_parameters(p1, p2))
+            .any(|(new, current)| MayInvalidate.aggregate_parameters(new, current))
     }
 }
 
@@ -253,8 +253,8 @@ impl Canonical<ExClause<SlgContext, SlgContext>> {
 struct MayInvalidate;
 
 impl MayInvalidate {
-    fn aggregate_parameters(&mut self, p1: &Parameter, p2: &Parameter) -> bool {
-        match (p1, p2) {
+    fn aggregate_parameters(&mut self, new: &Parameter, current: &Parameter) -> bool {
+        match (new, current) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => {
                 self.aggregate_tys(ty1, ty2)
             }
@@ -262,14 +262,14 @@ impl MayInvalidate {
                 self.aggregate_lifetimes(l1, l2)
             }
             (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
-                panic!("mismatched parameter kinds: p1={:?} p2={:?}", p1, p2)
+                panic!("mismatched parameter kinds: new={:?} current={:?}", new, current)
             }
         }
     }
 
     // Returns true if the two types could be unequal.
-    fn aggregate_tys(&mut self, ty0: &Ty, ty1: &Ty) -> bool {
-        match (ty0, ty1) {
+    fn aggregate_tys(&mut self, new: &Ty, current: &Ty) -> bool {
+        match (new, current) {
             (Ty::Var(_), Ty::Var(_)) => false,
 
             // Aggregating universally-quantified types seems hard according to Niko. ;)
@@ -328,86 +328,86 @@ impl MayInvalidate {
         }
     }
 
-    fn aggregate_lifetimes(&mut self, l1: &Lifetime, l2: &Lifetime) -> bool {
+    fn aggregate_lifetimes(&mut self, _: &Lifetime, _: &Lifetime) -> bool {
         true
     }
 
     fn aggregate_application_tys(
         &mut self,
-        apply1: &ApplicationTy,
-        apply2: &ApplicationTy
+        new: &ApplicationTy,
+        current: &ApplicationTy
     ) -> bool {
         let ApplicationTy {
-            name: name1,
-            parameters: parameters1,
-        } = apply1;
+            name: new_name,
+            parameters: new_parameters,
+        } = new;
         let ApplicationTy {
-            name: name2,
-            parameters: parameters2,
-        } = apply2;
+            name: current_name,
+            parameters: current_parameters,
+        } = current;
 
-        self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
+        self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
     }
 
-    fn aggregate_projection_tys(&mut self, proj1: &ProjectionTy, proj2: &ProjectionTy) -> bool {
+    fn aggregate_projection_tys(&mut self, new: &ProjectionTy, current: &ProjectionTy) -> bool {
         let ProjectionTy {
-            associated_ty_id: name1,
-            parameters: parameters1,
-        } = proj1;
+            associated_ty_id: new_name,
+            parameters: new_parameters,
+        } = new;
         let ProjectionTy {
-            associated_ty_id: name2,
-            parameters: parameters2,
-        } = proj2;
+            associated_ty_id: current_name,
+            parameters: current_parameters,
+        } = current;
 
-        self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
+        self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
     }
 
     fn aggregate_unselected_projection_tys(
         &mut self,
-        proj1: &UnselectedProjectionTy,
-        proj2: &UnselectedProjectionTy,
+        new: &UnselectedProjectionTy,
+        current: &UnselectedProjectionTy,
     ) -> bool {
         let UnselectedProjectionTy {
-            type_name: name1,
-            parameters: parameters1,
-        } = proj1;
+            type_name: new_name,
+            parameters: new_parameters,
+        } = new;
         let UnselectedProjectionTy {
-            type_name: name2,
-            parameters: parameters2,
-        } = proj2;
+            type_name: current_name,
+            parameters: current_parameters,
+        } = current;
 
-        self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
+        self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
     }
 
     fn aggregate_name_and_substs<N>(
         &mut self,
-        name1: N,
-        parameters1: &[Parameter],
-        name2: N,
-        parameters2: &[Parameter],
+        new_name: N,
+        new_parameters: &[Parameter],
+        current_name: N,
+        current_parameters: &[Parameter],
     ) -> bool
     where
         N: Copy + Eq + Debug,
     {
-        if name1 != name2 {
+        if new_name != current_name {
             return true;
         }
 
-        let name = name1;
+        let name = new_name;
 
         assert_eq!(
-            parameters1.len(),
-            parameters2.len(),
+            new_parameters.len(),
+            current_parameters.len(),
             "does {:?} take {} parameters or {}? can't both be right",
             name,
-            parameters1.len(),
-            parameters2.len()
+            new_parameters.len(),
+            current_parameters.len()
         );
 
-        parameters1
+       new_parameters 
             .iter()
-            .zip(parameters2)
-            .any(|(p1, p2)| self.aggregate_parameters(p1, p2))
+            .zip(current_parameters)
+            .any(|(new, current)| self.aggregate_parameters(new, current))
     }
 }
 
