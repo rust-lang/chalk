@@ -8,7 +8,7 @@ crate mod prelude;
 
 /// The "context" in which the SLG solver operates.
 pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self> {
-    type CanonicalExClause: Debug;
+    type CanonicalExClause: CanonicalExClause<Self>;
 
     /// A map between universes. These are produced when
     /// u-canonicalizing something; they map canonical results back to
@@ -20,6 +20,10 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self>
     ///
     /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html#canonicalizing-the-query-result
     type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
+
+    /// Extracted from a canonicalized substitution or canonicalized ex clause, this is the type of
+    /// substitution that is fully normalized with respect to inference variables.
+    type InferenceNormalizedSubst: Debug;
 
     /// A canonicalized `GoalInEnvironment` -- that is, one where all
     /// free inference variables have been bound into the canonical
@@ -285,9 +289,17 @@ pub trait Environment<C: Context, I: InferenceContext<C>>: Debug + Clone {
     fn add_clauses(&self, clauses: impl IntoIterator<Item = I::ProgramClause>) -> Self;
 }
 
+pub trait CanonicalExClause<C: Context>: Debug {
+    /// Extracts the inner normalized substitution.
+    fn inference_normalized_subst(&self) -> C::InferenceNormalizedSubst;
+}
+
 pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
     /// True if this solution has no region constraints.
     fn empty_constraints(&self) -> bool;
+
+    /// Extracts the inner normalized substitution.
+    fn inference_normalized_subst(&self) -> C::InferenceNormalizedSubst;
 }
 
 pub trait DomainGoal<C: Context, I: InferenceContext<C>>: Debug {
@@ -346,6 +358,6 @@ pub trait AnswerStream<C: Context> {
     /// if we find any answer for which `test` returns true.
     fn any_future_answer(
         &mut self,
-        test: impl FnMut(&mut C::CanonicalExClause) -> bool,
+        test: impl FnMut(&mut C::InferenceNormalizedSubst) -> bool,
     ) -> bool;
 }

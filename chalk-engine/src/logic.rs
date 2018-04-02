@@ -106,20 +106,17 @@ impl<C: Context> Forest<C> {
     pub(super) fn any_future_answer(
         &mut self,
         table: TableIndex,
-        mut test: impl FnMut(&mut C::CanonicalExClause) -> bool,
+        answer: AnswerIndex,
+        mut test: impl FnMut(&mut C::InferenceNormalizedSubst) -> bool,
     ) -> bool {
-        let mut strands = self.tables[table].strands_mut();
-
-        // If we don't have any strands at all, then we are
-        // intentionally conservative and say it may_invalidate.
-        match strands.next() {
-            None => return true,
-            Some(strand) => if test(&mut strand.canonical_ex_clause) {
-                return true
-            },
+        if let Some(answer) = self.tables[table].answer(answer) {
+            info!("answer cached = {:?}", answer);
+            return test(&mut answer.subst.inference_normalized_subst());
         }
 
-        strands.any(|strand| test(&mut strand.canonical_ex_clause))
+        self.tables[table].strands_mut().any(|strand| {
+            test(&mut strand.canonical_ex_clause.inference_normalized_subst())
+        })
     }
 
     /// Ensures that answer with the given index is available from the

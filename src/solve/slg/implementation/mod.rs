@@ -55,6 +55,7 @@ impl context::Context for SlgContext {
     type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal>>;
     type UniverseMap = UniverseMap;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
+    type InferenceNormalizedSubst = Substitution;
     type Solution = Solution;
 }
 
@@ -238,11 +239,9 @@ impl context::Environment<SlgContext, SlgContext> for Arc<Environment> {
     }
 }
 
-impl Canonical<ExClause<SlgContext, SlgContext>> {
+impl Substitution {
     fn may_invalidate(&mut self, subst: &Canonical<Substitution>) -> bool {
-        self.value
-            .subst
-            .parameters
+        self.parameters
             .iter()
             .zip(&subst.value.parameters)
             .any(|(new, current)| MayInvalidate.aggregate_parameters(new, current))
@@ -413,9 +412,19 @@ impl context::DomainGoal<SlgContext, SlgContext> for DomainGoal {
     }
 }
 
+impl context::CanonicalExClause<SlgContext> for Canonical<ExClause<SlgContext, SlgContext>> {
+    fn inference_normalized_subst(&self) -> Substitution {
+        self.value.subst.clone()
+    }
+}
+
 impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSubst> {
     fn empty_constraints(&self) -> bool {
         self.value.constraints.is_empty()
+    }
+
+    fn inference_normalized_subst(&self) -> Substitution {
+        self.value.subst.clone()
     }
 }
 
