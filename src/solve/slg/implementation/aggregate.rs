@@ -15,18 +15,16 @@ impl context::AggregateOps<SlgContext> for SlgContext {
     fn make_solution(
         &self,
         root_goal: &Canonical<InEnvironment<Goal>>,
-        simplified_answers: impl IntoIterator<Item = SimplifiedAnswer<SlgContext>>,
+        mut simplified_answers: impl context::AnswerStream<SlgContext>,
     ) -> Option<Solution> {
-        let mut simplified_answers = simplified_answers.into_iter().peekable();
-
         // No answers at all?
-        if simplified_answers.peek().is_none() {
+        if simplified_answers.peek_answer().is_none() {
             return None;
         }
-        let SimplifiedAnswer { subst, ambiguous } = simplified_answers.next().unwrap();
+        let SimplifiedAnswer { subst, ambiguous } = simplified_answers.next_answer().unwrap();
 
         // Exactly 1 unconditional answer?
-        if simplified_answers.peek().is_none() && !ambiguous {
+        if simplified_answers.peek_answer().is_none() && !ambiguous {
             return Some(Solution::Unique(subst));
         }
 
@@ -57,7 +55,13 @@ impl context::AggregateOps<SlgContext> for SlgContext {
                 break Guidance::Unknown;
             }
 
-            match simplified_answers.next() {
+            if !simplified_answers.any_future_answer(|ref mut new_subst| {
+                new_subst.may_invalidate(&subst)
+            }) {
+                break Guidance::Definite(subst);
+            }
+
+            match simplified_answers.next_answer() {
                 Some(answer1) => {
                     subst = merge_into_guidance(root_goal, subst, &answer1.subst);
                 }

@@ -55,6 +55,7 @@ impl context::Context for SlgContext {
     type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal>>;
     type UniverseMap = UniverseMap;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
+    type InferenceNormalizedSubst = Substitution;
     type Solution = Solution;
 }
 
@@ -238,6 +239,157 @@ impl context::Environment<SlgContext, SlgContext> for Arc<Environment> {
     }
 }
 
+impl Substitution {
+    fn may_invalidate(&self, subst: &Canonical<Substitution>) -> bool {
+        self.parameters
+            .iter()
+            .zip(&subst.value.parameters)
+            .any(|(new, current)| MayInvalidate.aggregate_parameters(new, current))
+    }
+}
+
+// This is a struct in case we need to add state at any point like in AntiUnifier
+struct MayInvalidate;
+
+impl MayInvalidate {
+    fn aggregate_parameters(&mut self, new: &Parameter, current: &Parameter) -> bool {
+        match (new, current) {
+            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => {
+                self.aggregate_tys(ty1, ty2)
+            }
+            (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
+                self.aggregate_lifetimes(l1, l2)
+            }
+            (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
+                panic!("mismatched parameter kinds: new={:?} current={:?}", new, current)
+            }
+        }
+    }
+
+    // Returns true if the two types could be unequal.
+    fn aggregate_tys(&mut self, new: &Ty, current: &Ty) -> bool {
+        match (new, current) {
+            (_, Ty::Var(_)) => {
+                // If the aggregate solution already has an inference variable here, then no matter
+                // what type we produce, the aggregate cannot get 'more generalized' than it already
+                // is. So return false, we cannot invalidate.
+                false
+            }
+
+            (Ty::Var(_), _) => {
+                // If we see a type variable in the potential future solution, we have to be
+                // conservative. We don't know what type variable will wind up being! Remember that
+                // the future solution could be any instantiation of `ty0` -- or it could leave this
+                // variable unbound, if the result is true for all types.
+                true
+            }
+
+            // Aggregating universally-quantified types seems hard according to Niko. ;)
+            // Since this is the case, we are conservative here and just say we may invalidate.
+            (Ty::ForAll(_), Ty::ForAll(_)) => true,
+
+            (Ty::Apply(apply1), Ty::Apply(apply2)) => {
+                self.aggregate_application_tys(apply1, apply2)
+            }
+
+            (Ty::Projection(apply1), Ty::Projection(apply2)) => {
+                self.aggregate_projection_tys(apply1, apply2)
+            }
+
+            (Ty::UnselectedProjection(apply1), Ty::UnselectedProjection(apply2)) => {
+                self.aggregate_unselected_projection_tys(apply1, apply2)
+            }
+
+            (Ty::ForAll(_), _)
+            | (Ty::Apply(_), _)
+            | (Ty::Projection(_), _)
+            | (Ty::UnselectedProjection(_), _) => true,
+        }
+    }
+
+    fn aggregate_lifetimes(&mut self, _: &Lifetime, _: &Lifetime) -> bool {
+        true
+    }
+
+    fn aggregate_application_tys(
+        &mut self,
+        new: &ApplicationTy,
+        current: &ApplicationTy
+    ) -> bool {
+        let ApplicationTy {
+            name: new_name,
+            parameters: new_parameters,
+        } = new;
+        let ApplicationTy {
+            name: current_name,
+            parameters: current_parameters,
+        } = current;
+
+        self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
+    }
+
+    fn aggregate_projection_tys(&mut self, new: &ProjectionTy, current: &ProjectionTy) -> bool {
+        let ProjectionTy {
+            associated_ty_id: new_name,
+            parameters: new_parameters,
+        } = new;
+        let ProjectionTy {
+            associated_ty_id: current_name,
+            parameters: current_parameters,
+        } = current;
+
+        self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
+    }
+
+    fn aggregate_unselected_projection_tys(
+        &mut self,
+        new: &UnselectedProjectionTy,
+        current: &UnselectedProjectionTy,
+    ) -> bool {
+        let UnselectedProjectionTy {
+            type_name: new_name,
+            parameters: new_parameters,
+        } = new;
+        let UnselectedProjectionTy {
+            type_name: current_name,
+            parameters: current_parameters,
+        } = current;
+
+        self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
+    }
+
+    fn aggregate_name_and_substs<N>(
+        &mut self,
+        new_name: N,
+        new_parameters: &[Parameter],
+        current_name: N,
+        current_parameters: &[Parameter],
+    ) -> bool
+    where
+        N: Copy + Eq + Debug,
+    {
+        if new_name != current_name {
+            return true;
+        }
+
+        let name = new_name;
+
+        assert_eq!(
+            new_parameters.len(),
+            current_parameters.len(),
+            "does {:?} take {} parameters or {}? can't both be right",
+            name,
+            new_parameters.len(),
+            current_parameters.len()
+        );
+
+       new_parameters 
+            .iter()
+            .zip(current_parameters)
+            .any(|(new, current)| self.aggregate_parameters(new, current))
+    }
+}
+
 impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::UniverseMap {
     fn map_goal_from_canonical(
         &self,
@@ -260,9 +412,19 @@ impl context::DomainGoal<SlgContext, SlgContext> for DomainGoal {
     }
 }
 
+impl context::CanonicalExClause<SlgContext> for Canonical<ExClause<SlgContext, SlgContext>> {
+    fn inference_normalized_subst(&self) -> &Substitution {
+        &self.value.subst
+    }
+}
+
 impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSubst> {
     fn empty_constraints(&self) -> bool {
         self.value.constraints.is_empty()
+    }
+
+    fn inference_normalized_subst(&self) -> &Substitution {
+        &self.value.subst
     }
 }
 

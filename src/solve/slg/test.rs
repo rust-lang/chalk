@@ -23,6 +23,13 @@ fn parse_and_lower_goal(
 macro_rules! test {
     (program $program:tt $(goal $goal:tt first $n:tt with max $depth:tt { $expected:expr })*) => {
         solve_goal(stringify!($program), vec![$(($depth, $n, stringify!($goal), $expected)),*])
+    };
+
+    (program $program:tt $(goal $goal:tt fixed $n:tt with max $depth:tt { $expected:expr })*) => {
+        solve_goal_fixed_num_answers(
+            stringify!($program),
+            vec![$(($depth, $n, stringify!($goal), $expected)),*],
+        )
     }
 }
 
@@ -45,6 +52,36 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
             let result = format!("{:#?}", forest.force_answers(peeled_goal, num_answers));
 
             ::test_util::assert_test_result_eq(&expected, &result);
+        }
+    });
+}
+
+fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
+    println!("program {}", program_text);
+    assert!(program_text.starts_with("{"));
+    assert!(program_text.ends_with("}"));
+    let program =
+        &Arc::new(parse_and_lower_program(&program_text[1..program_text.len() - 1]).unwrap());
+    let env = &Arc::new(program.environment());
+    ir::tls::set_current_program(&program, || {
+        for (max_size, num_answers, goal_text, expected) in goals {
+            println!("----------------------------------------------------------------------");
+            println!("goal {}", goal_text);
+            assert!(goal_text.starts_with("{"));
+            assert!(goal_text.ends_with("}"));
+            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
+            let peeled_goal = goal.into_peeled_goal();
+            let mut forest = Forest::new(SlgContext::new(env, max_size));
+            let result = format!("{:?}", forest.solve(&peeled_goal));
+
+            ::test_util::assert_test_result_eq(&expected, &result);
+
+            let num_cached_answers_for_goal = forest.num_cached_answers_for_goal(&peeled_goal);
+            // ::test_util::assert_test_result_eq(
+            //     &format!("{}", num_cached_answers_for_goal),
+            //     &format!("{}", expected_num_answers)
+            // );
+            assert_eq!(num_cached_answers_for_goal, num_answers);
         }
     });
 }
@@ -252,7 +289,8 @@ fn flounder() {
 // answers before we stop.
 #[test]
 fn only_draw_so_many() {
-    let program_text = "
+    test! {
+        program {
             trait Sized { }
 
             struct Vec<T> { }
@@ -263,25 +301,40 @@ fn only_draw_so_many() {
 
             struct Slice<T> { }
             impl<T> Sized for Slice<T> where T: Sized { }
-    ";
+        }
 
-    let goal_text = "exists<T> { T: Sized }";
+        goal {
+            exists<T> { T: Sized }
+        } fixed 2 with max 10 {
+            "Some(Ambig(Unknown))"
+        }
+    }
+}
 
-    let program = &Arc::new(parse_and_lower_program(program_text).unwrap());
-    let env = &Arc::new(program.environment());
-    ir::tls::set_current_program(&program, || {
-        let goal = parse_and_lower_goal(&program, goal_text).unwrap();
-        let peeled_goal = goal.into_peeled_goal();
-        let mut forest = Forest::new(SlgContext::new(env, 10));
-        let solution = forest.solve(&peeled_goal);
+#[test]
+fn only_draw_so_many_blow_up() {
+    test! {
+        program {
+            trait Sized { }
+            trait Foo { }
 
-        // First, check we got the expected solution.
-        assert_eq!(format!("{:?}", solution), "Some(Ambig(Unknown))");
+            struct Vec<T> { }
+            impl<T> Sized for Vec<T> where T: Sized { }
+            impl<T> Foo for Vec<T> where T: Sized { }
 
-        // Next, check how many answers we had to peel to get it.
-        let num_cached_answers_for_goal = forest.num_cached_answers_for_goal(&peeled_goal);
-        assert_eq!(num_cached_answers_for_goal, 2);
-    });
+            struct i32 { }
+            impl Sized for i32 { }
+
+            struct Slice<T> { }
+            impl<T> Sized for Slice<T> where T: Sized { }
+        }
+
+        goal {
+            exists<T> { T: Foo }
+        } fixed 2 with max 10 {
+            "Some(Ambig(Definite(Canonical { value: [?0 := Vec<?0>], binders: [Ty(U0)] })))"
+        }
+    }
 }
 
 /// Here, P and Q depend on one another through a negative loop.

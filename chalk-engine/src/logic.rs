@@ -103,6 +103,22 @@ impl<C: Context> Forest<C> {
         }
     }
 
+    pub(super) fn any_future_answer(
+        &mut self,
+        table: TableIndex,
+        answer: AnswerIndex,
+        mut test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
+    ) -> bool {
+        if let Some(answer) = self.tables[table].answer(answer) {
+            info!("answer cached = {:?}", answer);
+            return test(answer.subst.inference_normalized_subst());
+        }
+
+        self.tables[table].strands_mut().any(|strand| {
+            test(strand.canonical_ex_clause.inference_normalized_subst())
+        })
+    }
+
     /// Ensures that answer with the given index is available from the
     /// given table. Returns `Ok` if there is an answer:
     ///
