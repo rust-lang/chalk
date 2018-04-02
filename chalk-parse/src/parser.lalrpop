@@ -38,7 +38,7 @@ Goal1: Box<Goal> = {
 ExternalKeyword: () = "extern";
 AutoKeyword: () = "#" "[" "auto" "]";
 MarkerKeyword: () = "#" "[" "marker" "]";
-DerefKeyword: () = "#" "[" "deref" "]";
+DerefLangItem: () = "#" "[" "lang_deref" "]";
 
 StructDefn: StructDefn = {
     <external:ExternalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
@@ -55,7 +55,7 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    <external:ExternalKeyword?> <auto:AutoKeyword?> <marker:MarkerKeyword?> <deref:DerefKeyword?> "trait" <n:Id><p:Angle<ParameterKind>>
+    <external:ExternalKeyword?> <auto:AutoKeyword?> <marker:MarkerKeyword?> <deref:DerefLangItem?> "trait" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
     {
         name: n,
@@ -241,6 +241,7 @@ WhereClause: WhereClause = {
     },
 
     "InScope" "(" <t:Id> ")" => WhereClause::TraitInScope { trait_name: t },
+    "Derefs" "(" <source:Ty> "," <target:Ty> ")" => WhereClause::Derefs { source, target },
 };
 
 QuantifiedWhereClause: QuantifiedWhereClause = {

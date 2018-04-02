@@ -484,6 +484,12 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
 
                 ir::DomainGoal::InScope(id)
             }
+            WhereClause::Derefs { source, target } => {
+                ir::DomainGoal::Derefs(ir::Derefs { 
+                                        source: source.lower(env)?, 
+                                        target: target.lower(env)?
+                                    })
+            }
         })
     }
 }
@@ -511,7 +517,8 @@ impl LowerWhereClause<ir::LeafGoal> for WhereClause {
             | WhereClause::TyWellFormed { .. }
             | WhereClause::TraitRefWellFormed { .. }
             | WhereClause::TyFromEnv { .. }
-            | WhereClause::TraitRefFromEnv { .. } => {
+            | WhereClause::TraitRefFromEnv { .. }
+            | WhereClause::Derefs { .. } => {
                 let g: ir::DomainGoal = self.lower(env)?;
                 g.cast()
             }
@@ -1039,8 +1046,8 @@ impl ir::Program {
         );
         program_clauses.extend(self.default_impl_data.iter().map(|d| d.to_program_clause()));
 
-        // Adds clause that defines Deref:
-        // forall<T, U> { Deref(T, U) :- ProjectionEq(<T as Deref>::Target = U>) }
+        // Adds clause that defines the Derefs domain goal:
+        // forall<T, U> { Derefs(T, U) :- ProjectionEq(<T as Deref>::Target = U>) }
         if let Some(trait_id) = self.lang_items.get(&ir::LangItem::DerefTrait) {
             // Find `Deref::Target`.
             let associated_ty_id = self.associated_ty_data.values()
@@ -1052,7 +1059,7 @@ impl ir::Program {
             program_clauses.push(ir::Binders {
                 binders: vec![ir::ParameterKind::Ty(()), ir::ParameterKind::Ty(())],
                 value: ir::ProgramClauseImplication {
-                    consequence: ir::DomainGoal::Deref(ir::Deref { source: t(), target: u() }),
+                    consequence: ir::DomainGoal::Derefs(ir::Derefs { source: t(), target: u() }),
                     conditions: vec![ir::ProjectionEq {
                         projection: ir::ProjectionTy { 
                             associated_ty_id,

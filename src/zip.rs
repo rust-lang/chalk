@@ -182,7 +182,7 @@ struct_zip!(ProjectionEq { projection, ty });
 struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
 struct_zip!(ProgramClauseImplication { consequence, conditions });
-struct_zip!(Deref { source, target });
+struct_zip!(Derefs { source, target });
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
@@ -226,7 +226,7 @@ enum_zip!(DomainGoal {
     WellFormedTy,
     FromEnvTy,
     InScope,
-    Deref
+    Derefs
 });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(ProgramClause { Implies, ForAll });

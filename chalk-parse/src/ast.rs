@@ -193,6 +193,7 @@ pub enum WhereClause {
     UnifyTys { a: Ty, b: Ty },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
     TraitInScope { trait_name: Identifier },
+    Derefs { source: Ty, target: Ty },
 }
 
 pub struct QuantifiedWhereClause {

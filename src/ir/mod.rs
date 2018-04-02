@@ -464,7 +464,7 @@ pub enum WhereClauseAtom {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
-pub struct Deref {
+pub struct Derefs {
     pub source: Ty,
     pub target: Ty,
 }
@@ -532,13 +532,12 @@ pub enum DomainGoal {
 
     InScope(ItemId),
 
-    /// Whether a type can Deref into another. Right now this is just:
+    /// Whether a type can deref into another. Right now this is just:
     /// ```notrust
-    /// Deref(T, U) :- Implemented(T: Deref<Target = U>)
+    /// Derefs(T, U) :- Implemented(T: Deref<Target = U>)
     /// ```
-    /// In Rust there are also raw pointers which can be deref'd
-    /// but do not implement Deref.
-    Deref(Deref)
+    /// In Rust there are also raw pointers which can be deref'd but do not implement Deref.
+    Derefs(Derefs)
 }
 
 pub type QuantifiedDomainGoal = Binders<DomainGoal>;
