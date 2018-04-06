@@ -205,6 +205,7 @@ impl Debug for DomainGoal {
             DomainGoal::WellFormedTy(t) => write!(fmt, "WellFormed({:?})", t),
             DomainGoal::FromEnvTy(t) => write!(fmt, "FromEnv({:?})", t),
             DomainGoal::InScope(n) => write!(fmt, "InScope({:?})", n),
+            DomainGoal::Derefs(n) => write!(fmt, "Derefs({:?})", n),
         }
     }
 }

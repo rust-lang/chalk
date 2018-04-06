@@ -38,6 +38,9 @@ pub struct Program {
 
     /// For each user-specified clause
     crate custom_clauses: Vec<ProgramClause>,
+
+    /// Special types and traits.
+    crate lang_items: BTreeMap<LangItem, ItemId>,
 }
 
 impl Program {
@@ -69,6 +72,11 @@ pub struct ProgramEnvironment {
 
     /// Compiled forms of the above:
     crate program_clauses: Vec<ProgramClause>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LangItem {
+    DerefTrait,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -244,6 +252,7 @@ pub struct TraitFlags {
     crate auto: bool,
     crate marker: bool,
     crate external: bool,
+    pub deref: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -454,6 +463,12 @@ pub enum WhereClauseAtom {
     ProjectionEq(ProjectionEq),
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub struct Derefs {
+    pub source: Ty,
+    pub target: Ty,
+}
+
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
@@ -516,6 +531,13 @@ pub enum DomainGoal {
     FromEnvTy(Ty),
 
     InScope(ItemId),
+
+    /// Whether a type can deref into another. Right now this is just:
+    /// ```notrust
+    /// Derefs(T, U) :- Implemented(T: Deref<Target = U>)
+    /// ```
+    /// In Rust there are also raw pointers which can be deref'd but do not implement Deref.
+    Derefs(Derefs)
 }
 
 pub type QuantifiedDomainGoal = Binders<DomainGoal>;

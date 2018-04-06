@@ -172,6 +172,7 @@ impl LowerProgram for Program {
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut custom_clauses = Vec::new();
+        let mut lang_items = BTreeMap::new();
         for (item, &item_id) in self.items.iter().zip(&item_ids) {
             let empty_env = Env {
                 type_ids: &type_ids,
@@ -204,6 +205,16 @@ impl LowerProgram for Program {
                             },
                         );
                     }
+
+                    if d.flags.deref {
+                        use std::collections::btree_map::Entry::*;
+                        match lang_items.entry(ir::LangItem::DerefTrait) {
+                            Vacant(entry) => { entry.insert(item_id); },
+                            Occupied(_) => {
+                                bail!(ErrorKind::DuplicateLangItem(ir::LangItem::DerefTrait))
+                            }
+                        }
+                    }
                 }
                 Item::Impl(ref d) => {
                     impl_data.insert(item_id, d.lower_impl(&empty_env)?);
@@ -222,6 +233,7 @@ impl LowerProgram for Program {
             impl_data,
             associated_ty_data,
             custom_clauses,
+            lang_items,
             default_impl_data: Vec::new(),
         };
         program.add_default_impls();
@@ -472,6 +484,12 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
 
                 ir::DomainGoal::InScope(id)
             }
+            WhereClause::Derefs { source, target } => {
+                ir::DomainGoal::Derefs(ir::Derefs { 
+                                        source: source.lower(env)?, 
+                                        target: target.lower(env)?
+                                    })
+            }
         })
     }
 }
@@ -499,7 +517,8 @@ impl LowerWhereClause<ir::LeafGoal> for WhereClause {
             | WhereClause::TyWellFormed { .. }
             | WhereClause::TraitRefWellFormed { .. }
             | WhereClause::TyFromEnv { .. }
-            | WhereClause::TraitRefFromEnv { .. } => {
+            | WhereClause::TraitRefFromEnv { .. }
+            | WhereClause::Derefs { .. } => {
                 let g: ir::DomainGoal = self.lower(env)?;
                 g.cast()
             }
@@ -903,6 +922,7 @@ impl LowerTrait for TraitDefn {
                     auto: self.flags.auto,
                     marker: self.flags.marker,
                     external: self.flags.external,
+                    deref: self.flags.deref,
                 },
             })
         })?;
@@ -1025,6 +1045,31 @@ impl ir::Program {
                 .flat_map(|d| d.to_program_clauses(self)),
         );
         program_clauses.extend(self.default_impl_data.iter().map(|d| d.to_program_clause()));
+
+        // Adds clause that defines the Derefs domain goal:
+        // forall<T, U> { Derefs(T, U) :- ProjectionEq(<T as Deref>::Target = U>) }
+        if let Some(trait_id) = self.lang_items.get(&ir::LangItem::DerefTrait) {
+            // Find `Deref::Target`.
+            let associated_ty_id = self.associated_ty_data.values()
+                                                        .find(|d| d.trait_id == *trait_id)
+                                                        .expect("Deref has no assoc item")
+                                                        .id;
+            let t = || ir::Ty::Var(0);
+            let u = || ir::Ty::Var(1);
+            program_clauses.push(ir::Binders {
+                binders: vec![ir::ParameterKind::Ty(()), ir::ParameterKind::Ty(())],
+                value: ir::ProgramClauseImplication {
+                    consequence: ir::DomainGoal::Derefs(ir::Derefs { source: t(), target: u() }),
+                    conditions: vec![ir::ProjectionEq {
+                        projection: ir::ProjectionTy { 
+                            associated_ty_id,
+                            parameters: vec![t().cast()]
+                        },
+                        ty: u(),
+                    }.cast()]
+                },
+            }.cast());
+        }
 
         for datum in self.impl_data.values() {
             // If we encounter a negative impl, do not generate any rule. Negative impls

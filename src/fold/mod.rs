@@ -425,7 +425,7 @@ enum_fold!(PolarizedTraitRef[] { Positive(a), Negative(a) });
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
 enum_fold!(WhereClauseAtom[] { Implemented(a), ProjectionEq(a) });
 enum_fold!(DomainGoal[] { Holds(a), WellFormed(a), FromEnv(a), Normalize(a), UnselectedNormalize(a),
-                          WellFormedTy(a), FromEnvTy(a), InScope(a) });
+                          WellFormedTy(a), FromEnvTy(a), InScope(a), Derefs(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
@@ -571,6 +571,7 @@ struct_fold!(AssociatedTyValueBound { ty, where_clauses });
 struct_fold!(Environment { clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold<Result = F>);
 struct_fold!(EqGoal { a, b });
+struct_fold!(Derefs { source, target });
 struct_fold!(ProgramClauseImplication {
     consequence,
     conditions,

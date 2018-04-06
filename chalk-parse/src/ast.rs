@@ -48,6 +48,7 @@ pub struct TraitFlags {
     pub auto: bool,
     pub marker: bool,
     pub external: bool,
+    pub deref: bool,
 }
 
 pub struct AssocTyDefn {
@@ -192,6 +193,7 @@ pub enum WhereClause {
     UnifyTys { a: Ty, b: Ty },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
     TraitInScope { trait_name: Identifier },
+    Derefs { source: Ty, target: Ty },
 }
 
 pub struct QuantifiedWhereClause {

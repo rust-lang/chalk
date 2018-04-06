@@ -850,3 +850,21 @@ fn higher_ranked_cyclic_requirements() {
         }
     }
 }
+
+#[test]
+fn deref_trait() {
+    lowering_success! {
+        program {
+            #[lang_deref] trait Deref { type Target; }
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang_deref] trait Deref { }
+            #[lang_deref] trait DerefDupe { }
+        } error_msg {
+            "Duplicate lang item `DerefTrait`"
+        }
+    }
+}
