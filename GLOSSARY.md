@@ -97,11 +97,11 @@ which the subformulas are arranged fulfil certain rules. The individual patterns
 have different advantages for their manipulation.
 
 ### Conjunctive normal form (CNF)
-A formula in CNF is a disjunction of conjunctions. For example `(x1 || x2 ||
+A formula in CNF is a conjunction of disjunctions. For example `(x1 || x2 ||
 x3) && (x4 || x5 || x6)` is in CNF.
 
 ### Disjunctive normal form (DNF)
-A formula in DNF is a conjunction of disjunctions. For example `(x1 && x2 &&
+A formula in DNF is a disjunction of conjunctions. For example `(x1 && x2 &&
 x3) || (x4 && x5 && x6)` is in DNF.
 
 ### Negation normal form (NNF)
