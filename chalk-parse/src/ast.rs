@@ -175,7 +175,10 @@ pub enum Ty {
     ForAll {
         lifetime_names: Vec<Identifier>,
         ty: Box<Ty>
-    }
+    },
+    RawPtr {
+        ty: Box<Ty>
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]

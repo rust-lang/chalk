@@ -39,6 +39,7 @@ impl Debug for TypeName {
             TypeName::ItemId(id) => write!(fmt, "{:?}", id),
             TypeName::ForAll(universe) => write!(fmt, "!{}", universe.counter),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
+            TypeName::RawPtr => write!(fmt, "*const"),
         }
     }
 }

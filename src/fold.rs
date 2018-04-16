@@ -266,7 +266,7 @@ crate fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fall
                     folder.fold_free_universal_ty(ui, binders)
                 }
 
-                TypeName::ItemId(_) | TypeName::AssociatedType(_) => {
+                TypeName::ItemId(_) | TypeName::AssociatedType(_) | TypeName::RawPtr => {
                     let parameters = parameters.fold_with(folder, binders)?;
                     Ok(ApplicationTy { name, parameters }.cast())
                 }

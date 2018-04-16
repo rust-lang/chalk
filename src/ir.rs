@@ -142,6 +142,9 @@ pub enum TypeName {
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(ItemId),
+
+    /// `*const` or `*mut`. For now we don't care which.
+    RawPtr
 }
 
 impl TypeName {
@@ -690,11 +693,12 @@ pub enum DomainGoal {
 
     InScope(ItemId),
 
-    /// Whether a type can deref into another. Right now this is just:
+    /// Whether a type can deref into another. This is defined as:
     /// ```notrust
     /// Derefs(T, U) :- Implemented(T: Deref<Target = U>)
+    /// Derefs(T, U) :- T == *const U
+    /// Derefs(T, U) :- T == *mut U
     /// ```
-    /// In Rust there are also raw pointers which can be deref'd but do not implement Deref.
     Derefs(Derefs),
 
     /// True if a type is considered to have been "defined" by the current crate. This is true for
@@ -1084,6 +1088,19 @@ impl Goal {
             Goal::Quantified(QuantifierKind::ForAll, goal) => goal.value.is_coinductive(program),
             _ => false,
         }
+    }
+
+    crate fn imply_deref(self) -> ProgramClause {
+            Binders {
+                binders: vec![ParameterKind::Ty(()), ParameterKind::Ty(())],
+                value: ProgramClauseImplication {
+                    consequence: DomainGoal::Derefs(Derefs { 
+                                                        source: Ty::Var(0), // T
+                                                        target: Ty::Var(1)  // U
+                                                    }),
+                    conditions: vec![self]
+                },
+            }.cast()
     }
 }
 

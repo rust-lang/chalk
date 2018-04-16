@@ -2478,6 +2478,38 @@ fn deref_goal() {
             "No possible solution"
         }
     }
+
+    // Test raw ptr deref.
+    test! {
+        program {
+            struct i32 { }
+            struct u64 { }
+        }
+
+        goal {
+            Derefs(*const i32, i32)
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Derefs(*mut u64, u64)
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Derefs(*const *const i32, *const i32)
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Derefs(i32, u64)
+        } yields {
+           "No possible solution"
+        }
+    }
 }
 
 #[test]

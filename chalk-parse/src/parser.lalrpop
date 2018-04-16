@@ -40,6 +40,8 @@ AutoKeyword: () = "#" "[" "auto" "]";
 MarkerKeyword: () = "#" "[" "marker" "]";
 DerefLangItem: () = "#" "[" "lang_deref" "]";
 FundamentalKeyword: () = "#" "[" "fundamental" "]";
+ConstKeyword: () = "const";
+MutKeyword: () = "mut";
 
 StructDefn: StructDefn = {
     <fundamental:FundamentalKeyword?> <external:ExternalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
@@ -150,6 +152,8 @@ pub Ty: Ty = {
         lifetime_names: l,
         ty: Box::new(t)
     },
+    "*" ConstKeyword <t:Ty> => Ty::RawPtr { ty: Box::new(t) },
+    "*" MutKeyword <t:Ty> => Ty::RawPtr { ty: Box::new(t) },
     TyWithoutFor,
 };
 

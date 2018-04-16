@@ -34,30 +34,37 @@ impl Program {
         );
         program_clauses.extend(self.default_impl_data.iter().map(|d| d.to_program_clause()));
 
-        // Adds clause that defines the Derefs domain goal:
-        // forall<T, U> { Derefs(T, U) :- ProjectionEq(<T as Deref>::Target = U>) }
+        // Add clauses that define the Derefs domain goal.
+        // forall<T, U> {
+        //  Derefs(T, U) :- ProjectionEq(<T as Deref>::Target = U>)
+        //  Derefs(T, U) :- T == *const/mut U
+        // }
+        let t = || Ty::Var(0);
+        let u = || Ty::Var(1);
         if let Some(trait_id) = self.lang_items.get(&LangItem::DerefTrait) {
             // Find `Deref::Target`.
             let associated_ty_id = self.associated_ty_data.values()
                                                         .find(|d| d.trait_id == *trait_id)
                                                         .expect("Deref has no assoc item")
                                                         .id;
-            let t = || Ty::Var(0);
-            let u = || Ty::Var(1);
-            program_clauses.push(Binders {
-                binders: vec![ParameterKind::Ty(()), ParameterKind::Ty(())],
-                value: ProgramClauseImplication {
-                    consequence: DomainGoal::Derefs(Derefs { source: t(), target: u() }),
-                    conditions: vec![ProjectionEq {
-                        projection: ProjectionTy {
-                            associated_ty_id,
-                            parameters: vec![t().cast()]
-                        },
-                        ty: u(),
-                    }.cast()]
+            // ProjectionEq(<T as Deref>::Target = U)
+            let g: Goal = ProjectionEq {
+                projection: ProjectionTy { 
+                    associated_ty_id,
+                    parameters: vec![t().cast()]
                 },
-            }.cast());
+                ty: u(),
+            }.cast();
+            program_clauses.push(g.imply_deref());
         }
+        let g: Goal = EqGoal {
+                a: t().cast(),
+                b: ApplicationTy {
+                    name: TypeName::RawPtr,
+                    parameters: vec![u().cast()],
+                }.cast().cast()
+            }.cast();
+        program_clauses.push(g.imply_deref());
 
         for datum in self.impl_data.values() {
             // If we encounter a negative impl, do not generate any rule. Negative impls

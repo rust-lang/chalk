@@ -872,6 +872,13 @@ impl LowerTy for Ty {
                 };
                 Ok(ir::Ty::ForAll(Box::new(quantified_ty)))
             }
+
+            Ty::RawPtr {
+                ref ty
+            } => Ok(ir::Ty::Apply(ir::ApplicationTy {
+                    name: ir::TypeName::RawPtr,
+                    parameters: vec![ty.lower(env)?.cast()],
+                }))
         }
     }
 }
