@@ -1,0 +1,305 @@
+#![cfg(test)]
+
+use ir::tls;
+use solve::SolverChoice;
+use std::sync::Arc;
+use test_util::*;
+
+#[test]
+fn lower_success() {
+    lowering_success! {
+        program {
+            struct Foo { field: Foo }
+            trait Bar { }
+            impl Bar for Foo { }
+        }
+    }
+}
+
+#[test]
+fn not_trait() {
+    lowering_error! {
+        program {
+            struct Foo { }
+            trait Bar { }
+            impl Foo for Bar { }
+        }
+        error_msg {
+            "expected a trait, found `Foo`, which is not a trait"
+        }
+    }
+}
+
+#[test]
+fn auto_trait() {
+    lowering_error! {
+        program {
+            #[auto] trait Foo<T> { }
+        }
+        error_msg {
+            "auto trait cannot have parameters"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Bar { }
+            #[auto] trait Foo where Self: Bar { }
+        }
+        error_msg {
+            "auto trait cannot have where clauses"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[auto] trait Foo {
+                type Item;
+            }
+        }
+        error_msg {
+            "auto trait cannot define associated types"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[auto] trait Send { }
+        }
+    }
+}
+
+#[test]
+fn negative_impl() {
+    lowering_error! {
+        program {
+            trait Foo {
+                type Item;
+            }
+
+            struct i32 { }
+
+            impl !Foo for i32 {
+                type Item = i32;
+            }
+        }
+        error_msg {
+            "negative impls cannot define associated values"
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Foo { }
+
+            trait Iterator {
+                type Item;
+            }
+
+            struct i32 { }
+
+            impl<T> !Foo for T where T: Iterator<Item = i32> { }
+        }
+    }
+}
+
+#[test]
+fn invalid_name() {
+    lowering_error! {
+        program {
+            struct Foo { }
+            trait Bar { }
+            impl Bar for X { }
+        }
+        error_msg {
+            "invalid type name `X`"
+        }
+    }
+}
+
+#[test]
+fn type_parameter() {
+    lowering_success! {
+        program {
+            struct Foo { }
+            trait Bar { }
+            impl<X> Bar for X { }
+        }
+    }
+}
+
+#[test]
+fn type_parameter_bound() {
+    lowering_success! {
+        program {
+            struct Foo { }
+            trait Bar { }
+            trait Eq { }
+            impl<X> Bar for X where X: Eq { }
+        }
+    }
+}
+
+#[test]
+fn assoc_tys() {
+    lowering_success! {
+        program {
+            struct String { }
+            struct Char { }
+
+            trait Iterator { type Item; }
+            impl Iterator for String { type Item = Char; }
+
+            trait Foo { }
+            impl<X> Foo for <X as Iterator>::Item where X: Iterator { }
+        }
+    }
+}
+
+#[test]
+fn goal_quantifiers() {
+    let program = Arc::new(
+        parse_and_lower_program(
+            "trait Foo<A, B> { }",
+            SolverChoice::slg()
+        ).unwrap()
+    );
+    let goal = parse_and_lower_goal(
+        &program,
+        "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}"
+    ).unwrap();
+    tls::set_current_program(&program, || {
+        assert_eq!(
+            format!("{:?}", goal),
+            "ForAll<type> { Exists<type> { ForAll<type> { Implemented(?0: Foo<?1, ?2>) } } }"
+        );
+    });
+}
+
+#[test]
+fn atc_accounting() {
+    let program = Arc::new(
+        parse_and_lower_program(
+            "
+            struct Vec<T> { }
+
+            trait Iterable {
+                type Iter<'a>;
+            }
+
+            impl<T> Iterable for Vec<T> {
+                type Iter<'a> = Iter<'a, T>;
+            }
+
+            struct Iter<'a, T> { }
+            ",
+            SolverChoice::slg()
+        ).unwrap(),
+    );
+    tls::set_current_program(&program, || {
+        let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
+        println!("{}", impl_text);
+        assert_eq!(
+            &impl_text[..],
+            r#"ImplDatum {
+    binders: for<type> ImplDatumBound {
+        trait_ref: Positive(
+            Vec<?0> as Iterable
+        ),
+        where_clauses: [],
+        associated_ty_values: [
+            AssociatedTyValue {
+                associated_ty_id: (Iterable::Iter),
+                value: for<lifetime> AssociatedTyValueBound {
+                    ty: Iter<'?0, ?1>,
+                    where_clauses: []
+                }
+            }
+        ],
+        specialization_priority: 0
+    }
+}"#
+        );
+        let goal = parse_and_lower_goal(
+            &program,
+            "forall<X> { forall<'a> { forall<Y> { \
+             X: Iterable<Iter<'a> = Y> } } }",
+        ).unwrap();
+        let goal_text = format!("{:?}", goal);
+        println!("{}", goal_text);
+        assert_eq!(
+            goal_text,
+            "ForAll<type> { ForAll<lifetime> { ForAll<type> { ProjectionEq(<?2 as Iterable>::Iter<'?1> = ?0) } } }"
+        );
+    });
+}
+
+#[test]
+fn check_parameter_kinds() {
+    lowering_error! {
+        program {
+            struct Foo<'a> { }
+            struct i32 { }
+            trait Bar { }
+            impl Bar for Foo<i32> { }
+        }
+        error_msg {
+            "incorrect parameter kind: expected lifetime, found type"
+        }
+    };
+
+    lowering_error! {
+        program {
+            struct Foo<T> { }
+            trait Bar { }
+            impl<'a> Bar for Foo<'a> { }
+        }
+        error_msg {
+            "incorrect parameter kind: expected type, found lifetime"
+        }
+    };
+
+    lowering_error! {
+        program {
+            trait Iterator { type Item<'a>; }
+            trait Foo { }
+            impl<X, T> Foo for <X as Iterator>::Item<T> where X: Iterator { }
+        }
+        error_msg {
+            "incorrect kind for associated type parameter: expected lifetime, found type"
+        }
+    };
+
+    lowering_error! {
+        program {
+            trait Iterator { type Item<T>; }
+            trait Foo { }
+            impl<X, 'a> Foo for <X as Iterator>::Item<'a> where X: Iterator { }
+        }
+        error_msg {
+            "incorrect kind for associated type parameter: expected type, found lifetime"
+        }
+    };
+
+    lowering_error! {
+        program {
+            trait Into<T> {}
+            struct Foo {}
+            impl<'a> Into<'a> for Foo {}
+        }
+        error_msg {
+            "incorrect kind for trait parameter: expected type, found lifetime"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait IntoTime<'a> {}
+            struct Foo {}
+            impl<T> IntoTime<T> for Foo {}
+        }
+        error_msg {
+            "incorrect kind for trait parameter: expected lifetime, found type"
+        }
+    }
+}

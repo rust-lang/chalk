@@ -10,6 +10,9 @@ use std::sync::Arc;
 mod macros;
 
 crate mod could_match;
+crate mod debug;
+pub mod lowering;
+pub mod tls;
 
 crate type Identifier = InternedString;
 
@@ -403,6 +406,35 @@ impl<T, L> ast::Kinded for ParameterKind<T, L> {
         match *self {
             ParameterKind::Ty(_) => ast::Kind::Ty,
             ParameterKind::Lifetime(_) => ast::Kind::Lifetime,
+        }
+    }
+}
+
+pub trait Anonymize {
+    fn anonymize(&self) -> Vec<ParameterKind<()>>;
+}
+
+impl Anonymize for [ParameterKind<Identifier>] {
+    fn anonymize(&self) -> Vec<ParameterKind<()>> {
+        self.iter().map(|pk| pk.map(|_| ())).collect()
+    }
+}
+
+pub trait ToParameter {
+    /// Utility for converting a list of all the binders into scope
+    /// into references to those binders. Simply pair the binders with
+    /// the indices, and invoke `to_parameter()` on the `(binder,
+    /// index)` pair. The result will be a reference to a bound
+    /// variable of appropriate kind at the corresponding index.
+    fn to_parameter(&self) -> Parameter;
+}
+
+impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
+    fn to_parameter(&self) -> Parameter {
+        let &(binder, index) = self;
+        match *binder {
+            ParameterKind::Lifetime(_) => ParameterKind::Lifetime(Lifetime::Var(index)),
+            ParameterKind::Ty(_) => ParameterKind::Ty(Ty::Var(index)),
         }
     }
 }
@@ -964,6 +996,3 @@ pub struct ConstrainedSubst {
     crate subst: Substitution,
     crate constraints: Vec<InEnvironment<Constraint>>,
 }
-
-crate mod debug;
-pub mod tls;

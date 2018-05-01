@@ -1,24 +1,12 @@
 #![cfg(test)]
 
-use crate::chalk_parse;
-use crate::errors::*;
 use crate::ir;
-use crate::lower::*;
 use crate::solve::slg::implementation::SlgContext;
 
 use chalk_engine::forest::Forest;
 use std::sync::Arc;
-
-fn parse_and_lower_program(text: &str) -> Result<ir::Program> {
-    chalk_parse::parse_program(text)?.lower_without_coherence()
-}
-
-fn parse_and_lower_goal(
-    program: &ir::Program,
-    text: &str,
-) -> Result<Box<ir::Goal>> {
-    chalk_parse::parse_goal(text)?.lower(program)
-}
+use test_util::*;
+use solve::SolverChoice;
 
 macro_rules! test {
     (program $program:tt $(goal $goal:tt first $n:tt with max $depth:tt { $expected:expr })*) => {
@@ -37,8 +25,12 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let program =
-        &Arc::new(parse_and_lower_program(&program_text[1..program_text.len() - 1]).unwrap());
+   let program = &Arc::new(
+        parse_and_lower_program(
+            &program_text[1..program_text.len() - 1],
+            SolverChoice::slg()
+        ).unwrap()
+    );
     let env = &Arc::new(program.environment());
     ir::tls::set_current_program(&program, || {
         for (max_size, num_answers, goal_text, expected) in goals {
@@ -51,7 +43,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
             let mut forest = Forest::new(SlgContext::new(env, max_size));
             let result = format!("{:#?}", forest.force_answers(peeled_goal, num_answers));
 
-            ::test_util::assert_test_result_eq(&expected, &result);
+            assert_test_result_eq(&expected, &result);
         }
     });
 }
@@ -60,8 +52,12 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let program =
-        &Arc::new(parse_and_lower_program(&program_text[1..program_text.len() - 1]).unwrap());
+    let program = &Arc::new(
+        parse_and_lower_program(
+            &program_text[1..program_text.len() - 1],
+            SolverChoice::slg()
+        ).unwrap()
+    );
     let env = &Arc::new(program.environment());
     ir::tls::set_current_program(&program, || {
         for (max_size, num_answers, goal_text, expected) in goals {
@@ -74,7 +70,7 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
             let mut forest = Forest::new(SlgContext::new(env, max_size));
             let result = format!("{:?}", forest.solve(&peeled_goal));
 
-            ::test_util::assert_test_result_eq(&expected, &result);
+            assert_test_result_eq(&expected, &result);
 
             let num_cached_answers_for_goal = forest.num_cached_answers_for_goal(&peeled_goal);
             // ::test_util::assert_test_result_eq(

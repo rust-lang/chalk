@@ -25,6 +25,9 @@ extern crate petgraph;
 extern crate stacker;
 
 #[macro_use]
+mod test_util;
+
+#[macro_use]
 crate mod fold;
 
 #[macro_use]
@@ -35,9 +38,8 @@ pub mod ir;
 
 crate mod cast;
 crate mod coherence;
+crate mod rules;
 pub mod errors;
-pub mod lower;
 pub mod solve;
-mod test_util;
 
 pub use crate::chalk_engine::fallible;
