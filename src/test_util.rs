@@ -1,8 +1,52 @@
 #![cfg(test)]
 
 use diff;
+use chalk_parse;
 use itertools::Itertools;
 use std::fmt::Write;
+use ir::lowering::{LowerProgram, LowerGoal};
+use ir::{Goal, Program};
+use solve::SolverChoice;
+use errors::Result;
+
+pub fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<Program> {
+    chalk_parse::parse_program(text)?.lower(solver_choice)
+}
+
+pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
+    chalk_parse::parse_goal(text)?.lower(program)
+}
+
+macro_rules! lowering_success {
+    (program $program:tt) => {
+        let program_text = stringify!($program);
+        assert!(program_text.starts_with("{"));
+        assert!(program_text.ends_with("}"));
+        assert!(
+            parse_and_lower_program(
+                &program_text[1..program_text.len()-1],
+                $crate::solve::SolverChoice::slg()
+            ).is_ok()
+        );
+    }
+}
+
+macro_rules! lowering_error {
+    (program $program:tt error_msg { $expected:expr }) => {
+        let program_text = stringify!($program);
+        assert!(program_text.starts_with("{"));
+        assert!(program_text.ends_with("}"));
+        let error = parse_and_lower_program(
+            &program_text[1..program_text.len()-1],
+            $crate::solve::SolverChoice::slg()
+        ).unwrap_err();
+        let expected = $crate::errors::Error::from($expected);
+        assert_eq!(
+            error.to_string(),
+            expected.to_string()
+        );
+    }
+}
 
 crate fn assert_test_result_eq(expected: &str, actual: &str) {
     let expected_trimmed: String = expected

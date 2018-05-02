@@ -1,25 +1,13 @@
 #![cfg(test)]
 
-use chalk_parse;
 use errors::*;
 use ir;
-use lower::*;
 use solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 use std::sync::Arc;
+use test_util::*;
 
 mod bench;
-
-fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<ir::Program> {
-    chalk_parse::parse_program(text)?.lower(solver_choice)
-}
-
-fn parse_and_lower_goal(
-    program: &ir::Program,
-    text: &str,
-) -> Result<Box<ir::Goal>> {
-    chalk_parse::parse_goal(text)?.lower(program)
-}
 
 fn result_to_string(result: &Result<Option<Solution>>) -> String {
     match result {

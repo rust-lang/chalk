@@ -15,7 +15,7 @@ use std::sync::Arc;
 use std::process::exit;
 
 use chalk::ir;
-use chalk::lower::*;
+use chalk::ir::lowering::*;
 use chalk::solve::SolverChoice;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;

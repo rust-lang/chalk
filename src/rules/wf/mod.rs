@@ -6,6 +6,8 @@ use cast::*;
 use solve::SolverChoice;
 use itertools::Itertools;
 
+mod test;
+
 struct WfSolver {
     env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,

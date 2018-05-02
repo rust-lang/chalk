@@ -6,7 +6,7 @@ use solve::SolverChoice;
 use std::sync::Arc;
 
 mod solve;
-
+mod test;
 
 impl Program {
     crate fn record_specialization_priorities(&mut self, solver_choice: SolverChoice) -> Result<()> {
