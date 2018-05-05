@@ -872,7 +872,6 @@ impl LowerAssocTyValue for AssocTyValue {
         let value = env.in_binders(self.all_parameters(), |env| {
             Ok(ir::AssociatedTyValueBound {
                 ty: self.value.lower(env)?,
-                where_clauses: self.where_clauses.lower(env)?,
             })
         })?;
         Ok(ir::AssociatedTyValue {

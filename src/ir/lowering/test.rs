@@ -211,8 +211,7 @@ fn atc_accounting() {
             AssociatedTyValue {
                 associated_ty_id: (Iterable::Iter),
                 value: for<lifetime> AssociatedTyValueBound {
-                    ty: Iter<'?0, ?1>,
-                    where_clauses: []
+                    ty: Iter<'?0, ?1>
                 }
             }
         ],

@@ -115,7 +115,6 @@ pub struct Impl {
 pub struct AssocTyValue {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
-    pub where_clauses: Vec<WhereClause>,
     pub value: Ty,
 }
 

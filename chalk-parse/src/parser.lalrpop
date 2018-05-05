@@ -102,11 +102,10 @@ ParameterKind: ParameterKind = {
 };
 
 AssocTyValue: AssocTyValue = {
-    "type" <n:Id> <a:Angle<ParameterKind>> <wc:WhereClauses> "=" <v:Ty> ";" => AssocTyValue {
+    "type" <n:Id> <a:Angle<ParameterKind>> "=" <v:Ty> ";" => AssocTyValue {
         name: n,
         parameter_kinds: a,
         value: v,
-        where_clauses: wc,
     },
 };
 
@@ -199,11 +198,6 @@ InlineClause: Clause = {
         consequence: c.consequence,
         conditions: c.conditions,
     }
-};
-
-WhereClauses: Vec<WhereClause> = {
-    "where" <Comma<WhereClause>>,
-    () => vec![],
 };
 
 QuantifiedWhereClauses: Vec<QuantifiedWhereClause> = {

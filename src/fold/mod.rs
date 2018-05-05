@@ -567,7 +567,7 @@ struct_fold!(AssociatedTyValue {
     associated_ty_id,
     value,
 });
-struct_fold!(AssociatedTyValueBound { ty, where_clauses });
+struct_fold!(AssociatedTyValueBound { ty });
 struct_fold!(Environment { clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold<Result = F>);
 struct_fold!(EqGoal { a, b });

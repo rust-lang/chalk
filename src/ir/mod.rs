@@ -289,10 +289,6 @@ pub struct AssociatedTyValue {
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     crate ty: Ty,
-
-    /// Where-clauses that must hold for projection to be valid. The
-    /// WC in `type Foo<'a> = X where WC`.
-    crate where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
