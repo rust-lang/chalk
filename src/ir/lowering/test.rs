@@ -302,3 +302,34 @@ fn check_parameter_kinds() {
         }
     }
 }
+
+#[test]
+fn gat_parse() {
+    let program = Arc::new(
+        parse_and_lower_program(
+            "
+            trait Sized {}
+
+            trait Foo {
+                type Item<'a, T>: Clone where Self: Sized;
+            }
+
+            trait Bar {
+                type Item<'a, T> where Self: Sized;
+            }
+
+            trait Baz {
+                type Item<'a, T>: Clone;
+            }
+
+            trait Quux {
+                type Item<'a, T>;
+            }
+            ",
+            SolverChoice::slg()
+        ).unwrap()
+    );
+    tls::set_current_program(&program, || {
+        println!("{:#?}", program.associated_ty_data.values());
+    });
+}

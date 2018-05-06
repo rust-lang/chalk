@@ -72,9 +72,26 @@ TraitDefn: TraitDefn = {
 };
 
 AssocTyDefn: AssocTyDefn = {
-    "type" <name:Id> <p:Angle<ParameterKind>> ";" => AssocTyDefn {
-        name: name,
-        parameter_kinds: p
+    "type" <name:Id> <p:Angle<ParameterKind>> <b:(":" <Id> <Angle<Parameter>>)?>
+        <w:QuantifiedWhereClauses> ";" =>
+    {
+        let bound = match b {
+            Some((t, a)) => {
+                let mut args = vec![Parameter::Ty(Ty::Id{ name })];
+                args.extend(a);
+                Some(TraitRef {
+                    trait_name: t,
+                    args: args,
+                })
+            }
+            None => None
+        };
+        AssocTyDefn {
+            name: name,
+            parameter_kinds: p,
+            where_clauses: w,
+            bound,
+        }
     }
 };
 

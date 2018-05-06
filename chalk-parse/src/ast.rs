@@ -54,6 +54,8 @@ pub struct TraitFlags {
 pub struct AssocTyDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
+    pub bound: Option<TraitRef>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
 pub enum ParameterKind {
