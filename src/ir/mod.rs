@@ -687,6 +687,29 @@ impl<T> Binders<T> {
     }
 }
 
+/// Allows iterating over a Binders<Vec<T>>, for instance.
+/// Each element will include the same set of parameter bounds.
+impl<V: IntoIterator> IntoIterator for Binders<V> {
+    type Item = Binders<<V as IntoIterator>::Item>;
+    type IntoIter = BindersIntoIterator<V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        BindersIntoIterator { iter: self.value.into_iter(), binders: self.binders }
+    }
+}
+
+pub struct BindersIntoIterator<V: IntoIterator> {
+    iter: <V as IntoIterator>::IntoIter,
+    binders: Vec<ParameterKind<()>>,
+}
+
+impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
+    type Item = Binders<<V as IntoIterator>::Item>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|v| Binders { binders: self.binders.clone(), value: v })
+    }
+}
+
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
