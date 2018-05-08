@@ -56,7 +56,7 @@ impl<C: Context> Forest<C> {
                         .subgoals
                         .push(Literal::Positive(I::goal_in_environment(
                             &environment,
-                            domain_goal.into_goal(),
+                            I::into_goal(domain_goal),
                         )));
                 }
                 HhGoal::CannotProve => {

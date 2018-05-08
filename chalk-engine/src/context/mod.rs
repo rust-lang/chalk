@@ -69,7 +69,7 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     /// A goal that can be targeted by a program clause. The SLG
     /// solver treats these opaquely; in contrast, it understands
     /// "meta" goals like `G1 && G2` and so forth natively.
-    type DomainGoal: DomainGoal<C, Self>;
+    type DomainGoal: Debug;
 
     /// A "higher-order" goal, quantified over some types and/or
     /// lifetimes. When you have a quantification, like `forall<T> { G
@@ -94,6 +94,9 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     type UnificationResult: UnificationResult<C, Self>;
 
     fn goal_in_environment(environment: &Self::Environment, goal: Self::Goal) -> Self::GoalInEnvironment;
+    
+    /// Upcast this domain goal into a more general goal.
+    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal;
 }
 
 pub trait ContextOps<C: Context> {
@@ -293,11 +296,6 @@ pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord
 
     /// Extracts the inner normalized substitution.
     fn inference_normalized_subst(&self) -> &C::InferenceNormalizedSubst;
-}
-
-pub trait DomainGoal<C: Context, I: InferenceContext<C>>: Debug {
-    /// Upcast this domain goal into a more general goal.
-    fn into_goal(self) -> I::Goal;
 }
 
 pub trait Goal<C: Context, I: InferenceContext<C>>: Clone + Debug + Eq {

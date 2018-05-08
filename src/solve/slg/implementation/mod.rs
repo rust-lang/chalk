@@ -140,6 +140,10 @@ impl context::InferenceContext<SlgContext> for SlgContext {
     fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
         InEnvironment::new(environment, goal)
     }
+    
+    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal {
+        domain_goal.cast()
+    }
 }
 
 impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable {
@@ -403,12 +407,6 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
         value: &Canonical<ConstrainedSubst>,
     ) -> Canonical<ConstrainedSubst> {
         self.map_from_canonical(value)
-    }
-}
-
-impl context::DomainGoal<SlgContext, SlgContext> for DomainGoal {
-    fn into_goal(self) -> Goal {
-        self.cast()
     }
 }
 
