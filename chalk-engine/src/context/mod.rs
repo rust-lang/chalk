@@ -59,7 +59,7 @@ pub trait InferenceContext<C: Context>: Sized + Debug {
     type DomainGoal: DomainGoal<C, Self>;
 
     /// Represents a goal along with an environment.
-    type GoalInEnvironment: GoalInEnvironment<C, Self>;
+    type GoalInEnvironment: Debug + Clone + Eq + Ord + Hash;
 
     /// Represents a region constraint that will be propagated back
     /// (but not verified).
@@ -90,6 +90,8 @@ pub trait InferenceContext<C: Context>: Sized + Debug {
     /// The successful result from unification: contains new subgoals
     /// and things that can be attached to an ex-clause.
     type UnificationResult: UnificationResult<C, Self>;
+
+    fn goal_in_environment(environment: &Self::Environment, goal: Self::Goal) -> Self::GoalInEnvironment;
 }
 
 pub trait ContextOps<C: Context> {
@@ -273,17 +275,6 @@ pub trait ResolventOps<C: Context, I: InferenceContext<C>> {
     ) -> Fallible<ExClause<C, I>>;
 }
 
-pub trait GoalInEnvironment<C: Context, I: InferenceContext<C>>:
-    Debug + Clone + Eq + Ord + Hash
-{
-    fn new(
-        environment: &I::Environment,
-        goal: I::Goal,
-    ) -> Self;
-
-    fn environment(&self) -> &I::Environment;
-}
-
 pub trait Environment<C: Context, I: InferenceContext<C>>: Debug + Clone {
     // Used by: simplify
     fn add_clauses(&self, clauses: impl IntoIterator<Item = I::ProgramClause>) -> Self;
@@ -356,8 +347,6 @@ pub trait AnswerStream<C: Context> {
 
     /// Invokes `test` with each possible future answer, returning true immediately
     /// if we find any answer for which `test` returns true.
-    fn any_future_answer(
-        &mut self,
-        test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
-    ) -> bool;
+    fn any_future_answer(&mut self, test: impl FnMut(&C::InferenceNormalizedSubst) -> bool)
+        -> bool;
 }

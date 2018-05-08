@@ -45,7 +45,7 @@ impl<C: Context> Forest<C> {
                 HhGoal::Not(subgoal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(I::GoalInEnvironment::new(&environment, subgoal)));
+                        .push(Literal::Negative(I::goal_in_environment(&environment, subgoal)));
                 }
                 HhGoal::Unify(a, b) => {
                     infer.unify_parameters(&environment, &a, &b)?
@@ -54,7 +54,7 @@ impl<C: Context> Forest<C> {
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Positive(I::GoalInEnvironment::new(
+                        .push(Literal::Positive(I::goal_in_environment(
                             &environment,
                             domain_goal.into_goal(),
                         )));
@@ -69,7 +69,7 @@ impl<C: Context> Forest<C> {
                     let goal = I::Goal::cannot_prove();
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(I::GoalInEnvironment::new(&environment, goal)));
+                        .push(Literal::Negative(I::goal_in_environment(&environment, goal)));
                 }
             }
         }
