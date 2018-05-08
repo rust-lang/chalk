@@ -43,10 +43,23 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self>
     type Solution;
 }
 
+pub trait ExClauseContext<C: Context>: Sized + Debug {
+    /// Represents a substitution from the "canonical variables" found
+    /// in a canonical goal to specific values.
+    type Substitution: Debug;
+
+    /// Represents a region constraint that will be propagated back
+    /// (but not verified).
+    type RegionConstraint: Debug;
+
+    /// Represents a goal along with an environment.
+    type GoalInEnvironment: Debug + Clone + Eq + Ord + Hash;
+}
+
 /// The set of types belonging to an "inference context"; in rustc,
 /// these types are tied to the lifetime of the arena within which an
 /// inference context operates.
-pub trait InferenceContext<C: Context>: Sized + Debug {
+pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Environment<C, Self>;
 
@@ -57,17 +70,6 @@ pub trait InferenceContext<C: Context>: Sized + Debug {
     /// solver treats these opaquely; in contrast, it understands
     /// "meta" goals like `G1 && G2` and so forth natively.
     type DomainGoal: DomainGoal<C, Self>;
-
-    /// Represents a goal along with an environment.
-    type GoalInEnvironment: Debug + Clone + Eq + Ord + Hash;
-
-    /// Represents a region constraint that will be propagated back
-    /// (but not verified).
-    type RegionConstraint: Debug;
-
-    /// Represents a substitution from the "canonical variables" found
-    /// in a canonical goal to specific values.
-    type Substitution: Debug;
 
     /// A "higher-order" goal, quantified over some types and/or
     /// lifetimes. When you have a quantification, like `forall<T> { G

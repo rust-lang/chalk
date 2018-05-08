@@ -122,11 +122,14 @@ impl context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable {
 
 impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable {}
 
-impl context::InferenceContext<SlgContext> for SlgContext {
-    type Environment = Arc<Environment>;
+impl context::ExClauseContext<SlgContext> for SlgContext {
     type GoalInEnvironment = InEnvironment<Goal>;
     type Substitution = Substitution;
     type RegionConstraint = InEnvironment<Constraint>;
+}
+
+impl context::InferenceContext<SlgContext> for SlgContext {
+    type Environment = Arc<Environment>;
     type DomainGoal = DomainGoal;
     type Goal = Goal;
     type BindersGoal = Binders<Box<Goal>>;
