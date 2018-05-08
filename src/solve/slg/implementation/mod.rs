@@ -144,6 +144,23 @@ impl context::InferenceContext<SlgContext> for SlgContext {
     fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal {
         domain_goal.cast()
     }
+
+    fn cannot_prove() -> Self::Goal {
+        Goal::CannotProve(())
+    }
+
+    fn into_hh_goal(goal: Self::Goal) -> HhGoal<SlgContext, Self> {
+        match goal {
+            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
+            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
+            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
+            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
+            Goal::Not(g1) => HhGoal::Not(*g1),
+            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
+            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
+            Goal::CannotProve(()) => HhGoal::CannotProve,
+        }
+    }
 }
 
 impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable {
@@ -437,25 +454,6 @@ impl context::UCanonicalGoalInEnvironment<SlgContext> for UCanonical<InEnvironme
 
     fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
         self.is_trivial_substitution(canonical_subst)
-    }
-}
-
-impl context::Goal<SlgContext, SlgContext> for Goal {
-    fn cannot_prove() -> Goal {
-        Goal::CannotProve(())
-    }
-
-    fn into_hh_goal(self) -> HhGoal<SlgContext, SlgContext> {
-        match self {
-            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
-            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
-            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
-            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
-            Goal::Not(g1) => HhGoal::Not(*g1),
-            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
-            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
-            Goal::CannotProve(()) => HhGoal::CannotProve,
-        }
     }
 }
 

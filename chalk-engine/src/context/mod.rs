@@ -64,7 +64,7 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     type Environment: Environment<C, Self>;
 
     /// Goals correspond to things we can prove.
-    type Goal: Goal<C, Self>;
+    type Goal: Clone + Debug + Eq;
 
     /// A goal that can be targeted by a program clause. The SLG
     /// solver treats these opaquely; in contrast, it understands
@@ -97,6 +97,19 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     
     /// Upcast this domain goal into a more general goal.
     fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal;
+
+    /// Create a "cannot prove" goal (see `HhGoal::CannotProve`).
+    fn cannot_prove() -> Self::Goal;
+
+    /// Convert the context's goal type into the `HhGoal` type that
+    /// the SLG solver understands. The expectation is that the
+    /// context's goal type has the same set of variants, but with
+    /// different names and a different setup. If you inspect
+    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
+    /// conversion -- that is, we convert the outermost goal into an
+    /// `HhGoal`, but the goals contained within are left as context
+    /// goals.
+    fn into_hh_goal(goal: Self::Goal) -> HhGoal<C, Self>;
 }
 
 pub trait ContextOps<C: Context> {
@@ -296,21 +309,6 @@ pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord
 
     /// Extracts the inner normalized substitution.
     fn inference_normalized_subst(&self) -> &C::InferenceNormalizedSubst;
-}
-
-pub trait Goal<C: Context, I: InferenceContext<C>>: Clone + Debug + Eq {
-    /// Create a "cannot prove" goal (see `HhGoal::CannotProve`).
-    fn cannot_prove() -> Self;
-
-    /// Convert the context's goal type into the `HhGoal` type that
-    /// the SLG solver understands. The expectation is that the
-    /// context's goal type has the same set of variants, but with
-    /// different names and a different setup. If you inspect
-    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
-    /// conversion -- that is, we convert the outermost goal into an
-    /// `HhGoal`, but the goals contained within are left as context
-    /// goals.
-    fn into_hh_goal(self) -> HhGoal<C, I>;
 }
 
 pub trait UniverseMap<C: Context>: Clone + Debug {

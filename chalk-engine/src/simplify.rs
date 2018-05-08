@@ -28,19 +28,19 @@ impl<C: Context> Forest<C> {
             match hh_goal {
                 HhGoal::ForAll(subgoal) => {
                     let subgoal = infer.instantiate_binders_universally(&subgoal);
-                    pending_goals.push((environment, subgoal.into_hh_goal()));
+                    pending_goals.push((environment, I::into_hh_goal(subgoal)));
                 }
                 HhGoal::Exists(subgoal) => {
                     let subgoal = infer.instantiate_binders_existentially(&subgoal);
-                    pending_goals.push((environment, subgoal.into_hh_goal()))
+                    pending_goals.push((environment, I::into_hh_goal(subgoal)))
                 }
                 HhGoal::Implies(wc, subgoal) => {
                     let new_environment = environment.add_clauses(wc);
-                    pending_goals.push((new_environment, subgoal.into_hh_goal()));
+                    pending_goals.push((new_environment, I::into_hh_goal(subgoal)));
                 }
                 HhGoal::And(subgoal1, subgoal2) => {
-                    pending_goals.push((environment.clone(), subgoal1.into_hh_goal()));
-                    pending_goals.push((environment, subgoal2.into_hh_goal()));
+                    pending_goals.push((environment.clone(), I::into_hh_goal(subgoal1)));
+                    pending_goals.push((environment, I::into_hh_goal(subgoal2)));
                 }
                 HhGoal::Not(subgoal) => {
                     ex_clause
@@ -66,7 +66,7 @@ impl<C: Context> Forest<C> {
                     // course, will always create a negative cycle and
                     // hence a delayed literal that cannot be
                     // resolved.
-                    let goal = I::Goal::cannot_prove();
+                    let goal = I::cannot_prove();
                     ex_clause
                         .subgoals
                         .push(Literal::Negative(I::goal_in_environment(&environment, goal)));
