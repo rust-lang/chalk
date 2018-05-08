@@ -9,7 +9,6 @@
 #![feature(macro_vis_matcher)]
 #![feature(specialization)]
 #![feature(step_trait)]
-#![feature(underscore_lifetimes)]
 
 extern crate chalk_parse;
 #[macro_use]
