@@ -6,6 +6,7 @@ use lalrpop_intern::intern;
 use cast::{Cast, Caster};
 use errors::*;
 use ir::{self, Anonymize, ToParameter};
+use itertools::Itertools;
 use solve::SolverChoice;
 
 mod test;
@@ -995,10 +996,11 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
             }
             Goal::Not(g) => Ok(Box::new(ir::Goal::Not(g.lower(env)?))),
             Goal::Leaf(wc) => {
-                let leaf = wc.lower(env)?;
-                assert_eq!(1, leaf.len());
-                let leaf = leaf.into_iter().next().unwrap();
-                Ok(Box::new(ir::Goal::Leaf(leaf)))
+                // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
+                let leaves = wc.lower(env)?.into_iter().map(ir::Goal::Leaf);
+                let goal = leaves.fold1(|goal, leaf| ir::Goal::And(Box::new(goal), Box::new(leaf)))
+                                 .expect("at least one goal");
+                Ok(Box::new(goal))
             }
         }
     }
