@@ -53,7 +53,7 @@ pub trait ExClauseContext<C: Context>: Sized + Debug {
     type RegionConstraint: Debug;
 
     /// Represents a goal along with an environment.
-    type GoalInEnvironment: Debug + Clone + Eq + Ord + Hash;
+    type GoalInEnvironment: Debug + Clone + Eq + Hash;
 }
 
 /// The set of types belonging to an "inference context"; in rustc,
