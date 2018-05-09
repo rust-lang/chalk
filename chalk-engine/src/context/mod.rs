@@ -91,7 +91,7 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
 
     /// The successful result from unification: contains new subgoals
     /// and things that can be attached to an ex-clause.
-    type UnificationResult: UnificationResult<C, Self>;
+    type UnificationResult;
 
     fn goal_in_environment(environment: &Self::Environment, goal: Self::Goal) -> Self::GoalInEnvironment;
     
@@ -110,6 +110,10 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     /// `HhGoal`, but the goals contained within are left as context
     /// goals.
     fn into_hh_goal(goal: Self::Goal) -> HhGoal<C, Self>;
+
+    /// Add the residual subgoals as new subgoals of the ex-clause.
+    /// Also add region constraints.
+    fn into_ex_clause(result: Self::UnificationResult, ex_clause: &mut ExClause<C, Self>);
 }
 
 pub trait ContextOps<C: Context> {
@@ -328,15 +332,6 @@ pub trait UniverseMap<C: Context>: Clone + Debug {
         &self,
         value: &C::CanonicalConstrainedSubst,
     ) -> C::CanonicalConstrainedSubst;
-}
-
-/// Embodies the result of a unification operation: we presume that
-/// unification may produce new residual subgoals, which must be
-/// further proven, as well as region constraints.
-pub trait UnificationResult<C: Context, I: InferenceContext<C>> {
-    /// Add the residual subgoals as new subgoals of the ex-clause.
-    /// Also add region constraints.
-    fn into_ex_clause(self, ex_clause: &mut ExClause<C, I>);
 }
 
 pub trait AnswerStream<C: Context> {

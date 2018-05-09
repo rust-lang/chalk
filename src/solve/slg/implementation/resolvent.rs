@@ -7,7 +7,7 @@ use crate::solve::slg::implementation::{SlgContext, TruncatingInferenceTable};
 use crate::zip::{Zip, Zipper};
 
 use chalk_engine::{ExClause, Literal};
-use chalk_engine::context::{self, UnificationResult as UnificationResultTrait};
+use chalk_engine::context::{self, InferenceContext};
 use std::sync::Arc;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -105,7 +105,7 @@ impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable 
         };
 
         // Add the subgoals/region-constraints that unification gave us.
-        unification_result.into_ex_clause(&mut ex_clause);
+        SlgContext::into_ex_clause(unification_result, &mut ex_clause);
 
         // Add the `conditions` from the program clause into the result too.
         ex_clause
@@ -290,9 +290,10 @@ impl<'t> AnswerSubstitutor<'t> {
                 )
             });
 
-        self.table
-            .unify(&self.environment, answer_param, pending_shifted)?
-            .into_ex_clause(&mut self.ex_clause);
+        SlgContext::into_ex_clause(self.table.unify(&self.environment,
+                                                    answer_param,
+                                                    pending_shifted)?,
+                                   &mut self.ex_clause);
 
         Ok(true)
     }

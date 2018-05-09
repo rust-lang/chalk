@@ -48,8 +48,8 @@ impl<C: Context> Forest<C> {
                         .push(Literal::Negative(I::goal_in_environment(&environment, subgoal)));
                 }
                 HhGoal::Unify(a, b) => {
-                    infer.unify_parameters(&environment, &a, &b)?
-                        .into_ex_clause(&mut ex_clause)
+                    I::into_ex_clause(infer.unify_parameters(&environment, &a, &b)?,
+                                      &mut ex_clause)
                 }
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause

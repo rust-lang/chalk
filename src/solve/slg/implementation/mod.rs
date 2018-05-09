@@ -161,6 +161,14 @@ impl context::InferenceContext<SlgContext> for SlgContext {
             Goal::CannotProve(()) => HhGoal::CannotProve,
         }
     }
+
+    fn into_ex_clause(result: Self::UnificationResult,
+                      ex_clause: &mut ExClause<SlgContext, SlgContext>) {
+        ex_clause
+            .subgoals
+            .extend(result.goals.into_iter().casted().map(Literal::Positive));
+        ex_clause.constraints.extend(result.constraints);
+    }
 }
 
 impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable {
@@ -245,17 +253,6 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         b: &Parameter,
     ) -> Fallible<UnificationResult> {
         self.infer.unify(environment, a, b)
-    }
-}
-
-impl context::UnificationResult<SlgContext, SlgContext>
-    for ::crate::solve::infer::unify::UnificationResult
-{
-    fn into_ex_clause(self, ex_clause: &mut ExClause<SlgContext, SlgContext>) {
-        ex_clause
-            .subgoals
-            .extend(self.goals.into_iter().casted().map(Literal::Positive));
-        ex_clause.constraints.extend(self.constraints);
     }
 }
 

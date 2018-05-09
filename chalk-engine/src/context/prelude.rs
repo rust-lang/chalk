@@ -7,7 +7,6 @@ crate use super::TruncateOps;
 crate use super::Environment;
 crate use super::InferenceTable;
 crate use super::InferenceContext;
-crate use super::UnificationResult;
 crate use super::UCanonicalGoalInEnvironment;
 crate use super::UniverseMap;
 crate use super::CanonicalExClause;
