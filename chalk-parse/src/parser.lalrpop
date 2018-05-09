@@ -85,12 +85,24 @@ AssocTyDefn: AssocTyDefn = {
 };
 
 TraitBound: TraitBound = {
-    <t:Id> <a:Angle<Parameter>> => {
+    <t:Id> <a:Angle<TraitBoundParameter>> => {
         TraitBound {
             trait_name: t,
             args_no_self: a,
         }
     }
+};
+
+TraitBoundParameter: TraitBoundParameter = {
+    Ty => TraitBoundParameter::Ty(<>),
+    Lifetime => TraitBoundParameter::Lifetime(<>),
+    ProjectionEqBound => TraitBoundParameter::ProjectionEq(<>),
+};
+
+ProjectionEqBound: ProjectionEqBound = {
+    <name:Id> <parameters:Angle<Parameter>> "=" <value:Ty> => ProjectionEqBound {
+        name, parameters, value
+    },
 };
 
 Impl: Impl = {

@@ -68,6 +68,25 @@ pub enum Parameter {
     Lifetime(Lifetime),
 }
 
+/// Represents a trait bound on e.g. a type or type parameter.
+/// Does not know anything about what it's binding.
+pub struct TraitBound {
+    pub trait_name: Identifier,
+    pub args_no_self: Vec<TraitBoundParameter>,
+}
+
+pub enum TraitBoundParameter {
+    Ty(Ty),
+    Lifetime(Lifetime),
+    ProjectionEq(ProjectionEqBound),
+}
+
+pub struct ProjectionEqBound {
+    pub name: Identifier,
+    pub parameters: Vec<Parameter>,
+    pub value: Ty,
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Kind {
     Ty,
@@ -175,11 +194,6 @@ impl PolarizedTraitRef {
             PolarizedTraitRef::Negative(trait_ref)
         }
     }
-}
-
-pub struct TraitBound {
-    pub trait_name: Identifier,
-    pub args_no_self: Vec<Parameter>,
 }
 
 #[derive(Copy, Clone, Debug)]

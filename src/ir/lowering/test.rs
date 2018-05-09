@@ -318,8 +318,12 @@ fn gat_parse() {
                 type Item<'a, T> where Self: Sized;
             }
 
+            struct Container<T> {
+                value: T
+            }
+
             trait Baz {
-                type Item<'a, T>: Clone;
+                type Item<'a, 'b, T>: Foo<Item<'b, T> = Containter<T>> + Clone;
             }
 
             trait Quux {
