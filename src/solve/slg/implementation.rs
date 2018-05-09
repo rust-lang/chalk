@@ -57,11 +57,6 @@ impl context::Context for SlgContext {
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
     type InferenceNormalizedSubst = Substitution;
     type Solution = Solution;
-
-    fn inference_normalized_subst(canon_ex_clause: &Self::CanonicalExClause)
-                                  -> &Self::InferenceNormalizedSubst {
-        &canon_ex_clause.value.subst
-    }
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -90,6 +85,20 @@ impl context::ContextOps<SlgContext> for SlgContext {
             InferenceTable::from_canonical(num_universes, canonical_ex_clause);
         let dyn_infer = &mut TruncatingInferenceTable::new(&self.program, self.max_size, infer);
         op.with(dyn_infer, ex_cluse)
+    }
+
+    fn inference_normalized_subst_from_ex_clause(
+        canon_ex_clause: &Canonical<ExClause<SlgContext, SlgContext>>,
+    ) -> &Substitution {
+        &canon_ex_clause.value.subst
+    }
+
+    fn empty_constraints(ccs: &Canonical<ConstrainedSubst>) -> bool {
+        ccs.value.constraints.is_empty()
+    }
+
+    fn inference_normalized_subst_from_subst(ccs: &Canonical<ConstrainedSubst>) -> &Substitution {
+        &ccs.value.subst
     }
 }
 
@@ -145,7 +154,7 @@ impl context::InferenceContext<SlgContext> for SlgContext {
     fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
         InEnvironment::new(environment, goal)
     }
-    
+
     fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal {
         domain_goal.cast()
     }
@@ -167,8 +176,10 @@ impl context::InferenceContext<SlgContext> for SlgContext {
         }
     }
 
-    fn into_ex_clause(result: Self::UnificationResult,
-                      ex_clause: &mut ExClause<SlgContext, SlgContext>) {
+    fn into_ex_clause(
+        result: Self::UnificationResult,
+        ex_clause: &mut ExClause<SlgContext, SlgContext>,
+    ) {
         ex_clause
             .subgoals
             .extend(result.goals.into_iter().casted().map(Literal::Positive));
@@ -176,9 +187,10 @@ impl context::InferenceContext<SlgContext> for SlgContext {
     }
 
     // Used by: simplify
-    fn add_clauses(env: &Self::Environment,
-                  clauses: impl IntoIterator<Item = Self::ProgramClause>)
-                  -> Self::Environment {
+    fn add_clauses(
+        env: &Self::Environment,
+        clauses: impl IntoIterator<Item = Self::ProgramClause>,
+    ) -> Self::Environment {
         Environment::add_clauses(env, clauses)
     }
 }
@@ -427,16 +439,6 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
         value: &Canonical<ConstrainedSubst>,
     ) -> Canonical<ConstrainedSubst> {
         self.map_from_canonical(value)
-    }
-}
-
-impl context::CanonicalConstrainedSubst<SlgContext> for Canonical<ConstrainedSubst> {
-    fn empty_constraints(&self) -> bool {
-        self.value.constraints.is_empty()
-    }
-
-    fn inference_normalized_subst(&self) -> &Substitution {
-        &self.value.subst
     }
 }
 

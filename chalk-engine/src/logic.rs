@@ -111,11 +111,11 @@ impl<C: Context> Forest<C> {
     ) -> bool {
         if let Some(answer) = self.tables[table].answer(answer) {
             info!("answer cached = {:?}", answer);
-            return test(answer.subst.inference_normalized_subst());
+            return test(C::inference_normalized_subst_from_subst(&answer.subst));
         }
 
         self.tables[table].strands_mut().any(|strand| {
-            test(C::inference_normalized_subst(&strand.canonical_ex_clause))
+            test(C::inference_normalized_subst_from_ex_clause(&strand.canonical_ex_clause))
         })
     }
 
@@ -632,7 +632,7 @@ impl<C: Context> Forest<C> {
                 && self.tables[table]
                     .table_goal
                     .is_trivial_substitution(&answer.subst)
-                && answer.subst.empty_constraints()
+                && C::empty_constraints(&answer.subst)
         };
 
         if self.tables[table].push_answer(answer) {
