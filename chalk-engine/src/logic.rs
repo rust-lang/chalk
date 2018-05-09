@@ -7,7 +7,7 @@ use crate::hh::HhGoal;
 use crate::stack::StackIndex;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{Answer, AnswerIndex};
-use std::collections::HashSet;
+use fxhash::FxHashSet;
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -350,7 +350,7 @@ impl<C: Context> Forest<C> {
             self.clear_strands_after_cycle(table, strands);
             Some(RecursiveSearchFail::NoMoreSolutions)
         } else if minimums.positive >= dfn && minimums.negative >= dfn {
-            let mut visited = HashSet::default();
+            let mut visited = FxHashSet::default();
             visited.insert(table);
             self.tables[table].extend_strands(strands);
             self.delay_strands_after_cycle(table, &mut visited);
@@ -396,7 +396,7 @@ impl<C: Context> Forest<C> {
     /// encounters a cycle, and that some of those cycles involve
     /// negative edges. In that case, walks all negative edges and
     /// converts them to delayed literals.
-    fn delay_strands_after_cycle(&mut self, table: TableIndex, visited: &mut HashSet<TableIndex>) {
+    fn delay_strands_after_cycle(&mut self, table: TableIndex, visited: &mut FxHashSet<TableIndex>) {
         let mut tables = vec![];
 
         let num_universes = C::num_universes(&self.tables[table].table_goal);

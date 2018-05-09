@@ -58,9 +58,10 @@
 
 #[macro_use] extern crate chalk_macros;
 extern crate stacker;
+extern crate fxhash;
 
 use crate::context::{Context, ExClauseContext};
-use std::collections::HashSet;
+use fxhash::FxHashSet;
 use std::cmp::min;
 use std::usize;
 
@@ -145,7 +146,7 @@ enum DelayedLiteralSets<C: Context> {
     None,
 
     /// Some (non-zero) number of non-empty sets.
-    Some(HashSet<DelayedLiteralSet<C>>),
+    Some(FxHashSet<DelayedLiteralSet<C>>),
 }
 
 /// A set of delayed literals. The vector in this struct must

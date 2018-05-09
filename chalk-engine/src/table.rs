@@ -1,7 +1,8 @@
 use crate::{DelayedLiteralSet, DelayedLiteralSets};
 use crate::context::prelude::*;
 use crate::strand::CanonicalStrand;
-use std::collections::{HashMap, VecDeque};
+use fxhash::FxHashMap;
+use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::mem;
 use std::iter;
@@ -24,7 +25,7 @@ crate struct Table<C: Context> {
     /// represented here -- we discard answers from `answers_hash`
     /// (but not `answers`) when better answers arrive (in particular,
     /// answers with fewer delayed literals).
-    answers_hash: HashMap<C::CanonicalConstrainedSubst, DelayedLiteralSets<C>>,
+    answers_hash: FxHashMap<C::CanonicalConstrainedSubst, DelayedLiteralSets<C>>,
 
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
@@ -53,7 +54,7 @@ impl<C: Context> Table<C> {
             table_goal,
             coinductive_goal,
             answers: Vec::new(),
-            answers_hash: HashMap::new(),
+            answers_hash: FxHashMap::default(),
             strands: VecDeque::new(),
         }
     }
