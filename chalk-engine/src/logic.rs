@@ -1046,10 +1046,10 @@ impl<C: Context> Forest<C> {
             ),
         };
 
-        let table_goal = &universe_map
-            .map_goal_from_canonical(&C::canonical(&self.tables[subgoal_table].table_goal));
+        let table_goal = &C::map_goal_from_canonical(&universe_map,
+                                                     &C::canonical(&self.tables[subgoal_table].table_goal));
         let answer_subst =
-            &universe_map.map_subst_from_canonical(&self.answer(subgoal_table, answer_index).subst);
+            &C::map_subst_from_canonical(&universe_map, &self.answer(subgoal_table, answer_index).subst);
         match infer.apply_answer_subst(ex_clause, &subgoal, table_goal, answer_subst) {
             Ok(mut ex_clause) => {
                 // If the answer had delayed literals, we have to

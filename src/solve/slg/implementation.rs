@@ -112,7 +112,21 @@ impl context::ContextOps<SlgContext> for SlgContext {
 
     fn num_universes(u_canon: &UCanonical<InEnvironment<Goal>>) -> usize {
         u_canon.universes
-    }    
+    }
+
+    fn map_goal_from_canonical(
+        map: &UniverseMap,
+        value: &Canonical<InEnvironment<Goal>>,
+    ) -> Canonical<InEnvironment<Goal>> {
+        map.map_from_canonical(value)
+    }
+
+    fn map_subst_from_canonical(
+        map: &UniverseMap,
+        value: &Canonical<ConstrainedSubst>,
+    ) -> Canonical<ConstrainedSubst> {
+        map.map_from_canonical(value)
+    }
 }
 
 impl TruncatingInferenceTable {
@@ -436,22 +450,6 @@ impl MayInvalidate {
             .iter()
             .zip(current_parameters)
             .any(|(new, current)| self.aggregate_parameters(new, current))
-    }
-}
-
-impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::UniverseMap {
-    fn map_goal_from_canonical(
-        &self,
-        value: &Canonical<InEnvironment<Goal>>,
-    ) -> Canonical<InEnvironment<Goal>> {
-        self.map_from_canonical(value)
-    }
-
-    fn map_subst_from_canonical(
-        &self,
-        value: &Canonical<ConstrainedSubst>,
-    ) -> Canonical<ConstrainedSubst> {
-        self.map_from_canonical(value)
     }
 }
 
