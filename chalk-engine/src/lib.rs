@@ -55,12 +55,11 @@
 #![feature(in_band_lifetimes)]
 #![feature(macro_vis_matcher)]
 #![feature(step_trait)]
-#![feature(underscore_lifetimes)]
 
 #[macro_use] extern crate chalk_macros;
 extern crate stacker;
 
-use crate::context::{Context, InferenceContext};
+use crate::context::{Context, ExClauseContext};
 use std::collections::HashSet;
 use std::cmp::min;
 use std::usize;
@@ -105,20 +104,20 @@ struct DepthFirstNumber {
 
 /// The paper describes these as `A :- D | G`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ExClause<C: Context, I: InferenceContext<C>> {
+pub struct ExClause<C: Context, E: ExClauseContext<C>> {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
-    pub subst: I::Substitution,
+    pub subst: E::Substitution,
 
     /// Delayed literals: things that we depend on negatively,
     /// but which have not yet been fully evaluated.
     pub delayed_literals: Vec<DelayedLiteral<C>>,
 
     /// Region constraints we have accumulated.
-    pub constraints: Vec<I::RegionConstraint>,
+    pub constraints: Vec<E::RegionConstraint>,
 
     /// Subgoals: literals that must be proven
-    pub subgoals: Vec<Literal<C, I>>,
+    pub subgoals: Vec<Literal<C, E>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -185,9 +184,9 @@ pub enum DelayedLiteral<C: Context> {
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
 #[derive(Clone, Debug)]
-pub enum Literal<C: Context, I: InferenceContext<C>> { // FIXME: pub b/c fold
-    Positive(I::GoalInEnvironment),
-    Negative(I::GoalInEnvironment),
+pub enum Literal<C: Context, E: ExClauseContext<C>> { // FIXME: pub b/c fold
+    Positive(E::GoalInEnvironment),
+    Negative(E::GoalInEnvironment),
 }
 
 /// The `Minimums` structure is used to track the dependencies between

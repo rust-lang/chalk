@@ -28,35 +28,35 @@ impl<C: Context> Forest<C> {
             match hh_goal {
                 HhGoal::ForAll(subgoal) => {
                     let subgoal = infer.instantiate_binders_universally(&subgoal);
-                    pending_goals.push((environment, subgoal.into_hh_goal()));
+                    pending_goals.push((environment, I::into_hh_goal(subgoal)));
                 }
                 HhGoal::Exists(subgoal) => {
                     let subgoal = infer.instantiate_binders_existentially(&subgoal);
-                    pending_goals.push((environment, subgoal.into_hh_goal()))
+                    pending_goals.push((environment, I::into_hh_goal(subgoal)))
                 }
                 HhGoal::Implies(wc, subgoal) => {
-                    let new_environment = environment.add_clauses(wc);
-                    pending_goals.push((new_environment, subgoal.into_hh_goal()));
+                    let new_environment = I::add_clauses(&environment, wc);
+                    pending_goals.push((new_environment, I::into_hh_goal(subgoal)));
                 }
                 HhGoal::And(subgoal1, subgoal2) => {
-                    pending_goals.push((environment.clone(), subgoal1.into_hh_goal()));
-                    pending_goals.push((environment, subgoal2.into_hh_goal()));
+                    pending_goals.push((environment.clone(), I::into_hh_goal(subgoal1)));
+                    pending_goals.push((environment, I::into_hh_goal(subgoal2)));
                 }
                 HhGoal::Not(subgoal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(I::GoalInEnvironment::new(&environment, subgoal)));
+                        .push(Literal::Negative(I::goal_in_environment(&environment, subgoal)));
                 }
                 HhGoal::Unify(a, b) => {
-                    infer.unify_parameters(&environment, &a, &b)?
-                        .into_ex_clause(&mut ex_clause)
+                    I::into_ex_clause(infer.unify_parameters(&environment, &a, &b)?,
+                                      &mut ex_clause)
                 }
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Positive(I::GoalInEnvironment::new(
+                        .push(Literal::Positive(I::goal_in_environment(
                             &environment,
-                            domain_goal.into_goal(),
+                            I::into_goal(domain_goal),
                         )));
                 }
                 HhGoal::CannotProve => {
@@ -66,10 +66,10 @@ impl<C: Context> Forest<C> {
                     // course, will always create a negative cycle and
                     // hence a delayed literal that cannot be
                     // resolved.
-                    let goal = I::Goal::cannot_prove();
+                    let goal = I::cannot_prove();
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(I::GoalInEnvironment::new(&environment, goal)));
+                        .push(Literal::Negative(I::goal_in_environment(&environment, goal)));
                 }
             }
         }

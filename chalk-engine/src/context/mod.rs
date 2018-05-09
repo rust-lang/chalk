@@ -8,7 +8,7 @@ crate mod prelude;
 
 /// The "context" in which the SLG solver operates.
 pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self> {
-    type CanonicalExClause: CanonicalExClause<Self>;
+    type CanonicalExClause: Debug;
 
     /// A map between universes. These are produced when
     /// u-canonicalizing something; they map canonical results back to
@@ -41,33 +41,39 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self>
     /// completely opaque to the SLG solver; it is produced by
     /// `make_solution`.
     type Solution;
+
+    /// Extracts the inner normalized substitution.
+    fn inference_normalized_subst(canon_ex_clause: &Self::CanonicalExClause)
+                                  -> &Self::InferenceNormalizedSubst;
 }
 
-/// The set of types belonging to an "inference context"; in rustc,
-/// these types are tied to the lifetime of the arena within which an
-/// inference context operates.
-pub trait InferenceContext<C: Context>: Sized + Debug {
-    /// Represents a set of hypotheses that are assumed to be true.
-    type Environment: Environment<C, Self>;
-
-    /// Goals correspond to things we can prove.
-    type Goal: Goal<C, Self>;
-
-    /// A goal that can be targeted by a program clause. The SLG
-    /// solver treats these opaquely; in contrast, it understands
-    /// "meta" goals like `G1 && G2` and so forth natively.
-    type DomainGoal: DomainGoal<C, Self>;
-
-    /// Represents a goal along with an environment.
-    type GoalInEnvironment: GoalInEnvironment<C, Self>;
+pub trait ExClauseContext<C: Context>: Sized + Debug {
+    /// Represents a substitution from the "canonical variables" found
+    /// in a canonical goal to specific values.
+    type Substitution: Debug;
 
     /// Represents a region constraint that will be propagated back
     /// (but not verified).
     type RegionConstraint: Debug;
 
-    /// Represents a substitution from the "canonical variables" found
-    /// in a canonical goal to specific values.
-    type Substitution: Debug;
+    /// Represents a goal along with an environment.
+    type GoalInEnvironment: Debug + Clone + Eq + Hash;
+}
+
+/// The set of types belonging to an "inference context"; in rustc,
+/// these types are tied to the lifetime of the arena within which an
+/// inference context operates.
+pub trait InferenceContext<C: Context>: ExClauseContext<C> {
+    /// Represents a set of hypotheses that are assumed to be true.
+    type Environment: Debug + Clone;
+
+    /// Goals correspond to things we can prove.
+    type Goal: Clone + Debug + Eq;
+
+    /// A goal that can be targeted by a program clause. The SLG
+    /// solver treats these opaquely; in contrast, it understands
+    /// "meta" goals like `G1 && G2` and so forth natively.
+    type DomainGoal: Debug;
 
     /// A "higher-order" goal, quantified over some types and/or
     /// lifetimes. When you have a quantification, like `forall<T> { G
@@ -89,7 +95,34 @@ pub trait InferenceContext<C: Context>: Sized + Debug {
 
     /// The successful result from unification: contains new subgoals
     /// and things that can be attached to an ex-clause.
-    type UnificationResult: UnificationResult<C, Self>;
+    type UnificationResult;
+
+    fn goal_in_environment(environment: &Self::Environment, goal: Self::Goal) -> Self::GoalInEnvironment;
+    
+    /// Upcast this domain goal into a more general goal.
+    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal;
+
+    /// Create a "cannot prove" goal (see `HhGoal::CannotProve`).
+    fn cannot_prove() -> Self::Goal;
+
+    /// Convert the context's goal type into the `HhGoal` type that
+    /// the SLG solver understands. The expectation is that the
+    /// context's goal type has the same set of variants, but with
+    /// different names and a different setup. If you inspect
+    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
+    /// conversion -- that is, we convert the outermost goal into an
+    /// `HhGoal`, but the goals contained within are left as context
+    /// goals.
+    fn into_hh_goal(goal: Self::Goal) -> HhGoal<C, Self>;
+
+    /// Add the residual subgoals as new subgoals of the ex-clause.
+    /// Also add region constraints.
+    fn into_ex_clause(result: Self::UnificationResult, ex_clause: &mut ExClause<C, Self>);
+
+    // Used by: simplify
+    fn add_clauses(env: &Self::Environment,
+                  clauses: impl IntoIterator<Item = Self::ProgramClause>)
+                  -> Self::Environment;
 }
 
 pub trait ContextOps<C: Context> {
@@ -273,53 +306,12 @@ pub trait ResolventOps<C: Context, I: InferenceContext<C>> {
     ) -> Fallible<ExClause<C, I>>;
 }
 
-pub trait GoalInEnvironment<C: Context, I: InferenceContext<C>>:
-    Debug + Clone + Eq + Ord + Hash
-{
-    fn new(
-        environment: &I::Environment,
-        goal: I::Goal,
-    ) -> Self;
-
-    fn environment(&self) -> &I::Environment;
-}
-
-pub trait Environment<C: Context, I: InferenceContext<C>>: Debug + Clone {
-    // Used by: simplify
-    fn add_clauses(&self, clauses: impl IntoIterator<Item = I::ProgramClause>) -> Self;
-}
-
-pub trait CanonicalExClause<C: Context>: Debug {
-    /// Extracts the inner normalized substitution.
-    fn inference_normalized_subst(&self) -> &C::InferenceNormalizedSubst;
-}
-
 pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
     /// True if this solution has no region constraints.
     fn empty_constraints(&self) -> bool;
 
     /// Extracts the inner normalized substitution.
     fn inference_normalized_subst(&self) -> &C::InferenceNormalizedSubst;
-}
-
-pub trait DomainGoal<C: Context, I: InferenceContext<C>>: Debug {
-    /// Upcast this domain goal into a more general goal.
-    fn into_goal(self) -> I::Goal;
-}
-
-pub trait Goal<C: Context, I: InferenceContext<C>>: Clone + Debug + Eq {
-    /// Create a "cannot prove" goal (see `HhGoal::CannotProve`).
-    fn cannot_prove() -> Self;
-
-    /// Convert the context's goal type into the `HhGoal` type that
-    /// the SLG solver understands. The expectation is that the
-    /// context's goal type has the same set of variants, but with
-    /// different names and a different setup. If you inspect
-    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
-    /// conversion -- that is, we convert the outermost goal into an
-    /// `HhGoal`, but the goals contained within are left as context
-    /// goals.
-    fn into_hh_goal(self) -> HhGoal<C, I>;
 }
 
 pub trait UniverseMap<C: Context>: Clone + Debug {
@@ -341,23 +333,12 @@ pub trait UniverseMap<C: Context>: Clone + Debug {
     ) -> C::CanonicalConstrainedSubst;
 }
 
-/// Embodies the result of a unification operation: we presume that
-/// unification may produce new residual subgoals, which must be
-/// further proven, as well as region constraints.
-pub trait UnificationResult<C: Context, I: InferenceContext<C>> {
-    /// Add the residual subgoals as new subgoals of the ex-clause.
-    /// Also add region constraints.
-    fn into_ex_clause(self, ex_clause: &mut ExClause<C, I>);
-}
-
 pub trait AnswerStream<C: Context> {
     fn peek_answer(&mut self) -> Option<SimplifiedAnswer<C>>;
     fn next_answer(&mut self) -> Option<SimplifiedAnswer<C>>;
 
     /// Invokes `test` with each possible future answer, returning true immediately
     /// if we find any answer for which `test` returns true.
-    fn any_future_answer(
-        &mut self,
-        test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
-    ) -> bool;
+    fn any_future_answer(&mut self, test: impl FnMut(&C::InferenceNormalizedSubst) -> bool)
+        -> bool;
 }

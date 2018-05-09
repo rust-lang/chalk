@@ -115,7 +115,7 @@ impl<C: Context> Forest<C> {
         }
 
         self.tables[table].strands_mut().any(|strand| {
-            test(strand.canonical_ex_clause.inference_normalized_subst())
+            test(C::inference_normalized_subst(&strand.canonical_ex_clause))
         })
     }
 
@@ -760,7 +760,7 @@ impl<C: Context> Forest<C> {
         goal: I::Goal,
     ) {
         let table_ref = &mut self.tables[table];
-        match goal.into_hh_goal() {
+        match I::into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
                 let clauses = infer.program_clauses(&environment, &domain_goal);
                 for clause in clauses {

@@ -1,17 +1,17 @@
 use crate::cast::{Cast, Caster};
 use crate::fallible::Fallible;
-use crate::ir::*;
 use crate::ir::could_match::CouldMatch;
-use crate::solve::infer::InferenceTable;
+use crate::ir::*;
 use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::solve::infer::unify::UnificationResult;
-use crate::solve::Solution;
+use crate::solve::infer::InferenceTable;
 use crate::solve::truncate::{self, Truncated};
+use crate::solve::Solution;
 
-use chalk_engine::{DelayedLiteral, ExClause, Literal};
 use chalk_engine::context;
 use chalk_engine::forest::Forest;
 use chalk_engine::hh::HhGoal;
+use chalk_engine::{DelayedLiteral, ExClause, Literal};
 
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -57,6 +57,11 @@ impl context::Context for SlgContext {
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
     type InferenceNormalizedSubst = Substitution;
     type Solution = Solution;
+
+    fn inference_normalized_subst(canon_ex_clause: &Self::CanonicalExClause)
+                                  -> &Self::InferenceNormalizedSubst {
+        &canon_ex_clause.value.subst
+    }
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -90,16 +95,18 @@ impl context::ContextOps<SlgContext> for SlgContext {
 
 impl TruncatingInferenceTable {
     fn new(program: &Arc<ProgramEnvironment>, max_size: usize, infer: InferenceTable) -> Self {
-        Self { program: program.clone(), max_size, infer }
+        Self {
+            program: program.clone(),
+            max_size,
+            infer,
+        }
     }
 }
 
 impl context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable {
-    fn truncate_goal(
-        &mut self,
-        subgoal: &InEnvironment<Goal>,
-    ) -> Option<InEnvironment<Goal>> {
-        let Truncated { overflow, value } = truncate::truncate(&mut self.infer, self.max_size, subgoal);
+    fn truncate_goal(&mut self, subgoal: &InEnvironment<Goal>) -> Option<InEnvironment<Goal>> {
+        let Truncated { overflow, value } =
+            truncate::truncate(&mut self.infer, self.max_size, subgoal);
         if overflow {
             Some(value)
         } else {
@@ -107,11 +114,9 @@ impl context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable {
         }
     }
 
-    fn truncate_answer(
-        &mut self,
-        subst: &Substitution,
-    ) -> Option<Substitution> {
-        let Truncated { overflow, value } = truncate::truncate(&mut self.infer, self.max_size, subst);
+    fn truncate_answer(&mut self, subst: &Substitution) -> Option<Substitution> {
+        let Truncated { overflow, value } =
+            truncate::truncate(&mut self.infer, self.max_size, subst);
         if overflow {
             Some(value)
         } else {
@@ -120,20 +125,62 @@ impl context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable {
     }
 }
 
-impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable {
+impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable {}
+
+impl context::ExClauseContext<SlgContext> for SlgContext {
+    type GoalInEnvironment = InEnvironment<Goal>;
+    type Substitution = Substitution;
+    type RegionConstraint = InEnvironment<Constraint>;
 }
 
 impl context::InferenceContext<SlgContext> for SlgContext {
     type Environment = Arc<Environment>;
-    type GoalInEnvironment = InEnvironment<Goal>;
-    type Substitution = Substitution;
-    type RegionConstraint = InEnvironment<Constraint>;
     type DomainGoal = DomainGoal;
     type Goal = Goal;
     type BindersGoal = Binders<Box<Goal>>;
     type Parameter = Parameter;
     type ProgramClause = ProgramClause;
     type UnificationResult = UnificationResult;
+
+    fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
+        InEnvironment::new(environment, goal)
+    }
+    
+    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal {
+        domain_goal.cast()
+    }
+
+    fn cannot_prove() -> Self::Goal {
+        Goal::CannotProve(())
+    }
+
+    fn into_hh_goal(goal: Self::Goal) -> HhGoal<SlgContext, Self> {
+        match goal {
+            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
+            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
+            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
+            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
+            Goal::Not(g1) => HhGoal::Not(*g1),
+            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
+            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
+            Goal::CannotProve(()) => HhGoal::CannotProve,
+        }
+    }
+
+    fn into_ex_clause(result: Self::UnificationResult,
+                      ex_clause: &mut ExClause<SlgContext, SlgContext>) {
+        ex_clause
+            .subgoals
+            .extend(result.goals.into_iter().casted().map(Literal::Positive));
+        ex_clause.constraints.extend(result.constraints);
+    }
+
+    // Used by: simplify
+    fn add_clauses(env: &Self::Environment,
+                  clauses: impl IntoIterator<Item = Self::ProgramClause>)
+                  -> Self::Environment {
+        Environment::add_clauses(env, clauses)
+    }
 }
 
 impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable {
@@ -165,7 +212,10 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         *self.infer.instantiate_binders_existentially(arg)
     }
 
-    fn debug_ex_clause(&mut self, value: &'v ExClause<SlgContext, SlgContext>) -> Box<dyn Debug + 'v> {
+    fn debug_ex_clause(
+        &mut self,
+        value: &'v ExClause<SlgContext, SlgContext>,
+    ) -> Box<dyn Debug + 'v> {
         Box::new(self.infer.normalize_deep(value))
     }
 
@@ -173,7 +223,10 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         self.infer.canonicalize(value).quantified
     }
 
-    fn canonicalize_ex_clause(&mut self, value: &ExClause<SlgContext, SlgContext>) -> Canonical<ExClause<SlgContext, SlgContext>> {
+    fn canonicalize_ex_clause(
+        &mut self,
+        value: &ExClause<SlgContext, SlgContext>,
+    ) -> Canonical<ExClause<SlgContext, SlgContext>> {
         self.infer.canonicalize(value).quantified
     }
 
@@ -182,7 +235,8 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         subst: Substitution,
         constraints: Vec<InEnvironment<Constraint>>,
     ) -> Canonical<ConstrainedSubst> {
-        self.infer.canonicalize(&ConstrainedSubst { subst, constraints })
+        self.infer
+            .canonicalize(&ConstrainedSubst { subst, constraints })
             .quantified
     }
 
@@ -214,31 +268,6 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
     }
 }
 
-impl context::UnificationResult<SlgContext, SlgContext> for ::crate::solve::infer::unify::UnificationResult {
-    fn into_ex_clause(self, ex_clause: &mut ExClause<SlgContext, SlgContext>) {
-        ex_clause
-            .subgoals
-            .extend(self.goals.into_iter().casted().map(Literal::Positive));
-        ex_clause.constraints.extend(self.constraints);
-    }
-}
-
-impl context::GoalInEnvironment<SlgContext, SlgContext> for InEnvironment<Goal> {
-    fn new(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
-        InEnvironment::new(environment, goal)
-    }
-
-    fn environment(&self) -> &Arc<Environment> {
-        &self.environment
-    }
-}
-
-impl context::Environment<SlgContext, SlgContext> for Arc<Environment> {
-    fn add_clauses(&self, clauses: impl IntoIterator<Item = ProgramClause>) -> Self {
-        Environment::add_clauses(self, clauses)
-    }
-}
-
 impl Substitution {
     fn may_invalidate(&self, subst: &Canonical<Substitution>) -> bool {
         self.parameters
@@ -254,15 +283,14 @@ struct MayInvalidate;
 impl MayInvalidate {
     fn aggregate_parameters(&mut self, new: &Parameter, current: &Parameter) -> bool {
         match (new, current) {
-            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => {
-                self.aggregate_tys(ty1, ty2)
-            }
+            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2)
             }
-            (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
-                panic!("mismatched parameter kinds: new={:?} current={:?}", new, current)
-            }
+            (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => panic!(
+                "mismatched parameter kinds: new={:?} current={:?}",
+                new, current
+            ),
         }
     }
 
@@ -311,11 +339,7 @@ impl MayInvalidate {
         true
     }
 
-    fn aggregate_application_tys(
-        &mut self,
-        new: &ApplicationTy,
-        current: &ApplicationTy
-    ) -> bool {
+    fn aggregate_application_tys(&mut self, new: &ApplicationTy, current: &ApplicationTy) -> bool {
         let ApplicationTy {
             name: new_name,
             parameters: new_parameters,
@@ -383,7 +407,7 @@ impl MayInvalidate {
             current_parameters.len()
         );
 
-       new_parameters 
+        new_parameters
             .iter()
             .zip(current_parameters)
             .any(|(new, current)| self.aggregate_parameters(new, current))
@@ -403,18 +427,6 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
         value: &Canonical<ConstrainedSubst>,
     ) -> Canonical<ConstrainedSubst> {
         self.map_from_canonical(value)
-    }
-}
-
-impl context::DomainGoal<SlgContext, SlgContext> for DomainGoal {
-    fn into_goal(self) -> Goal {
-        self.cast()
-    }
-}
-
-impl context::CanonicalExClause<SlgContext> for Canonical<ExClause<SlgContext, SlgContext>> {
-    fn inference_normalized_subst(&self) -> &Substitution {
-        &self.value.subst
     }
 }
 
@@ -439,25 +451,6 @@ impl context::UCanonicalGoalInEnvironment<SlgContext> for UCanonical<InEnvironme
 
     fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
         self.is_trivial_substitution(canonical_subst)
-    }
-}
-
-impl context::Goal<SlgContext, SlgContext> for Goal {
-    fn cannot_prove() -> Goal {
-        Goal::CannotProve(())
-    }
-
-    fn into_hh_goal(self) -> HhGoal<SlgContext, SlgContext> {
-        match self {
-            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
-            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
-            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
-            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
-            Goal::Not(g1) => HhGoal::Not(*g1),
-            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
-            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
-            Goal::CannotProve(()) => HhGoal::CannotProve,
-        }
     }
 }
 

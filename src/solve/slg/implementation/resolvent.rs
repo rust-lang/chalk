@@ -1,13 +1,13 @@
 use crate::fallible::Fallible;
-use crate::fold::Fold;
 use crate::fold::shift::Shift;
+use crate::fold::Fold;
 use crate::ir::*;
 use crate::solve::infer::InferenceTable;
 use crate::solve::slg::implementation::{SlgContext, TruncatingInferenceTable};
 use crate::zip::{Zip, Zipper};
 
+use chalk_engine::context::{self, InferenceContext};
 use chalk_engine::{ExClause, Literal};
-use chalk_engine::context::{self, UnificationResult as UnificationResultTrait};
 use std::sync::Arc;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -105,7 +105,7 @@ impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable 
         };
 
         // Add the subgoals/region-constraints that unification gave us.
-        unification_result.into_ex_clause(&mut ex_clause);
+        SlgContext::into_ex_clause(unification_result, &mut ex_clause);
 
         // Add the `conditions` from the program clause into the result too.
         ex_clause
@@ -209,7 +209,10 @@ impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable 
     ) -> Fallible<ExClause<SlgContext, SlgContext>> {
         debug_heading!("apply_answer_subst()");
         debug!("ex_clause={:?}", ex_clause);
-        debug!("selected_goal={:?}", self.infer.normalize_deep(selected_goal));
+        debug!(
+            "selected_goal={:?}",
+            self.infer.normalize_deep(selected_goal)
+        );
         debug!("answer_table_goal={:?}", answer_table_goal);
         debug!("canonical_answer_subst={:?}", canonical_answer_subst);
 
@@ -290,9 +293,11 @@ impl<'t> AnswerSubstitutor<'t> {
                 )
             });
 
-        self.table
-            .unify(&self.environment, answer_param, pending_shifted)?
-            .into_ex_clause(&mut self.ex_clause);
+        SlgContext::into_ex_clause(
+            self.table
+                .unify(&self.environment, answer_param, pending_shifted)?,
+            &mut self.ex_clause,
+        );
 
         Ok(true)
     }
