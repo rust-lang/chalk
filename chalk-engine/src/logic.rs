@@ -205,7 +205,7 @@ impl<C: Context> Forest<C> {
         loop {
             match self.tables[table].pop_next_strand() {
                 Some(canonical_strand) => {
-                    let num_universes = self.tables[table].table_goal.num_universes();
+                    let num_universes = C::num_universes(&self.tables[table].table_goal);
                     let result = Self::with_instantiated_strand(
                         self.context.clone(),
                         num_universes,
@@ -399,7 +399,7 @@ impl<C: Context> Forest<C> {
     fn delay_strands_after_cycle(&mut self, table: TableIndex, visited: &mut HashSet<TableIndex>) {
         let mut tables = vec![];
 
-        let num_universes = self.tables[table].table_goal.num_universes();
+        let num_universes = C::num_universes(&self.tables[table].table_goal);
         for canonical_strand in self.tables[table].strands_mut() {
             // FIXME if CanonicalExClause were not held abstract, we
             // could do this in place like we used to (and
@@ -629,9 +629,7 @@ impl<C: Context> Forest<C> {
         // must be backed by an impl *eventually*).
         let is_trivial_answer = {
             answer.delayed_literals.is_empty()
-                && self.tables[table]
-                    .table_goal
-                    .is_trivial_substitution(&answer.subst)
+                && C::is_trivial_substitution(&self.tables[table].table_goal, &answer.subst)
                 && C::empty_constraints(&answer.subst)
         };
 
@@ -1049,7 +1047,7 @@ impl<C: Context> Forest<C> {
         };
 
         let table_goal = &universe_map
-            .map_goal_from_canonical(&self.tables[subgoal_table].table_goal.canonical());
+            .map_goal_from_canonical(&C::canonical(&self.tables[subgoal_table].table_goal));
         let answer_subst =
             &universe_map.map_subst_from_canonical(&self.answer(subgoal_table, answer_index).subst);
         match infer.apply_answer_subst(ex_clause, &subgoal, table_goal, answer_subst) {

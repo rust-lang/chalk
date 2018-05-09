@@ -100,6 +100,19 @@ impl context::ContextOps<SlgContext> for SlgContext {
     fn inference_normalized_subst_from_subst(ccs: &Canonical<ConstrainedSubst>) -> &Substitution {
         &ccs.value.subst
     }
+
+    fn canonical(u_canon: &UCanonical<InEnvironment<Goal>>) -> &Canonical<InEnvironment<Goal>> {
+        &u_canon.canonical
+    }
+
+    fn is_trivial_substitution(u_canon: &UCanonical<InEnvironment<Goal>>,
+                               canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
+        u_canon.is_trivial_substitution(canonical_subst)
+    }
+
+    fn num_universes(u_canon: &UCanonical<InEnvironment<Goal>>) -> usize {
+        u_canon.universes
+    }    
 }
 
 impl TruncatingInferenceTable {
@@ -439,20 +452,6 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
         value: &Canonical<ConstrainedSubst>,
     ) -> Canonical<ConstrainedSubst> {
         self.map_from_canonical(value)
-    }
-}
-
-impl context::UCanonicalGoalInEnvironment<SlgContext> for UCanonical<InEnvironment<Goal>> {
-    fn num_universes(&self) -> usize {
-        self.universes
-    }
-
-    fn canonical(&self) -> &Canonical<InEnvironment<Goal>> {
-        &self.canonical
-    }
-
-    fn is_trivial_substitution(&self, canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
-        self.is_trivial_substitution(canonical_subst)
     }
 }
 

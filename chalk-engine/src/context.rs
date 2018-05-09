@@ -35,7 +35,7 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self>
     /// A u-canonicalized `GoalInEnvironment` -- this is one where the
     /// free universes are renumbered to consecutive integers starting
     /// from U1 (but preserving their relative order).
-    type UCanonicalGoalInEnvironment: UCanonicalGoalInEnvironment<Self>;
+    type UCanonicalGoalInEnvironment: Debug + Clone + Eq + Hash;
 
     /// A final solution that is passed back to the user. This is
     /// completely opaque to the SLG solver; it is produced by
@@ -166,6 +166,11 @@ pub trait ContextOps<C: Context> {
 
     /// True if this solution has no region constraints.
     fn empty_constraints(ccs: &C::CanonicalConstrainedSubst) -> bool;
+
+    fn canonical(u_canon: &C::UCanonicalGoalInEnvironment) -> &C::CanonicalGoalInEnvironment;
+    fn is_trivial_substitution(u_canon: &C::UCanonicalGoalInEnvironment,
+                               canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
+    fn num_universes(&C::UCanonicalGoalInEnvironment) -> usize;
 }
 
 /// Callback trait for `instantiate_ucanonical_goal`. Unlike the other
@@ -209,12 +214,6 @@ pub trait AggregateOps<C: Context> {
         root_goal: &C::CanonicalGoalInEnvironment,
         simplified_answers: impl AnswerStream<C>,
     ) -> Option<C::Solution>;
-}
-
-pub trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
-    fn canonical(&self) -> &C::CanonicalGoalInEnvironment;
-    fn is_trivial_substitution(&self, canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
-    fn num_universes(&self) -> usize;
 }
 
 /// An "inference table" contains the state to support unification and
