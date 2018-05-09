@@ -311,7 +311,7 @@ fn gat_parse() {
             trait Sized {}
 
             trait Foo {
-                type Item<'a, T>: Clone where Self: Sized;
+                type Item<'a, T>: Sized + Clone where Self: Sized;
             }
 
             trait Bar {

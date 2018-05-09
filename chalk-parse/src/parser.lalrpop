@@ -72,25 +72,23 @@ TraitDefn: TraitDefn = {
 };
 
 AssocTyDefn: AssocTyDefn = {
-    "type" <name:Id> <p:Angle<ParameterKind>> <b:(":" <Id> <Angle<Parameter>>)?>
+    "type" <name:Id> <p:Angle<ParameterKind>> <b:(":" <Plus<TraitBound>>)?>
         <w:QuantifiedWhereClauses> ";" =>
     {
-        let bound = match b {
-            Some((t, a)) => {
-                let mut args = vec![Parameter::Ty(Ty::Id{ name })];
-                args.extend(a);
-                Some(TraitRef {
-                    trait_name: t,
-                    args: args,
-                })
-            }
-            None => None
-        };
         AssocTyDefn {
             name: name,
             parameter_kinds: p,
             where_clauses: w,
-            bound,
+            bounds: b.unwrap_or(vec![]),
+        }
+    }
+};
+
+TraitBound: TraitBound = {
+    <t:Id> <a:Angle<Parameter>> => {
+        TraitBound {
+            trait_name: t,
+            args_no_self: a,
         }
     }
 };
@@ -299,6 +297,11 @@ Comma<T>: Vec<T> = {
 #[inline]
 SemiColon<T>: Vec<T> = {
     <Separator<";", T>>
+};
+
+#[inline]
+Plus<T>: Vec<T> = {
+    <Separator<"+", T>>
 };
 
 Angle<T>: Vec<T> = {

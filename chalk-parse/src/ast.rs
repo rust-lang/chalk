@@ -54,7 +54,7 @@ pub struct TraitFlags {
 pub struct AssocTyDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
-    pub bound: Option<TraitRef>,
+    pub bounds: Vec<TraitBound>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
@@ -175,6 +175,11 @@ impl PolarizedTraitRef {
             PolarizedTraitRef::Negative(trait_ref)
         }
     }
+}
+
+pub struct TraitBound {
+    pub trait_name: Identifier,
+    pub args_no_self: Vec<Parameter>,
 }
 
 #[derive(Copy, Clone, Debug)]
