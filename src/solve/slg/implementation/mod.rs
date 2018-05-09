@@ -169,6 +169,13 @@ impl context::InferenceContext<SlgContext> for SlgContext {
             .extend(result.goals.into_iter().casted().map(Literal::Positive));
         ex_clause.constraints.extend(result.constraints);
     }
+
+    // Used by: simplify
+    fn add_clauses(env: &Self::Environment,
+                  clauses: impl IntoIterator<Item = Self::ProgramClause>)
+                  -> Self::Environment {
+        Environment::add_clauses(env, clauses)
+    }
 }
 
 impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable {
@@ -253,12 +260,6 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         b: &Parameter,
     ) -> Fallible<UnificationResult> {
         self.infer.unify(environment, a, b)
-    }
-}
-
-impl context::Environment<SlgContext, SlgContext> for Arc<Environment> {
-    fn add_clauses(&self, clauses: impl IntoIterator<Item = ProgramClause>) -> Self {
-        Environment::add_clauses(self, clauses)
     }
 }
 

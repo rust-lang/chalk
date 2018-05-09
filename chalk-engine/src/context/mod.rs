@@ -61,7 +61,7 @@ pub trait ExClauseContext<C: Context>: Sized + Debug {
 /// inference context operates.
 pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     /// Represents a set of hypotheses that are assumed to be true.
-    type Environment: Environment<C, Self>;
+    type Environment: Debug + Clone;
 
     /// Goals correspond to things we can prove.
     type Goal: Clone + Debug + Eq;
@@ -114,6 +114,11 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     /// Add the residual subgoals as new subgoals of the ex-clause.
     /// Also add region constraints.
     fn into_ex_clause(result: Self::UnificationResult, ex_clause: &mut ExClause<C, Self>);
+
+    // Used by: simplify
+    fn add_clauses(env: &Self::Environment,
+                  clauses: impl IntoIterator<Item = Self::ProgramClause>)
+                  -> Self::Environment;
 }
 
 pub trait ContextOps<C: Context> {
@@ -295,11 +300,6 @@ pub trait ResolventOps<C: Context, I: InferenceContext<C>> {
         answer_table_goal: &C::CanonicalGoalInEnvironment,
         canonical_answer_subst: &C::CanonicalConstrainedSubst,
     ) -> Fallible<ExClause<C, I>>;
-}
-
-pub trait Environment<C: Context, I: InferenceContext<C>>: Debug + Clone {
-    // Used by: simplify
-    fn add_clauses(&self, clauses: impl IntoIterator<Item = I::ProgramClause>) -> Self;
 }
 
 pub trait CanonicalExClause<C: Context>: Debug {
