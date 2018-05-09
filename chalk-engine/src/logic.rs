@@ -115,7 +115,7 @@ impl<C: Context> Forest<C> {
         }
 
         self.tables[table].strands_mut().any(|strand| {
-            test(strand.canonical_ex_clause.inference_normalized_subst())
+            test(C::inference_normalized_subst(&strand.canonical_ex_clause))
         })
     }
 

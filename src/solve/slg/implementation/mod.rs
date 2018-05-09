@@ -57,6 +57,11 @@ impl context::Context for SlgContext {
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
     type InferenceNormalizedSubst = Substitution;
     type Solution = Solution;
+
+    fn inference_normalized_subst(canon_ex_clause: &Self::CanonicalExClause)
+                                  -> &Self::InferenceNormalizedSubst {
+        &canon_ex_clause.value.subst
+    }
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -422,12 +427,6 @@ impl context::UniverseMap<SlgContext> for ::crate::solve::infer::ucanonicalize::
         value: &Canonical<ConstrainedSubst>,
     ) -> Canonical<ConstrainedSubst> {
         self.map_from_canonical(value)
-    }
-}
-
-impl context::CanonicalExClause<SlgContext> for Canonical<ExClause<SlgContext, SlgContext>> {
-    fn inference_normalized_subst(&self) -> &Substitution {
-        &self.value.subst
     }
 }
 

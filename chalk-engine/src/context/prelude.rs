@@ -8,5 +8,4 @@ crate use super::InferenceTable;
 crate use super::InferenceContext;
 crate use super::UCanonicalGoalInEnvironment;
 crate use super::UniverseMap;
-crate use super::CanonicalExClause;
 crate use super::CanonicalConstrainedSubst;

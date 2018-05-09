@@ -8,7 +8,7 @@ crate mod prelude;
 
 /// The "context" in which the SLG solver operates.
 pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self> {
-    type CanonicalExClause: CanonicalExClause<Self>;
+    type CanonicalExClause: Debug;
 
     /// A map between universes. These are produced when
     /// u-canonicalizing something; they map canonical results back to
@@ -41,6 +41,10 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self>
     /// completely opaque to the SLG solver; it is produced by
     /// `make_solution`.
     type Solution;
+
+    /// Extracts the inner normalized substitution.
+    fn inference_normalized_subst(canon_ex_clause: &Self::CanonicalExClause)
+                                  -> &Self::InferenceNormalizedSubst;
 }
 
 pub trait ExClauseContext<C: Context>: Sized + Debug {
@@ -300,11 +304,6 @@ pub trait ResolventOps<C: Context, I: InferenceContext<C>> {
         answer_table_goal: &C::CanonicalGoalInEnvironment,
         canonical_answer_subst: &C::CanonicalConstrainedSubst,
     ) -> Fallible<ExClause<C, I>>;
-}
-
-pub trait CanonicalExClause<C: Context>: Debug {
-    /// Extracts the inner normalized substitution.
-    fn inference_normalized_subst(&self) -> &C::InferenceNormalizedSubst;
 }
 
 pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
