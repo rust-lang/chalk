@@ -105,7 +105,7 @@ fn basic() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -142,7 +142,7 @@ fn breadth_first() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -154,7 +154,7 @@ fn breadth_first() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -166,7 +166,7 @@ fn breadth_first() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -178,7 +178,7 @@ fn breadth_first() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -190,7 +190,7 @@ fn breadth_first() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -269,11 +269,11 @@ fn flounder() {
                         ]
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: [
+                        delayed_literals: {
                             CannotProve(
                                 ()
                             )
-                        ]
+                        }
                     }
                 }
             ]"
@@ -359,11 +359,11 @@ fn negative_loop() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: [
+                        delayed_literals: {
                             Negative(
                                 TableIndex(1)
                             )
-                        ]
+                        }
                     }
                 }
             ]"
@@ -404,7 +404,7 @@ fn subgoal_cycle_uninhabited() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -424,7 +424,7 @@ fn subgoal_cycle_uninhabited() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -445,11 +445,11 @@ fn subgoal_cycle_uninhabited() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: [
+                        delayed_literals: {
                             CannotProve(
                                 ()
                             )
-                        ]
+                        }
                     }
                 }
             ]"
@@ -469,7 +469,7 @@ fn subgoal_cycle_uninhabited() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -489,7 +489,7 @@ fn subgoal_cycle_uninhabited() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -522,7 +522,7 @@ fn subgoal_cycle_inhabited() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -558,7 +558,7 @@ fn basic_region_constraint_from_positive_impl() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -597,7 +597,7 @@ fn example_2_1_EWFS() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -609,7 +609,7 @@ fn example_2_1_EWFS() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -621,7 +621,7 @@ fn example_2_1_EWFS() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -662,7 +662,7 @@ fn example_2_2_EWFS() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -703,7 +703,7 @@ fn example_2_3_EWFS() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -742,14 +742,14 @@ fn example_3_3_EWFS() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: [
-                            Negative(
-                                TableIndex(1)
-                            ),
+                        delayed_literals: {
                             Negative(
                                 TableIndex(4)
+                            ),
+                            Negative(
+                                TableIndex(1)
                             )
-                        ]
+                        }
                     }
                 }
             ]"
@@ -782,11 +782,11 @@ fn contradiction() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: [
+                        delayed_literals: {
                             Negative(
                                 TableIndex(0)
                             )
-                        ]
+                        }
                     }
                 }
             ]"
@@ -833,7 +833,7 @@ fn cached_answers_1() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -845,7 +845,7 @@ fn cached_answers_1() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -857,7 +857,7 @@ fn cached_answers_1() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -869,7 +869,7 @@ fn cached_answers_1() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -883,11 +883,11 @@ fn cached_answers_1() {
                         ]
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: [
+                        delayed_literals: {
                             CannotProve(
                                 ()
                             )
-                        ]
+                        }
                     }
                 }
             ]"
@@ -923,7 +923,7 @@ fn cached_answers_2() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -935,7 +935,7 @@ fn cached_answers_2() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -947,7 +947,7 @@ fn cached_answers_2() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -959,7 +959,7 @@ fn cached_answers_2() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -973,11 +973,11 @@ fn cached_answers_2() {
                         ]
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: [
+                        delayed_literals: {
                             CannotProve(
                                 ()
                             )
-                        ]
+                        }
                     }
                 }
             ]"
@@ -1013,7 +1013,7 @@ fn cached_answers_3() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -1025,7 +1025,7 @@ fn cached_answers_3() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -1037,7 +1037,7 @@ fn cached_answers_3() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 },
                 Answer {
@@ -1051,11 +1051,11 @@ fn cached_answers_3() {
                         ]
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: [
+                        delayed_literals: {
                             CannotProve(
                                 ()
                             )
-                        ]
+                        }
                     }
                 },
                 Answer {
@@ -1067,7 +1067,7 @@ fn cached_answers_3() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: []
+                        delayed_literals: {}
                     }
                 }
             ]"
@@ -1103,11 +1103,11 @@ fn negative_answer_delayed_literal() {
                         binders: []
                     },
                     delayed_literals: DelayedLiteralSet {
-                        delayed_literals: [
+                        delayed_literals: {
                             Negative(
                                 TableIndex(1)
                             )
-                        ]
+                        }
                     }
                 }
             ]"

@@ -557,9 +557,7 @@ impl<C: Context> Forest<C> {
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
         let delayed_literals = {
-            let mut delayed_literals: Vec<_> = delayed_literals.into_iter().collect();
-            delayed_literals.sort();
-            delayed_literals.dedup();
+            let mut delayed_literals: FxHashSet<_> = delayed_literals.into_iter().collect();
             DelayedLiteralSet { delayed_literals }
         };
         debug!("answer: delayed_literals={:?}", delayed_literals);

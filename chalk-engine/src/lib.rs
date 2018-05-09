@@ -140,17 +140,20 @@ pub struct SimplifiedAnswer<C: Context> {
     pub ambiguous: bool,
 }
 
-#[derive(Clone, Debug)]
-enum DelayedLiteralSets<C: Context> {
+#[derive(Debug)]
+struct DelayedLiteralSets<C: Context>(InnerDelayedLiteralSets<C>);
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum InnerDelayedLiteralSets<C: Context> {
     /// Corresponds to a single, empty set.
     None,
 
     /// Some (non-zero) number of non-empty sets.
-    Some(FxHashSet<DelayedLiteralSet<C>>),
+    /// Must be a set of sets, but HashSets are not Hash so we manually ensure uniqueness.
+    Some(Vec<DelayedLiteralSet<C>>),
 }
 
-/// A set of delayed literals. The vector in this struct must
-/// be sorted, ensuring that we don't have to worry about permutations.
+/// A set of delayed literals.
 ///
 /// (One might expect delayed literals to always be ground, since
 /// non-ground negative literals result in flounded
@@ -162,7 +165,7 @@ enum DelayedLiteralSets<C: Context> {
 /// and so forth. Therefore, we store canonicalized goals.)
 #[derive(Clone, Debug, Default)]
 struct DelayedLiteralSet<C: Context> {
-    delayed_literals: Vec<DelayedLiteral<C>>,
+    delayed_literals: FxHashSet<DelayedLiteral<C>>,
 }
 
 #[derive(Clone, Debug)]
@@ -229,10 +232,36 @@ struct Minimums {
 }
 
 impl<C: Context> DelayedLiteralSets<C> {
-    fn is_empty(&self) -> bool {
-        match *self {
-            DelayedLiteralSets::None => true,
-            DelayedLiteralSets::Some(_) => false,
+    fn singleton(set: DelayedLiteralSet<C>) -> Self {
+        if set.is_empty() {
+            DelayedLiteralSets(InnerDelayedLiteralSets::None)
+        } else {
+            DelayedLiteralSets(InnerDelayedLiteralSets::Some(vec![set]))
+        }
+    }
+
+    /// Inserts the set if it is minimal in the family.
+    /// Returns true iff the set was inserted.
+    fn insert_if_minimal(&mut self, set: &DelayedLiteralSet<C>) -> bool {
+        match self.0 {
+            // The empty set is always minimal.
+            InnerDelayedLiteralSets::None => false,
+            // Are we inserting an empty set?
+            InnerDelayedLiteralSets::Some(_) if set.is_empty() => {
+                self.0 = InnerDelayedLiteralSets::None;
+                true
+            }
+            InnerDelayedLiteralSets::Some(ref mut sets) => {
+                // Look for a subset.
+                if sets.iter().any(|set| set.is_subset(&set)) {
+                    false
+                } else {
+                    // No subset therefore `set` is minimal, discard supersets and insert.
+                    sets.retain(|set| !set.is_subset(set));
+                    sets.push(set.clone());
+                    true
+                }
+            }
         }
     }
 }
@@ -245,7 +274,7 @@ impl<C: Context> DelayedLiteralSet<C> {
     fn is_subset(&self, other: &DelayedLiteralSet<C>) -> bool {
         self.delayed_literals
             .iter()
-            .all(|elem| other.delayed_literals.binary_search(elem).is_ok())
+            .all(|elem| other.delayed_literals.contains(elem))
     }
 }
 

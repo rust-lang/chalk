@@ -19,7 +19,7 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self>
     /// combined with region constraints. See [the rustc-guide] for more information.
     ///
     /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html#canonicalizing-the-query-result
-    type CanonicalConstrainedSubst: Clone + Debug + Eq + Hash + Ord;
+    type CanonicalConstrainedSubst: Clone + Debug + Eq + Hash;
 
     /// Extracted from a canonicalized substitution or canonicalized ex clause, this is the type of
     /// substitution that is fully normalized with respect to inference variables.

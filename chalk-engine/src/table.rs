@@ -5,7 +5,6 @@ use fxhash::FxHashMap;
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::mem;
-use std::iter;
 
 crate struct Table<C: Context> {
     /// The goal this table is trying to solve (also the key to look
@@ -92,65 +91,25 @@ impl<C: Context> Table<C> {
             self.answers_hash.get(&answer.subst)
         );
 
-        if answer.delayed_literals.is_empty() {
-            match self.answers_hash.entry(answer.subst.clone()) {
-                Entry::Vacant(entry) => {
-                    entry.insert(DelayedLiteralSets::None);
-                }
-
-                Entry::Occupied(mut entry) => {
-                    if entry.get().is_empty() {
-                        return false;
-                    }
-
-                    entry.insert(DelayedLiteralSets::None);
-                }
-            }
-
-            info!(
-                "new answer to table with goal {:?}: answer={:?}",
-                self.table_goal, answer,
-            );
-            self.answers.push(answer);
-            return true;
-        }
-
-        match self.answers_hash.entry(answer.subst.clone()) {
+        let added = match self.answers_hash.entry(answer.subst.clone()) {
             Entry::Vacant(entry) => {
-                entry.insert(DelayedLiteralSets::Some(
-                    iter::once(answer.delayed_literals.clone()).collect(),
-                ));
+                entry.insert(DelayedLiteralSets::singleton(answer.delayed_literals.clone()));
+                true
             }
 
             Entry::Occupied(mut entry) => {
-                match entry.get_mut() {
-                    DelayedLiteralSets::None => {
-                        return false;
-                    }
-
-                    DelayedLiteralSets::Some(sets) => {
-                        // look for an older answer that is better than this one
-                        if sets.iter()
-                            .any(|set| set.is_subset(&answer.delayed_literals))
-                        {
-                            return false;
-                        }
-
-                        // discard older answers where this new answer is better
-                        sets.retain(|set| !answer.delayed_literals.is_subset(set));
-
-                        sets.insert(answer.delayed_literals.clone());
-                    }
-                }
+                entry.get_mut().insert_if_minimal(&answer.delayed_literals)
             }
-        }
+        };
 
         info!(
             "new answer to table with goal {:?}: answer={:?}",
             self.table_goal, answer,
         );
-        self.answers.push(answer);
-        true
+        if added {
+            self.answers.push(answer);
+        }
+        added
     }
 
     pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer<C>> {

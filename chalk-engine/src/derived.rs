@@ -2,7 +2,7 @@
 // because the `#[derive()]` would add requirements onto the context
 // object that are not needed.
 
-use std::cmp::{Ordering, PartialEq, Eq, PartialOrd, Ord};
+use std::cmp::{PartialEq, Eq};
 use std::hash::{Hash, Hasher};
 use std::mem;
 use super::*;
@@ -16,27 +16,6 @@ impl<C: Context> PartialEq for DelayedLiteralSet<C> {
 }
 
 impl<C: Context> Eq for DelayedLiteralSet<C> {
-}
-
-impl<C: Context> PartialOrd for DelayedLiteralSet<C> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<C: Context> Ord for DelayedLiteralSet<C> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let DelayedLiteralSet { delayed_literals: a1 } = self;
-        let DelayedLiteralSet { delayed_literals: a2 } = other;
-        a1.cmp(a2)
-    }
-}
-
-impl<C: Context> Hash for DelayedLiteralSet<C> {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        let DelayedLiteralSet { delayed_literals } = self;
-        delayed_literals.hash(hasher);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -63,39 +42,6 @@ impl<C: Context> PartialEq for DelayedLiteral<C> {
 }
 
 impl<C: Context> Eq for DelayedLiteral<C> {
-}
-
-impl<C: Context> PartialOrd for DelayedLiteral<C> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<C: Context> Ord for DelayedLiteral<C> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (DelayedLiteral::CannotProve(()), DelayedLiteral::CannotProve(())) =>
-                Ordering::Equal,
-
-            (DelayedLiteral::CannotProve(()), _) =>
-                Ordering::Greater,
-
-            (_, DelayedLiteral::CannotProve(())) =>
-                Ordering::Less,
-
-            (DelayedLiteral::Negative(a1), DelayedLiteral::Negative(a2)) =>
-                a1.cmp(a2),
-
-            (DelayedLiteral::Negative(..), _) =>
-                Ordering::Greater,
-
-            (_, DelayedLiteral::Negative(..)) =>
-                Ordering::Less,
-
-            (DelayedLiteral::Positive(a1, b1), DelayedLiteral::Positive(a2, b2)) =>
-                a1.cmp(a2).then_with(|| b1.cmp(b2)),
-        }
-    }
 }
 
 impl<C: Context> Hash for DelayedLiteral<C> {
