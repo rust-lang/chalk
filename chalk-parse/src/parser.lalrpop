@@ -72,7 +72,7 @@ TraitDefn: TraitDefn = {
 };
 
 AssocTyDefn: AssocTyDefn = {
-    "type" <name:Id> <p:Angle<ParameterKind>> <b:(":" <Plus<TraitBound>>)?>
+    "type" <name:Id> <p:Angle<ParameterKind>> <b:(":" <Plus<InlineBound>>)?>
         <w:QuantifiedWhereClauses> ";" =>
     {
         AssocTyDefn {
@@ -84,8 +84,13 @@ AssocTyDefn: AssocTyDefn = {
     }
 };
 
+InlineBound: InlineBound = {
+    TraitBound => InlineBound::TraitBound(<>),
+    ProjectionEqBound => InlineBound::ProjectionEqBound(<>),
+};
+
 TraitBound: TraitBound = {
-    <t:Id> <a:Angle<TraitBoundParameter>> => {
+    <t:Id> <a:Angle<Parameter>> => {
         TraitBound {
             trait_name: t,
             args_no_self: a,
@@ -93,16 +98,18 @@ TraitBound: TraitBound = {
     }
 };
 
-TraitBoundParameter: TraitBoundParameter = {
-    Ty => TraitBoundParameter::Ty(<>),
-    Lifetime => TraitBoundParameter::Lifetime(<>),
-    ProjectionEqBound => TraitBoundParameter::ProjectionEq(<>),
-};
-
 ProjectionEqBound: ProjectionEqBound = {
-    <name:Id> <parameters:Angle<Parameter>> "=" <value:Ty> => ProjectionEqBound {
-        name, parameters, value
-    },
+    <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
+        "=" <ty:Ty> ">" => ProjectionEqBound
+    {
+        trait_bound: TraitBound {
+            trait_name: t,
+            args_no_self: a.unwrap_or(vec![]),
+        },
+        name,
+        parameters: a2,
+        value: ty,
+    }
 };
 
 Impl: Impl = {

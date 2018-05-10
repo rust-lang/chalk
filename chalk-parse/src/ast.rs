@@ -54,7 +54,7 @@ pub struct TraitFlags {
 pub struct AssocTyDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
-    pub bounds: Vec<TraitBound>,
+    pub bounds: Vec<InlineBound>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
@@ -68,20 +68,23 @@ pub enum Parameter {
     Lifetime(Lifetime),
 }
 
+/// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
+pub enum InlineBound {
+    TraitBound(TraitBound),
+    ProjectionEqBound(ProjectionEqBound),
+}
+
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 pub struct TraitBound {
     pub trait_name: Identifier,
-    pub args_no_self: Vec<TraitBoundParameter>,
+    pub args_no_self: Vec<Parameter>,
 }
 
-pub enum TraitBoundParameter {
-    Ty(Ty),
-    Lifetime(Lifetime),
-    ProjectionEq(ProjectionEqBound),
-}
-
+/// Represents a projection equality bound on e.g. a type or type parameter.
+/// Does not know anything about what it's binding.
 pub struct ProjectionEqBound {
+    pub trait_bound: TraitBound,
     pub name: Identifier,
     pub parameters: Vec<Parameter>,
     pub value: Ty,

@@ -305,9 +305,8 @@ fn check_parameter_kinds() {
 
 #[test]
 fn gat_parse() {
-    let program = Arc::new(
-        parse_and_lower_program(
-            "
+    lowering_success! {
+        program {
             trait Sized {}
 
             trait Foo {
@@ -323,17 +322,51 @@ fn gat_parse() {
             }
 
             trait Baz {
-                type Item<'a, 'b, T>: Foo<Item<'b, T> = Containter<T>> + Clone;
+                type Item<'a, 'b, T>: Foo<Item<'b, T> = Container<T>> + Clone;
             }
 
             trait Quux {
                 type Item<'a, T>;
             }
-            ",
-            SolverChoice::slg()
-        ).unwrap()
-    );
-    tls::set_current_program(&program, || {
-        println!("{:#?}", program.associated_ty_data.values());
-    });
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Sized { }
+
+            trait Foo {
+                type Item where K: Sized;
+            }
+        }
+
+        error_msg {
+            "invalid type name `K`"
+        }
+    }
+}
+
+#[test]
+fn duplicate_parameters() {
+    lowering_error! {
+        program {
+            trait Foo<T, T> { }
+        }
+
+        error_msg {
+            "duplicate parameters"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Foo<T> {
+                type Item<T>;
+            }
+        }
+
+        error_msg {
+            "duplicate parameters"
+        }
+    }
 }
