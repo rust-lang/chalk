@@ -200,10 +200,7 @@ impl ir::AssociatedTyValue {
             .trait_ref
             .trait_ref()
             .up_shift(self.value.len());
-        let conditions: Vec<ir::Goal> = Some(impl_trait_ref.clone().cast())
-            .into_iter()
-            .chain(self.value.value.where_clauses.clone().cast())
-            .collect();
+        let conditions: Vec<ir::Goal> = vec![impl_trait_ref.clone().cast()];
 
         // Bound parameters + `Self` type of the trait-ref
         let parameters: Vec<_> = {

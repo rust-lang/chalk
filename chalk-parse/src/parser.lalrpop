@@ -72,9 +72,43 @@ TraitDefn: TraitDefn = {
 };
 
 AssocTyDefn: AssocTyDefn = {
-    "type" <name:Id> <p:Angle<ParameterKind>> ";" => AssocTyDefn {
-        name: name,
-        parameter_kinds: p
+    "type" <name:Id> <p:Angle<ParameterKind>> <b:(":" <Plus<InlineBound>>)?>
+        <w:QuantifiedWhereClauses> ";" =>
+    {
+        AssocTyDefn {
+            name: name,
+            parameter_kinds: p,
+            where_clauses: w,
+            bounds: b.unwrap_or(vec![]),
+        }
+    }
+};
+
+InlineBound: InlineBound = {
+    TraitBound => InlineBound::TraitBound(<>),
+    ProjectionEqBound => InlineBound::ProjectionEqBound(<>),
+};
+
+TraitBound: TraitBound = {
+    <t:Id> <a:Angle<Parameter>> => {
+        TraitBound {
+            trait_name: t,
+            args_no_self: a,
+        }
+    }
+};
+
+ProjectionEqBound: ProjectionEqBound = {
+    <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
+        "=" <ty:Ty> ">" => ProjectionEqBound
+    {
+        trait_bound: TraitBound {
+            trait_name: t,
+            args_no_self: a.unwrap_or(vec![]),
+        },
+        name,
+        parameters: a2,
+        value: ty,
     }
 };
 
@@ -102,11 +136,10 @@ ParameterKind: ParameterKind = {
 };
 
 AssocTyValue: AssocTyValue = {
-    "type" <n:Id> <a:Angle<ParameterKind>> <wc:WhereClauses> "=" <v:Ty> ";" => AssocTyValue {
+    "type" <n:Id> <a:Angle<ParameterKind>> "=" <v:Ty> ";" => AssocTyValue {
         name: n,
         parameter_kinds: a,
         value: v,
-        where_clauses: wc,
     },
 };
 
@@ -201,11 +234,6 @@ InlineClause: Clause = {
     }
 };
 
-WhereClauses: Vec<WhereClause> = {
-    "where" <Comma<WhereClause>>,
-    () => vec![],
-};
-
 QuantifiedWhereClauses: Vec<QuantifiedWhereClause> = {
     "where" <Comma<QuantifiedWhereClause>>,
     () => vec![],
@@ -288,6 +316,11 @@ Comma<T>: Vec<T> = {
 #[inline]
 SemiColon<T>: Vec<T> = {
     <Separator<";", T>>
+};
+
+#[inline]
+Plus<T>: Vec<T> = {
+    <Separator<"+", T>>
 };
 
 Angle<T>: Vec<T> = {

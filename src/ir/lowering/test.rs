@@ -211,8 +211,7 @@ fn atc_accounting() {
             AssociatedTyValue {
                 associated_ty_id: (Iterable::Iter),
                 value: for<lifetime> AssociatedTyValueBound {
-                    ty: Iter<'?0, ?1>,
-                    where_clauses: []
+                    ty: Iter<'?0, ?1>
                 }
             }
         ],
@@ -300,6 +299,74 @@ fn check_parameter_kinds() {
         }
         error_msg {
             "incorrect kind for trait parameter: expected lifetime, found type"
+        }
+    }
+}
+
+#[test]
+fn gat_parse() {
+    lowering_success! {
+        program {
+            trait Sized {}
+
+            trait Foo {
+                type Item<'a, T>: Sized + Clone where Self: Sized;
+            }
+
+            trait Bar {
+                type Item<'a, T> where Self: Sized;
+            }
+
+            struct Container<T> {
+                value: T
+            }
+
+            trait Baz {
+                type Item<'a, 'b, T>: Foo<Item<'b, T> = Container<T>> + Clone;
+            }
+
+            trait Quux {
+                type Item<'a, T>;
+            }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Sized { }
+
+            trait Foo {
+                type Item where K: Sized;
+            }
+        }
+
+        error_msg {
+            "invalid type name `K`"
+        }
+    }
+}
+
+#[test]
+fn duplicate_parameters() {
+    lowering_error! {
+        program {
+            trait Foo<T, T> { }
+        }
+
+        error_msg {
+            "duplicate parameters"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Foo<T> {
+                type Item<T>;
+            }
+        }
+
+        error_msg {
+            "duplicate parameters"
         }
     }
 }

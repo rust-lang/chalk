@@ -273,8 +273,10 @@ pub struct AssociatedTyDatum {
     /// but possibly including more.
     crate parameter_kinds: Vec<ParameterKind<Identifier>>,
 
+    // FIXME: inline bounds on the associated ty need to be implemented
+
     /// Where clauses that must hold for the projection be well-formed.
-    crate where_clauses: Vec<DomainGoal>,
+    crate where_clauses: Vec<QuantifiedDomainGoal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -289,10 +291,6 @@ pub struct AssociatedTyValue {
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     crate ty: Ty,
-
-    /// Where-clauses that must hold for projection to be valid. The
-    /// WC in `type Foo<'a> = X where WC`.
-    crate where_clauses: Vec<DomainGoal>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

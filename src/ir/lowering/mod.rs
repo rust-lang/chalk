@@ -71,7 +71,7 @@ impl<'k> Env<'k> {
     /// Introduces new parameters, shifting the indices of existing
     /// parameters to accommodate them. The indices of the new binders
     /// will be assigned in order as they are iterated.
-    fn introduce<I>(&self, binders: I) -> Self
+    fn introduce<I>(&self, binders: I) -> Result<Self>
     where
         I: IntoIterator<Item = ir::ParameterKind<ir::Identifier>>,
         I::IntoIter: ExactSizeIterator,
@@ -83,10 +83,13 @@ impl<'k> Env<'k> {
             .map(|(&k, &v)| (k, v + len))
             .chain(binders)
             .collect();
-        Env {
+        if parameter_map.len() != self.parameter_map.len() + len {
+            bail!("duplicate parameters");
+        }
+        Ok(Env {
             parameter_map,
             ..*self
-        }
+        })
     }
 
     fn in_binders<I, T, OP>(&self, binders: I, op: OP) -> Result<ir::Binders<T>>
@@ -96,7 +99,7 @@ impl<'k> Env<'k> {
         OP: FnOnce(&Self) -> Result<T>,
     {
         let binders: Vec<_> = binders.into_iter().collect();
-        let env = self.introduce(binders.iter().cloned());
+        let env = self.introduce(binders.iter().cloned())?;
         Ok(ir::Binders {
             binders: binders.anonymize(),
             value: op(&env)?,
@@ -179,6 +182,7 @@ impl LowerProgram for Program {
 
                         let mut parameter_kinds = defn.all_parameters();
                         parameter_kinds.extend(d.all_parameters());
+                        let env = empty_env.introduce(parameter_kinds.clone())?;
 
                         associated_ty_data.insert(
                             info.id,
@@ -187,7 +191,7 @@ impl LowerProgram for Program {
                                 id: info.id,
                                 name: defn.name.str,
                                 parameter_kinds: parameter_kinds,
-                                where_clauses: vec![],
+                                where_clauses: defn.where_clauses.lower(&env)?,
                             },
                         );
                     }
@@ -764,7 +768,7 @@ impl LowerTy for Ty {
                     lifetime_names
                         .iter()
                         .map(|id| ir::ParameterKind::Lifetime(id.str)),
-                );
+                )?;
 
                 let ty = ty.lower(&quantified_env)?;
                 let quantified_ty = ir::QuantifiedTy {
@@ -890,7 +894,6 @@ impl LowerAssocTyValue for AssocTyValue {
         let value = env.in_binders(self.all_parameters(), |env| {
             Ok(ir::AssociatedTyValueBound {
                 ty: self.value.lower(env)?,
-                where_clauses: self.where_clauses.lower(env)?,
             })
         })?;
         Ok(ir::AssociatedTyValue {
