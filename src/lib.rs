@@ -8,6 +8,7 @@
 #![feature(macro_vis_matcher)]
 #![feature(specialization)]
 #![feature(step_trait)]
+#![feature(non_modrs_mods)]
 
 extern crate chalk_parse;
 #[macro_use]

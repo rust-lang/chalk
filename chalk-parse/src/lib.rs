@@ -1,3 +1,5 @@
+#![feature(non_modrs_mods)]
+
 #![recursion_limit = "1024"]
 
 #[macro_use]
@@ -55,4 +57,3 @@ pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
         }
     }
 }
-
