@@ -217,7 +217,7 @@ fn projection_type_in_header() {
 
             // Projection types in an impl header are not assumed to be well-formed,
             // an explicit where clause is needed (see below).
-            impl<T> Bar for <T as Foo>::Value { }
+            impl<T> Bar for T where <T as Foo>::Value: Bar { }
         } error_msg {
             "trait impl for \"Bar\" does not meet well-formedness requirements"
         }
@@ -231,7 +231,125 @@ fn projection_type_in_header() {
 
             trait Bar { }
 
-            impl<T> Bar for <T as Foo>::Value where T: Foo { }
+            impl<T> Bar for T where T: Foo, <T as Foo>::Value: Bar { }
+        }
+    }
+}
+
+#[test]
+fn bound_in_header_from_env() {
+    lowering_success! {
+        program {
+            trait Foo { }
+
+            trait Bar {
+                type Item: Foo;
+            }
+
+            struct Stuff<T> { }
+
+            impl<T> Bar for Stuff<T> where T: Foo {
+                // Should have FromEnv(T: Foo) here.
+                type Item = T;
+            }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Foo { }
+            trait Baz { }
+
+            trait Bar {
+                type Item: Baz;
+            }
+
+            struct Stuff<T> { }
+
+            impl<T> Bar for Stuff<T> where T: Foo {
+                // No T: Baz here.
+                type Item = T;
+            }
+        } error_msg {
+            "trait impl for \"Bar\" does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn generic_projection_where_clause() {
+    lowering_success! {
+        program {
+            trait PointerFamily { type Pointer<T>; }
+
+            struct Cow<T> { }
+            struct CowFamily { }
+            impl PointerFamily for CowFamily { type Pointer<T> = Cow<T>; }
+
+            struct String { }
+            struct Foo<P> where P: PointerFamily {
+                bar: <P as PointerFamily>::Pointer<String>
+            }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Copy { }
+            trait PointerFamily { type Pointer<T> where T: Copy; }
+
+            struct Cow<T> { }
+            struct CowFamily { }
+            impl PointerFamily for CowFamily { type Pointer<T> = Cow<T>; }
+
+            struct String { }
+            struct Foo<P> where P: PointerFamily {
+                // No impl Copy for String, so this will fail.
+                bar: <P as PointerFamily>::Pointer<String>
+            }
+        } error_msg {
+            "type declaration \"Foo\" does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn generic_projection_bound() {
+    lowering_success! {
+        program {
+            trait Clone { }
+            trait PointerFamily { type Pointer<T>: Clone where T: Clone; }
+
+            struct Cow<T> { }
+            impl<T> Clone for Cow<T> where T: Clone { }
+
+            struct CowFamily { }
+
+            // impl is WF due because of:
+            // - `where T: Clone` clause on PointerFamily::Pointer<T>
+            // - impl<T> Clone for Cow<T> where T: Clone
+            impl PointerFamily for CowFamily { type Pointer<T> = Cow<T>; }
+
+            struct String { }
+            impl Clone for String { }
+            struct Foo<P> where P: PointerFamily {
+                bar: <P as PointerFamily>::Pointer<String>
+            }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Clone { }
+            trait PointerFamily { type Pointer<T>: Clone where T: Clone; }
+
+            struct Cow<T> { }
+            struct CowFamily { }
+
+            // No impl Clone for Cow<T>, so this will fail.
+            impl PointerFamily for CowFamily { type Pointer<T> = Cow<T>; }
+        } error_msg {
+            "trait impl for \"PointerFamily\" does not meet well-formedness requirements"
         }
     }
 }

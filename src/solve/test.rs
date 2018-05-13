@@ -547,6 +547,129 @@ fn normalize_basic() {
 }
 
 #[test]
+fn normalize_gat1() {
+    test! {
+        program {
+            struct Vec<T> { }
+
+            trait Iterable {
+                type Iter<'a>;
+            }
+
+            impl<T> Iterable for Vec<T> {
+                type Iter<'a> = Iter<'a, T>;
+            }
+
+            trait Iterator {
+                type Item;
+            }
+
+            struct Iter<'a, T> { }
+            struct Ref<'a, T> { }
+
+            impl<'a, T> Iterator for Iter<'a, T> {
+                type Item = Ref<'a, T>;
+            }
+        }
+
+        goal {
+            forall<T> {
+                forall<'a> {
+                    exists<U> {
+                        Normalize(<Vec<T> as Iterable>::Iter<'a> -> U)
+                    }
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := Iter<'!2, !1>], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn normalize_gat2() {
+    test! {
+        program {
+            trait StreamingIterator<T> { type Item<'a>; }
+            struct Span<'a, T> { }
+            struct StreamIterMut<T> { }
+            struct u32 { }
+            impl<T> StreamingIterator<T> for StreamIterMut<T> {
+                type Item<'a> = Span<'a, T>;
+            }
+        }
+
+        goal {
+            forall<'a, T> {
+                exists<U> {
+                    Normalize(<StreamIterMut<T> as StreamingIterator<T>>::Item<'a> -> U)
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := Span<'!1, !2>], lifetime constraints []"
+        }
+
+        goal {
+            forall<'a, T> {
+                <StreamIterMut<T> as StreamingIterator<T>>::Item<'a> = Span<'a, T>
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<'a, T, U> {
+                if (T: StreamingIterator<U, Item<'a> = Span<'a, U>>) {
+                    <T as StreamingIterator<U>>::Item<'a> = Span<'a, U>
+                }
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn normalize_gat_with_where_clause() {
+    test! {
+        program {
+            trait Sized { }
+            trait Foo {
+                type Item<T> where T: Sized;
+            }
+
+            struct Value<T> { }
+            struct Sometype { }
+            impl Foo for Sometype {
+                type Item<T> = Value<T>;
+            }
+        }
+
+        goal {
+            forall<T> {
+                exists<U> {
+                    Normalize(<Sometype as Foo>::Item<T> -> U)
+                }
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T> {
+                exists<U> {
+                    if (T: Sized) {
+                        Normalize(<Sometype as Foo>::Item<T> -> U)
+                    }
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := Value<!1>]"
+        }
+    }
+}
+
+#[test]
 fn normalize_implied_bound() {
     test! {
         program {
@@ -563,6 +686,46 @@ fn normalize_implied_bound() {
             }
         } yields {
             "Unique; substitution []"
+        }
+    }
+}
+
+#[test]
+fn normalize_implied_bound_gat() {
+    test! {
+        program {
+            trait Clone { }
+            trait Foo { type Item<T>: Clone; }
+            struct u32 { }
+        }
+
+        goal {
+            forall<T, U, V> {
+                if (T: Foo<Item<U> = V>) {
+                    V: Clone
+                }
+            }
+        } yields {
+            "Unique; substitution []"
+        }
+    }
+
+    test! {
+        program {
+            trait Clone { }
+            trait Foo { type Item<T>; }
+            struct u32 { }
+        }
+
+        goal {
+            forall<T, U, V> {
+                if (T: Foo<Item<U> = V>) {
+                    // Without the bound Item<T>: Clone, there is no way to infer this.
+                    V: Clone
+                }
+            }
+        } yields {
+            "No possible solution"
         }
     }
 }
@@ -586,6 +749,31 @@ fn normalize_rev_infer() {
             }
         } yields {
             "Unique; substitution [?0 := u32]"
+        }
+    }
+}
+
+/// Demonstrates that, given the expected value of the associated
+/// type, we can use that to narrow down the relevant impls.
+#[test]
+fn normalize_rev_infer_gat() {
+    test! {
+        program {
+            trait Combine { type Item<T>; }
+            struct u32 { }
+            struct i32 { }
+            struct Either<T, U> { }
+            impl Combine for u32 { type Item<U> = Either<u32, U>; }
+            impl Combine for i32 { type Item<U> = Either<i32, U>; }
+        }
+
+        goal {
+            exists<T, U> {
+                T: Combine<Item<U> = Either<u32, i32>>
+            }
+        } yields {
+            // T is ?1 and U is ?0, so this is surprising, but correct! (See #126.)
+            "Unique; substitution [?0 := i32, ?1 := u32]"
         }
     }
 }
@@ -689,42 +877,58 @@ fn forall_projection() {
     }
 }
 
+/// Demonstrates that, given the expected value of the associated
+/// type, we can use that to narrow down the relevant impls.
 #[test]
-fn atc1() {
+fn forall_projection_gat() {
     test! {
         program {
-            struct Vec<T> { }
+            trait Eq<T> { }
+            impl<T> Eq<T> for T { }
 
-            trait Iterable {
-                type Iter<'a>;
-            }
+            trait Sized { }
 
-            impl<T> Iterable for Vec<T> {
-                type Iter<'a> = Iter<'a, T>;
-            }
+            trait DropOuter<'a> { type Item<U> where U: Sized; }
+            impl<'a, T> DropOuter<'a> for T { type Item<U> = T; }
 
-            trait Iterator {
-                type Item;
-            }
-
-            struct Iter<'a, T> { }
+            struct Unit { }
             struct Ref<'a, T> { }
-
-            impl<'a, T> Iterator for Iter<'a, T> {
-                type Item = Ref<'a, T>;
-            }
         }
 
         goal {
             forall<T> {
-                forall<'a> {
-                    exists<U> {
-                        Normalize(<Vec<T> as Iterable>::Iter<'a> -> U)
-                    }
+                for<'a> <Unit as DropOuter<'a>>::Item<T>: Eq<Unit>
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Sized) {
+                    for<'a> <Unit as DropOuter<'a>>::Item<T>: Eq<Unit>
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Iter<'!2, !1>], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<'a, T> {
+                WellFormed(<Unit as DropOuter<'a>>::Item<T>)
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Sized) {
+                    WellFormed(for<'a> <Unit as DropOuter<'a>>::Item<T>: Eq<Unit>)
+                }
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
@@ -1016,6 +1220,34 @@ fn mixed_indices_normalize_application() {
             }
         } yields {
             "Unique; for<?U0,?U0> { substitution [?0 := '?0, ?1 := ?1, ?2 := ?1], "
+        }
+    }
+}
+
+#[test]
+fn mixed_indices_normalize_gat_application() {
+    test! {
+        program {
+            struct Either<T, U> { }
+            struct Ref<'a, T> { }
+            trait Foo {
+                type T<X>;
+            }
+
+            impl<U, 'a> Foo for Ref<'a, U> {
+                type T<X> = Either<X, U>;
+            }
+        }
+
+        goal {
+            exists<T, 'a, U, Y, X> {
+                Normalize(<Ref<'a, T> as Foo>::T<X> -> Either<U, Y>)
+            }
+        } yields {
+            // Our GAT parameter <X> is mapped to ?0; all others appear left to right
+            // in our Normalize(...) goal.
+            "Unique; for<?U0,?U0,?U0> { \
+                substitution [?0 := ?0, ?1 := '?1, ?2 := ?2, ?3 := ?0, ?4 := ?2], "
         }
     }
 }
@@ -1766,7 +1998,7 @@ fn unselected_projection() {
 }
 
 #[test]
-fn unselected_projection_with_atc() {
+fn unselected_projection_with_gat() {
     test! {
         program {
             trait Foo {
@@ -1780,10 +2012,21 @@ fn unselected_projection_with_atc() {
                 type Item<'a> = Ref<'a, i32>;
             }
         }
+
         goal {
             forall<'a> {
                 if (InScope(Foo)) {
                     i32::Item<'a> = Ref<'a, i32>
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<'a> {
+                if (InScope(Foo)) {
+                    WellFormed(i32::Item<'a>)
                 }
             }
         } yields {
@@ -1873,6 +2116,47 @@ fn projection_from_env() {
             }
         } yields {
             "Unique"
+        }
+    }
+}
+
+#[test]
+fn gat_unify_with_implied_wc() {
+    test! {
+        program {
+            struct Slice<T> { }
+
+            trait Cast<T> { }
+            trait CastingIter<T> {
+                type Item<U>: Cast<U> where T: Cast<U>;
+            }
+
+            impl<T> CastingIter<T> for Slice<T> {
+                type Item<U> = Castable<T, U>;
+            }
+
+            struct Castable<T, U> { }
+            impl<T, U> Cast<U> for Castable<T, U> { }
+        }
+
+        goal {
+            forall<T, U, V> {
+                if (
+                    FromEnv(<Slice<T> as CastingIter<T>>::Item<U>)
+                ) {
+                    T: Cast<U>
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T, U, V> {
+                T: Cast<U>
+            }
+        } yields {
+            "No possible solution"
         }
     }
 }

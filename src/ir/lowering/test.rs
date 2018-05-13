@@ -315,6 +315,7 @@ fn gat_parse() {
     lowering_success! {
         program {
             trait Sized {}
+            trait Clone {}
 
             trait Foo {
                 type Item<'a, T>: Sized + Clone where Self: Sized;
