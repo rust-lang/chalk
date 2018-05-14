@@ -7,7 +7,9 @@ use std::hash::Hash;
 crate mod prelude;
 
 /// The "context" in which the SLG solver operates.
-pub trait Context: Sized + Clone + Debug + ContextOps<Self> {
+// FIXME(leodasvacas): Clone and Debug bounds are just for easy derive,
+//                     they are not actually necessary.
+pub trait Context: Clone + Debug {
     type CanonicalExClause: Debug;
 
     /// A map between universes. These are produced when
