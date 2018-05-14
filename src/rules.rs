@@ -1,6 +1,7 @@
 use cast::{Cast, Caster};
 use fold::shift::Shift;
 use ir::{self, ToParameter};
+use std::iter;
 
 mod default;
 mod wf;
@@ -181,12 +182,14 @@ impl ir::AssociatedTyValue {
         program: &ir::Program,
         impl_datum: &ir::ImplDatum,
     ) -> Vec<ir::ProgramClause> {
+        let associated_ty = &program.associated_ty_data[&self.associated_ty_id];
+
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
         let all_binders: Vec<_> = self.value
             .binders
             .iter()
+            .chain(impl_datum.binders.binders.iter())
             .cloned()
-            .chain(impl_datum.binders.binders.iter().cloned())
             .collect();
 
         // Assemble the full list of conditions for projection to be valid.
@@ -200,7 +203,9 @@ impl ir::AssociatedTyValue {
             .trait_ref
             .trait_ref()
             .up_shift(self.value.len());
-        let conditions: Vec<ir::Goal> = vec![impl_trait_ref.clone().cast()];
+        let conditions: Vec<ir::Goal> =
+            iter::once(impl_trait_ref.clone().cast())
+                .chain(associated_ty.where_clauses.iter().cloned().casted()).collect();
 
         // Bound parameters + `Self` type of the trait-ref
         let parameters: Vec<_> = {
@@ -233,14 +238,12 @@ impl ir::AssociatedTyValue {
             binders: all_binders.clone(),
             value: ir::ProgramClauseImplication {
                 consequence: normalize_goal.clone(),
-                conditions: conditions.clone(),
+                conditions: conditions,
             },
         }.cast();
 
         let unselected_projection = ir::UnselectedProjectionTy {
-            type_name: program.associated_ty_data[&self.associated_ty_id]
-                .name
-                .clone(),
+            type_name: associated_ty.name.clone(),
             parameters: parameters,
         };
 
@@ -410,23 +413,22 @@ impl ir::AssociatedTyDatum {
         // equality" rules. There are always two; one for a successful normalization,
         // and one for the "fallback" notion of equality.
         //
-        // Given:
+        // Given: (here, `'a` and `T` represent zero or more parameters)
         //
         //    trait Foo {
-        //        type Assoc;
+        //        type Assoc<'a, T>: Bounds where WC;
         //    }
         //
         // we generate the 'fallback' rule:
         //
-        //    forall<T> {
-        //        ProjectionEq(<T as Foo>::Assoc = (Foo::Assoc)<T>) :-
-        //            T: Foo
+        //    forall<Self, 'a, T> {
+        //        ProjectionEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
         //    }
         //
         // and
         //
-        //    forall<T> {
-        //        ProjectionEq(<T as Foo>::Assoc = U) :-
+        //    forall<Self, 'a, T, U> {
+        //        ProjectionEq(<T as Foo>::Assoc<'a, T> = U) :-
         //            Normalize(<T as Foo>::Assoc -> U)
         //    }
         //
@@ -473,36 +475,75 @@ impl ir::AssociatedTyDatum {
         };
         let app_ty = ir::Ty::Apply(app);
 
+        let projection_eq = ir::ProjectionEq {
+            projection: projection.clone(),
+            ty: app_ty.clone(),
+        };
+
         let mut clauses = vec![];
 
-        //    forall<T> {
-        //        ProjectionEq(<T as Foo>::Assoc = (Foo::Assoc)<T>) :-
-        //            T: Foo
-        //    }
-        clauses.push(ir::Binders {
-            binders: binders.clone(),
-            value: ir::ProgramClauseImplication {
-                consequence: ir::ProjectionEq {
-                    projection: projection.clone(),
-                    ty: app_ty.clone(),
-                }.cast(),
-                conditions: vec![trait_ref.clone().cast()],
-            },
-        }.cast());
-
-        // The above application type is always well-formed, and `<T as Foo>::Assoc` will
-        // unify with `(Foo::Assoc)<T>` only if `T: Foo`, because of the above rule, so we have:
+        // Fallback rule. The solver uses this to move between the projection
+        // and skolemized type.
         //
-        //    forall<T> {
-        //        WellFormed((Foo::Assoc)<T>).
+        //    forall<Self> {
+        //        ProjectionEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
         //    }
         clauses.push(ir::Binders {
             binders: binders.clone(),
             value: ir::ProgramClauseImplication {
-                consequence: ir::DomainGoal::WellFormedTy(app_ty).cast(),
+                consequence: projection_eq.clone().cast(),
                 conditions: vec![],
             },
         }.cast());
+
+        // Well-formedness of projection type.
+        //
+        //    forall<Self> {
+        //        WellFormed((Foo::Assoc)<Self>) :- Self: Foo, WC.
+        //    }
+        clauses.push(ir::Binders {
+            binders: binders.clone(),
+            value: ir::ProgramClauseImplication {
+                consequence: ir::DomainGoal::WellFormedTy(app_ty.clone()).cast(),
+                conditions: iter::once(trait_ref.clone().cast())
+                                .chain(self.where_clauses.iter().cloned().casted())
+                                .collect(),
+            },
+        }.cast());
+
+        // Assuming well-formedness of projection type means we can assume
+        // the trait ref as well.
+        //
+        // Currently we do not use this rule in chalk (it's used in fn bodies),
+        // but it's here for completeness.
+        //
+        //    forall<Self> {
+        //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).
+        //    }
+        clauses.push(ir::Binders {
+            binders: binders.clone(),
+            value: ir::ProgramClauseImplication {
+                consequence: ir::DomainGoal::FromEnv(trait_ref.clone().cast()),
+                conditions: vec![ir::DomainGoal::FromEnvTy(app_ty.clone()).cast()],
+            }
+        }.cast());
+
+        // Reverse rule for where clauses.
+        //
+        //    forall<Self> {
+        //        FromEnv(WC) :- FromEnv((Foo::Assoc)<Self>).
+        //    }
+        //
+        // This is really a family of clauses, one for each where clause.
+        clauses.extend(self.where_clauses.iter().map(|wc| {
+            ir::Binders {
+                binders: binders.iter().chain(wc.binders.iter()).cloned().collect(),
+                value: ir::ProgramClauseImplication {
+                    consequence: wc.value.clone().into_from_env_goal(),
+                    conditions: vec![ir::DomainGoal::FromEnvTy(app_ty.clone()).cast()],
+                }
+            }.cast()
+        }));
 
         // add new type parameter U
         let mut binders = binders;
@@ -515,9 +556,11 @@ impl ir::AssociatedTyDatum {
         // `ProjectionEq(<T as Foo>::Assoc = U)`
         let projection_eq = ir::ProjectionEq { projection: projection.clone(), ty };
 
-        //    forall<T> {
+        // Projection equality rule from above.
+        //
+        //    forall<T, U> {
         //        ProjectionEq(<T as Foo>::Assoc = U) :-
-        //            Normalize(<T as Foo>::Assoc -> U)
+        //            Normalize(<T as Foo>::Assoc -> U).
         //    }
         clauses.push(ir::Binders {
             binders: binders.clone(),
