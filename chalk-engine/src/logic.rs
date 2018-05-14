@@ -8,6 +8,7 @@ use crate::stack::StackIndex;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{Answer, AnswerIndex};
 use fxhash::FxHashSet;
+use std::marker::PhantomData;
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -78,7 +79,7 @@ enum EnsureSuccess {
     Coinductive,
 }
 
-impl<C: Context> Forest<C> {
+impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// Ensures that answer with the given index is available from the
     /// given table. This may require activating a strand. Returns
     /// `Ok(())` if the answer is available and otherwise a
@@ -263,10 +264,10 @@ impl<C: Context> Forest<C> {
     }
 
     fn with_instantiated_strand<R>(
-        context: C,
+        context: CO,
         num_universes: usize,
         canonical_strand: &CanonicalStrand<C>,
-        op: impl WithInstantiatedStrand<C, Output = R>,
+        op: impl WithInstantiatedStrand<C, CO, Output = R>,
     ) -> R {
         let CanonicalStrand {
             canonical_ex_clause,
@@ -278,15 +279,18 @@ impl<C: Context> Forest<C> {
             With {
                 op,
                 selected_subgoal: selected_subgoal.clone(),
+                ops: PhantomData,
             },
         );
 
-        struct With<C: Context, OP: WithInstantiatedStrand<C>> {
+        struct With<C: Context, CO: ContextOps<C>, OP: WithInstantiatedStrand<C, CO>> {
             op: OP,
             selected_subgoal: Option<SelectedSubgoal<C>>,
+            ops: PhantomData<CO>,
         }
 
-        impl<C: Context, OP: WithInstantiatedStrand<C>> WithInstantiatedExClause<C> for With<C, OP> {
+        impl<C: Context, CO: ContextOps<C>, OP: WithInstantiatedStrand<C, CO>> 
+            WithInstantiatedExClause<C> for With<C, CO, OP> {
             type Output = OP::Output;
 
             fn with<I: InferenceContext<C>>(
@@ -726,12 +730,13 @@ impl<C: Context> Forest<C> {
             PushInitialStrandsInstantiated { table, this: self },
         );
 
-        struct PushInitialStrandsInstantiated<'a, C: Context + 'a> {
+        struct PushInitialStrandsInstantiated<'a, C: Context + 'a, CO: ContextOps<C> + 'a> {
             table: TableIndex,
-            this: &'a mut Forest<C>,
+            this: &'a mut Forest<C, CO>,
         }
 
-        impl<C: Context> WithInstantiatedUCanonicalGoal<C> for PushInitialStrandsInstantiated<'a, C> {
+        impl<C: Context, CO: ContextOps<C>> WithInstantiatedUCanonicalGoal<C> 
+                                                for PushInitialStrandsInstantiated<'a, C, CO> {
             type Output = ();
 
             fn with<I: InferenceContext<C>>(
@@ -1301,18 +1306,18 @@ impl<C: Context> Forest<C> {
     }
 }
 
-trait WithInstantiatedStrand<C: Context> {
+trait WithInstantiatedStrand<C: Context, CO: AggregateOps<C>> {
     type Output;
 
     fn with(self, strand: Strand<'_, C, impl InferenceContext<C>>) -> Self::Output;
 }
 
-struct PursueStrand<'a, C: Context + 'a> {
-    forest: &'a mut Forest<C>,
+struct PursueStrand<'a, C: Context + 'a, CO: ContextOps<C> + 'a> {
+    forest: &'a mut Forest<C, CO>,
     depth: StackIndex,
 }
 
-impl<C: Context> WithInstantiatedStrand<C> for PursueStrand<'a, C> {
+impl<C: Context, CO: ContextOps<C>> WithInstantiatedStrand<C, CO> for PursueStrand<'a, C, CO> {
     type Output = StrandResult<C, ()>;
 
     fn with(self, strand: Strand<'_, C, impl InferenceContext<C>>) -> Self::Output {
@@ -1324,10 +1329,10 @@ struct DelayStrandAfterCycle {
     table: TableIndex,
 }
 
-impl<C: Context> WithInstantiatedStrand<C> for DelayStrandAfterCycle {
+impl<C: Context, CO: ContextOps<C>> WithInstantiatedStrand<C, CO> for DelayStrandAfterCycle {
     type Output = (CanonicalStrand<C>, TableIndex);
 
     fn with(self, strand: Strand<'_, C, impl InferenceContext<C>>) -> Self::Output {
-        <Forest<C>>::delay_strand_after_cycle(self.table, strand)
+        <Forest<C, CO>>::delay_strand_after_cycle(self.table, strand)
     }
 }
