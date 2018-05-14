@@ -1,13 +1,13 @@
 use crate::TableIndex;
 use crate::context::prelude::*;
 use crate::table::Table;
-use std::collections::HashMap;
+use fxhash::FxHashMap;
 use std::ops::{Index, IndexMut};
 
 /// See `Forest`.
 crate struct Tables<C: Context> {
     /// Maps from a canonical goal to the index of its table.
-    table_indices: HashMap<C::UCanonicalGoalInEnvironment, TableIndex>,
+    table_indices: FxHashMap<C::UCanonicalGoalInEnvironment, TableIndex>,
 
     /// Table: as described above, stores the key information for each
     /// tree in the forest.
@@ -17,7 +17,7 @@ crate struct Tables<C: Context> {
 impl<C: Context> Tables<C> {
     crate fn new() -> Tables<C> {
         Tables {
-            table_indices: HashMap::default(),
+            table_indices: FxHashMap::default(),
             tables: Vec::default(),
         }
     }

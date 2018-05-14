@@ -7,7 +7,7 @@ use crate::hh::HhGoal;
 use crate::stack::StackIndex;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{Answer, AnswerIndex};
-use std::collections::HashSet;
+use fxhash::FxHashSet;
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -111,11 +111,11 @@ impl<C: Context> Forest<C> {
     ) -> bool {
         if let Some(answer) = self.tables[table].answer(answer) {
             info!("answer cached = {:?}", answer);
-            return test(answer.subst.inference_normalized_subst());
+            return test(C::inference_normalized_subst_from_subst(&answer.subst));
         }
 
         self.tables[table].strands_mut().any(|strand| {
-            test(C::inference_normalized_subst(&strand.canonical_ex_clause))
+            test(C::inference_normalized_subst_from_ex_clause(&strand.canonical_ex_clause))
         })
     }
 
@@ -205,7 +205,7 @@ impl<C: Context> Forest<C> {
         loop {
             match self.tables[table].pop_next_strand() {
                 Some(canonical_strand) => {
-                    let num_universes = self.tables[table].table_goal.num_universes();
+                    let num_universes = C::num_universes(&self.tables[table].table_goal);
                     let result = Self::with_instantiated_strand(
                         self.context.clone(),
                         num_universes,
@@ -350,7 +350,7 @@ impl<C: Context> Forest<C> {
             self.clear_strands_after_cycle(table, strands);
             Some(RecursiveSearchFail::NoMoreSolutions)
         } else if minimums.positive >= dfn && minimums.negative >= dfn {
-            let mut visited = HashSet::default();
+            let mut visited = FxHashSet::default();
             visited.insert(table);
             self.tables[table].extend_strands(strands);
             self.delay_strands_after_cycle(table, &mut visited);
@@ -396,10 +396,10 @@ impl<C: Context> Forest<C> {
     /// encounters a cycle, and that some of those cycles involve
     /// negative edges. In that case, walks all negative edges and
     /// converts them to delayed literals.
-    fn delay_strands_after_cycle(&mut self, table: TableIndex, visited: &mut HashSet<TableIndex>) {
+    fn delay_strands_after_cycle(&mut self, table: TableIndex, visited: &mut FxHashSet<TableIndex>) {
         let mut tables = vec![];
 
-        let num_universes = self.tables[table].table_goal.num_universes();
+        let num_universes = C::num_universes(&self.tables[table].table_goal);
         for canonical_strand in self.tables[table].strands_mut() {
             // FIXME if CanonicalExClause were not held abstract, we
             // could do this in place like we used to (and
@@ -557,9 +557,7 @@ impl<C: Context> Forest<C> {
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
         let delayed_literals = {
-            let mut delayed_literals: Vec<_> = delayed_literals.into_iter().collect();
-            delayed_literals.sort();
-            delayed_literals.dedup();
+            let mut delayed_literals: FxHashSet<_> = delayed_literals.into_iter().collect();
             DelayedLiteralSet { delayed_literals }
         };
         debug!("answer: delayed_literals={:?}", delayed_literals);
@@ -629,10 +627,8 @@ impl<C: Context> Forest<C> {
         // must be backed by an impl *eventually*).
         let is_trivial_answer = {
             answer.delayed_literals.is_empty()
-                && self.tables[table]
-                    .table_goal
-                    .is_trivial_substitution(&answer.subst)
-                && answer.subst.empty_constraints()
+                && C::is_trivial_substitution(&self.tables[table].table_goal, &answer.subst)
+                && C::empty_constraints(&answer.subst)
         };
 
         if self.tables[table].push_answer(answer) {
@@ -1048,10 +1044,10 @@ impl<C: Context> Forest<C> {
             ),
         };
 
-        let table_goal = &universe_map
-            .map_goal_from_canonical(&self.tables[subgoal_table].table_goal.canonical());
+        let table_goal = &C::map_goal_from_canonical(&universe_map,
+                                                     &C::canonical(&self.tables[subgoal_table].table_goal));
         let answer_subst =
-            &universe_map.map_subst_from_canonical(&self.answer(subgoal_table, answer_index).subst);
+            &C::map_subst_from_canonical(&universe_map, &self.answer(subgoal_table, answer_index).subst);
         match infer.apply_answer_subst(ex_clause, &subgoal, table_goal, answer_subst) {
             Ok(mut ex_clause) => {
                 // If the answer had delayed literals, we have to

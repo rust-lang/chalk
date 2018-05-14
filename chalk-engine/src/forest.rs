@@ -79,7 +79,7 @@ impl<C: Context> Forest<C> {
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
     pub fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<C::Solution> {
-        self.context.clone().make_solution(goal.canonical(), self.iter_answers(goal))
+        self.context.clone().make_solution(C::canonical(&goal), self.iter_answers(goal))
     }
 
     /// True if all the tables on the stack starting from `depth` and

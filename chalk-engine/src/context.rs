@@ -13,13 +13,13 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self>
     /// A map between universes. These are produced when
     /// u-canonicalizing something; they map canonical results back to
     /// the universes from the original.
-    type UniverseMap: UniverseMap<Self>;
+    type UniverseMap: Clone + Debug;
 
     /// Part of an answer: represents a canonicalized substitution,
     /// combined with region constraints. See [the rustc-guide] for more information.
     ///
     /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html#canonicalizing-the-query-result
-    type CanonicalConstrainedSubst: CanonicalConstrainedSubst<Self>;
+    type CanonicalConstrainedSubst: Clone + Debug + Eq + Hash;
 
     /// Extracted from a canonicalized substitution or canonicalized ex clause, this is the type of
     /// substitution that is fully normalized with respect to inference variables.
@@ -35,16 +35,12 @@ pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self>
     /// A u-canonicalized `GoalInEnvironment` -- this is one where the
     /// free universes are renumbered to consecutive integers starting
     /// from U1 (but preserving their relative order).
-    type UCanonicalGoalInEnvironment: UCanonicalGoalInEnvironment<Self>;
+    type UCanonicalGoalInEnvironment: Debug + Clone + Eq + Hash;
 
     /// A final solution that is passed back to the user. This is
     /// completely opaque to the SLG solver; it is produced by
     /// `make_solution`.
     type Solution;
-
-    /// Extracts the inner normalized substitution.
-    fn inference_normalized_subst(canon_ex_clause: &Self::CanonicalExClause)
-                                  -> &Self::InferenceNormalizedSubst;
 }
 
 pub trait ExClauseContext<C: Context>: Sized + Debug {
@@ -97,8 +93,11 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     /// and things that can be attached to an ex-clause.
     type UnificationResult;
 
-    fn goal_in_environment(environment: &Self::Environment, goal: Self::Goal) -> Self::GoalInEnvironment;
-    
+    fn goal_in_environment(
+        environment: &Self::Environment,
+        goal: Self::Goal,
+    ) -> Self::GoalInEnvironment;
+
     /// Upcast this domain goal into a more general goal.
     fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal;
 
@@ -120,9 +119,10 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     fn into_ex_clause(result: Self::UnificationResult, ex_clause: &mut ExClause<C, Self>);
 
     // Used by: simplify
-    fn add_clauses(env: &Self::Environment,
-                  clauses: impl IntoIterator<Item = Self::ProgramClause>)
-                  -> Self::Environment;
+    fn add_clauses(
+        env: &Self::Environment,
+        clauses: impl IntoIterator<Item = Self::ProgramClause>,
+    ) -> Self::Environment;
 }
 
 pub trait ContextOps<C: Context> {
@@ -153,6 +153,41 @@ pub trait ContextOps<C: Context> {
         canonical_ex_clause: &C::CanonicalExClause,
         op: impl WithInstantiatedExClause<C, Output = R>,
     ) -> R;
+
+    /// Extracts the inner normalized substitution from a canonical ex-clause.
+    fn inference_normalized_subst_from_ex_clause(
+        canon_ex_clause: &C::CanonicalExClause,
+    ) -> &C::InferenceNormalizedSubst;
+
+    /// Extracts the inner normalized substitution from a canonical constraint subst.
+    fn inference_normalized_subst_from_subst(
+        canon_ex_clause: &C::CanonicalConstrainedSubst,
+    ) -> &C::InferenceNormalizedSubst;
+
+    /// True if this solution has no region constraints.
+    fn empty_constraints(ccs: &C::CanonicalConstrainedSubst) -> bool;
+
+    fn canonical(u_canon: &C::UCanonicalGoalInEnvironment) -> &C::CanonicalGoalInEnvironment;
+    fn is_trivial_substitution(u_canon: &C::UCanonicalGoalInEnvironment,
+                               canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
+    fn num_universes(&C::UCanonicalGoalInEnvironment) -> usize;
+
+    /// Convert a goal G *from* the canonical universes *into* our
+    /// local universes. This will yield a goal G' that is the same
+    /// but for the universes of universally quantified names.
+    fn map_goal_from_canonical(
+        &C::UniverseMap,
+        value: &C::CanonicalGoalInEnvironment,
+    ) -> C::CanonicalGoalInEnvironment;
+
+    /// Convert a substitution *from* the canonical universes *into*
+    /// our local universes. This will yield a substitution S' that is
+    /// the same but for the universes of universally quantified
+    /// names.
+    fn map_subst_from_canonical(
+        &C::UniverseMap,
+        value: &C::CanonicalConstrainedSubst,
+    ) -> C::CanonicalConstrainedSubst;
 }
 
 /// Callback trait for `instantiate_ucanonical_goal`. Unlike the other
@@ -196,12 +231,6 @@ pub trait AggregateOps<C: Context> {
         root_goal: &C::CanonicalGoalInEnvironment,
         simplified_answers: impl AnswerStream<C>,
     ) -> Option<C::Solution>;
-}
-
-pub trait UCanonicalGoalInEnvironment<C: Context>: Debug + Clone + Eq + Hash {
-    fn canonical(&self) -> &C::CanonicalGoalInEnvironment;
-    fn is_trivial_substitution(&self, canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
-    fn num_universes(&self) -> usize;
 }
 
 /// An "inference table" contains the state to support unification and
@@ -304,33 +333,6 @@ pub trait ResolventOps<C: Context, I: InferenceContext<C>> {
         answer_table_goal: &C::CanonicalGoalInEnvironment,
         canonical_answer_subst: &C::CanonicalConstrainedSubst,
     ) -> Fallible<ExClause<C, I>>;
-}
-
-pub trait CanonicalConstrainedSubst<C: Context>: Clone + Debug + Eq + Hash + Ord {
-    /// True if this solution has no region constraints.
-    fn empty_constraints(&self) -> bool;
-
-    /// Extracts the inner normalized substitution.
-    fn inference_normalized_subst(&self) -> &C::InferenceNormalizedSubst;
-}
-
-pub trait UniverseMap<C: Context>: Clone + Debug {
-    /// Convert a goal G *from* the canonical universes *into* our
-    /// local universes. This will yield a goal G' that is the same
-    /// but for the universes of universally quantified names.
-    fn map_goal_from_canonical(
-        &self,
-        value: &C::CanonicalGoalInEnvironment,
-    ) -> C::CanonicalGoalInEnvironment;
-
-    /// Convert a substitution *from* the canonical universes *into*
-    /// our local universes. This will yield a substitution S' that is
-    /// the same but for the universes of universally quantified
-    /// names.
-    fn map_subst_from_canonical(
-        &self,
-        value: &C::CanonicalConstrainedSubst,
-    ) -> C::CanonicalConstrainedSubst;
 }
 
 pub trait AnswerStream<C: Context> {
