@@ -228,7 +228,14 @@ fn atc_accounting() {
         println!("{}", goal_text);
         assert_eq!(
             goal_text,
-            "ForAll<type> { ForAll<lifetime> { ForAll<type> { ProjectionEq(<?2 as Iterable>::Iter<'?1> = ?0) } } }"
+            "ForAll<type> { \
+                ForAll<lifetime> { \
+                    ForAll<type> { \
+                        (ProjectionEq(<?2 as Iterable>::Iter<'?1> = ?0), \
+                        Implemented(?2: Iterable)) \
+                    } \
+                } \
+            }"
         );
     });
 }

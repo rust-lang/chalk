@@ -441,32 +441,37 @@ trait LowerWhereClause<T> {
 /// type in Rust and well-formedness checks.
 impl LowerWhereClause<ir::DomainGoal> for WhereClause {
     fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>> {
-        let goal = match self {
+        let goals = match self {
             WhereClause::Implemented { trait_ref } => {
-                ir::DomainGoal::Holds(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))
+                vec![ir::DomainGoal::Holds(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))]
             }
             WhereClause::ProjectionEq {
                 projection,
                 ty,
-            } => ir::DomainGoal::Holds(ir::WhereClauseAtom::ProjectionEq(ir::ProjectionEq {
-                projection: projection.lower(env)?,
-                ty: ty.lower(env)?,
-            })),
+            } => vec![
+                ir::DomainGoal::Holds(ir::WhereClauseAtom::ProjectionEq(ir::ProjectionEq {
+                    projection: projection.lower(env)?,
+                    ty: ty.lower(env)?,
+                })),
+                ir::DomainGoal::Holds(ir::WhereClauseAtom::Implemented(
+                    projection.trait_ref.lower(env)?
+                )),
+            ],
             WhereClause::Normalize {
                 projection,
                 ty,
-            } => ir::DomainGoal::Normalize(ir::Normalize {
+            } => vec![ir::DomainGoal::Normalize(ir::Normalize {
                 projection: projection.lower(env)?,
                 ty: ty.lower(env)?,
-            }),
-            WhereClause::TyWellFormed { ty } => ir::DomainGoal::WellFormedTy(ty.lower(env)?),
-            WhereClause::TraitRefWellFormed { trait_ref } => {
+            })],
+            WhereClause::TyWellFormed { ty } => vec![ir::DomainGoal::WellFormedTy(ty.lower(env)?)],
+            WhereClause::TraitRefWellFormed { trait_ref } => vec![
                 ir::DomainGoal::WellFormed(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))
-            }
-            WhereClause::TyFromEnv { ty } => ir::DomainGoal::FromEnvTy(ty.lower(env)?),
-            WhereClause::TraitRefFromEnv { trait_ref } => {
+            ],
+            WhereClause::TyFromEnv { ty } => vec![ir::DomainGoal::FromEnvTy(ty.lower(env)?)],
+            WhereClause::TraitRefFromEnv { trait_ref } => vec![
                 ir::DomainGoal::FromEnv(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))
-            }
+            ],
             WhereClause::UnifyTys { .. } | WhereClause::UnifyLifetimes { .. } => {
                 bail!("this form of where-clause not allowed here")
             }
@@ -480,19 +485,19 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
                     bail!(ErrorKind::NotTrait(trait_name));
                 }
 
-                ir::DomainGoal::InScope(id)
+                vec![ir::DomainGoal::InScope(id)]
             }
-            WhereClause::Derefs { source, target } => {
+            WhereClause::Derefs { source, target } => vec![
                 ir::DomainGoal::Derefs(ir::Derefs {
                     source: source.lower(env)?,
                     target: target.lower(env)?
                 })
-            }
-            WhereClause::TyIsLocal { ty } => {
+            ],
+            WhereClause::TyIsLocal { ty } => vec![
                 ir::DomainGoal::IsLocalTy(ty.lower(env)?)
-            }
+            ],
         };
-        Ok(vec![goal])
+        Ok(goals)
     }
 }
 
