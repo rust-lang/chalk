@@ -51,6 +51,7 @@
 
 #![feature(crate_in_paths)]
 #![feature(crate_visibility_modifier)]
+#![feature(dyn_trait)]
 #![feature(in_band_lifetimes)]
 #![feature(macro_vis_matcher)]
 #![feature(step_trait)]
