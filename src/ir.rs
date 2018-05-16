@@ -5,6 +5,7 @@ use fold::shift::Shift;
 use lalrpop_intern::InternedString;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
+use std::iter;
 
 #[macro_use]
 mod macros;
@@ -265,12 +266,40 @@ pub enum InlineBound {
     ProjectionEqBound(ProjectionEqBound),
 }
 
+impl InlineBound {
+    /// Applies the `InlineBound` to `self_ty` and lowers to a [`DomainGoal`].
+    /// 
+    /// Because an `InlineBound` not know anything about what it's binding, you
+    /// must provide that type as `self_ty`.
+    pub fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
+        match self {
+            InlineBound::TraitBound(b) => b.lower_with_self(self_ty),
+            InlineBound::ProjectionEqBound(b) => b.lower_with_self(self_ty),
+        }
+    }
+}
+
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitBound {
     crate trait_id: ItemId,
     crate args_no_self: Vec<Parameter>,
+}
+
+impl TraitBound {
+    pub fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
+        let trait_ref = self.as_trait_ref(self_ty);
+        vec![DomainGoal::Holds(WhereClauseAtom::Implemented(trait_ref))]
+    }
+
+    fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
+        let self_ty = ParameterKind::Ty(self_ty);
+        TraitRef {
+            trait_id: self.trait_id,
+            parameters: iter::once(self_ty).chain(self.args_no_self.iter().cloned()).collect(),
+        }
+    }
 }
 
 /// Represents a projection equality bound on e.g. a type or type parameter.
@@ -282,6 +311,26 @@ pub struct ProjectionEqBound {
     /// Does not include trait parameters.
     crate parameters: Vec<Parameter>,
     crate value: Ty,
+}
+
+impl ProjectionEqBound {
+    pub fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
+        let trait_ref = self.trait_bound.as_trait_ref(self_ty);
+
+        let mut parameters = self.parameters.clone();
+        parameters.extend(trait_ref.parameters.clone());
+
+        vec![
+            DomainGoal::Holds(WhereClauseAtom::Implemented(trait_ref)),
+            DomainGoal::Holds(WhereClauseAtom::ProjectionEq(ProjectionEq {
+                projection: ProjectionTy {
+                    associated_ty_id: self.associated_ty_id,
+                    parameters: parameters,
+                },
+                ty: self.value.clone(),
+            }))
+        ]
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -307,6 +356,27 @@ pub struct AssociatedTyDatum {
 
     /// Where clauses that must hold for the projection be well-formed.
     crate where_clauses: Vec<QuantifiedDomainGoal>,
+}
+
+impl AssociatedTyDatum {
+    /// Returns the associated ty's bounds applied to the projection type, e.g.:
+    ///
+    /// ```notrust
+    /// Implemented(<?0 as Foo>::Item<?1>: Sized)
+    /// ```
+    pub fn bounds_on_self(&self) -> Vec<DomainGoal> {
+        let parameters = self.parameter_kinds
+                             .anonymize()
+                             .iter()
+                             .zip(0..)
+                             .map(|p| p.to_parameter())
+                             .collect();
+        let self_ty = Ty::Projection(ProjectionTy {
+            associated_ty_id: self.id,
+            parameters
+        });
+        self.bounds.iter().flat_map(|b| b.lower_with_self(self_ty.clone())).collect()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

@@ -86,7 +86,7 @@ pub struct TraitBound {
 pub struct ProjectionEqBound {
     pub trait_bound: TraitBound,
     pub name: Identifier,
-    pub parameters: Vec<Parameter>,
+    pub args: Vec<Parameter>,
     pub value: Ty,
 }
 

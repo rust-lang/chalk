@@ -256,17 +256,52 @@ impl WfSolver {
         // ```
         // we would issue the following subgoal: `forall<'a> { WellFormed(Box<&'a T>) }`.
         let compute_assoc_ty_goal = |assoc_ty: &AssociatedTyValue| {
+            let assoc_ty_datum = &self.env.associated_ty_data[&assoc_ty.associated_ty_id];
+            let bounds = &assoc_ty_datum.bounds;
+
+            let trait_datum = &self.env.trait_data[&assoc_ty_datum.trait_id];
+
             let mut input_types = Vec::new();
             assoc_ty.value.value.ty.fold(&mut input_types);
 
-            if input_types.is_empty() {
-                return None;
-            }
+            let goals = input_types.into_iter()
+                                   .map(|ty| DomainGoal::WellFormedTy(ty).cast());
+                                   //.chain(bounds.iter()
+                                   //             .flat_map(|b| b.clone()
+                                   //                            .lower_with_self(assoc_ty.value.value.ty.clone()))
+                                   //             .map(|g| g.into_well_formed_goal().cast()));
+            let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)));
+                            //.expect("at least one goal");
+            let goal = goal //Goal::Implies(hypotheses, Box::new(goal))
+                .map(|goal| goal.quantify(QuantifierKind::ForAll, assoc_ty.value.binders.clone()));//binders);
 
-            let goals = input_types.into_iter().map(|ty| DomainGoal::WellFormedTy(ty).cast());
-            let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-                            .expect("at least one goal");
-            Some(goal.quantify(QuantifierKind::ForAll, assoc_ty.value.binders.clone()))
+            // FIXME this is wrong (and test)!
+            let mut bound_binders = assoc_ty.value.binders.clone();
+            bound_binders.extend(trait_datum.binders.binders.iter());
+
+            let hypotheses =
+                assoc_ty_datum.where_clauses
+                              .iter()
+                              .chain(impl_datum.binders.value.where_clauses.iter())  // FIXME binders (and test)!
+                              .cloned()
+                              .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+                              .casted()
+                              .collect();
+            let bound_goal = bounds.iter()
+                                   .flat_map(|b| b.clone()
+                                   .lower_with_self(assoc_ty.value.value.ty.clone()))
+                                   .map(|g| g.into_well_formed_goal().cast())
+                                   .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)));
+            let bound_goal = bound_goal.map(|g| {
+                Goal::Implies(hypotheses, Box::new(g)).quantify(QuantifierKind::ForAll, bound_binders)
+            });
+
+            let goal = goal.into_iter()
+                           .chain(bound_goal.into_iter())
+                           .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)));
+            println!("{:?}", goal);
+
+            goal
         };
 
         let assoc_ty_goals =

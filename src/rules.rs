@@ -545,6 +545,23 @@ impl ir::AssociatedTyDatum {
             }.cast()
         }));
 
+        // Reverse rule for implied bounds.
+        //
+        //    forall<T> {
+        //        FromEnv(<T as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo)
+        //    }
+        clauses.extend(self.bounds_on_self().into_iter().map(|bound| {
+            ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: bound.into_from_env_goal(),
+                    conditions: vec![
+                        ir::DomainGoal::FromEnv(trait_ref.clone().cast()).cast()
+                    ],
+                }
+            }.cast()
+        }));
+
         // add new type parameter U
         let mut binders = binders;
         binders.push(ir::ParameterKind::Ty(()));
@@ -567,55 +584,6 @@ impl ir::AssociatedTyDatum {
             value: ir::ProgramClauseImplication {
                 consequence: projection_eq.clone().cast(),
                 conditions: vec![normalize.clone().cast()],
-            },
-        }.cast());
-
-
-        let projection_wc = ir::WhereClauseAtom::ProjectionEq(projection_eq.clone());
-        let trait_ref_wc = ir::WhereClauseAtom::Implemented(trait_ref.clone());
-
-        // We generate a proxy rule for the well-formedness of `T: Foo<Assoc = U>` which really
-        // means two things: `T: Foo` and `Normalize(<T as Foo>::Assoc -> U)`. So we have the
-        // following rule:
-        //
-        //    forall<T> {
-        //        WellFormed(T: Foo<Assoc = U>) :-
-        //            WellFormed(T: Foo), ProjectionEq(<T as Foo>::Assoc = U)
-        //    }
-        clauses.push(ir::Binders {
-            binders: binders.clone(),
-            value: ir::ProgramClauseImplication {
-                consequence: ir::DomainGoal::WellFormed(projection_wc.clone()),
-                conditions: vec![
-                    ir::DomainGoal::WellFormed(trait_ref_wc.clone()).cast(),
-                    projection_eq.clone().cast()
-                ],
-            }
-        }.cast());
-
-        // We also have two proxy reverse rules, the first one being:
-        //
-        //    forall<T> {
-        //        FromEnv(T: Foo) :- FromEnv(T: Foo<Assoc = U>)
-        //    }
-        clauses.push(ir::Binders {
-            binders: binders.clone(),
-            value: ir::ProgramClauseImplication {
-                consequence: ir::DomainGoal::FromEnv(trait_ref_wc).cast(),
-                conditions: vec![ir::DomainGoal::FromEnv(projection_wc.clone()).cast()],
-            },
-        }.cast());
-
-        // And the other one being:
-        //
-        //    forall<T> {
-        //        ProjectionEq(<T as Foo>::Assoc = U) :- FromEnv(T: Foo<Assoc = U>)
-        //    }
-        clauses.push(ir::Binders {
-            binders,
-            value: ir::ProgramClauseImplication {
-                consequence: projection_eq.clone().cast(),
-                conditions: vec![ir::DomainGoal::FromEnv(projection_wc).cast()],
             },
         }.cast());
 
