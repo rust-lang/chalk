@@ -508,7 +508,7 @@ pub enum DomainGoal {
 
     /// A predicate which is true is some trait ref is well-formed.
     /// For example, given the following trait definitions:
-    /// 
+    ///
     /// ```notrust
     /// trait Clone { ... }
     /// trait Copy where Self: Clone { ... }
@@ -550,7 +550,7 @@ pub enum DomainGoal {
     /// A predicate which enables deriving everything which should be true if we *know* that
     /// some type is well-formed. For example given the above type definition, we can use
     /// `FromEnv(Set<K>)` to derive that `K: Hash`, like in:
-    /// 
+    ///
     /// ```notrust
     /// forall<K> {
     ///     if (FromEnv(Set<K>)) {
@@ -567,7 +567,10 @@ pub enum DomainGoal {
     /// Derefs(T, U) :- Implemented(T: Deref<Target = U>)
     /// ```
     /// In Rust there are also raw pointers which can be deref'd but do not implement Deref.
-    Derefs(Derefs)
+    Derefs(Derefs),
+
+    IsLocalTy(Ty),
+    IsLocalTraitRef(TraitRef),
 }
 
 pub type QuantifiedDomainGoal = Binders<DomainGoal>;
