@@ -854,6 +854,10 @@ impl Goal {
         )
     }
 
+    crate fn negate(self) -> Self {
+        Goal::Not(Box::new(self))
+    }
+
     crate fn implied_by(self, predicates: Vec<ProgramClause>) -> Goal {
         Goal::Implies(predicates, Box::new(self))
     }
