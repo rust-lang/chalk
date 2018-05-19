@@ -7,7 +7,9 @@ use std::hash::Hash;
 crate mod prelude;
 
 /// The "context" in which the SLG solver operates.
-pub trait Context: Sized + Clone + Debug + ContextOps<Self> + AggregateOps<Self> {
+// FIXME(leodasvacas): Clone and Debug bounds are just for easy derive,
+//                     they are not actually necessary.
+pub trait Context: Clone + Debug {
     type CanonicalExClause: Debug;
 
     /// A map between universes. These are produced when
@@ -125,7 +127,7 @@ pub trait InferenceContext<C: Context>: ExClauseContext<C> {
     ) -> Self::Environment;
 }
 
-pub trait ContextOps<C: Context> {
+pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
     fn is_coinductive(&self, goal: &C::UCanonicalGoalInEnvironment) -> bool;
 

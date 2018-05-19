@@ -4,7 +4,7 @@ use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::context::prelude::*;
 
-impl<C: Context> Forest<C> {
+impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// Simplifies an HH goal into a series of positive domain goals
     /// and negative HH goals. This operation may fail if the HH goal
     /// includes unifications that cannot be completed.

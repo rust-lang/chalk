@@ -6,17 +6,17 @@ use crate::stack::{Stack, StackIndex};
 use crate::tables::Tables;
 use crate::table::{Answer, AnswerIndex};
 
-pub struct Forest<C: Context> {
+pub struct Forest<C: Context, CO: ContextOps<C>> {
     #[allow(dead_code)]
-    crate context: C,
+    crate context: CO,
     crate tables: Tables<C>,
     crate stack: Stack,
 
     dfn: DepthFirstNumber,
 }
 
-impl<C: Context> Forest<C> {
-    pub fn new(context: C) -> Self {
+impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
+    pub fn new(context: CO) -> Self {
         Forest {
             context,
             tables: Tables::new(),
@@ -79,7 +79,7 @@ impl<C: Context> Forest<C> {
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
     pub fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<C::Solution> {
-        self.context.clone().make_solution(C::canonical(&goal), self.iter_answers(goal))
+        self.context.clone().make_solution(CO::canonical(&goal), self.iter_answers(goal))
     }
 
     /// True if all the tables on the stack starting from `depth` and
@@ -122,13 +122,13 @@ impl<C: Context> Forest<C> {
     }
 }
 
-struct ForestSolver<'forest, C: Context + 'forest> {
-    forest: &'forest mut Forest<C>,
+struct ForestSolver<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> {
+    forest: &'forest mut Forest<C, CO>,
     table: TableIndex,
     answer: AnswerIndex,
 }
 
-impl<'forest, C> AnswerStream<C> for ForestSolver<'forest, C>
+impl<'forest, C, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'forest, C, CO>
 where
     C: Context,
 {
