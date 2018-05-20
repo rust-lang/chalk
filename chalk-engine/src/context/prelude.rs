@@ -1,5 +1,6 @@
 #![allow(unused_imports)] // rustc bug
 
+crate use super::ExClauseContext;
 crate use super::Context;
 crate use super::ContextOps;
 crate use super::AggregateOps;

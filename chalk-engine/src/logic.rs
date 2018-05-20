@@ -296,7 +296,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             fn with<I: InferenceContext<C>>(
                 self,
                 infer: &mut dyn InferenceTable<C, I>,
-                ex_clause: ExClause<C, I>,
+                ex_clause: ExClause<I>,
             ) -> OP::Output {
                 self.op.with(Strand {
                     infer,
@@ -318,7 +318,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
 
     fn canonicalize_strand_from<I: InferenceContext<C>>(
         infer: &mut dyn InferenceTable<C, I>,
-        ex_clause: &ExClause<C, I>,
+        ex_clause: &ExClause<I>,
         selected_subgoal: Option<SelectedSubgoal<C>>,
     ) -> CanonicalStrand<C> {
         let canonical_ex_clause = infer.canonicalize_ex_clause(&ex_clause);
@@ -561,7 +561,9 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
         let delayed_literals = {
-            let mut delayed_literals: FxHashSet<_> = delayed_literals.into_iter().collect();
+            let mut delayed_literals: FxHashSet<_> = delayed_literals.into_iter()
+                .map(|dl| infer.lift_delayed_literal(dl))
+                .collect();
             DelayedLiteralSet { delayed_literals }
         };
         debug!("answer: delayed_literals={:?}", delayed_literals);
@@ -663,7 +665,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     fn get_or_create_table_for_subgoal<I: InferenceContext<C>>(
         &mut self,
         infer: &mut dyn InferenceTable<C, I>,
-        subgoal: &Literal<C, I>,
+        subgoal: &Literal<I>,
     ) -> Option<(TableIndex, C::UniverseMap)> {
         debug_heading!("get_or_create_table_for_subgoal(subgoal={:?})", subgoal);
 
@@ -1064,7 +1066,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
                     if !answer.delayed_literals.is_empty() {
                         ex_clause.delayed_literals.push(DelayedLiteral::Positive(
                             subgoal_table,
-                            answer.subst.clone(),
+                            infer.sink_answer_subset(&answer.subst),
                         ));
                     }
                 }
@@ -1097,9 +1099,9 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// the resolvent (or factor) if it has grown too large.
     fn truncate_returned<I: InferenceContext<C>>(
         &self,
-        ex_clause: ExClause<C, I>,
+        ex_clause: ExClause<I>,
         infer: &mut dyn InferenceTable<C, I>,
-    ) -> ExClause<C, I> {
+    ) -> ExClause<I> {
         // DIVERGENCE
         //
         // In the original RR paper, truncation is only applied
@@ -1208,7 +1210,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         // literal (in which case the negative literal *may* be true).
         // Before exiting the match, then, we set `delayed_literal` to
         // either `Some` or `None` depending.
-        let delayed_literal: Option<DelayedLiteral<C>>;
+        let delayed_literal: Option<DelayedLiteral<_>>;
         match self.ensure_answer_recursively(subgoal_table, answer_index) {
             Ok(EnsureSuccess::AnswerAvailable) => {
                 if self.answer(subgoal_table, answer_index).is_unconditional() {

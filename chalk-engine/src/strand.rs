@@ -14,7 +14,7 @@ crate struct CanonicalStrand<C: Context> {
 crate struct Strand<'table, C: Context + 'table, I: InferenceContext<C> + 'table> {
     crate infer: &'table mut dyn InferenceTable<C, I>,
 
-    pub(super) ex_clause: ExClause<C, I>,
+    pub(super) ex_clause: ExClause<I>,
 
     /// Index into `ex_clause.subgoals`.
     crate selected_subgoal: Option<SelectedSubgoal<C>>,

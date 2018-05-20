@@ -111,20 +111,20 @@ struct DepthFirstNumber {
 
 /// The paper describes these as `A :- D | G`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ExClause<C: Context, E: ExClauseContext<C>> {
+pub struct ExClause<E: ExClauseContext> {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
     pub subst: E::Substitution,
 
     /// Delayed literals: things that we depend on negatively,
     /// but which have not yet been fully evaluated.
-    pub delayed_literals: Vec<DelayedLiteral<C>>,
+    pub delayed_literals: Vec<DelayedLiteral<E>>,
 
     /// Region constraints we have accumulated.
     pub constraints: Vec<E::RegionConstraint>,
 
     /// Subgoals: literals that must be proven
-    pub subgoals: Vec<Literal<C, E>>,
+    pub subgoals: Vec<Literal<E>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -170,12 +170,12 @@ enum InnerDelayedLiteralSets<C: Context> {
 /// delayed literal, which in turn forces its subgoal to be delayed,
 /// and so forth. Therefore, we store canonicalized goals.)
 #[derive(Clone, Debug, Default)]
-struct DelayedLiteralSet<C: Context> {
-    delayed_literals: FxHashSet<DelayedLiteral<C>>,
+struct DelayedLiteralSet<E: ExClauseContext> {
+    delayed_literals: FxHashSet<DelayedLiteral<E>>,
 }
 
 #[derive(Clone, Debug)]
-pub enum DelayedLiteral<C: Context> {
+pub enum DelayedLiteral<E: ExClauseContext> {
     /// Something which can never be proven nor disproven. Inserted
     /// when truncation triggers; doesn't arise normally.
     CannotProve(()),
@@ -189,12 +189,12 @@ pub enum DelayedLiteral<C: Context> {
     /// **conditional** answer (the `CanonicalConstrainedSubst`) within the
     /// given table, but we have to come back later and see whether
     /// that answer turns out to be true.
-    Positive(TableIndex, C::CanonicalConstrainedSubst),
+    Positive(TableIndex, E::CanonicalConstrainedSubst),
 }
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
 #[derive(Clone, Debug)]
-pub enum Literal<C: Context, E: ExClauseContext<C>> { // FIXME: pub b/c fold
+pub enum Literal<E: ExClauseContext> { // FIXME: pub b/c fold
     Positive(E::GoalInEnvironment),
     Negative(E::GoalInEnvironment),
 }
@@ -272,12 +272,12 @@ impl<C: Context> DelayedLiteralSets<C> {
     }
 }
 
-impl<C: Context> DelayedLiteralSet<C> {
+impl<E: ExClauseContext> DelayedLiteralSet<E> {
     fn is_empty(&self) -> bool {
         self.delayed_literals.is_empty()
     }
 
-    fn is_subset(&self, other: &DelayedLiteralSet<C>) -> bool {
+    fn is_subset(&self, other: &DelayedLiteralSet<E>) -> bool {
         self.delayed_literals
             .iter()
             .all(|elem| other.delayed_literals.contains(elem))

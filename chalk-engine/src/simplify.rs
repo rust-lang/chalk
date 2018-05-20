@@ -13,7 +13,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         subst: I::Substitution,
         initial_environment: &I::Environment,
         initial_hh_goal: HhGoal<C, I>,
-    ) -> Fallible<ExClause<C, I>> {
+    ) -> Fallible<ExClause<I>> {
         let mut ex_clause = ExClause {
             subst,
             delayed_literals: vec![],

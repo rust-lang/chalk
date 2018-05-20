@@ -49,12 +49,18 @@ impl SlgContext {
     }
 }
 
+impl context::ExClauseContext for SlgContext {
+    type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
+    type GoalInEnvironment = InEnvironment<Goal>;
+    type Substitution = Substitution;
+    type RegionConstraint = InEnvironment<Constraint>;
+}
+
 impl context::Context for SlgContext {
     type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal>>;
-    type CanonicalExClause = Canonical<ExClause<Self, Self>>;
+    type CanonicalExClause = Canonical<ExClause<Self>>;
     type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal>>;
     type UniverseMap = UniverseMap;
-    type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
     type InferenceNormalizedSubst = Substitution;
     type Solution = Solution;
 }
@@ -78,7 +84,7 @@ impl context::ContextOps<SlgContext> for SlgContext {
     fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
-        canonical_ex_clause: &Canonical<ExClause<SlgContext, SlgContext>>,
+        canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
         op: impl context::WithInstantiatedExClause<Self, Output = R>,
     ) -> R {
         let (infer, _subst, ex_cluse) =
@@ -88,7 +94,7 @@ impl context::ContextOps<SlgContext> for SlgContext {
     }
 
     fn inference_normalized_subst_from_ex_clause(
-        canon_ex_clause: &Canonical<ExClause<SlgContext, SlgContext>>,
+        canon_ex_clause: &Canonical<ExClause<SlgContext>>,
     ) -> &Substitution {
         &canon_ex_clause.value.subst
     }
@@ -163,12 +169,6 @@ impl context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable {
 
 impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable {}
 
-impl context::ExClauseContext<SlgContext> for SlgContext {
-    type GoalInEnvironment = InEnvironment<Goal>;
-    type Substitution = Substitution;
-    type RegionConstraint = InEnvironment<Constraint>;
-}
-
 impl context::InferenceContext<SlgContext> for SlgContext {
     type Environment = Arc<Environment>;
     type DomainGoal = DomainGoal;
@@ -205,7 +205,7 @@ impl context::InferenceContext<SlgContext> for SlgContext {
 
     fn into_ex_clause(
         result: Self::UnificationResult,
-        ex_clause: &mut ExClause<SlgContext, SlgContext>,
+        ex_clause: &mut ExClause<SlgContext>,
     ) {
         ex_clause
             .subgoals
@@ -253,7 +253,7 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
 
     fn debug_ex_clause(
         &mut self,
-        value: &'v ExClause<SlgContext, SlgContext>,
+        value: &'v ExClause<SlgContext>,
     ) -> Box<dyn Debug + 'v> {
         Box::new(self.infer.normalize_deep(value))
     }
@@ -264,8 +264,8 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
 
     fn canonicalize_ex_clause(
         &mut self,
-        value: &ExClause<SlgContext, SlgContext>,
-    ) -> Canonical<ExClause<SlgContext, SlgContext>> {
+        value: &ExClause<SlgContext>,
+    ) -> Canonical<ExClause<SlgContext>> {
         self.infer.canonicalize(value).quantified
     }
 
@@ -304,6 +304,18 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         b: &Parameter,
     ) -> Fallible<UnificationResult> {
         self.infer.unify(environment, a, b)
+    }
+
+    /// Since we do not have distinct types for the inference context and the slg-context,
+    /// these conversion operations are just no-ops.q
+    fn sink_answer_subset(&self, c: &Canonical<ConstrainedSubst>) -> Canonical<ConstrainedSubst> {
+        c.clone()
+    }
+
+    /// Since we do not have distinct types for the inference context and the slg-context,
+    /// these conversion operations are just no-ops.q
+    fn lift_delayed_literal(&self, c: DelayedLiteral<SlgContext>) -> DelayedLiteral<SlgContext> {
+        c
     }
 }
 
@@ -453,7 +465,7 @@ impl MayInvalidate {
     }
 }
 
-type ExClauseSlgContext = ExClause<SlgContext, SlgContext>;
+type ExClauseSlgContext = ExClause<SlgContext>;
 struct_fold!(ExClauseSlgContext {
     subst,
     delayed_literals,
@@ -461,7 +473,7 @@ struct_fold!(ExClauseSlgContext {
     subgoals,
 });
 
-type LiteralSlgContext = Literal<SlgContext, SlgContext>;
+type LiteralSlgContext = Literal<SlgContext>;
 enum_fold!(LiteralSlgContext {
     Literal :: {
         Positive(a), Negative(a)
