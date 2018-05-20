@@ -277,6 +277,90 @@ fn bound_in_header_from_env() {
 }
 
 #[test]
+fn mixed_indices_check_projection_bounds() {
+    lowering_success! {
+        program {
+            trait Foo<T> { }
+
+            trait Bar<T> {
+                type Item: Foo<T>;
+            }
+
+            struct Stuff<T, U> { }
+
+            impl<T, U> Bar<T> for Stuff<T, U> where U: Foo<T> {
+                type Item = U;
+            }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Foo<T> { }
+            trait Baz<T> { }
+
+            trait Bar<T> {
+                type Item: Baz<T>;
+            }
+
+            struct Stuff<T, U> { }
+
+            impl<T, U> Bar<T> for Stuff<T, U> where U: Foo<T> {
+                type Item = U;
+            }
+        } error_msg {
+            "trait impl for \"Bar\" does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn mixed_indices_check_generic_projection_bounds() {
+    lowering_success! {
+        program {
+            struct Stuff<T, U> { }
+
+            trait Foo<T> { }
+
+            // A type that impls Foo<T> as long as U: Foo<T>.
+            struct Fooey<U, V> { }
+            impl<T, U, V> Foo<T> for Fooey<U, V> where U: Foo<T> { }
+
+            trait Bar<T> {
+                type Item<V>: Foo<T> where V: Foo<T>;
+            }
+
+            impl<T, U> Bar<T> for Stuff<T, U> where U: Foo<T> {
+                type Item<V> = Fooey<U, V>;
+            }
+        }
+    }
+
+    lowering_error! {
+        program {
+            struct Stuff<T, U> { }
+
+            trait Foo<T> { }
+            trait Baz<T> { }
+
+            // A type that impls Foo<T> as long as U: Foo<T>.
+            struct Fooey<U, V> { }
+            impl<T, U, V> Foo<T> for Fooey<U, V> where U: Foo<T> { }
+
+            trait Bar<T> {
+                type Item<V>: Baz<T> where V: Foo<T>;
+            }
+
+            impl<T, U> Bar<T> for Stuff<T, U> where U: Foo<T> {
+                type Item<V> = Fooey<U, V>;
+            }
+        } error_msg {
+            "trait impl for \"Bar\" does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
 fn generic_projection_where_clause() {
     lowering_success! {
         program {
