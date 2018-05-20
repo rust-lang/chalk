@@ -258,6 +258,32 @@ pub struct TraitFlags {
     pub deref: bool,
 }
 
+/// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum InlineBound {
+    TraitBound(TraitBound),
+    ProjectionEqBound(ProjectionEqBound),
+}
+
+/// Represents a trait bound on e.g. a type or type parameter.
+/// Does not know anything about what it's binding.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TraitBound {
+    crate trait_id: ItemId,
+    crate args_no_self: Vec<Parameter>,
+}
+
+/// Represents a projection equality bound on e.g. a type or type parameter.
+/// Does not know anything about what it's binding.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ProjectionEqBound {
+    crate trait_bound: TraitBound,
+    crate associated_ty_id: ItemId,
+    /// Does not include trait parameters.
+    crate parameters: Vec<Parameter>,
+    crate value: Ty,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyDatum {
     /// The trait this associated type is defined in.
@@ -273,7 +299,11 @@ pub struct AssociatedTyDatum {
     /// but possibly including more.
     crate parameter_kinds: Vec<ParameterKind<Identifier>>,
 
-    // FIXME: inline bounds on the associated ty need to be implemented
+    /// Bounds on the associated type itself.
+    ///
+    /// These must be proven by the implementer, for all possible parameters that
+    /// would result in a well-formed projection.
+    crate bounds: Vec<InlineBound>,
 
     /// Where clauses that must hold for the projection be well-formed.
     crate where_clauses: Vec<QuantifiedDomainGoal>,
