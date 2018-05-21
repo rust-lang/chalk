@@ -100,6 +100,9 @@ pub trait Context: Clone + Debug {
     /// goal we are trying to solve to produce an ex-clause.
     type ProgramClause: Debug;
 
+    /// A vector of program clauses.
+    type ProgramClauses: Debug;
+
     /// The successful result from unification: contains new subgoals
     /// and things that can be attached to an ex-clause.
     type UnificationResult;
@@ -245,7 +248,7 @@ pub trait InferenceTable<C: Context, I: Context>:
     fn add_clauses(
         &mut self,
         env: &I::Environment,
-        clauses: Vec<I::ProgramClause>,
+        clauses: I::ProgramClauses,
     ) -> I::Environment;
 }
 

@@ -62,6 +62,7 @@ impl context::Context for SlgContext {
     type BindersGoal = Binders<Box<Goal>>;
     type Parameter = Parameter;
     type ProgramClause = ProgramClause;
+    type ProgramClauses = Vec<ProgramClause>;
     type UnificationResult = UnificationResult;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
     type GoalInEnvironment = InEnvironment<Goal>;
