@@ -104,7 +104,8 @@ pub trait Context: Clone + Debug {
     /// and things that can be attached to an ex-clause.
     type UnificationResult;
 
-    /// Given an environment and a goal, glue them together to create a `GoalInEnvironment`.
+    /// Given an environment and a goal, glue them together to create
+    /// a `GoalInEnvironment`.
     fn goal_in_environment(
         environment: &Self::Environment,
         goal: Self::Goal,
@@ -115,22 +116,6 @@ pub trait Context: Clone + Debug {
 
     /// Create a "cannot prove" goal (see `HhGoal::CannotProve`).
     fn cannot_prove() -> Self::Goal;
-
-    /// Convert the context's goal type into the `HhGoal` type that
-    /// the SLG solver understands. The expectation is that the
-    /// context's goal type has the same set of variants, but with
-    /// different names and a different setup. If you inspect
-    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
-    /// conversion -- that is, we convert the outermost goal into an
-    /// `HhGoal`, but the goals contained within are left as context
-    /// goals.
-    fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self>;
-
-    // Used by: simplify
-    fn add_clauses(
-        env: &Self::Environment,
-        clauses: impl IntoIterator<Item = Self::ProgramClause>,
-    ) -> Self::Environment;
 }
 
 pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
@@ -246,6 +231,22 @@ pub trait AggregateOps<C: Context> {
 pub trait InferenceTable<C: Context, I: Context>:
     ResolventOps<C, I> + TruncateOps<C, I> + UnificationOps<C, I>
 {
+    /// Convert the context's goal type into the `HhGoal` type that
+    /// the SLG solver understands. The expectation is that the
+    /// context's goal type has the same set of variants, but with
+    /// different names and a different setup. If you inspect
+    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
+    /// conversion -- that is, we convert the outermost goal into an
+    /// `HhGoal`, but the goals contained within are left as context
+    /// goals.
+    fn into_hh_goal(&mut self, goal: I::Goal) -> HhGoal<I>;
+
+    // Used by: simplify
+    fn add_clauses(
+        &mut self,
+        env: &I::Environment,
+        clauses: Vec<I::ProgramClause>,
+    ) -> I::Environment;
 }
 
 /// Methods for unifying and manipulating terms and binders.

@@ -28,19 +28,19 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             match hh_goal {
                 HhGoal::ForAll(subgoal) => {
                     let subgoal = infer.instantiate_binders_universally(&subgoal);
-                    pending_goals.push((environment, I::into_hh_goal(subgoal)));
+                    pending_goals.push((environment, infer.into_hh_goal(subgoal)));
                 }
                 HhGoal::Exists(subgoal) => {
                     let subgoal = infer.instantiate_binders_existentially(&subgoal);
-                    pending_goals.push((environment, I::into_hh_goal(subgoal)))
+                    pending_goals.push((environment, infer.into_hh_goal(subgoal)))
                 }
                 HhGoal::Implies(wc, subgoal) => {
-                    let new_environment = I::add_clauses(&environment, wc);
-                    pending_goals.push((new_environment, I::into_hh_goal(subgoal)));
+                    let new_environment = infer.add_clauses(&environment, wc);
+                    pending_goals.push((new_environment, infer.into_hh_goal(subgoal)));
                 }
                 HhGoal::And(subgoal1, subgoal2) => {
-                    pending_goals.push((environment.clone(), I::into_hh_goal(subgoal1)));
-                    pending_goals.push((environment, I::into_hh_goal(subgoal2)));
+                    pending_goals.push((environment.clone(), infer.into_hh_goal(subgoal1)));
+                    pending_goals.push((environment, infer.into_hh_goal(subgoal2)));
                 }
                 HhGoal::Not(subgoal) => {
                     ex_clause

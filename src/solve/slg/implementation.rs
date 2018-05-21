@@ -79,27 +79,6 @@ impl context::Context for SlgContext {
     fn cannot_prove() -> Self::Goal {
         Goal::CannotProve(())
     }
-
-    fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self> {
-        match goal {
-            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
-            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
-            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
-            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
-            Goal::Not(g1) => HhGoal::Not(*g1),
-            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
-            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
-            Goal::CannotProve(()) => HhGoal::CannotProve,
-        }
-    }
-
-    // Used by: simplify
-    fn add_clauses(
-        env: &Self::Environment,
-        clauses: impl IntoIterator<Item = Self::ProgramClause>,
-    ) -> Self::Environment {
-        Environment::add_clauses(env, clauses)
-    }
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -204,7 +183,29 @@ impl context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable {
     }
 }
 
-impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable {}
+impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable {
+    fn into_hh_goal(&mut self, goal: Goal) -> HhGoal<SlgContext> {
+        match goal {
+            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
+            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
+            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
+            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
+            Goal::Not(g1) => HhGoal::Not(*g1),
+            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
+            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
+            Goal::CannotProve(()) => HhGoal::CannotProve,
+        }
+    }
+
+    // Used by: simplify
+    fn add_clauses(
+        &mut self,
+        env: &Arc<Environment>,
+        clauses: Vec<ProgramClause>,
+    ) -> Arc<Environment> {
+        Environment::add_clauses(env, clauses)
+    }
+}
 
 impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable {
     fn program_clauses(

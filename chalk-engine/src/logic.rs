@@ -763,7 +763,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         goal: I::Goal,
     ) {
         let table_ref = &mut self.tables[table];
-        match I::into_hh_goal(goal) {
+        match infer.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
                 let clauses = infer.program_clauses(&environment, &domain_goal);
                 for clause in clauses {
