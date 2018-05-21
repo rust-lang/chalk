@@ -3,10 +3,10 @@ use crate::fold::shift::Shift;
 use crate::fold::Fold;
 use crate::ir::*;
 use crate::solve::infer::InferenceTable;
-use crate::solve::slg::implementation::{SlgContext, TruncatingInferenceTable};
+use crate::solve::slg::implementation::{self, SlgContext, TruncatingInferenceTable};
 use crate::zip::{Zip, Zipper};
 
-use chalk_engine::context::{self, InferenceContext};
+use chalk_engine::context;
 use chalk_engine::{ExClause, Literal};
 use std::sync::Arc;
 
@@ -61,7 +61,7 @@ impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable 
         goal: &DomainGoal,
         subst: &Substitution,
         clause: &ProgramClause,
-    ) -> Fallible<Canonical<ExClause<SlgContext, SlgContext>>> {
+    ) -> Fallible<Canonical<ExClause<SlgContext>>> {
         // Relating the above description to our situation:
         //
         // - `goal` G, except with binders for any existential variables.
@@ -105,7 +105,7 @@ impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable 
         };
 
         // Add the subgoals/region-constraints that unification gave us.
-        SlgContext::into_ex_clause(unification_result, &mut ex_clause);
+        implementation::into_ex_clause(unification_result, &mut ex_clause);
 
         // Add the `conditions` from the program clause into the result too.
         ex_clause
@@ -202,11 +202,11 @@ impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable 
 
     fn apply_answer_subst(
         &mut self,
-        ex_clause: ExClause<SlgContext, SlgContext>,
+        ex_clause: ExClause<SlgContext>,
         selected_goal: &InEnvironment<Goal>,
         answer_table_goal: &Canonical<InEnvironment<Goal>>,
         canonical_answer_subst: &Canonical<ConstrainedSubst>,
-    ) -> Fallible<ExClause<SlgContext, SlgContext>> {
+    ) -> Fallible<ExClause<SlgContext>> {
         debug_heading!("apply_answer_subst()");
         debug!("ex_clause={:?}", ex_clause);
         debug!(
@@ -247,7 +247,7 @@ struct AnswerSubstitutor<'t> {
     answer_subst: &'t Substitution,
     answer_binders: usize,
     pending_binders: usize,
-    ex_clause: ExClause<SlgContext, SlgContext>,
+    ex_clause: ExClause<SlgContext>,
 }
 
 impl<'t> AnswerSubstitutor<'t> {
@@ -255,10 +255,10 @@ impl<'t> AnswerSubstitutor<'t> {
         table: &mut InferenceTable,
         environment: &Arc<Environment>,
         answer_subst: &Substitution,
-        ex_clause: ExClause<SlgContext, SlgContext>,
+        ex_clause: ExClause<SlgContext>,
         answer: &T,
         pending: &T,
-    ) -> Fallible<ExClause<SlgContext, SlgContext>> {
+    ) -> Fallible<ExClause<SlgContext>> {
         let mut this = AnswerSubstitutor {
             table,
             environment,
@@ -293,7 +293,7 @@ impl<'t> AnswerSubstitutor<'t> {
                 )
             });
 
-        SlgContext::into_ex_clause(
+        implementation::into_ex_clause(
             self.table
                 .unify(&self.environment, answer_param, pending_shifted)?,
             &mut self.ex_clause,

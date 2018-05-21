@@ -66,7 +66,7 @@
 extern crate stacker;
 extern crate fxhash;
 
-use crate::context::{Context, ExClauseContext};
+use crate::context::Context;
 use fxhash::FxHashSet;
 use std::cmp::min;
 use std::usize;
@@ -111,20 +111,20 @@ struct DepthFirstNumber {
 
 /// The paper describes these as `A :- D | G`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ExClause<C: Context, E: ExClauseContext<C>> {
+pub struct ExClause<C: Context> {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
-    pub subst: E::Substitution,
+    pub subst: C::Substitution,
 
     /// Delayed literals: things that we depend on negatively,
     /// but which have not yet been fully evaluated.
     pub delayed_literals: Vec<DelayedLiteral<C>>,
 
     /// Region constraints we have accumulated.
-    pub constraints: Vec<E::RegionConstraint>,
+    pub constraints: Vec<C::RegionConstraint>,
 
     /// Subgoals: literals that must be proven
-    pub subgoals: Vec<Literal<C, E>>,
+    pub subgoals: Vec<Literal<C>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -194,9 +194,9 @@ pub enum DelayedLiteral<C: Context> {
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
 #[derive(Clone, Debug)]
-pub enum Literal<C: Context, E: ExClauseContext<C>> { // FIXME: pub b/c fold
-    Positive(E::GoalInEnvironment),
-    Negative(E::GoalInEnvironment),
+pub enum Literal<C: Context> { // FIXME: pub b/c fold
+    Positive(C::GoalInEnvironment),
+    Negative(C::GoalInEnvironment),
 }
 
 /// The `Minimums` structure is used to track the dependencies between

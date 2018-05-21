@@ -65,8 +65,8 @@ impl<C: Context> Hash for DelayedLiteral<C> {
 
 ///////////////////////////////////////////////////////////////////////////
 
-impl<C: Context, I: ExClauseContext<C>> PartialEq for Literal<C, I> {
-    fn eq(&self, other: &Literal<C, I>) -> bool {
+impl<C: Context> PartialEq for Literal<C> {
+    fn eq(&self, other: &Literal<C>) -> bool {
         match (self, other) {
             (Literal::Positive(goal1), Literal::Positive(goal2))
             | (Literal::Negative(goal1), Literal::Negative(goal2)) => goal1 == goal2,
@@ -76,10 +76,10 @@ impl<C: Context, I: ExClauseContext<C>> PartialEq for Literal<C, I> {
     }
 }
 
-impl<C: Context, I: ExClauseContext<C>> Eq for Literal<C, I> {
+impl<C: Context> Eq for Literal<C> {
 }
 
-impl<C: Context, I: ExClauseContext<C>> Hash for Literal<C, I> {
+impl<C: Context> Hash for Literal<C> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         mem::discriminant(self).hash(state);
         match self {

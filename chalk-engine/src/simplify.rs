@@ -8,12 +8,12 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// Simplifies an HH goal into a series of positive domain goals
     /// and negative HH goals. This operation may fail if the HH goal
     /// includes unifications that cannot be completed.
-    pub(super) fn simplify_hh_goal<I: InferenceContext<C>>(
+    pub(super) fn simplify_hh_goal<I: Context>(
         infer: &mut dyn InferenceTable<C, I>,
         subst: I::Substitution,
         initial_environment: &I::Environment,
-        initial_hh_goal: HhGoal<C, I>,
-    ) -> Fallible<ExClause<C, I>> {
+        initial_hh_goal: HhGoal<I>,
+    ) -> Fallible<ExClause<I>> {
         let mut ex_clause = ExClause {
             subst,
             delayed_literals: vec![],
@@ -28,19 +28,19 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             match hh_goal {
                 HhGoal::ForAll(subgoal) => {
                     let subgoal = infer.instantiate_binders_universally(&subgoal);
-                    pending_goals.push((environment, I::into_hh_goal(subgoal)));
+                    pending_goals.push((environment, infer.into_hh_goal(subgoal)));
                 }
                 HhGoal::Exists(subgoal) => {
                     let subgoal = infer.instantiate_binders_existentially(&subgoal);
-                    pending_goals.push((environment, I::into_hh_goal(subgoal)))
+                    pending_goals.push((environment, infer.into_hh_goal(subgoal)))
                 }
                 HhGoal::Implies(wc, subgoal) => {
-                    let new_environment = I::add_clauses(&environment, wc);
-                    pending_goals.push((new_environment, I::into_hh_goal(subgoal)));
+                    let new_environment = infer.add_clauses(&environment, wc);
+                    pending_goals.push((new_environment, infer.into_hh_goal(subgoal)));
                 }
                 HhGoal::And(subgoal1, subgoal2) => {
-                    pending_goals.push((environment.clone(), I::into_hh_goal(subgoal1)));
-                    pending_goals.push((environment, I::into_hh_goal(subgoal2)));
+                    pending_goals.push((environment.clone(), infer.into_hh_goal(subgoal1)));
+                    pending_goals.push((environment, infer.into_hh_goal(subgoal2)));
                 }
                 HhGoal::Not(subgoal) => {
                     ex_clause
@@ -48,8 +48,8 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
                         .push(Literal::Negative(I::goal_in_environment(&environment, subgoal)));
                 }
                 HhGoal::Unify(a, b) => {
-                    I::into_ex_clause(infer.unify_parameters(&environment, &a, &b)?,
-                                      &mut ex_clause)
+                    let result = infer.unify_parameters(&environment, &a, &b)?;
+                    infer.into_ex_clause(result, &mut ex_clause)
                 }
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause
