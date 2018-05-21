@@ -3,6 +3,12 @@ crates.io periodically for use by the compiler. The rest of chalk is
 not yet published, though it might be nice to publish the interpreter
 at some point.
 
+# Release 0.5.0
+
+**Tag:** `chalk-engine-v0.5.0`
+
+Pare down to very few dependencies, and make even those optional.
+
 # Release 0.4.0
 
 **Tag:** `chalk-engine-v0.4.0`
