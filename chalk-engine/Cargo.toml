@@ -8,9 +8,14 @@ repository = "https://github.com/rust-lang-nursery/chalk"
 readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 
+[features]
+default = ["stack_protection", "stabler"]
+stack_protection = ["stacker"]
+stabler = ["fxhash"]
+
 [dependencies]
-stacker = "0.1.2"
-fxhash = "0.2.1"
+stacker = { version = "0.1.2", optional = true }
+fxhash = { version = "0.2.1", optional = true }
 
 [dependencies.chalk-macros]
 version = "0.1.0"

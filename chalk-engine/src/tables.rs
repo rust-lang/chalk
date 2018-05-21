@@ -1,7 +1,7 @@
 use crate::TableIndex;
 use crate::context::prelude::*;
 use crate::table::Table;
-use fxhash::FxHashMap;
+use crate::hashmap::FxHashMap;
 use std::ops::{Index, IndexMut};
 
 /// See `Forest`.
