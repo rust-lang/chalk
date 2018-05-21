@@ -12,7 +12,7 @@ crate mod prelude;
 ///
 /// At any given time, the SLG solver may have more than one context
 /// active. First, there is always the *global* context, but when we
-/// are in the midst of pursuing some particular strange, we will
+/// are in the midst of pursuing some particular strand, we will
 /// instantiate a second context just for that work, via the
 /// `instantiate_ucanonical_goal` and `instantiate_ex_clause` methods.
 ///
