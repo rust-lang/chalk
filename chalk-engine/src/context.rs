@@ -6,9 +6,25 @@ use std::hash::Hash;
 
 crate mod prelude;
 
-/// The "context" in which the SLG solver operates.
-// FIXME(leodasvacas): Clone and Debug bounds are just for easy derive,
-//                     they are not actually necessary.
+/// The "context" in which the SLG solver operates. It defines all the
+/// types that the SLG solver may need to refer to, as well as a few
+/// very simple interconversion methods.
+///
+/// At any given time, the SLG solver may have more than one context
+/// active. First, there is always the *global* context, but when we
+/// are in the midst of pursuing some particular strange, we will
+/// instantiate a second context just for that work, via the
+/// `instantiate_ucanonical_goal` and `instantiate_ex_clause` methods.
+///
+/// In the chalk implementation, these two contexts are mapped to the
+/// same type. But in the rustc implementation, this second context
+/// corresponds to a fresh arena, and data allocated in that second
+/// context will be freed once the work is done. (The "canonicalizing"
+/// steps offer a way to convert data from the inference context back
+/// into the global context.)
+///
+/// FIXME: Clone and Debug bounds are just for easy derive, they are
+/// not actually necessary. But dang are they convenient.
 pub trait Context: Clone + Debug {
     type CanonicalExClause: Debug;
 
@@ -87,12 +103,8 @@ pub trait Context: Clone + Debug {
     /// The successful result from unification: contains new subgoals
     /// and things that can be attached to an ex-clause.
     type UnificationResult;
-}
 
-/// The set of types belonging to an "inference context"; in rustc,
-/// these types are tied to the lifetime of the arena within which an
-/// inference context operates.
-pub trait InferenceContext<C: Context>: Context {
+    /// Given an environment and a goal, glue them together to create a `GoalInEnvironment`.
     fn goal_in_environment(
         environment: &Self::Environment,
         goal: Self::Goal,
@@ -113,10 +125,6 @@ pub trait InferenceContext<C: Context>: Context {
     /// `HhGoal`, but the goals contained within are left as context
     /// goals.
     fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self>;
-
-    /// Add the residual subgoals as new subgoals of the ex-clause.
-    /// Also add region constraints.
-    fn into_ex_clause(result: Self::UnificationResult, ex_clause: &mut ExClause<Self>);
 
     // Used by: simplify
     fn add_clauses(
@@ -199,7 +207,7 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
 pub trait WithInstantiatedUCanonicalGoal<C: Context> {
     type Output;
 
-    fn with<I: InferenceContext<C>>(
+    fn with<I: Context>(
         self,
         infer: &mut dyn InferenceTable<C, I>,
         subst: I::Substitution,
@@ -217,7 +225,7 @@ pub trait WithInstantiatedUCanonicalGoal<C: Context> {
 pub trait WithInstantiatedExClause<C: Context> {
     type Output;
 
-    fn with<I: InferenceContext<C>>(
+    fn with<I: Context>(
         self,
         infer: &mut dyn InferenceTable<C, I>,
         ex_clause: ExClause<I>,
@@ -235,13 +243,13 @@ pub trait AggregateOps<C: Context> {
 
 /// An "inference table" contains the state to support unification and
 /// other operations on terms.
-pub trait InferenceTable<C: Context, I: InferenceContext<C>>:
+pub trait InferenceTable<C: Context, I: Context>:
     ResolventOps<C, I> + TruncateOps<C, I> + UnificationOps<C, I>
 {
 }
 
 /// Methods for unifying and manipulating terms and binders.
-pub trait UnificationOps<C: Context, I: InferenceContext<C>> {
+pub trait UnificationOps<C: Context, I: Context> {
     /// Returns the set of program clauses that might apply to
     /// `goal`. (This set can be over-approximated, naturally.)
     fn program_clauses(
@@ -298,6 +306,10 @@ pub trait UnificationOps<C: Context, I: InferenceContext<C>> {
         a: &I::Parameter,
         b: &I::Parameter,
     ) -> Fallible<I::UnificationResult>;
+
+    /// Add the residual subgoals as new subgoals of the ex-clause.
+    /// Also add region constraints.
+    fn into_ex_clause(&mut self, result: I::UnificationResult, ex_clause: &mut ExClause<I>);
 }
 
 /// "Truncation" (called "abstraction" in the papers referenced below)
@@ -312,7 +324,7 @@ pub trait UnificationOps<C: Context, I: InferenceContext<C>> {
 ///   - Riguzzi and Swift; ACM Transactions on Computational Logic 2013
 /// - Radial Restraint
 ///   - Grosof and Swift; 2013
-pub trait TruncateOps<C: Context, I: InferenceContext<C>> {
+pub trait TruncateOps<C: Context, I: Context> {
     /// If `subgoal` is too large, return a truncated variant (else
     /// return `None`).
     fn truncate_goal(&mut self, subgoal: &I::GoalInEnvironment) -> Option<I::GoalInEnvironment>;
@@ -322,7 +334,7 @@ pub trait TruncateOps<C: Context, I: InferenceContext<C>> {
     fn truncate_answer(&mut self, subst: &I::Substitution) -> Option<I::Substitution>;
 }
 
-pub trait ResolventOps<C: Context, I: InferenceContext<C>> {
+pub trait ResolventOps<C: Context, I: Context> {
     /// Combines the `goal` (instantiated within `infer`) with the
     /// given program clause to yield the start of a new strand (a
     /// canonical ex-clause).

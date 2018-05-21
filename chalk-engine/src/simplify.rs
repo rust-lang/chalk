@@ -8,7 +8,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// Simplifies an HH goal into a series of positive domain goals
     /// and negative HH goals. This operation may fail if the HH goal
     /// includes unifications that cannot be completed.
-    pub(super) fn simplify_hh_goal<I: InferenceContext<C>>(
+    pub(super) fn simplify_hh_goal<I: Context>(
         infer: &mut dyn InferenceTable<C, I>,
         subst: I::Substitution,
         initial_environment: &I::Environment,
@@ -48,8 +48,8 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
                         .push(Literal::Negative(I::goal_in_environment(&environment, subgoal)));
                 }
                 HhGoal::Unify(a, b) => {
-                    I::into_ex_clause(infer.unify_parameters(&environment, &a, &b)?,
-                                      &mut ex_clause)
+                    let result = infer.unify_parameters(&environment, &a, &b)?;
+                    infer.into_ex_clause(result, &mut ex_clause)
                 }
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause

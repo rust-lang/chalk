@@ -67,6 +67,39 @@ impl context::Context for SlgContext {
     type GoalInEnvironment = InEnvironment<Goal>;
     type Substitution = Substitution;
     type RegionConstraint = InEnvironment<Constraint>;
+
+    fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
+        InEnvironment::new(environment, goal)
+    }
+
+    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal {
+        domain_goal.cast()
+    }
+
+    fn cannot_prove() -> Self::Goal {
+        Goal::CannotProve(())
+    }
+
+    fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self> {
+        match goal {
+            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
+            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
+            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
+            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
+            Goal::Not(g1) => HhGoal::Not(*g1),
+            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
+            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
+            Goal::CannotProve(()) => HhGoal::CannotProve,
+        }
+    }
+
+    // Used by: simplify
+    fn add_clauses(
+        env: &Self::Environment,
+        clauses: impl IntoIterator<Item = Self::ProgramClause>,
+    ) -> Self::Environment {
+        Environment::add_clauses(env, clauses)
+    }
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -173,51 +206,6 @@ impl context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable {
 
 impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable {}
 
-impl context::InferenceContext<SlgContext> for SlgContext {
-    fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
-        InEnvironment::new(environment, goal)
-    }
-
-    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal {
-        domain_goal.cast()
-    }
-
-    fn cannot_prove() -> Self::Goal {
-        Goal::CannotProve(())
-    }
-
-    fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self> {
-        match goal {
-            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
-            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
-            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
-            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
-            Goal::Not(g1) => HhGoal::Not(*g1),
-            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
-            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
-            Goal::CannotProve(()) => HhGoal::CannotProve,
-        }
-    }
-
-    fn into_ex_clause(
-        result: Self::UnificationResult,
-        ex_clause: &mut ExClause<SlgContext>,
-    ) {
-        ex_clause
-            .subgoals
-            .extend(result.goals.into_iter().casted().map(Literal::Positive));
-        ex_clause.constraints.extend(result.constraints);
-    }
-
-    // Used by: simplify
-    fn add_clauses(
-        env: &Self::Environment,
-        clauses: impl IntoIterator<Item = Self::ProgramClause>,
-    ) -> Self::Environment {
-        Environment::add_clauses(env, clauses)
-    }
-}
-
 impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable {
     fn program_clauses(
         &self,
@@ -313,6 +301,25 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
     fn lift_delayed_literal(&self, c: DelayedLiteral<SlgContext>) -> DelayedLiteral<SlgContext> {
         c
     }
+
+    fn into_ex_clause(
+        &mut self,
+        result: UnificationResult,
+        ex_clause: &mut ExClause<SlgContext>,
+    ) {
+        into_ex_clause(result, ex_clause)
+    }
+}
+
+/// Helper function
+fn into_ex_clause(
+    result: UnificationResult,
+    ex_clause: &mut ExClause<SlgContext>,
+) {
+    ex_clause
+        .subgoals
+        .extend(result.goals.into_iter().casted().map(Literal::Positive));
+    ex_clause.constraints.extend(result.constraints);
 }
 
 impl Substitution {
