@@ -536,11 +536,12 @@ impl ir::AssociatedTyDatum {
         //
         // This is really a family of clauses, one for each where clause.
         clauses.extend(self.where_clauses.iter().map(|wc| {
+            let shift = wc.binders.len();
             ir::Binders {
-                binders: binders.iter().chain(wc.binders.iter()).cloned().collect(),
+                binders: wc.binders.iter().chain(binders.iter()).cloned().collect(),
                 value: ir::ProgramClauseImplication {
                     consequence: wc.value.clone().into_from_env_goal(),
-                    conditions: vec![ir::DomainGoal::FromEnvTy(app_ty.clone()).cast()],
+                    conditions: vec![ir::DomainGoal::FromEnvTy(app_ty.clone()).up_shift(shift).cast()],
                 }
             }.cast()
         }));

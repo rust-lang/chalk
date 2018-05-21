@@ -431,6 +431,7 @@ enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
                     Leaf(wc), CannotProve(a) });
 enum_fold!(ProgramClause[] { Implies(a), ForAll(a) });
+enum_fold!(InlineBound[] { TraitBound(a), ProjectionEqBound(a) });
 
 macro_rules! struct_fold {
     ($s:ident $([$($tt_args:tt)*])? { $($name:ident),* $(,)* } $($w:tt)*) => {
@@ -580,6 +581,18 @@ struct_fold!(ProgramClauseImplication {
 struct_fold!(ConstrainedSubst {
     subst, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
     constraints,
+});
+
+struct_fold!(TraitBound {
+    trait_id,
+    args_no_self,
+});
+
+struct_fold!(ProjectionEqBound {
+    trait_bound,
+    associated_ty_id,
+    parameters,
+    value,
 });
 
 // struct_fold!(ApplicationTy { name, parameters }); -- intentionally omitted, folded through Ty

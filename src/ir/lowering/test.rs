@@ -378,3 +378,31 @@ fn duplicate_parameters() {
         }
     }
 }
+
+#[test]
+fn external_items() {
+    lowering_success! {
+        program {
+            extern trait Send { }
+            extern struct Vec<T> { }
+        }
+    }
+}
+
+#[test]
+fn deref_trait() {
+    lowering_success! {
+        program {
+            #[lang_deref] trait Deref { type Target; }
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang_deref] trait Deref { }
+            #[lang_deref] trait DerefDupe { }
+        } error_msg {
+            "Duplicate lang item `DerefTrait`"
+        }
+    }
+}

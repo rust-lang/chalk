@@ -439,16 +439,6 @@ fn generic_projection_bound() {
 }
 
 #[test]
-fn external_items() {
-    lowering_success! {
-        program {
-            extern trait Send { }
-            extern struct Vec<T> { }
-        }
-    }
-}
-
-#[test]
 fn higher_ranked_trait_bounds() {
     lowering_error! {
         program {
@@ -470,6 +460,24 @@ fn higher_ranked_trait_bounds() {
 
             impl<'a> Foo<'a> for i32 { }
             impl Bar for i32 { }
+        }
+    }
+}
+
+#[test]
+fn higher_ranked_trait_bound_on_gat() {
+    lowering_success! {
+        program {
+            trait Foo<'a> { }
+            struct i32 { }
+
+            trait Bar<'a> {
+                type Item<V>: Foo<'a> where forall<'b> V: Foo<'b>;
+            }
+
+            impl<'a> Bar<'a> for i32 {
+                type Item<V> = V;
+            }
         }
     }
 }
@@ -508,24 +516,6 @@ fn higher_ranked_cyclic_requirements() {
 
             impl<T, U> Foo<T> for U where U: Copy { }
             impl<T, U> Bar<T> for U where U: Foo<T> { }
-        }
-    }
-}
-
-#[test]
-fn deref_trait() {
-    lowering_success! {
-        program {
-            #[lang_deref] trait Deref { type Target; }
-        }
-    }
-
-    lowering_error! {
-        program {
-            #[lang_deref] trait Deref { }
-            #[lang_deref] trait DerefDupe { }
-        } error_msg {
-            "Duplicate lang item `DerefTrait`"
         }
     }
 }

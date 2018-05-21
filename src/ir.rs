@@ -693,7 +693,9 @@ impl DomainGoal {
     /// Same as `into_well_formed_goal` but with the `FromEnv` predicate instead of `WellFormed`.
     crate fn into_from_env_goal(self) -> DomainGoal {
         match self {
-            DomainGoal::Holds(wca) => DomainGoal::FromEnv(wca),
+            DomainGoal::Holds(wca @ WhereClauseAtom::Implemented(..)) => {
+                DomainGoal::FromEnv(wca)
+            }
             goal => goal,
         }
     }
