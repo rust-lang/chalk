@@ -3,6 +3,12 @@ crates.io periodically for use by the compiler. The rest of chalk is
 not yet published, though it might be nice to publish the interpreter
 at some point.
 
+# Release 0.3.0
+
+**Tag:** `chalk-engine-v0.3.0`
+
+Tweak various things about the traits to aid in rustc integration.
+
 # Release 0.2.0
 
 **Tag:** `chalk-engine-v0.2.0`
