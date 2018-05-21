@@ -7,7 +7,7 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 use super::*;
 
-impl<E: ExClauseContext> PartialEq for DelayedLiteralSet<E> {
+impl<C: Context> PartialEq for DelayedLiteralSet<C> {
     fn eq(&self, other: &Self) -> bool {
         let DelayedLiteralSet { delayed_literals: a1 } = self;
         let DelayedLiteralSet { delayed_literals: a2 } = other;
@@ -15,12 +15,12 @@ impl<E: ExClauseContext> PartialEq for DelayedLiteralSet<E> {
     }
 }
 
-impl<E: ExClauseContext> Eq for DelayedLiteralSet<E> {
+impl<C: Context> Eq for DelayedLiteralSet<C> {
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
-impl<E: ExClauseContext> PartialEq for DelayedLiteral<E> {
+impl<C: Context> PartialEq for DelayedLiteral<C> {
     fn eq(&self, other: &Self) -> bool {
         if mem::discriminant(self) != mem::discriminant(other) {
             return false;
@@ -41,10 +41,10 @@ impl<E: ExClauseContext> PartialEq for DelayedLiteral<E> {
     }
 }
 
-impl<E: ExClauseContext> Eq for DelayedLiteral<E> {
+impl<C: Context> Eq for DelayedLiteral<C> {
 }
 
-impl<E: ExClauseContext> Hash for DelayedLiteral<E> {
+impl<C: Context> Hash for DelayedLiteral<C> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         mem::discriminant(self).hash(hasher);
 
@@ -65,8 +65,8 @@ impl<E: ExClauseContext> Hash for DelayedLiteral<E> {
 
 ///////////////////////////////////////////////////////////////////////////
 
-impl<I: ExClauseContext> PartialEq for Literal<I> {
-    fn eq(&self, other: &Literal<I>) -> bool {
+impl<C: Context> PartialEq for Literal<C> {
+    fn eq(&self, other: &Literal<C>) -> bool {
         match (self, other) {
             (Literal::Positive(goal1), Literal::Positive(goal2))
             | (Literal::Negative(goal1), Literal::Negative(goal2)) => goal1 == goal2,
@@ -76,10 +76,10 @@ impl<I: ExClauseContext> PartialEq for Literal<I> {
     }
 }
 
-impl<I: ExClauseContext> Eq for Literal<I> {
+impl<C: Context> Eq for Literal<C> {
 }
 
-impl<I: ExClauseContext> Hash for Literal<I> {
+impl<C: Context> Hash for Literal<C> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         mem::discriminant(self).hash(state);
         match self {

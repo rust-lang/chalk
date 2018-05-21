@@ -49,13 +49,6 @@ impl SlgContext {
     }
 }
 
-impl context::ExClauseContext for SlgContext {
-    type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
-    type GoalInEnvironment = InEnvironment<Goal>;
-    type Substitution = Substitution;
-    type RegionConstraint = InEnvironment<Constraint>;
-}
-
 impl context::Context for SlgContext {
     type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal>>;
     type CanonicalExClause = Canonical<ExClause<Self>>;
@@ -63,6 +56,17 @@ impl context::Context for SlgContext {
     type UniverseMap = UniverseMap;
     type InferenceNormalizedSubst = Substitution;
     type Solution = Solution;
+    type Environment = Arc<Environment>;
+    type DomainGoal = DomainGoal;
+    type Goal = Goal;
+    type BindersGoal = Binders<Box<Goal>>;
+    type Parameter = Parameter;
+    type ProgramClause = ProgramClause;
+    type UnificationResult = UnificationResult;
+    type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
+    type GoalInEnvironment = InEnvironment<Goal>;
+    type Substitution = Substitution;
+    type RegionConstraint = InEnvironment<Constraint>;
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -170,14 +174,6 @@ impl context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable {
 impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable {}
 
 impl context::InferenceContext<SlgContext> for SlgContext {
-    type Environment = Arc<Environment>;
-    type DomainGoal = DomainGoal;
-    type Goal = Goal;
-    type BindersGoal = Binders<Box<Goal>>;
-    type Parameter = Parameter;
-    type ProgramClause = ProgramClause;
-    type UnificationResult = UnificationResult;
-
     fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
         InEnvironment::new(environment, goal)
     }
@@ -190,7 +186,7 @@ impl context::InferenceContext<SlgContext> for SlgContext {
         Goal::CannotProve(())
     }
 
-    fn into_hh_goal(goal: Self::Goal) -> HhGoal<SlgContext, Self> {
+    fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self> {
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
             Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),

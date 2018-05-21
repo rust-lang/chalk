@@ -12,7 +12,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         infer: &mut dyn InferenceTable<C, I>,
         subst: I::Substitution,
         initial_environment: &I::Environment,
-        initial_hh_goal: HhGoal<C, I>,
+        initial_hh_goal: HhGoal<I>,
     ) -> Fallible<ExClause<I>> {
         let mut ex_clause = ExClause {
             subst,

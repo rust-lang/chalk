@@ -6,29 +6,10 @@ use std::hash::Hash;
 
 crate mod prelude;
 
-pub trait ExClauseContext: Sized + Debug {
-    /// Part of an answer: represents a canonicalized substitution,
-    /// combined with region constraints. See [the rustc-guide] for more information.
-    ///
-    /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html#canonicalizing-the-query-result
-    type CanonicalConstrainedSubst: Clone + Debug + Eq + Hash;
-
-    /// Represents a substitution from the "canonical variables" found
-    /// in a canonical goal to specific values.
-    type Substitution: Debug;
-
-    /// Represents a region constraint that will be propagated back
-    /// (but not verified).
-    type RegionConstraint: Debug;
-
-    /// Represents a goal along with an environment.
-    type GoalInEnvironment: Debug + Clone + Eq + Hash;
-}
-
 /// The "context" in which the SLG solver operates.
 // FIXME(leodasvacas): Clone and Debug bounds are just for easy derive,
 //                     they are not actually necessary.
-pub trait Context: Clone + Debug + ExClauseContext {
+pub trait Context: Clone + Debug {
     type CanonicalExClause: Debug;
 
     /// A map between universes. These are produced when
@@ -56,12 +37,24 @@ pub trait Context: Clone + Debug + ExClauseContext {
     /// completely opaque to the SLG solver; it is produced by
     /// `make_solution`.
     type Solution;
-}
 
-/// The set of types belonging to an "inference context"; in rustc,
-/// these types are tied to the lifetime of the arena within which an
-/// inference context operates.
-pub trait InferenceContext<C: Context>: ExClauseContext {
+    /// Part of an answer: represents a canonicalized substitution,
+    /// combined with region constraints. See [the rustc-guide] for more information.
+    ///
+    /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html#canonicalizing-the-query-result
+    type CanonicalConstrainedSubst: Clone + Debug + Eq + Hash;
+
+    /// Represents a substitution from the "canonical variables" found
+    /// in a canonical goal to specific values.
+    type Substitution: Debug;
+
+    /// Represents a region constraint that will be propagated back
+    /// (but not verified).
+    type RegionConstraint: Debug;
+
+    /// Represents a goal along with an environment.
+    type GoalInEnvironment: Debug + Clone + Eq + Hash;
+
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Debug + Clone;
 
@@ -94,7 +87,12 @@ pub trait InferenceContext<C: Context>: ExClauseContext {
     /// The successful result from unification: contains new subgoals
     /// and things that can be attached to an ex-clause.
     type UnificationResult;
+}
 
+/// The set of types belonging to an "inference context"; in rustc,
+/// these types are tied to the lifetime of the arena within which an
+/// inference context operates.
+pub trait InferenceContext<C: Context>: Context {
     fn goal_in_environment(
         environment: &Self::Environment,
         goal: Self::Goal,
@@ -114,7 +112,7 @@ pub trait InferenceContext<C: Context>: ExClauseContext {
     /// conversion -- that is, we convert the outermost goal into an
     /// `HhGoal`, but the goals contained within are left as context
     /// goals.
-    fn into_hh_goal(goal: Self::Goal) -> HhGoal<C, Self>;
+    fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self>;
 
     /// Add the residual subgoals as new subgoals of the ex-clause.
     /// Also add region constraints.

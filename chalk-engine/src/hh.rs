@@ -1,17 +1,17 @@
-use crate::context::{Context, InferenceContext};
+use crate::context::Context;
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
-pub enum HhGoal<C: Context, I: InferenceContext<C>> {
+pub enum HhGoal<C: Context> {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
-    ForAll(I::BindersGoal),
-    Exists(I::BindersGoal),
-    Implies(Vec<I::ProgramClause>, I::Goal),
-    And(I::Goal, I::Goal),
-    Not(I::Goal),
-    Unify(I::Parameter, I::Parameter),
-    DomainGoal(I::DomainGoal),
+    ForAll(C::BindersGoal),
+    Exists(C::BindersGoal),
+    Implies(Vec<C::ProgramClause>, C::Goal),
+    And(C::Goal, C::Goal),
+    Not(C::Goal),
+    Unify(C::Parameter, C::Parameter),
+    DomainGoal(C::DomainGoal),
 
     /// Indicates something that cannot be proven to be true or false
     /// definitively. This can occur with overflow but also with

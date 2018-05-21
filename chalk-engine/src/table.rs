@@ -42,9 +42,9 @@ index_struct! {
 /// goal for a particular table (modulo delayed literals). It contains
 /// a substitution
 #[derive(Clone, Debug)]
-pub struct Answer<E: ExClauseContext> {
-    crate subst: E::CanonicalConstrainedSubst,
-    crate delayed_literals: DelayedLiteralSet<E>,
+pub struct Answer<C: Context> {
+    crate subst: C::CanonicalConstrainedSubst,
+    crate delayed_literals: DelayedLiteralSet<C>,
 }
 
 impl<C: Context> Table<C> {

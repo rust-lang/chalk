@@ -66,7 +66,7 @@
 extern crate stacker;
 extern crate fxhash;
 
-use crate::context::{Context, ExClauseContext};
+use crate::context::Context;
 use fxhash::FxHashSet;
 use std::cmp::min;
 use std::usize;
@@ -111,20 +111,20 @@ struct DepthFirstNumber {
 
 /// The paper describes these as `A :- D | G`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ExClause<E: ExClauseContext> {
+pub struct ExClause<C: Context> {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
-    pub subst: E::Substitution,
+    pub subst: C::Substitution,
 
     /// Delayed literals: things that we depend on negatively,
     /// but which have not yet been fully evaluated.
-    pub delayed_literals: Vec<DelayedLiteral<E>>,
+    pub delayed_literals: Vec<DelayedLiteral<C>>,
 
     /// Region constraints we have accumulated.
-    pub constraints: Vec<E::RegionConstraint>,
+    pub constraints: Vec<C::RegionConstraint>,
 
     /// Subgoals: literals that must be proven
-    pub subgoals: Vec<Literal<E>>,
+    pub subgoals: Vec<Literal<C>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -170,12 +170,12 @@ enum InnerDelayedLiteralSets<C: Context> {
 /// delayed literal, which in turn forces its subgoal to be delayed,
 /// and so forth. Therefore, we store canonicalized goals.)
 #[derive(Clone, Debug, Default)]
-struct DelayedLiteralSet<E: ExClauseContext> {
-    delayed_literals: FxHashSet<DelayedLiteral<E>>,
+struct DelayedLiteralSet<C: Context> {
+    delayed_literals: FxHashSet<DelayedLiteral<C>>,
 }
 
 #[derive(Clone, Debug)]
-pub enum DelayedLiteral<E: ExClauseContext> {
+pub enum DelayedLiteral<C: Context> {
     /// Something which can never be proven nor disproven. Inserted
     /// when truncation triggers; doesn't arise normally.
     CannotProve(()),
@@ -189,14 +189,14 @@ pub enum DelayedLiteral<E: ExClauseContext> {
     /// **conditional** answer (the `CanonicalConstrainedSubst`) within the
     /// given table, but we have to come back later and see whether
     /// that answer turns out to be true.
-    Positive(TableIndex, E::CanonicalConstrainedSubst),
+    Positive(TableIndex, C::CanonicalConstrainedSubst),
 }
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
 #[derive(Clone, Debug)]
-pub enum Literal<E: ExClauseContext> { // FIXME: pub b/c fold
-    Positive(E::GoalInEnvironment),
-    Negative(E::GoalInEnvironment),
+pub enum Literal<C: Context> { // FIXME: pub b/c fold
+    Positive(C::GoalInEnvironment),
+    Negative(C::GoalInEnvironment),
 }
 
 /// The `Minimums` structure is used to track the dependencies between
@@ -272,12 +272,12 @@ impl<C: Context> DelayedLiteralSets<C> {
     }
 }
 
-impl<E: ExClauseContext> DelayedLiteralSet<E> {
+impl<C: Context> DelayedLiteralSet<C> {
     fn is_empty(&self) -> bool {
         self.delayed_literals.is_empty()
     }
 
-    fn is_subset(&self, other: &DelayedLiteralSet<E>) -> bool {
+    fn is_subset(&self, other: &DelayedLiteralSet<C>) -> bool {
         self.delayed_literals
             .iter()
             .all(|elem| other.delayed_literals.contains(elem))
