@@ -2121,3 +2121,110 @@ fn local_and_external_types() {
         goal { forall<T> { IsLocal(Internal<T>) } } yields { "Unique" }
     }
 }
+
+#[test]
+fn fundamental_types() {
+    // NOTE: These tests need to have both Internal and External structs since chalk will attempt
+    // to enumerate all of them.
+
+    // This first test is a sanity check to make sure `Box` isn't a special case.
+    // By testing this, we ensure that adding the #[fundamental] attribute does in fact
+    // change behaviour
+    test! {
+        program {
+            extern struct Box<T> { }
+
+            extern struct External { }
+            struct Internal { }
+        }
+
+        // Without fundamental, Box should never be local
+        goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "Unique" }
+
+        // Without fundamental, both of these are always non-local
+        goal { IsLocal(Box<External>) } yields { "No possible solution" }
+        goal { IsLocal(Box<Internal>) } yields { "No possible solution" }
+    }
+
+    test! {
+        program {
+            #[fundamental]
+            extern struct Box<T> { }
+
+            extern struct External { }
+            struct Internal { }
+        }
+
+        // With fundamental, Box can be local for certain types
+        goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "No possible solution" }
+
+        // With fundamental, each of these yields different results
+        goal { IsLocal(Box<External>) } yields { "No possible solution" }
+        goal { IsLocal(Box<Internal>) } yields { "Unique" }
+    }
+
+    test! {
+        program {
+            #[fundamental]
+            extern struct Box<T> { }
+
+            trait Clone { }
+            extern struct External<T> where T: Clone { }
+            struct Internal<T> where T: Clone { }
+        }
+
+        // External is extern no matter what, so this should not be local for any T
+        goal { forall<T> { IsLocal(Box<External<T>>) } } yields { "No possible solution" }
+
+        // A fundamental type inside an external type should not make a difference
+        goal { forall<T> { IsLocal(External<Box<T>>) } } yields { "No possible solution" }
+
+        // Make sure internal types within an external type do not make a difference
+        goal { forall<T> { IsLocal(Box<External<Internal<T>>>) } } yields { "No possible solution" }
+
+        // Internal is local no matter what, so this should be local for any T
+        goal { forall<T> { IsLocal(Box<Internal<T>>) } } yields { "Unique" }
+
+        // A fundamental type inside an internal type should not make a difference
+        goal { forall<T> { IsLocal(Internal<Box<T>>) } } yields { "Unique" }
+
+        // Make sure external types within an internal type do not make a difference
+        goal { forall<T> { IsLocal(Box<Internal<External<T>>>) } } yields { "Unique" }
+    }
+
+    // Nested fundamental types should still be local if they can be recursively proven to be local
+    test! {
+        program {
+            #[fundamental]
+            extern struct Box<T> { }
+            // This type represents &T which is also fundamental
+            #[fundamental]
+            extern struct Ref<T> { }
+
+            extern struct External { }
+            struct Internal { }
+        }
+
+        goal { forall<T> { IsLocal(Ref<Box<T>>) } } yields { "No possible solution" }
+
+        goal { IsLocal(Ref<Box<External>>) } yields { "No possible solution" }
+
+        goal { IsLocal(Ref<Box<Internal>>) } yields { "Unique" }
+    }
+
+    // If a type is not extern, it is always local regardless of its parameters or #[fundamental]
+    test! {
+        program {
+            // if we were compiling std, Box would never be extern
+            #[fundamental]
+            struct Box<T> { }
+
+            extern struct External { }
+            struct Internal { }
+        }
+
+        goal { forall<T> { IsLocal(Box<T>) } } yields { "Unique" }
+        goal { IsLocal(Box<External>) } yields { "Unique" }
+        goal { IsLocal(Box<Internal>) } yields { "Unique" }
+    }
+}
