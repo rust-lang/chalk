@@ -236,6 +236,7 @@ pub struct StructDatumBound {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructFlags {
     crate external: bool,
+    crate fundamental: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

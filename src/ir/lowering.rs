@@ -575,6 +575,7 @@ impl LowerStructDefn for StructDefn {
                 where_clauses,
                 flags: ir::StructFlags {
                     external: self.flags.external,
+                    fundamental: self.flags.fundamental,
                 },
             })
         })?;
