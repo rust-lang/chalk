@@ -1,7 +1,7 @@
 use crate::{DelayedLiteralSet, DelayedLiteralSets};
 use crate::context::prelude::*;
 use crate::strand::CanonicalStrand;
-use fxhash::FxHashMap;
+use crate::hashmap::FxHashMap;
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::mem;

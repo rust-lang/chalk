@@ -55,6 +55,7 @@
 #![feature(macro_vis_matcher)]
 #![feature(step_trait)]
 #![feature(non_modrs_mods)]
+#![feature(rustc_private)]
 
 //FIXME(2018-05-14): In rustc we build using beta and dyn trait is still unstable right now, so we
 // need to allow this to remove the warning about dyn_trait being stable in the latest rust.
@@ -63,17 +64,25 @@
 #![feature(dyn_trait)]
 
 #[macro_use] extern crate chalk_macros;
+
+#[cfg(feature = "stack_protection")]
 extern crate stacker;
+
+#[cfg(feature = "stabler")]
 extern crate fxhash;
 
+#[cfg(not(feature = "stabler"))]
+extern crate rustc_data_structures;
+
 use crate::context::Context;
-use fxhash::FxHashSet;
+use crate::hashmap::FxHashSet;
 use std::cmp::min;
 use std::usize;
 
 pub mod context;
 pub mod fallible;
 pub mod forest;
+pub mod hashmap;
 pub mod hh;
 mod derived;
 mod logic;
@@ -318,6 +327,7 @@ impl DepthFirstNumber {
 
 /// Because we recurse so deeply, we rely on stacker to
 /// avoid overflowing the stack.
+#[cfg(feature = "stack_protection")]
 fn maybe_grow_stack<F, R>(op: F) -> R
 where
     F: FnOnce() -> R,
@@ -327,4 +337,12 @@ where
     // for growing the stack in `new_clause`, a red zone of 32K was
     // insufficient to prevent stack overflow. - nikomatsakis
     stacker::maybe_grow(256 * 1024, 2 * 1024 * 1024, op)
+}
+
+#[cfg(not(feature = "stack_protection"))]
+fn maybe_grow_stack<F, R>(op: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    op()
 }
