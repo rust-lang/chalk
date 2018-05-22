@@ -273,7 +273,7 @@ impl ir::StructDatum {
         //    forall<T> { WF(Foo<T>) :- (T: Eq). }
         //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
         //
-        // If the type Foo is not marked #[extern], we also generate:
+        // If the type Foo is not marked `extern`, we also generate:
         //
         //    forall<T> { IsLocalTy(Foo<T>) }
 
@@ -293,7 +293,7 @@ impl ir::StructDatum {
 
         let mut clauses = vec![wf];
 
-        // Types that are not marked #[extern] satisfy IsLocal(TypeName)
+        // Types that are not marked `extern` satisfy IsLocal(TypeName)
         if !self.binders.value.flags.external {
             // `IsLocalTy(Ty)` depends *only* on whether the type is marked extern and nothing else
             let is_local = self.binders.map_ref(|bound_datum| ir::ProgramClauseImplication {
