@@ -1935,7 +1935,7 @@ fn projection_from_env_slow() {
 #[test]
 fn clauses_in_if_goals() {
     test! {
-        program { 
+        program {
             trait Foo { }
             struct Vec<T> { }
             struct i32 { }
@@ -2071,7 +2071,7 @@ fn deref_goal() {
             "No possible solution"
         }
     }
-    
+
     test! {
         program {
             #[lang_deref]
@@ -2093,5 +2093,31 @@ fn deref_goal() {
         } yields {
             "No possible solution"
         }
+    }
+}
+
+#[test]
+fn local_and_external_types() {
+    test! {
+        program {
+            extern struct External { }
+            struct Internal { }
+        }
+
+        goal { IsLocal(External) } yields { "No possible solution" }
+
+        goal { IsLocal(Internal) } yields { "Unique" }
+    }
+
+    test! {
+        program {
+            trait Clone { }
+            extern struct External<T> where T: Clone { }
+            struct Internal<T> where T: Clone { }
+        }
+
+        goal { forall<T> { IsLocal(External<T>) } } yields { "No possible solution" }
+
+        goal { forall<T> { IsLocal(Internal<T>) } } yields { "Unique" }
     }
 }

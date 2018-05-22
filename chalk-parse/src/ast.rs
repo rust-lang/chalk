@@ -217,6 +217,7 @@ pub enum WhereClause {
     UnifyLifetimes { a: Lifetime, b: Lifetime },
     TraitInScope { trait_name: Identifier },
     Derefs { source: Ty, target: Ty },
+    TyIsLocal { ty: Ty },
 }
 
 pub struct QuantifiedWhereClause {
@@ -247,4 +248,3 @@ pub enum Goal {
     // Additional kinds of goals:
     Leaf(WhereClause),
 }
-
