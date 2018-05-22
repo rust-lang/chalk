@@ -569,6 +569,9 @@ pub enum DomainGoal {
     /// In Rust there are also raw pointers which can be deref'd but do not implement Deref.
     Derefs(Derefs),
 
+    /// True if a type is considered to have been "defined" by the current crate. This is true for
+    /// a `struct Foo { }` but false for a `extern struct Foo { }`. However, for fundamental types
+    /// like `Box<T>`, it is true if `T` is local.
     IsLocalTy(Ty),
     IsLocalTraitRef(TraitRef),
 }
