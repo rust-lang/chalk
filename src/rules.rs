@@ -47,7 +47,7 @@ impl ir::Program {
                 value: ir::ProgramClauseImplication {
                     consequence: ir::DomainGoal::Derefs(ir::Derefs { source: t(), target: u() }),
                     conditions: vec![ir::ProjectionEq {
-                        projection: ir::ProjectionTy { 
+                        projection: ir::ProjectionTy {
                             associated_ty_id,
                             parameters: vec![t().cast()]
                         },
@@ -272,6 +272,10 @@ impl ir::StructDatum {
         //
         //    forall<T> { WF(Foo<T>) :- (T: Eq). }
         //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
+        //
+        // If the type Foo is not marked `extern`, we also generate:
+        //
+        //    forall<T> { IsLocalTy(Foo<T>) }
 
         let wf = self.binders.map_ref(|bound_datum| {
             ir::ProgramClauseImplication {
@@ -288,6 +292,18 @@ impl ir::StructDatum {
         }).cast();
 
         let mut clauses = vec![wf];
+
+        // Types that are not marked `extern` satisfy IsLocal(TypeName)
+        if !self.binders.value.flags.external {
+            // `IsLocalTy(Ty)` depends *only* on whether the type is marked extern and nothing else
+            let is_local = self.binders.map_ref(|bound_datum| ir::ProgramClauseImplication {
+                consequence: ir::DomainGoal::IsLocalTy(bound_datum.self_ty.clone().cast()),
+                conditions: Vec::new(),
+            }).cast();
+
+            clauses.push(is_local);
+        }
+
         let condition = ir::DomainGoal::FromEnvTy(self.binders.value.self_ty.clone().cast());
 
         for wc in self.binders
@@ -511,7 +527,7 @@ impl ir::AssociatedTyDatum {
             },
         }.cast());
 
-        
+
         let projection_wc = ir::WhereClauseAtom::ProjectionEq(projection_eq.clone());
         let trait_ref_wc = ir::WhereClauseAtom::Implemented(trait_ref.clone());
 

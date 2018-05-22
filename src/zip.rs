@@ -226,7 +226,9 @@ enum_zip!(DomainGoal {
     WellFormedTy,
     FromEnvTy,
     InScope,
-    Derefs
+    Derefs,
+    IsLocalTy,
+    IsLocalTraitRef
 });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(ProgramClause { Implies, ForAll });
