@@ -1,5 +1,6 @@
 use cast::{Cast, Caster};
 use fold::shift::Shift;
+use fold::Subst;
 use ir::{self, ToParameter};
 use std::iter;
 
@@ -192,20 +193,35 @@ impl ir::AssociatedTyValue {
             .cloned()
             .collect();
 
+        let impl_trait_ref = impl_datum.binders
+                                       .value
+                                       .trait_ref
+                                       .trait_ref()
+                                       .up_shift(self.value.len());
+
+        let all_parameters: Vec<_> =
+            self.value.binders
+                      .iter()
+                      .zip(0..)
+                      .map(|p| p.to_parameter())
+                      .chain(impl_trait_ref.parameters.iter().cloned())
+                      .collect();
+
         // Assemble the full list of conditions for projection to be valid.
         // This comes in two parts, marked as (1) and (2) in example above:
         //
         // 1. require that the trait is implemented
         // 2. any where-clauses from the `type` declaration in the impl
-        let impl_trait_ref = impl_datum
-            .binders
-            .value
-            .trait_ref
-            .trait_ref()
-            .up_shift(self.value.len());
+        let where_clauses =
+            associated_ty.where_clauses
+                         .iter()
+                         .map(|wc| Subst::apply(&all_parameters, wc))
+                         .casted();
+
         let conditions: Vec<ir::Goal> =
-            iter::once(impl_trait_ref.clone().cast())
-                .chain(associated_ty.where_clauses.iter().cloned().casted()).collect();
+            where_clauses
+            .chain(Some(impl_trait_ref.clone().cast()))
+            .collect();
 
         // Bound parameters + `Self` type of the trait-ref
         let parameters: Vec<_> = {
