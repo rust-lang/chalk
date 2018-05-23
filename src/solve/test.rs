@@ -670,6 +670,76 @@ fn normalize_gat_with_where_clause() {
 }
 
 #[test]
+fn normalize_gat_with_where_clause2() {
+    test! {
+        program {
+            trait Bar<T> { }
+            trait Foo<T> {
+                type Item<U> where U: Bar<T>;
+            }
+
+            struct i32 { }
+            impl<T> Foo<T> for i32 {
+                type Item<U> = U;
+            }
+        }
+
+        goal {
+            forall<T, U> {
+                exists<V> {
+                    Normalize(<i32 as Foo<T>>::Item<U> -> V)
+                }
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T, U> {
+                exists<V> {
+                    if (U: Bar<T>) {
+                        Normalize(<i32 as Foo<T>>::Item<U> -> V)
+                    }
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := !2]"
+        }
+    }
+}
+
+#[test]
+fn normalize_gat_with_higher_ranked_trait_bound() {
+    test! {
+        program {
+            trait Foo<'a, T> { }
+            struct i32 { }
+
+            trait Bar<'a, T> {
+                type Item<V>: Foo<'a, T> where forall<'b> V: Foo<'b, T>;
+            }
+
+            impl<'a, T> Foo<'a, T> for i32 { }
+            impl<'a, T> Bar<'a, T> for i32 {
+                type Item<V> = i32;
+            }
+        }
+
+        goal {
+            forall<'a, T, V> {
+                if (forall<'b> { V: Foo<'b, T> }) {
+                    exists<U> {
+                        Normalize(<i32 as Bar<'a, T>>::Item<V> -> U)
+                    }
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := i32], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
 fn normalize_implied_bound() {
     test! {
         program {

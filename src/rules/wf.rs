@@ -325,7 +325,7 @@ impl WfSolver {
         let goal = Goal::Implies(hypotheses, Box::new(goal))
             .quantify(QuantifierKind::ForAll, impl_datum.binders.binders.clone());
 
-        println!("{:?}", goal);
+        debug!("WF trait goal: {:?}", goal);
 
         match self.solver_choice.solve_root_goal(&self.env, &goal.into_closed_goal()).unwrap() {
             Some(sol) => sol.is_unique(),
