@@ -311,10 +311,10 @@ impl ir::StructDatum {
             }).cast();
 
             clauses.push(is_local);
-        }
-        // If a type is `extern`, but is also `#[fundamental]`, it satisfies IsLocalTy
-        // if and only if its parameters satisfy IsLocalTy
-        else if self.binders.value.flags.fundamental {
+        } else if self.binders.value.flags.fundamental {
+            // If a type is `extern`, but is also `#[fundamental]`, it satisfies IsLocalTy
+            // if and only if its parameters satisfy IsLocalTy
+
             // Fundamental types must always have at least one type parameter for this rule to
             // make any sense. We currently do not have have any fundamental types with more than
             // one type parameter, nor do we know what the behaviour for that should be. Thus, we

@@ -2140,6 +2140,7 @@ fn fundamental_types() {
 
         // Without fundamental, Box should never be local
         goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "Unique" }
+        goal { forall<T> { IsLocal(Box<T>) } } yields { "No possible solution" }
 
         // Without fundamental, both of these are always non-local
         goal { IsLocal(Box<External>) } yields { "No possible solution" }
@@ -2157,6 +2158,7 @@ fn fundamental_types() {
 
         // With fundamental, Box can be local for certain types
         goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "No possible solution" }
+        goal { forall<T> { IsLocal(Box<T>) } } yields { "No possible solution" }
 
         // With fundamental, each of these yields different results
         goal { IsLocal(Box<External>) } yields { "No possible solution" }
