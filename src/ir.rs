@@ -269,9 +269,9 @@ pub enum InlineBound {
 impl InlineBound {
     /// Applies the `InlineBound` to `self_ty` and lowers to a [`DomainGoal`].
     /// 
-    /// Because an `InlineBound` not know anything about what it's binding, you
-    /// must provide that type as `self_ty`.
-    pub fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
+    /// Because an `InlineBound` does not know anything about what it's binding,
+    /// you must provide that type as `self_ty`.
+    crate fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
         match self {
             InlineBound::TraitBound(b) => b.lower_with_self(self_ty),
             InlineBound::ProjectionEqBound(b) => b.lower_with_self(self_ty),
@@ -288,7 +288,7 @@ pub struct TraitBound {
 }
 
 impl TraitBound {
-    pub fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
+    crate fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
         let trait_ref = self.as_trait_ref(self_ty);
         vec![DomainGoal::Holds(WhereClauseAtom::Implemented(trait_ref))]
     }
@@ -314,7 +314,7 @@ pub struct ProjectionEqBound {
 }
 
 impl ProjectionEqBound {
-    pub fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
+    crate fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 
         let mut parameters = self.parameters.clone();
@@ -354,7 +354,7 @@ pub struct AssociatedTyDatum {
     /// would result in a well-formed projection.
     crate bounds: Vec<InlineBound>,
 
-    /// Where clauses that must hold for the projection be well-formed.
+    /// Where clauses that must hold for the projection to be well-formed.
     crate where_clauses: Vec<QuantifiedDomainGoal>,
 }
 
@@ -364,7 +364,7 @@ impl AssociatedTyDatum {
     /// ```notrust
     /// Implemented(<?0 as Foo>::Item<?1>: Sized)
     /// ```
-    pub fn bounds_on_self(&self) -> Vec<DomainGoal> {
+    crate fn bounds_on_self(&self) -> Vec<DomainGoal> {
         let parameters = self.parameter_kinds
                              .anonymize()
                              .iter()

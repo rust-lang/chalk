@@ -740,7 +740,7 @@ fn normalize_gat_with_higher_ranked_trait_bound() {
 }
 
 #[test]
-fn normalize_implied_bound() {
+fn implied_bounds() {
     test! {
         program {
             trait Clone { }
@@ -761,7 +761,7 @@ fn normalize_implied_bound() {
 }
 
 #[test]
-fn normalize_implied_bound_gat() {
+fn gat_implied_bounds() {
     test! {
         program {
             trait Clone { }
@@ -792,6 +792,36 @@ fn normalize_implied_bound_gat() {
                 if (T: Foo<Item<U> = V>) {
                     // Without the bound Item<T>: Clone, there is no way to infer this.
                     V: Clone
+                }
+            }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn implied_from_env() {
+    test! {
+        program {
+            trait Clone { }
+            trait Foo<U> { type Item<V>; }
+        }
+
+        goal {
+            forall<T, U, V> {
+                if (FromEnv(<T as Foo<U>>::Item<V>)) {
+                    FromEnv(T: Foo<U>)
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T, U, V> {
+                if (FromEnv(<T as Foo<U>>::Item<V>)) {
+                    FromEnv(T: Clone)
                 }
             }
         } yields {

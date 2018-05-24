@@ -237,7 +237,7 @@ impl ir::AssociatedTyValue {
         let projection = ir::ProjectionTy {
             associated_ty_id: self.associated_ty_id,
 
-            // Add the remaining parameters of the trait-ref if any
+            // Add the remaining parameters of the trait-ref, if any
             parameters: parameters.iter()
                                   .chain(&impl_trait_ref.parameters[1..])
                                   .cloned()
@@ -528,10 +528,7 @@ impl ir::AssociatedTyDatum {
         }.cast());
 
         // Assuming well-formedness of projection type means we can assume
-        // the trait ref as well.
-        //
-        // Currently we do not use this rule in chalk (it's used in fn bodies),
-        // but it's here for completeness.
+        // the trait ref as well. Mostly used in function bodies.
         //
         //    forall<Self> {
         //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).

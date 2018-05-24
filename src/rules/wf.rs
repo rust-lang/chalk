@@ -258,7 +258,9 @@ impl WfSolver {
                                       .map(|p| p.to_parameter())
                                       .chain(trait_ref.parameters.iter().cloned())
                                       .collect();
-            
+
+            // Add bounds from the trait. Because they are defined on the trait,
+            // their parameters must be substituted with those of the impl.
             let bound_goals =
                 bounds.iter()
                       .map(|b| Subst::apply(&all_parameters, b))
@@ -271,6 +273,8 @@ impl WfSolver {
                 None => return None,
             };
 
+            // Add where clauses from the associated ty definition. We must
+            // substitute parameters here, like we did with the bounds above.
             let hypotheses =
                 assoc_ty_datum.where_clauses
                               .iter()
@@ -278,7 +282,7 @@ impl WfSolver {
                               .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
                               .casted()
                               .collect();
-            
+
             let goal = Goal::Implies(
                 hypotheses,
                 Box::new(goal)
