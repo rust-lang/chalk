@@ -7,7 +7,7 @@ use crate::hh::HhGoal;
 use crate::stack::StackIndex;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{Answer, AnswerIndex};
-use crate::hashmap::FxHashSet;
+use rustc_hash::FxHashSet;
 use std::marker::PhantomData;
 use std::mem;
 

@@ -34,6 +34,7 @@ pub struct StructDefn {
 
 pub struct StructFlags {
     pub external: bool,
+    pub fundamental: bool,
 }
 
 pub struct TraitDefn {

@@ -406,3 +406,16 @@ fn deref_trait() {
         }
     }
 }
+
+fn fundamental_multiple_type_parameters() {
+    lowering_error! {
+        program {
+            #[fundamental]
+            struct Boxes<T, U> { }
+        }
+
+        error_msg {
+            "Only fundamental types with a single parameter are supported"
+        }
+    }
+}

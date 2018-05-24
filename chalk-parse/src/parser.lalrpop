@@ -39,9 +39,10 @@ ExternalKeyword: () = "extern";
 AutoKeyword: () = "#" "[" "auto" "]";
 MarkerKeyword: () = "#" "[" "marker" "]";
 DerefLangItem: () = "#" "[" "lang_deref" "]";
+FundamentalKeyword: () = "#" "[" "fundamental" "]";
 
 StructDefn: StructDefn = {
-    <external:ExternalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
+    <fundamental:FundamentalKeyword?> <external:ExternalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
     {
         name: n,
@@ -50,6 +51,7 @@ StructDefn: StructDefn = {
         fields: f,
         flags: StructFlags {
             external: external.is_some(),
+            fundamental: fundamental.is_some(),
         },
     }
 };

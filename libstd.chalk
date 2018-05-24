@@ -24,6 +24,7 @@ struct Rc<T> { }
 impl<T> Clone for Rc<T> { }
 impl<T> Sized for Rc<T> { }
 
+#[fundamental]
 struct Box<T> { }
 impl<T> AsRef<T> for Box<T> where T: Sized { }
 impl<T> Clone for Box<T> where T: Clone { }
@@ -39,4 +40,3 @@ impl<T> AsRef<Slice<T>> for Vec<T> where T: Sized { }
 impl<T> AsRef<Vec<T>> for Vec<T> where T: Sized { }
 impl<T> Clone for Vec<T> where T: Clone, T: Sized { }
 impl<T> Sized for Vec<T> where T: Sized { }
-

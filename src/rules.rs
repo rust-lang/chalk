@@ -295,6 +295,15 @@ impl ir::StructDatum {
         // If the type Foo is not marked `extern`, we also generate:
         //
         //    forall<T> { IsLocalTy(Foo<T>) }
+        //
+        // Given an `extern` type that is also fundamental:
+        //
+        //    #[fundamental]
+        //    extern struct Box<T> {}
+        //
+        // We generate the following clause:
+        //
+        //    forall<T> { IsLocalTy(Box<T>) :- IsLocalTy(T) }
 
         let wf = self.binders.map_ref(|bound_datum| {
             ir::ProgramClauseImplication {
@@ -321,6 +330,30 @@ impl ir::StructDatum {
             }).cast();
 
             clauses.push(is_local);
+        } else if self.binders.value.flags.fundamental {
+            // If a type is `extern`, but is also `#[fundamental]`, it satisfies IsLocalTy
+            // if and only if its parameters satisfy IsLocalTy
+
+            // Fundamental types must always have at least one type parameter for this rule to
+            // make any sense. We currently do not have have any fundamental types with more than
+            // one type parameter, nor do we know what the behaviour for that should be. Thus, we
+            // are asserting here that there is only a single type parameter until the day when
+            // someone makes a decision about how that should behave.
+            assert_eq!(self.binders.value.self_ty.len_type_parameters(), 1,
+                "Only fundamental types with a single parameter are supported");
+
+            let local_fundamental = self.binders.map_ref(|bound_datum| ir::ProgramClauseImplication {
+                consequence: ir::DomainGoal::IsLocalTy(bound_datum.self_ty.clone().cast()),
+                conditions: vec![
+                    ir::DomainGoal::IsLocalTy(
+                        // This unwrap is safe because we asserted above for the presence of a type
+                        // parameter
+                        bound_datum.self_ty.first_type_parameter().unwrap()
+                    ).cast(),
+                ],
+            }).cast();
+
+            clauses.push(local_fundamental);
         }
 
         let condition = ir::DomainGoal::FromEnvTy(self.binders.value.self_ty.clone().cast());
