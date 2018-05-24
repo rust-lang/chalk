@@ -56,35 +56,30 @@
 #![feature(step_trait)]
 #![feature(non_modrs_mods)]
 #![feature(rustc_private)]
-
 //FIXME(2018-05-14): In rustc we build using beta and dyn trait is still unstable right now, so we
 // need to allow this to remove the warning about dyn_trait being stable in the latest rust.
 // We should probably eventually remove this `allow` and delete any unecessary `feature` declarations.
 #![allow(stable_features)]
 #![feature(dyn_trait)]
 
-#[macro_use] extern crate chalk_macros;
+#[macro_use]
+extern crate chalk_macros;
 
 #[cfg(feature = "stack_protection")]
 extern crate stacker;
 
-#[cfg(feature = "stabler")]
-extern crate fxhash;
-
-#[cfg(not(feature = "stabler"))]
-extern crate rustc_data_structures;
+extern crate rustc_hash;
 
 use crate::context::Context;
-use crate::hashmap::FxHashSet;
+use rustc_hash::FxHashSet;
 use std::cmp::min;
 use std::usize;
 
 pub mod context;
+mod derived;
 pub mod fallible;
 pub mod forest;
-pub mod hashmap;
 pub mod hh;
-mod derived;
 mod logic;
 mod simplify;
 mod stack;
