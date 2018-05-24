@@ -349,6 +349,10 @@ impl ApplicationTy {
         // This unwrap() is safe because is_ty ensures that we definitely have a Ty
         self.parameters.iter().find(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
     }
+
+    crate fn len_type_parameters(&self) -> usize {
+        self.parameters.iter().filter(|p| p.is_ty()).count()
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -703,10 +707,6 @@ impl<T> Binders<T> {
 
     crate fn len(&self) -> usize {
         self.binders.len()
-    }
-
-    crate fn len_type_parameters(&self) -> usize {
-        self.binders.iter().filter(|p| p.is_ty()).count()
     }
 }
 

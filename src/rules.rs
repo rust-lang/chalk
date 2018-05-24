@@ -320,7 +320,7 @@ impl ir::StructDatum {
             // one type parameter, nor do we know what the behaviour for that should be. Thus, we
             // are asserting here that there is only a single type parameter until the day when
             // someone makes a decision about how that should behave.
-            assert_eq!(self.binders.len_type_parameters(), 1,
+            assert_eq!(self.binders.value.self_ty.len_type_parameters(), 1,
                 "Only fundamental types with a single parameter are supported");
 
             let local_fundamental = self.binders.map_ref(|bound_datum| ir::ProgramClauseImplication {
