@@ -236,6 +236,7 @@ pub struct StructDatumBound {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructFlags {
     crate external: bool,
+    crate fundamental: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -343,6 +344,17 @@ pub struct ApplicationTy {
     crate parameters: Vec<Parameter>,
 }
 
+impl ApplicationTy {
+    crate fn first_type_parameter(&self) -> Option<Ty> {
+        // This unwrap() is safe because is_ty ensures that we definitely have a Ty
+        self.parameters.iter().find(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
+    }
+
+    crate fn len_type_parameters(&self) -> usize {
+        self.parameters.iter().filter(|p| p.is_ty()).count()
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ParameterKind<T, L = T> {
     Ty(T),
@@ -381,6 +393,13 @@ impl<T, L> ParameterKind<T, L> {
         match *self {
             ParameterKind::Ty(ref t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(ref l) => ParameterKind::Lifetime(l),
+        }
+    }
+
+    crate fn is_ty(&self) -> bool {
+        match self {
+            ParameterKind::Ty(_) => true,
+            ParameterKind::Lifetime(_) => false,
         }
     }
 

@@ -566,6 +566,10 @@ impl LowerStructDefn for StructDefn {
                     .collect(),
             };
 
+            if self.flags.fundamental && self_ty.len_type_parameters() != 1 {
+                bail!("Only fundamental types with a single parameter are supported");
+            }
+
             let fields: Result<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
             let where_clauses = self.lower_where_clauses(env)?;
 
@@ -575,6 +579,7 @@ impl LowerStructDefn for StructDefn {
                 where_clauses,
                 flags: ir::StructFlags {
                     external: self.flags.external,
+                    fundamental: self.flags.fundamental,
                 },
             })
         })?;
