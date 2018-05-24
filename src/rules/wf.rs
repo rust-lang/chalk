@@ -5,6 +5,8 @@ use errors::*;
 use cast::*;
 use solve::SolverChoice;
 use itertools::Itertools;
+use fold::*;
+use fold::shift::Shift;
 
 mod test;
 
@@ -209,13 +211,11 @@ impl WfSolver {
         let mut input_types = Vec::new();
         impl_datum.binders.value.where_clauses.fold(&mut input_types);
 
-        // We partition the input types of the type on which we implement the trait in two categories:
-        // * projection types, e.g. `<T as Iterator>::Item`: we will have to prove that these types
-        //   are well-formed, e.g. that we can show that `T: Iterator` holds
-        // * any other types, e.g. `HashSet<K>`: we will *assume* that these types are well-formed, e.g.
-        //   we will be able to derive that `K: Hash` holds without writing any where clause.
+        // We retrieve all the input types of the type on which we implement the trait: we will
+        // *assume* that these types are well-formed, e.g. we will be able to derive that
+        // `K: Hash` holds without writing any where clause.
         //
-        // Examples:
+        // Example:
         // ```
         // struct HashSet<K> where K: Hash { ... }
         //
@@ -223,24 +223,8 @@ impl WfSolver {
         //     // Inside here, we can rely on the fact that `K: Hash` holds
         // }
         // ```
-        //
-        // ```
-        // impl<T> Foo for <T as Iterator>::Item {
-        //     // The impl is not well-formed, as an exception we do not assume that
-        //     // `<T as Iterator>::Item` is well-formed and instead want to prove it.
-        // }
-        // ```
-        //
-        // ```
-        // impl<T> Foo for <T as Iterator>::Item where T: Iterator {
-        //     // Now ok.
-        // }
-        // ```
         let mut header_input_types = Vec::new();
         trait_ref.fold(&mut header_input_types);
-        let (header_projection_types, header_other_types): (Vec<_>, Vec<_>) =
-            header_input_types.into_iter()
-                              .partition(|ty| ty.is_projection());
 
         // Associated type values are special because they can be parametric (independently of
         // the impl), so we issue a special goal which is quantified using the binders of the
@@ -256,16 +240,54 @@ impl WfSolver {
         // ```
         // we would issue the following subgoal: `forall<'a> { WellFormed(Box<&'a T>) }`.
         let compute_assoc_ty_goal = |assoc_ty: &AssociatedTyValue| {
+            let assoc_ty_datum = &self.env.associated_ty_data[&assoc_ty.associated_ty_id];
+            let bounds = &assoc_ty_datum.bounds;
+
             let mut input_types = Vec::new();
             assoc_ty.value.value.ty.fold(&mut input_types);
 
-            if input_types.is_empty() {
-                return None;
-            }
+            let wf_goals =
+                input_types.into_iter()
+                           .map(|ty| DomainGoal::WellFormedTy(ty));
+            
+            let trait_ref = trait_ref.up_shift(assoc_ty.value.binders.len());
 
-            let goals = input_types.into_iter().map(|ty| DomainGoal::WellFormedTy(ty).cast());
-            let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-                            .expect("at least one goal");
+            let all_parameters: Vec<_> =
+                assoc_ty.value.binders.iter()
+                                      .zip(0..)
+                                      .map(|p| p.to_parameter())
+                                      .chain(trait_ref.parameters.iter().cloned())
+                                      .collect();
+
+            // Add bounds from the trait. Because they are defined on the trait,
+            // their parameters must be substituted with those of the impl.
+            let bound_goals =
+                bounds.iter()
+                      .map(|b| Subst::apply(&all_parameters, b))
+                      .flat_map(|b| b.lower_with_self(assoc_ty.value.value.ty.clone()))
+                      .map(|g| g.into_well_formed_goal());
+            
+            let goals = wf_goals.chain(bound_goals).casted();
+            let goal = match goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf))) {
+                Some(goal) => goal,
+                None => return None,
+            };
+
+            // Add where clauses from the associated ty definition. We must
+            // substitute parameters here, like we did with the bounds above.
+            let hypotheses =
+                assoc_ty_datum.where_clauses
+                              .iter()
+                              .map(|wc| Subst::apply(&all_parameters, wc))
+                              .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+                              .casted()
+                              .collect();
+
+            let goal = Goal::Implies(
+                hypotheses,
+                Box::new(goal)
+            );
+
             Some(goal.quantify(QuantifierKind::ForAll, assoc_ty.value.binders.clone()))
         };
 
@@ -283,7 +305,6 @@ impl WfSolver {
         );
         let goals =
             input_types.into_iter()
-                       .chain(header_projection_types.into_iter())
                        .map(|ty| DomainGoal::WellFormedTy(ty).cast())
                        .chain(assoc_ty_goals)
                        .chain(Some(trait_ref_wf).cast());
@@ -302,11 +323,13 @@ impl WfSolver {
                       .cloned()
                       .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
                       .casted()
-                      .chain(header_other_types.into_iter().map(|ty| DomainGoal::FromEnvTy(ty).cast()))
+                      .chain(header_input_types.into_iter().map(|ty| DomainGoal::FromEnvTy(ty).cast()))
                       .collect();
 
         let goal = Goal::Implies(hypotheses, Box::new(goal))
             .quantify(QuantifierKind::ForAll, impl_datum.binders.binders.clone());
+
+        debug!("WF trait goal: {:?}", goal);
 
         match self.solver_choice.solve_root_goal(&self.env, &goal.into_closed_goal()).unwrap() {
             Some(sol) => sol.is_unique(),

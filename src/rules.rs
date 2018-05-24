@@ -1,6 +1,8 @@
 use cast::{Cast, Caster};
 use fold::shift::Shift;
+use fold::Subst;
 use ir::{self, ToParameter};
+use std::iter;
 
 mod default;
 mod wf;
@@ -181,26 +183,45 @@ impl ir::AssociatedTyValue {
         program: &ir::Program,
         impl_datum: &ir::ImplDatum,
     ) -> Vec<ir::ProgramClause> {
+        let associated_ty = &program.associated_ty_data[&self.associated_ty_id];
+
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
         let all_binders: Vec<_> = self.value
             .binders
             .iter()
+            .chain(impl_datum.binders.binders.iter())
             .cloned()
-            .chain(impl_datum.binders.binders.iter().cloned())
             .collect();
+
+        let impl_trait_ref = impl_datum.binders
+                                       .value
+                                       .trait_ref
+                                       .trait_ref()
+                                       .up_shift(self.value.len());
+
+        let all_parameters: Vec<_> =
+            self.value.binders
+                      .iter()
+                      .zip(0..)
+                      .map(|p| p.to_parameter())
+                      .chain(impl_trait_ref.parameters.iter().cloned())
+                      .collect();
 
         // Assemble the full list of conditions for projection to be valid.
         // This comes in two parts, marked as (1) and (2) in example above:
         //
         // 1. require that the trait is implemented
         // 2. any where-clauses from the `type` declaration in the impl
-        let impl_trait_ref = impl_datum
-            .binders
-            .value
-            .trait_ref
-            .trait_ref()
-            .up_shift(self.value.len());
-        let conditions: Vec<ir::Goal> = vec![impl_trait_ref.clone().cast()];
+        let where_clauses =
+            associated_ty.where_clauses
+                         .iter()
+                         .map(|wc| Subst::apply(&all_parameters, wc))
+                         .casted();
+
+        let conditions: Vec<ir::Goal> =
+            where_clauses
+            .chain(Some(impl_trait_ref.clone().cast()))
+            .collect();
 
         // Bound parameters + `Self` type of the trait-ref
         let parameters: Vec<_> = {
@@ -216,7 +237,7 @@ impl ir::AssociatedTyValue {
         let projection = ir::ProjectionTy {
             associated_ty_id: self.associated_ty_id,
 
-            // Add the remaining parameters of the trait-ref if any
+            // Add the remaining parameters of the trait-ref, if any
             parameters: parameters.iter()
                                   .chain(&impl_trait_ref.parameters[1..])
                                   .cloned()
@@ -233,14 +254,12 @@ impl ir::AssociatedTyValue {
             binders: all_binders.clone(),
             value: ir::ProgramClauseImplication {
                 consequence: normalize_goal.clone(),
-                conditions: conditions.clone(),
+                conditions: conditions,
             },
         }.cast();
 
         let unselected_projection = ir::UnselectedProjectionTy {
-            type_name: program.associated_ty_data[&self.associated_ty_id]
-                .name
-                .clone(),
+            type_name: associated_ty.name.clone(),
             parameters: parameters,
         };
 
@@ -443,23 +462,22 @@ impl ir::AssociatedTyDatum {
         // equality" rules. There are always two; one for a successful normalization,
         // and one for the "fallback" notion of equality.
         //
-        // Given:
+        // Given: (here, `'a` and `T` represent zero or more parameters)
         //
         //    trait Foo {
-        //        type Assoc;
+        //        type Assoc<'a, T>: Bounds where WC;
         //    }
         //
         // we generate the 'fallback' rule:
         //
-        //    forall<T> {
-        //        ProjectionEq(<T as Foo>::Assoc = (Foo::Assoc)<T>) :-
-        //            T: Foo
+        //    forall<Self, 'a, T> {
+        //        ProjectionEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
         //    }
         //
         // and
         //
-        //    forall<T> {
-        //        ProjectionEq(<T as Foo>::Assoc = U) :-
+        //    forall<Self, 'a, T, U> {
+        //        ProjectionEq(<T as Foo>::Assoc<'a, T> = U) :-
         //            Normalize(<T as Foo>::Assoc -> U)
         //    }
         //
@@ -506,36 +524,90 @@ impl ir::AssociatedTyDatum {
         };
         let app_ty = ir::Ty::Apply(app);
 
+        let projection_eq = ir::ProjectionEq {
+            projection: projection.clone(),
+            ty: app_ty.clone(),
+        };
+
         let mut clauses = vec![];
 
-        //    forall<T> {
-        //        ProjectionEq(<T as Foo>::Assoc = (Foo::Assoc)<T>) :-
-        //            T: Foo
-        //    }
-        clauses.push(ir::Binders {
-            binders: binders.clone(),
-            value: ir::ProgramClauseImplication {
-                consequence: ir::ProjectionEq {
-                    projection: projection.clone(),
-                    ty: app_ty.clone(),
-                }.cast(),
-                conditions: vec![trait_ref.clone().cast()],
-            },
-        }.cast());
-
-        // The above application type is always well-formed, and `<T as Foo>::Assoc` will
-        // unify with `(Foo::Assoc)<T>` only if `T: Foo`, because of the above rule, so we have:
+        // Fallback rule. The solver uses this to move between the projection
+        // and skolemized type.
         //
-        //    forall<T> {
-        //        WellFormed((Foo::Assoc)<T>).
+        //    forall<Self> {
+        //        ProjectionEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
         //    }
         clauses.push(ir::Binders {
             binders: binders.clone(),
             value: ir::ProgramClauseImplication {
-                consequence: ir::DomainGoal::WellFormedTy(app_ty).cast(),
+                consequence: projection_eq.clone().cast(),
                 conditions: vec![],
             },
         }.cast());
+
+        // Well-formedness of projection type.
+        //
+        //    forall<Self> {
+        //        WellFormed((Foo::Assoc)<Self>) :- Self: Foo, WC.
+        //    }
+        clauses.push(ir::Binders {
+            binders: binders.clone(),
+            value: ir::ProgramClauseImplication {
+                consequence: ir::DomainGoal::WellFormedTy(app_ty.clone()).cast(),
+                conditions: iter::once(trait_ref.clone().cast())
+                                .chain(self.where_clauses.iter().cloned().casted())
+                                .collect(),
+            },
+        }.cast());
+
+        // Assuming well-formedness of projection type means we can assume
+        // the trait ref as well. Mostly used in function bodies.
+        //
+        //    forall<Self> {
+        //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).
+        //    }
+        clauses.push(ir::Binders {
+            binders: binders.clone(),
+            value: ir::ProgramClauseImplication {
+                consequence: ir::DomainGoal::FromEnv(trait_ref.clone().cast()),
+                conditions: vec![ir::DomainGoal::FromEnvTy(app_ty.clone()).cast()],
+            }
+        }.cast());
+
+        // Reverse rule for where clauses.
+        //
+        //    forall<Self> {
+        //        FromEnv(WC) :- FromEnv((Foo::Assoc)<Self>).
+        //    }
+        //
+        // This is really a family of clauses, one for each where clause.
+        clauses.extend(self.where_clauses.iter().map(|wc| {
+            let shift = wc.binders.len();
+            ir::Binders {
+                binders: wc.binders.iter().chain(binders.iter()).cloned().collect(),
+                value: ir::ProgramClauseImplication {
+                    consequence: wc.value.clone().into_from_env_goal(),
+                    conditions: vec![ir::DomainGoal::FromEnvTy(app_ty.clone()).up_shift(shift).cast()],
+                }
+            }.cast()
+        }));
+
+        // Reverse rule for implied bounds.
+        //
+        //    forall<T> {
+        //        FromEnv(<T as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo)
+        //    }
+        clauses.extend(self.bounds_on_self().into_iter().map(|bound| {
+            ir::Binders {
+                binders: binders.clone(),
+                value: ir::ProgramClauseImplication {
+                    consequence: bound.into_from_env_goal(),
+                    conditions: vec![
+                        ir::DomainGoal::FromEnv(trait_ref.clone().cast()).cast()
+                    ],
+                }
+            }.cast()
+        }));
 
         // add new type parameter U
         let mut binders = binders;
@@ -548,64 +620,17 @@ impl ir::AssociatedTyDatum {
         // `ProjectionEq(<T as Foo>::Assoc = U)`
         let projection_eq = ir::ProjectionEq { projection: projection.clone(), ty };
 
-        //    forall<T> {
+        // Projection equality rule from above.
+        //
+        //    forall<T, U> {
         //        ProjectionEq(<T as Foo>::Assoc = U) :-
-        //            Normalize(<T as Foo>::Assoc -> U)
+        //            Normalize(<T as Foo>::Assoc -> U).
         //    }
         clauses.push(ir::Binders {
             binders: binders.clone(),
             value: ir::ProgramClauseImplication {
                 consequence: projection_eq.clone().cast(),
                 conditions: vec![normalize.clone().cast()],
-            },
-        }.cast());
-
-
-        let projection_wc = ir::WhereClauseAtom::ProjectionEq(projection_eq.clone());
-        let trait_ref_wc = ir::WhereClauseAtom::Implemented(trait_ref.clone());
-
-        // We generate a proxy rule for the well-formedness of `T: Foo<Assoc = U>` which really
-        // means two things: `T: Foo` and `Normalize(<T as Foo>::Assoc -> U)`. So we have the
-        // following rule:
-        //
-        //    forall<T> {
-        //        WellFormed(T: Foo<Assoc = U>) :-
-        //            WellFormed(T: Foo), ProjectionEq(<T as Foo>::Assoc = U)
-        //    }
-        clauses.push(ir::Binders {
-            binders: binders.clone(),
-            value: ir::ProgramClauseImplication {
-                consequence: ir::DomainGoal::WellFormed(projection_wc.clone()),
-                conditions: vec![
-                    ir::DomainGoal::WellFormed(trait_ref_wc.clone()).cast(),
-                    projection_eq.clone().cast()
-                ],
-            }
-        }.cast());
-
-        // We also have two proxy reverse rules, the first one being:
-        //
-        //    forall<T> {
-        //        FromEnv(T: Foo) :- FromEnv(T: Foo<Assoc = U>)
-        //    }
-        clauses.push(ir::Binders {
-            binders: binders.clone(),
-            value: ir::ProgramClauseImplication {
-                consequence: ir::DomainGoal::FromEnv(trait_ref_wc).cast(),
-                conditions: vec![ir::DomainGoal::FromEnv(projection_wc.clone()).cast()],
-            },
-        }.cast());
-
-        // And the other one being:
-        //
-        //    forall<T> {
-        //        ProjectionEq(<T as Foo>::Assoc = U) :- FromEnv(T: Foo<Assoc = U>)
-        //    }
-        clauses.push(ir::Binders {
-            binders,
-            value: ir::ProgramClauseImplication {
-                consequence: projection_eq.clone().cast(),
-                conditions: vec![ir::DomainGoal::FromEnv(projection_wc).cast()],
             },
         }.cast());
 

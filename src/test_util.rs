@@ -22,11 +22,15 @@ macro_rules! lowering_success {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
+        let result = parse_and_lower_program(
+            &program_text[1..program_text.len()-1],
+            $crate::solve::SolverChoice::slg()
+        );
+        if let Err(ref e) = result {
+            println!("lowering error: {}", e);
+        }
         assert!(
-            parse_and_lower_program(
-                &program_text[1..program_text.len()-1],
-                $crate::solve::SolverChoice::slg()
-            ).is_ok()
+            result.is_ok()
         );
     }
 }

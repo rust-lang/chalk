@@ -191,6 +191,7 @@ impl LowerProgram for Program {
                                 id: info.id,
                                 name: defn.name.str,
                                 parameter_kinds: parameter_kinds,
+                                bounds: defn.bounds.lower(&env)?,
                                 where_clauses: defn.where_clauses.lower(&env)?,
                             },
                         );
@@ -441,32 +442,37 @@ trait LowerWhereClause<T> {
 /// type in Rust and well-formedness checks.
 impl LowerWhereClause<ir::DomainGoal> for WhereClause {
     fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>> {
-        let goal = match self {
+        let goals = match self {
             WhereClause::Implemented { trait_ref } => {
-                ir::DomainGoal::Holds(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))
+                vec![ir::DomainGoal::Holds(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))]
             }
             WhereClause::ProjectionEq {
                 projection,
                 ty,
-            } => ir::DomainGoal::Holds(ir::WhereClauseAtom::ProjectionEq(ir::ProjectionEq {
-                projection: projection.lower(env)?,
-                ty: ty.lower(env)?,
-            })),
+            } => vec![
+                ir::DomainGoal::Holds(ir::WhereClauseAtom::ProjectionEq(ir::ProjectionEq {
+                    projection: projection.lower(env)?,
+                    ty: ty.lower(env)?,
+                })),
+                ir::DomainGoal::Holds(ir::WhereClauseAtom::Implemented(
+                    projection.trait_ref.lower(env)?
+                )),
+            ],
             WhereClause::Normalize {
                 projection,
                 ty,
-            } => ir::DomainGoal::Normalize(ir::Normalize {
+            } => vec![ir::DomainGoal::Normalize(ir::Normalize {
                 projection: projection.lower(env)?,
                 ty: ty.lower(env)?,
-            }),
-            WhereClause::TyWellFormed { ty } => ir::DomainGoal::WellFormedTy(ty.lower(env)?),
-            WhereClause::TraitRefWellFormed { trait_ref } => {
+            })],
+            WhereClause::TyWellFormed { ty } => vec![ir::DomainGoal::WellFormedTy(ty.lower(env)?)],
+            WhereClause::TraitRefWellFormed { trait_ref } => vec![
                 ir::DomainGoal::WellFormed(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))
-            }
-            WhereClause::TyFromEnv { ty } => ir::DomainGoal::FromEnvTy(ty.lower(env)?),
-            WhereClause::TraitRefFromEnv { trait_ref } => {
+            ],
+            WhereClause::TyFromEnv { ty } => vec![ir::DomainGoal::FromEnvTy(ty.lower(env)?)],
+            WhereClause::TraitRefFromEnv { trait_ref } => vec![
                 ir::DomainGoal::FromEnv(ir::WhereClauseAtom::Implemented(trait_ref.lower(env)?))
-            }
+            ],
             WhereClause::UnifyTys { .. } | WhereClause::UnifyLifetimes { .. } => {
                 bail!("this form of where-clause not allowed here")
             }
@@ -480,19 +486,19 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
                     bail!(ErrorKind::NotTrait(trait_name));
                 }
 
-                ir::DomainGoal::InScope(id)
+                vec![ir::DomainGoal::InScope(id)]
             }
-            WhereClause::Derefs { source, target } => {
+            WhereClause::Derefs { source, target } => vec![
                 ir::DomainGoal::Derefs(ir::Derefs {
                     source: source.lower(env)?,
                     target: target.lower(env)?
                 })
-            }
-            WhereClause::TyIsLocal { ty } => {
+            ],
+            WhereClause::TyIsLocal { ty } => vec![
                 ir::DomainGoal::IsLocalTy(ty.lower(env)?)
-            }
+            ],
         };
-        Ok(vec![goal])
+        Ok(goals)
     }
 }
 
@@ -635,6 +641,107 @@ impl LowerTraitRef for TraitRef {
             trait_id: id,
             parameters: parameters,
         })
+    }
+}
+
+trait LowerTraitBound {
+    fn lower_trait_bound(&self, env: &Env) -> Result<ir::TraitBound>;
+}
+
+impl LowerTraitBound for TraitBound {
+    fn lower_trait_bound(&self, env: &Env) -> Result<ir::TraitBound> {
+        let id = match env.lookup(self.trait_name)? {
+            NameLookup::Type(id) => id,
+            NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(self.trait_name)),
+        };
+
+        let k = env.type_kind(id);
+        if k.sort != ir::TypeSort::Trait {
+            bail!(ErrorKind::NotTrait(self.trait_name));
+        }
+
+        let parameters = self.args_no_self
+                             .iter()
+                             .map(|a| Ok(a.lower(env)?))
+                             .collect::<Result<Vec<_>>>()?;
+
+        if parameters.len() != k.binders.len() {
+            bail!(
+                "wrong number of parameters, expected `{:?}`, got `{:?}`",
+                k.binders.len(),
+                parameters.len()
+            )
+        }
+
+        for (binder, param) in k.binders.binders.iter().zip(parameters.iter()) {
+            check_type_kinds("incorrect kind for trait parameter", binder, param)?;
+        }
+
+        Ok(ir::TraitBound {
+            trait_id: id,
+            args_no_self: parameters,
+        })
+    }
+}
+
+trait LowerInlineBound {
+    fn lower(&self, env: &Env) -> Result<ir::InlineBound>;
+}
+
+impl LowerInlineBound for TraitBound {
+    fn lower(&self, env: &Env) -> Result<ir::InlineBound> {
+        Ok(ir::InlineBound::TraitBound(self.lower_trait_bound(&env)?))
+    }
+}
+
+impl LowerInlineBound for ProjectionEqBound {
+    fn lower(&self, env: &Env) -> Result<ir::InlineBound> {
+        let trait_bound = self.trait_bound.lower_trait_bound(env)?;
+        let info = match env.associated_ty_infos.get(&(trait_bound.trait_id, self.name.str)) {
+            Some(info) => info,
+            None => bail!("no associated type `{}` defined in trait", self.name.str),
+        };
+        let args: Vec<_> = try!(self.args.iter().map(|a| a.lower(env)).collect());
+
+        if args.len() != info.addl_parameter_kinds.len() {
+            bail!(
+                "wrong number of parameters for associated type (expected {}, got {})",
+                info.addl_parameter_kinds.len(),
+                args.len()
+            )
+        }
+
+        for (param, arg) in info.addl_parameter_kinds.iter().zip(args.iter()) {
+            check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
+        }
+
+        Ok(ir::InlineBound::ProjectionEqBound(ir::ProjectionEqBound {
+            trait_bound,
+            associated_ty_id: info.id,
+            parameters: args,
+            value: self.value.lower(env)?,
+        }))
+    }
+}
+
+impl LowerInlineBound for InlineBound {
+    fn lower(&self, env: &Env) -> Result<ir::InlineBound> {
+        match self {
+            InlineBound::TraitBound(b) => b.lower(&env),
+            InlineBound::ProjectionEqBound(b) => b.lower(&env),
+        }
+    }
+}
+
+trait LowerInlineBounds {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::InlineBound>>;
+}
+
+impl LowerInlineBounds for Vec<InlineBound> {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::InlineBound>> {
+        self.iter()
+            .map(|b| b.lower(env))
+            .collect()
     }
 }
 

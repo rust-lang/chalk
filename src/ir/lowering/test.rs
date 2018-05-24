@@ -228,7 +228,14 @@ fn atc_accounting() {
         println!("{}", goal_text);
         assert_eq!(
             goal_text,
-            "ForAll<type> { ForAll<lifetime> { ForAll<type> { ProjectionEq(<?2 as Iterable>::Iter<'?1> = ?0) } } }"
+            "ForAll<type> { \
+                ForAll<lifetime> { \
+                    ForAll<type> { \
+                        (ProjectionEq(<?2 as Iterable>::Iter<'?1> = ?0), \
+                        Implemented(?2: Iterable)) \
+                    } \
+                } \
+            }"
         );
     });
 }
@@ -308,6 +315,7 @@ fn gat_parse() {
     lowering_success! {
         program {
             trait Sized {}
+            trait Clone {}
 
             trait Foo {
                 type Item<'a, T>: Sized + Clone where Self: Sized;
@@ -372,6 +380,33 @@ fn duplicate_parameters() {
 }
 
 #[test]
+fn external_items() {
+    lowering_success! {
+        program {
+            extern trait Send { }
+            extern struct Vec<T> { }
+        }
+    }
+}
+
+#[test]
+fn deref_trait() {
+    lowering_success! {
+        program {
+            #[lang_deref] trait Deref { type Target; }
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang_deref] trait Deref { }
+            #[lang_deref] trait DerefDupe { }
+        } error_msg {
+            "Duplicate lang item `DerefTrait`"
+        }
+    }
+}
+
 fn fundamental_multiple_type_parameters() {
     lowering_error! {
         program {

@@ -109,7 +109,7 @@ ProjectionEqBound: ProjectionEqBound = {
             args_no_self: a.unwrap_or(vec![]),
         },
         name,
-        parameters: a2,
+        args: a2,
         value: ty,
     }
 };
