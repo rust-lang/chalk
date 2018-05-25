@@ -213,7 +213,13 @@ impl Debug for DomainGoal {
             DomainGoal::InScope(n) => write!(fmt, "InScope({:?})", n),
             DomainGoal::Derefs(n) => write!(fmt, "Derefs({:?})", n),
             DomainGoal::IsLocal(n) => write!(fmt, "IsLocal({:?})", n),
-            DomainGoal::LocalImplAllowed(n) => write!(fmt, "LocalImplAllowed({:?})", n),
+            DomainGoal::LocalImplAllowed(tr) => write!(
+                fmt,
+                "LocalImplAllowed({:?}: {:?}{:?})",
+                tr.parameters[0],
+                tr.trait_id,
+                Angle(&tr.parameters[1..])
+            ),
         }
     }
 }
