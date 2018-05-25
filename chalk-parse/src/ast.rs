@@ -243,6 +243,7 @@ pub enum DomainGoal {
     TraitInScope { trait_name: Identifier },
     Derefs { source: Ty, target: Ty },
     IsLocal { ty: Ty },
+    LocalImplAllowed { trait_ref: TraitRef },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
