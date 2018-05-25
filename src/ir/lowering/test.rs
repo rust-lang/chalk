@@ -407,6 +407,7 @@ fn deref_trait() {
     }
 }
 
+#[test]
 fn fundamental_multiple_type_parameters() {
     lowering_error! {
         program {
