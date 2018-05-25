@@ -273,7 +273,7 @@ WhereClause: WhereClause = {
     "InScope" "(" <t:Id> ")" => WhereClause::TraitInScope { trait_name: t },
     "Derefs" "(" <source:Ty> "," <target:Ty> ")" => WhereClause::Derefs { source, target },
 
-    "IsLocal" "(" <ty:Ty> ")" => WhereClause::TyIsLocal { ty },
+    "IsLocal" "(" <ty:Ty> ")" => WhereClause::IsLocal { ty },
 };
 
 QuantifiedWhereClause: QuantifiedWhereClause = {

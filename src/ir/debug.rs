@@ -206,8 +206,8 @@ impl Debug for DomainGoal {
             DomainGoal::FromEnvTy(t) => write!(fmt, "FromEnv({:?})", t),
             DomainGoal::InScope(n) => write!(fmt, "InScope({:?})", n),
             DomainGoal::Derefs(n) => write!(fmt, "Derefs({:?})", n),
-            DomainGoal::IsLocalTy(n) => write!(fmt, "IsLocalTy({:?})", n),
-            DomainGoal::IsLocalTraitRef(n) => write!(fmt, "IsLocalTraitRef({:?})", n),
+            DomainGoal::IsLocal(n) => write!(fmt, "IsLocal({:?})", n),
+            DomainGoal::LocalImplAllowed(n) => write!(fmt, "LocalImplAllowed({:?})", n),
         }
     }
 }

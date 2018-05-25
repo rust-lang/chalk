@@ -294,7 +294,7 @@ impl ir::StructDatum {
         //
         // If the type Foo is not marked `extern`, we also generate:
         //
-        //    forall<T> { IsLocalTy(Foo<T>) }
+        //    forall<T> { IsLocal(Foo<T>) }
         //
         // Given an `extern` type that is also fundamental:
         //
@@ -303,7 +303,7 @@ impl ir::StructDatum {
         //
         // We generate the following clause:
         //
-        //    forall<T> { IsLocalTy(Box<T>) :- IsLocalTy(T) }
+        //    forall<T> { IsLocal(Box<T>) :- IsLocal(T) }
 
         let wf = self.binders.map_ref(|bound_datum| {
             ir::ProgramClauseImplication {
@@ -323,16 +323,16 @@ impl ir::StructDatum {
 
         // Types that are not marked `extern` satisfy IsLocal(TypeName)
         if !self.binders.value.flags.external {
-            // `IsLocalTy(Ty)` depends *only* on whether the type is marked extern and nothing else
+            // `IsLocal(Ty)` depends *only* on whether the type is marked extern and nothing else
             let is_local = self.binders.map_ref(|bound_datum| ir::ProgramClauseImplication {
-                consequence: ir::DomainGoal::IsLocalTy(bound_datum.self_ty.clone().cast()),
+                consequence: ir::DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
                 conditions: Vec::new(),
             }).cast();
 
             clauses.push(is_local);
         } else if self.binders.value.flags.fundamental {
-            // If a type is `extern`, but is also `#[fundamental]`, it satisfies IsLocalTy
-            // if and only if its parameters satisfy IsLocalTy
+            // If a type is `extern`, but is also `#[fundamental]`, it satisfies IsLocal
+            // if and only if its parameters satisfy IsLocal
 
             // Fundamental types must always have at least one type parameter for this rule to
             // make any sense. We currently do not have have any fundamental types with more than
@@ -343,9 +343,9 @@ impl ir::StructDatum {
                 "Only fundamental types with a single parameter are supported");
 
             let local_fundamental = self.binders.map_ref(|bound_datum| ir::ProgramClauseImplication {
-                consequence: ir::DomainGoal::IsLocalTy(bound_datum.self_ty.clone().cast()),
+                consequence: ir::DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
                 conditions: vec![
-                    ir::DomainGoal::IsLocalTy(
+                    ir::DomainGoal::IsLocal(
                         // This unwrap is safe because we asserted above for the presence of a type
                         // parameter
                         bound_datum.self_ty.first_type_parameter().unwrap()

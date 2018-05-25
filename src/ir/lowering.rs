@@ -494,8 +494,8 @@ impl LowerWhereClause<ir::DomainGoal> for WhereClause {
                     target: target.lower(env)?
                 })
             ],
-            WhereClause::TyIsLocal { ty } => vec![
-                ir::DomainGoal::IsLocalTy(ty.lower(env)?)
+            WhereClause::IsLocal { ty } => vec![
+                ir::DomainGoal::IsLocal(ty.lower(env)?)
             ],
         };
         Ok(goals)
@@ -527,7 +527,7 @@ impl LowerWhereClause<ir::LeafGoal> for WhereClause {
             | WhereClause::TyFromEnv { .. }
             | WhereClause::TraitRefFromEnv { .. }
             | WhereClause::Derefs { .. }
-            | WhereClause::TyIsLocal { .. } => {
+            | WhereClause::IsLocal { .. } => {
                 let goals: Vec<ir::DomainGoal> = self.lower(env)?;
                 goals.into_iter().casted().collect()
             }

@@ -269,7 +269,7 @@ pub enum InlineBound {
 
 impl InlineBound {
     /// Applies the `InlineBound` to `self_ty` and lowers to a [`DomainGoal`].
-    /// 
+    ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
     crate fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
@@ -691,8 +691,16 @@ pub enum DomainGoal {
     /// True if a type is considered to have been "defined" by the current crate. This is true for
     /// a `struct Foo { }` but false for a `extern struct Foo { }`. However, for fundamental types
     /// like `Box<T>`, it is true if `T` is local.
-    IsLocalTy(Ty),
-    IsLocalTraitRef(TraitRef),
+    IsLocal(Ty),
+
+    /// Used to dictate when trait impls are allowed in the current (local) crate based on the
+    /// orphan rules.
+    ///
+    /// `LocalImplAllowed(T: Trait)` is true if the type T is allowed to impl trait Trait in
+    /// the current crate. Under the current rules, this is unconditionally true for all types if
+    /// the Trait is considered to be "defined" in the current crate. If that is not the case, then
+    /// `LocalImplAllowed(T: Trait)` can still be true if `IsLocal(T)` is true.
+    LocalImplAllowed(TraitRef),
 }
 
 pub type QuantifiedDomainGoal = Binders<DomainGoal>;
