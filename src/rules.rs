@@ -452,17 +452,23 @@ impl TraitDatum {
         let mut clauses = vec![wf];
 
         if !self.binders.value.flags.external {
-            let impl_allowed = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::LocalImplAllowed(bound_datum.self_ty.clone().cast()),
-                conditions: Vec::new(),
-            }).cast();
+            let impl_allowed = self.binders.map_ref(|bound_datum|
+                ProgramClauseImplication {
+                    consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
+                    conditions: Vec::new(),
+                }
+            ).cast();
 
             clauses.push(impl_allowed);
         } else {
-            let impl_maybe_allowed = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::LocalImplAllowed(bound_datum.self_ty.clone().cast()),
-                conditions: Vec::new(),
-            }).cast();
+            let impl_maybe_allowed = self.binders.map_ref(|bound_datum|
+                ProgramClauseImplication {
+                    consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
+                    conditions: vec![
+                        DomainGoal::IsLocal(bound_datum.trait_ref.parameters[0].assert_ty_ref().clone()).cast(),
+                    ],
+                }
+            ).cast();
 
             clauses.push(impl_maybe_allowed);
         }

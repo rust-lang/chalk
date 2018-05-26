@@ -2627,8 +2627,12 @@ fn impl_allowed_for_traits() {
         }
 
         goal { forall<T> { LocalImplAllowed(T: ExternalTrait) } } yields { "No possible solution" }
+        goal { LocalImplAllowed(Internal: ExternalTrait) } yields { "Unique" }
+        goal { LocalImplAllowed(External: ExternalTrait) } yields { "No possible solution" }
 
         goal { forall<T> { LocalImplAllowed(T: InternalTrait) } } yields { "Unique" }
+        goal { LocalImplAllowed(Internal: InternalTrait) } yields { "Unique" }
+        goal { LocalImplAllowed(External: InternalTrait) } yields { "Unique" }
     }
 
     test! {
@@ -2642,7 +2646,11 @@ fn impl_allowed_for_traits() {
         }
 
         goal { forall<T, U> { LocalImplAllowed(T: ExternalTrait<U>) } } yields { "No possible solution" }
+        goal { forall<T> { LocalImplAllowed(Internal: ExternalTrait<T>) } } yields { "Unique" }
+        goal { forall<T> { LocalImplAllowed(External: ExternalTrait<T>) } } yields { "No possible solution" }
 
         goal { forall<T, U> { LocalImplAllowed(T: InternalTrait<U>) } } yields { "Unique" }
+        goal { forall<T> { LocalImplAllowed(Internal: InternalTrait<T>) } } yields { "Unique" }
+        goal { forall<T> { LocalImplAllowed(External: InternalTrait<T>) } } yields { "Unique" }
     }
 }
