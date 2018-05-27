@@ -1,7 +1,7 @@
 use lalrpop_intern::InternedString;
 use std::fmt;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
@@ -13,10 +13,12 @@ impl Span {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Program {
     pub items: Vec<Item>
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
@@ -24,6 +26,7 @@ pub enum Item {
     Clause(Clause),
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct StructDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
@@ -32,11 +35,13 @@ pub struct StructDefn {
     pub flags: StructFlags,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct StructFlags {
     pub external: bool,
     pub fundamental: bool,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct TraitDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
@@ -45,6 +50,7 @@ pub struct TraitDefn {
     pub flags: TraitFlags,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct TraitFlags {
     pub auto: bool,
     pub marker: bool,
@@ -52,6 +58,7 @@ pub struct TraitFlags {
     pub deref: bool,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct AssocTyDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
@@ -59,22 +66,26 @@ pub struct AssocTyDefn {
     pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum ParameterKind {
     Ty(Identifier),
     Lifetime(Identifier),
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Parameter {
     Ty(Ty),
     Lifetime(Lifetime),
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
 pub enum InlineBound {
     TraitBound(TraitBound),
     ProjectionEqBound(ProjectionEqBound),
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 pub struct TraitBound {
@@ -82,6 +93,7 @@ pub struct TraitBound {
     pub args_no_self: Vec<Parameter>,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 /// Represents a projection equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 pub struct ProjectionEqBound {
@@ -91,7 +103,7 @@ pub struct ProjectionEqBound {
     pub value: Ty,
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Kind {
     Ty,
     Lifetime,
@@ -130,6 +142,7 @@ impl Kinded for Parameter {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Impl {
     pub parameter_kinds: Vec<ParameterKind>,
     pub trait_ref: PolarizedTraitRef,
@@ -137,12 +150,14 @@ pub struct Impl {
     pub assoc_ty_values: Vec<AssocTyValue>,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct AssocTyValue {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
     pub value: Ty,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Ty {
     Id {
         name: Identifier,
@@ -163,28 +178,33 @@ pub enum Ty {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Lifetime {
     Id {
         name: Identifier,
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
     pub args: Vec<Parameter>,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct UnselectedProjectionTy {
     pub name: Identifier,
     pub args: Vec<Parameter>,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct TraitRef {
     pub trait_name: Identifier,
     pub args: Vec<Parameter>,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum PolarizedTraitRef {
     Positive(TraitRef),
     Negative(TraitRef),
@@ -200,17 +220,19 @@ impl PolarizedTraitRef {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Identifier {
     pub str: InternedString,
     pub span: Span,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DomainGoal {
     Holds { where_clause: WhereClause },
     Normalize { projection: ProjectionTy, ty: Ty },
@@ -223,22 +245,26 @@ pub enum DomainGoal {
     IsLocal { ty: Ty },
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum LeafGoal {
     DomainGoal { goal: DomainGoal },
     UnifyTys { a: Ty, b: Ty },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct QuantifiedWhereClause {
     pub parameter_kinds: Vec<ParameterKind>,
     pub where_clause: WhereClause,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Field {
     pub name: Identifier,
     pub ty: Ty,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 /// This allows users to add arbitrary `A :- B` clauses into the
 /// logic; it has no equivalent in Rust, but it's useful for testing.
 pub struct Clause {
@@ -247,6 +273,7 @@ pub struct Clause {
     pub conditions: Vec<Box<Goal>>,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Goal {
     ForAll(Vec<ParameterKind>, Box<Goal>),
     Exists(Vec<ParameterKind>, Box<Goal>),

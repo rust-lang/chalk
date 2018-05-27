@@ -418,14 +418,14 @@ trait LowerWhereClauseVec<T> {
 
 impl LowerWhereClauseVec<ir::WhereClause> for [WhereClause] {
     fn lower(&self, env: &Env) -> Result<Vec<ir::WhereClause>> {
-        self.iter().flat_map(|wc| LowerWhereClause::lower(wc, env).apply_result()).collect()
+        self.iter().flat_map(|wc| wc.lower(env).apply_result()).collect()
     }
 }
 
 impl LowerWhereClauseVec<ir::QuantifiedWhereClause> for [QuantifiedWhereClause] {
     fn lower(&self, env: &Env) -> Result<Vec<ir::QuantifiedWhereClause>> {
         self.iter()
-            .flat_map(|wc| match LowerWhereClause::lower(wc, env) {
+            .flat_map(|wc| match wc.lower(env) {
                 Ok(v) => v.into_iter().map(Ok).collect(),
                 Err(e) => vec![Err(e)],
             })
@@ -434,6 +434,10 @@ impl LowerWhereClauseVec<ir::QuantifiedWhereClause> for [QuantifiedWhereClause] 
 }
 
 trait LowerWhereClause<T> {
+    /// Lower from an AST `where` clause to an internal IR.
+    /// Some AST `where` clauses can lower to multiple ones, this is why we return a `Vec`.
+    /// As for now, this is the only the case for `where T: Foo<Item = U>` which lowers to
+    /// `Implemented(T: Foo)` and `ProjectionEq(<T as Foo>::Item = U)`.
     fn lower(&self, env: &Env) -> Result<Vec<T>>;
 }
 
@@ -464,7 +468,7 @@ impl LowerWhereClause<ir::QuantifiedWhereClause> for QuantifiedWhereClause {
     fn lower(&self, env: &Env) -> Result<Vec<ir::QuantifiedWhereClause>> {
         let parameter_kinds = self.parameter_kinds.iter().map(|pk| pk.lower());
         let binders = env.in_binders(parameter_kinds, |env| {
-            Ok(LowerWhereClause::lower(&self.where_clause, env)?)
+            Ok(self.where_clause.lower(env)?)
         })?;
         Ok(binders.into_iter().collect())
     }
@@ -474,14 +478,6 @@ trait LowerDomainGoal {
     fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>>;
 }
 
-/// Lowers a where-clause in the context of a clause (i.e. in "negative"
-/// position); this is limited to the kinds of where-clauses users can actually
-/// type in Rust and well-formedness checks.
-/// 
-/// Lowers a where-clause in the context of a goal (i.e. in "positive"
-/// position); this is richer in terms of the legal sorts of where-clauses that
-/// can appear, because it includes all the sorts of things that the compiler
-/// must verify.
 impl LowerDomainGoal for DomainGoal {
     fn lower(&self, env: &Env) -> Result<Vec<ir::DomainGoal>> {
         let goals = match self {
@@ -614,46 +610,22 @@ trait LowerTraitRef {
 
 impl LowerTraitRef for TraitRef {
     fn lower(&self, env: &Env) -> Result<ir::TraitRef> {
-        let id = match env.lookup(self.trait_name)? {
-            NameLookup::Type(id) => id,
-            NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(self.trait_name)),
-        };
+        let without_self = TraitBound {
+            trait_name: self.trait_name,
+            args_no_self: self.args.iter().cloned().skip(1).collect(),
+        }.lower(env)?;
 
-        let k = env.type_kind(id);
-        if k.sort != ir::TypeSort::Trait {
-            bail!(ErrorKind::NotTrait(self.trait_name));
-        }
-
-        let parameters = self.args
-            .iter()
-            .map(|a| Ok(a.lower(env)?))
-            .collect::<Result<Vec<_>>>()?;
-
-        if parameters.len() != k.binders.len() + 1 {
-            bail!(
-                "wrong number of parameters, expected `{:?}`, got `{:?}`",
-                k.binders.len() + 1,
-                parameters.len()
-            )
-        }
-
-        for (binder, param) in k.binders.binders.iter().zip(parameters.iter().skip(1)) {
-            check_type_kinds("incorrect kind for trait parameter", binder, param)?;
-        }
-
-        Ok(ir::TraitRef {
-            trait_id: id,
-            parameters: parameters,
-        })
+        let self_parameter = self.args[0].lower(env)?;
+        Ok(without_self.as_trait_ref(self_parameter.ty().unwrap()))
     }
 }
 
 trait LowerTraitBound {
-    fn lower_trait_bound(&self, env: &Env) -> Result<ir::TraitBound>;
+    fn lower(&self, env: &Env) -> Result<ir::TraitBound>;
 }
 
 impl LowerTraitBound for TraitBound {
-    fn lower_trait_bound(&self, env: &Env) -> Result<ir::TraitBound> {
+    fn lower(&self, env: &Env) -> Result<ir::TraitBound> {
         let id = match env.lookup(self.trait_name)? {
             NameLookup::Type(id) => id,
             NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(self.trait_name)),
@@ -688,19 +660,13 @@ impl LowerTraitBound for TraitBound {
     }
 }
 
-trait LowerInlineBound {
-    fn lower(&self, env: &Env) -> Result<ir::InlineBound>;
+trait LowerProjectionEqBound {
+    fn lower(&self, env: &Env) -> Result<ir::ProjectionEqBound>;
 }
 
-impl LowerInlineBound for TraitBound {
-    fn lower(&self, env: &Env) -> Result<ir::InlineBound> {
-        Ok(ir::InlineBound::TraitBound(self.lower_trait_bound(&env)?))
-    }
-}
-
-impl LowerInlineBound for ProjectionEqBound {
-    fn lower(&self, env: &Env) -> Result<ir::InlineBound> {
-        let trait_bound = self.trait_bound.lower_trait_bound(env)?;
+impl LowerProjectionEqBound for ProjectionEqBound {
+    fn lower(&self, env: &Env) -> Result<ir::ProjectionEqBound> {
+        let trait_bound = self.trait_bound.lower(env)?;
         let info = match env.associated_ty_infos.get(&(trait_bound.trait_id, self.name.str)) {
             Some(info) => info,
             None => bail!("no associated type `{}` defined in trait", self.name.str),
@@ -719,21 +685,30 @@ impl LowerInlineBound for ProjectionEqBound {
             check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
         }
 
-        Ok(ir::InlineBound::ProjectionEqBound(ir::ProjectionEqBound {
+        Ok(ir::ProjectionEqBound {
             trait_bound,
             associated_ty_id: info.id,
             parameters: args,
             value: self.value.lower(env)?,
-        }))
+        })
     }
+}
+
+trait LowerInlineBound {
+    fn lower(&self, env: &Env) -> Result<ir::InlineBound>;
 }
 
 impl LowerInlineBound for InlineBound {
     fn lower(&self, env: &Env) -> Result<ir::InlineBound> {
-        match self {
-            InlineBound::TraitBound(b) => b.lower(&env),
-            InlineBound::ProjectionEqBound(b) => b.lower(&env),
-        }
+        let bound = match self {
+            InlineBound::TraitBound(b) => ir::InlineBound::TraitBound(
+                b.lower(&env)?
+            ),
+            InlineBound::ProjectionEqBound(b) => ir::InlineBound::ProjectionEqBound(
+                b.lower(&env)?
+            ),
+        };
+        Ok(bound)
     }
 }
 

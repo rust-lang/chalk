@@ -151,21 +151,28 @@ impl DefaultImplDatum {
 }
 
 impl AssociatedTyValue {
-    /// Given:
+    /// Given the following trait:
     ///
     /// ```notrust
+    /// trait Iterable {
+    ///     type IntoIter<'a>: 'a;
+    /// }
+    /// ```
+    /// 
+    /// Then for the following impl:
+    /// ```notrust
     /// impl<T> Iterable for Vec<T> {
-    ///     type IntoIter<'a> where T: 'a = Iter<'a, T>;
+    ///     type IntoIter<'a> = Iter<'a, T>;
     /// }
     /// ```
     ///
-    /// generate:
+    /// we generate:
     ///
     /// ```notrust
     /// forall<'a, T> {
     ///     Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>>) :-
     ///         (Vec<T>: Iterable),  // (1)
-    ///         (T: 'a)              // (2)
+    ///         (Iter<'a, T>: 'a)    // (2)
     /// }
     /// ```
     ///
@@ -211,7 +218,8 @@ impl AssociatedTyValue {
         // This comes in two parts, marked as (1) and (2) in example above:
         //
         // 1. require that the trait is implemented
-        // 2. any where-clauses from the `type` declaration in the impl
+        // 2. any where-clauses from the `type` declaration in the trait: the
+        //    parameters must be substituted with those of the impl
         let where_clauses =
             associated_ty.where_clauses
                          .iter()
@@ -587,6 +595,7 @@ impl AssociatedTyDatum {
         //
         // This is really a family of clauses, one for each where clause.
         clauses.extend(self.where_clauses.iter().map(|wc| {
+            // Don't forget to move the binders to the left in case of higher-ranked where clauses.
             let shift = wc.binders.len();
             Binders {
                 binders: wc.binders.iter().chain(binders.iter()).cloned().collect(),

@@ -206,7 +206,7 @@ fn wf_requiremements_for_projection() {
 }
 
 #[test]
-fn projection_type_in_header() {
+fn ill_formed_type_in_header() {
     lowering_error! {
         program {
             trait Foo {
@@ -215,8 +215,8 @@ fn projection_type_in_header() {
 
             trait Bar { }
 
-            // Projection types in an impl header are not assumed to be well-formed,
-            // an explicit where clause is needed (see below).
+            // Types in where clauses are not assumed to be well-formed,
+            // an explicit where clause would be needed (see below).
             impl<T> Bar for T where <T as Foo>::Value: Bar { }
         } error_msg {
             "trait impl for \"Bar\" does not meet well-formedness requirements"

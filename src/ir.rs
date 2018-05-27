@@ -295,7 +295,7 @@ impl TraitBound {
         vec![WhereClause::Implemented(trait_ref)]
     }
 
-    fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
+    crate fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
         let self_ty = ParameterKind::Ty(self_ty);
         TraitRef {
             trait_id: self.trait_id,
