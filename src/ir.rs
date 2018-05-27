@@ -6,6 +6,7 @@ use lalrpop_intern::InternedString;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use std::iter;
+use cast::Cast;
 
 #[macro_use]
 mod macros;
@@ -205,7 +206,7 @@ pub struct ImplDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
     crate trait_ref: PolarizedTraitRef,
-    crate where_clauses: Vec<QuantifiedDomainGoal>,
+    crate where_clauses: Vec<QuantifiedWhereClause>,
     crate associated_ty_values: Vec<AssociatedTyValue>,
     crate specialization_priority: usize,
 }
@@ -230,7 +231,7 @@ pub struct StructDatum {
 pub struct StructDatumBound {
     crate self_ty: ApplicationTy,
     crate fields: Vec<Ty>,
-    crate where_clauses: Vec<QuantifiedDomainGoal>,
+    crate where_clauses: Vec<QuantifiedWhereClause>,
     crate flags: StructFlags,
 }
 
@@ -248,7 +249,7 @@ pub struct TraitDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
     crate trait_ref: TraitRef,
-    crate where_clauses: Vec<QuantifiedDomainGoal>,
+    crate where_clauses: Vec<QuantifiedWhereClause>,
     crate flags: TraitFlags,
 }
 
@@ -272,10 +273,10 @@ impl InlineBound {
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
-    crate fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
+    crate fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
         match self {
-            InlineBound::TraitBound(b) => b.lower_with_self(self_ty),
-            InlineBound::ProjectionEqBound(b) => b.lower_with_self(self_ty),
+            InlineBound::TraitBound(b) => b.into_where_clauses(self_ty),
+            InlineBound::ProjectionEqBound(b) => b.into_where_clauses(self_ty),
         }
     }
 }
@@ -289,9 +290,9 @@ pub struct TraitBound {
 }
 
 impl TraitBound {
-    crate fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
+    crate fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
         let trait_ref = self.as_trait_ref(self_ty);
-        vec![DomainGoal::Holds(WhereClauseAtom::Implemented(trait_ref))]
+        vec![WhereClause::Implemented(trait_ref)]
     }
 
     fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
@@ -315,21 +316,21 @@ pub struct ProjectionEqBound {
 }
 
 impl ProjectionEqBound {
-    crate fn lower_with_self(&self, self_ty: Ty) -> Vec<DomainGoal> {
+    crate fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 
         let mut parameters = self.parameters.clone();
         parameters.extend(trait_ref.parameters.clone());
 
         vec![
-            DomainGoal::Holds(WhereClauseAtom::Implemented(trait_ref)),
-            DomainGoal::Holds(WhereClauseAtom::ProjectionEq(ProjectionEq {
+            WhereClause::Implemented(trait_ref),
+            WhereClause::ProjectionEq(ProjectionEq {
                 projection: ProjectionTy {
                     associated_ty_id: self.associated_ty_id,
                     parameters: parameters,
                 },
                 ty: self.value.clone(),
-            }))
+            }),
         ]
     }
 }
@@ -356,7 +357,7 @@ pub struct AssociatedTyDatum {
     crate bounds: Vec<InlineBound>,
 
     /// Where clauses that must hold for the projection to be well-formed.
-    crate where_clauses: Vec<QuantifiedDomainGoal>,
+    crate where_clauses: Vec<QuantifiedWhereClause>,
 }
 
 impl AssociatedTyDatum {
@@ -365,7 +366,7 @@ impl AssociatedTyDatum {
     /// ```notrust
     /// Implemented(<?0 as Foo>::Item<?1>: Sized)
     /// ```
-    crate fn bounds_on_self(&self) -> Vec<DomainGoal> {
+    crate fn bounds_on_self(&self) -> Vec<WhereClause> {
         let parameters = self.parameter_kinds
                              .anonymize()
                              .iter()
@@ -376,7 +377,7 @@ impl AssociatedTyDatum {
             associated_ty_id: self.id,
             parameters
         });
-        self.bounds.iter().flat_map(|b| b.lower_with_self(self_ty.clone())).collect()
+        self.bounds.iter().flat_map(|b| b.into_where_clauses(self_ty.clone())).collect()
     }
 }
 
@@ -605,9 +606,9 @@ impl PolarizedTraitRef {
     }
 }
 
-/// "Basic" where clauses which have a WF/FromEnv version of themselves.
+/// Where clauses that can be written by a Rust programmer.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum WhereClauseAtom {
+pub enum WhereClause {
     Implemented(TraitRef),
     ProjectionEq(ProjectionEq),
 }
@@ -618,13 +619,8 @@ pub struct Derefs {
     pub target: Ty,
 }
 
-/// A "domain goal" is a goal that is directly about Rust, rather than a pure
-/// logical statement. As much as possible, the Chalk solver should avoid
-/// decomposing this enum, and instead treat its values opaquely.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum DomainGoal {
-    Holds(WhereClauseAtom),
-
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub enum WellFormed {
     /// A predicate which is true is some trait ref is well-formed.
     /// For example, given the following trait definitions:
     ///
@@ -635,24 +631,7 @@ pub enum DomainGoal {
     ///
     /// then we have the following rule:
     /// `WellFormed(?Self: Copy) :- ?Self: Copy, WellFormed(?Self: Clone)`.
-    WellFormed(WhereClauseAtom),
-
-    /// A predicate which enables deriving everything which should be true if we *know* that
-    /// some trait ref is well-formed. For example given the above trait definitions, we can use
-    /// `FromEnv(T: Copy)` to derive that `T: Clone`, like in:
-    ///
-    /// ```notrust
-    /// forall<T> {
-    ///     if (FromEnv(T: Copy)) {
-    ///         T: Clone
-    ///     }
-    /// }
-    /// ```
-    FromEnv(WhereClauseAtom),
-
-
-    Normalize(Normalize),
-    UnselectedNormalize(UnselectedNormalize),
+    Trait(TraitRef),
 
     /// A predicate which is true is some type is well-formed.
     /// For example, given the following type definition:
@@ -664,7 +643,23 @@ pub enum DomainGoal {
     /// ```
     ///
     /// then we have the following rule: `WellFormedTy(Set<K>) :- Implemented(K: Hash)`.
-    WellFormedTy(Ty),
+    Ty(Ty),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub enum FromEnv {
+    /// A predicate which enables deriving everything which should be true if we *know* that
+    /// some trait ref is well-formed. For example given the above trait definitions, we can use
+    /// `FromEnv(T: Copy)` to derive that `T: Clone`, like in:
+    ///
+    /// ```notrust
+    /// forall<T> {
+    ///     if (FromEnv(T: Copy)) {
+    ///         T: Clone
+    ///     }
+    /// }
+    /// ```
+    Trait(TraitRef),
 
     /// A predicate which enables deriving everything which should be true if we *know* that
     /// some type is well-formed. For example given the above type definition, we can use
@@ -677,7 +672,21 @@ pub enum DomainGoal {
     ///     }
     /// }
     /// ```
-    FromEnvTy(Ty),
+    Ty(Ty),
+}
+
+/// A "domain goal" is a goal that is directly about Rust, rather than a pure
+/// logical statement. As much as possible, the Chalk solver should avoid
+/// decomposing this enum, and instead treat its values opaquely.
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum DomainGoal {
+    Holds(WhereClause),
+    WellFormed(WellFormed),
+    FromEnv(FromEnv),
+
+
+    Normalize(Normalize),
+    UnselectedNormalize(UnselectedNormalize),
 
     InScope(ItemId),
 
@@ -703,26 +712,33 @@ pub enum DomainGoal {
     LocalImplAllowed(TraitRef),
 }
 
-pub type QuantifiedDomainGoal = Binders<DomainGoal>;
+pub type QuantifiedWhereClause = Binders<WhereClause>;
 
-impl DomainGoal {
+impl WhereClause {
     /// Turn a where clause into the WF version of it i.e.:
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
     /// * `ProjectionEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
     crate fn into_well_formed_goal(self) -> DomainGoal {
         match self {
-            DomainGoal::Holds(wca) => DomainGoal::WellFormed(wca),
-            goal => goal,
+            WhereClause::Implemented(trait_ref) => WellFormed::Trait(trait_ref).cast(),
+            wc => wc.cast(),
         }
     }
 
     /// Same as `into_well_formed_goal` but with the `FromEnv` predicate instead of `WellFormed`.
     crate fn into_from_env_goal(self) -> DomainGoal {
         match self {
-            DomainGoal::Holds(wca @ WhereClauseAtom::Implemented(..)) => {
-                DomainGoal::FromEnv(wca)
-            }
+            WhereClause::Implemented(trait_ref) => FromEnv::Trait(trait_ref).cast(),
+            wc => wc.cast(),
+        }
+    }
+}
+
+impl DomainGoal {
+    crate fn into_from_env_goal(self) -> DomainGoal {
+        match self {
+            DomainGoal::Holds(wc) => wc.into_from_env_goal(),
             goal => goal,
         }
     }
@@ -1055,14 +1071,14 @@ impl Goal {
         match self {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => {
                 match wca {
-                    WhereClauseAtom::Implemented(tr) => {
+                    WhereClause::Implemented(tr) => {
                         let trait_datum = &program.trait_data[&tr.trait_id];
                         trait_datum.binders.value.flags.auto
                     }
-                    WhereClauseAtom::ProjectionEq(..) => false,
+                    WhereClause::ProjectionEq(..) => false,
                 }
             }
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(..))) => {
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..)))) => {
                 true
             }
             Goal::Quantified(QuantifierKind::ForAll, goal) => goal.value.is_coinductive(program),

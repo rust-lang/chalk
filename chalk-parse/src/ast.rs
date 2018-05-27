@@ -208,17 +208,25 @@ pub struct Identifier {
 
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
-    Normalize { projection: ProjectionTy, ty: Ty },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
-    TyWellFormed { ty: Ty },
+}
+
+pub enum DomainGoal {
+    Holds { where_clause: WhereClause },
+    Normalize { projection: ProjectionTy, ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
+    TyWellFormed { ty: Ty },
     TyFromEnv { ty: Ty },
     TraitRefFromEnv { trait_ref: TraitRef },
-    UnifyTys { a: Ty, b: Ty },
-    UnifyLifetimes { a: Lifetime, b: Lifetime },
     TraitInScope { trait_name: Identifier },
     Derefs { source: Ty, target: Ty },
     IsLocal { ty: Ty },
+}
+
+pub enum LeafGoal {
+    DomainGoal { goal: DomainGoal },
+    UnifyTys { a: Ty, b: Ty },
+    UnifyLifetimes { a: Lifetime, b: Lifetime },
 }
 
 pub struct QuantifiedWhereClause {
@@ -235,7 +243,7 @@ pub struct Field {
 /// logic; it has no equivalent in Rust, but it's useful for testing.
 pub struct Clause {
     pub parameter_kinds: Vec<ParameterKind>,
-    pub consequence: WhereClause,
+    pub consequence: DomainGoal,
     pub conditions: Vec<Box<Goal>>,
 }
 
@@ -247,5 +255,5 @@ pub enum Goal {
     Not(Box<Goal>),
 
     // Additional kinds of goals:
-    Leaf(WhereClause),
+    Leaf(LeafGoal),
 }
