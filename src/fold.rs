@@ -423,9 +423,11 @@ macro_rules! enum_fold {
 
 enum_fold!(PolarizedTraitRef[] { Positive(a), Negative(a) });
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
-enum_fold!(WhereClauseAtom[] { Implemented(a), ProjectionEq(a) });
+enum_fold!(WhereClause[] { Implemented(a), ProjectionEq(a) });
+enum_fold!(WellFormed[] { Trait(a), Ty(a) });
+enum_fold!(FromEnv[] { Trait(a), Ty(a) });
 enum_fold!(DomainGoal[] { Holds(a), WellFormed(a), FromEnv(a), Normalize(a), UnselectedNormalize(a),
-                          WellFormedTy(a), FromEnvTy(a), InScope(a), Derefs(a), IsLocal(a), LocalImplAllowed(a) });
+                          InScope(a), Derefs(a), IsLocal(a), LocalImplAllowed(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),

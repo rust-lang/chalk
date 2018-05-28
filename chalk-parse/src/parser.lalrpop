@@ -29,9 +29,9 @@ pub Goal: Box<Goal> = {
 Goal1: Box<Goal> = {
     "forall" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
     "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
-    "if" "(" <w:SemiColon<InlineClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(w, g)),
+    "if" "(" <h:SemiColon<InlineClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(h, g)),
     "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
-    <w:WhereClause> => Box::new(Goal::Leaf(w)),
+    <leaf:LeafGoal> => Box::new(Goal::Leaf(leaf)),
     "(" <Goal> ")",
 };
 
@@ -199,29 +199,29 @@ Field: Field = {
 };
 
 Clause: Clause = {
-    "forall" <pk:Angle<ParameterKind>> "{" <wc:WhereClause> "if" <g:Comma<Goal1>> "}" => Clause {
+    "forall" <pk:Angle<ParameterKind>> "{" <dg:DomainGoal> "if" <g:Comma<Goal1>> "}" => Clause {
         parameter_kinds: pk,
-        consequence: wc,
+        consequence: dg,
         conditions: g,
     },
 
-    "forall" <pk:Angle<ParameterKind>> "{" <wc:WhereClause> "}" => Clause {
+    "forall" <pk:Angle<ParameterKind>> "{" <dg:DomainGoal> "}" => Clause {
         parameter_kinds: pk,
-        consequence: wc,
+        consequence: dg,
         conditions: vec![],
     },
 };
 
 InlineClause1: Clause = {
-    <wc:WhereClause> => Clause {
+    <dg:DomainGoal> => Clause {
         parameter_kinds: vec![],
-        consequence: wc,
+        consequence: dg,
         conditions: vec![],
     },
 
-    <wc:WhereClause> ":" "-" <g:Comma<Goal1>> => Clause {
+    <dg:DomainGoal> ":" "-" <g:Comma<Goal1>> => Clause {
         parameter_kinds: vec![],
-        consequence: wc,
+        consequence: dg,
         conditions: g,
     },
 };
@@ -236,28 +236,8 @@ InlineClause: Clause = {
     }
 };
 
-QuantifiedWhereClauses: Vec<QuantifiedWhereClause> = {
-    "where" <Comma<QuantifiedWhereClause>>,
-    () => vec![],
-};
-
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
-
-    "WellFormed" "(" <t:Ty> ")" => WhereClause::TyWellFormed { ty: t },
-
-    "WellFormed" "(" <t:TraitRef<":">> ")" => WhereClause::TraitRefWellFormed { trait_ref: t },
-
-    "FromEnv" "(" <t:Ty> ")" => WhereClause::TyFromEnv { ty: t },
-
-    "FromEnv" "(" <t:TraitRef<":">> ")" => WhereClause::TraitRefFromEnv { trait_ref: t },
-
-    <a:Ty> "=" <b:Ty> => WhereClause::UnifyTys { a, b },
-
-    <a:Lifetime> "=" <b:Lifetime> => WhereClause::UnifyLifetimes { a, b },
-
-    // `<T as Foo>::U -> Bar` -- a normalization
-    "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => WhereClause::Normalize { projection: s, ty: t },
 
     // `T: Foo<U = Bar>` -- projection equality
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
@@ -269,11 +249,6 @@ WhereClause: WhereClause = {
         let projection = ProjectionTy { trait_ref, name, args: a2 };
         WhereClause::ProjectionEq { projection, ty }
     },
-
-    "InScope" "(" <t:Id> ")" => WhereClause::TraitInScope { trait_name: t },
-    "Derefs" "(" <source:Ty> "," <target:Ty> ")" => WhereClause::Derefs { source, target },
-
-    "IsLocal" "(" <ty:Ty> ")" => WhereClause::IsLocal { ty },
 };
 
 QuantifiedWhereClause: QuantifiedWhereClause = {
@@ -286,6 +261,40 @@ QuantifiedWhereClause: QuantifiedWhereClause = {
         parameter_kinds: pk,
         where_clause: wc,
     },
+};
+
+QuantifiedWhereClauses: Vec<QuantifiedWhereClause> = {
+    "where" <Comma<QuantifiedWhereClause>>,
+    () => vec![],
+};
+
+DomainGoal: DomainGoal = {
+    <wc: WhereClause> => DomainGoal::Holds { where_clause: wc },
+
+    "WellFormed" "(" <t:Ty> ")" => DomainGoal::TyWellFormed { ty: t },
+
+    "WellFormed" "(" <t:TraitRef<":">> ")" => DomainGoal::TraitRefWellFormed { trait_ref: t },
+
+    "FromEnv" "(" <t:Ty> ")" => DomainGoal::TyFromEnv { ty: t },
+
+    "FromEnv" "(" <t:TraitRef<":">> ")" => DomainGoal::TraitRefFromEnv { trait_ref: t },
+
+    // `<T as Foo>::U -> Bar` -- a normalization
+    "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
+
+    "InScope" "(" <t:Id> ")" => DomainGoal::TraitInScope { trait_name: t },
+
+    "Derefs" "(" <source:Ty> "," <target:Ty> ")" => DomainGoal::Derefs { source, target },
+
+    "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
+};
+
+LeafGoal: LeafGoal = {
+    <dg: DomainGoal> => LeafGoal::DomainGoal { goal: dg },
+
+    <a:Ty> "=" <b:Ty> => LeafGoal::UnifyTys { a, b },
+
+    <a:Lifetime> "=" <b:Lifetime> => LeafGoal::UnifyLifetimes { a, b },
 };
 
 TraitRef<S>: TraitRef = {

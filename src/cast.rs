@@ -50,21 +50,21 @@ macro_rules! reflexive_impl {
 reflexive_impl!(TraitRef);
 reflexive_impl!(LeafGoal);
 reflexive_impl!(DomainGoal);
-reflexive_impl!(WhereClauseAtom);
+reflexive_impl!(WhereClause);
 
-impl Cast<WhereClauseAtom> for TraitRef {
-    fn cast(self) -> WhereClauseAtom {
-        WhereClauseAtom::Implemented(self)
+impl Cast<WhereClause> for TraitRef {
+    fn cast(self) -> WhereClause {
+        WhereClause::Implemented(self)
     }
 }
 
-impl Cast<WhereClauseAtom> for ProjectionEq {
-    fn cast(self) -> WhereClauseAtom {
-        WhereClauseAtom::ProjectionEq(self)
+impl Cast<WhereClause> for ProjectionEq {
+    fn cast(self) -> WhereClause {
+        WhereClause::ProjectionEq(self)
     }
 }
 
-impl<T> Cast<DomainGoal> for T where T: Cast<WhereClauseAtom> {
+impl<T> Cast<DomainGoal> for T where T: Cast<WhereClause> {
     fn cast(self) -> DomainGoal {
         DomainGoal::Holds(self.cast())
     }
@@ -94,13 +94,25 @@ impl Cast<DomainGoal> for UnselectedNormalize {
     }
 }
 
+impl Cast<DomainGoal> for WellFormed {
+    fn cast(self) -> DomainGoal {
+        DomainGoal::WellFormed(self)
+    }
+}
+
+impl Cast<DomainGoal> for FromEnv {
+    fn cast(self) -> DomainGoal {
+        DomainGoal::FromEnv(self)
+    }
+}
+
 impl Cast<LeafGoal> for EqGoal {
     fn cast(self) -> LeafGoal {
         LeafGoal::EqGoal(self)
     }
 }
 
-impl Cast<Goal> for QuantifiedDomainGoal {
+impl<T: Cast<Goal>> Cast<Goal> for Binders<T> {
     fn cast(self) -> Goal {
         if self.binders.is_empty() {
             self.value.cast()
@@ -108,21 +120,6 @@ impl Cast<Goal> for QuantifiedDomainGoal {
             Goal::Quantified(
                 QuantifierKind::ForAll,
                 self.map(|bound| Box::new(bound.cast()))
-            )
-        }
-    }
-}
-
-impl Cast<ProgramClause> for QuantifiedDomainGoal {
-    fn cast(self) -> ProgramClause {
-        if self.binders.is_empty() {
-            self.value.cast()
-        } else {
-            ProgramClause::ForAll(
-                self.map(|bound| ProgramClauseImplication {
-                    consequence: bound,
-                    conditions: vec![],
-                })
             )
         }
     }
@@ -152,12 +149,27 @@ impl Cast<Parameter> for Lifetime {
     }
 }
 
-impl Cast<ProgramClause> for DomainGoal {
+impl<T> Cast<ProgramClause> for T where T: Cast<DomainGoal> {
     fn cast(self) -> ProgramClause {
         ProgramClause::Implies(ProgramClauseImplication {
-            consequence: self,
+            consequence: self.cast(),
             conditions: vec![],
         })
+    }
+}
+
+impl<T: Cast<DomainGoal>> Cast<ProgramClause> for Binders<T> {
+    fn cast(self) -> ProgramClause {
+        if self.binders.is_empty() {
+           Cast::<ProgramClause>::cast(self.value)
+        } else {
+            ProgramClause::ForAll(
+                self.map(|bound| ProgramClauseImplication {
+                    consequence: bound.cast(),
+                    conditions: vec![],
+                })
+            )
+        }
     }
 }
 

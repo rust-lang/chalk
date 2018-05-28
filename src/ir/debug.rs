@@ -169,17 +169,17 @@ impl Debug for UnselectedNormalize {
     }
 }
 
-impl Debug for WhereClauseAtom {
+impl Debug for WhereClause {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            WhereClauseAtom::Implemented(tr) => write!(
+            WhereClause::Implemented(tr) => write!(
                 fmt,
                 "Implemented({:?}: {:?}{:?})",
                 tr.parameters[0],
                 tr.trait_id,
                 Angle(&tr.parameters[1..])
             ),
-            WhereClauseAtom::ProjectionEq(p) => write!(fmt, "{:?}", p),
+            WhereClause::ProjectionEq(p) => write!(fmt, "{:?}", p),
         }
     }
 }
@@ -187,23 +187,11 @@ impl Debug for WhereClauseAtom {
 impl Debug for DomainGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            DomainGoal::Holds(wca) => write!(fmt, "{:?}", wca),
-            DomainGoal::WellFormed(WhereClauseAtom::Implemented(tr)) => {
-                write!(fmt, "WellFormed({:?})", tr)
-            }
-            DomainGoal::WellFormed(WhereClauseAtom::ProjectionEq(p)) => {
-                write!(fmt, "WellFormed({:?})", p)
-            }
-            DomainGoal::FromEnv(WhereClauseAtom::Implemented(tr)) => {
-                write!(fmt, "FromEnv({:?})", tr)
-            }
-            DomainGoal::FromEnv(WhereClauseAtom::ProjectionEq(p)) => {
-                write!(fmt, "FromEnv({:?})", p)
-            }
+            DomainGoal::Holds(n) => write!(fmt, "{:?}", n),
+            DomainGoal::WellFormed(n) => write!(fmt, "{:?}", n),
+            DomainGoal::FromEnv(n) => write!(fmt, "{:?}", n),
             DomainGoal::Normalize(n) => write!(fmt, "{:?}", n),
             DomainGoal::UnselectedNormalize(n) => write!(fmt, "{:?}", n),
-            DomainGoal::WellFormedTy(t) => write!(fmt, "WellFormed({:?})", t),
-            DomainGoal::FromEnvTy(t) => write!(fmt, "FromEnv({:?})", t),
             DomainGoal::InScope(n) => write!(fmt, "InScope({:?})", n),
             DomainGoal::Derefs(n) => write!(fmt, "Derefs({:?})", n),
             DomainGoal::IsLocal(n) => write!(fmt, "IsLocal({:?})", n),

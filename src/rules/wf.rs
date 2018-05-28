@@ -109,45 +109,11 @@ impl FoldInputTypes for ProjectionEq {
     }
 }
 
-impl FoldInputTypes for WhereClauseAtom {
+impl FoldInputTypes for WhereClause {
     fn fold(&self, accumulator: &mut Vec<Ty>) {
         match self {
-            WhereClauseAtom::Implemented(tr) => tr.fold(accumulator),
-            WhereClauseAtom::ProjectionEq(p) => p.fold(accumulator),
-        }
-    }
-}
-
-impl FoldInputTypes for Normalize {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
-        self.projection.parameters.fold(accumulator);
-        self.ty.fold(accumulator);
-    }
-}
-
-impl FoldInputTypes for UnselectedNormalize {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
-        self.projection.parameters.fold(accumulator);
-        self.ty.fold(accumulator);
-    }
-}
-
-impl FoldInputTypes for DomainGoal {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
-        match self {
-            DomainGoal::Holds(wca) => wca.fold(accumulator),
-            DomainGoal::Normalize(n) => n.fold(accumulator),
-            DomainGoal::UnselectedNormalize(n) => n.fold(accumulator),
-
-            DomainGoal::WellFormed(..) |
-            DomainGoal::FromEnv(..) |
-            DomainGoal::WellFormedTy(..) |
-            DomainGoal::FromEnvTy(..) |
-            DomainGoal::IsLocal(..) |
-            DomainGoal::LocalImplAllowed(..) |
-            DomainGoal::Derefs(..) => panic!("unexpected where clause"),
-
-            DomainGoal::InScope(..) => (),
+            WhereClause::Implemented(tr) => tr.fold(accumulator),
+            WhereClause::ProjectionEq(p) => p.fold(accumulator),
         }
     }
 }
@@ -169,7 +135,9 @@ impl WfSolver {
             return true;
         }
 
-        let goals = input_types.into_iter().map(|ty| DomainGoal::WellFormedTy(ty).cast());
+        let goals = input_types.into_iter()
+                               .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
+                               .casted();
         let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
                         .expect("at least one goal");
 
@@ -248,7 +216,7 @@ impl WfSolver {
 
             let wf_goals =
                 input_types.into_iter()
-                           .map(|ty| DomainGoal::WellFormedTy(ty));
+                           .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)));
             
             let trait_ref = trait_ref.up_shift(assoc_ty.value.binders.len());
 
@@ -264,7 +232,7 @@ impl WfSolver {
             let bound_goals =
                 bounds.iter()
                       .map(|b| Subst::apply(&all_parameters, b))
-                      .flat_map(|b| b.lower_with_self(assoc_ty.value.value.ty.clone()))
+                      .flat_map(|b| b.into_where_clauses(assoc_ty.value.value.ty.clone()))
                       .map(|g| g.into_well_formed_goal());
             
             let goals = wf_goals.chain(bound_goals).casted();
@@ -301,11 +269,11 @@ impl WfSolver {
         // Things to prove well-formed: input types of the where-clauses, projection types
         // appearing in the header, associated type values, and of course the trait ref.
         let trait_ref_wf = DomainGoal::WellFormed(
-            WhereClauseAtom::Implemented(trait_ref.clone())
+            WellFormed::Trait(trait_ref.clone())
         );
         let goals =
             input_types.into_iter()
-                       .map(|ty| DomainGoal::WellFormedTy(ty).cast())
+                       .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)).cast())
                        .chain(assoc_ty_goals)
                        .chain(Some(trait_ref_wf).cast());
 
@@ -323,7 +291,11 @@ impl WfSolver {
                       .cloned()
                       .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
                       .casted()
-                      .chain(header_input_types.into_iter().map(|ty| DomainGoal::FromEnvTy(ty).cast()))
+                      .chain(
+                          header_input_types.into_iter()
+                                            .map(|ty| DomainGoal::FromEnv(FromEnv::Ty(ty)))
+                                            .casted()
+                      )
                       .collect();
 
         let goal = Goal::Implies(hypotheses, Box::new(goal))
