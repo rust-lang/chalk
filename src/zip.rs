@@ -227,8 +227,8 @@ enum_zip!(DomainGoal {
     FromEnvTy,
     InScope,
     Derefs,
-    IsLocalTy,
-    IsLocalTraitRef
+    IsLocal,
+    LocalImplAllowed
 });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(ProgramClause { Implies, ForAll });
