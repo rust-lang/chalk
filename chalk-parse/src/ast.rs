@@ -62,7 +62,7 @@ pub struct TraitFlags {
 pub struct AssocTyDefn {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
-    pub bounds: Vec<InlineBound>,
+    pub bounds: Vec<QuantifiedInlineBound>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
@@ -83,6 +83,12 @@ pub enum Parameter {
 pub enum InlineBound {
     TraitBound(TraitBound),
     ProjectionEqBound(ProjectionEqBound),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct QuantifiedInlineBound {
+    pub parameter_kinds: Vec<ParameterKind>,
+    pub bound: InlineBound,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

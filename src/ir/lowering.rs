@@ -414,17 +414,11 @@ impl LowerWhereClauses for Impl {
     }
 }
 
-trait LowerWhereClauseVec<T> {
-    fn lower(&self, env: &Env) -> Result<Vec<T>>;
+trait LowerWhereClauseVec {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::QuantifiedWhereClause>>;
 }
 
-impl LowerWhereClauseVec<ir::WhereClause> for [WhereClause] {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::WhereClause>> {
-        self.iter().flat_map(|wc| wc.lower(env).apply_result()).collect()
-    }
-}
-
-impl LowerWhereClauseVec<ir::QuantifiedWhereClause> for [QuantifiedWhereClause] {
+impl LowerWhereClauseVec for [QuantifiedWhereClause] {
     fn lower(&self, env: &Env) -> Result<Vec<ir::QuantifiedWhereClause>> {
         self.iter()
             .flat_map(|wc| match wc.lower(env) {
@@ -723,12 +717,26 @@ impl LowerInlineBound for InlineBound {
     }
 }
 
-trait LowerInlineBounds {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::InlineBound>>;
+trait LowerQuantifiedInlineBound {
+    fn lower(&self, env: &Env) -> Result<ir::QuantifiedInlineBound>;
 }
 
-impl LowerInlineBounds for Vec<InlineBound> {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::InlineBound>> {
+impl LowerQuantifiedInlineBound for QuantifiedInlineBound {
+    fn lower(&self, env: &Env) -> Result<ir::QuantifiedInlineBound> {
+        let parameter_kinds = self.parameter_kinds.iter().map(|pk| pk.lower());
+        let binders = env.in_binders(parameter_kinds, |env| {
+            Ok(self.bound.lower(env)?)
+        })?;
+        Ok(binders)
+    }
+}
+
+trait LowerQuantifiedInlineBoundVec {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::QuantifiedInlineBound>>;
+}
+
+impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
+    fn lower(&self, env: &Env) -> Result<Vec<ir::QuantifiedInlineBound>> {
         self.iter()
             .map(|b| b.lower(env))
             .collect()

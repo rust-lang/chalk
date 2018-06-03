@@ -216,7 +216,8 @@ impl WfSolver {
 
             let wf_goals =
                 input_types.into_iter()
-                           .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)));
+                           .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
+                           .casted();
             
             let trait_ref = trait_ref.up_shift(assoc_ty.value.binders.len());
 
@@ -233,9 +234,10 @@ impl WfSolver {
                 bounds.iter()
                       .map(|b| Subst::apply(&all_parameters, b))
                       .flat_map(|b| b.into_where_clauses(assoc_ty.value.value.ty.clone()))
-                      .map(|g| g.into_well_formed_goal());
+                      .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
+                      .casted();
             
-            let goals = wf_goals.chain(bound_goals).casted();
+            let goals = wf_goals.chain(bound_goals);
             let goal = match goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf))) {
                 Some(goal) => goal,
                 None => return None,

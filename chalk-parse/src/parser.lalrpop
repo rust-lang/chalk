@@ -74,7 +74,7 @@ TraitDefn: TraitDefn = {
 };
 
 AssocTyDefn: AssocTyDefn = {
-    "type" <name:Id> <p:Angle<ParameterKind>> <b:(":" <Plus<InlineBound>>)?>
+    "type" <name:Id> <p:Angle<ParameterKind>> <b:(":" <Plus<QuantifiedInlineBound>>)?>
         <w:QuantifiedWhereClauses> ";" =>
     {
         AssocTyDefn {
@@ -112,6 +112,18 @@ ProjectionEqBound: ProjectionEqBound = {
         args: a2,
         value: ty,
     }
+};
+
+QuantifiedInlineBound: QuantifiedInlineBound = {
+    <b:InlineBound> => QuantifiedInlineBound {
+        parameter_kinds: vec![],
+        bound: b,
+    },
+
+    "forall" "<" <pk:Comma<ParameterKind>> ">" <b:InlineBound> => QuantifiedInlineBound {
+        parameter_kinds: pk,
+        bound: b,
+    },
 };
 
 Impl: Impl = {
