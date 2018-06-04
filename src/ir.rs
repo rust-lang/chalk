@@ -153,6 +153,13 @@ impl TypeName {
     }
 }
 
+/// An universe index is how a universally quantified parameter is
+/// represented when it's binder is moved into the environment.
+/// An example chain of transformations would be:
+/// `forall<T> { Goal(T) }` (syntatical representation)
+/// `forall { Goal(?0) }` (used a DeBruijn index)
+/// `Goal(!U1)` (the quantifier was moved to the environment and replaced with a universe index)
+/// See https://rust-lang-nursery.github.io/rustc-guide/mir/regionck.html#skol for more.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UniverseIndex {
     crate counter: usize,
