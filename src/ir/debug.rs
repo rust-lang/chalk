@@ -184,6 +184,24 @@ impl Debug for WhereClause {
     }
 }
 
+impl Debug for FromEnv {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match self {
+            FromEnv::Trait(t) => write!(fmt, "FromEnv({:?})", t),
+            FromEnv::Ty(t) => write!(fmt, "FromEnv({:?})", t),
+        }
+    }
+}
+
+impl Debug for WellFormed {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match self {
+            WellFormed::Trait(t) => write!(fmt, "WellFormed({:?})", t),
+            WellFormed::Ty(t) => write!(fmt, "WellFormed({:?})", t),
+        }
+    }
+}
+
 impl Debug for DomainGoal {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {

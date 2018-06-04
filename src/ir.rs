@@ -619,7 +619,7 @@ pub struct Derefs {
     pub target: Ty,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum WellFormed {
     /// A predicate which is true is some trait ref is well-formed.
     /// For example, given the following trait definitions:
@@ -646,7 +646,7 @@ pub enum WellFormed {
     Ty(Ty),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum FromEnv {
     /// A predicate which enables deriving everything which should be true if we *know* that
     /// some trait ref is well-formed. For example given the above trait definitions, we can use
