@@ -158,7 +158,7 @@ impl AssociatedTyValue {
     ///     type IntoIter<'a>: 'a;
     /// }
     /// ```
-    /// 
+    ///
     /// Then for the following impl:
     /// ```notrust
     /// impl<T> Iterable for Vec<T> {
@@ -413,6 +413,19 @@ impl TraitDatum {
         //
         //    forall<Self, T> { (Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
         //    forall<Self, T> { FromEnv(Self: Eq<T>) :- FromEnv(Self: Ord<T>) }
+        //
+        // As specified in the orphan rules, if a trait is not marked `extern`, the current crate
+        // can implement it for any type. To represent that, we generate:
+        //
+        //    // `Ord<T>` would not be `extern` when compiling `std`
+        //    forall<Self, T> { LocalImplAllowed(Self: Ord<T>) }
+        //
+        // For traits that are `extern` (i.e. not in the current crate), the orphan rules specify
+        // that impls are allowed as long as the the type being implemented for is defined in the
+        // current crate. This is represented as follows:
+        //
+        //    // for `extern trait Ord<T> where Self: Eq<T> { ... }`
+        //    forall<Self, T> { LocalImplAllowed(Self: Ord<T>) :- IsLocal(Self) }
 
         let trait_ref = self.binders.value.trait_ref.clone();
 
@@ -437,6 +450,29 @@ impl TraitDatum {
         }).cast();
 
         let mut clauses = vec![wf];
+
+        if !self.binders.value.flags.external {
+            let impl_allowed = self.binders.map_ref(|bound_datum|
+                ProgramClauseImplication {
+                    consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
+                    conditions: Vec::new(),
+                }
+            ).cast();
+
+            clauses.push(impl_allowed);
+        } else {
+            let impl_maybe_allowed = self.binders.map_ref(|bound_datum|
+                ProgramClauseImplication {
+                    consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
+                    conditions: vec![
+                        DomainGoal::IsLocal(bound_datum.trait_ref.parameters[0].assert_ty_ref().clone()).cast(),
+                    ],
+                }
+            ).cast();
+
+            clauses.push(impl_maybe_allowed);
+        }
+
         let condition = DomainGoal::FromEnv(FromEnv::Trait(trait_ref.clone()));
 
         for wc in self.binders
