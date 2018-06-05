@@ -420,12 +420,36 @@ impl TraitDatum {
         //    // `Ord<T>` would not be `extern` when compiling `std`
         //    forall<Self, T> { LocalImplAllowed(Self: Ord<T>) }
         //
-        // For traits that are `extern` (i.e. not in the current crate), the orphan rules specify
-        // that impls are allowed as long as the the type being implemented for is defined in the
-        // current crate. This is represented as follows:
+        // For traits that are `extern` (i.e. not in the current crate), the orphan rules dictate
+        // that impls are allowed as long as at least one type parameter is local and each type
+        // prior to that is *deeply* external. That means that each type prior to the first local
+        // type cannot contain any of the type parameters of the impl.
         //
-        //    // for `extern trait Ord<T> where Self: Eq<T> { ... }`
-        //    forall<Self, T> { LocalImplAllowed(Self: Ord<T>) :- IsLocal(Self) }
+        // This rule is fairly complex, so we expand it and generate a program clause for each
+        // possible case. This is represented as follows:
+        //
+        //    // for `extern trait Foo<T, U, V> where Self: Eq<T> { ... }`
+        //    forall<Self, T, U, V> {
+        //      LocalImplAllowed(Self: Foo<T, U, V>) :- IsLocal(Self)
+        //    }
+        //    forall<Self, T, U, V> {
+        //      LocalImplAllowed(Self: Foo<T, U, V>) :-
+        //          IsDeeplyExternal(Self),
+        //          IsLocal(T)
+        //    }
+        //    forall<Self, T, U, V> {
+        //      LocalImplAllowed(Self: Foo<T, U, V>) :-
+        //          IsDeeplyExternal(Self),
+        //          IsDeeplyExternal(T),
+        //          IsLocal(U)
+        //    }
+        //    forall<Self, T, U, V> {
+        //      LocalImplAllowed(Self: Foo<T, U, V>) :-
+        //          IsDeeplyExternal(Self),
+        //          IsDeeplyExternal(T),
+        //          IsDeeplyExternal(U),
+        //          IsLocal(V)
+        //    }
 
         let trait_ref = self.binders.value.trait_ref.clone();
 
@@ -461,16 +485,23 @@ impl TraitDatum {
 
             clauses.push(impl_allowed);
         } else {
-            let impl_maybe_allowed = self.binders.map_ref(|bound_datum|
-                ProgramClauseImplication {
-                    consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
-                    conditions: vec![
-                        DomainGoal::IsLocal(bound_datum.trait_ref.parameters[0].assert_ty_ref().clone()).cast(),
-                    ],
-                }
-            ).cast();
+            // The number of parameters will always be at least 1 because of the Self parameter
+            // that is automatically added to every trait. This is important because otherwise
+            // the added program clauses would not have any conditions.
 
-            clauses.push(impl_maybe_allowed);
+            for i in 0..self.binders.value.trait_ref.parameters.len() {
+                let impl_maybe_allowed = self.binders.map_ref(|bound_datum|
+                    ProgramClauseImplication {
+                        consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
+                        conditions:
+                            (0..i).map(|j| DomainGoal::IsDeeplyExternal(bound_datum.trait_ref.parameters[j].assert_ty_ref().clone()).cast())
+                            .chain(iter::once(DomainGoal::IsLocal(bound_datum.trait_ref.parameters[i].assert_ty_ref().clone()).cast()))
+                            .collect(),
+                    }
+                ).cast();
+
+                clauses.push(impl_maybe_allowed);
+            }
         }
 
         let condition = DomainGoal::FromEnv(FromEnv::Trait(trait_ref.clone()));
