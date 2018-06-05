@@ -2643,12 +2643,18 @@ fn impl_allowed_for_traits() {
 
             extern struct External { }
             struct Internal { }
+
+            //FIXME(sunjay): Delete this line once IsDeeplyExternal is implemented
+            forall<> { IsDeeplyExternal(External) }
         }
 
         goal { forall<T, U> { LocalImplAllowed(T: ExternalTrait<U>) } } yields { "No possible solution" }
+        // Types after the first local type do not matter
         goal { forall<T> { LocalImplAllowed(Internal: ExternalTrait<T>) } } yields { "Unique" }
-        goal { forall<T> { LocalImplAllowed(External: ExternalTrait<T>) } } yields { "No possible solution" }
+        goal { LocalImplAllowed(External: ExternalTrait<External>) } yields { "No possible solution" }
+        goal { LocalImplAllowed(External: ExternalTrait<Internal>) } yields { "Unique" }
 
+        // If the trait itself is local the types implemented for do not matter
         goal { forall<T, U> { LocalImplAllowed(T: InternalTrait<U>) } } yields { "Unique" }
         goal { forall<T> { LocalImplAllowed(Internal: InternalTrait<T>) } } yields { "Unique" }
         goal { forall<T> { LocalImplAllowed(External: InternalTrait<T>) } } yields { "Unique" }
