@@ -922,7 +922,7 @@ fn region_equality() {
         } yields {
             "Unique; substitution [],
                      lifetime constraints \
-                     [InEnvironment { environment: Env([]), goal: '!2'0 == '!1'0 }]
+                     [InEnvironment { environment: Env([]), goal: '!1'1 == '!1'0 }]
                      "
         }
 
@@ -966,12 +966,12 @@ fn forall_equality() {
             // this is because the region constraints are unsolvable.
             //
             // Note that `?0` (in universe 2) must be equal to both
-            // `!1` and `!2`, which of course it cannot be.
+            // `!1'0` and `!1'1`, which of course it cannot be.
             for<'a, 'b> Ref<'a, Ref<'b, Ref<'a, Unit>>>: Eq<
                 for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
         } yields {
             "Unique; substitution [], lifetime constraints [
-                 InEnvironment { environment: Env([]), goal: '!2'0 == '!1'0 }
+                 InEnvironment { environment: Env([]), goal: '!1'1 == '!1'0 }
              ]"
         }
     }

@@ -100,19 +100,24 @@ impl InferenceTable {
         T: Fold,
     {
         let (binders, value) = arg.split();
+        let lifetime_ui = self.new_universe();
+        let mut idx = 0;
         let parameters: Vec<_> = binders
             .iter()
             .map(|pk| {
-                let new_universe = self.new_universe();
                 match *pk {
                     ParameterKind::Lifetime(()) => {
-                        let lt = Lifetime::ForAll(UniversalIndex { ui: new_universe, idx: 0 });
+                        let lt = Lifetime::ForAll(UniversalIndex { ui: lifetime_ui, idx });
+                        idx += 1;
                         ParameterKind::Lifetime(lt)
                     }
-                    ParameterKind::Ty(()) => ParameterKind::Ty(Ty::Apply(ApplicationTy {
-                        name: TypeName::ForAll(new_universe),
-                        parameters: vec![],
-                    })),
+                    ParameterKind::Ty(()) => {
+                        let new_universe = self.new_universe();
+                        ParameterKind::Ty(Ty::Apply(ApplicationTy {
+                            name: TypeName::ForAll(new_universe),
+                            parameters: vec![],
+                        }))
+                    }
                 }
             })
             .collect();
