@@ -287,6 +287,8 @@ DomainGoal: DomainGoal = {
     "Derefs" "(" <source:Ty> "," <target:Ty> ")" => DomainGoal::Derefs { source, target },
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
+    "IsExternal" "(" <ty:Ty> ")" => DomainGoal::IsExternal { ty },
+    "IsDeeplyExternal" "(" <ty:Ty> ")" => DomainGoal::IsDeeplyExternal { ty },
 
     "LocalImplAllowed" "(" <trait_ref:TraitRef<":">> ")" => DomainGoal::LocalImplAllowed { trait_ref },
 };

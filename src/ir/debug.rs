@@ -213,6 +213,8 @@ impl Debug for DomainGoal {
             DomainGoal::InScope(n) => write!(fmt, "InScope({:?})", n),
             DomainGoal::Derefs(n) => write!(fmt, "Derefs({:?})", n),
             DomainGoal::IsLocal(n) => write!(fmt, "IsLocal({:?})", n),
+            DomainGoal::IsExternal(n) => write!(fmt, "IsExternal({:?})", n),
+            DomainGoal::IsDeeplyExternal(n) => write!(fmt, "IsDeeplyExternal({:?})", n),
             DomainGoal::LocalImplAllowed(tr) => write!(
                 fmt,
                 "LocalImplAllowed({:?}: {:?}{:?})",

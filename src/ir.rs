@@ -709,6 +709,29 @@ pub enum DomainGoal {
     /// like `Box<T>`, it is true if `T` is local.
     IsLocal(Ty),
 
+    /// True if a type is *not* considered to have been "defined" by the current crate. This is
+    /// false for a `struct Foo { }` but true for a `extern struct Foo { }`. However, for
+    /// fundamental types like `Box<T>`, it is true if `T` is external.
+    IsExternal(Ty),
+
+    /// True if a type both external and its type parameters are recursively external
+    ///
+    /// More formally, for each non-fundamental struct S<P0..Pn> that is external:
+    /// forall<P0..Pn> {
+    ///     IsDeeplyExternal(S<P0...Pn>) :-
+    ///         IsDeeplyExternal(P0),
+    ///         ...
+    ///         IsDeeplyExternal(Pn)
+    /// }
+    ///
+    /// For each fundamental struct P<P0>,
+    ///
+    /// forall<P0> { IsDeeplyExternal(S<P0>) :- IsDeeplyExternal(P0) }
+    ///
+    /// Note that any of these types can have lifetimes in their parameters too, but we only
+    /// consider type parameters.
+    IsDeeplyExternal(Ty),
+
     /// Used to dictate when trait impls are allowed in the current (local) crate based on the
     /// orphan rules.
     ///

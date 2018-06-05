@@ -243,6 +243,8 @@ pub enum DomainGoal {
     TraitInScope { trait_name: Identifier },
     Derefs { source: Ty, target: Ty },
     IsLocal { ty: Ty },
+    IsExternal { ty: Ty },
+    IsDeeplyExternal { ty: Ty },
     LocalImplAllowed { trait_ref: TraitRef },
 }
 
