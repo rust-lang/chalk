@@ -581,7 +581,7 @@ fn normalize_gat1() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Iter<'!2, !1>], lifetime constraints []"
+            "Unique; substitution [?0 := Iter<'!2'0, !1>], lifetime constraints []"
         }
     }
 }
@@ -606,7 +606,7 @@ fn normalize_gat2() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Span<'!1, !2>], lifetime constraints []"
+            "Unique; substitution [?0 := Span<'!1'0, !2>], lifetime constraints []"
         }
 
         goal {
@@ -922,7 +922,7 @@ fn region_equality() {
         } yields {
             "Unique; substitution [],
                      lifetime constraints \
-                     [InEnvironment { environment: Env([]), goal: '!2 == '!1 }]
+                     [InEnvironment { environment: Env([]), goal: '!2'0 == '!1'0 }]
                      "
         }
 
@@ -933,7 +933,7 @@ fn region_equality() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := '!1], lifetime constraints []"
+            "Unique; substitution [?0 := '!1'0], lifetime constraints []"
         }
     }
 }
@@ -971,7 +971,7 @@ fn forall_equality() {
                 for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
         } yields {
             "Unique; substitution [], lifetime constraints [
-                 InEnvironment { environment: Env([]), goal: '!2 == '!1 }
+                 InEnvironment { environment: Env([]), goal: '!2'0 == '!1'0 }
              ]"
         }
     }
@@ -1185,7 +1185,7 @@ fn normalize_under_binder() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Ref<'!1, I32>], lifetime constraints []"
+            "Unique; substitution [?0 := Ref<'!1'0, I32>], lifetime constraints []"
         }
 
         goal {
@@ -1197,7 +1197,7 @@ fn normalize_under_binder() {
         } yields {
             "Unique; for<?U0> { \
              substitution [?0 := Ref<'?0, I32>], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1'0 }] \
              }"
         }
     }
@@ -1221,7 +1221,7 @@ fn unify_quantified_lifetimes() {
         } yields {
             "Unique; for<?U0> { \
              substitution [?0 := '?0], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1'0 }] \
              }"
         }
 
@@ -1237,8 +1237,8 @@ fn unify_quantified_lifetimes() {
             }
         } yields {
             "Unique; for<?U0> { \
-             substitution [?0 := '?0, ?1 := '!1], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
+             substitution [?0 := '?0, ?1 := '!1'0], \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1'0 }] \
              }"
         }
     }
@@ -1263,7 +1263,7 @@ fn equality_binder() {
         } yields {
             "Unique; for<?U1> { \
                  substitution [?0 := '?0], \
-                 lifetime constraints [InEnvironment { environment: Env([]), goal: '!2 == '?0 }] \
+                 lifetime constraints [InEnvironment { environment: Env([]), goal: '!2'0 == '?0 }] \
              }"
         }
     }
@@ -2394,7 +2394,7 @@ fn quantified_types() {
         } yields {
             // Lifetime constraints are unsatisfiable
             "Unique; substitution [], \
-            lifetime constraints [InEnvironment { environment: Env([]), goal: '!2 == '!1 }]"
+            lifetime constraints [InEnvironment { environment: Env([]), goal: '!2'0 == '!1'0 }]"
         }
     }
 }

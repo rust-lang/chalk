@@ -106,7 +106,7 @@ impl InferenceTable {
                 let new_universe = self.new_universe();
                 match *pk {
                     ParameterKind::Lifetime(()) => {
-                        let lt = Lifetime::ForAll(new_universe);
+                        let lt = Lifetime::ForAll(UniversalIndex { ui: new_universe, idx: 0 });
                         ParameterKind::Lifetime(lt)
                     }
                     ParameterKind::Ty(()) => ParameterKind::Ty(Ty::Apply(ApplicationTy {

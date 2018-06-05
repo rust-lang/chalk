@@ -349,7 +349,7 @@ pub fn super_fold_lifetime(
         } else {
             Ok(Lifetime::Var(depth))
         },
-        Lifetime::ForAll(universe) => folder.fold_free_universal_lifetime(universe, binders),
+        Lifetime::ForAll(universe) => folder.fold_free_universal_lifetime(universe.ui, binders),
     }
 }
 

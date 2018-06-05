@@ -135,7 +135,7 @@ impl UniverseIndex {
     }
 
     pub fn to_lifetime(self) -> Lifetime {
-        Lifetime::ForAll(self)
+        Lifetime::ForAll(UniversalIndex { ui: self, idx: 0 })
     }
 
     pub fn next(self) -> UniverseIndex {
@@ -206,7 +206,18 @@ pub struct QuantifiedTy {
 pub enum Lifetime {
     /// See Ty::Var(_).
     Var(usize),
-    ForAll(UniverseIndex),
+    ForAll(UniversalIndex),
+}
+
+/// Index of an universally quantified parameter in the environment.
+/// Two indexes are required, the one of the universe itself
+/// and the relative index inside the universe.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct UniversalIndex {
+    /// Index *of* the universe.
+    pub ui: UniverseIndex,
+    /// Index *in* the universe.
+    pub idx: usize,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

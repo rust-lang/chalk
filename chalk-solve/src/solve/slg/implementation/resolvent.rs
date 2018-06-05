@@ -388,8 +388,8 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (Lifetime::ForAll(answer_ui), Lifetime::ForAll(pending_ui)) => {
-                assert_eq!(answer_ui, pending_ui);
+            (Lifetime::ForAll(_), Lifetime::ForAll(_)) => {
+                assert_eq!(answer, pending);
                 Ok(())
             }
 

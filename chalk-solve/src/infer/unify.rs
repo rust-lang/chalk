@@ -178,7 +178,7 @@ impl<'t> Unifier<'t> {
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|_| {
                 let new_universe = self.table.new_universe();
-                Lifetime::ForAll(new_universe).cast()
+                Lifetime::ForAll(UniversalIndex { ui: new_universe, idx: 0 }).cast()
             })
             .collect();
 
@@ -242,7 +242,7 @@ impl<'t> Unifier<'t> {
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|_| {
                 let new_universe = self.table.new_universe();
-                Lifetime::ForAll(new_universe).cast()
+                Lifetime::ForAll(UniversalIndex { ui: new_universe, idx: 0 }).cast()
             })
             .collect();
 
@@ -294,16 +294,16 @@ impl<'t> Unifier<'t> {
                 Ok(())
             }
 
-            (&Lifetime::Var(depth), &Lifetime::ForAll(ui))
-            | (&Lifetime::ForAll(ui), &Lifetime::Var(depth)) => {
+            (&Lifetime::Var(depth), &Lifetime::ForAll(idx))
+            | (&Lifetime::ForAll(idx), &Lifetime::Var(depth)) => {
                 let var = InferenceVariable::from_depth(depth);
                 let var_ui = self.table.universe_of_unbound_var(var);
-                if var_ui.can_see(ui) {
+                if var_ui.can_see(idx.ui) {
                     debug!(
                         "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
-                        var, var_ui, ui
+                        var, var_ui, idx.ui
                     );
-                    let v = Lifetime::ForAll(ui);
+                    let v = Lifetime::ForAll(idx);
                     self.table
                         .unify
                         .unify_var_value(var, InferenceValue::from(v))
@@ -312,7 +312,7 @@ impl<'t> Unifier<'t> {
                 } else {
                     debug!(
                         "unify_lifetime_lifetime: {:?} in {:?} cannot see {:?}; pushing constraint",
-                        var, var_ui, ui
+                        var, var_ui, idx.ui
                     );
                     Ok(self.push_lifetime_eq_constraint(*a, *b))
                 }

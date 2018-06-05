@@ -320,8 +320,8 @@ impl<'infer> AntiUnifier<'infer> {
         match (l1, l2) {
             (Lifetime::Var(_), _) | (_, Lifetime::Var(_)) => self.new_lifetime_variable(),
 
-            (Lifetime::ForAll(ui1), Lifetime::ForAll(ui2)) => if ui1 == ui2 {
-                Lifetime::ForAll(*ui1)
+            (Lifetime::ForAll(_), Lifetime::ForAll(_)) => if l1 == l2 {
+                *l1
             } else {
                 self.new_lifetime_variable()
             },

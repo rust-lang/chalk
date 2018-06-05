@@ -54,7 +54,7 @@ macro_rules! lifetime {
     };
 
     (skol $b:expr) => {
-        $crate::Lifetime::ForAll(UniverseIndex { counter: $b })
+        $crate::Lifetime::ForAll(UniversalIndex { ui: UniverseIndex { counter: $b }, idx: 0})
     };
 
     (expr $b:expr) => {
