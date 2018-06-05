@@ -21,6 +21,8 @@ struct Env<'k> {
     type_ids: &'k TypeIds,
     type_kinds: &'k TypeKinds,
     associated_ty_infos: &'k AssociatedTyInfos,
+    /// Parameter identifiers are used as keys, therefore
+    /// all indentifiers in an environment must be unique (no shadowing).
     parameter_map: ParameterMap,
 }
 
@@ -84,7 +86,7 @@ impl<'k> Env<'k> {
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
-            bail!("duplicate parameters");
+            bail!("duplicate or shadowed parameters");
         }
         Ok(Env {
             parameter_map,

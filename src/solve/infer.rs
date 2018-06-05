@@ -89,6 +89,7 @@ impl InferenceTable {
     crate fn new_universe(&mut self) -> UniverseIndex {
         let u = self.max_universe.next();
         self.max_universe = u;
+        debug!("new_universe: {:?}", u);
         u
     }
 

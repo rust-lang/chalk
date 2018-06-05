@@ -2371,11 +2371,18 @@ fn quantified_types() {
         program {
             trait Foo { }
             struct fn<'a> { }
+            struct fn2<'a, 'b> { }
             impl Foo for for<'a> fn<'a> { }
         }
 
         goal {
             for<'a> fn<'a>: Foo
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            for<'a, 'b> fn2<'a, 'b> = for<'b, 'a> fn2<'a, 'b>
         } yields {
             "Unique"
         }
