@@ -101,10 +101,10 @@ impl<'q> UniversalFolder for Canonicalizer<'q> {
 
     fn fold_free_universal_lifetime(
         &mut self,
-        universe: UniverseIndex,
+        universe: UniversalIndex,
         _binders: usize,
     ) -> Fallible<Lifetime> {
-        self.max_universe = max(self.max_universe, universe);
+        self.max_universe = max(self.max_universe, universe.ui);
         Ok(universe.to_lifetime())
     }
 }

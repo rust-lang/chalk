@@ -134,10 +134,6 @@ impl UniverseIndex {
         self.counter >= ui.counter
     }
 
-    pub fn to_lifetime(self) -> Lifetime {
-        Lifetime::ForAll(UniversalIndex { ui: self, idx: 0 })
-    }
-
     pub fn next(self) -> UniverseIndex {
         UniverseIndex {
             counter: self.counter + 1,
@@ -218,6 +214,12 @@ pub struct UniversalIndex {
     pub ui: UniverseIndex,
     /// Index *in* the universe.
     pub idx: usize,
+}
+
+impl UniversalIndex {
+    pub fn to_lifetime(self) -> Lifetime {
+        Lifetime::ForAll(self)
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

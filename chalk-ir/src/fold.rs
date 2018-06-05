@@ -140,7 +140,7 @@ pub trait UniversalFolder {
     /// As with `fold_free_universal_ty`, but for lifetimes.
     fn fold_free_universal_lifetime(
         &mut self,
-        universe: UniverseIndex,
+        universe: UniversalIndex,
         binders: usize,
     ) -> Fallible<Lifetime>;
 }
@@ -157,7 +157,7 @@ impl<T: IdentityUniversalFolder> UniversalFolder for T {
 
     fn fold_free_universal_lifetime(
         &mut self,
-        universe: UniverseIndex,
+        universe: UniversalIndex,
         _binders: usize,
     ) -> Fallible<Lifetime> {
         Ok(universe.to_lifetime())
@@ -349,7 +349,7 @@ pub fn super_fold_lifetime(
         } else {
             Ok(Lifetime::Var(depth))
         },
-        Lifetime::ForAll(universe) => folder.fold_free_universal_lifetime(universe.ui, binders),
+        Lifetime::ForAll(universe) => folder.fold_free_universal_lifetime(universe, binders),
     }
 }
 

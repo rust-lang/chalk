@@ -384,10 +384,10 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
 
     fn fold_free_universal_lifetime(
         &mut self,
-        ui: UniverseIndex,
+        ui: UniversalIndex,
         binders: usize,
     ) -> Fallible<Lifetime> {
-        if self.universe_index < ui {
+        if self.universe_index < ui.ui {
             // Scenario is like:
             //
             // exists<T> forall<'b> ?T = Foo<'b>
