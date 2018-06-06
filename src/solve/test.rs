@@ -2489,8 +2489,12 @@ fn local_and_external_types() {
         }
 
         goal { IsLocal(External) } yields { "No possible solution" }
+        goal { IsExternal(External) } yields { "Unique" }
+        goal { IsDeeplyExternal(External) } yields { "Unique" }
 
         goal { IsLocal(Internal) } yields { "Unique" }
+        goal { IsExternal(Internal) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(Internal) } yields { "No possible solution" }
     }
 
     test! {
@@ -2498,11 +2502,25 @@ fn local_and_external_types() {
             trait Clone { }
             extern struct External<T> where T: Clone { }
             struct Internal<T> where T: Clone { }
+
+            extern struct External2 { }
+            struct Internal2 { }
         }
 
         goal { forall<T> { IsLocal(External<T>) } } yields { "No possible solution" }
+        goal { forall<T> { IsExternal(External<T>) } } yields { "Unique" }
 
         goal { forall<T> { IsLocal(Internal<T>) } } yields { "Unique" }
+        goal { forall<T> { IsExternal(Internal<T>) } } yields { "No possible solution" }
+
+        // Not true for all T
+        goal { forall<T> { IsDeeplyExternal(External<T>) } } yields { "No possible solution" }
+
+        // Must be recursively external
+        goal { IsDeeplyExternal(External<External<External<External2>>>) } yields { "Unique" }
+        goal { IsDeeplyExternal(Internal<External<External2>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(External<Internal<External<External2>>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(External<External<External<Internal2>>>) } yields { "No possible solution" }
     }
 }
 

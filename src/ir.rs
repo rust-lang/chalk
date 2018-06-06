@@ -453,13 +453,17 @@ pub struct ApplicationTy {
 }
 
 impl ApplicationTy {
-    crate fn first_type_parameter(&self) -> Option<Ty> {
+    crate fn type_parameters<'a>(&'a self) -> impl Iterator<Item=Ty> + 'a {
         // This unwrap() is safe because is_ty ensures that we definitely have a Ty
-        self.parameters.iter().find(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
+        self.parameters.iter().filter(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
+    }
+
+    crate fn first_type_parameter(&self) -> Option<Ty> {
+        self.type_parameters().next()
     }
 
     crate fn len_type_parameters(&self) -> usize {
-        self.parameters.iter().filter(|p| p.is_ty()).count()
+        self.type_parameters().count()
     }
 }
 

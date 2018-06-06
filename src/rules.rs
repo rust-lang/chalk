@@ -300,7 +300,12 @@ impl StructDatum {
         //    forall<T> { WF(Foo<T>) :- (T: Eq). }
         //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
         //
-        // If the type Foo is not marked `extern`, we also generate:
+        // If the type Foo is marked `extern`, we also generate:
+        //
+        //    forall<T> { IsExternal(Foo<T>) }
+        //    forall<T> { IsDeeplyExternal(Foo<T>) :- IsDeeplyExternal(T) }
+        //
+        // Otherwise, if the type Foo is not marked `extern`, we generate:
         //
         //    forall<T> { IsLocal(Foo<T>) }
         //
@@ -362,6 +367,24 @@ impl StructDatum {
             }).cast();
 
             clauses.push(local_fundamental);
+        } else {
+            // The type is just extern and not fundamental
+
+            let is_external = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                consequence: DomainGoal::IsExternal(bound_datum.self_ty.clone().cast()),
+                conditions: Vec::new(),
+            }).cast();
+
+            clauses.push(is_external);
+
+            let is_deeply_external = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                consequence: DomainGoal::IsDeeplyExternal(bound_datum.self_ty.clone().cast()),
+                conditions: bound_datum.self_ty.type_parameters()
+                    .map(|ty| DomainGoal::IsDeeplyExternal(ty).cast())
+                    .collect(),
+            }).cast();
+
+            clauses.push(is_deeply_external);
         }
 
         let condition = DomainGoal::FromEnv(
