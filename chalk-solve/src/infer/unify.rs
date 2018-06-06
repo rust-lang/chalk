@@ -242,10 +242,10 @@ impl<'t> Unifier<'t> {
     }
 
     fn unify_forall_apply(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Fallible<()> {
+        let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|_| {
-                let new_universe = self.table.new_universe();
-                Lifetime::ForAll(UniversalIndex { ui: new_universe, idx: 0 }).cast()
+            .map(|idx| {
+                Lifetime::ForAll(UniversalIndex { ui, idx }).cast()
             })
             .collect();
 

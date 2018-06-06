@@ -60,7 +60,7 @@ impl Debug for Lifetime {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             Lifetime::Var(depth) => write!(fmt, "'?{}", depth),
-            Lifetime::ForAll(UniversalIndex { ui, idx }) => write!(fmt, "'!{}'{}", ui.counter, idx),
+            Lifetime::ForAll(UniversalIndex { ui, idx }) => write!(fmt, "'!{}_{}", ui.counter, idx),
         }
     }
 }
