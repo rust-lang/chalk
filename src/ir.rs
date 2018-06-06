@@ -239,13 +239,14 @@ pub struct StructDatumBound {
     crate self_ty: ApplicationTy,
     crate fields: Vec<Ty>,
     crate where_clauses: Vec<QuantifiedWhereClause>,
-    crate flags: StructFlags,
+    crate struct_type: StructType,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StructFlags {
-    crate external: bool,
-    crate fundamental: bool,
+pub enum StructType {
+    External,
+    Fundamental,
+    Local,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
