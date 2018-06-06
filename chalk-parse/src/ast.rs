@@ -148,6 +148,13 @@ pub struct Impl {
     pub trait_ref: PolarizedTraitRef,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
+    pub impl_type: ImplType,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum ImplType {
+    Local,
+    External,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

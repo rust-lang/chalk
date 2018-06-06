@@ -115,7 +115,7 @@ ProjectionEqBound: ProjectionEqBound = {
 };
 
 Impl: Impl = {
-    "impl" <p:Angle<ParameterKind>> <mark:"!"?> <t:Id> <a:Angle<Parameter>> "for" <s:Ty>
+    <external:ExternalKeyword?> "impl" <p:Angle<ParameterKind>> <mark:"!"?> <t:Id> <a:Angle<Parameter>> "for" <s:Ty>
         <w:QuantifiedWhereClauses> "{" <assoc:AssocTyValue*> "}" =>
     {
         let mut args = vec![Parameter::Ty(s)];
@@ -128,6 +128,7 @@ Impl: Impl = {
             }),
             where_clauses: w,
             assoc_ty_values: assoc,
+            impl_type: external.map(|_| ImplType::External).unwrap_or(ImplType::Local),
         }
     },
 };

@@ -940,6 +940,10 @@ impl LowerImpl for Impl {
                 where_clauses,
                 associated_ty_values,
                 specialization_priority: 0,
+                impl_type: match self.impl_type {
+                    ImplType::Local => ir::ImplType::Local,
+                    ImplType::External => ir::ImplType::External,
+                },
             })
         })?;
 
