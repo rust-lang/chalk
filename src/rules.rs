@@ -523,13 +523,15 @@ impl TraitDatum {
             // that is automatically added to every trait. This is important because otherwise
             // the added program clauses would not have any conditions.
 
-            for i in 0..self.binders.value.trait_ref.parameters.len() {
+            let type_parameters: Vec<_> = self.binders.value.trait_ref.type_parameters().collect();
+
+            for i in 0..type_parameters.len() {
                 let impl_maybe_allowed = self.binders.map_ref(|bound_datum|
                     ProgramClauseImplication {
                         consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
-                        conditions:
-                            (0..i).map(|j| DomainGoal::IsDeeplyExternal(bound_datum.trait_ref.parameters[j].assert_ty_ref().clone()).cast())
-                            .chain(iter::once(DomainGoal::IsLocal(bound_datum.trait_ref.parameters[i].assert_ty_ref().clone()).cast()))
+                        conditions: (0..i)
+                            .map(|j| DomainGoal::IsDeeplyExternal(type_parameters[j].clone()).cast())
+                            .chain(iter::once(DomainGoal::IsLocal(type_parameters[i].clone()).cast()))
                             .collect(),
                     }
                 ).cast();

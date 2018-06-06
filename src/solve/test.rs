@@ -2689,7 +2689,7 @@ fn fundamental_types() {
 }
 
 #[test]
-fn impl_allowed_for_traits() {
+fn local_impl_allowed_for_traits() {
     test! {
         program {
             extern trait ExternalTrait { }
@@ -2734,9 +2734,10 @@ fn impl_allowed_for_traits() {
         program {
             trait Clone { }
             trait Eq { }
+            // Lifetime is just included to show that it does not break anything
             // Where clauses are included just to show that they do not matter at all
-            extern trait ExternalTrait<T, U, V> where T: Clone, U: Eq, V: Clone, V: Eq { }
-            trait InternalTrait<T, U, V> where T: Clone, U: Eq, V: Clone, V: Eq { }
+            extern trait ExternalTrait<'a, T, U, V> where T: Clone, U: Eq, V: Clone, V: Eq { }
+            trait InternalTrait<'a, T, U, V> where T: Clone, U: Eq, V: Clone, V: Eq { }
 
             extern struct External<T> { }
             extern struct External2 {}
@@ -2744,35 +2745,35 @@ fn impl_allowed_for_traits() {
         }
 
         // External traits definitely cannot be implemented for all types
-        goal { forall<Self, T, U, V> { LocalImplAllowed(Self: ExternalTrait<T, U, V>) } } yields { "No possible solution" }
+        goal { forall<Self, 'a, T, U, V> { LocalImplAllowed(Self: ExternalTrait<'a, T, U, V>) } } yields { "No possible solution" }
 
         // External traits can be implemented for any types if the Self type is local
-        goal { forall<T, U, V> { LocalImplAllowed(Internal: ExternalTrait<T, U, V>) } } yields { "Unique" }
+        goal { forall<'a, T, U, V> { LocalImplAllowed(Internal: ExternalTrait<'a, T, U, V>) } } yields { "Unique" }
         // External traits cannot be implemented for any types if the Self type is external
-        goal { forall<T, U, V> { LocalImplAllowed(External2: ExternalTrait<T, U, V>) } } yields { "No possible solution" }
+        goal { forall<'a, T, U, V> { LocalImplAllowed(External2: ExternalTrait<'a, T, U, V>) } } yields { "No possible solution" }
 
         // External traits can be implemented if a local type is used and all of the prior types are deeply external
         // NOTE: Notice that the types past the local type do not matter at all
-        goal { forall<U, V> { LocalImplAllowed(External2: ExternalTrait<Internal, U, V>) } } yields { "Unique" }
-        goal { forall<U, V> { LocalImplAllowed(External<External2>: ExternalTrait<Internal, U, V>) } } yields { "Unique" }
+        goal { forall<'a, U, V> { LocalImplAllowed(External2: ExternalTrait<'a, Internal, U, V>) } } yields { "Unique" }
+        goal { forall<'a, U, V> { LocalImplAllowed(External<External2>: ExternalTrait<'a, Internal, U, V>) } } yields { "Unique" }
         // Does not apply if one of the prior types is not deeply external
-        goal { forall<U, V> { LocalImplAllowed(External<Internal>: ExternalTrait<Internal, U, V>) } } yields { "No possible solution" }
+        goal { forall<'a, U, V> { LocalImplAllowed(External<Internal>: ExternalTrait<'a, Internal, U, V>) } } yields { "No possible solution" }
 
         // Different cases of local and external types before a local type
-        goal { LocalImplAllowed(External2: ExternalTrait<External2, External2, Internal>) } yields { "Unique" }
-        goal { LocalImplAllowed(External2: ExternalTrait<External<External2>, External2, Internal>) } yields { "Unique" }
-        goal { LocalImplAllowed(External2: ExternalTrait<External<Internal>, External2, Internal>) } yields { "No possible solution" }
-        goal { LocalImplAllowed(External2: ExternalTrait<External2, External<External2>, Internal>) } yields { "Unique" }
-        goal { LocalImplAllowed(External2: ExternalTrait<External2, External<Internal>, Internal>) } yields { "No possible solution" }
+        goal { forall<'a> { LocalImplAllowed(External2: ExternalTrait<'a, External2, External2, Internal>) } } yields { "Unique" }
+        goal { forall<'a> { LocalImplAllowed(External2: ExternalTrait<'a, External<External2>, External2, Internal>) } } yields { "Unique" }
+        goal { forall<'a> { LocalImplAllowed(External2: ExternalTrait<'a, External<Internal>, External2, Internal>) } } yields { "No possible solution" }
+        goal { forall<'a> { LocalImplAllowed(External2: ExternalTrait<'a, External2, External<External2>, Internal>) } } yields { "Unique" }
+        goal { forall<'a> { LocalImplAllowed(External2: ExternalTrait<'a, External2, External<Internal>, Internal>) } } yields { "No possible solution" }
 
         // Obvious case: All external types should not allow impls
-        goal { LocalImplAllowed(External<External2>: ExternalTrait<
+        goal { forall<'a> { LocalImplAllowed(External<External2>: ExternalTrait<'a,
             External<External2>,
             External<External<External<External2>>>,
             External<External<External2>>
-        >) } yields { "No possible solution" }
+        >) } } yields { "No possible solution" }
 
         // Local traits can be implemented regardless of the types involved
-        goal { forall<Self, T, U, V> { LocalImplAllowed(Self: InternalTrait<T, U, V>) } } yields { "Unique" }
+        goal { forall<Self, 'a, T, U, V> { LocalImplAllowed(Self: InternalTrait<'a, T, U, V>) } } yields { "Unique" }
     }
 }

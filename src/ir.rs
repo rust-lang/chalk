@@ -596,6 +596,13 @@ pub struct TraitRef {
     crate parameters: Vec<Parameter>,
 }
 
+impl TraitRef {
+    crate fn type_parameters<'a>(&'a self) -> impl Iterator<Item=Ty> + 'a {
+        // This unwrap() is safe because is_ty ensures that we definitely have a Ty
+        self.parameters.iter().filter(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub enum PolarizedTraitRef {
     Positive(TraitRef),
