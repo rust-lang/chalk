@@ -453,13 +453,17 @@ pub struct ApplicationTy {
 }
 
 impl ApplicationTy {
-    crate fn first_type_parameter(&self) -> Option<Ty> {
+    crate fn type_parameters<'a>(&'a self) -> impl Iterator<Item=Ty> + 'a {
         // This unwrap() is safe because is_ty ensures that we definitely have a Ty
-        self.parameters.iter().find(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
+        self.parameters.iter().filter(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
+    }
+
+    crate fn first_type_parameter(&self) -> Option<Ty> {
+        self.type_parameters().next()
     }
 
     crate fn len_type_parameters(&self) -> usize {
-        self.parameters.iter().filter(|p| p.is_ty()).count()
+        self.type_parameters().count()
     }
 }
 
@@ -592,6 +596,13 @@ pub struct TraitRef {
     crate parameters: Vec<Parameter>,
 }
 
+impl TraitRef {
+    crate fn type_parameters<'a>(&'a self) -> impl Iterator<Item=Ty> + 'a {
+        // This unwrap() is safe because is_ty ensures that we definitely have a Ty
+        self.parameters.iter().filter(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub enum PolarizedTraitRef {
     Positive(TraitRef),
@@ -708,6 +719,29 @@ pub enum DomainGoal {
     /// a `struct Foo { }` but false for a `extern struct Foo { }`. However, for fundamental types
     /// like `Box<T>`, it is true if `T` is local.
     IsLocal(Ty),
+
+    /// True if a type is *not* considered to have been "defined" by the current crate. This is
+    /// false for a `struct Foo { }` but true for a `extern struct Foo { }`. However, for
+    /// fundamental types like `Box<T>`, it is true if `T` is external.
+    IsExternal(Ty),
+
+    /// True if a type both external and its type parameters are recursively external
+    ///
+    /// More formally, for each non-fundamental struct S<P0..Pn> that is external:
+    /// forall<P0..Pn> {
+    ///     IsDeeplyExternal(S<P0...Pn>) :-
+    ///         IsDeeplyExternal(P0),
+    ///         ...
+    ///         IsDeeplyExternal(Pn)
+    /// }
+    ///
+    /// For each fundamental struct S<P0>,
+    ///
+    /// forall<P0> { IsDeeplyExternal(S<P0>) :- IsDeeplyExternal(P0) }
+    ///
+    /// Note that any of these types can have lifetimes in their parameters too, but we only
+    /// consider type parameters.
+    IsDeeplyExternal(Ty),
 
     /// Used to dictate when trait impls are allowed in the current (local) crate based on the
     /// orphan rules.

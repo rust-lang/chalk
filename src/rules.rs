@@ -158,7 +158,7 @@ impl AssociatedTyValue {
     ///     type IntoIter<'a>: 'a;
     /// }
     /// ```
-    /// 
+    ///
     /// Then for the following impl:
     /// ```notrust
     /// impl<T> Iterable for Vec<T> {
@@ -300,7 +300,12 @@ impl StructDatum {
         //    forall<T> { WF(Foo<T>) :- (T: Eq). }
         //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
         //
-        // If the type Foo is not marked `extern`, we also generate:
+        // If the type Foo is marked `extern`, we also generate:
+        //
+        //    forall<T> { IsExternal(Foo<T>) }
+        //    forall<T> { IsDeeplyExternal(Foo<T>) :- IsDeeplyExternal(T) }
+        //
+        // Otherwise, if the type Foo is not marked `extern`, we generate:
         //
         //    forall<T> { IsLocal(Foo<T>) }
         //
@@ -312,6 +317,8 @@ impl StructDatum {
         // We generate the following clause:
         //
         //    forall<T> { IsLocal(Box<T>) :- IsLocal(T) }
+        //    forall<T> { IsExternal(Box<T>) :- IsExternal(T) }
+        //    forall<T> { IsDeeplyExternal(Box<T>) :- IsDeeplyExternal(T) }
 
         let wf = self.binders.map_ref(|bound_datum| {
             ProgramClauseImplication {
@@ -350,18 +357,45 @@ impl StructDatum {
             assert_eq!(self.binders.value.self_ty.len_type_parameters(), 1,
                 "Only fundamental types with a single parameter are supported");
 
-            let local_fundamental = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
-                conditions: vec![
-                    DomainGoal::IsLocal(
-                        // This unwrap is safe because we asserted above for the presence of a type
-                        // parameter
-                        bound_datum.self_ty.first_type_parameter().unwrap()
-                    ).cast(),
-                ],
+            // Fundamental types often have rules in the form of:
+            //     Goal(FundamentalType<T>) :- Goal(T)
+            // This macro makes creating that kind of clause easy
+            macro_rules! fundamental_rule {
+                ($goal:ident) => {
+                    clauses.push(self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                        consequence: DomainGoal::$goal(bound_datum.self_ty.clone().cast()),
+                        conditions: vec![
+                        DomainGoal::$goal(
+                            // This unwrap is safe because we asserted above for the presence of a type
+                            // parameter
+                            bound_datum.self_ty.first_type_parameter().unwrap()
+                        ).cast(),
+                        ],
+                    }).cast());
+                };
+            }
+
+            fundamental_rule!(IsLocal);
+            fundamental_rule!(IsExternal);
+            fundamental_rule!(IsDeeplyExternal);
+        } else {
+            // The type is just extern and not fundamental
+
+            let is_external = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                consequence: DomainGoal::IsExternal(bound_datum.self_ty.clone().cast()),
+                conditions: Vec::new(),
             }).cast();
 
-            clauses.push(local_fundamental);
+            clauses.push(is_external);
+
+            let is_deeply_external = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                consequence: DomainGoal::IsDeeplyExternal(bound_datum.self_ty.clone().cast()),
+                conditions: bound_datum.self_ty.type_parameters()
+                    .map(|ty| DomainGoal::IsDeeplyExternal(ty).cast())
+                    .collect(),
+            }).cast();
+
+            clauses.push(is_deeply_external);
         }
 
         let condition = DomainGoal::FromEnv(
@@ -413,6 +447,43 @@ impl TraitDatum {
         //
         //    forall<Self, T> { (Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
         //    forall<Self, T> { FromEnv(Self: Eq<T>) :- FromEnv(Self: Ord<T>) }
+        //
+        // As specified in the orphan rules, if a trait is not marked `extern`, the current crate
+        // can implement it for any type. To represent that, we generate:
+        //
+        //    // `Ord<T>` would not be `extern` when compiling `std`
+        //    forall<Self, T> { LocalImplAllowed(Self: Ord<T>) }
+        //
+        // For traits that are `extern` (i.e. not in the current crate), the orphan rules dictate
+        // that impls are allowed as long as at least one type parameter is local and each type
+        // prior to that is *deeply* external. That means that each type prior to the first local
+        // type cannot contain any of the type parameters of the impl.
+        //
+        // This rule is fairly complex, so we expand it and generate a program clause for each
+        // possible case. This is represented as follows:
+        //
+        //    // for `extern trait Foo<T, U, V> where Self: Eq<T> { ... }`
+        //    forall<Self, T, U, V> {
+        //      LocalImplAllowed(Self: Foo<T, U, V>) :- IsLocal(Self)
+        //    }
+        //    forall<Self, T, U, V> {
+        //      LocalImplAllowed(Self: Foo<T, U, V>) :-
+        //          IsDeeplyExternal(Self),
+        //          IsLocal(T)
+        //    }
+        //    forall<Self, T, U, V> {
+        //      LocalImplAllowed(Self: Foo<T, U, V>) :-
+        //          IsDeeplyExternal(Self),
+        //          IsDeeplyExternal(T),
+        //          IsLocal(U)
+        //    }
+        //    forall<Self, T, U, V> {
+        //      LocalImplAllowed(Self: Foo<T, U, V>) :-
+        //          IsDeeplyExternal(Self),
+        //          IsDeeplyExternal(T),
+        //          IsDeeplyExternal(U),
+        //          IsLocal(V)
+        //    }
 
         let trait_ref = self.binders.value.trait_ref.clone();
 
@@ -437,6 +508,38 @@ impl TraitDatum {
         }).cast();
 
         let mut clauses = vec![wf];
+
+        if !self.binders.value.flags.external {
+            let impl_allowed = self.binders.map_ref(|bound_datum|
+                ProgramClauseImplication {
+                    consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
+                    conditions: Vec::new(),
+                }
+            ).cast();
+
+            clauses.push(impl_allowed);
+        } else {
+            // The number of parameters will always be at least 1 because of the Self parameter
+            // that is automatically added to every trait. This is important because otherwise
+            // the added program clauses would not have any conditions.
+
+            let type_parameters: Vec<_> = self.binders.value.trait_ref.type_parameters().collect();
+
+            for i in 0..type_parameters.len() {
+                let impl_maybe_allowed = self.binders.map_ref(|bound_datum|
+                    ProgramClauseImplication {
+                        consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
+                        conditions: (0..i)
+                            .map(|j| DomainGoal::IsDeeplyExternal(type_parameters[j].clone()).cast())
+                            .chain(iter::once(DomainGoal::IsLocal(type_parameters[i].clone()).cast()))
+                            .collect(),
+                    }
+                ).cast();
+
+                clauses.push(impl_maybe_allowed);
+            }
+        }
+
         let condition = DomainGoal::FromEnv(FromEnv::Trait(trait_ref.clone()));
 
         for wc in self.binders

@@ -228,6 +228,8 @@ enum_zip!(DomainGoal {
     InScope,
     Derefs,
     IsLocal,
+    IsExternal,
+    IsDeeplyExternal,
     LocalImplAllowed
 });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
