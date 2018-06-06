@@ -97,7 +97,7 @@ impl InferenceTable {
 
 struct Inverter<'q> {
     table: &'q mut InferenceTable,
-    inverted_ty: HashMap<UniverseIndex, InferenceVariable>,
+    inverted_ty: HashMap<UniversalIndex, InferenceVariable>,
     inverted_lifetime: HashMap<UniversalIndex, InferenceVariable>,
 }
 
@@ -114,12 +114,12 @@ impl<'q> Inverter<'q> {
 impl<'q> DefaultTypeFolder for Inverter<'q> {}
 
 impl<'q> UniversalFolder for Inverter<'q> {
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Fallible<Ty> {
+    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, binders: usize) -> Fallible<Ty> {
         let table = &mut self.table;
         Ok(
             self.inverted_ty
                 .entry(universe)
-                .or_insert_with(|| table.new_variable(universe))
+                .or_insert_with(|| table.new_variable(universe.ui))
                 .to_ty()
                 .shifted_in(binders),
         )

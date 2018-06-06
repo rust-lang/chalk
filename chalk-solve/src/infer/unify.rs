@@ -377,11 +377,11 @@ impl<'u, 't> OccursCheck<'u, 't> {
 impl<'u, 't> DefaultTypeFolder for OccursCheck<'u, 't> {}
 
 impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
-        if self.universe_index < universe {
+    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
+        if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
-            Ok(TypeName::ForAll(universe).to_ty()) // no need to shift, not relative to depth
+            Ok(universe.to_ty()) // no need to shift, not relative to depth
         }
     }
 

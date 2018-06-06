@@ -69,5 +69,10 @@ macro_rules! lifetime {
 #[macro_export]
 macro_rules! ty_name {
     ((item $n:expr)) => { $crate::TypeName::ItemId(ItemId { index: $n }) };
-    ((skol $n:expr)) => { $crate::TypeName::ForAll(UniverseIndex { counter: $n }) }
+    ((skol $n:expr)) => { $crate::TypeName::ForAll(
+                            UniversalIndex {
+                                ui: UniverseIndex { counter: $n },
+                                idx: 0,
+                            })
+                        }
 }

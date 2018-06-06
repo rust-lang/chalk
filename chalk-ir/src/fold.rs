@@ -135,7 +135,7 @@ pub trait UniversalFolder {
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, binders: usize) -> Fallible<Ty>;
+    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, binders: usize) -> Fallible<Ty>;
 
     /// As with `fold_free_universal_ty`, but for lifetimes.
     fn fold_free_universal_lifetime(
@@ -151,8 +151,8 @@ pub trait UniversalFolder {
 pub trait IdentityUniversalFolder {}
 
 impl<T: IdentityUniversalFolder> UniversalFolder for T {
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
-        Ok(TypeName::ForAll(universe).to_ty())
+    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
+        Ok(universe.to_ty())
     }
 
     fn fold_free_universal_lifetime(

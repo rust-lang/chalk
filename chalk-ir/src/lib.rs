@@ -96,19 +96,10 @@ pub enum TypeName {
     ItemId(ItemId),
 
     /// skolemized form of a type parameter like `T`
-    ForAll(UniverseIndex),
+    ForAll(UniversalIndex),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(ItemId),
-}
-
-impl TypeName {
-    pub fn to_ty(self) -> Ty {
-        Ty::Apply(ApplicationTy {
-            name: self,
-            parameters: vec![],
-        })
-    }
 }
 
 /// An universe index is how a universally quantified parameter is
@@ -219,6 +210,13 @@ pub struct UniversalIndex {
 impl UniversalIndex {
     pub fn to_lifetime(self) -> Lifetime {
         Lifetime::ForAll(self)
+    }
+
+    pub fn to_ty(self) -> Ty {
+        Ty::Apply(ApplicationTy {
+            name: TypeName::ForAll(self),
+            parameters: vec![],
+        })
     }
 }
 

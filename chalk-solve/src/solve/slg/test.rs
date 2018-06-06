@@ -482,7 +482,7 @@ fn subgoal_cycle_uninhabited() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: [?0 := !1],
+                            subst: [?0 := !1_0],
                             constraints: []
                         },
                         binders: []

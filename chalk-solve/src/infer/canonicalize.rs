@@ -94,9 +94,9 @@ impl<'q> Canonicalizer<'q> {
 impl<'q> DefaultTypeFolder for Canonicalizer<'q> {}
 
 impl<'q> UniversalFolder for Canonicalizer<'q> {
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
-        self.max_universe = max(self.max_universe, universe);
-        Ok(TypeName::ForAll(universe).to_ty())
+    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
+        self.max_universe = max(self.max_universe, universe.ui);
+        Ok(universe.to_ty())
     }
 
     fn fold_free_universal_lifetime(

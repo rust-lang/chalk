@@ -476,7 +476,7 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := !1], lifetime constraints []"
+            "Unique; substitution [?0 := !1_0], lifetime constraints []"
         }
 
         goal {
@@ -506,7 +506,7 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := (Iterator::Item)<!1>]"
+            "Unique; substitution [?0 := (Iterator::Item)<!1_0>]"
         }
 
         goal {
@@ -518,7 +518,7 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := (Iterator::Item)<!1>]"
+            "Unique; substitution [?0 := (Iterator::Item)<!1_0>]"
         }
 
         goal {
@@ -581,7 +581,7 @@ fn normalize_gat1() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Iter<'!2_0, !1>], lifetime constraints []"
+            "Unique; substitution [?0 := Iter<'!2_0, !1_0>], lifetime constraints []"
         }
     }
 }
@@ -606,7 +606,7 @@ fn normalize_gat2() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Span<'!1_0, !2>], lifetime constraints []"
+            "Unique; substitution [?0 := Span<'!1_0, !1_1>], lifetime constraints []"
         }
 
         goal {
@@ -664,7 +664,7 @@ fn normalize_gat_with_where_clause() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Value<!1>]"
+            "Unique; substitution [?0 := Value<!1_0>]"
         }
     }
 }
@@ -703,7 +703,7 @@ fn normalize_gat_with_where_clause2() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := !2]"
+            "Unique; substitution [?0 := !1_1]"
         }
     }
 }
