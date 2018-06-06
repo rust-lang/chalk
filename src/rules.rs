@@ -317,6 +317,8 @@ impl StructDatum {
         // We generate the following clause:
         //
         //    forall<T> { IsLocal(Box<T>) :- IsLocal(T) }
+        //    forall<T> { IsExternal(Box<T>) :- IsExternal(T) }
+        //    forall<T> { IsDeeplyExternal(Box<T>) :- IsDeeplyExternal(T) }
 
         let wf = self.binders.map_ref(|bound_datum| {
             ProgramClauseImplication {
@@ -355,18 +357,27 @@ impl StructDatum {
             assert_eq!(self.binders.value.self_ty.len_type_parameters(), 1,
                 "Only fundamental types with a single parameter are supported");
 
-            let local_fundamental = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
-                conditions: vec![
-                    DomainGoal::IsLocal(
-                        // This unwrap is safe because we asserted above for the presence of a type
-                        // parameter
-                        bound_datum.self_ty.first_type_parameter().unwrap()
-                    ).cast(),
-                ],
-            }).cast();
+            // Fundamental types often have rules in the form of:
+            //     Goal(FundamentalType<T>) :- Goal(T)
+            // This macro makes creating that kind of clause easy
+            macro_rules! fundamental_rule {
+                ($goal:ident) => {
+                    clauses.push(self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                        consequence: DomainGoal::$goal(bound_datum.self_ty.clone().cast()),
+                        conditions: vec![
+                        DomainGoal::$goal(
+                            // This unwrap is safe because we asserted above for the presence of a type
+                            // parameter
+                            bound_datum.self_ty.first_type_parameter().unwrap()
+                        ).cast(),
+                        ],
+                    }).cast());
+                };
+            }
 
-            clauses.push(local_fundamental);
+            fundamental_rule!(IsLocal);
+            fundamental_rule!(IsExternal);
+            fundamental_rule!(IsDeeplyExternal);
         } else {
             // The type is just extern and not fundamental
 

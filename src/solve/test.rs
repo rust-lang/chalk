@@ -2540,13 +2540,20 @@ fn fundamental_types() {
             struct Internal { }
         }
 
-        // Without fundamental, Box should never be local
+        // Without fundamental, Box should behave like a regular extern type
         goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "Unique" }
         goal { forall<T> { IsLocal(Box<T>) } } yields { "No possible solution" }
+        goal { forall<T> { IsExternal(Box<T>) } } yields { "Unique" }
+        goal { forall<T> { IsDeeplyExternal(Box<T>) } } yields { "No possible solution" }
 
-        // Without fundamental, both of these are always non-local
+        // Without fundamental, Box is external regardless of its inner type
         goal { IsLocal(Box<External>) } yields { "No possible solution" }
         goal { IsLocal(Box<Internal>) } yields { "No possible solution" }
+        goal { IsExternal(Box<External>) } yields { "Unique" }
+        goal { IsExternal(Box<Internal>) } yields { "Unique" }
+
+        goal { IsDeeplyExternal(Box<External>) } yields { "Unique" }
+        goal { IsDeeplyExternal(Box<Internal>) } yields { "No possible solution" }
     }
 
     test! {
@@ -2558,13 +2565,24 @@ fn fundamental_types() {
             struct Internal { }
         }
 
-        // With fundamental, Box can be local for certain types
+        // With fundamental, Box can be local for certain types, so there is no unique solution
+        // anymore for any of these
         goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "No possible solution" }
         goal { forall<T> { IsLocal(Box<T>) } } yields { "No possible solution" }
+        goal { forall<T> { IsExternal(Box<T>) } } yields { "No possible solution" }
+        goal { forall<T> { IsDeeplyExternal(Box<T>) } } yields { "No possible solution" }
 
-        // With fundamental, each of these yields different results
+        // With fundamental, some of these yield different results -- no longer depends on Box
+        // itself
         goal { IsLocal(Box<External>) } yields { "No possible solution" }
         goal { IsLocal(Box<Internal>) } yields { "Unique" }
+        goal { IsExternal(Box<External>) } yields { "Unique" }
+        goal { IsExternal(Box<Internal>) } yields { "No possible solution" }
+
+        // Since Internal and External have no type parameters, neither of these change
+        // The next test will see some different results.
+        goal { IsDeeplyExternal(Box<External>) } yields { "Unique" }
+        goal { IsDeeplyExternal(Box<Internal>) } yields { "No possible solution" }
     }
 
     test! {
@@ -2575,25 +2593,45 @@ fn fundamental_types() {
             trait Clone { }
             extern struct External<T> where T: Clone { }
             struct Internal<T> where T: Clone { }
+
+            extern struct External2 { }
+            struct Internal2 { }
         }
 
         // External is extern no matter what, so this should not be local for any T
         goal { forall<T> { IsLocal(Box<External<T>>) } } yields { "No possible solution" }
+        goal { forall<T> { IsExternal(Box<External<T>>) } } yields { "Unique" }
 
-        // A fundamental type inside an external type should not make a difference
+        // A fundamental type inside an external type should not make a difference (i.e. the rules
+        // for the outer, non-fundamental type should apply)
         goal { forall<T> { IsLocal(External<Box<T>>) } } yields { "No possible solution" }
+        goal { forall<T> { IsExternal(External<Box<T>>) } } yields { "Unique" }
 
         // Make sure internal types within an external type do not make a difference
         goal { forall<T> { IsLocal(Box<External<Internal<T>>>) } } yields { "No possible solution" }
+        goal { forall<T> { IsExternal(Box<External<Internal<T>>>) } } yields { "Unique" }
 
         // Internal is local no matter what, so this should be local for any T
         goal { forall<T> { IsLocal(Box<Internal<T>>) } } yields { "Unique" }
+        goal { forall<T> { IsExternal(Box<Internal<T>>) } } yields { "No possible solution" }
 
         // A fundamental type inside an internal type should not make a difference
         goal { forall<T> { IsLocal(Internal<Box<T>>) } } yields { "Unique" }
+        goal { forall<T> { IsExternal(Internal<Box<T>>) } } yields { "No possible solution" }
 
-        // Make sure external types within an internal type do not make a difference
+        // Make sure external types within an internal type and vice versa do not make a difference
         goal { forall<T> { IsLocal(Box<Internal<External<T>>>) } } yields { "Unique" }
+        goal { forall<T> { IsExternal(Box<External<Internal<T>>>) } } yields { "Unique" }
+
+        // Whether fundamental types satisfy IsDeeplyExternal depends only on their internal types
+        // and not on whether the fundamental type is extern or not
+        goal { IsDeeplyExternal(Box<External<External2>>) } yields { "Unique" }
+        goal { IsDeeplyExternal(Box<Internal<External2>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(Box<External<Internal2>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(Box<Internal<Internal2>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(Box<External<External<External2>>>) } yields { "Unique" }
+        goal { IsDeeplyExternal(Box<External<Internal<External2>>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(Box<External<External<Internal2>>>) } yields { "No possible solution" }
     }
 
     // Nested fundamental types should still be local if they can be recursively proven to be local
@@ -2605,15 +2643,32 @@ fn fundamental_types() {
             #[fundamental]
             extern struct Ref<T> { }
 
-            extern struct External { }
-            struct Internal { }
+            trait Clone { }
+            extern struct External<T> where T: Clone { }
+            struct Internal<T> where T: Clone { }
+
+            extern struct External2 { }
+            struct Internal2 { }
         }
 
         goal { forall<T> { IsLocal(Ref<Box<T>>) } } yields { "No possible solution" }
+        goal { forall<T> { IsExternal(Ref<Box<T>>) } } yields { "No possible solution" }
 
-        goal { IsLocal(Ref<Box<External>>) } yields { "No possible solution" }
+        goal { IsLocal(Ref<Box<External2>>) } yields { "No possible solution" }
+        goal { IsExternal(Ref<Box<External2>>) } yields { "Unique" }
 
-        goal { IsLocal(Ref<Box<Internal>>) } yields { "Unique" }
+        goal { IsLocal(Ref<Box<Internal2>>) } yields { "Unique" }
+        goal { IsExternal(Ref<Box<Internal2>>) } yields { "No possible solution" }
+
+        // Whether fundamental types satisfy IsDeeplyExternal depends only on their internal types
+        // and not on whether the fundamental type is extern or not
+        goal { IsDeeplyExternal(Ref<Box<External<External2>>>) } yields { "Unique" }
+        goal { IsDeeplyExternal(Ref<Box<Internal<External2>>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(Ref<Box<External<Internal2>>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(Ref<Box<Internal<Internal2>>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(Ref<Box<External<External<External2>>>>) } yields { "Unique" }
+        goal { IsDeeplyExternal(Ref<Box<External<Internal<External2>>>>) } yields { "No possible solution" }
+        goal { IsDeeplyExternal(Ref<Box<External<External<Internal2>>>>) } yields { "No possible solution" }
     }
 
     // If a type is not extern, it is always local regardless of its parameters or #[fundamental]
@@ -2661,9 +2716,6 @@ fn impl_allowed_for_traits() {
 
             extern struct External { }
             struct Internal { }
-
-            //FIXME(sunjay): Delete this line once IsDeeplyExternal is implemented
-            forall<> { IsDeeplyExternal(External) }
         }
 
         goal { forall<T, U> { LocalImplAllowed(T: ExternalTrait<U>) } } yields { "No possible solution" }
@@ -2689,10 +2741,6 @@ fn impl_allowed_for_traits() {
             extern struct External<T> { }
             extern struct External2 {}
             struct Internal { }
-
-            //FIXME(sunjay): Delete these lines once IsDeeplyExternal is implemented
-            forall<T> { IsDeeplyExternal(External<T>) if IsDeeplyExternal(T) }
-            forall<> { IsDeeplyExternal(External2) }
         }
 
         // External traits definitely cannot be implemented for all types
