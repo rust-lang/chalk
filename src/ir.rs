@@ -735,7 +735,7 @@ pub enum DomainGoal {
     ///         IsDeeplyExternal(Pn)
     /// }
     ///
-    /// For each fundamental struct P<P0>,
+    /// For each fundamental struct S<P0>,
     ///
     /// forall<P0> { IsDeeplyExternal(S<P0>) :- IsDeeplyExternal(P0) }
     ///
