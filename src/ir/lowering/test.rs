@@ -161,7 +161,7 @@ fn goal_quantifiers() {
     let program = Arc::new(
         parse_and_lower_program(
             "trait Foo<A, B> { }",
-            SolverChoice::slg()
+            SolverChoice::default()
         ).unwrap()
     );
     let goal = parse_and_lower_goal(
@@ -193,7 +193,7 @@ fn atc_accounting() {
 
             struct Iter<'a, T> { }
             ",
-            SolverChoice::slg()
+            SolverChoice::default()
         ).unwrap(),
     );
     tls::set_current_program(&program, || {

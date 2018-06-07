@@ -19,13 +19,19 @@ use std::sync::Arc;
 mod aggregate;
 mod resolvent;
 
+/// Entry point for the chalk solver implementation.
+/// Solve a canonical goal `root_goal` in the given `program` environment.
+pub fn solve_goal_in_program(root_goal: &UCanonical<InEnvironment<Goal>>, program: &Arc<ProgramEnvironment>, max_size: usize) -> Option<Solution> {
+    Forest::new(SlgContext::new(program, max_size)).solve(root_goal)
+}
+
 #[derive(Clone, Debug)]
-pub struct SlgContext {
+pub(super) struct SlgContext {
     program: Arc<ProgramEnvironment>,
     max_size: usize,
 }
 
-pub struct TruncatingInferenceTable {
+pub(super) struct TruncatingInferenceTable {
     program: Arc<ProgramEnvironment>,
     max_size: usize,
     infer: InferenceTable,
@@ -37,15 +43,6 @@ impl SlgContext {
             program: program.clone(),
             max_size,
         }
-    }
-
-    /// Convenience fn for solving a root goal.
-    crate fn solve_root_goal(
-        self,
-        root_goal: &UCanonical<InEnvironment<Goal>>,
-    ) -> Option<Solution> {
-        let mut forest = Forest::new(self);
-        forest.solve(root_goal)
     }
 }
 

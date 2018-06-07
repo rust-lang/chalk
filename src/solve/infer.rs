@@ -16,8 +16,7 @@ mod test;
 use self::var::*;
 
 #[derive(Clone)]
-pub struct InferenceTable {
-    // FIXME pub b/c of trait impl for SLG
+crate struct InferenceTable {
     unify: ena::UnificationTable<InferenceVariable>,
     vars: Vec<InferenceVariable>,
     max_universe: UniverseIndex,
@@ -29,7 +28,7 @@ crate struct InferenceSnapshot {
     vars: Vec<InferenceVariable>,
 }
 
-crate type ParameterInferenceVariable = ParameterKind<InferenceVariable>;
+pub(in solve) type ParameterInferenceVariable = ParameterKind<InferenceVariable>;
 
 impl InferenceTable {
     /// Create an empty inference table with no variables.
@@ -100,7 +99,7 @@ impl InferenceTable {
     /// Creates a new inference variable and returns its index. The
     /// kind of the variable should be known by the caller, but is not
     /// tracked directly by the inference table.
-    crate fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
+    pub(in solve) fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
         debug!("new_variable: var={:?} ui={:?}", var, ui);

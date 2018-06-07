@@ -24,7 +24,7 @@ macro_rules! lowering_success {
         assert!(program_text.ends_with("}"));
         let result = parse_and_lower_program(
             &program_text[1..program_text.len()-1],
-            $crate::solve::SolverChoice::slg()
+            $crate::solve::SolverChoice::default()
         );
         if let Err(ref e) = result {
             println!("lowering error: {}", e);
@@ -42,7 +42,7 @@ macro_rules! lowering_error {
         assert!(program_text.ends_with("}"));
         let error = parse_and_lower_program(
             &program_text[1..program_text.len()-1],
-            $crate::solve::SolverChoice::slg()
+            $crate::solve::SolverChoice::default()
         ).unwrap_err();
         let expected = $crate::errors::Error::from($expected);
         assert_eq!(

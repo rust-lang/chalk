@@ -28,7 +28,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
    let program = &Arc::new(
         parse_and_lower_program(
             &program_text[1..program_text.len() - 1],
-            SolverChoice::slg()
+            SolverChoice::default()
         ).unwrap()
     );
     let env = &Arc::new(program.environment());
@@ -55,7 +55,7 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
     let program = &Arc::new(
         parse_and_lower_program(
             &program_text[1..program_text.len() - 1],
-            SolverChoice::slg()
+            SolverChoice::default()
         ).unwrap()
     );
     let env = &Arc::new(program.environment());

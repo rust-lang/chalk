@@ -88,17 +88,17 @@ impl SolverChoice {
         env: &Arc<ProgramEnvironment>,
         canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> ::errors::Result<Option<Solution>> {
-        use self::slg::implementation::SlgContext;
+        use self::slg::implementation::solve_goal_in_program;
 
         match self {
             SolverChoice::SLG { max_size } => {
-                Ok(SlgContext::new(env, max_size).solve_root_goal(&canonical_goal))
+                Ok(solve_goal_in_program(canonical_goal, env, max_size))
             }
         }
     }
 
     /// Returns the default SLG parameters.
-    pub fn slg() -> Self {
+    fn slg() -> Self {
         SolverChoice::SLG { max_size: 10 }
     }
 }
