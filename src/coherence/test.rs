@@ -310,8 +310,11 @@ fn orphan_check() {
 
             struct TheType { }
 
+            // These impls should be fine because they contain the local type
             impl TheTrait<TheType> for isize { }
             impl TheTrait<isize> for TheType { }
+
+            // This impl should fail because it contains only external type
             impl TheTrait<usize> for isize { }
         } error_msg {
             "impl for trait \"TheTrait\" violates the orphan rules"
