@@ -57,7 +57,7 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    <external:ExternalKeyword?> <auto:AutoKeyword?> <marker:MarkerKeyword?> <deref:DerefLangItem?> "trait" <n:Id><p:Angle<ParameterKind>>
+    <auto:AutoKeyword?> <marker:MarkerKeyword?> <deref:DerefLangItem?> <external:ExternalKeyword?> "trait" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
     {
         name: n,
