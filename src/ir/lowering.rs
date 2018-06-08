@@ -233,6 +233,7 @@ impl LowerProgram for Program {
         program.add_default_impls();
         program.record_specialization_priorities(solver_choice)?;
         program.verify_well_formedness(solver_choice)?;
+        program.perform_orphan_check(solver_choice)?;
         Ok(program)
     }
 }

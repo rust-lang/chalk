@@ -6,6 +6,7 @@ use solve::SolverChoice;
 use std::sync::Arc;
 
 mod solve;
+mod orphan;
 mod test;
 
 impl Program {

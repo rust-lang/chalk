@@ -55,5 +55,10 @@ error_chain! {
             description("Duplicate lang item")
                 display("Duplicate lang item `{:?}`", item)
         }
+
+        FailedOrphanCheck(trait_id: ir::Identifier) {
+            description("impl violates the orphan rules")
+                display("impl for trait {:?} violates the orphan rules", trait_id)
+        }
     }
 }

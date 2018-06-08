@@ -226,3 +226,173 @@ fn overlapping_negative_impls() {
         }
     }
 }
+
+#[test]
+fn orphan_check() {
+    // These tests are largely adapted from the compile-fail coherence-*.rs tests from rustc
+
+    lowering_error! {
+        program {
+            extern trait Foo { }
+            extern struct Bar { }
+
+            impl Foo for Bar { }
+        } error_msg {
+            "impl for trait \"Foo\" violates the orphan rules"
+        }
+    }
+
+    lowering_error! {
+        program {
+            extern trait Foo { }
+
+            impl<T> Foo for T { }
+        } error_msg {
+            "impl for trait \"Foo\" violates the orphan rules"
+        }
+    }
+
+    lowering_error! {
+        program {
+            extern trait Foo<T> { }
+            struct Bar { }
+
+            impl<T> Foo<Bar> for T { }
+        } error_msg {
+            "impl for trait \"Foo\" violates the orphan rules"
+        }
+    }
+
+    // Test that the `Pair` type reports an error if it contains type
+    // parameters, even when they are covered by local types. This test
+    // was originally intended to test the opposite, but the rules changed
+    // with RFC 1023 and this became illegal.
+    lowering_error! {
+        program {
+            extern trait Remote { }
+            extern struct Pair<T, U> { }
+            struct Cover<T> { }
+
+            impl<T> Remote for Pair<T, Cover<T>> { }
+        } error_msg {
+            "impl for trait \"Remote\" violates the orphan rules"
+        }
+    }
+    lowering_error! {
+        program {
+            extern trait Remote { }
+            extern struct Pair<T, U> { }
+            struct Cover<T> { }
+
+            impl<T> Remote for Pair<Cover<T>, T> { }
+        } error_msg {
+            "impl for trait \"Remote\" violates the orphan rules"
+        }
+    }
+    lowering_error! {
+        program {
+            extern trait Remote { }
+            extern struct Pair<T, U> { }
+            struct Cover<T> { }
+
+            impl<T, U> Remote for Pair<Cover<T>, U> { }
+        } error_msg {
+            "impl for trait \"Remote\" violates the orphan rules"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[auto] extern trait Send { }
+            extern trait TheTrait<T> { }
+            extern struct isize { }
+            extern struct usize { }
+
+            struct TheType { }
+
+            impl TheTrait<TheType> for isize { }
+            impl TheTrait<isize> for TheType { }
+            impl TheTrait<usize> for isize { }
+        } error_msg {
+            "impl for trait \"TheTrait\" violates the orphan rules"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[auto] extern trait Send { }
+            extern struct Vec<T> { }
+            extern struct isize { }
+
+            impl !Send for Vec<isize> { }
+        } error_msg {
+            "impl for trait \"Send\" violates the orphan rules"
+        }
+    }
+
+    lowering_error! {
+        program {
+            extern trait Remote { }
+            extern struct Pair<T, U> { }
+
+            struct Foo { }
+
+            impl<T> Remote for Pair<T, Foo> { }
+        } error_msg {
+            "impl for trait \"Remote\" violates the orphan rules"
+        }
+    }
+
+    lowering_error! {
+        program {
+            extern trait Remote1<T> { }
+            extern struct Pair<T, U> { }
+            extern struct i32 { }
+
+            struct Local<T> { }
+
+            impl<T, U> Remote1<Pair<T, Local<U>>> for i32 { }
+        } error_msg {
+            "impl for trait \"Remote1\" violates the orphan rules"
+        }
+    }
+
+    lowering_error! {
+        program {
+            extern trait Remote { }
+            extern struct Pair<T, U> { }
+
+            struct Local<T> { }
+
+            impl<T, U> Remote for Pair<T, Local<U>> { }
+        } error_msg {
+            "impl for trait \"Remote\" violates the orphan rules"
+        }
+    }
+
+    lowering_error! {
+        program {
+            extern trait Remote { }
+            extern struct Vec<T> { }
+
+            struct Local { }
+
+            impl Remote for Vec<Local> { }
+        } error_msg {
+            "impl for trait \"Remote\" violates the orphan rules"
+        }
+    }
+
+    lowering_error! {
+        program {
+            extern trait Remote { }
+            extern struct Vec<T> { }
+
+            struct Local<T> { }
+
+            impl<T> Remote for Vec<Local<T>> { }
+        } error_msg {
+            "impl for trait \"Remote\" violates the orphan rules"
+        }
+    }
+}
