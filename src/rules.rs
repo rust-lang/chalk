@@ -337,65 +337,59 @@ impl StructDatum {
         let mut clauses = vec![wf];
 
         // Types that are not marked `extern` satisfy IsLocal(TypeName)
-        if !self.binders.value.flags.external {
-            // `IsLocalTy(Ty)` depends *only* on whether the type is marked extern and nothing else
-            let is_local = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
-                conditions: Vec::new(),
-            }).cast();
+        match self.binders.value.struct_type {
+            StructType::External => clauses.extend(vec![
+                self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::IsExternal(bound_datum.self_ty.clone().cast()),
+                    conditions: Vec::new(),
+                }).cast(),
+                self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::IsDeeplyExternal(bound_datum.self_ty.clone().cast()),
+                    conditions: bound_datum.self_ty.type_parameters()
+                        .map(|ty| DomainGoal::IsDeeplyExternal(ty).cast())
+                        .collect(),
+                }).cast(),
+            ]),
+            StructType::Local => clauses.push(self.binders.map_ref(|bound_datum| {
+                ProgramClauseImplication {
+                    consequence: DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
+                    conditions: Vec::new(),
+                }
+            }).cast()),
+            StructType::Fundamental => {
+                // If a type is `extern`, but is also `#[fundamental]`, it satisfies IsLocal
+                // if and only if its parameters satisfy IsLocal
 
-            clauses.push(is_local);
-        } else if self.binders.value.flags.fundamental {
-            // If a type is `extern`, but is also `#[fundamental]`, it satisfies IsLocal
-            // if and only if its parameters satisfy IsLocal
-
-            // Fundamental types must always have at least one type parameter for this rule to
-            // make any sense. We currently do not have have any fundamental types with more than
-            // one type parameter, nor do we know what the behaviour for that should be. Thus, we
-            // are asserting here that there is only a single type parameter until the day when
-            // someone makes a decision about how that should behave.
-            assert_eq!(self.binders.value.self_ty.len_type_parameters(), 1,
+                // Fundamental types must always have at least one type parameter for this rule to
+                // make any sense. We currently do not have have any fundamental types with more
+                // than one type parameter, nor do we know what the behaviour for that should be.
+                // Thus, we are asserting here that there is only a single type parameter until the
+                // day when someone makes a decision about how that should behave.
+                assert_eq!(self.binders.value.self_ty.len_type_parameters(), 1,
                 "Only fundamental types with a single parameter are supported");
 
-            // Fundamental types often have rules in the form of:
-            //     Goal(FundamentalType<T>) :- Goal(T)
-            // This macro makes creating that kind of clause easy
-            macro_rules! fundamental_rule {
-                ($goal:ident) => {
-                    clauses.push(self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                        consequence: DomainGoal::$goal(bound_datum.self_ty.clone().cast()),
-                        conditions: vec![
-                        DomainGoal::$goal(
-                            // This unwrap is safe because we asserted above for the presence of a type
-                            // parameter
-                            bound_datum.self_ty.first_type_parameter().unwrap()
-                        ).cast(),
-                        ],
-                    }).cast());
-                };
+                // Fundamental types often have rules in the form of:
+                //     Goal(FundamentalType<T>) :- Goal(T)
+                // This macro makes creating that kind of clause easy
+                macro_rules! fundamental_rule {
+                    ($goal:ident) => {
+                        clauses.push(self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                            consequence: DomainGoal::$goal(bound_datum.self_ty.clone().cast()),
+                            conditions: vec![
+                            DomainGoal::$goal(
+                                // This unwrap is safe because we asserted above for the presence
+                                // of a type parameter
+                                bound_datum.self_ty.first_type_parameter().unwrap()
+                            ).cast(),
+                            ],
+                        }).cast());
+                    };
+                }
+
+                fundamental_rule!(IsLocal);
+                fundamental_rule!(IsExternal);
+                fundamental_rule!(IsDeeplyExternal);
             }
-
-            fundamental_rule!(IsLocal);
-            fundamental_rule!(IsExternal);
-            fundamental_rule!(IsDeeplyExternal);
-        } else {
-            // The type is just extern and not fundamental
-
-            let is_external = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsExternal(bound_datum.self_ty.clone().cast()),
-                conditions: Vec::new(),
-            }).cast();
-
-            clauses.push(is_external);
-
-            let is_deeply_external = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsDeeplyExternal(bound_datum.self_ty.clone().cast()),
-                conditions: bound_datum.self_ty.type_parameters()
-                    .map(|ty| DomainGoal::IsDeeplyExternal(ty).cast())
-                    .collect(),
-            }).cast();
-
-            clauses.push(is_deeply_external);
         }
 
         let condition = DomainGoal::FromEnv(

@@ -594,9 +594,12 @@ impl LowerStructDefn for StructDefn {
                 self_ty,
                 fields: fields?,
                 where_clauses,
-                flags: ir::StructFlags {
-                    external: self.flags.external,
-                    fundamental: self.flags.fundamental,
+                struct_type: match (self.flags.external, self.flags.fundamental) {
+                    // A local struct is local regardless of fundamental
+                    (false, _) => ir::StructType::Local,
+                    // An external struct can be fundamental or not
+                    (true, false) => ir::StructType::External,
+                    (true, true) => ir::StructType::Fundamental,
                 },
             })
         })?;
