@@ -362,7 +362,7 @@ fn duplicate_parameters() {
         }
 
         error_msg {
-            "duplicate parameters"
+            "duplicate or shadowed parameters"
         }
     }
 
@@ -374,7 +374,18 @@ fn duplicate_parameters() {
         }
 
         error_msg {
-            "duplicate parameters"
+            "duplicate or shadowed parameters"
+        }
+    }
+
+    lowering_error! {
+        program {
+            struct fn<'a> { }
+            struct Foo<'a> {
+                a: for<'a> fn<'a>
+            }
+        } error_msg {
+            "duplicate or shadowed parameters"
         }
     }
 }
