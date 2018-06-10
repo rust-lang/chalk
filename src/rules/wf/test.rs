@@ -549,6 +549,8 @@ fn higher_ranked_inline_bound_on_gat() {
 
             struct fn<T, U> { }
 
+            impl<T, U> Fn<T, U> for fn<T, U> { }
+
             trait Bar {
                 type Item<T>: forall<U> Fn<T, U>;
             }

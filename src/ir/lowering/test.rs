@@ -413,7 +413,7 @@ fn duplicate_parameters() {
                 type Item<T>: forall<'a> Fn<Ref<'a, T>>;
             }
         } error_msg {
-            "duplicate parameters"
+            "duplicate or shadowed parameters"
         }
     }
 }
