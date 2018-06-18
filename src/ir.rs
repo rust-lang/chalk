@@ -751,6 +751,24 @@ pub enum DomainGoal {
     /// the Trait is considered to be "defined" in the current crate. If that is not the case, then
     /// `LocalImplAllowed(T: Trait)` can still be true if `IsLocal(T)` is true.
     LocalImplAllowed(TraitRef),
+
+    /// Used to activate the "compatible modality" rules. Rules that introduce predicates that have
+    /// to do with "all compatible universes" should depend on this clause so that they only apply
+    /// if this is present.
+    ///
+    /// (HACK: Having `()` makes some of our macros work better.)
+    Compatible(()),
+
+    /// Used to indicate that a given type is in a downstream crate. Downstream crates contain the
+    /// current crate at some level of their dependencies.
+    ///
+    /// Since chalk does not actually see downstream types, this is usually introduced with
+    /// implication on a fresh, universally quantified type.
+    ///
+    /// forall<T> { if (DownstreamType(T)) { /* ... */ } }
+    ///
+    /// This makes a new type `T` available and makes `DownstreamType(T)` provable for that type.
+    DownstreamType(Ty),
 }
 
 pub type QuantifiedWhereClause = Binders<WhereClause>;
@@ -868,6 +886,26 @@ impl<T> Binders<T> {
         let value = op(&self.value);
         Binders {
             binders: self.binders.clone(),
+            value,
+        }
+    }
+
+    /// Introduces a fresh type variable at the start of the binders and returns new Binders with
+    /// the result of the operator function applied.
+    ///
+    /// forall<?0, ?1> will become forall<?0, ?1, ?2> where ?0 is the fresh variable
+    crate fn with_fresh_type_var<U, OP>(self, op: OP) -> Binders<U>
+    where
+        OP: FnOnce(<T as Fold>::Result, Ty) -> U,
+        T: Shift
+    {
+        // The new variable is at the front and everything afterwards is shifted up by 1
+        let new_var = Ty::Var(0);
+        let value = op(self.value.up_shift(1), new_var);
+        Binders {
+            binders: iter::once(ParameterKind::Ty(()))
+            .chain(self.binders.iter().cloned())
+            .collect(),
             value,
         }
     }
@@ -1046,8 +1084,30 @@ impl Goal {
         )
     }
 
+    /// Takes a goal `G` and turns it into `not { G }`
     crate fn negate(self) -> Self {
         Goal::Not(Box::new(self))
+    }
+
+    /// Takes a goal `G` and turns it into `compatible { G }`
+    crate fn compatible(self) -> Self {
+        // compatible { G } desugars into: forall<T> { if (Compatible, DownstreamType(T)) { G } }
+        // This activates the compatible modality rules and introduces an anonymous downstream type
+        Goal::Quantified(
+            QuantifierKind::ForAll,
+            Binders {
+                value: Box::new(self),
+                binders: Vec::new(),
+            }.with_fresh_type_var(|goal, ty| {
+                Box::new(Goal::Implies(
+                    vec![
+                        DomainGoal::Compatible(()).cast(),
+                        DomainGoal::DownstreamType(ty).cast(),
+                    ],
+                    goal
+                ))
+            }),
+        )
     }
 
     crate fn implied_by(self, predicates: Vec<ProgramClause>) -> Goal {

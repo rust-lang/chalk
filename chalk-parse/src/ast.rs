@@ -284,6 +284,9 @@ pub enum Goal {
     And(Box<Goal>, Box<Goal>),
     Not(Box<Goal>),
 
+    /// The `compatible { G }` syntax
+    Compatible(Box<Goal>),
+
     // Additional kinds of goals:
     Leaf(LeafGoal),
 }

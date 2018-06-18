@@ -31,6 +31,7 @@ Goal1: Box<Goal> = {
     "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
     "if" "(" <h:SemiColon<InlineClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(h, g)),
     "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
+    "compatible" "{" <g:Goal> "}" => Box::new(Goal::Compatible(g)),
     <leaf:LeafGoal> => Box::new(Goal::Leaf(leaf)),
     "(" <Goal> ")",
 };

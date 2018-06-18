@@ -69,6 +69,12 @@ impl<'a, T: ?Sized + Zip> Zip for &'a T {
     }
 }
 
+impl Zip for () {
+    fn zip_with<Z: Zipper>(_: &mut Z, _: &Self, _: &Self) -> Fallible<()> {
+        Ok(())
+    }
+}
+
 impl<T: Zip> Zip for Vec<T> {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         <[T] as Zip>::zip_with(zipper, a, b)
@@ -230,7 +236,9 @@ enum_zip!(DomainGoal {
     IsLocal,
     IsExternal,
     IsDeeplyExternal,
-    LocalImplAllowed
+    LocalImplAllowed,
+    Compatible,
+    DownstreamType
 });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(ProgramClause { Implies, ForAll });

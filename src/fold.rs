@@ -428,7 +428,7 @@ enum_fold!(WellFormed[] { Trait(a), Ty(a) });
 enum_fold!(FromEnv[] { Trait(a), Ty(a) });
 enum_fold!(DomainGoal[] { Holds(a), WellFormed(a), FromEnv(a), Normalize(a), UnselectedNormalize(a),
                           InScope(a), Derefs(a), IsLocal(a), IsExternal(a), IsDeeplyExternal(a),
-                          LocalImplAllowed(a) });
+                          LocalImplAllowed(a), Compatible(a), DownstreamType(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
