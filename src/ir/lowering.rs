@@ -521,8 +521,8 @@ impl LowerDomainGoal for DomainGoal {
             DomainGoal::IsLocal { ty } => vec![
                 ir::DomainGoal::IsLocal(ty.lower(env)?)
             ],
-            DomainGoal::IsExternal { ty } => vec![
-                ir::DomainGoal::IsExternal(ty.lower(env)?)
+            DomainGoal::IsUpstream { ty } => vec![
+                ir::DomainGoal::IsUpstream(ty.lower(env)?)
             ],
             DomainGoal::IsDeeplyExternal { ty } => vec![
                 ir::DomainGoal::IsDeeplyExternal(ty.lower(env)?)
@@ -590,7 +590,7 @@ impl LowerStructDefn for StructDefn {
                 fields: fields?,
                 where_clauses,
                 flags: ir::StructFlags {
-                    external: self.flags.external,
+                    upstream: self.flags.upstream,
                     fundamental: self.flags.fundamental,
                 },
             })
@@ -1049,7 +1049,7 @@ impl LowerTrait for TraitDefn {
                 flags: ir::TraitFlags {
                     auto: self.flags.auto,
                     marker: self.flags.marker,
-                    external: self.flags.external,
+                    upstream: self.flags.upstream,
                     deref: self.flags.deref,
                 },
             })

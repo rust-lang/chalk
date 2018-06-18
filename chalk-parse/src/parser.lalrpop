@@ -36,14 +36,14 @@ Goal1: Box<Goal> = {
     "(" <Goal> ")",
 };
 
-ExternalKeyword: () = "extern";
+UpstreamKeyword: () = "#" "[" "upstream" "]";
 AutoKeyword: () = "#" "[" "auto" "]";
 MarkerKeyword: () = "#" "[" "marker" "]";
 DerefLangItem: () = "#" "[" "lang_deref" "]";
 FundamentalKeyword: () = "#" "[" "fundamental" "]";
 
 StructDefn: StructDefn = {
-    <fundamental:FundamentalKeyword?> <external:ExternalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
+    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
     {
         name: n,
@@ -51,14 +51,14 @@ StructDefn: StructDefn = {
         where_clauses: w,
         fields: f,
         flags: StructFlags {
-            external: external.is_some(),
+            upstream: upstream.is_some(),
             fundamental: fundamental.is_some(),
         },
     }
 };
 
 TraitDefn: TraitDefn = {
-    <auto:AutoKeyword?> <marker:MarkerKeyword?> <deref:DerefLangItem?> <external:ExternalKeyword?> "trait" <n:Id><p:Angle<ParameterKind>>
+    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <deref:DerefLangItem?> "trait" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
     {
         name: n,
@@ -68,7 +68,7 @@ TraitDefn: TraitDefn = {
         flags: TraitFlags {
             auto: auto.is_some(),
             marker: marker.is_some(),
-            external: external.is_some(),
+            upstream: upstream.is_some(),
             deref: deref.is_some(),
         },
     }
@@ -128,7 +128,7 @@ QuantifiedInlineBound: QuantifiedInlineBound = {
 };
 
 Impl: Impl = {
-    <external:ExternalKeyword?> "impl" <p:Angle<ParameterKind>> <mark:"!"?> <t:Id> <a:Angle<Parameter>> "for" <s:Ty>
+    <external:UpstreamKeyword?> "impl" <p:Angle<ParameterKind>> <mark:"!"?> <t:Id> <a:Angle<Parameter>> "for" <s:Ty>
         <w:QuantifiedWhereClauses> "{" <assoc:AssocTyValue*> "}" =>
     {
         let mut args = vec![Parameter::Ty(s)];
@@ -301,7 +301,7 @@ DomainGoal: DomainGoal = {
     "Derefs" "(" <source:Ty> "," <target:Ty> ")" => DomainGoal::Derefs { source, target },
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
-    "IsExternal" "(" <ty:Ty> ")" => DomainGoal::IsExternal { ty },
+    "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },
     "IsDeeplyExternal" "(" <ty:Ty> ")" => DomainGoal::IsDeeplyExternal { ty },
 
     "LocalImplAllowed" "(" <trait_ref:TraitRef<":">> ")" => DomainGoal::LocalImplAllowed { trait_ref },
