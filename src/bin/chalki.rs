@@ -184,6 +184,11 @@ fn process(
         let filename = &command["load ".len()..];
         *prog = Some(load_program(args, filename)?);
 
+    } else if command.starts_with("debug ") {
+        match command.split_whitespace().nth(1) {
+            Some(level) => std::env::set_var("CHALK_DEBUG", level),
+            None => println!("debug <level> set debug level to <level>")
+        }
     } else {
         // The command is either "print", "lowered", or a goal.
         
@@ -225,12 +230,13 @@ fn load_program(args: &Args, filename: &str) -> Result<Program> {
 // TODO: Implement "help <command>" for more info.
 fn help() {
     println!("Commands:");
-    println!("  help         print this output");
-    println!("  program      provide a program via stdin");
-    println!("  load <file>  load program from <file>");
-    println!("  print        print the current program");
-    println!("  lowered      print the lowered program");
-    println!("  <goal>       attempt to solve <goal>");
+    println!("  help          print this output");
+    println!("  program       provide a program via stdin");
+    println!("  load <file>   load program from <file>");
+    println!("  print         print the current program");
+    println!("  lowered       print the lowered program");
+    println!("  <goal>        attempt to solve <goal>");
+    println!("  debug <level> set debug level to <level>");
 }
 
 /// Read a program from the command-line. Stop reading when EOF is read. If
