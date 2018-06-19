@@ -233,6 +233,7 @@ impl LowerProgram for Program {
         program.add_default_impls();
         program.record_specialization_priorities(solver_choice)?;
         program.verify_well_formedness(solver_choice)?;
+        program.perform_orphan_check(solver_choice)?;
         Ok(program)
     }
 }
@@ -940,6 +941,10 @@ impl LowerImpl for Impl {
                 where_clauses,
                 associated_ty_values,
                 specialization_priority: 0,
+                impl_type: match self.impl_type {
+                    ImplType::Local => ir::ImplType::Local,
+                    ImplType::External => ir::ImplType::External,
+                },
             })
         })?;
 

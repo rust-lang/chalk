@@ -216,6 +216,13 @@ pub struct ImplDatumBound {
     crate where_clauses: Vec<QuantifiedWhereClause>,
     crate associated_ty_values: Vec<AssociatedTyValue>,
     crate specialization_priority: usize,
+    crate impl_type: ImplType,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ImplType {
+    Local,
+    External,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
