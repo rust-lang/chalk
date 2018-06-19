@@ -519,3 +519,47 @@ fn higher_ranked_cyclic_requirements() {
         }
     }
 }
+
+#[test]
+fn higher_ranked_inline_bound_on_gat() {
+    lowering_success! {
+        program {
+            trait Fn<T> { }
+            struct Ref<'a, T> { }
+            struct i32 {}
+
+            struct fn<T> { }
+
+            impl<'a, T> Fn<Ref<'a, T>> for for<'b> fn<Ref<'b, T>> { }
+
+            trait Bar {
+                type Item<T>: forall<'a> Fn<Ref<'a, T>>;
+            }
+
+            impl Bar for i32 {
+                type Item<T> = for<'a> fn<Ref<'a, T>>;
+            }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Fn<T, U> { }
+            struct i32 {}
+
+            struct fn<T, U> { }
+
+            impl<T, U> Fn<T, U> for fn<T, U> { }
+
+            trait Bar {
+                type Item<T>: forall<U> Fn<T, U>;
+            }
+
+            impl Bar for i32 {
+                type Item<T> = fn<T, i32>;
+            }
+        } error_msg {
+            "trait impl for \"Bar\" does not meet well-formedness requirements"
+        }
+    }
+}

@@ -798,6 +798,30 @@ fn gat_implied_bounds() {
             "No possible solution"
         }
     }
+
+    test! {
+        program {
+            trait Fn<T> { }
+            struct Ref<'a, T> { }
+            trait Sized { }
+
+            trait Foo {
+                type Item<T>: forall<'a> Fn<Ref<'a, T>> + Sized;
+            }
+        }
+
+        goal {
+            forall<Type> {
+                if (Type: Foo) {
+                    forall<'a, T> {
+                        <Type as Foo>::Item<T>: Fn<Ref<'a, T>>
+                    }
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
 }
 
 #[test]

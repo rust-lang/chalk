@@ -717,12 +717,14 @@ impl AssociatedTyDatum {
         //        FromEnv(<T as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo)
         //    }
         clauses.extend(self.bounds_on_self().into_iter().map(|bound| {
+            // Same as above in case of higher-ranked inline bounds.
+            let shift = bound.binders.len();
             Binders {
-                binders: binders.clone(),
+                binders: bound.binders.iter().chain(binders.iter()).cloned().collect(),
                 value: ProgramClauseImplication {
-                    consequence: bound.into_from_env_goal(),
+                    consequence: bound.value.clone().into_from_env_goal(),
                     conditions: vec![
-                        FromEnv::Trait(trait_ref.clone()).cast()
+                        FromEnv::Trait(trait_ref.clone()).up_shift(shift).cast()
                     ],
                 }
             }.cast()

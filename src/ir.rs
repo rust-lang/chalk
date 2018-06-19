@@ -282,18 +282,33 @@ pub enum InlineBound {
     ProjectionEqBound(ProjectionEqBound),
 }
 
+pub type QuantifiedInlineBound = Binders<InlineBound>;
+
 impl InlineBound {
     /// Applies the `InlineBound` to `self_ty` and lowers to a [`DomainGoal`].
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
-    crate fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
+    fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
         match self {
             InlineBound::TraitBound(b) => b.into_where_clauses(self_ty),
             InlineBound::ProjectionEqBound(b) => b.into_where_clauses(self_ty),
         }
     }
 }
+
+impl QuantifiedInlineBound {
+    crate fn into_where_clauses(&self, self_ty: Ty) -> Vec<QuantifiedWhereClause> {
+        let self_ty = self_ty.up_shift(self.binders.len());
+        self.value.into_where_clauses(self_ty).into_iter().map(|wc| {
+            Binders {
+                binders: self.binders.clone(),
+                value: wc,
+            }
+        }).collect()
+    }
+}
+
 
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
@@ -304,7 +319,7 @@ pub struct TraitBound {
 }
 
 impl TraitBound {
-    crate fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
+    fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
         let trait_ref = self.as_trait_ref(self_ty);
         vec![WhereClause::Implemented(trait_ref)]
     }
@@ -317,7 +332,6 @@ impl TraitBound {
         }
     }
 }
-
 /// Represents a projection equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -330,7 +344,7 @@ pub struct ProjectionEqBound {
 }
 
 impl ProjectionEqBound {
-    crate fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
+    fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 
         let mut parameters = self.parameters.clone();
@@ -368,7 +382,7 @@ pub struct AssociatedTyDatum {
     ///
     /// These must be proven by the implementer, for all possible parameters that
     /// would result in a well-formed projection.
-    crate bounds: Vec<InlineBound>,
+    crate bounds: Vec<QuantifiedInlineBound>,
 
     /// Where clauses that must hold for the projection to be well-formed.
     crate where_clauses: Vec<QuantifiedWhereClause>,
@@ -380,7 +394,7 @@ impl AssociatedTyDatum {
     /// ```notrust
     /// Implemented(<?0 as Foo>::Item<?1>: Sized)
     /// ```
-    crate fn bounds_on_self(&self) -> Vec<WhereClause> {
+    crate fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause> {
         let parameters = self.parameter_kinds
                              .anonymize()
                              .iter()

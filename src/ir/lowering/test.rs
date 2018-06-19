@@ -356,6 +356,21 @@ fn gat_parse() {
 }
 
 #[test]
+fn gat_higher_ranked_bound() {
+    lowering_success! {
+        program {
+            trait Fn<T> {}
+            trait Ref<'a, T> {}
+            trait Sized {}
+
+            trait Foo {
+                type Item<T>: forall<'a> Fn<Ref<'a, T>> + Sized;
+            }
+        }
+    }
+}
+
+#[test]
 fn duplicate_parameters() {
     lowering_error! {
         program {
@@ -384,6 +399,19 @@ fn duplicate_parameters() {
             struct fn<'a> { }
             struct Foo<'a> {
                 a: for<'a> fn<'a>
+            }
+        } error_msg {
+            "duplicate or shadowed parameters"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Fn<T> {}
+            trait Ref<'a, T> {}
+
+            trait Foo<'a> {
+                type Item<T>: forall<'a> Fn<Ref<'a, T>>;
             }
         } error_msg {
             "duplicate or shadowed parameters"
