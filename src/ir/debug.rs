@@ -222,6 +222,8 @@ impl Debug for DomainGoal {
                 tr.trait_id,
                 Angle(&tr.parameters[1..])
             ),
+            DomainGoal::Compatible(_) => write!(fmt, "Compatible"),
+            DomainGoal::DownstreamType(n) => write!(fmt, "DownstreamType({:?})", n),
         }
     }
 }

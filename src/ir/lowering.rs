@@ -1117,6 +1117,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(Box::new(ir::Goal::And(g1.lower(env)?, g2.lower(env)?)))
             }
             Goal::Not(g) => Ok(Box::new(ir::Goal::Not(g.lower(env)?))),
+            Goal::Compatible(g) => Ok(Box::new(g.lower(env)?.compatible())),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
                 let leaves = leaf.lower(env)?.into_iter().map(ir::Goal::Leaf);

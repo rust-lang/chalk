@@ -150,7 +150,8 @@ impl DisjointSolver {
             .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
             .expect("Every trait takes at least one input type")
             .quantify(QuantifierKind::Exists, binders)
-            .negate();
+            .negate()
+            .compatible();
 
         // Unless we can prove NO solution, we consider things to overlap.
         let canonical_goal = &goal.into_closed_goal();
