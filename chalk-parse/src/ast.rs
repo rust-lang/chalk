@@ -37,7 +37,7 @@ pub struct StructDefn {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct StructFlags {
-    pub external: bool,
+    pub upstream: bool,
     pub fundamental: bool,
 }
 
@@ -54,7 +54,7 @@ pub struct TraitDefn {
 pub struct TraitFlags {
     pub auto: bool,
     pub marker: bool,
-    pub external: bool,
+    pub upstream: bool,
     pub deref: bool,
 }
 
@@ -256,7 +256,7 @@ pub enum DomainGoal {
     TraitInScope { trait_name: Identifier },
     Derefs { source: Ty, target: Ty },
     IsLocal { ty: Ty },
-    IsExternal { ty: Ty },
+    IsUpstream { ty: Ty },
     IsDeeplyExternal { ty: Ty },
     LocalImplAllowed { trait_ref: TraitRef },
 }

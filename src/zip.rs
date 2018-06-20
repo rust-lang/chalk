@@ -234,7 +234,7 @@ enum_zip!(DomainGoal {
     InScope,
     Derefs,
     IsLocal,
-    IsExternal,
+    IsUpstream,
     IsDeeplyExternal,
     LocalImplAllowed,
     Compatible,

@@ -251,7 +251,7 @@ pub struct StructDatumBound {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructFlags {
-    crate external: bool,
+    crate upstream: bool,
     crate fundamental: bool,
 }
 
@@ -271,7 +271,7 @@ pub struct TraitDatumBound {
 pub struct TraitFlags {
     crate auto: bool,
     crate marker: bool,
-    crate external: bool,
+    crate upstream: bool,
     pub deref: bool,
 }
 
@@ -737,14 +737,14 @@ pub enum DomainGoal {
     Derefs(Derefs),
 
     /// True if a type is considered to have been "defined" by the current crate. This is true for
-    /// a `struct Foo { }` but false for a `extern struct Foo { }`. However, for fundamental types
+    /// a `struct Foo { }` but false for a `#[upstream] struct Foo { }`. However, for fundamental types
     /// like `Box<T>`, it is true if `T` is local.
     IsLocal(Ty),
 
     /// True if a type is *not* considered to have been "defined" by the current crate. This is
-    /// false for a `struct Foo { }` but true for a `extern struct Foo { }`. However, for
-    /// fundamental types like `Box<T>`, it is true if `T` is external.
-    IsExternal(Ty),
+    /// false for a `struct Foo { }` but true for a `#[upstream] struct Foo { }`. However, for
+    /// fundamental types like `Box<T>`, it is true if `T` is upstream.
+    IsUpstream(Ty),
 
     /// True if a type both external and its type parameters are recursively external
     ///

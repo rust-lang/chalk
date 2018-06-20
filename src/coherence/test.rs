@@ -233,8 +233,8 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            extern trait Foo { }
-            extern struct Bar { }
+            #[upstream] trait Foo { }
+            #[upstream] struct Bar { }
 
             impl Foo for Bar { }
         } error_msg {
@@ -244,7 +244,7 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            extern trait Foo { }
+            #[upstream] trait Foo { }
 
             impl<T> Foo for T { }
         } error_msg {
@@ -254,7 +254,7 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            extern trait Foo<T> { }
+            #[upstream] trait Foo<T> { }
             struct Bar { }
 
             impl<T> Foo<Bar> for T { }
@@ -269,8 +269,8 @@ fn orphan_check() {
     // with RFC 1023 and this became illegal.
     lowering_error! {
         program {
-            extern trait Remote { }
-            extern struct Pair<T, U> { }
+            #[upstream] trait Remote { }
+            #[upstream] struct Pair<T, U> { }
             struct Cover<T> { }
 
             impl<T> Remote for Pair<T, Cover<T>> { }
@@ -280,8 +280,8 @@ fn orphan_check() {
     }
     lowering_error! {
         program {
-            extern trait Remote { }
-            extern struct Pair<T, U> { }
+            #[upstream] trait Remote { }
+            #[upstream] struct Pair<T, U> { }
             struct Cover<T> { }
 
             impl<T> Remote for Pair<Cover<T>, T> { }
@@ -291,8 +291,8 @@ fn orphan_check() {
     }
     lowering_error! {
         program {
-            extern trait Remote { }
-            extern struct Pair<T, U> { }
+            #[upstream] trait Remote { }
+            #[upstream] struct Pair<T, U> { }
             struct Cover<T> { }
 
             impl<T, U> Remote for Pair<Cover<T>, U> { }
@@ -303,10 +303,10 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            #[auto] extern trait Send { }
-            extern trait TheTrait<T> { }
-            extern struct isize { }
-            extern struct usize { }
+            #[auto] #[upstream] trait Send { }
+            #[upstream] trait TheTrait<T> { }
+            #[upstream] struct isize { }
+            #[upstream] struct usize { }
 
             struct TheType { }
 
@@ -314,7 +314,7 @@ fn orphan_check() {
             impl TheTrait<TheType> for isize { }
             impl TheTrait<isize> for TheType { }
 
-            // This impl should fail because it contains only external type
+            // This impl should fail because it contains only upstream type
             impl TheTrait<usize> for isize { }
         } error_msg {
             "impl for trait \"TheTrait\" violates the orphan rules"
@@ -323,9 +323,9 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            #[auto] extern trait Send { }
-            extern struct Vec<T> { }
-            extern struct isize { }
+            #[auto] #[upstream] trait Send { }
+            #[upstream] struct Vec<T> { }
+            #[upstream] struct isize { }
 
             impl !Send for Vec<isize> { }
         } error_msg {
@@ -335,8 +335,8 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            extern trait Remote { }
-            extern struct Pair<T, U> { }
+            #[upstream] trait Remote { }
+            #[upstream] struct Pair<T, U> { }
 
             struct Foo { }
 
@@ -348,9 +348,9 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            extern trait Remote1<T> { }
-            extern struct Pair<T, U> { }
-            extern struct i32 { }
+            #[upstream] trait Remote1<T> { }
+            #[upstream] struct Pair<T, U> { }
+            #[upstream] struct i32 { }
 
             struct Local<T> { }
 
@@ -362,8 +362,8 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            extern trait Remote { }
-            extern struct Pair<T, U> { }
+            #[upstream] trait Remote { }
+            #[upstream] struct Pair<T, U> { }
 
             struct Local<T> { }
 
@@ -375,8 +375,8 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            extern trait Remote { }
-            extern struct Vec<T> { }
+            #[upstream] trait Remote { }
+            #[upstream] struct Vec<T> { }
 
             struct Local { }
 
@@ -388,8 +388,8 @@ fn orphan_check() {
 
     lowering_error! {
         program {
-            extern trait Remote { }
-            extern struct Vec<T> { }
+            #[upstream] trait Remote { }
+            #[upstream] struct Vec<T> { }
 
             struct Local<T> { }
 

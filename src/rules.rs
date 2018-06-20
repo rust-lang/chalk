@@ -300,24 +300,25 @@ impl StructDatum {
         //    forall<T> { WF(Foo<T>) :- (T: Eq). }
         //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
         //
-        // If the type Foo is marked `extern`, we also generate:
+        // If the type Foo is marked `#[upstream]`, we also generate:
         //
-        //    forall<T> { IsExternal(Foo<T>) }
+        //    forall<T> { IsUpstream(Foo<T>) }
         //    forall<T> { IsDeeplyExternal(Foo<T>) :- IsDeeplyExternal(T) }
         //
-        // Otherwise, if the type Foo is not marked `extern`, we generate:
+        // Otherwise, if the type Foo is not marked `#[upstream]`, we generate:
         //
         //    forall<T> { IsLocal(Foo<T>) }
         //
-        // Given an `extern` type that is also fundamental:
+        // Given an `#[upstream]` type that is also fundamental:
         //
+        //    #[upstream]
         //    #[fundamental]
-        //    extern struct Box<T> {}
+        //    struct Box<T> {}
         //
         // We generate the following clause:
         //
         //    forall<T> { IsLocal(Box<T>) :- IsLocal(T) }
-        //    forall<T> { IsExternal(Box<T>) :- IsExternal(T) }
+        //    forall<T> { IsUpstream(Box<T>) :- IsUpstream(T) }
         //    forall<T> { IsDeeplyExternal(Box<T>) :- IsDeeplyExternal(T) }
 
         let wf = self.binders.map_ref(|bound_datum| {
@@ -336,9 +337,9 @@ impl StructDatum {
 
         let mut clauses = vec![wf];
 
-        // Types that are not marked `extern` satisfy IsLocal(TypeName)
-        if !self.binders.value.flags.external {
-            // `IsLocalTy(Ty)` depends *only* on whether the type is marked extern and nothing else
+        // Types that are not marked `#[upstream]` satisfy IsLocal(TypeName)
+        if !self.binders.value.flags.upstream {
+            // `IsLocalTy(Ty)` depends *only* on whether the type is marked #[upstream] and nothing else
             let is_local = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
                 consequence: DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
                 conditions: Vec::new(),
@@ -346,7 +347,7 @@ impl StructDatum {
 
             clauses.push(is_local);
         } else if self.binders.value.flags.fundamental {
-            // If a type is `extern`, but is also `#[fundamental]`, it satisfies IsLocal
+            // If a type is `#[upstream]`, but is also `#[fundamental]`, it satisfies IsLocal
             // if and only if its parameters satisfy IsLocal
 
             // Fundamental types must always have at least one type parameter for this rule to
@@ -376,17 +377,17 @@ impl StructDatum {
             }
 
             fundamental_rule!(IsLocal);
-            fundamental_rule!(IsExternal);
+            fundamental_rule!(IsUpstream);
             fundamental_rule!(IsDeeplyExternal);
         } else {
-            // The type is just extern and not fundamental
+            // The type is just upstream and not fundamental
 
-            let is_external = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsExternal(bound_datum.self_ty.clone().cast()),
+            let is_upstream = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                consequence: DomainGoal::IsUpstream(bound_datum.self_ty.clone().cast()),
                 conditions: Vec::new(),
             }).cast();
 
-            clauses.push(is_external);
+            clauses.push(is_upstream);
 
             let is_deeply_external = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
                 consequence: DomainGoal::IsDeeplyExternal(bound_datum.self_ty.clone().cast()),
@@ -448,13 +449,13 @@ impl TraitDatum {
         //    forall<Self, T> { (Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
         //    forall<Self, T> { FromEnv(Self: Eq<T>) :- FromEnv(Self: Ord<T>) }
         //
-        // As specified in the orphan rules, if a trait is not marked `extern`, the current crate
+        // As specified in the orphan rules, if a trait is not marked `#[upstream]`, the current crate
         // can implement it for any type. To represent that, we generate:
         //
-        //    // `Ord<T>` would not be `extern` when compiling `std`
+        //    // `Ord<T>` would not be `#[upstream]` when compiling `std`
         //    forall<Self, T> { LocalImplAllowed(Self: Ord<T>) }
         //
-        // For traits that are `extern` (i.e. not in the current crate), the orphan rules dictate
+        // For traits that are `#[upstream]` (i.e. not in the current crate), the orphan rules dictate
         // that impls are allowed as long as at least one type parameter is local and each type
         // prior to that is *deeply* external. That means that each type prior to the first local
         // type cannot contain any of the type parameters of the impl.
@@ -462,7 +463,7 @@ impl TraitDatum {
         // This rule is fairly complex, so we expand it and generate a program clause for each
         // possible case. This is represented as follows:
         //
-        //    // for `extern trait Foo<T, U, V> where Self: Eq<T> { ... }`
+        //    // for `#[upstream] trait Foo<T, U, V> where Self: Eq<T> { ... }`
         //    forall<Self, T, U, V> {
         //      LocalImplAllowed(Self: Foo<T, U, V>) :- IsLocal(Self)
         //    }
@@ -509,7 +510,7 @@ impl TraitDatum {
 
         let mut clauses = vec![wf];
 
-        if !self.binders.value.flags.external {
+        if !self.binders.value.flags.upstream {
             let impl_allowed = self.binders.map_ref(|bound_datum|
                 ProgramClauseImplication {
                     consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),

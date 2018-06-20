@@ -420,11 +420,11 @@ fn duplicate_parameters() {
 }
 
 #[test]
-fn external_items() {
+fn upstream_items() {
     lowering_success! {
         program {
-            extern trait Send { }
-            extern struct Vec<T> { }
+            #[upstream] trait Send { }
+            #[upstream] struct Vec<T> { }
         }
     }
 }
