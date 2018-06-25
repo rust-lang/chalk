@@ -1,4 +1,4 @@
-#![feature(non_modrs_mods)]
+#![feature(non_modrs_mods, tool_attributes)]
 
 #![recursion_limit = "1024"]
 
@@ -10,6 +10,7 @@ extern crate lalrpop_util;
 
 pub mod ast;
 pub mod errors;
+#[rustfmt::skip]
 mod parser;
 
 use errors::Result;
