@@ -2521,11 +2521,9 @@ fn local_and_upstream_types() {
 
         goal { IsLocal(Upstream) } yields { "No possible solution" }
         goal { IsUpstream(Upstream) } yields { "Unique" }
-        goal { IsDeeplyExternal(Upstream) } yields { "Unique" }
 
         goal { IsLocal(Local) } yields { "Unique" }
         goal { IsUpstream(Local) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Local) } yields { "No possible solution" }
     }
 
     test! {
@@ -2543,15 +2541,62 @@ fn local_and_upstream_types() {
 
         goal { forall<T> { IsLocal(Local<T>) } } yields { "Unique" }
         goal { forall<T> { IsUpstream(Local<T>) } } yields { "No possible solution" }
+    }
+}
 
-        // Not true for all T
-        goal { forall<T> { IsDeeplyExternal(Upstream<T>) } } yields { "No possible solution" }
+#[test]
+fn is_fully_visible() {
+    // Should be visible regardless of local, fundamental, or upstream
+    test! {
+        program {
+            #[upstream] struct Upstream { }
+            struct Local { }
 
-        // Must be recursively upstream
-        goal { IsDeeplyExternal(Upstream<Upstream<Upstream<Upstream2>>>) } yields { "Unique" }
-        goal { IsDeeplyExternal(Local<Upstream<Upstream2>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Upstream<Local<Upstream<Upstream2>>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Upstream<Upstream<Upstream<Internal2>>>) } yields { "No possible solution" }
+            #[upstream]
+            #[fundamental]
+            struct Box<T> { }
+        }
+
+        goal { IsFullyVisible(Upstream) } yields { "Unique" }
+        goal { IsFullyVisible(Local) } yields { "Unique" }
+        goal { IsFullyVisible(Box<Local>) } yields { "Unique" }
+        goal { IsFullyVisible(Box<Upstream>) } yields { "Unique" }
+    }
+
+    // Should be visible regardless of local, fundamental, or upstream
+    test! {
+        program {
+            #[upstream] struct Upstream { }
+            struct Local { }
+
+            #[upstream] struct Upstream2<T> { }
+            struct Local2<T> { }
+
+            #[upstream]
+            #[fundamental]
+            struct Box<T> { }
+        }
+
+        // Unknown type parameters are not fully visible
+        goal { forall<T> { IsFullyVisible(Box<T>) } } yields { "No possible solution" }
+        goal { forall<T> { IsFullyVisible(Upstream2<T>) } } yields { "No possible solution" }
+        goal { forall<T> { IsFullyVisible(Local2<T>) } } yields { "No possible solution" }
+
+        // Without any unknown type parameters, local and upstream should not matter
+        goal { forall<T> { IsFullyVisible(Upstream2<Upstream>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Upstream2<Local>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Local2<Upstream>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Local2<Local>) } } yields { "Unique" }
+
+        // Fundamental anywhere should not change the outcome
+        goal { forall<T> { IsFullyVisible(Box<Upstream2<Upstream>>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Box<Upstream2<Local>>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Box<Local2<Upstream>>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Box<Local2<Local>>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Upstream2<Box<Upstream>>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Upstream2<Box<Local>>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Local2<Box<Upstream>>) } } yields { "Unique" }
+        goal { forall<T> { IsFullyVisible(Local2<Box<Local>>) } } yields { "Unique" }
     }
 }
 
@@ -2575,16 +2620,12 @@ fn fundamental_types() {
         goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "Unique" }
         goal { forall<T> { IsLocal(Box<T>) } } yields { "No possible solution" }
         goal { forall<T> { IsUpstream(Box<T>) } } yields { "Unique" }
-        goal { forall<T> { IsDeeplyExternal(Box<T>) } } yields { "No possible solution" }
 
         // Without fundamental, Box is upstream regardless of its inner type
         goal { IsLocal(Box<Upstream>) } yields { "No possible solution" }
         goal { IsLocal(Box<Local>) } yields { "No possible solution" }
         goal { IsUpstream(Box<Upstream>) } yields { "Unique" }
         goal { IsUpstream(Box<Local>) } yields { "Unique" }
-
-        goal { IsDeeplyExternal(Box<Upstream>) } yields { "Unique" }
-        goal { IsDeeplyExternal(Box<Local>) } yields { "No possible solution" }
     }
 
     test! {
@@ -2602,7 +2643,6 @@ fn fundamental_types() {
         goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "No possible solution" }
         goal { forall<T> { IsLocal(Box<T>) } } yields { "No possible solution" }
         goal { forall<T> { IsUpstream(Box<T>) } } yields { "No possible solution" }
-        goal { forall<T> { IsDeeplyExternal(Box<T>) } } yields { "No possible solution" }
 
         // With fundamental, some of these yield different results -- no longer depends on Box
         // itself
@@ -2610,11 +2650,6 @@ fn fundamental_types() {
         goal { IsLocal(Box<Local>) } yields { "Unique" }
         goal { IsUpstream(Box<Upstream>) } yields { "Unique" }
         goal { IsUpstream(Box<Local>) } yields { "No possible solution" }
-
-        // Since Local and Upstream have no type parameters, neither of these change
-        // The next test will see some different results.
-        goal { IsDeeplyExternal(Box<Upstream>) } yields { "Unique" }
-        goal { IsDeeplyExternal(Box<Local>) } yields { "No possible solution" }
     }
 
     test! {
@@ -2655,16 +2690,6 @@ fn fundamental_types() {
         // Make sure upstream types within an internal type and vice versa do not make a difference
         goal { forall<T> { IsLocal(Box<Local<Upstream<T>>>) } } yields { "Unique" }
         goal { forall<T> { IsUpstream(Box<Upstream<Local<T>>>) } } yields { "Unique" }
-
-        // Whether fundamental types satisfy IsDeeplyExternal depends only on their internal types
-        // and not on whether the fundamental type is upstream or not
-        goal { IsDeeplyExternal(Box<Upstream<Upstream2>>) } yields { "Unique" }
-        goal { IsDeeplyExternal(Box<Local<Upstream2>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Box<Upstream<Internal2>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Box<Local<Internal2>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Box<Upstream<Upstream<Upstream2>>>) } yields { "Unique" }
-        goal { IsDeeplyExternal(Box<Upstream<Local<Upstream2>>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Box<Upstream<Upstream<Internal2>>>) } yields { "No possible solution" }
     }
 
     // Nested fundamental types should still be local if they can be recursively proven to be local
@@ -2694,16 +2719,6 @@ fn fundamental_types() {
 
         goal { IsLocal(Ref<Box<Internal2>>) } yields { "Unique" }
         goal { IsUpstream(Ref<Box<Internal2>>) } yields { "No possible solution" }
-
-        // Whether fundamental types satisfy IsDeeplyExternal depends only on their internal types
-        // and not on whether the fundamental type is upstream or not
-        goal { IsDeeplyExternal(Ref<Box<Upstream<Upstream2>>>) } yields { "Unique" }
-        goal { IsDeeplyExternal(Ref<Box<Local<Upstream2>>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Ref<Box<Upstream<Internal2>>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Ref<Box<Local<Internal2>>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Ref<Box<Upstream<Upstream<Upstream2>>>>) } yields { "Unique" }
-        goal { IsDeeplyExternal(Ref<Box<Upstream<Local<Upstream2>>>>) } yields { "No possible solution" }
-        goal { IsDeeplyExternal(Ref<Box<Upstream<Upstream<Internal2>>>>) } yields { "No possible solution" }
     }
 
     // If a type is not upstream, it is always local regardless of its parameters or #[fundamental]
@@ -2727,88 +2742,129 @@ fn fundamental_types() {
 fn local_impl_allowed_for_traits() {
     test! {
         program {
-            #[upstream] trait UpstreamTrait { }
-            trait InternalTrait { }
+            trait LocalTrait { }
+            trait LocalTrait2<T> { }
 
             #[upstream] struct Upstream { }
             struct Local { }
         }
 
-        goal { forall<T> { LocalImplAllowed(T: UpstreamTrait) } } yields { "No possible solution" }
-        goal { LocalImplAllowed(Local: UpstreamTrait) } yields { "Unique" }
-        goal { LocalImplAllowed(Upstream: UpstreamTrait) } yields { "No possible solution" }
-
-        goal { forall<T> { LocalImplAllowed(T: InternalTrait) } } yields { "Unique" }
-        goal { LocalImplAllowed(Local: InternalTrait) } yields { "Unique" }
-        goal { LocalImplAllowed(Upstream: InternalTrait) } yields { "Unique" }
+        // Local traits are always implementable
+        goal { forall<T> { LocalImplAllowed(T: LocalTrait) } } yields { "Unique" }
+        goal { LocalImplAllowed(Local: LocalTrait) } yields { "Unique" }
+        goal { LocalImplAllowed(Upstream: LocalTrait) } yields { "Unique" }
+        goal { forall<T> { LocalImplAllowed(T: LocalTrait2<T>) } } yields { "Unique" }
+        goal { forall<T, U> { LocalImplAllowed(T: LocalTrait2<U>) } } yields { "Unique" }
+        goal { forall<T> { LocalImplAllowed(Local: LocalTrait2<T>) } } yields { "Unique" }
+        goal { forall<T> { LocalImplAllowed(Upstream: LocalTrait2<T>) } } yields { "Unique" }
     }
 
+    // Single-type parameter trait refs (Self only)
+    test! {
+        program {
+            #[upstream] trait UpstreamTrait { }
+
+            #[upstream] struct Upstream { }
+            #[upstream] struct Upstream2<T> { }
+            struct Local { }
+            struct Local2<T> { }
+        }
+
+        // No local type
+        goal { LocalImplAllowed(Upstream: UpstreamTrait) } yields { "No possible solution" }
+        goal { forall<T> { LocalImplAllowed(T: UpstreamTrait) } } yields { "No possible solution" }
+
+        // Local type, not preceded by anything
+        // Notice that the types after the first local type do not matter at all
+        goal { LocalImplAllowed(Local: UpstreamTrait) } yields { "Unique" }
+    }
+
+    // Multi-type parameter trait refs (Self, T)
     test! {
         program {
             trait Clone { }
-            #[upstream] trait UpstreamTrait<T> where T: Clone { }
-            trait InternalTrait<T> where T: Clone { }
+            #[upstream] trait UpstreamTrait2<T> where T: Clone { }
 
             #[upstream] struct Upstream { }
+            #[upstream] struct Upstream2<T> { }
             struct Local { }
+            struct Local2<T> { }
         }
 
-        goal { forall<T, U> { LocalImplAllowed(T: UpstreamTrait<U>) } } yields { "No possible solution" }
-        // Types after the first local type do not matter
-        goal { forall<T> { LocalImplAllowed(Local: UpstreamTrait<T>) } } yields { "Unique" }
-        goal { LocalImplAllowed(Upstream: UpstreamTrait<Upstream>) } yields { "No possible solution" }
-        goal { LocalImplAllowed(Upstream: UpstreamTrait<Local>) } yields { "Unique" }
+        // No local type
+        goal { forall<T> { LocalImplAllowed(T: UpstreamTrait2<T>) } } yields { "No possible solution" }
+        goal { forall<T, U> { LocalImplAllowed(T: UpstreamTrait2<U>) } } yields { "No possible solution" }
+        goal { forall<T> { LocalImplAllowed(Upstream: UpstreamTrait2<T>) } } yields { "No possible solution" }
 
-        // If the trait itself is local the types implemented for do not matter
-        goal { forall<T, U> { LocalImplAllowed(T: InternalTrait<U>) } } yields { "Unique" }
-        goal { forall<T> { LocalImplAllowed(Local: InternalTrait<T>) } } yields { "Unique" }
-        goal { forall<T> { LocalImplAllowed(Upstream: InternalTrait<T>) } } yields { "Unique" }
+        // Local type, but preceded by a type parameter
+        goal { forall<T> { LocalImplAllowed(T: UpstreamTrait2<Local>) } } yields { "No possible solution" }
+
+        // Local type, not preceded by anything
+        // Notice that the types after the first local type do not matter at all
+        goal { forall<T> { LocalImplAllowed(Local: UpstreamTrait2<T>) } } yields { "Unique" }
+        goal { LocalImplAllowed(Local: UpstreamTrait2<Upstream>) } yields { "Unique" }
+        goal { LocalImplAllowed(Local: UpstreamTrait2<Local>) } yields { "Unique" }
+
+        // Local type, but preceded by a fully visible type (i.e. no placeholder types)
+        goal { LocalImplAllowed(Upstream: UpstreamTrait2<Local>) } yields { "Unique" }
+        goal { LocalImplAllowed(Upstream2<Local>: UpstreamTrait2<Local>) } yields { "Unique" }
+        goal { LocalImplAllowed(Upstream2<Upstream>: UpstreamTrait2<Local>) } yields { "Unique" }
+
+        // Type parameter covered by the local type
+        goal { forall<T> { LocalImplAllowed(Upstream: UpstreamTrait2<Local2<T>>) } } yields { "Unique" }
+        goal { forall<T> { LocalImplAllowed(Upstream2<Local>: UpstreamTrait2<Local2<T>>) } } yields { "Unique" }
+        goal { forall<T> { LocalImplAllowed(Upstream2<Upstream>: UpstreamTrait2<Local2<T>>) } } yields { "Unique" }
+
+        // Type parameter covered by a deeply nested upstream type
+        // Notice that it does not matter that the T is wrapped in a local type because the outer
+        // type is still upstream
+        goal { forall<T> { LocalImplAllowed(Upstream2<Local2<T>>: UpstreamTrait2<Local2<T>>) } } yields { "No possible solution" }
+        // Does not matter whether the covered type parameter is eventually covered or not by the
+        // first actually local type found
+        goal { forall<T, U> { LocalImplAllowed(Upstream2<Local2<T>>: UpstreamTrait2<Local2<U>>) } } yields { "No possible solution" }
     }
 
     test! {
         program {
             trait Clone { }
             trait Eq { }
-            // Lifetime is just included to show that it does not break anything
-            // Where clauses are included just to show that they do not matter at all
+            // Lifetime is just included to show that it does not break anything.
+            // Where clauses do not change the results at all.
             #[upstream] trait UpstreamTrait<'a, T, U, V> where T: Clone, U: Eq, V: Clone, V: Eq { }
             trait InternalTrait<'a, T, U, V> where T: Clone, U: Eq, V: Clone, V: Eq { }
 
-            #[upstream] struct Upstream<T> { }
-            #[upstream] struct Upstream2 {}
+            #[upstream] struct Upstream { }
+            #[upstream] struct Upstream2<T> { }
             struct Local { }
         }
+
+        // Local traits can be implemented regardless of the types involved
+        goal { forall<Self, 'a, T, U, V> { LocalImplAllowed(Self: InternalTrait<'a, T, U, V>) } } yields { "Unique" }
 
         // Upstream traits definitely cannot be implemented for all types
         goal { forall<Self, 'a, T, U, V> { LocalImplAllowed(Self: UpstreamTrait<'a, T, U, V>) } } yields { "No possible solution" }
 
-        // Upstream traits can be implemented for any types if the Self type is local
-        goal { forall<'a, T, U, V> { LocalImplAllowed(Local: UpstreamTrait<'a, T, U, V>) } } yields { "Unique" }
-        // Upstream traits cannot be implemented for any types if the Self type is upstream
-        goal { forall<'a, T, U, V> { LocalImplAllowed(Upstream2: UpstreamTrait<'a, T, U, V>) } } yields { "No possible solution" }
-
-        // Upstream traits can be implemented if a local type is used and all of the prior types are deeply upstream
-        // NOTE: Notice that the types past the local type do not matter at all
-        goal { forall<'a, U, V> { LocalImplAllowed(Upstream2: UpstreamTrait<'a, Local, U, V>) } } yields { "Unique" }
-        goal { forall<'a, U, V> { LocalImplAllowed(Upstream<Upstream2>: UpstreamTrait<'a, Local, U, V>) } } yields { "Unique" }
-        // Does not apply if one of the prior types is not deeply upstream
-        goal { forall<'a, U, V> { LocalImplAllowed(Upstream<Local>: UpstreamTrait<'a, Local, U, V>) } } yields { "No possible solution" }
-
-        // Different cases of local and upstream types before a local type
-        goal { forall<'a> { LocalImplAllowed(Upstream2: UpstreamTrait<'a, Upstream2, Upstream2, Local>) } } yields { "Unique" }
-        goal { forall<'a> { LocalImplAllowed(Upstream2: UpstreamTrait<'a, Upstream<Upstream2>, Upstream2, Local>) } } yields { "Unique" }
-        goal { forall<'a> { LocalImplAllowed(Upstream2: UpstreamTrait<'a, Upstream<Local>, Upstream2, Local>) } } yields { "No possible solution" }
-        goal { forall<'a> { LocalImplAllowed(Upstream2: UpstreamTrait<'a, Upstream2, Upstream<Upstream2>, Local>) } } yields { "Unique" }
-        goal { forall<'a> { LocalImplAllowed(Upstream2: UpstreamTrait<'a, Upstream2, Upstream<Local>, Local>) } } yields { "No possible solution" }
-
-        // Obvious case: All upstream types should not allow impls
-        goal { forall<'a> { LocalImplAllowed(Upstream<Upstream2>: UpstreamTrait<'a,
-            Upstream<Upstream2>,
-            Upstream<Upstream<Upstream<Upstream2>>>,
-            Upstream<Upstream<Upstream2>>
+        // No local types
+        goal { forall<'a> { LocalImplAllowed(Upstream2<Upstream>: UpstreamTrait<'a, Upstream, Upstream, Upstream>) } } yields { "No possible solution" }
+        goal { forall<'a> { LocalImplAllowed(Upstream2<Upstream>: UpstreamTrait<
+            'a,
+            Upstream2<Upstream>,
+            Upstream2<Upstream2<Upstream2<Upstream>>>,
+            Upstream2<Upstream2<Upstream>>
         >) } } yields { "No possible solution" }
 
-        // Local traits can be implemented regardless of the types involved
-        goal { forall<Self, 'a, T, U, V> { LocalImplAllowed(Self: InternalTrait<'a, T, U, V>) } } yields { "Unique" }
+        // Local type, not preceded by anything -- types after the first local type do not matter
+        goal { forall<'a, T, U, V> { LocalImplAllowed(Local: UpstreamTrait<'a, T, U, V>) } } yields { "Unique" }
+        goal { forall<'a, U, V> { LocalImplAllowed(Local: UpstreamTrait<'a, Local, U, V>) } } yields { "Unique" }
+        goal { forall<'a, U, V> { LocalImplAllowed(Local: UpstreamTrait<'a, Upstream, U, V>) } } yields { "Unique" }
+        goal { forall<'a> { LocalImplAllowed(Local: UpstreamTrait<'a, Upstream, Local, Local>) } } yields { "Unique" }
+
+        // Local type preceded by a type that is not fully visible
+        goal { forall<'a, T> { LocalImplAllowed(T: UpstreamTrait<'a, Upstream, Upstream, Local>) } } yields { "No possible solution" }
+        goal { forall<'a, T> { LocalImplAllowed(Upstream: UpstreamTrait<'a, T, Upstream, Local>) } } yields { "No possible solution" }
+        goal { forall<'a, T> { LocalImplAllowed(Upstream: UpstreamTrait<'a, Upstream, T, Local>) } } yields { "No possible solution" }
+
+        // Once again, types after the first local do not matter
+        goal { forall<'a, T> { LocalImplAllowed(Upstream: UpstreamTrait<'a, Upstream, Local, T>) } } yields { "Unique" }
     }
 }

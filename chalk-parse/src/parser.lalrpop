@@ -302,7 +302,7 @@ DomainGoal: DomainGoal = {
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
     "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },
-    "IsDeeplyExternal" "(" <ty:Ty> ")" => DomainGoal::IsDeeplyExternal { ty },
+    "IsFullyVisible" "(" <ty:Ty> ")" => DomainGoal::IsFullyVisible { ty },
 
     "LocalImplAllowed" "(" <trait_ref:TraitRef<":">> ")" => DomainGoal::LocalImplAllowed { trait_ref },
 };

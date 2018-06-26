@@ -524,8 +524,8 @@ impl LowerDomainGoal for DomainGoal {
             DomainGoal::IsUpstream { ty } => vec![
                 ir::DomainGoal::IsUpstream(ty.lower(env)?)
             ],
-            DomainGoal::IsDeeplyExternal { ty } => vec![
-                ir::DomainGoal::IsDeeplyExternal(ty.lower(env)?)
+            DomainGoal::IsFullyVisible { ty } => vec![
+                ir::DomainGoal::IsFullyVisible(ty.lower(env)?)
             ],
             DomainGoal::LocalImplAllowed { trait_ref } => vec![
                 ir::DomainGoal::LocalImplAllowed(trait_ref.lower(env)?)

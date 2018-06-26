@@ -746,23 +746,20 @@ pub enum DomainGoal {
     /// fundamental types like `Box<T>`, it is true if `T` is upstream.
     IsUpstream(Ty),
 
-    /// True if a type both external and its type parameters are recursively external
+    /// True if a type and its input types are fully visible, known types. That is, there are no
+    /// unknown type parameters anywhere in this type.
     ///
-    /// More formally, for each non-fundamental struct S<P0..Pn> that is external:
+    /// More formally, for each struct S<P0..Pn>:
     /// forall<P0..Pn> {
-    ///     IsDeeplyExternal(S<P0...Pn>) :-
-    ///         IsDeeplyExternal(P0),
+    ///     IsFullyVisible(S<P0...Pn>) :-
+    ///         IsFullyVisible(P0),
     ///         ...
-    ///         IsDeeplyExternal(Pn)
+    ///         IsFullyVisible(Pn)
     /// }
-    ///
-    /// For each fundamental struct S<P0>,
-    ///
-    /// forall<P0> { IsDeeplyExternal(S<P0>) :- IsDeeplyExternal(P0) }
     ///
     /// Note that any of these types can have lifetimes in their parameters too, but we only
     /// consider type parameters.
-    IsDeeplyExternal(Ty),
+    IsFullyVisible(Ty),
 
     /// Used to dictate when trait impls are allowed in the current (local) crate based on the
     /// orphan rules.

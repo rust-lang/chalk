@@ -214,7 +214,7 @@ impl Debug for DomainGoal {
             DomainGoal::Derefs(n) => write!(fmt, "Derefs({:?})", n),
             DomainGoal::IsLocal(n) => write!(fmt, "IsLocal({:?})", n),
             DomainGoal::IsUpstream(n) => write!(fmt, "IsUpstream({:?})", n),
-            DomainGoal::IsDeeplyExternal(n) => write!(fmt, "IsDeeplyExternal({:?})", n),
+            DomainGoal::IsFullyVisible(n) => write!(fmt, "IsFullyVisible({:?})", n),
             DomainGoal::LocalImplAllowed(tr) => write!(
                 fmt,
                 "LocalImplAllowed({:?}: {:?}{:?})",
