@@ -76,8 +76,8 @@ impl InferenceTable {
     {
         let Canonicalized {
             free_vars,
-            max_universe: _,
             quantified,
+            ..
         } = self.canonicalize(&value);
 
         // If the original contains free existential variables, give up.

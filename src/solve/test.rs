@@ -47,7 +47,7 @@ macro_rules! test {
         test!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::slg(), $expected)
+                      (stringify!($goal), SolverChoice::default(), $expected)
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };

@@ -31,7 +31,7 @@ use std::u32;
 ///     "downcast" the resulting variable using
 ///     e.g. `value.ty().unwrap()`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct InferenceVariable { // FIXME pub b/c of trait impl for SLG
+pub(in solve) struct InferenceVariable {
     index: u32,
 }
 
@@ -85,7 +85,7 @@ impl UnifyKey for InferenceVariable {
 /// universe index; when the inference variable is assigned a value, it becomes
 /// bound and records that value. See `InferenceVariable` for more details.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum InferenceValue { // FIXME pub b/c of trait impl for SLG
+pub(in solve) enum InferenceValue {
     Unbound(UniverseIndex),
     Bound(Parameter),
 }
