@@ -257,7 +257,7 @@ pub enum DomainGoal {
     Derefs { source: Ty, target: Ty },
     IsLocal { ty: Ty },
     IsUpstream { ty: Ty },
-    IsDeeplyExternal { ty: Ty },
+    IsFullyVisible { ty: Ty },
     LocalImplAllowed { trait_ref: TraitRef },
 }
 

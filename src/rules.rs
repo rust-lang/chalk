@@ -295,15 +295,15 @@ impl StructDatum {
         //
         //    struct Foo<T: Eq> { }
         //
-        // we generate the following clause:
+        // we generate the following clauses:
         //
         //    forall<T> { WF(Foo<T>) :- (T: Eq). }
         //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
+        //    forall<T> { IsFullyVisible(Foo<T>) :- IsFullyVisible(T) }
         //
         // If the type Foo is marked `#[upstream]`, we also generate:
         //
         //    forall<T> { IsUpstream(Foo<T>) }
-        //    forall<T> { IsDeeplyExternal(Foo<T>) :- IsDeeplyExternal(T) }
         //
         // Otherwise, if the type Foo is not marked `#[upstream]`, we generate:
         //
@@ -319,7 +319,6 @@ impl StructDatum {
         //
         //    forall<T> { IsLocal(Box<T>) :- IsLocal(T) }
         //    forall<T> { IsUpstream(Box<T>) :- IsUpstream(T) }
-        //    forall<T> { IsDeeplyExternal(Box<T>) :- IsDeeplyExternal(T) }
 
         let wf = self.binders.map_ref(|bound_datum| {
             ProgramClauseImplication {
@@ -335,7 +334,14 @@ impl StructDatum {
             }
         }).cast();
 
-        let mut clauses = vec![wf];
+        let is_fully_visible = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+            consequence: DomainGoal::IsFullyVisible(bound_datum.self_ty.clone().cast()),
+            conditions: bound_datum.self_ty.type_parameters()
+            .map(|ty| DomainGoal::IsFullyVisible(ty).cast())
+            .collect(),
+        }).cast();
+
+        let mut clauses = vec![wf, is_fully_visible];
 
         // Types that are not marked `#[upstream]` satisfy IsLocal(TypeName)
         if !self.binders.value.flags.upstream {
@@ -378,7 +384,6 @@ impl StructDatum {
 
             fundamental_rule!(IsLocal);
             fundamental_rule!(IsUpstream);
-            fundamental_rule!(IsDeeplyExternal);
         } else {
             // The type is just upstream and not fundamental
 
@@ -388,15 +393,6 @@ impl StructDatum {
             }).cast();
 
             clauses.push(is_upstream);
-
-            let is_deeply_external = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsDeeplyExternal(bound_datum.self_ty.clone().cast()),
-                conditions: bound_datum.self_ty.type_parameters()
-                    .map(|ty| DomainGoal::IsDeeplyExternal(ty).cast())
-                    .collect(),
-            }).cast();
-
-            clauses.push(is_deeply_external);
         }
 
         let condition = DomainGoal::FromEnv(
@@ -457,7 +453,7 @@ impl TraitDatum {
         //
         // For traits that are `#[upstream]` (i.e. not in the current crate), the orphan rules dictate
         // that impls are allowed as long as at least one type parameter is local and each type
-        // prior to that is *deeply* external. That means that each type prior to the first local
+        // prior to that is fully visible. That means that each type prior to the first local
         // type cannot contain any of the type parameters of the impl.
         //
         // This rule is fairly complex, so we expand it and generate a program clause for each
@@ -469,20 +465,20 @@ impl TraitDatum {
         //    }
         //    forall<Self, T, U, V> {
         //      LocalImplAllowed(Self: Foo<T, U, V>) :-
-        //          IsDeeplyExternal(Self),
+        //          IsFullyVisible(Self),
         //          IsLocal(T)
         //    }
         //    forall<Self, T, U, V> {
         //      LocalImplAllowed(Self: Foo<T, U, V>) :-
-        //          IsDeeplyExternal(Self),
-        //          IsDeeplyExternal(T),
+        //          IsFullyVisible(Self),
+        //          IsFullyVisible(T),
         //          IsLocal(U)
         //    }
         //    forall<Self, T, U, V> {
         //      LocalImplAllowed(Self: Foo<T, U, V>) :-
-        //          IsDeeplyExternal(Self),
-        //          IsDeeplyExternal(T),
-        //          IsDeeplyExternal(U),
+        //          IsFullyVisible(Self),
+        //          IsFullyVisible(T),
+        //          IsFullyVisible(U),
         //          IsLocal(V)
         //    }
 
@@ -531,7 +527,7 @@ impl TraitDatum {
                     ProgramClauseImplication {
                         consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
                         conditions: (0..i)
-                            .map(|j| DomainGoal::IsDeeplyExternal(type_parameters[j].clone()).cast())
+                            .map(|j| DomainGoal::IsFullyVisible(type_parameters[j].clone()).cast())
                             .chain(iter::once(DomainGoal::IsLocal(type_parameters[i].clone()).cast()))
                             .collect(),
                     }
