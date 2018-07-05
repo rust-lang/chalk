@@ -5,7 +5,7 @@ use itertools::Itertools;
 use errors::*;
 use ir::*;
 use cast::*;
-use solve::SolverChoice;
+use solve::{SolverChoice, Solution};
 
 struct DisjointSolver {
     env: Arc<ProgramEnvironment>,
@@ -97,19 +97,19 @@ impl DisjointSolver {
     //      impl<T> Foo for T { }
     //      impl Foo for i32 { }
     //  Generates:
-    //      not { exists<T> { T = i32 } }
+    //      compatible { not { exists<T> { T = i32 } } }
     //
     //  Impls:
     //      impl<T1, U> Foo<T1> for Vec<U> { }
     //      impl<T2> Foo<T2> for Vec<i32> { }
     //  Generates:
-    //      not { exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 } }
+    //      compatible { not { exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 } } }
     //
     //  Impls:
     //      impl<T> Foo for Vec<T> where T: Bar { }
     //      impl<U> Foo for Vec<U> where U: Baz { }
     //  Generates:
-    //      not { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } }
+    //      compatible { not { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } }
     //
     fn disjoint(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
         debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
