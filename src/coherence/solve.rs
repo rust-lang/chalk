@@ -153,12 +153,18 @@ impl DisjointSolver {
             .negate()
             .compatible();
 
-        // Unless we can prove NO solution, we consider things to overlap.
         let canonical_goal = &goal.into_closed_goal();
-        let result = self.solver_choice
+        let solution = self.solver_choice
             .solve_root_goal(&self.env, canonical_goal)
-            .unwrap()
-            .is_some();
+            .unwrap(); // internal errors in the solver are fatal
+        let result = match solution {
+            // Goal was proven with a unique solution, so impls are disjoint
+            Some(Solution::Unique(_)) => true,
+            // Goal was ambiguous, so there *may* be overlap
+            Some(Solution::Ambig(_)) |
+            // Goal cannot be proven, so impls definitely overlap
+            None => false,
+        };
         debug!("overlaps: result = {:?}", result);
         result
     }
