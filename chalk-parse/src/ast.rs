@@ -259,6 +259,8 @@ pub enum DomainGoal {
     IsUpstream { ty: Ty },
     IsFullyVisible { ty: Ty },
     LocalImplAllowed { trait_ref: TraitRef },
+    Compatible,
+    DownstreamType { ty: Ty },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
