@@ -744,10 +744,10 @@ fn example_3_3_EWFS() {
                     delayed_literals: DelayedLiteralSet {
                         delayed_literals: {
                             Negative(
-                                TableIndex(4)
+                                TableIndex(1)
                             ),
                             Negative(
-                                TableIndex(1)
+                                TableIndex(6)
                             )
                         }
                     }

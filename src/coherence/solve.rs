@@ -7,7 +7,7 @@ use ir::*;
 use cast::*;
 use solve::{SolverChoice, Solution};
 
-struct DisjointSolver {
+struct OverlapSolver {
     env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,
 }
@@ -21,7 +21,7 @@ impl Program {
     where
         F: FnMut(ItemId, ItemId),
     {
-        let mut solver = DisjointSolver {
+        let mut solver = OverlapSolver {
             env: Arc::new(self.environment()),
             solver_choice,
         };
@@ -65,7 +65,7 @@ impl Program {
                 // Check if the impls overlap, then if they do, check if one specializes
                 // the other. Note that specialization can only run one way - if both
                 // specialization checks return *either* true or false, that's an error.
-                if !solver.disjoint(lhs, rhs) {
+                if solver.overlap(lhs, rhs) {
                     match (solver.specializes(lhs, rhs), solver.specializes(rhs, lhs)) {
                         (true, false) => record_specialization(l_id, r_id),
                         (false, true) => record_specialization(r_id, l_id),
@@ -82,14 +82,14 @@ impl Program {
     }
 }
 
-impl DisjointSolver {
-    // Test if two impls are disjoint. If the test does not succeed, there is an overlap.
+impl OverlapSolver {
+    // Test if the set of types that these two impls apply to overlap. If the test succeeds, these
+    // two impls overlap.
     //
     // We combine the binders of the two impls & treat them as existential
     // quantifiers. Then we attempt to unify the input types to the trait provided
     // by each impl, as well as prove that the where clauses from both impls all
-    // hold. At the end, we negate the query because we only want to return `true` if
-    // it is provable that there is no overlap.
+    // hold.
     //
     // Examples:
     //
@@ -97,21 +97,21 @@ impl DisjointSolver {
     //      impl<T> Foo for T { }
     //      impl Foo for i32 { }
     //  Generates:
-    //      compatible { not { exists<T> { T = i32 } } }
+    //      compatible { exists<T> { T = i32 } }
     //
     //  Impls:
     //      impl<T1, U> Foo<T1> for Vec<U> { }
     //      impl<T2> Foo<T2> for Vec<i32> { }
     //  Generates:
-    //      compatible { not { exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 } } }
+    //      compatible { exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 } }
     //
     //  Impls:
     //      impl<T> Foo for Vec<T> where T: Bar { }
     //      impl<U> Foo for Vec<U> where U: Baz { }
     //  Generates:
-    //      compatible { not { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } }
+    //      compatible { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } }
     //
-    fn disjoint(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
+    fn overlap(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
         debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
 
         let lhs_len = lhs.binders.len();
@@ -150,7 +150,6 @@ impl DisjointSolver {
             .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
             .expect("Every trait takes at least one input type")
             .quantify(QuantifierKind::Exists, binders)
-            .negate()
             .compatible();
 
         let canonical_goal = &goal.into_closed_goal();
@@ -158,11 +157,12 @@ impl DisjointSolver {
             .solve_root_goal(&self.env, canonical_goal)
             .unwrap(); // internal errors in the solver are fatal
         let result = match solution {
-            // Goal was proven with a unique solution, so impls are disjoint
-            Some(Solution::Unique(_)) => true,
+            // Goal was proven with a unique solution, so an impl was found that causes these two
+            // to overlap
+            Some(Solution::Unique(_)) |
             // Goal was ambiguous, so there *may* be overlap
-            Some(Solution::Ambig(_)) |
-            // Goal cannot be proven, so impls definitely overlap
+            Some(Solution::Ambig(_)) => true,
+            // Goal cannot be proven, so impls are disjoint
             None => false,
         };
         debug!("overlaps: result = {:?}", result);

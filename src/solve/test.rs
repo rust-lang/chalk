@@ -1937,28 +1937,6 @@ fn mixed_semantics() {
 }
 
 #[test]
-fn partial_overlap_1() {
-    test! {
-        program {
-            trait Marker {}
-            trait Foo {}
-            trait Bar {}
-
-            impl<T> Marker for T where T: Foo {}
-            impl<T> Marker for T where T: Bar {}
-        }
-
-        goal {
-            forall<T> {
-                if (T: Foo; T: Bar) { T: Marker }
-            }
-        } yields {
-            "Unique"
-        }
-    }
-}
-
-#[test]
 fn partial_overlap_2() {
     test! {
         program {
