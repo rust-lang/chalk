@@ -959,13 +959,13 @@ impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ProgramClauseImplication {
     crate consequence: DomainGoal,
     crate conditions: Vec<Goal>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ProgramClause {
     Implies(ProgramClauseImplication),
     ForAll(Binders<ProgramClauseImplication>),

@@ -291,6 +291,32 @@ impl<T: Debug> Debug for Binders<T> {
     }
 }
 
+impl Debug for ProgramClause {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match self {
+            ProgramClause::Implies(pc) => write!(fmt, "{:?}", pc),
+            ProgramClause::ForAll(pc) => write!(fmt, "{:?}", pc),
+        }
+    }
+}
+
+impl Debug for ProgramClauseImplication {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{:?}", self.consequence)?;
+
+        let conds = self.conditions.len();
+        if conds == 0 {
+            return Ok(());
+        }
+
+        write!(fmt, " :- ")?;
+        for cond in &self.conditions[..conds - 1] {
+            write!(fmt, "{:?}, ", cond)?;
+        }
+        write!(fmt, "{:?}", self.conditions[conds - 1])
+    }
+}
+
 impl Debug for Environment {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "Env({:?})", self.clauses)
