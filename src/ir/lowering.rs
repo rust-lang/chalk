@@ -530,6 +530,12 @@ impl LowerDomainGoal for DomainGoal {
             DomainGoal::LocalImplAllowed { trait_ref } => vec![
                 ir::DomainGoal::LocalImplAllowed(trait_ref.lower(env)?)
             ],
+            DomainGoal::Compatible => vec![
+                ir::DomainGoal::Compatible(())
+            ],
+            DomainGoal::DownstreamType { ty } => vec![
+                ir::DomainGoal::DownstreamType(ty.lower(env)?)
+            ],
         };
         Ok(goals)
     }

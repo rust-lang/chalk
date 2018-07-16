@@ -305,6 +305,9 @@ DomainGoal: DomainGoal = {
     "IsFullyVisible" "(" <ty:Ty> ")" => DomainGoal::IsFullyVisible { ty },
 
     "LocalImplAllowed" "(" <trait_ref:TraitRef<":">> ")" => DomainGoal::LocalImplAllowed { trait_ref },
+
+    "Compatible" => DomainGoal::Compatible,
+    "DownstreamType" "(" <ty:Ty> ")" => DomainGoal::DownstreamType { ty },
 };
 
 LeafGoal: LeafGoal = {
