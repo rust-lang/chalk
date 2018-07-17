@@ -1102,6 +1102,11 @@ impl Goal {
         )
     }
 
+    /// Takes a goal `G` and turns it into `not { G }`
+    crate fn negate(self) -> Self {
+        Goal::Not(Box::new(self))
+    }
+
     /// Takes a goal `G` and turns it into `compatible { G }`
     crate fn compatible(self) -> Self {
         // compatible { G } desugars into: forall<T> { if (Compatible, DownstreamType(T)) { G } }

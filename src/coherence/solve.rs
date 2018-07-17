@@ -7,7 +7,7 @@ use ir::*;
 use cast::*;
 use solve::{SolverChoice, Solution};
 
-struct OverlapSolver {
+struct DisjointSolver {
     env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,
 }
@@ -21,7 +21,7 @@ impl Program {
     where
         F: FnMut(ItemId, ItemId),
     {
-        let mut solver = OverlapSolver {
+        let mut solver = DisjointSolver {
             env: Arc::new(self.environment()),
             solver_choice,
         };
@@ -65,7 +65,7 @@ impl Program {
                 // Check if the impls overlap, then if they do, check if one specializes
                 // the other. Note that specialization can only run one way - if both
                 // specialization checks return *either* true or false, that's an error.
-                if solver.overlap(lhs, rhs) {
+                if !solver.disjoint(lhs, rhs) {
                     match (solver.specializes(lhs, rhs), solver.specializes(rhs, lhs)) {
                         (true, false) => record_specialization(l_id, r_id),
                         (false, true) => record_specialization(r_id, l_id),
@@ -82,14 +82,19 @@ impl Program {
     }
 }
 
-impl OverlapSolver {
+impl DisjointSolver {
     // Test if the set of types that these two impls apply to overlap. If the test succeeds, these
-    // two impls overlap.
+    // two impls are disjoint.
     //
-    // We combine the binders of the two impls & treat them as existential
-    // quantifiers. Then we attempt to unify the input types to the trait provided
-    // by each impl, as well as prove that the where clauses from both impls all
-    // hold.
+    // We combine the binders of the two impls & treat them as existential quantifiers. Then we
+    // attempt to unify the input types to the trait provided by each impl, as well as prove that
+    // the where clauses from both impls all hold. At the end, we apply the `compatible` modality
+    // and negate the query. Negating the query means that we are asking chalk to prove that no
+    // such overlapping impl exists. By applying `compatible { G }`, chalk attempts to prove that
+    // "there exists a compatible world where G is provable." When we negate compatible, it turns
+    // into the statement "for all compatible worlds, G is not provable." This is exactly what we
+    // want since we want to ensure that there is no overlap in *all* compatible worlds, not just
+    // that there is no overlap in *some* compatible world.
     //
     // Examples:
     //
@@ -97,21 +102,21 @@ impl OverlapSolver {
     //      impl<T> Foo for T { }
     //      impl Foo for i32 { }
     //  Generates:
-    //      compatible { exists<T> { T = i32 } }
+    //      not { compatible { exists<T> { T = i32 } } }
     //
     //  Impls:
     //      impl<T1, U> Foo<T1> for Vec<U> { }
     //      impl<T2> Foo<T2> for Vec<i32> { }
     //  Generates:
-    //      compatible { exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 } }
+    //      not { compatible { exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 } } }
     //
     //  Impls:
     //      impl<T> Foo for Vec<T> where T: Bar { }
     //      impl<U> Foo for Vec<U> where U: Baz { }
     //  Generates:
-    //      compatible { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } }
+    //      not { compatible { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } }
     //
-    fn overlap(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
+    fn disjoint(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
         debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
 
         let lhs_len = lhs.binders.len();
@@ -150,19 +155,20 @@ impl OverlapSolver {
             .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
             .expect("Every trait takes at least one input type")
             .quantify(QuantifierKind::Exists, binders)
-            .compatible();
+            .compatible()
+            .negate();
 
         let canonical_goal = &goal.into_closed_goal();
         let solution = self.solver_choice
             .solve_root_goal(&self.env, canonical_goal)
             .unwrap(); // internal errors in the solver are fatal
         let result = match solution {
-            // Goal was proven with a unique solution, so an impl was found that causes these two
+            // Goal was proven with a unique solution, so no impl was found that causes these two
             // to overlap
-            Some(Solution::Unique(_)) |
+            Some(Solution::Unique(_)) => true,
             // Goal was ambiguous, so there *may* be overlap
-            Some(Solution::Ambig(_)) => true,
-            // Goal cannot be proven, so impls are disjoint
+            Some(Solution::Ambig(_)) |
+            // Goal cannot be proven, so there is some impl that causes overlap
             None => false,
         };
         debug!("overlaps: result = {:?}", result);
