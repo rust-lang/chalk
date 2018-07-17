@@ -225,6 +225,39 @@ fn overlapping_negative_impls() {
 }
 
 #[test]
+fn downstream_impl_of_fundamental_43355() {
+    // Regression test for issue 43355 which exposed an unsoundness in the original implementation
+    // with regards to how fundamental types were handled for potential downstream impls. This case
+    // fails exactly the way we want it to using chalk's overlap check rules.
+    // https://github.com/rust-lang/rust/issues/43355
+    lowering_error! {
+        program {
+            #[upstream]
+            #[fundamental]
+            struct Box<T> { }
+
+            trait Trait1<X> { }
+            trait Trait2<X> { }
+
+            struct A { }
+
+            impl<X, T> Trait1<X> for T where T: Trait2<X> { }
+            impl<X> Trait1<Box<X>> for A { }
+
+            // So how do these impls overlap? Consider a downstream crate that adds this code:
+            //
+            //     struct B;
+            //     impl Trait2<Box<B>> for A {}
+            //
+            // This makes the first impl now apply to A, which means that both of these impls now
+            // overlap for A even though they didn't overlap in the original crate where A is defined.
+        } error_msg {
+            "overlapping impls of trait \"Trait1\""
+        }
+    }
+}
+
+#[test]
 fn orphan_check() {
     // These tests are largely adapted from the compile-fail coherence-*.rs tests from rustc
 
