@@ -5,7 +5,7 @@ use itertools::Itertools;
 use errors::*;
 use ir::*;
 use cast::*;
-use solve::SolverChoice;
+use solve::{SolverChoice, Solution};
 
 struct DisjointSolver {
     env: Arc<ProgramEnvironment>,
@@ -83,13 +83,18 @@ impl Program {
 }
 
 impl DisjointSolver {
-    // Test if two impls are disjoint. If the test does not succeed, there is an overlap.
+    // Test if the set of types that these two impls apply to overlap. If the test succeeds, these
+    // two impls are disjoint.
     //
-    // We combine the binders of the two impls & treat them as existential
-    // quantifiers. Then we attempt to unify the input types to the trait provided
-    // by each impl, as well as prove that the where clauses from both impls all
-    // hold. At the end, we negate the query because we only want to return `true` if
-    // it is provable that there is no overlap.
+    // We combine the binders of the two impls & treat them as existential quantifiers. Then we
+    // attempt to unify the input types to the trait provided by each impl, as well as prove that
+    // the where clauses from both impls all hold. At the end, we apply the `compatible` modality
+    // and negate the query. Negating the query means that we are asking chalk to prove that no
+    // such overlapping impl exists. By applying `compatible { G }`, chalk attempts to prove that
+    // "there exists a compatible world where G is provable." When we negate compatible, it turns
+    // into the statement "for all compatible worlds, G is not provable." This is exactly what we
+    // want since we want to ensure that there is no overlap in *all* compatible worlds, not just
+    // that there is no overlap in *some* compatible world.
     //
     // Examples:
     //
@@ -97,19 +102,19 @@ impl DisjointSolver {
     //      impl<T> Foo for T { }
     //      impl Foo for i32 { }
     //  Generates:
-    //      not { exists<T> { T = i32 } }
+    //      not { compatible { exists<T> { T = i32 } } }
     //
     //  Impls:
     //      impl<T1, U> Foo<T1> for Vec<U> { }
     //      impl<T2> Foo<T2> for Vec<i32> { }
     //  Generates:
-    //      not { exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 } }
+    //      not { compatible { exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 } } }
     //
     //  Impls:
     //      impl<T> Foo for Vec<T> where T: Bar { }
     //      impl<U> Foo for Vec<U> where U: Baz { }
     //  Generates:
-    //      not { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } }
+    //      not { compatible { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } }
     //
     fn disjoint(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
         debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
@@ -150,15 +155,22 @@ impl DisjointSolver {
             .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
             .expect("Every trait takes at least one input type")
             .quantify(QuantifierKind::Exists, binders)
-            .negate()
-            .compatible();
+            .compatible()
+            .negate();
 
-        // Unless we can prove NO solution, we consider things to overlap.
         let canonical_goal = &goal.into_closed_goal();
-        let result = self.solver_choice
+        let solution = self.solver_choice
             .solve_root_goal(&self.env, canonical_goal)
-            .unwrap()
-            .is_some();
+            .unwrap(); // internal errors in the solver are fatal
+        let result = match solution {
+            // Goal was proven with a unique solution, so no impl was found that causes these two
+            // to overlap
+            Some(Solution::Unique(_)) => true,
+            // Goal was ambiguous, so there *may* be overlap
+            Some(Solution::Ambig(_)) |
+            // Goal cannot be proven, so there is some impl that causes overlap
+            None => false,
+        };
         debug!("overlaps: result = {:?}", result);
         result
     }

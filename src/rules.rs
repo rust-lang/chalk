@@ -319,6 +319,8 @@ impl StructDatum {
         //
         //    forall<T> { IsLocal(Box<T>) :- IsLocal(T) }
         //    forall<T> { IsUpstream(Box<T>) :- IsUpstream(T) }
+        //    // Generated for both upstream and local fundamental types
+        //    forall<T> { DownstreamType(Box<T>) :- DownstreamType(T) }
 
         let wf = self.binders.map_ref(|bound_datum| {
             ProgramClauseImplication {
@@ -343,6 +345,32 @@ impl StructDatum {
 
         let mut clauses = vec![wf, is_fully_visible];
 
+        // Fundamental types often have rules in the form of:
+        //     Goal(FundamentalType<T>) :- Goal(T)
+        // This macro makes creating that kind of clause easy
+        macro_rules! fundamental_rule {
+            ($goal:ident) => {
+                // Fundamental types must always have at least one type parameter for this rule to
+                // make any sense. We currently do not have have any fundamental types with more than
+                // one type parameter, nor do we know what the behaviour for that should be. Thus, we
+                // are asserting here that there is only a single type parameter until the day when
+                // someone makes a decision about how that should behave.
+                assert_eq!(self.binders.value.self_ty.len_type_parameters(), 1,
+                    "Only fundamental types with a single parameter are supported");
+
+                clauses.push(self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::$goal(bound_datum.self_ty.clone().cast()),
+                    conditions: vec![
+                    DomainGoal::$goal(
+                        // This unwrap is safe because we asserted above for the presence of a type
+                        // parameter
+                        bound_datum.self_ty.first_type_parameter().unwrap()
+                    ).cast(),
+                    ],
+                }).cast());
+            };
+        }
+
         // Types that are not marked `#[upstream]` satisfy IsLocal(TypeName)
         if !self.binders.value.flags.upstream {
             // `IsLocalTy(Ty)` depends *only* on whether the type is marked #[upstream] and nothing else
@@ -355,33 +383,6 @@ impl StructDatum {
         } else if self.binders.value.flags.fundamental {
             // If a type is `#[upstream]`, but is also `#[fundamental]`, it satisfies IsLocal
             // if and only if its parameters satisfy IsLocal
-
-            // Fundamental types must always have at least one type parameter for this rule to
-            // make any sense. We currently do not have have any fundamental types with more than
-            // one type parameter, nor do we know what the behaviour for that should be. Thus, we
-            // are asserting here that there is only a single type parameter until the day when
-            // someone makes a decision about how that should behave.
-            assert_eq!(self.binders.value.self_ty.len_type_parameters(), 1,
-                "Only fundamental types with a single parameter are supported");
-
-            // Fundamental types often have rules in the form of:
-            //     Goal(FundamentalType<T>) :- Goal(T)
-            // This macro makes creating that kind of clause easy
-            macro_rules! fundamental_rule {
-                ($goal:ident) => {
-                    clauses.push(self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                        consequence: DomainGoal::$goal(bound_datum.self_ty.clone().cast()),
-                        conditions: vec![
-                        DomainGoal::$goal(
-                            // This unwrap is safe because we asserted above for the presence of a type
-                            // parameter
-                            bound_datum.self_ty.first_type_parameter().unwrap()
-                        ).cast(),
-                        ],
-                    }).cast());
-                };
-            }
-
             fundamental_rule!(IsLocal);
             fundamental_rule!(IsUpstream);
         } else {
@@ -393,6 +394,10 @@ impl StructDatum {
             }).cast();
 
             clauses.push(is_upstream);
+        }
+
+        if self.binders.value.flags.fundamental {
+            fundamental_rule!(DownstreamType);
         }
 
         let condition = DomainGoal::FromEnv(
@@ -481,6 +486,25 @@ impl TraitDatum {
         //          IsFullyVisible(U),
         //          IsLocal(V)
         //    }
+        //
+        // The overlap check uses compatible { ... } mode to ensure that it accounts for impls that
+        // may exist in some other *compatible* world. For every upstream trait, we add a rule to
+        // account for the fact that upstream crates are able to compatibly add impls of upstream
+        // traits for upstream types.
+        //
+        //     // For `#[upstream] trait Foo<T, U, V> where Self: Eq<T> { ... }`
+        //     forall<Self, T, U, V> {
+        //         Implemented(Self: Foo<T, U, V>) :-
+        //             Implemented(Self: Eq<T>), // where clauses
+        //             Compatible,               // compatible modality
+        //             IsUpstream(Self),
+        //             IsUpstream(T),
+        //             IsUpstream(U),
+        //             IsUpstream(V),
+        //             CannotProve,              // returns ambiguous
+        //     }
+
+        let mut clauses = Vec::new();
 
         let trait_ref = self.binders.value.trait_ref.clone();
 
@@ -503,8 +527,32 @@ impl TraitDatum {
                 },
             }
         }).cast();
+        clauses.push(wf);
 
-        let mut clauses = vec![wf];
+        // The number of parameters will always be at least 1 because of the Self parameter
+        // that is automatically added to every trait. This is important because otherwise
+        // the added program clauses would not have any conditions.
+        let type_parameters: Vec<_> = self.binders.value.trait_ref.type_parameters().collect();
+
+        // Add all cases for potential downstream impls that could exist
+        for i in 0..type_parameters.len() {
+            let impl_may_exist = self.binders.map_ref(|bound_datum|
+                ProgramClauseImplication {
+                    consequence: DomainGoal::Holds(WhereClause::Implemented(bound_datum.trait_ref.clone())),
+                    conditions: bound_datum.where_clauses
+                        .iter()
+                        .cloned()
+                        .casted()
+                        .chain(iter::once(DomainGoal::Compatible(()).cast()))
+                        .chain((0..i).map(|j| DomainGoal::IsFullyVisible(type_parameters[j].clone()).cast()))
+                        .chain(iter::once(DomainGoal::DownstreamType(type_parameters[i].clone()).cast()))
+                        .chain(iter::once(Goal::CannotProve(())))
+                        .collect(),
+                }
+            ).cast();
+
+            clauses.push(impl_may_exist);
+        }
 
         if !self.binders.value.flags.upstream {
             let impl_allowed = self.binders.map_ref(|bound_datum|
@@ -516,12 +564,6 @@ impl TraitDatum {
 
             clauses.push(impl_allowed);
         } else {
-            // The number of parameters will always be at least 1 because of the Self parameter
-            // that is automatically added to every trait. This is important because otherwise
-            // the added program clauses would not have any conditions.
-
-            let type_parameters: Vec<_> = self.binders.value.trait_ref.type_parameters().collect();
-
             for i in 0..type_parameters.len() {
                 let impl_maybe_allowed = self.binders.map_ref(|bound_datum|
                     ProgramClauseImplication {
@@ -535,6 +577,20 @@ impl TraitDatum {
 
                 clauses.push(impl_maybe_allowed);
             }
+
+            let impl_may_exist = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                consequence: DomainGoal::Holds(WhereClause::Implemented(bound_datum.trait_ref.clone())),
+                conditions: bound_datum.where_clauses
+                    .iter()
+                    .cloned()
+                    .casted()
+                    .chain(iter::once(DomainGoal::Compatible(()).cast()))
+                    .chain(bound_datum.trait_ref.type_parameters().map(|ty| DomainGoal::IsUpstream(ty).cast()))
+                    .chain(iter::once(Goal::CannotProve(())))
+                    .collect(),
+            }).cast();
+
+            clauses.push(impl_may_exist);
         }
 
         let condition = DomainGoal::FromEnv(FromEnv::Trait(trait_ref.clone()));
