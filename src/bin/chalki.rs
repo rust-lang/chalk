@@ -148,7 +148,7 @@ where
                 // Process the line.
                 f(rl, &line);
             }
-            
+
             // EOF: We're done.
             Err(ReadlineError::Eof) => break,
 
@@ -191,7 +191,7 @@ fn process(
         }
     } else {
         // The command is either "print", "lowered", or a goal.
-        
+
         // Check that a program has been loaded.
         let prog = prog.as_ref()
             .ok_or("no program currently loaded; type 'help' to see available commands")?;
@@ -251,7 +251,7 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
     Ok(text)
 }
 
-/// Parse a goal and attempt to solve it, using the specified solver. 
+/// Parse a goal and attempt to solve it, using the specified solver.
 // TODO: Could we pass in an Options struct or something? The Args struct
 // still has Strings where it should have Enums... (e.g. solver_choice)
 fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {

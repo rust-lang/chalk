@@ -1,5 +1,3 @@
-#![allow(bare_trait_object)] // FIXME -- error-chain uses old-style trait objects
-
 use chalk_parse::{self, ast};
 use ir;
 

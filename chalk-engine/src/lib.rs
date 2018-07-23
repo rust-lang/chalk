@@ -56,11 +56,6 @@
 #![feature(step_trait)]
 #![feature(non_modrs_mods)]
 #![feature(rustc_private)]
-//FIXME(2018-05-14): In rustc we build using beta and dyn trait is still unstable right now, so we
-// need to allow this to remove the warning about dyn_trait being stable in the latest rust.
-// We should probably eventually remove this `allow` and delete any unecessary `feature` declarations.
-#![allow(stable_features)]
-#![feature(dyn_trait)]
 
 #[macro_use]
 extern crate chalk_macros;
