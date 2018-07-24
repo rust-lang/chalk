@@ -58,7 +58,7 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <deref:DerefLangItem?> "trait" <n:Id><p:Angle<ParameterKind>>
+    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <deref:DerefLangItem?> "trait" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
     {
         name: n,
@@ -69,6 +69,7 @@ TraitDefn: TraitDefn = {
             auto: auto.is_some(),
             marker: marker.is_some(),
             upstream: upstream.is_some(),
+            fundamental: fundamental.is_some(),
             deref: deref.is_some(),
         },
     }

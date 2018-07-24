@@ -272,6 +272,7 @@ pub struct TraitFlags {
     crate auto: bool,
     crate marker: bool,
     crate upstream: bool,
+    crate fundamental: bool,
     pub deref: bool,
 }
 
