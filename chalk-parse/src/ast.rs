@@ -55,6 +55,7 @@ pub struct TraitFlags {
     pub auto: bool,
     pub marker: bool,
     pub upstream: bool,
+    pub fundamental: bool,
     pub deref: bool,
 }
 

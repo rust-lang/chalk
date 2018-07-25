@@ -503,6 +503,32 @@ impl TraitDatum {
         //             IsUpstream(V),
         //             CannotProve,              // returns ambiguous
         //     }
+        //
+        // In certain situations, this is too restrictive. Consider the following code:
+        //
+        //    // In crate std:
+        //    trait Sized { }
+        //    struct str { }
+        //
+        //    // In crate bar: (depends on std)
+        //    trait Bar { }
+        //    impl Bar for str { }
+        //    impl<T> Bar for T where T: Sized { }
+        //
+        // Here, because of the rules we've defined, these two impls overlap. The std crate is
+        // upstream to bar, and thus it is allowed to compatibly implement Sized for str. If str
+        // can implement Sized in a compatible future, these two impls definitely overlap since the
+        // second impl covers all types that implement Sized.
+        //
+        // The solution we've got right now is to mark Sized as "fundamental" when it is defined.
+        // This signals to the Rust compiler that it can rely on the fact that str does not
+        // implement Sized in all contexts. A consequence of this is that we can no longer add an
+        // implementation of Sized compatibly for str. This is the trade off you make when defining
+        // a fundamental trait.
+        //
+        // To implement fundamental traits, we simply just do not add the rule above that allows
+        // upstream types to implement upstream traits. Fundamental traits are not allowed to
+        // compatibly do that.
 
         let mut clauses = Vec::new();
 
@@ -578,9 +604,12 @@ impl TraitDatum {
                 clauses.push(impl_maybe_allowed);
             }
 
-            let impl_may_exist = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::Holds(WhereClause::Implemented(bound_datum.trait_ref.clone())),
-                conditions: bound_datum.where_clauses
+            // Fundamental traits can be reasoned about negatively without any ambiguity, so no
+            // need for this rule if the trait is fundamental.
+            if !self.binders.value.flags.fundamental {
+                let impl_may_exist = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::Holds(WhereClause::Implemented(bound_datum.trait_ref.clone())),
+                    conditions: bound_datum.where_clauses
                     .iter()
                     .cloned()
                     .casted()
@@ -588,9 +617,10 @@ impl TraitDatum {
                     .chain(bound_datum.trait_ref.type_parameters().map(|ty| DomainGoal::IsUpstream(ty).cast()))
                     .chain(iter::once(Goal::CannotProve(())))
                     .collect(),
-            }).cast();
+                }).cast();
 
-            clauses.push(impl_may_exist);
+                clauses.push(impl_may_exist);
+            }
         }
 
         let condition = DomainGoal::FromEnv(FromEnv::Trait(trait_ref.clone()));

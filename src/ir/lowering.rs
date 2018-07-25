@@ -1056,6 +1056,7 @@ impl LowerTrait for TraitDefn {
                     auto: self.flags.auto,
                     marker: self.flags.marker,
                     upstream: self.flags.upstream,
+                    fundamental: self.flags.fundamental,
                     deref: self.flags.deref,
                 },
             })
