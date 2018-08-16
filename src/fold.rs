@@ -437,9 +437,9 @@ enum_fold!(ProgramClause[] { Implies(a), ForAll(a) });
 enum_fold!(InlineBound[] { TraitBound(a), ProjectionEqBound(a) });
 
 macro_rules! struct_fold {
-    ($s:ident $([$($tt_args:tt)*])? { $($name:ident),* $(,)* } $($w:tt)*) => {
+    ($s:ident $([$($tt_args:tt)*])* { $($name:ident),* $(,)* } $($w:tt)*) => {
         struct_fold! {
-            @parse_tt_args($($($tt_args)*)?)
+            @parse_tt_args($($($tt_args)*)*)
                 struct_name($s)
                 parameters()
                 self_args()
