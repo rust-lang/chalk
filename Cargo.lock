@@ -82,7 +82,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "chalk"
 version = "0.1.0"
 dependencies = [
- "chalk-engine 0.6.0",
+ "chalk-engine 0.7.0",
  "chalk-macros 0.1.0",
  "chalk-parse 0.1.0",
  "diff 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -100,7 +100,7 @@ dependencies = [
 
 [[package]]
 name = "chalk-engine"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "chalk-macros 0.1.0",
  "rustc-hash 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
