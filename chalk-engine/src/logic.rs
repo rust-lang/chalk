@@ -289,7 +289,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             ops: PhantomData<CO>,
         }
 
-        impl<C: Context, CO: ContextOps<C>, OP: WithInstantiatedStrand<C, CO>> 
+        impl<C: Context, CO: ContextOps<C>, OP: WithInstantiatedStrand<C, CO>>
             WithInstantiatedExClause<C> for With<C, CO, OP> {
             type Output = OP::Output;
 
@@ -737,7 +737,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             this: &'a mut Forest<C, CO>,
         }
 
-        impl<C: Context, CO: ContextOps<C>> WithInstantiatedUCanonicalGoal<C> 
+        impl<C: Context, CO: ContextOps<C>> WithInstantiatedUCanonicalGoal<C>
                                                 for PushInitialStrandsInstantiated<'a, C, CO> {
             type Output = ();
 
@@ -1166,7 +1166,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         depth: StackIndex,
         strand: Strand<'_, C, impl Context>,
     ) -> StrandResult<C, ()> {
-        ::crate::maybe_grow_stack(|| self.pursue_strand(depth, strand))
+        crate::maybe_grow_stack(|| self.pursue_strand(depth, strand))
     }
 
     /// Invoked when we have found a successful answer to the given

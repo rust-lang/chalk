@@ -267,7 +267,7 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         value: &Canonical<InEnvironment<Goal>>,
     ) -> (
         UCanonical<InEnvironment<Goal>>,
-        ::crate::solve::infer::ucanonicalize::UniverseMap,
+        crate::solve::infer::ucanonicalize::UniverseMap,
     ) {
         let UCanonicalized {
             quantified,
