@@ -204,7 +204,7 @@ impl AssociatedTyValue {
                                        .value
                                        .trait_ref
                                        .trait_ref()
-                                       .up_shift(self.value.len());
+                                       .shifted_in(self.value.len());
 
         let all_parameters: Vec<_> =
             self.value.binders
@@ -424,7 +424,7 @@ impl StructDatum {
                 binders: wc.binders.into_iter().chain(self.binders.binders.clone()).collect(),
                 value: ProgramClauseImplication {
                     consequence: wc.value,
-                    conditions: vec![condition.clone().up_shift(shift).cast()],
+                    conditions: vec![condition.clone().shifted_in(shift).cast()],
                 }
             }.cast());
         }
@@ -639,7 +639,7 @@ impl TraitDatum {
                 binders: wc.binders.into_iter().chain(self.binders.binders.clone()).collect(),
                 value: ProgramClauseImplication {
                     consequence: wc.value,
-                    conditions: vec![condition.clone().up_shift(shift).cast()],
+                    conditions: vec![condition.clone().shifted_in(shift).cast()],
                 }
             }.cast());
         }
@@ -788,7 +788,7 @@ impl AssociatedTyDatum {
                 value: ProgramClauseImplication {
                     consequence: wc.value.clone().into_from_env_goal(),
                     conditions: vec![
-                        FromEnv::Ty(app_ty.clone()).up_shift(shift).cast()
+                        FromEnv::Ty(app_ty.clone()).shifted_in(shift).cast()
                     ],
                 }
             }.cast()
@@ -807,7 +807,7 @@ impl AssociatedTyDatum {
                 value: ProgramClauseImplication {
                     consequence: bound.value.clone().into_from_env_goal(),
                     conditions: vec![
-                        FromEnv::Trait(trait_ref.clone()).up_shift(shift).cast()
+                        FromEnv::Trait(trait_ref.clone()).shifted_in(shift).cast()
                     ],
                 }
             }.cast()

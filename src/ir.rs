@@ -300,7 +300,7 @@ impl InlineBound {
 
 impl QuantifiedInlineBound {
     crate fn into_where_clauses(&self, self_ty: Ty) -> Vec<QuantifiedWhereClause> {
-        let self_ty = self_ty.up_shift(self.binders.len());
+        let self_ty = self_ty.shifted_in(self.binders.len());
         self.value.into_where_clauses(self_ty).into_iter().map(|wc| {
             Binders {
                 binders: self.binders.clone(),
@@ -920,7 +920,7 @@ impl<T> Binders<T> {
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
         let new_var = Ty::Var(0);
-        let value = op(self.value.up_shift(1), new_var);
+        let value = op(self.value.shifted_in(1), new_var);
         Binders {
             binders: iter::once(ParameterKind::Ty(()))
             .chain(self.binders.iter().cloned())
@@ -1271,7 +1271,7 @@ impl<'a> ExistentialFolder for &'a Substitution {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         let ty = &self.parameters[depth];
         let ty = ty.assert_ty_ref();
-        Ok(ty.up_shift(binders))
+        Ok(ty.shifted_in(binders))
     }
 
     fn fold_free_existential_lifetime(
@@ -1281,7 +1281,7 @@ impl<'a> ExistentialFolder for &'a Substitution {
     ) -> Fallible<Lifetime> {
         let l = &self.parameters[depth];
         let l = l.assert_lifetime_ref();
-        Ok(l.up_shift(binders))
+        Ok(l.shifted_in(binders))
     }
 }
 

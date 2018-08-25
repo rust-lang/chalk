@@ -34,7 +34,7 @@ crate trait Shift: Fold {
     ///                  ^^           ^^ refers to `?X`
     ///                  refers to `U`
     /// ```
-    fn up_shift(&self, adjustment: usize) -> Self::Result;
+    fn shifted_in(&self, adjustment: usize) -> Self::Result;
 
     /// Shifts debruijn indices in `self` **down**, hence **removing**
     /// a value from binders. This will fail with `Err(NoSolution)` in
@@ -57,15 +57,15 @@ crate trait Shift: Fold {
     /// But if we try to `down_shift` the `T = ?0` goal by 1, we will
     /// get `Err`, because it refers to the type bound by the
     /// `exists`.
-    fn down_shift(&self, adjustment: usize) -> Fallible<Self::Result>;
+    fn shifted_out(&self, adjustment: usize) -> Fallible<Self::Result>;
 }
 
 impl<T: Fold> Shift for T {
-    fn up_shift(&self, adjustment: usize) -> T::Result {
+    fn shifted_in(&self, adjustment: usize) -> T::Result {
         self.fold_with(&mut Shifter { adjustment }, 0).unwrap()
     }
 
-    fn down_shift(&self, adjustment: usize) -> Fallible<T::Result> {
+    fn shifted_out(&self, adjustment: usize) -> Fallible<T::Result> {
         self.fold_with(&mut DownShifter { adjustment }, 0)
     }
 }

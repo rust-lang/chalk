@@ -404,7 +404,7 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
             let tick_x = self.unifier.table.new_variable(self.universe_index);
             self.unifier
                 .push_lifetime_eq_constraint(tick_x.to_lifetime(), ui.to_lifetime());
-            Ok(tick_x.to_lifetime().up_shift(binders))
+            Ok(tick_x.to_lifetime().shifted_in(binders))
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name
             // this lifetime, no problem.
@@ -420,7 +420,7 @@ impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_ty) => {
                 let normalized_ty = normalized_ty.ty().unwrap();
-                Ok(normalized_ty.fold_with(self, 0)?.up_shift(binders))
+                Ok(normalized_ty.fold_with(self, 0)?.shifted_in(binders))
             }
 
             // Otherwise, check the universe of the variable, and also
@@ -473,11 +473,11 @@ impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
                         .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
                         .unwrap();
                 }
-                Ok(Lifetime::Var(depth).up_shift(binders))
+                Ok(Lifetime::Var(depth).shifted_in(binders))
             }
 
             InferenceValue::Bound(l) => {
-                let l = l.lifetime().unwrap().up_shift(binders);
+                let l = l.lifetime().unwrap().shifted_in(binders);
                 l.fold_with(self, binders)
             }
         }

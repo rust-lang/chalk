@@ -31,7 +31,7 @@ impl<'b> ExistentialFolder for Subst<'b> {
             Ok(Ty::Var(depth - self.parameters.len() + binders))
         } else {
             match self.parameters[depth] {
-                ParameterKind::Ty(ref t) => Ok(t.up_shift(binders)),
+                ParameterKind::Ty(ref t) => Ok(t.shifted_in(binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         }
@@ -46,7 +46,7 @@ impl<'b> ExistentialFolder for Subst<'b> {
             Ok(Lifetime::Var(depth - self.parameters.len() + binders))
         } else {
             match self.parameters[depth] {
-                ParameterKind::Lifetime(ref l) => Ok(l.up_shift(binders)),
+                ParameterKind::Lifetime(ref l) => Ok(l.shifted_in(binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         }

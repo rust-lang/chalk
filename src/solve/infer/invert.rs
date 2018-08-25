@@ -121,7 +121,7 @@ impl<'q> UniversalFolder for Inverter<'q> {
                 .entry(universe)
                 .or_insert_with(|| table.new_variable(universe))
                 .to_ty()
-                .up_shift(binders),
+                .shifted_in(binders),
         )
     }
 
@@ -136,7 +136,7 @@ impl<'q> UniversalFolder for Inverter<'q> {
                 .entry(universe)
                 .or_insert_with(|| table.new_variable(universe))
                 .to_lifetime()
-                .up_shift(binders),
+                .shifted_in(binders),
         )
     }
 }

@@ -156,7 +156,7 @@ impl DefaultTypeFolder for Instantiator {}
 impl ExistentialFolder for Instantiator {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         if depth < self.vars.len() {
-            Ok(self.vars[depth].assert_ty_ref().up_shift(binders))
+            Ok(self.vars[depth].assert_ty_ref().shifted_in(binders))
         } else {
             Ok(Ty::Var(depth + binders - self.vars.len())) // see comment above
         }
@@ -168,7 +168,7 @@ impl ExistentialFolder for Instantiator {
         binders: usize,
     ) -> Fallible<Lifetime> {
         if depth < self.vars.len() {
-            Ok(self.vars[depth].assert_lifetime_ref().up_shift(binders))
+            Ok(self.vars[depth].assert_lifetime_ref().shifted_in(binders))
         } else {
             Ok(Lifetime::Var(depth + binders - self.vars.len())) // see comment above
         }

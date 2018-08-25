@@ -152,7 +152,7 @@ impl InferenceTable {
                     InferenceValue::Unbound(_) => None,
                     InferenceValue::Bound(ref val) => {
                         let ty = val.as_ref().ty().unwrap();
-                        Some(ty.up_shift(binders))
+                        Some(ty.shifted_in(binders))
                     }
                 }
             }
@@ -168,7 +168,7 @@ impl InferenceTable {
                     return None;
                 }
                 let v1 = self.probe_lifetime_var(InferenceVariable::from_depth(v - binders))?;
-                Some(v1.up_shift(binders))
+                Some(v1.shifted_in(binders))
             }
             Lifetime::ForAll(_) => None,
         }

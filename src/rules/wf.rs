@@ -219,7 +219,7 @@ impl WfSolver {
                            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
                            .casted();
             
-            let trait_ref = trait_ref.up_shift(assoc_ty.value.binders.len());
+            let trait_ref = trait_ref.shifted_in(assoc_ty.value.binders.len());
 
             let all_parameters: Vec<_> =
                 assoc_ty.value.binders.iter()

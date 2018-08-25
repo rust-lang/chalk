@@ -285,7 +285,7 @@ impl<'t> AnswerSubstitutor<'t> {
         let answer_param = &self.answer_subst.parameters[answer_depth - self.answer_binders];
 
         let pending_shifted = &pending
-            .down_shift(self.pending_binders)
+            .shifted_out(self.pending_binders)
             .unwrap_or_else(|_| {
                 panic!(
                     "truncate extracted a pending value that references internal binder: {:?}",

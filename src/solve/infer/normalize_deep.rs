@@ -36,7 +36,7 @@ impl<'table> ExistentialFolder for DeepNormalizer<'table> {
     fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_ty_var(var) {
-            Some(ty) => Ok(ty.fold_with(self, 0)?.up_shift(binders)),
+            Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(binders)),
             None => Ok(InferenceVariable::from_depth(depth + binders).to_ty()),
         }
     }
@@ -48,7 +48,7 @@ impl<'table> ExistentialFolder for DeepNormalizer<'table> {
     ) -> Fallible<Lifetime> {
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_lifetime_var(var) {
-            Some(l) => Ok(l.fold_with(self, 0)?.up_shift(binders)),
+            Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(binders)),
             None => Ok(InferenceVariable::from_depth(depth + binders).to_lifetime()),
         }
     }

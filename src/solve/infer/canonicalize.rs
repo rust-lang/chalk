@@ -120,7 +120,7 @@ impl<'q> ExistentialFolder for Canonicalizer<'q> {
         match self.table.probe_ty_var(var) {
             Some(ty) => {
                 debug!("bound to {:?}", ty);
-                Ok(ty.fold_with(self, 0)?.up_shift(binders))
+                Ok(ty.fold_with(self, 0)?.shifted_in(binders))
             }
             None => {
                 // If this variable is not yet bound, find its
@@ -149,7 +149,7 @@ impl<'q> ExistentialFolder for Canonicalizer<'q> {
         match self.table.probe_lifetime_var(var) {
             Some(l) => {
                 debug!("bound to {:?}", l);
-                Ok(l.fold_with(self, 0)?.up_shift(binders))
+                Ok(l.fold_with(self, 0)?.shifted_in(binders))
             }
             None => {
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));

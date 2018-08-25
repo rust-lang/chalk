@@ -127,7 +127,7 @@ impl DisjointSolver {
 
         // Upshift the rhs variables in params to account for the joined binders
         let lhs_params = params(lhs).iter().cloned();
-        let rhs_params = params(rhs).iter().map(|param| param.up_shift(lhs_len));
+        let rhs_params = params(rhs).iter().map(|param| param.shifted_in(lhs_len));
 
         // Create an equality goal for every input type the trait, attempting
         // to unify the inputs to both impls with one another
@@ -141,7 +141,7 @@ impl DisjointSolver {
             .value
             .where_clauses
             .iter()
-            .map(|wc| wc.up_shift(lhs_len));
+            .map(|wc| wc.shifted_in(lhs_len));
 
         // Create a goal for each clause in both where clauses
         let wc_goals = lhs_where_clauses
@@ -209,7 +209,7 @@ impl DisjointSolver {
 
         // Create parameter equality goals.
         let more_special_params = params(more_special).iter().cloned();
-        let less_special_params = params(less_special).iter().map(|p| p.up_shift(more_len));
+        let less_special_params = params(less_special).iter().map(|p| p.shifted_in(more_len));
         let params_goals = more_special_params
             .zip(less_special_params)
             .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
@@ -228,7 +228,7 @@ impl DisjointSolver {
             .value
             .where_clauses
             .iter()
-            .map(|wc| wc.up_shift(more_len).cast());
+            .map(|wc| wc.shifted_in(more_len).cast());
 
         // Join all of the goals together.
         let goal = params_goals

@@ -88,7 +88,7 @@ impl<'infer> TypeFolder for Truncater<'infer> {
         // a fresh existential variable (in the innermost universe).
         let post_size = self.current_size;
         let result = if pre_size < self.max_size && post_size > self.max_size {
-            self.overflow(pre_size).up_shift(binders)
+            self.overflow(pre_size).shifted_in(binders)
         } else {
             result
         };
