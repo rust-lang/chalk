@@ -49,7 +49,13 @@ pub struct Program {
 }
 
 impl Program {
-    /// Used for debugging output
+    /// Given a projection of an associated type, split the type parameters
+    /// into those that come from the *trait* and those that come from the
+    /// *associated type itself*. So e.g. if you have `(Iterator::Item)<F>`,
+    /// this would return `([F], [])`, since `Iterator::Item` is not generic
+    /// and hence doesn't have any type parameters itself.
+    /// 
+    /// Used primarily for debugging output.
     crate fn split_projection<'p>(
         &self,
         projection: &'p ProjectionTy,
