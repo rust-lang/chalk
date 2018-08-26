@@ -69,8 +69,9 @@ impl Program {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProgramEnvironment {
-    /// For each trait (used for debugging):
-    crate trait_data: BTreeMap<ItemId, TraitDatum>,
+    /// Indicates whether a given trait has coinductive semantics --
+    /// at present, this is true only for auto traits.
+    crate coinductive_traits: BTreeSet<ItemId>,
 
     /// For each associated type (used for debugging):
     crate associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
@@ -1191,10 +1192,7 @@ impl Goal {
         match self {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => {
                 match wca {
-                    WhereClause::Implemented(tr) => {
-                        let trait_datum = &program.trait_data[&tr.trait_id];
-                        trait_datum.binders.value.flags.auto
-                    }
+                    WhereClause::Implemented(tr) => program.coinductive_traits.contains(&tr.trait_id),
                     WhereClause::ProjectionEq(..) => false,
                 }
             }
