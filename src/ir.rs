@@ -73,9 +73,6 @@ pub struct ProgramEnvironment {
     /// at present, this is true only for auto traits.
     crate coinductive_traits: BTreeSet<ItemId>,
 
-    /// For each associated type (used for debugging):
-    crate associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
-
     /// Compiled forms of the above:
     crate program_clauses: Vec<ProgramClause>,
 }

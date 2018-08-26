@@ -10,7 +10,8 @@ use fold::shift::Shift;
 
 mod test;
 
-struct WfSolver {
+struct WfSolver<'me> {
+    program: &'me Program,
     env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,
 }
@@ -22,6 +23,7 @@ impl Program {
 
     fn solve_wf_requirements(&self, solver_choice: SolverChoice) -> Result<()> {
         let solver = WfSolver {
+            program: self,
             env: Arc::new(self.environment()),
             solver_choice,
         };
@@ -124,7 +126,7 @@ impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
     }
 }
 
-impl WfSolver {
+impl<'me> WfSolver<'me> {
     fn verify_struct_decl(&self, struct_datum: &StructDatum) -> bool {
         // We retrieve all the input types of the struct fields.
         let mut input_types = Vec::new();
@@ -208,7 +210,7 @@ impl WfSolver {
         // ```
         // we would issue the following subgoal: `forall<'a> { WellFormed(Box<&'a T>) }`.
         let compute_assoc_ty_goal = |assoc_ty: &AssociatedTyValue| {
-            let assoc_ty_datum = &self.env.associated_ty_data[&assoc_ty.associated_ty_id];
+            let assoc_ty_datum = &self.program.associated_ty_data[&assoc_ty.associated_ty_id];
             let bounds = &assoc_ty_datum.bounds;
 
             let mut input_types = Vec::new();

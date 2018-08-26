@@ -95,11 +95,8 @@ impl Program {
                 }
             }).collect();
 
-        let associated_ty_data = self.associated_ty_data.clone();
-
         ProgramEnvironment {
             coinductive_traits,
-            associated_ty_data,
             program_clauses,
         }
     }
