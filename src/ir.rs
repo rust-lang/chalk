@@ -279,16 +279,6 @@ impl<T, L> ast::Kinded for ParameterKind<T, L> {
     }
 }
 
-pub trait Anonymize {
-    fn anonymize(&self) -> Vec<ParameterKind<()>>;
-}
-
-impl Anonymize for [ParameterKind<Identifier>] {
-    fn anonymize(&self) -> Vec<ParameterKind<()>> {
-        self.iter().map(|pk| pk.map(|_| ())).collect()
-    }
-}
-
 pub trait ToParameter {
     /// Utility for converting a list of all the binders into scope
     /// into references to those binders. Simply pair the binders with

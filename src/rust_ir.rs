@@ -4,8 +4,8 @@
 
 use fold::shift::Shift;
 use ir::{
-    Anonymize, ApplicationTy, Binders, Identifier, ItemId, Parameter, ParameterKind, ProgramClause,
-    ProjectionEq, ProjectionTy, QuantifiedWhereClause, ToParameter, TraitRef, Ty, TypeSort,
+    ApplicationTy, Binders, Identifier, ItemId, Lifetime, Parameter, ParameterKind, ProgramClause,
+    ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty, TypeSort,
     WhereClause,
 };
 use std::collections::BTreeMap;
@@ -229,6 +229,39 @@ impl ProjectionEqBound {
                 ty: self.value.clone(),
             }),
         ]
+    }
+}
+
+pub trait Anonymize {
+    /// Utility function that converts from a list of generic parameters
+    /// which *have* names (`ParameterKind<Identifier>`) to a list of
+    /// "anonymous" generic parameters that just preserves their
+    /// kinds (`ParameterKind<()>`). Often convenient in lowering.
+    fn anonymize(&self) -> Vec<ParameterKind<()>>;
+}
+
+impl Anonymize for [ParameterKind<Identifier>] {
+    fn anonymize(&self) -> Vec<ParameterKind<()>> {
+        self.iter().map(|pk| pk.map(|_| ())).collect()
+    }
+}
+
+pub trait ToParameter {
+    /// Utility for converting a list of all the binders into scope
+    /// into references to those binders. Simply pair the binders with
+    /// the indices, and invoke `to_parameter()` on the `(binder,
+    /// index)` pair. The result will be a reference to a bound
+    /// variable of appropriate kind at the corresponding index.
+    fn to_parameter(&self) -> Parameter;
+}
+
+impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
+    fn to_parameter(&self) -> Parameter {
+        let &(binder, index) = self;
+        match *binder {
+            ParameterKind::Lifetime(_) => ParameterKind::Lifetime(Lifetime::Var(index)),
+            ParameterKind::Ty(_) => ParameterKind::Ty(Ty::Var(index)),
+        }
     }
 }
 

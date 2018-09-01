@@ -5,8 +5,8 @@ use lalrpop_intern::intern;
 
 use cast::{Cast, Caster};
 use errors::*;
-use ir::{self, Anonymize, ToParameter};
-use rust_ir;
+use ir;
+use rust_ir::{self, Anonymize, ToParameter};
 use itertools::Itertools;
 use solve::SolverChoice;
 
