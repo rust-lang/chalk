@@ -6,13 +6,14 @@ use lalrpop_intern::intern;
 use cast::{Cast, Caster};
 use errors::*;
 use ir::{self, Anonymize, ToParameter};
+use rust_ir;
 use itertools::Itertools;
 use solve::SolverChoice;
 
 mod test;
 
 type TypeIds = BTreeMap<ir::Identifier, ir::ItemId>;
-type TypeKinds = BTreeMap<ir::ItemId, ir::TypeKind>;
+type TypeKinds = BTreeMap<ir::ItemId, rust_ir::TypeKind>;
 type AssociatedTyInfos = BTreeMap<(ir::ItemId, ir::Identifier), AssociatedTyInfo>;
 type ParameterMap = BTreeMap<ir::ParameterKind<ir::Identifier>, usize>;
 
@@ -66,7 +67,7 @@ impl<'k> Env<'k> {
         bail!("invalid lifetime name: {:?}", name.str);
     }
 
-    fn type_kind(&self, id: ir::ItemId) -> &ir::TypeKind {
+    fn type_kind(&self, id: ir::ItemId) -> &rust_ir::TypeKind {
         &self.type_kinds[&id]
     }
 
@@ -111,11 +112,11 @@ impl<'k> Env<'k> {
 
 pub trait LowerProgram {
     /// Lowers from a Program AST to the internal IR for a program.
-    fn lower(&self, solver_choice: SolverChoice) -> Result<ir::Program>;
+    fn lower(&self, solver_choice: SolverChoice) -> Result<rust_ir::Program>;
 }
 
 impl LowerProgram for Program {
-    fn lower(&self, solver_choice: SolverChoice) -> Result<ir::Program> {
+    fn lower(&self, solver_choice: SolverChoice) -> Result<rust_ir::Program> {
         let mut index = 0;
         let mut next_item_id = || -> ir::ItemId {
             let i = index;
@@ -188,7 +189,7 @@ impl LowerProgram for Program {
 
                         associated_ty_data.insert(
                             info.id,
-                            ir::AssociatedTyDatum {
+                            rust_ir::AssociatedTyDatum {
                                 trait_id: item_id,
                                 id: info.id,
                                 name: defn.name.str,
@@ -201,10 +202,10 @@ impl LowerProgram for Program {
 
                     if d.flags.deref {
                         use std::collections::btree_map::Entry::*;
-                        match lang_items.entry(ir::LangItem::DerefTrait) {
+                        match lang_items.entry(rust_ir::LangItem::DerefTrait) {
                             Vacant(entry) => { entry.insert(item_id); },
                             Occupied(_) => {
-                                bail!(ErrorKind::DuplicateLangItem(ir::LangItem::DerefTrait))
+                                bail!(ErrorKind::DuplicateLangItem(rust_ir::LangItem::DerefTrait))
                             }
                         }
                     }
@@ -218,7 +219,7 @@ impl LowerProgram for Program {
             }
         }
 
-        let mut program = ir::Program {
+        let mut program = rust_ir::Program {
             type_ids,
             type_kinds,
             struct_data,
@@ -239,7 +240,7 @@ impl LowerProgram for Program {
 }
 
 trait LowerTypeKind {
-    fn lower_type_kind(&self) -> Result<ir::TypeKind>;
+    fn lower_type_kind(&self) -> Result<rust_ir::TypeKind>;
 }
 
 trait LowerParameterMap {
@@ -370,8 +371,8 @@ trait LowerWhereClauses {
 }
 
 impl LowerTypeKind for StructDefn {
-    fn lower_type_kind(&self) -> Result<ir::TypeKind> {
-        Ok(ir::TypeKind {
+    fn lower_type_kind(&self) -> Result<rust_ir::TypeKind> {
+        Ok(rust_ir::TypeKind {
             sort: ir::TypeSort::Struct,
             name: self.name.str,
             binders: ir::Binders {
@@ -389,9 +390,9 @@ impl LowerWhereClauses for StructDefn {
 }
 
 impl LowerTypeKind for TraitDefn {
-    fn lower_type_kind(&self) -> Result<ir::TypeKind> {
+    fn lower_type_kind(&self) -> Result<rust_ir::TypeKind> {
         let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
-        Ok(ir::TypeKind {
+        Ok(rust_ir::TypeKind {
             sort: ir::TypeSort::Trait,
             name: self.name.str,
             binders: ir::Binders {
@@ -568,11 +569,11 @@ impl LowerLeafGoal for LeafGoal {
 }
 
 trait LowerStructDefn {
-    fn lower_struct(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::StructDatum>;
+    fn lower_struct(&self, item_id: ir::ItemId, env: &Env) -> Result<rust_ir::StructDatum>;
 }
 
 impl LowerStructDefn for StructDefn {
-    fn lower_struct(&self, item_id: ir::ItemId, env: &Env) -> Result<ir::StructDatum> {
+    fn lower_struct(&self, item_id: ir::ItemId, env: &Env) -> Result<rust_ir::StructDatum> {
         let binders = env.in_binders(self.all_parameters(), |env| {
             let self_ty = ir::ApplicationTy {
                 name: ir::TypeName::ItemId(item_id),
@@ -591,18 +592,18 @@ impl LowerStructDefn for StructDefn {
             let fields: Result<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
             let where_clauses = self.lower_where_clauses(env)?;
 
-            Ok(ir::StructDatumBound {
+            Ok(rust_ir::StructDatumBound {
                 self_ty,
                 fields: fields?,
                 where_clauses,
-                flags: ir::StructFlags {
+                flags: rust_ir::StructFlags {
                     upstream: self.flags.upstream,
                     fundamental: self.flags.fundamental,
                 },
             })
         })?;
 
-        Ok(ir::StructDatum { binders })
+        Ok(rust_ir::StructDatum { binders })
     }
 }
 
@@ -633,11 +634,11 @@ impl LowerTraitRef for TraitRef {
 }
 
 trait LowerTraitBound {
-    fn lower(&self, env: &Env) -> Result<ir::TraitBound>;
+    fn lower(&self, env: &Env) -> Result<rust_ir::TraitBound>;
 }
 
 impl LowerTraitBound for TraitBound {
-    fn lower(&self, env: &Env) -> Result<ir::TraitBound> {
+    fn lower(&self, env: &Env) -> Result<rust_ir::TraitBound> {
         let id = match env.lookup(self.trait_name)? {
             NameLookup::Type(id) => id,
             NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(self.trait_name)),
@@ -665,7 +666,7 @@ impl LowerTraitBound for TraitBound {
             check_type_kinds("incorrect kind for trait parameter", binder, param)?;
         }
 
-        Ok(ir::TraitBound {
+        Ok(rust_ir::TraitBound {
             trait_id: id,
             args_no_self: parameters,
         })
@@ -673,11 +674,11 @@ impl LowerTraitBound for TraitBound {
 }
 
 trait LowerProjectionEqBound {
-    fn lower(&self, env: &Env) -> Result<ir::ProjectionEqBound>;
+    fn lower(&self, env: &Env) -> Result<rust_ir::ProjectionEqBound>;
 }
 
 impl LowerProjectionEqBound for ProjectionEqBound {
-    fn lower(&self, env: &Env) -> Result<ir::ProjectionEqBound> {
+    fn lower(&self, env: &Env) -> Result<rust_ir::ProjectionEqBound> {
         let trait_bound = self.trait_bound.lower(env)?;
         let info = match env.associated_ty_infos.get(&(trait_bound.trait_id, self.name.str)) {
             Some(info) => info,
@@ -697,7 +698,7 @@ impl LowerProjectionEqBound for ProjectionEqBound {
             check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
         }
 
-        Ok(ir::ProjectionEqBound {
+        Ok(rust_ir::ProjectionEqBound {
             trait_bound,
             associated_ty_id: info.id,
             parameters: args,
@@ -707,16 +708,16 @@ impl LowerProjectionEqBound for ProjectionEqBound {
 }
 
 trait LowerInlineBound {
-    fn lower(&self, env: &Env) -> Result<ir::InlineBound>;
+    fn lower(&self, env: &Env) -> Result<rust_ir::InlineBound>;
 }
 
 impl LowerInlineBound for InlineBound {
-    fn lower(&self, env: &Env) -> Result<ir::InlineBound> {
+    fn lower(&self, env: &Env) -> Result<rust_ir::InlineBound> {
         let bound = match self {
-            InlineBound::TraitBound(b) => ir::InlineBound::TraitBound(
+            InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(
                 b.lower(&env)?
             ),
-            InlineBound::ProjectionEqBound(b) => ir::InlineBound::ProjectionEqBound(
+            InlineBound::ProjectionEqBound(b) => rust_ir::InlineBound::ProjectionEqBound(
                 b.lower(&env)?
             ),
         };
@@ -725,11 +726,11 @@ impl LowerInlineBound for InlineBound {
 }
 
 trait LowerQuantifiedInlineBound {
-    fn lower(&self, env: &Env) -> Result<ir::QuantifiedInlineBound>;
+    fn lower(&self, env: &Env) -> Result<rust_ir::QuantifiedInlineBound>;
 }
 
 impl LowerQuantifiedInlineBound for QuantifiedInlineBound {
-    fn lower(&self, env: &Env) -> Result<ir::QuantifiedInlineBound> {
+    fn lower(&self, env: &Env) -> Result<rust_ir::QuantifiedInlineBound> {
         let parameter_kinds = self.parameter_kinds.iter().map(|pk| pk.lower());
         let binders = env.in_binders(parameter_kinds, |env| {
             Ok(self.bound.lower(env)?)
@@ -739,11 +740,11 @@ impl LowerQuantifiedInlineBound for QuantifiedInlineBound {
 }
 
 trait LowerQuantifiedInlineBoundVec {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::QuantifiedInlineBound>>;
+    fn lower(&self, env: &Env) -> Result<Vec<rust_ir::QuantifiedInlineBound>>;
 }
 
 impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
-    fn lower(&self, env: &Env) -> Result<Vec<ir::QuantifiedInlineBound>> {
+    fn lower(&self, env: &Env) -> Result<Vec<rust_ir::QuantifiedInlineBound>> {
         self.iter()
             .map(|b| b.lower(env))
             .collect()
@@ -751,14 +752,14 @@ impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
 }
 
 trait LowerPolarizedTraitRef {
-    fn lower(&self, env: &Env) -> Result<ir::PolarizedTraitRef>;
+    fn lower(&self, env: &Env) -> Result<rust_ir::PolarizedTraitRef>;
 }
 
 impl LowerPolarizedTraitRef for PolarizedTraitRef {
-    fn lower(&self, env: &Env) -> Result<ir::PolarizedTraitRef> {
+    fn lower(&self, env: &Env) -> Result<rust_ir::PolarizedTraitRef> {
         Ok(match *self {
-            PolarizedTraitRef::Positive(ref tr) => ir::PolarizedTraitRef::Positive(tr.lower(env)?),
-            PolarizedTraitRef::Negative(ref tr) => ir::PolarizedTraitRef::Negative(tr.lower(env)?),
+            PolarizedTraitRef::Positive(ref tr) => rust_ir::PolarizedTraitRef::Positive(tr.lower(env)?),
+            PolarizedTraitRef::Negative(ref tr) => rust_ir::PolarizedTraitRef::Negative(tr.lower(env)?),
         })
     }
 }
@@ -930,11 +931,11 @@ impl LowerLifetime for Lifetime {
 }
 
 trait LowerImpl {
-    fn lower_impl(&self, empty_env: &Env) -> Result<ir::ImplDatum>;
+    fn lower_impl(&self, empty_env: &Env) -> Result<rust_ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, empty_env: &Env) -> Result<ir::ImplDatum> {
+    fn lower_impl(&self, empty_env: &Env) -> Result<rust_ir::ImplDatum> {
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
 
@@ -950,19 +951,19 @@ impl LowerImpl for Impl {
                     .map(|v| v.lower(trait_id, env))
                     .collect()
             );
-            Ok(ir::ImplDatumBound {
+            Ok(rust_ir::ImplDatumBound {
                 trait_ref,
                 where_clauses,
                 associated_ty_values,
                 specialization_priority: 0,
                 impl_type: match self.impl_type {
-                    ImplType::Local => ir::ImplType::Local,
-                    ImplType::External => ir::ImplType::External,
+                    ImplType::Local => rust_ir::ImplType::Local,
+                    ImplType::External => rust_ir::ImplType::External,
                 },
             })
         })?;
 
-        Ok(ir::ImplDatum { binders: binders })
+        Ok(rust_ir::ImplDatum { binders: binders })
     }
 }
 
@@ -1010,18 +1011,18 @@ impl LowerClause for Clause {
 }
 
 trait LowerAssocTyValue {
-    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssociatedTyValue>;
+    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<rust_ir::AssociatedTyValue>;
 }
 
 impl LowerAssocTyValue for AssocTyValue {
-    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::AssociatedTyValue> {
+    fn lower(&self, trait_id: ir::ItemId, env: &Env) -> Result<rust_ir::AssociatedTyValue> {
         let info = &env.associated_ty_infos[&(trait_id, self.name.str)];
         let value = env.in_binders(self.all_parameters(), |env| {
-            Ok(ir::AssociatedTyValueBound {
+            Ok(rust_ir::AssociatedTyValueBound {
                 ty: self.value.lower(env)?,
             })
         })?;
-        Ok(ir::AssociatedTyValue {
+        Ok(rust_ir::AssociatedTyValue {
             associated_ty_id: info.id,
             value: value,
         })
@@ -1029,11 +1030,11 @@ impl LowerAssocTyValue for AssocTyValue {
 }
 
 trait LowerTrait {
-    fn lower_trait(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::TraitDatum>;
+    fn lower_trait(&self, trait_id: ir::ItemId, env: &Env) -> Result<rust_ir::TraitDatum>;
 }
 
 impl LowerTrait for TraitDefn {
-    fn lower_trait(&self, trait_id: ir::ItemId, env: &Env) -> Result<ir::TraitDatum> {
+    fn lower_trait(&self, trait_id: ir::ItemId, env: &Env) -> Result<rust_ir::TraitDatum> {
         let binders = env.in_binders(self.all_parameters(), |env| {
             let trait_ref = ir::TraitRef {
                 trait_id: trait_id,
@@ -1049,10 +1050,10 @@ impl LowerTrait for TraitDefn {
                 }
             }
 
-            Ok(ir::TraitDatumBound {
+            Ok(rust_ir::TraitDatumBound {
                 trait_ref: trait_ref,
                 where_clauses: self.lower_where_clauses(env)?,
-                flags: ir::TraitFlags {
+                flags: rust_ir::TraitFlags {
                     auto: self.flags.auto,
                     marker: self.flags.marker,
                     upstream: self.flags.upstream,
@@ -1062,7 +1063,7 @@ impl LowerTrait for TraitDefn {
             })
         })?;
 
-        Ok(ir::TraitDatum { binders: binders })
+        Ok(rust_ir::TraitDatum { binders: binders })
     }
 }
 
@@ -1070,8 +1071,8 @@ pub trait LowerGoal<A> {
     fn lower(&self, arg: &A) -> Result<Box<ir::Goal>>;
 }
 
-impl LowerGoal<ir::Program> for Goal {
-    fn lower(&self, program: &ir::Program) -> Result<Box<ir::Goal>> {
+impl LowerGoal<rust_ir::Program> for Goal {
+    fn lower(&self, program: &rust_ir::Program) -> Result<Box<ir::Goal>> {
         let associated_ty_infos: BTreeMap<_, _> = program
             .associated_ty_data
             .iter()

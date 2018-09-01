@@ -3,6 +3,7 @@
 use cast::Cast;
 use fallible::*;
 use ir::*;
+use rust_ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 

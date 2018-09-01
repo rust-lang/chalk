@@ -4,6 +4,7 @@ use fold::shift::Shift;
 use itertools::Itertools;
 use errors::*;
 use ir::*;
+use rust_ir::*;
 use cast::*;
 use solve::{SolverChoice, Solution};
 

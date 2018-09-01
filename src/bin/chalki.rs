@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::process::exit;
 
 use chalk::ir;
+use chalk::rust_ir;
 use chalk::ir::lowering::*;
 use chalk::solve::SolverChoice;
 use docopt::Docopt;
@@ -59,7 +60,7 @@ error_chain! {
 /// A loaded and parsed program.
 struct Program {
     text: String,
-    ir: Arc<ir::Program>,
+    ir: Arc<rust_ir::Program>,
     env: Arc<ir::ProgramEnvironment>,
 }
 

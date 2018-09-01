@@ -2,6 +2,7 @@ use cast::{Cast, Caster};
 use fold::shift::Shift;
 use fold::Subst;
 use ir::*;
+use rust_ir::*;
 use std::iter;
 
 mod default;

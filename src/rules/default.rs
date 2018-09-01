@@ -1,4 +1,5 @@
 use ir::*;
+use rust_ir::*;
 use solve::infer::InferenceTable;
 use cast::Cast;
 

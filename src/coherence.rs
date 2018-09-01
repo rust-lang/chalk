@@ -1,7 +1,8 @@
 use petgraph::prelude::*;
 
 use errors::Result;
-use ir::{self, ItemId, Program};
+use ir::{self, ItemId};
+use rust_ir::Program;
 use solve::SolverChoice;
 use std::sync::Arc;
 

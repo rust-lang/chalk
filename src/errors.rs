@@ -1,5 +1,6 @@
 use chalk_parse::{self, ast};
 use ir;
+use rust_ir;
 
 error_chain! {
     links {
@@ -49,7 +50,7 @@ error_chain! {
                 display("could not match")
         }
 
-        DuplicateLangItem(item: ir::LangItem) {
+        DuplicateLangItem(item: rust_ir::LangItem) {
             description("Duplicate lang item")
                 display("Duplicate lang item `{:?}`", item)
         }

@@ -50,7 +50,6 @@
 //!   Popularized by Lambda Prolog.
 
 #![feature(in_band_lifetimes)]
-#![feature(macro_vis_matcher)]
 #![feature(step_trait)]
 #![feature(non_modrs_mods)]
 

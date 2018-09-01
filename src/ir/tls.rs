@@ -1,14 +1,14 @@
-use ir;
+use rust_ir;
 use std::cell::RefCell;
 use std::sync::Arc;
 
 thread_local! {
-    static PROGRAM: RefCell<Option<Arc<ir::Program>>> = RefCell::new(None)
+    static PROGRAM: RefCell<Option<Arc<rust_ir::Program>>> = RefCell::new(None)
 }
 
 pub fn with_current_program<OP, R>(op: OP) -> R
 where
-    OP: FnOnce(Option<&Arc<ir::Program>>) -> R,
+    OP: FnOnce(Option<&Arc<rust_ir::Program>>) -> R,
 {
     PROGRAM.with(|prog_cell| {
         let p = prog_cell.borrow();
@@ -16,7 +16,7 @@ where
     })
 }
 
-pub fn set_current_program<OP, R>(p: &Arc<ir::Program>, op: OP) -> R
+pub fn set_current_program<OP, R>(p: &Arc<rust_ir::Program>, op: OP) -> R
 where
     OP: FnOnce() -> R,
 {

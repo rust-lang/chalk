@@ -3,10 +3,11 @@ use std::sync::Arc;
 use ir::*;
 use errors::*;
 use cast::*;
-use solve::SolverChoice;
-use itertools::Itertools;
 use fold::*;
 use fold::shift::Shift;
+use itertools::Itertools;
+use rust_ir::*;
+use solve::SolverChoice;
 
 mod test;
 

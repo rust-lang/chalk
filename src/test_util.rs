@@ -5,7 +5,8 @@ use chalk_parse;
 use itertools::Itertools;
 use std::fmt::Write;
 use ir::lowering::{LowerProgram, LowerGoal};
-use ir::{Goal, Program};
+use ir::Goal;
+use rust_ir::Program;
 use solve::SolverChoice;
 use errors::Result;
 
