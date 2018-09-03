@@ -5,7 +5,7 @@
 use fold::shift::Shift;
 use ir::{
     ApplicationTy, Binders, Identifier, ItemId, Lifetime, Parameter, ParameterKind, ProgramClause,
-    ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty, TypeSort,
+    ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty,
     WhereClause,
 };
 use std::collections::BTreeMap;
@@ -334,6 +334,12 @@ pub struct TypeKind {
     crate sort: TypeSort,
     crate name: Identifier,
     crate binders: Binders<()>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TypeSort {
+    Struct,
+    Trait,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]

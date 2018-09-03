@@ -373,7 +373,7 @@ trait LowerWhereClauses {
 impl LowerTypeKind for StructDefn {
     fn lower_type_kind(&self) -> Result<rust_ir::TypeKind> {
         Ok(rust_ir::TypeKind {
-            sort: ir::TypeSort::Struct,
+            sort: rust_ir::TypeSort::Struct,
             name: self.name.str,
             binders: ir::Binders {
                 binders: self.all_parameters().anonymize(),
@@ -393,7 +393,7 @@ impl LowerTypeKind for TraitDefn {
     fn lower_type_kind(&self) -> Result<rust_ir::TypeKind> {
         let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
         Ok(rust_ir::TypeKind {
-            sort: ir::TypeSort::Trait,
+            sort: rust_ir::TypeSort::Trait,
             name: self.name.str,
             binders: ir::Binders {
                 // for the purposes of the *type*, ignore `Self`:
@@ -507,7 +507,7 @@ impl LowerDomainGoal for DomainGoal {
                     NameLookup::Parameter(_) => bail!(ErrorKind::NotTrait(*trait_name)),
                 };
 
-                if env.type_kind(id).sort != ir::TypeSort::Trait {
+                if env.type_kind(id).sort != rust_ir::TypeSort::Trait {
                     bail!(ErrorKind::NotTrait(*trait_name));
                 }
 
@@ -645,7 +645,7 @@ impl LowerTraitBound for TraitBound {
         };
 
         let k = env.type_kind(id);
-        if k.sort != ir::TypeSort::Trait {
+        if k.sort != rust_ir::TypeSort::Trait {
             bail!(ErrorKind::NotTrait(self.trait_name));
         }
 
