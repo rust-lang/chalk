@@ -5,7 +5,6 @@
 #![feature(crate_visibility_modifier)]
 #![feature(in_band_lifetimes)]
 #![feature(macro_at_most_once_rep)]
-#![feature(macro_vis_matcher)]
 #![feature(specialization)]
 #![feature(step_trait)]
 #![feature(non_modrs_mods)]

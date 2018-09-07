@@ -52,7 +52,6 @@
 #![feature(crate_in_paths)]
 #![feature(crate_visibility_modifier)]
 #![feature(in_band_lifetimes)]
-#![feature(macro_vis_matcher)]
 #![feature(step_trait)]
 #![feature(non_modrs_mods)]
 #![feature(rustc_private)]
