@@ -54,7 +54,6 @@
 #![feature(in_band_lifetimes)]
 #![feature(step_trait)]
 #![feature(non_modrs_mods)]
-#![feature(rustc_private)]
 
 #[macro_use]
 extern crate chalk_macros;
