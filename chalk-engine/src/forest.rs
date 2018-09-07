@@ -1,16 +1,16 @@
-use crate::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
-use crate::context::prelude::*;
-use crate::context::AnswerStream;
-use crate::logic::RootSearchFail;
-use crate::stack::{Stack, StackIndex};
-use crate::tables::Tables;
-use crate::table::{Answer, AnswerIndex};
+use {DepthFirstNumber, SimplifiedAnswer, TableIndex};
+use context::prelude::*;
+use context::AnswerStream;
+use logic::RootSearchFail;
+use stack::{Stack, StackIndex};
+use tables::Tables;
+use table::{Answer, AnswerIndex};
 
 pub struct Forest<C: Context, CO: ContextOps<C>> {
     #[allow(dead_code)]
-    crate context: CO,
-    crate tables: Tables<C>,
-    crate stack: Stack,
+    pub(crate) context: CO,
+    pub(crate) tables: Tables<C>,
+    pub(crate) stack: Stack,
 
     dfn: DepthFirstNumber,
 }

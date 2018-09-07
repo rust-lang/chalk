@@ -1,39 +1,39 @@
 use std::fmt::{Debug, Error, Formatter};
-use crate::{ExClause, TableIndex};
-use crate::context::{Context, InferenceTable};
-use crate::table::AnswerIndex;
+use {ExClause, TableIndex};
+use context::{Context, InferenceTable};
+use table::AnswerIndex;
 
 #[derive(Debug)]
-crate struct CanonicalStrand<C: Context> {
+pub(crate) struct CanonicalStrand<C: Context> {
     pub(super) canonical_ex_clause: C::CanonicalExClause,
 
     /// Index into `ex_clause.subgoals`.
-    crate selected_subgoal: Option<SelectedSubgoal<C>>,
+    pub(crate) selected_subgoal: Option<SelectedSubgoal<C>>,
 }
 
-crate struct Strand<'table, C: Context + 'table, I: Context + 'table> {
-    crate infer: &'table mut dyn InferenceTable<C, I>,
+pub(crate) struct Strand<'table, C: Context + 'table, I: Context + 'table> {
+    pub(crate) infer: &'table mut dyn InferenceTable<C, I>,
 
     pub(super) ex_clause: ExClause<I>,
 
     /// Index into `ex_clause.subgoals`.
-    crate selected_subgoal: Option<SelectedSubgoal<C>>,
+    pub(crate) selected_subgoal: Option<SelectedSubgoal<C>>,
 }
 
 #[derive(Clone, Debug)]
-crate struct SelectedSubgoal<C: Context> {
+pub(crate) struct SelectedSubgoal<C: Context> {
     /// The index of the subgoal in `ex_clause.subgoals`
-    crate subgoal_index: usize,
+    pub(crate) subgoal_index: usize,
 
     /// The index of the table that we created or found for this subgoal
     pub(super) subgoal_table: TableIndex,
 
     /// Index of the answer we should request next from the table
-    crate answer_index: AnswerIndex,
+    pub(crate) answer_index: AnswerIndex,
 
     /// Maps the universes of the subgoal to the canonical universes
     /// used in the table
-    crate universe_map: C::UniverseMap,
+    pub(crate) universe_map: C::UniverseMap,
 }
 
 impl<'table, C: Context, I: Context> Debug for Strand<'table, C, I> {
