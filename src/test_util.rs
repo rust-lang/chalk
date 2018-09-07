@@ -4,7 +4,7 @@ use diff;
 use chalk_parse;
 use itertools::Itertools;
 use std::fmt::Write;
-use ir::lowering::{LowerProgram, LowerGoal};
+use rust_ir::lowering::{LowerProgram, LowerGoal};
 use ir::Goal;
 use rust_ir::Program;
 use solve::SolverChoice;
