@@ -1,8 +1,9 @@
 language: rust
 rust:
+  - beta
   - nightly
 script:
-  - cd chalk-engine; cargo build --no-default-features
-  - cd chalk-engine; cargo build --all-features
-  - cargo test --all
+  - cd chalk-engine; RUSTC_BOOTSTRAP=1 cargo build --no-default-features
+  - cd chalk-engine; RUSTC_BOOTSTRAP=1 cargo build --all-features
+  - RUSTC_BOOTSTRAP=1 cargo test --all
 
