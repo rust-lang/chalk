@@ -1,8 +1,8 @@
 #![allow(unused_imports)] // rustc bug
 
-crate use super::Context;
-crate use super::ContextOps;
-crate use super::AggregateOps;
-crate use super::ResolventOps;
-crate use super::TruncateOps;
-crate use super::InferenceTable;
+pub(crate) use super::Context;
+pub(crate) use super::ContextOps;
+pub(crate) use super::AggregateOps;
+pub(crate) use super::ResolventOps;
+pub(crate) use super::TruncateOps;
+pub(crate) use super::InferenceTable;

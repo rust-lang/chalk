@@ -1,8 +1,8 @@
-use crate::fallible::Fallible;
-use crate::{ExClause, Literal};
-use crate::forest::Forest;
-use crate::hh::HhGoal;
-use crate::context::prelude::*;
+use fallible::Fallible;
+use {ExClause, Literal};
+use forest::Forest;
+use hh::HhGoal;
+use context::prelude::*;
 
 impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// Simplifies an HH goal into a series of positive domain goals

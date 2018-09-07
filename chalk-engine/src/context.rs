@@ -1,10 +1,10 @@
-use crate::fallible::Fallible;
-use crate::hh::HhGoal;
-use crate::{DelayedLiteral, ExClause, SimplifiedAnswer};
+use fallible::Fallible;
+use hh::HhGoal;
+use {DelayedLiteral, ExClause, SimplifiedAnswer};
 use std::fmt::Debug;
 use std::hash::Hash;
 
-crate mod prelude;
+pub(crate) mod prelude;
 
 /// The "context" in which the SLG solver operates. It defines all the
 /// types that the SLG solver may need to refer to, as well as a few

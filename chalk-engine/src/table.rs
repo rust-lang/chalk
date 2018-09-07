@@ -1,19 +1,19 @@
-use crate::{DelayedLiteralSet, DelayedLiteralSets};
-use crate::context::prelude::*;
-use crate::strand::CanonicalStrand;
+use {DelayedLiteralSet, DelayedLiteralSets};
+use context::prelude::*;
+use strand::CanonicalStrand;
 use rustc_hash::FxHashMap;
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::mem;
 
-crate struct Table<C: Context> {
+pub(crate) struct Table<C: Context> {
     /// The goal this table is trying to solve (also the key to look
     /// it up).
-    crate table_goal: C::UCanonicalGoalInEnvironment,
+    pub(crate) table_goal: C::UCanonicalGoalInEnvironment,
 
     /// A goal is coinductive if it can assume itself to be true, more
     /// or less. This is true for auto traits.
-    crate coinductive_goal: bool,
+    pub(crate) coinductive_goal: bool,
 
     /// Stores the answers that we have found thus far. When we get a request
     /// for an answer N, we will first check this vector.
@@ -32,7 +32,7 @@ crate struct Table<C: Context> {
 }
 
 index_struct! {
-    crate struct AnswerIndex {
+    pub(crate) struct AnswerIndex {
         value: usize,
     }
 }
@@ -43,12 +43,12 @@ index_struct! {
 /// a substitution
 #[derive(Clone, Debug)]
 pub struct Answer<C: Context> {
-    crate subst: C::CanonicalConstrainedSubst,
-    crate delayed_literals: DelayedLiteralSet<C>,
+    pub(crate) subst: C::CanonicalConstrainedSubst,
+    pub(crate) delayed_literals: DelayedLiteralSet<C>,
 }
 
 impl<C: Context> Table<C> {
-    crate fn new(table_goal: C::UCanonicalGoalInEnvironment, coinductive_goal: bool) -> Table<C> {
+    pub(crate) fn new(table_goal: C::UCanonicalGoalInEnvironment, coinductive_goal: bool) -> Table<C> {
         Table {
             table_goal,
             coinductive_goal,
@@ -58,23 +58,23 @@ impl<C: Context> Table<C> {
         }
     }
 
-    crate fn push_strand(&mut self, strand: CanonicalStrand<C>) {
+    pub(crate) fn push_strand(&mut self, strand: CanonicalStrand<C>) {
         self.strands.push_back(strand);
     }
 
-    crate fn extend_strands(&mut self, strands: impl IntoIterator<Item = CanonicalStrand<C>>) {
+    pub(crate) fn extend_strands(&mut self, strands: impl IntoIterator<Item = CanonicalStrand<C>>) {
         self.strands.extend(strands);
     }
 
-    crate fn strands_mut(&mut self) -> impl Iterator<Item = &mut CanonicalStrand<C>> {
+    pub(crate) fn strands_mut(&mut self) -> impl Iterator<Item = &mut CanonicalStrand<C>> {
         self.strands.iter_mut()
     }
 
-    crate fn take_strands(&mut self) -> VecDeque<CanonicalStrand<C>> {
+    pub(crate) fn take_strands(&mut self) -> VecDeque<CanonicalStrand<C>> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
-    crate fn pop_next_strand(&mut self) -> Option<CanonicalStrand<C>> {
+    pub(crate) fn pop_next_strand(&mut self) -> Option<CanonicalStrand<C>> {
         self.strands.pop_front()
     }
 
@@ -127,7 +127,7 @@ impl<C: Context> Table<C> {
 }
 
 impl AnswerIndex {
-    crate const ZERO: AnswerIndex = AnswerIndex { value: 0 };
+    pub(crate) const ZERO: AnswerIndex = AnswerIndex { value: 0 };
 }
 
 impl<C: Context> Answer<C> {

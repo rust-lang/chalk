@@ -1,9 +1,9 @@
-use crate::{DepthFirstNumber, TableIndex};
+use {DepthFirstNumber, TableIndex};
 use std::ops::{Index, IndexMut, Range};
 
 /// See `Forest`.
 #[derive(Default)]
-crate struct Stack {
+pub(crate) struct Stack {
     /// Stack: as described above, stores the in-progress goals.
     stack: Vec<StackEntry>,
 }
@@ -13,12 +13,12 @@ crate struct Stack {
 /// table is completely evaluated, it may be popped from the stack,
 /// and hence no longer have a stack index.
 index_struct! {
-    crate struct StackIndex {
+    pub(crate) struct StackIndex {
         value: usize,
     }
 }
 
-crate struct StackEntry {
+pub(crate) struct StackEntry {
     /// The goal G from the stack entry `A :- G` represented here.
     pub(super) table: TableIndex,
 

@@ -1,12 +1,12 @@
-use crate::{DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal, Minimums,
+use {DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal, Minimums,
             TableIndex};
-use crate::fallible::NoSolution;
-use crate::context::{WithInstantiatedExClause, WithInstantiatedUCanonicalGoal, prelude::*};
-use crate::forest::Forest;
-use crate::hh::HhGoal;
-use crate::stack::StackIndex;
-use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
-use crate::table::{Answer, AnswerIndex};
+use fallible::NoSolution;
+use context::{WithInstantiatedExClause, WithInstantiatedUCanonicalGoal, prelude::*};
+use forest::Forest;
+use hh::HhGoal;
+use stack::StackIndex;
+use strand::{CanonicalStrand, SelectedSubgoal, Strand};
+use table::{Answer, AnswerIndex};
 use rustc_hash::FxHashSet;
 use std::marker::PhantomData;
 use std::mem;
@@ -56,7 +56,8 @@ enum RecursiveSearchFail {
     QuantumExceeded,
 }
 
-type StrandResult<C, T> = Result<T, StrandFail<C>>;
+#[allow(type_alias_bounds)]
+type StrandResult<C: Context, T> = Result<T, StrandFail<C>>;
 
 /// Possible failures from pursuing a particular strand.
 #[derive(Debug)]
@@ -183,7 +184,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         result.map(|()| EnsureSuccess::AnswerAvailable)
     }
 
-    crate fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<C> {
+    pub(crate) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<C> {
         self.tables[table].answer(answer).unwrap()
     }
 
@@ -691,7 +692,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// In terms of the NFTD paper, creating a new table corresponds
     /// to the *New Subgoal* step as well as the *Program Clause
     /// Resolution* steps.
-    crate fn get_or_create_table_for_ucanonical_goal(
+    pub(crate) fn get_or_create_table_for_ucanonical_goal(
         &mut self,
         goal: C::UCanonicalGoalInEnvironment,
     ) -> TableIndex {
@@ -1166,7 +1167,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         depth: StackIndex,
         strand: Strand<'_, C, impl Context>,
     ) -> StrandResult<C, ()> {
-        crate::maybe_grow_stack(|| self.pursue_strand(depth, strand))
+        ::maybe_grow_stack(|| self.pursue_strand(depth, strand))
     }
 
     /// Invoked when we have found a successful answer to the given

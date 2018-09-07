@@ -1,11 +1,11 @@
-use crate::TableIndex;
-use crate::context::prelude::*;
-use crate::table::Table;
+use TableIndex;
+use context::prelude::*;
+use table::Table;
 use rustc_hash::FxHashMap;
 use std::ops::{Index, IndexMut};
 
 /// See `Forest`.
-crate struct Tables<C: Context> {
+pub(crate) struct Tables<C: Context> {
     /// Maps from a canonical goal to the index of its table.
     table_indices: FxHashMap<C::UCanonicalGoalInEnvironment, TableIndex>,
 
@@ -15,7 +15,7 @@ crate struct Tables<C: Context> {
 }
 
 impl<C: Context> Tables<C> {
-    crate fn new() -> Tables<C> {
+    pub(crate) fn new() -> Tables<C> {
         Tables {
             table_indices: FxHashMap::default(),
             tables: Vec::default(),

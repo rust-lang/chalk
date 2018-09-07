@@ -49,13 +49,9 @@
 //! - HH: Hereditary harrop predicates. What Chalk deals in.
 //!   Popularized by Lambda Prolog.
 
-#![feature(crate_in_paths)]
-#![feature(crate_visibility_modifier)]
 #![feature(in_band_lifetimes)]
-#![feature(macro_vis_matcher)]
 #![feature(step_trait)]
 #![feature(non_modrs_mods)]
-#![feature(rustc_private)]
 
 #[macro_use]
 extern crate chalk_macros;
@@ -65,7 +61,7 @@ extern crate stacker;
 
 extern crate rustc_hash;
 
-use crate::context::Context;
+use context::Context;
 use rustc_hash::FxHashSet;
 use std::cmp::min;
 use std::usize;
