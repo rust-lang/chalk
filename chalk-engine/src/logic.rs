@@ -56,7 +56,8 @@ enum RecursiveSearchFail {
     QuantumExceeded,
 }
 
-type StrandResult<C, T> = Result<T, StrandFail<C>>;
+#[allow(type_alias_bounds)]
+type StrandResult<C: Context, T> = Result<T, StrandFail<C>>;
 
 /// Possible failures from pursuing a particular strand.
 #[derive(Debug)]
