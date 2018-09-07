@@ -1,6 +1,5 @@
 #![recursion_limit = "1024"]
 #![cfg_attr(test, feature(test))]
-#![feature(catch_expr)]
 #![feature(crate_in_paths)]
 #![feature(crate_visibility_modifier)]
 #![feature(in_band_lifetimes)]
