@@ -2,8 +2,8 @@ use crate::chalk_engine::fallible::Fallible;
 use crate::ir::fold::shift::Shift;
 use crate::ir::fold::Fold;
 use crate::ir::*;
-use crate::solve::infer::InferenceTable;
-use crate::solve::slg::implementation::{self, SlgContext, TruncatingInferenceTable};
+use crate::ir::solve::infer::InferenceTable;
+use crate::ir::solve::slg::implementation::{self, SlgContext, TruncatingInferenceTable};
 use crate::ir::zip::{Zip, Zipper};
 
 use chalk_engine::context;

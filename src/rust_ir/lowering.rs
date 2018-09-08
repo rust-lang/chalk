@@ -8,7 +8,7 @@ use errors::*;
 use ir;
 use rust_ir::{self, Anonymize, ToParameter};
 use itertools::Itertools;
-use solve::SolverChoice;
+use ir::solve::SolverChoice;
 
 mod test;
 

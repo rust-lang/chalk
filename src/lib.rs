@@ -33,4 +33,4 @@ pub mod rust_ir;
 crate mod coherence;
 crate mod rules;
 pub mod errors;
-pub mod solve;
+

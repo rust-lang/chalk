@@ -4,7 +4,7 @@ extern crate test;
 use self::test::Bencher;
 
 use ir;
-use solve::SolverChoice;
+use ir::solve::SolverChoice;
 use std::sync::Arc;
 
 use super::{parse_and_lower_program,

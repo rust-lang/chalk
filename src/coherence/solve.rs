@@ -6,7 +6,7 @@ use errors::*;
 use ir::*;
 use rust_ir::*;
 use ir::cast::*;
-use solve::{SolverChoice, Solution};
+use ir::solve::{SolverChoice, Solution};
 
 struct DisjointSolver {
     env: Arc<ProgramEnvironment>,

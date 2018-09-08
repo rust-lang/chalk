@@ -17,7 +17,7 @@ use std::process::exit;
 use chalk::ir;
 use chalk::rust_ir;
 use chalk::rust_ir::lowering::*;
-use chalk::solve::SolverChoice;
+use chalk::ir::solve::SolverChoice;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
 

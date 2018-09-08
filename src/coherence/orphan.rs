@@ -4,7 +4,7 @@ use errors::*;
 use ir::*;
 use rust_ir::*;
 use ir::cast::*;
-use solve::SolverChoice;
+use ir::solve::SolverChoice;
 
 struct OrphanSolver {
     env: Arc<ProgramEnvironment>,

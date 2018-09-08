@@ -4,7 +4,7 @@ use chalk_engine::fallible::*;
 use ir::fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
 use ir::fold::shift::Shift;
 use ir::*;
-use solve::infer::InferenceTable;
+use ir::solve::infer::InferenceTable;
 
 crate fn truncate<T>(
     infer: &mut InferenceTable,

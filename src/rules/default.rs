@@ -1,6 +1,6 @@
 use ir::*;
 use rust_ir::*;
-use solve::infer::InferenceTable;
+use ir::solve::infer::InferenceTable;
 use ir::cast::Cast;
 
 impl Program {

@@ -1,12 +1,12 @@
 #![cfg(test)]
 
 use crate::ir;
-use crate::solve::slg::implementation::SlgContext;
+use crate::ir::solve::slg::implementation::SlgContext;
 
 use chalk_engine::forest::Forest;
 use std::sync::Arc;
 use test_util::*;
-use solve::SolverChoice;
+use ir::solve::SolverChoice;
 
 macro_rules! test {
     (program $program:tt $(goal $goal:tt first $n:tt with max $depth:tt { $expected:expr })*) => {

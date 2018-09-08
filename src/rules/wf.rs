@@ -7,7 +7,7 @@ use ir::fold::*;
 use ir::fold::shift::Shift;
 use itertools::Itertools;
 use rust_ir::*;
-use solve::SolverChoice;
+use ir::solve::SolverChoice;
 
 mod test;
 

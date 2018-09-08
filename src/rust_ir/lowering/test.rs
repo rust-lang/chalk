@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use ir::tls;
-use solve::SolverChoice;
+use ir::solve::SolverChoice;
 use std::sync::Arc;
 use test_util::*;
 

@@ -53,7 +53,7 @@ crate struct Canonicalized<T> {
     crate quantified: Canonical<T>,
 
     /// The free existential variables, along with the universes they inhabit.
-    pub(in solve) free_vars: Vec<ParameterInferenceVariable>,
+    pub(in ir::solve) free_vars: Vec<ParameterInferenceVariable>,
 
     /// The maximum universe of any universally quantified variables
     /// encountered.

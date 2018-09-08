@@ -2,11 +2,11 @@ use crate::ir::cast::{Cast, Caster};
 use crate::chalk_engine::fallible::Fallible;
 use crate::ir::could_match::CouldMatch;
 use crate::ir::*;
-use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
-use crate::solve::infer::unify::UnificationResult;
-use crate::solve::infer::InferenceTable;
-use crate::solve::truncate::{self, Truncated};
-use crate::solve::Solution;
+use crate::ir::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
+use crate::ir::solve::infer::unify::UnificationResult;
+use crate::ir::solve::infer::InferenceTable;
+use crate::ir::solve::truncate::{self, Truncated};
+use crate::ir::solve::Solution;
 
 use chalk_engine::context;
 use chalk_engine::forest::Forest;
@@ -267,7 +267,7 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         value: &Canonical<InEnvironment<Goal>>,
     ) -> (
         UCanonical<InEnvironment<Goal>>,
-        crate::solve::infer::ucanonicalize::UniverseMap,
+        crate::ir::solve::infer::ucanonicalize::UniverseMap,
     ) {
         let UCanonicalized {
             quantified,

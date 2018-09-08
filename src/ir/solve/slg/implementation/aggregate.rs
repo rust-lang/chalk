@@ -1,7 +1,7 @@
 use crate::ir::cast::Cast;
 use crate::ir::*;
-use crate::solve::{Guidance, Solution};
-use crate::solve::infer::InferenceTable;
+use crate::ir::solve::{Guidance, Solution};
+use crate::ir::solve::infer::InferenceTable;
 
 use chalk_engine::context;
 use chalk_engine::SimplifiedAnswer;

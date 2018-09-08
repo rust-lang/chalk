@@ -2,7 +2,7 @@
 
 use errors::*;
 use ir;
-use solve::{Solution, SolverChoice};
+use ir::solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 use std::sync::Arc;
 use test_util::*;
