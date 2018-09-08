@@ -1,6 +1,5 @@
 use ir::fold::Fold;
 use ir::*;
-use rust_ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -224,7 +223,6 @@ macro_rules! enum_zip {
 /// Generates a Zip impl that requires the two enums be the same
 /// variant, then zips each field of the variant in turn. Only works
 /// if all variants have a single parenthesized value right now.
-enum_zip!(PolarizedTraitRef { Positive, Negative });
 enum_zip!(WhereClause {
     Implemented,
     ProjectionEq
