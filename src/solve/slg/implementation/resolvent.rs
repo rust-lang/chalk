@@ -1,6 +1,6 @@
 use crate::fallible::Fallible;
-use crate::fold::shift::Shift;
-use crate::fold::Fold;
+use crate::ir::fold::shift::Shift;
+use crate::ir::fold::Fold;
 use crate::ir::*;
 use crate::solve::infer::InferenceTable;
 use crate::solve::slg::implementation::{self, SlgContext, TruncatingInferenceTable};

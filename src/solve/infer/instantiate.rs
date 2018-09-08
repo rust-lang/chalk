@@ -1,5 +1,5 @@
 use fallible::*;
-use fold::*;
+use ir::fold::*;
 use std::fmt::Debug;
 
 use super::*;

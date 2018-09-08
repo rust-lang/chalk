@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fold::shift::Shift;
+use ir::fold::shift::Shift;
 use itertools::Itertools;
 use errors::*;
 use ir::*;

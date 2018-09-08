@@ -1,7 +1,7 @@
 use ena::unify as ena;
 use ir::*;
-use fold::Fold;
-use fold::shift::Shift;
+use ir::fold::Fold;
+use ir::fold::shift::Shift;
 
 crate mod canonicalize;
 crate mod ucanonicalize;

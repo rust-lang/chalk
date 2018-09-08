@@ -2,7 +2,7 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
-use fold::shift::Shift;
+use ir::fold::shift::Shift;
 use ir::tls;
 use ir::{
     ApplicationTy, Binders, Identifier, ItemId, Lifetime, Parameter, ParameterKind, ProgramClause,

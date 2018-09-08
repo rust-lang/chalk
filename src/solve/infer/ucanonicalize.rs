@@ -1,5 +1,5 @@
 use fallible::*;
-use fold::{DefaultTypeFolder, Fold, IdentityExistentialFolder, UniversalFolder};
+use ir::fold::{DefaultTypeFolder, Fold, IdentityExistentialFolder, UniversalFolder};
 use ir::*;
 
 use super::InferenceTable;

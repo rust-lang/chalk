@@ -1,8 +1,8 @@
 //!
 
 use fallible::*;
-use fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
-use fold::shift::Shift;
+use ir::fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
+use ir::fold::shift::Shift;
 use ir::*;
 use solve::infer::InferenceTable;
 

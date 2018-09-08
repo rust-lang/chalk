@@ -1,7 +1,6 @@
 //! Traits for transforming bits of IR.
 
 use cast::Cast;
-use fallible::*;
 use ir::*;
 use rust_ir::*;
 use std::fmt::Debug;
@@ -363,10 +362,10 @@ impl Fold for Substitution {
 
 macro_rules! copy_fold {
     ($t:ty) => {
-        impl ::fold::Fold for $t {
+        impl $crate::ir::fold::Fold for $t {
             type Result = Self;
             fn fold_with(&self,
-                         _folder: &mut dyn (::fold::Folder),
+                         _folder: &mut dyn ($crate::ir::fold::Folder),
                          _binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
                 Ok(*self)
@@ -385,10 +384,10 @@ copy_fold!(());
 
 macro_rules! enum_fold {
     ($s:ident [$($n:ident),*] { $($variant:ident($($name:ident),*)),* } $($w:tt)*) => {
-        impl<$($n),*> ::fold::Fold for $s<$($n),*> $($w)* {
+        impl<$($n),*> $crate::ir::fold::Fold for $s<$($n),*> $($w)* {
             type Result = $s<$($n :: Result),*>;
             fn fold_with(&self,
-                         folder: &mut dyn (::fold::Folder),
+                         folder: &mut dyn ($crate::ir::fold::Folder),
                          binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
                 match self {
@@ -404,10 +403,10 @@ macro_rules! enum_fold {
 
     // Hacky variant for use in slg::context::implementation
     ($s:ty { $p:ident :: { $($variant:ident($($name:ident),*)),* } }) => {
-        impl ::fold::Fold for $s {
+        impl $crate::ir::fold::Fold for $s {
             type Result = $s;
             fn fold_with(&self,
-                         folder: &mut dyn (::fold::Folder),
+                         folder: &mut dyn ($crate::ir::fold::Folder),
                          binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
                 match self {
@@ -539,10 +538,10 @@ macro_rules! struct_fold {
             field_names($($field_name:ident),*)
         where_clauses($($where_clauses:tt)*)
     ) => {
-        impl<$($parameters)*> ::fold::Fold for $self_ty $($where_clauses)* {
+        impl<$($parameters)*> $crate::ir::fold::Fold for $self_ty $($where_clauses)* {
             type Result = $result_ty;
             fn fold_with(&self,
-                         folder: &mut dyn (::fold::Folder),
+                         folder: &mut dyn ($crate::ir::fold::Folder),
                          binders: usize)
                          -> ::fallible::Fallible<Self::Result> {
                 Ok($s {

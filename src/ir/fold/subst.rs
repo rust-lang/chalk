@@ -1,4 +1,4 @@
-use fold::shift::Shift;
+use ir::fold::shift::Shift;
 use ir::*;
 
 use super::*;

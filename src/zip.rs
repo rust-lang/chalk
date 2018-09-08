@@ -1,5 +1,5 @@
 use fallible::*;
-use fold::Fold;
+use ir::fold::Fold;
 use ir::*;
 use rust_ir::*;
 use std::fmt::Debug;
@@ -146,7 +146,7 @@ macro_rules! eq_zip {
                 Ok(())
             }
         }
-    }
+    };
 }
 
 eq_zip!(ItemId);
@@ -188,7 +188,10 @@ struct_zip!(Normalize { projection, ty });
 struct_zip!(ProjectionEq { projection, ty });
 struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
-struct_zip!(ProgramClauseImplication { consequence, conditions });
+struct_zip!(ProgramClauseImplication {
+    consequence,
+    conditions
+});
 struct_zip!(Derefs { source, target });
 
 impl Zip for Environment {
@@ -223,7 +226,10 @@ macro_rules! enum_zip {
 /// variant, then zips each field of the variant in turn. Only works
 /// if all variants have a single parenthesized value right now.
 enum_zip!(PolarizedTraitRef { Positive, Negative });
-enum_zip!(WhereClause { Implemented, ProjectionEq });
+enum_zip!(WhereClause {
+    Implemented,
+    ProjectionEq
+});
 enum_zip!(WellFormed { Trait, Ty });
 enum_zip!(FromEnv { Trait, Ty });
 enum_zip!(DomainGoal {
@@ -265,12 +271,12 @@ impl Zip for Goal {
             (&Goal::Not(ref f_a), &Goal::Not(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
             (&Goal::Leaf(ref f_a), &Goal::Leaf(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
             (&Goal::CannotProve(()), &Goal::CannotProve(())) => Ok(()),
-            (&Goal::Quantified(..), _) |
-            (&Goal::Implies(..), _) |
-            (&Goal::And(..), _) |
-            (&Goal::Not(..), _) |
-            (&Goal::Leaf(..), _) |
-            (&Goal::CannotProve(..), _) => {
+            (&Goal::Quantified(..), _)
+            | (&Goal::Implies(..), _)
+            | (&Goal::And(..), _)
+            | (&Goal::Not(..), _)
+            | (&Goal::Leaf(..), _)
+            | (&Goal::CannotProve(..), _) => {
                 return Err(NoSolution);
             }
         }

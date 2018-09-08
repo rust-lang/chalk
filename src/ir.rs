@@ -1,15 +1,18 @@
+use cast::Cast;
 use chalk_parse::ast;
 use fallible::*;
-use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
-use fold::shift::Shift;
+use ir::fold::shift::Shift;
+use ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
-use std::sync::Arc;
 use std::iter;
-use cast::Cast;
+use std::sync::Arc;
 
 #[macro_use]
 mod macros;
+
+#[macro_use]
+crate mod fold;
 
 crate mod could_match;
 crate mod debug;
@@ -192,9 +195,12 @@ pub struct ApplicationTy {
 }
 
 impl ApplicationTy {
-    crate fn type_parameters<'a>(&'a self) -> impl Iterator<Item=Ty> + 'a {
+    crate fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty> + 'a {
         // This unwrap() is safe because is_ty ensures that we definitely have a Ty
-        self.parameters.iter().filter(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
+        self.parameters
+            .iter()
+            .filter(|p| p.is_ty())
+            .map(|p| p.clone().ty().unwrap())
     }
 
     crate fn first_type_parameter(&self) -> Option<Ty> {
@@ -307,12 +313,14 @@ pub struct TraitRef {
 }
 
 impl TraitRef {
-    crate fn type_parameters<'a>(&'a self) -> impl Iterator<Item=Ty> + 'a {
+    crate fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty> + 'a {
         // This unwrap() is safe because is_ty ensures that we definitely have a Ty
-        self.parameters.iter().filter(|p| p.is_ty()).map(|p| p.clone().ty().unwrap())
+        self.parameters
+            .iter()
+            .filter(|p| p.is_ty())
+            .map(|p| p.clone().ty().unwrap())
     }
 }
-
 
 /// Where clauses that can be written by a Rust programmer.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -338,7 +346,7 @@ pub enum WellFormed {
     /// ```
     ///
     /// then we have the following rule:
-    /// 
+    ///
     /// ```notrust
     /// WellFormed(?Self: Copy) :- ?Self: Copy, WellFormed(?Self: Clone)
     /// ```
@@ -394,7 +402,6 @@ pub enum DomainGoal {
     Holds(WhereClause),
     WellFormed(WellFormed),
     FromEnv(FromEnv),
-
 
     Normalize(Normalize),
     UnselectedNormalize(UnselectedNormalize),
@@ -564,7 +571,10 @@ pub struct Binders<T> {
 }
 
 impl<T> Binders<T> {
-    crate fn map<U, OP>(self, op: OP) -> Binders<U> where OP: FnOnce(T) -> U {
+    crate fn map<U, OP>(self, op: OP) -> Binders<U>
+    where
+        OP: FnOnce(T) -> U,
+    {
         let value = op(self.value);
         Binders {
             binders: self.binders,
@@ -572,7 +582,10 @@ impl<T> Binders<T> {
         }
     }
 
-    crate fn map_ref<U, OP>(&self, op: OP) -> Binders<U> where OP: FnOnce(&T) -> U {
+    crate fn map_ref<U, OP>(&self, op: OP) -> Binders<U>
+    where
+        OP: FnOnce(&T) -> U,
+    {
         let value = op(&self.value);
         Binders {
             binders: self.binders.clone(),
@@ -587,15 +600,15 @@ impl<T> Binders<T> {
     crate fn with_fresh_type_var<U, OP>(self, op: OP) -> Binders<U>
     where
         OP: FnOnce(<T as Fold>::Result, Ty) -> U,
-        T: Shift
+        T: Shift,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
         let new_var = Ty::Var(0);
         let value = op(self.value.shifted_in(1), new_var);
         Binders {
             binders: iter::once(ParameterKind::Ty(()))
-            .chain(self.binders.iter().cloned())
-            .collect(),
+                .chain(self.binders.iter().cloned())
+                .collect(),
             value,
         }
     }
@@ -612,7 +625,10 @@ impl<V: IntoIterator> IntoIterator for Binders<V> {
     type IntoIter = BindersIntoIterator<V>;
 
     fn into_iter(self) -> Self::IntoIter {
-        BindersIntoIterator { iter: self.value.into_iter(), binders: self.binders }
+        BindersIntoIterator {
+            iter: self.value.into_iter(),
+            binders: self.binders,
+        }
     }
 }
 
@@ -624,7 +640,10 @@ pub struct BindersIntoIterator<V: IntoIterator> {
 impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
     type Item = Binders<<V as IntoIterator>::Item>;
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|v| Binders { binders: self.binders.clone(), value: v })
+        self.iter.next().map(|v| Binders {
+            binders: self.binders.clone(),
+            value: v,
+        })
     }
 }
 
@@ -760,11 +779,7 @@ pub enum Goal {
 }
 
 impl Goal {
-    crate fn quantify(
-        self,
-        kind: QuantifierKind,
-        binders: Vec<ParameterKind<()>>,
-    ) -> Goal {
+    crate fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal {
         Goal::Quantified(
             kind,
             Binders {
@@ -794,7 +809,7 @@ impl Goal {
                         DomainGoal::Compatible(()).cast(),
                         DomainGoal::DownstreamType(ty).cast(),
                     ],
-                    goal
+                    goal,
                 ))
             }),
         )
@@ -860,15 +875,11 @@ impl Goal {
 
     crate fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
         match self {
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => {
-                match wca {
-                    WhereClause::Implemented(tr) => program.coinductive_traits.contains(&tr.trait_id),
-                    WhereClause::ProjectionEq(..) => false,
-                }
-            }
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..)))) => {
-                true
-            }
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => match wca {
+                WhereClause::Implemented(tr) => program.coinductive_traits.contains(&tr.trait_id),
+                WhereClause::ProjectionEq(..) => false,
+            },
+            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..)))) => true,
             Goal::Quantified(QuantifierKind::ForAll, goal) => goal.value.is_coinductive(program),
             _ => false,
         }
@@ -923,13 +934,14 @@ impl Substitution {
     /// Basically, each value is mapped to a type or lifetime with its
     /// same index.
     crate fn is_identity_subst(&self) -> bool {
-        self.parameters.iter().zip(0..).all(|(parameter, index)| {
-            match parameter {
+        self.parameters
+            .iter()
+            .zip(0..)
+            .all(|(parameter, index)| match parameter {
                 ParameterKind::Ty(Ty::Var(depth)) => index == *depth,
                 ParameterKind::Lifetime(Lifetime::Var(depth)) => index == *depth,
                 _ => false,
-            }
-        })
+            })
     }
 }
 

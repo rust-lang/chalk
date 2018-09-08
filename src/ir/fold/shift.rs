@@ -1,4 +1,3 @@
-use fallible::*;
 use ir::*;
 use super::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 

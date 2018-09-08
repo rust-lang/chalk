@@ -26,9 +26,6 @@ extern crate stacker;
 mod test_util;
 
 #[macro_use]
-crate mod fold;
-
-#[macro_use]
 crate mod zip;
 
 #[macro_use]

@@ -1,5 +1,5 @@
 use fallible::*;
-use fold::*;
+use ir::fold::*;
 use super::*;
 use super::unify::UnificationResult;
 
