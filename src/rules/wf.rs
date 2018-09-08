@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ir::*;
 use errors::*;
-use cast::*;
+use ir::cast::*;
 use ir::fold::*;
 use ir::fold::shift::Shift;
 use itertools::Itertools;

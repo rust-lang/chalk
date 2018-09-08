@@ -1,7 +1,7 @@
 use ir::*;
 use rust_ir::*;
 use solve::infer::InferenceTable;
-use cast::Cast;
+use ir::cast::Cast;
 
 impl Program {
     pub fn add_default_impls(&mut self) {

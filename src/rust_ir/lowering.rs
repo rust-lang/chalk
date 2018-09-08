@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use chalk_parse::ast::*;
 use lalrpop_intern::intern;
 
-use cast::{Cast, Caster};
+use ir::cast::{Cast, Caster};
 use errors::*;
 use ir;
 use rust_ir::{self, Anonymize, ToParameter};

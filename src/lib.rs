@@ -30,7 +30,6 @@ pub mod ir;
 
 pub mod rust_ir;
 
-crate mod cast;
 crate mod coherence;
 crate mod rules;
 pub mod errors;

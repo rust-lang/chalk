@@ -1,6 +1,6 @@
-use cast::Cast;
 use chalk_parse::ast;
 use chalk_engine::fallible::*;
+use ir::cast::Cast;
 use ir::fold::shift::Shift;
 use ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;
@@ -16,6 +16,8 @@ crate mod zip;
 
 #[macro_use]
 crate mod fold;
+
+crate mod cast;
 
 crate mod could_match;
 crate mod debug;

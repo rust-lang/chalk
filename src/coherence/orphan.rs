@@ -3,7 +3,7 @@ use std::sync::Arc;
 use errors::*;
 use ir::*;
 use rust_ir::*;
-use cast::*;
+use ir::cast::*;
 use solve::SolverChoice;
 
 struct OrphanSolver {

@@ -1,4 +1,4 @@
-use cast::Cast;
+use ir::cast::Cast;
 use chalk_engine::fallible::*;
 use ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use std::sync::Arc;

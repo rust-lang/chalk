@@ -1,4 +1,4 @@
-use crate::cast::Cast;
+use crate::ir::cast::Cast;
 use crate::ir::*;
 use crate::solve::{Guidance, Solution};
 use crate::solve::infer::InferenceTable;

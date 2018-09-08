@@ -1,4 +1,4 @@
-use cast::{Cast, Caster};
+use ir::cast::{Cast, Caster};
 use ir::fold::shift::Shift;
 use ir::fold::Subst;
 use ir::*;

@@ -1,6 +1,6 @@
 //! Traits for transforming bits of IR.
 
-use cast::Cast;
+use ir::cast::Cast;
 use ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
