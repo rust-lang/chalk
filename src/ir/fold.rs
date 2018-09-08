@@ -2,7 +2,6 @@
 
 use cast::Cast;
 use ir::*;
-use rust_ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -421,7 +420,6 @@ macro_rules! enum_fold {
     }
 }
 
-enum_fold!(PolarizedTraitRef[] { Positive(a), Negative(a) });
 enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
 enum_fold!(WhereClause[] { Implemented(a), ProjectionEq(a) });
 enum_fold!(WellFormed[] { Trait(a), Ty(a) });
@@ -434,7 +432,6 @@ enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
                     Leaf(wc), CannotProve(a) });
 enum_fold!(ProgramClause[] { Implies(a), ForAll(a) });
-enum_fold!(InlineBound[] { TraitBound(a), ProjectionEqBound(a) });
 
 macro_rules! struct_fold {
     ($s:ident $([$($tt_args:tt)*])* { $($name:ident),* $(,)* } $($w:tt)*) => {
@@ -567,11 +564,6 @@ struct_fold!(TraitRef {
 struct_fold!(Normalize { projection, ty });
 struct_fold!(ProjectionEq { projection, ty });
 struct_fold!(UnselectedNormalize { projection, ty });
-struct_fold!(AssociatedTyValue {
-    associated_ty_id,
-    value,
-});
-struct_fold!(AssociatedTyValueBound { ty });
 struct_fold!(Environment { clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold<Result = F>);
 struct_fold!(EqGoal { a, b });
@@ -584,18 +576,6 @@ struct_fold!(ProgramClauseImplication {
 struct_fold!(ConstrainedSubst {
     subst, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
     constraints,
-});
-
-struct_fold!(TraitBound {
-    trait_id,
-    args_no_self,
-});
-
-struct_fold!(ProjectionEqBound {
-    trait_bound,
-    associated_ty_id,
-    parameters,
-    value,
 });
 
 // struct_fold!(ApplicationTy { name, parameters }); -- intentionally omitted, folded through Ty

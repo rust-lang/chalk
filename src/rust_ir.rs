@@ -185,6 +185,8 @@ pub enum InlineBound {
     ProjectionEqBound(ProjectionEqBound),
 }
 
+enum_fold!(InlineBound[] { TraitBound(a), ProjectionEqBound(a) });
+
 pub type QuantifiedInlineBound = Binders<InlineBound>;
 
 impl InlineBound {
@@ -221,6 +223,11 @@ pub struct TraitBound {
     crate args_no_self: Vec<Parameter>,
 }
 
+struct_fold!(TraitBound {
+    trait_id,
+    args_no_self,
+});
+
 impl TraitBound {
     fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
         let trait_ref = self.as_trait_ref(self_ty);
@@ -247,6 +254,13 @@ pub struct ProjectionEqBound {
     crate parameters: Vec<Parameter>,
     crate value: Ty,
 }
+
+struct_fold!(ProjectionEqBound {
+    trait_bound,
+    associated_ty_id,
+    parameters,
+    value,
+});
 
 impl ProjectionEqBound {
     fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
@@ -359,11 +373,18 @@ pub struct AssociatedTyValue {
     crate value: Binders<AssociatedTyValueBound>,
 }
 
+struct_fold!(AssociatedTyValue {
+    associated_ty_id,
+    value,
+});
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     crate ty: Ty,
 }
+
+struct_fold!(AssociatedTyValueBound { ty });
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {
@@ -383,6 +404,8 @@ pub enum PolarizedTraitRef {
     Positive(TraitRef),
     Negative(TraitRef),
 }
+
+enum_fold!(PolarizedTraitRef[] { Positive(a), Negative(a) });
 
 impl PolarizedTraitRef {
     crate fn is_positive(&self) -> bool {
