@@ -1,4 +1,4 @@
-use fallible::*;
+use chalk_engine::fallible::*;
 use ir::fold::{DefaultTypeFolder, Fold, IdentityExistentialFolder, UniversalFolder};
 use ir::*;
 

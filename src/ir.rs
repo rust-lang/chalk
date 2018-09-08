@@ -1,6 +1,6 @@
 use cast::Cast;
 use chalk_parse::ast;
-use fallible::*;
+use chalk_engine::fallible::*;
 use ir::fold::shift::Shift;
 use ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
 use lalrpop_intern::InternedString;

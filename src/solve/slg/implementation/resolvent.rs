@@ -1,4 +1,4 @@
-use crate::fallible::Fallible;
+use crate::chalk_engine::fallible::Fallible;
 use crate::ir::fold::shift::Shift;
 use crate::ir::fold::Fold;
 use crate::ir::*;

@@ -1,5 +1,5 @@
 use cast::Cast;
-use fallible::*;
+use chalk_engine::fallible::*;
 use ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use std::sync::Arc;
 use ir::zip::{Zip, Zipper};

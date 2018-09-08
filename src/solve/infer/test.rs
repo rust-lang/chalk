@@ -1,4 +1,4 @@
-use fallible::*;
+use chalk_engine::fallible::*;
 use ir::fold::*;
 use super::*;
 use super::unify::UnificationResult;

@@ -1,5 +1,5 @@
 use crate::cast::{Cast, Caster};
-use crate::fallible::Fallible;
+use crate::chalk_engine::fallible::Fallible;
 use crate::ir::could_match::CouldMatch;
 use crate::ir::*;
 use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};

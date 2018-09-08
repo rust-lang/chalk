@@ -366,7 +366,7 @@ macro_rules! copy_fold {
             fn fold_with(&self,
                          _folder: &mut dyn ($crate::ir::fold::Folder),
                          _binders: usize)
-                         -> ::fallible::Fallible<Self::Result> {
+                         -> ::chalk_engine::fallible::Fallible<Self::Result> {
                 Ok(*self)
             }
         }
@@ -388,7 +388,7 @@ macro_rules! enum_fold {
             fn fold_with(&self,
                          folder: &mut dyn ($crate::ir::fold::Folder),
                          binders: usize)
-                         -> ::fallible::Fallible<Self::Result> {
+                         -> ::chalk_engine::fallible::Fallible<Self::Result> {
                 match self {
                     $(
                         $s::$variant( $($name),* ) => {
@@ -407,7 +407,7 @@ macro_rules! enum_fold {
             fn fold_with(&self,
                          folder: &mut dyn ($crate::ir::fold::Folder),
                          binders: usize)
-                         -> ::fallible::Fallible<Self::Result> {
+                         -> ::chalk_engine::fallible::Fallible<Self::Result> {
                 match self {
                     $(
                         $p::$variant( $($name),* ) => {
@@ -540,7 +540,7 @@ macro_rules! struct_fold {
             fn fold_with(&self,
                          folder: &mut dyn ($crate::ir::fold::Folder),
                          binders: usize)
-                         -> ::fallible::Fallible<Self::Result> {
+                         -> ::chalk_engine::fallible::Fallible<Self::Result> {
                 Ok($s {
                     $($field_name: self.$field_name.fold_with(folder, binders)?),*
                 })

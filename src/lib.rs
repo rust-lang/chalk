@@ -35,5 +35,3 @@ crate mod coherence;
 crate mod rules;
 pub mod errors;
 pub mod solve;
-
-pub use crate::chalk_engine::fallible;

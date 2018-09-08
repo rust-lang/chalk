@@ -1,4 +1,4 @@
-use fallible::*;
+use chalk_engine::fallible::*;
 use ir::fold::*;
 use std::fmt::Debug;
 

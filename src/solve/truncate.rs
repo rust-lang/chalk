@@ -1,6 +1,6 @@
 //!
 
-use fallible::*;
+use chalk_engine::fallible::*;
 use ir::fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
 use ir::fold::shift::Shift;
 use ir::*;
