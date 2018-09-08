@@ -3,7 +3,6 @@ use std::sync::Arc;
 use ir::*;
 
 crate mod slg;
-mod test;
 mod truncate;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -34,3 +34,5 @@ crate mod coherence;
 crate mod rules;
 pub mod errors;
 
+mod test;
+
