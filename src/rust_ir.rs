@@ -3,12 +3,14 @@
 //! compiler.
 
 use fold::shift::Shift;
+use ir::tls;
 use ir::{
     ApplicationTy, Binders, Identifier, ItemId, Lifetime, Parameter, ParameterKind, ProgramClause,
-    ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty,
-    WhereClause,
+    ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty, WhereClause,
 };
+use ir::debug::Angle;
 use std::collections::BTreeMap;
+use std::fmt;
 use std::iter;
 
 pub mod lowering;
@@ -65,6 +67,38 @@ impl Program {
         let split_point = parameters.len() - trait_num_params;
         let (other_params, trait_params) = parameters.split_at(split_point);
         (associated_ty_data, trait_params, other_params)
+    }
+}
+
+impl tls::DebugContext for Program {
+    fn debug_item_id(&self, item_id: ItemId, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        if let Some(k) = self.type_kinds.get(&item_id) {
+            write!(fmt, "{}", k.name)
+        } else if let Some(k) = self.associated_ty_data.get(&item_id) {
+            write!(fmt, "({:?}::{})", k.trait_id, k.name)
+        } else {
+            fmt.debug_struct("InvalidItemId")
+                .field("index", &item_id.index)
+                .finish()
+        }
+    }
+
+    fn debug_projection(
+        &self,
+        projection_ty: &ProjectionTy,
+        fmt: &mut fmt::Formatter,
+    ) -> Result<(), fmt::Error> {
+        let (associated_ty_data, trait_params, other_params) =
+            self.split_projection(projection_ty);
+        write!(
+            fmt,
+            "<{:?} as {:?}{:?}>::{}{:?}",
+            &trait_params[0],
+            associated_ty_data.trait_id,
+            Angle(&trait_params[1..]),
+            associated_ty_data.name,
+            Angle(&other_params)
+        )
     }
 }
 

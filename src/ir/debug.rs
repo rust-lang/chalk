@@ -5,16 +5,9 @@ use super::*;
 impl Debug for ItemId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         tls::with_current_program(|p| match p {
-            Some(prog) => if let Some(k) = prog.type_kinds.get(self) {
-                write!(fmt, "{}", k.name)
-            } else if let Some(k) = prog.associated_ty_data.get(self) {
-                write!(fmt, "({:?}::{})", k.trait_id, k.name)
-            } else {
-                fmt.debug_struct("ItemId")
-                    .field("index", &self.index)
-                    .finish()
-            },
-            None => fmt.debug_struct("ItemId")
+            Some(prog) => prog.debug_item_id(*self, fmt),
+            None => fmt
+                .debug_struct("ItemId")
                 .field("index", &self.index)
                 .finish(),
         })
@@ -58,10 +51,7 @@ impl Debug for Ty {
 impl Debug for QuantifiedTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         // FIXME -- we should introduce some names or something here
-        let QuantifiedTy {
-            num_binders,
-            ty,
-        } = self;
+        let QuantifiedTy { num_binders, ty } = self;
         write!(fmt, "for<{}> {:?}", num_binders, ty)
     }
 }
@@ -96,19 +86,7 @@ impl Debug for TraitRef {
 impl Debug for ProjectionTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         tls::with_current_program(|p| match p {
-            Some(program) => {
-                let (associated_ty_data, trait_params, other_params) =
-                    program.split_projection(self);
-                write!(
-                    fmt,
-                    "<{:?} as {:?}{:?}>::{}{:?}",
-                    &trait_params[0],
-                    associated_ty_data.trait_id,
-                    Angle(&trait_params[1..]),
-                    associated_ty_data.name,
-                    Angle(&other_params)
-                )
-            }
+            Some(program) => program.debug_projection(self, fmt),
             None => write!(
                 fmt,
                 "({:?}){:?}",
@@ -165,7 +143,11 @@ impl Debug for ProjectionEq {
 
 impl Debug for UnselectedNormalize {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "UnselectedNormalize({:?} -> {:?})", self.projection, self.ty)
+        write!(
+            fmt,
+            "UnselectedNormalize({:?} -> {:?})",
+            self.projection, self.ty
+        )
     }
 }
 
@@ -379,8 +361,7 @@ impl Display for ConstrainedSubst {
         write!(
             f,
             "substitution {}, lifetime constraints {:?}",
-            subst,
-            constraints,
+            subst, constraints,
         )
     }
 }
