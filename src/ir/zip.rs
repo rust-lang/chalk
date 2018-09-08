@@ -1,4 +1,3 @@
-use fallible::*;
 use ir::fold::Fold;
 use ir::*;
 use rust_ir::*;

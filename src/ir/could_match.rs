@@ -1,5 +1,5 @@
 use ir::*;
-use zip::{Zip, Zipper};
+use ir::zip::{Zip, Zipper};
 
 /// A fast check to see whether two things could ever possibly match.
 crate trait CouldMatch<T> {

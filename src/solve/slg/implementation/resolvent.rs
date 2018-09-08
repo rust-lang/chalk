@@ -4,7 +4,7 @@ use crate::ir::fold::Fold;
 use crate::ir::*;
 use crate::solve::infer::InferenceTable;
 use crate::solve::slg::implementation::{self, SlgContext, TruncatingInferenceTable};
-use crate::zip::{Zip, Zipper};
+use crate::ir::zip::{Zip, Zipper};
 
 use chalk_engine::context;
 use chalk_engine::{ExClause, Literal};

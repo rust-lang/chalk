@@ -12,6 +12,9 @@ use std::sync::Arc;
 mod macros;
 
 #[macro_use]
+crate mod zip;
+
+#[macro_use]
 crate mod fold;
 
 crate mod could_match;

@@ -2,7 +2,7 @@ use cast::Cast;
 use fallible::*;
 use ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use std::sync::Arc;
-use zip::{Zip, Zipper};
+use ir::zip::{Zip, Zipper};
 
 use super::*;
 use super::var::*;
