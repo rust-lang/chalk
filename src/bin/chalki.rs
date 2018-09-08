@@ -1,4 +1,5 @@
 extern crate chalk;
+extern crate chalk_engine;
 extern crate chalk_parse;
 extern crate docopt;
 extern crate rustyline;
@@ -18,6 +19,7 @@ use chalk::ir;
 use chalk::rust_ir;
 use chalk::rust_ir::lowering::*;
 use chalk::ir::solve::SolverChoice;
+use chalk_engine::fallible::NoSolution;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
 
@@ -261,7 +263,7 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     match args.solver_choice().solve_root_goal(&prog.env, &peeled_goal) {
         Ok(Some(v)) => println!("{}\n", v),
         Ok(None) => println!("No possible solution.\n"),
-        Err(e) => println!("Solver failed: {}", e),
+        Err(NoSolution) => println!("Solver failed"),
     }
     Ok(())
 }

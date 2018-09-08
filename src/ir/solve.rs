@@ -86,7 +86,7 @@ impl SolverChoice {
         self,
         env: &Arc<ProgramEnvironment>,
         canonical_goal: &UCanonical<InEnvironment<Goal>>,
-    ) -> ::errors::Result<Option<Solution>> {
+    ) -> Fallible<Option<Solution>> {
         use self::slg::implementation::solve_goal_in_program;
 
         match self {

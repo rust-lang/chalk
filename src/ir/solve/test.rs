@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use errors::*;
+use chalk_engine::fallible::{Fallible, NoSolution};
 use ir;
 use ir::solve::{Solution, SolverChoice};
 use std::collections::HashMap;
@@ -9,15 +9,15 @@ use test_util::*;
 
 mod bench;
 
-fn result_to_string(result: &Result<Option<Solution>>) -> String {
+fn result_to_string(result: &Fallible<Option<Solution>>) -> String {
     match result {
         Ok(Some(v)) => format!("{}", v),
         Ok(None) => format!("No possible solution"),
-        Err(e) => format!("{}", e),
+        Err(NoSolution) => format!("Error"),
     }
 }
 
-fn assert_result(result: &Result<Option<Solution>>, expected: &str) {
+fn assert_result(result: &Fallible<Option<Solution>>, expected: &str) {
     let result = result_to_string(result);
 
     println!("expected:\n{}", expected);
