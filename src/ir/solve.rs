@@ -2,7 +2,6 @@ use std::fmt;
 use std::sync::Arc;
 use ir::*;
 
-crate mod infer;
 crate mod slg;
 mod test;
 mod truncate;

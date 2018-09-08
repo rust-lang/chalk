@@ -21,6 +21,7 @@ crate mod cast;
 
 crate mod could_match;
 crate mod debug;
+crate mod infer;
 pub mod solve;
 pub mod tls;
 
@@ -720,7 +721,7 @@ impl<T> Canonical<T> {
         // This would mean that two canonical values could no longer
         // be compared with `Eq`, which defeats a key invariant of the
         // `Canonical` type (indeed, its entire reason for existence).
-        use ir::solve::infer::InferenceTable;
+        use self::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let snapshot = infer.snapshot();
         let instantiated_value = infer.instantiate_canonical(&self);
@@ -832,7 +833,7 @@ impl Goal {
     /// does not -- at present -- contain any variables. Useful for
     /// REPLs and tests but not much else.
     pub fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal>> {
-        use ir::solve::infer::InferenceTable;
+        use self::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let peeled_goal = {
             let mut env_goal = InEnvironment::new(&Environment::new(), self);
@@ -872,7 +873,7 @@ impl Goal {
     ///
     /// Will panic if this goal does in fact contain free variables.
     crate fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>> {
-        use ir::solve::infer::InferenceTable;
+        use self::infer::InferenceTable;
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(), self);
         let canonical_goal = infer.canonicalize(&env_goal).quantified;

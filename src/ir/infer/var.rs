@@ -31,7 +31,7 @@ use std::u32;
 ///     "downcast" the resulting variable using
 ///     e.g. `value.ty().unwrap()`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(in ir::solve) struct InferenceVariable {
+pub(in ir) struct InferenceVariable {
     index: u32,
 }
 
@@ -85,7 +85,7 @@ impl UnifyKey for InferenceVariable {
 /// universe index; when the inference variable is assigned a value, it becomes
 /// bound and records that value. See `InferenceVariable` for more details.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in ir::solve) enum InferenceValue {
+pub(in ir) enum InferenceValue {
     Unbound(UniverseIndex),
     Bound(Parameter),
 }
