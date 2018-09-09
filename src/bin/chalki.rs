@@ -1,5 +1,6 @@
 extern crate chalk;
 extern crate chalk_engine;
+extern crate chalk_ir;
 extern crate chalk_parse;
 extern crate docopt;
 extern crate rustyline;
@@ -15,10 +16,9 @@ use std::fs::File;
 use std::sync::Arc;
 use std::process::exit;
 
-use chalk::ir;
 use chalk::rust_ir;
 use chalk::rust_ir::lowering::*;
-use chalk::ir::solve::SolverChoice;
+use chalk_ir::solve::SolverChoice;
 use chalk_engine::fallible::NoSolution;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
@@ -63,7 +63,7 @@ error_chain! {
 struct Program {
     text: String,
     ir: Arc<rust_ir::Program>,
-    env: Arc<ir::ProgramEnvironment>,
+    env: Arc<chalk_ir::ProgramEnvironment>,
 }
 
 impl Program {
@@ -119,7 +119,7 @@ fn run() -> Result<()> {
 
         // Evaluate the goal(s). If any goal returns an error, print the error
         // and exit.
-        ir::tls::set_current_program(&prog.ir, || -> Result<()> {
+        chalk_ir::tls::set_current_program(&prog.ir, || -> Result<()> {
             for g in &args.flag_goal {
                 if let Err(e) = goal(&args, g, &prog) {
                     eprintln!("error: {}", e);
@@ -200,7 +200,7 @@ fn process(
             .ok_or("no program currently loaded; type 'help' to see available commands")?;
 
         // Attempt to parse the program.
-        ir::tls::set_current_program(&prog.ir, || -> Result<()> {
+        chalk_ir::tls::set_current_program(&prog.ir, || -> Result<()> {
             match command {
                 // Print out the loaded program.
                 "print" => println!("{}", prog.text),

@@ -189,7 +189,15 @@ enum_fold!(InlineBound[] { TraitBound(a), ProjectionEqBound(a) });
 
 pub type QuantifiedInlineBound = Binders<InlineBound>;
 
-impl InlineBound {
+crate trait IntoWhereClauses {
+    type Output;
+
+    fn into_where_clauses(&self, self_ty: Ty) -> Vec<Self::Output>;
+}
+
+impl IntoWhereClauses for InlineBound {
+    type Output = WhereClause;
+
     /// Applies the `InlineBound` to `self_ty` and lowers to a [`DomainGoal`].
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
@@ -202,8 +210,10 @@ impl InlineBound {
     }
 }
 
-impl QuantifiedInlineBound {
-    crate fn into_where_clauses(&self, self_ty: Ty) -> Vec<QuantifiedWhereClause> {
+impl IntoWhereClauses for QuantifiedInlineBound {
+    type Output = QuantifiedWhereClause;
+
+    fn into_where_clauses(&self, self_ty: Ty) -> Vec<QuantifiedWhereClause> {
         let self_ty = self_ty.shifted_in(self.binders.len());
         self.value
             .into_where_clauses(self_ty)

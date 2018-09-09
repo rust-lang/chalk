@@ -13,8 +13,9 @@ extern crate chalk_parse;
 #[macro_use]
 extern crate chalk_macros;
 extern crate chalk_engine;
+#[macro_use]
+extern crate chalk_ir as ir;
 extern crate diff;
-extern crate ena;
 #[macro_use]
 extern crate error_chain;
 extern crate itertools;
@@ -24,9 +25,6 @@ extern crate stacker;
 
 #[macro_use]
 mod test_util;
-
-#[macro_use]
-pub mod ir;
 
 pub mod rust_ir;
 
