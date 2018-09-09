@@ -115,7 +115,8 @@ fn run() -> Result<()> {
         // Check that a program was provided.
         // TODO: It's customary to print Usage info when an error like this
         // happens.
-        let prog = prog.ok_or("error: cannot eval without a program; use `--program` to specify one.")?;
+        let prog =
+            prog.ok_or("error: cannot eval without a program; use `--program` to specify one.")?;
 
         // Evaluate the goal(s). If any goal returns an error, print the error
         // and exit.
@@ -177,20 +178,17 @@ fn process(
         // Print out interpreter commands.
         // TODO: Implement "help <command>" for more specific help.
         help()
-
     } else if command == "program" {
         // Load a .chalk file via stdin, until EOF is found.
         *prog = Some(Program::new(read_program(rl)?, args.solver_choice())?);
-
     } else if command.starts_with("load ") {
         // Load a .chalk file.
         let filename = &command["load ".len()..];
         *prog = Some(load_program(args, filename)?);
-
     } else if command.starts_with("debug ") {
         match command.split_whitespace().nth(1) {
             Some(level) => std::env::set_var("CHALK_DEBUG", level),
-            None => println!("debug <level> set debug level to <level>")
+            None => println!("debug <level> set debug level to <level>"),
         }
     } else {
         // The command is either "print", "lowered", or a goal.
@@ -260,7 +258,9 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let peeled_goal = goal.into_peeled_goal();
-    match args.solver_choice().solve_root_goal(&prog.env, &peeled_goal) {
+    match args.solver_choice()
+        .solve_root_goal(&prog.env, &peeled_goal)
+    {
         Ok(Some(v)) => println!("{}\n", v),
         Ok(None) => println!("No possible solution.\n"),
         Err(NoSolution) => println!("Solver failed"),
@@ -270,6 +270,8 @@ fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
 
 impl Args {
     fn solver_choice(&self) -> SolverChoice {
-        SolverChoice::SLG { max_size: self.flag_overflow_depth }
+        SolverChoice::SLG {
+            max_size: self.flag_overflow_depth,
+        }
     }
 }

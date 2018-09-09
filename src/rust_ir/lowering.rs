@@ -3,12 +3,12 @@ use std::collections::BTreeMap;
 use chalk_parse::ast::*;
 use lalrpop_intern::intern;
 
-use chalk_ir::cast::{Cast, Caster};
-use errors::*;
 use chalk_ir;
-use rust_ir::{self, Anonymize, ToParameter};
-use itertools::Itertools;
+use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::solve::SolverChoice;
+use errors::*;
+use itertools::Itertools;
+use rust_ir::{self, Anonymize, ToParameter};
 
 mod test;
 
@@ -46,7 +46,10 @@ const SELF: &str = "Self";
 
 impl<'k> Env<'k> {
     fn lookup(&self, name: Identifier) -> Result<NameLookup> {
-        if let Some(k) = self.parameter_map.get(&chalk_ir::ParameterKind::Ty(name.str)) {
+        if let Some(k) = self
+            .parameter_map
+            .get(&chalk_ir::ParameterKind::Ty(name.str))
+        {
             return Ok(NameLookup::Parameter(*k));
         }
 
@@ -58,7 +61,8 @@ impl<'k> Env<'k> {
     }
 
     fn lookup_lifetime(&self, name: Identifier) -> Result<LifetimeLookup> {
-        if let Some(k) = self.parameter_map
+        if let Some(k) = self
+            .parameter_map
             .get(&chalk_ir::ParameterKind::Lifetime(name.str))
         {
             return Ok(LifetimeLookup::Parameter(*k));
@@ -81,7 +85,8 @@ impl<'k> Env<'k> {
     {
         let binders = binders.into_iter().enumerate().map(|(i, k)| (k, i));
         let len = binders.len();
-        let parameter_map: ParameterMap = self.parameter_map
+        let parameter_map: ParameterMap = self
+            .parameter_map
             .iter()
             .map(|(&k, &v)| (k, v + len))
             .chain(binders)
@@ -203,7 +208,9 @@ impl LowerProgram for Program {
                     if d.flags.deref {
                         use std::collections::btree_map::Entry::*;
                         match lang_items.entry(rust_ir::LangItem::DerefTrait) {
-                            Vacant(entry) => { entry.insert(item_id); },
+                            Vacant(entry) => {
+                                entry.insert(item_id);
+                            }
                             Occupied(_) => {
                                 bail!(ErrorKind::DuplicateLangItem(rust_ir::LangItem::DerefTrait))
                             }
@@ -426,8 +433,7 @@ impl LowerWhereClauseVec for [QuantifiedWhereClause] {
             .flat_map(|wc| match wc.lower(env) {
                 Ok(v) => v.into_iter().map(Ok).collect(),
                 Err(e) => vec![Err(e)],
-            })
-            .collect()
+            }).collect()
     }
 }
 
@@ -445,17 +451,12 @@ impl LowerWhereClause<chalk_ir::WhereClause> for WhereClause {
             WhereClause::Implemented { trait_ref } => {
                 vec![chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?)]
             }
-            WhereClause::ProjectionEq {
-                projection,
-                ty,
-            } => vec![
+            WhereClause::ProjectionEq { projection, ty } => vec![
                 chalk_ir::WhereClause::ProjectionEq(chalk_ir::ProjectionEq {
                     projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
                 }),
-                chalk_ir::WhereClause::Implemented(
-                    projection.trait_ref.lower(env)?
-                ),
+                chalk_ir::WhereClause::Implemented(projection.trait_ref.lower(env)?),
             ],
         };
         Ok(where_clauses)
@@ -465,9 +466,7 @@ impl LowerWhereClause<chalk_ir::WhereClause> for WhereClause {
 impl LowerWhereClause<chalk_ir::QuantifiedWhereClause> for QuantifiedWhereClause {
     fn lower(&self, env: &Env) -> Result<Vec<chalk_ir::QuantifiedWhereClause>> {
         let parameter_kinds = self.parameter_kinds.iter().map(|pk| pk.lower());
-        let binders = env.in_binders(parameter_kinds, |env| {
-            Ok(self.where_clause.lower(env)?)
-        })?;
+        let binders = env.in_binders(parameter_kinds, |env| Ok(self.where_clause.lower(env)?))?;
         Ok(binders.into_iter().collect())
     }
 }
@@ -481,25 +480,24 @@ impl LowerDomainGoal for DomainGoal {
         let goals = match self {
             DomainGoal::Holds { where_clause } => {
                 where_clause.lower(env)?.into_iter().casted().collect()
-            },
-            DomainGoal::Normalize {
-                projection,
-                ty,
-            } => vec![chalk_ir::DomainGoal::Normalize(chalk_ir::Normalize {
-                projection: projection.lower(env)?,
-                ty: ty.lower(env)?,
-            })],
+            }
+            DomainGoal::Normalize { projection, ty } => {
+                vec![chalk_ir::DomainGoal::Normalize(chalk_ir::Normalize {
+                    projection: projection.lower(env)?,
+                    ty: ty.lower(env)?,
+                })]
+            }
             DomainGoal::TyWellFormed { ty } => vec![chalk_ir::DomainGoal::WellFormed(
-                chalk_ir::WellFormed::Ty(ty.lower(env)?)
+                chalk_ir::WellFormed::Ty(ty.lower(env)?),
             )],
             DomainGoal::TraitRefWellFormed { trait_ref } => vec![chalk_ir::DomainGoal::WellFormed(
-                chalk_ir::WellFormed::Trait(trait_ref.lower(env)?)
+                chalk_ir::WellFormed::Trait(trait_ref.lower(env)?),
             )],
             DomainGoal::TyFromEnv { ty } => vec![chalk_ir::DomainGoal::FromEnv(
-                chalk_ir::FromEnv::Ty(ty.lower(env)?)
+                chalk_ir::FromEnv::Ty(ty.lower(env)?),
             )],
             DomainGoal::TraitRefFromEnv { trait_ref } => vec![chalk_ir::DomainGoal::FromEnv(
-                chalk_ir::FromEnv::Trait(trait_ref.lower(env)?)
+                chalk_ir::FromEnv::Trait(trait_ref.lower(env)?),
             )],
             DomainGoal::TraitInScope { trait_name } => {
                 let id = match env.lookup(*trait_name)? {
@@ -513,30 +511,26 @@ impl LowerDomainGoal for DomainGoal {
 
                 vec![chalk_ir::DomainGoal::InScope(id)]
             }
-            DomainGoal::Derefs { source, target } => vec![chalk_ir::DomainGoal::Derefs(
-                chalk_ir::Derefs {
+            DomainGoal::Derefs { source, target } => {
+                vec![chalk_ir::DomainGoal::Derefs(chalk_ir::Derefs {
                     source: source.lower(env)?,
-                    target: target.lower(env)?
-                }
-            )],
-            DomainGoal::IsLocal { ty } => vec![
-                chalk_ir::DomainGoal::IsLocal(ty.lower(env)?)
-            ],
-            DomainGoal::IsUpstream { ty } => vec![
-                chalk_ir::DomainGoal::IsUpstream(ty.lower(env)?)
-            ],
-            DomainGoal::IsFullyVisible { ty } => vec![
-                chalk_ir::DomainGoal::IsFullyVisible(ty.lower(env)?)
-            ],
-            DomainGoal::LocalImplAllowed { trait_ref } => vec![
-                chalk_ir::DomainGoal::LocalImplAllowed(trait_ref.lower(env)?)
-            ],
-            DomainGoal::Compatible => vec![
-                chalk_ir::DomainGoal::Compatible(())
-            ],
-            DomainGoal::DownstreamType { ty } => vec![
-                chalk_ir::DomainGoal::DownstreamType(ty.lower(env)?)
-            ],
+                    target: target.lower(env)?,
+                })]
+            }
+            DomainGoal::IsLocal { ty } => vec![chalk_ir::DomainGoal::IsLocal(ty.lower(env)?)],
+            DomainGoal::IsUpstream { ty } => vec![chalk_ir::DomainGoal::IsUpstream(ty.lower(env)?)],
+            DomainGoal::IsFullyVisible { ty } => {
+                vec![chalk_ir::DomainGoal::IsFullyVisible(ty.lower(env)?)]
+            }
+            DomainGoal::LocalImplAllowed { trait_ref } => {
+                vec![chalk_ir::DomainGoal::LocalImplAllowed(
+                    trait_ref.lower(env)?,
+                )]
+            }
+            DomainGoal::Compatible => vec![chalk_ir::DomainGoal::Compatible(())],
+            DomainGoal::DownstreamType { ty } => {
+                vec![chalk_ir::DomainGoal::DownstreamType(ty.lower(env)?)]
+            }
         };
         Ok(goals)
     }
@@ -549,20 +543,23 @@ trait LowerLeafGoal {
 impl LowerLeafGoal for LeafGoal {
     fn lower(&self, env: &Env) -> Result<Vec<chalk_ir::LeafGoal>> {
         let goals = match self {
-            LeafGoal::DomainGoal { goal } => {
-                goal.lower(env)?
-                    .into_iter()
-                    .map(|goal| chalk_ir::LeafGoal::DomainGoal(goal))
-                    .collect()
-            }
-            LeafGoal::UnifyTys { a, b } => vec![chalk_ir::EqGoal {
-                a: chalk_ir::ParameterKind::Ty(a.lower(env)?),
-                b: chalk_ir::ParameterKind::Ty(b.lower(env)?),
-            }.cast()],
-            LeafGoal::UnifyLifetimes { ref a, ref b } => vec![chalk_ir::EqGoal {
-                a: chalk_ir::ParameterKind::Lifetime(a.lower(env)?),
-                b: chalk_ir::ParameterKind::Lifetime(b.lower(env)?),
-            }.cast()],
+            LeafGoal::DomainGoal { goal } => goal
+                .lower(env)?
+                .into_iter()
+                .map(|goal| chalk_ir::LeafGoal::DomainGoal(goal))
+                .collect(),
+            LeafGoal::UnifyTys { a, b } => vec![
+                chalk_ir::EqGoal {
+                    a: chalk_ir::ParameterKind::Ty(a.lower(env)?),
+                    b: chalk_ir::ParameterKind::Ty(b.lower(env)?),
+                }.cast(),
+            ],
+            LeafGoal::UnifyLifetimes { ref a, ref b } => vec![
+                chalk_ir::EqGoal {
+                    a: chalk_ir::ParameterKind::Lifetime(a.lower(env)?),
+                    b: chalk_ir::ParameterKind::Lifetime(b.lower(env)?),
+                }.cast(),
+            ],
         };
         Ok(goals)
     }
@@ -577,7 +574,8 @@ impl LowerStructDefn for StructDefn {
         let binders = env.in_binders(self.all_parameters(), |env| {
             let self_ty = chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::ItemId(item_id),
-                parameters: self.all_parameters()
+                parameters: self
+                    .all_parameters()
                     .anonymize()
                     .iter()
                     .zip(0..)
@@ -649,10 +647,11 @@ impl LowerTraitBound for TraitBound {
             bail!(ErrorKind::NotTrait(self.trait_name));
         }
 
-        let parameters = self.args_no_self
-                             .iter()
-                             .map(|a| Ok(a.lower(env)?))
-                             .collect::<Result<Vec<_>>>()?;
+        let parameters = self
+            .args_no_self
+            .iter()
+            .map(|a| Ok(a.lower(env)?))
+            .collect::<Result<Vec<_>>>()?;
 
         if parameters.len() != k.binders.len() {
             bail!(
@@ -680,7 +679,10 @@ trait LowerProjectionEqBound {
 impl LowerProjectionEqBound for ProjectionEqBound {
     fn lower(&self, env: &Env) -> Result<rust_ir::ProjectionEqBound> {
         let trait_bound = self.trait_bound.lower(env)?;
-        let info = match env.associated_ty_infos.get(&(trait_bound.trait_id, self.name.str)) {
+        let info = match env
+            .associated_ty_infos
+            .get(&(trait_bound.trait_id, self.name.str))
+        {
             Some(info) => info,
             None => bail!("no associated type `{}` defined in trait", self.name.str),
         };
@@ -714,12 +716,10 @@ trait LowerInlineBound {
 impl LowerInlineBound for InlineBound {
     fn lower(&self, env: &Env) -> Result<rust_ir::InlineBound> {
         let bound = match self {
-            InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(
-                b.lower(&env)?
-            ),
-            InlineBound::ProjectionEqBound(b) => rust_ir::InlineBound::ProjectionEqBound(
-                b.lower(&env)?
-            ),
+            InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(b.lower(&env)?),
+            InlineBound::ProjectionEqBound(b) => {
+                rust_ir::InlineBound::ProjectionEqBound(b.lower(&env)?)
+            }
         };
         Ok(bound)
     }
@@ -732,9 +732,7 @@ trait LowerQuantifiedInlineBound {
 impl LowerQuantifiedInlineBound for QuantifiedInlineBound {
     fn lower(&self, env: &Env) -> Result<rust_ir::QuantifiedInlineBound> {
         let parameter_kinds = self.parameter_kinds.iter().map(|pk| pk.lower());
-        let binders = env.in_binders(parameter_kinds, |env| {
-            Ok(self.bound.lower(env)?)
-        })?;
+        let binders = env.in_binders(parameter_kinds, |env| Ok(self.bound.lower(env)?))?;
         Ok(binders)
     }
 }
@@ -745,9 +743,7 @@ trait LowerQuantifiedInlineBoundVec {
 
 impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
     fn lower(&self, env: &Env) -> Result<Vec<rust_ir::QuantifiedInlineBound>> {
-        self.iter()
-            .map(|b| b.lower(env))
-            .collect()
+        self.iter().map(|b| b.lower(env)).collect()
     }
 }
 
@@ -758,8 +754,12 @@ trait LowerPolarizedTraitRef {
 impl LowerPolarizedTraitRef for PolarizedTraitRef {
     fn lower(&self, env: &Env) -> Result<rust_ir::PolarizedTraitRef> {
         Ok(match *self {
-            PolarizedTraitRef::Positive(ref tr) => rust_ir::PolarizedTraitRef::Positive(tr.lower(env)?),
-            PolarizedTraitRef::Negative(ref tr) => rust_ir::PolarizedTraitRef::Negative(tr.lower(env)?),
+            PolarizedTraitRef::Positive(ref tr) => {
+                rust_ir::PolarizedTraitRef::Positive(tr.lower(env)?)
+            }
+            PolarizedTraitRef::Negative(ref tr) => {
+                rust_ir::PolarizedTraitRef::Negative(tr.lower(env)?)
+            }
         })
     }
 }
@@ -862,7 +862,8 @@ impl LowerTy for Ty {
                     ))
                 }
 
-                let parameters = args.iter()
+                let parameters = args
+                    .iter()
                     .map(|t| Ok(t.lower(env)?))
                     .collect::<Result<Vec<_>>>()?;
 
@@ -976,7 +977,8 @@ impl LowerClause for Clause {
         let implications = env.in_binders(self.all_parameters(), |env| {
             let consequences: Vec<chalk_ir::DomainGoal> = self.consequence.lower(env)?;
 
-            let mut conditions: Vec<chalk_ir::Goal> = self.conditions
+            let mut conditions: Vec<chalk_ir::Goal> = self
+                .conditions
                 .iter()
                 .map(|g| g.lower(env).map(|g| *g))
                 .collect::<Result<_>>()?;
@@ -991,21 +993,21 @@ impl LowerClause for Clause {
                 .map(|consequence| chalk_ir::ProgramClauseImplication {
                     consequence,
                     conditions: conditions.clone(),
-                })
-                .collect::<Vec<_>>();
+                }).collect::<Vec<_>>();
             Ok(implications)
         })?;
 
         let clauses = implications
             .into_iter()
-            .map(|implication: chalk_ir::Binders<chalk_ir::ProgramClauseImplication>| {
-                if implication.binders.is_empty() {
-                    chalk_ir::ProgramClause::Implies(implication.value)
-                } else {
-                    chalk_ir::ProgramClause::ForAll(implication)
-                }
-            })
-            .collect();
+            .map(
+                |implication: chalk_ir::Binders<chalk_ir::ProgramClauseImplication>| {
+                    if implication.binders.is_empty() {
+                        chalk_ir::ProgramClause::Implies(implication.value)
+                    } else {
+                        chalk_ir::ProgramClause::ForAll(implication)
+                    }
+                },
+            ).collect();
         Ok(clauses)
     }
 }
@@ -1086,8 +1088,7 @@ impl LowerGoal<rust_ir::Program> for Goal {
                     addl_parameter_kinds,
                 };
                 ((datum.trait_id, datum.name), info)
-            })
-            .collect();
+            }).collect();
 
         let env = Env {
             type_ids: &program.type_ids,
@@ -1103,34 +1104,35 @@ impl LowerGoal<rust_ir::Program> for Goal {
 impl<'k> LowerGoal<Env<'k>> for Goal {
     fn lower(&self, env: &Env<'k>) -> Result<Box<chalk_ir::Goal>> {
         match self {
-            Goal::ForAll(ids, g) => {
-                g.lower_quantified(env, chalk_ir::QuantifierKind::ForAll, ids)
-            }
-            Goal::Exists(ids, g) => {
-                g.lower_quantified(env, chalk_ir::QuantifierKind::Exists, ids)
-            }
+            Goal::ForAll(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::ForAll, ids),
+            Goal::Exists(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::Exists, ids),
             Goal::Implies(hyp, g) => {
                 // We "elaborate" implied bounds by lowering goals like `T: Trait` and
                 // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`
                 // in the assumptions of an `if` goal, e.g. `if (T: Trait) { ... }` lowers to
                 // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
-                let where_clauses: Result<Vec<_>> =
-                    hyp.into_iter()
-                      .flat_map(|h| h.lower_clause(env).apply_result())
-                      .map(|result| result.map(|h| h.into_from_env_clause()))
-                      .collect();
-                Ok(Box::new(chalk_ir::Goal::Implies(where_clauses?, g.lower(env)?)))
+                let where_clauses: Result<Vec<_>> = hyp
+                    .into_iter()
+                    .flat_map(|h| h.lower_clause(env).apply_result())
+                    .map(|result| result.map(|h| h.into_from_env_clause()))
+                    .collect();
+                Ok(Box::new(chalk_ir::Goal::Implies(
+                    where_clauses?,
+                    g.lower(env)?,
+                )))
             }
-            Goal::And(g1, g2) => {
-                Ok(Box::new(chalk_ir::Goal::And(g1.lower(env)?, g2.lower(env)?)))
-            }
+            Goal::And(g1, g2) => Ok(Box::new(chalk_ir::Goal::And(
+                g1.lower(env)?,
+                g2.lower(env)?,
+            ))),
             Goal::Not(g) => Ok(Box::new(chalk_ir::Goal::Not(g.lower(env)?))),
             Goal::Compatible(g) => Ok(Box::new(g.lower(env)?.compatible())),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
                 let leaves = leaf.lower(env)?.into_iter().map(chalk_ir::Goal::Leaf);
-                let goal = leaves.fold1(|goal, leaf| chalk_ir::Goal::And(Box::new(goal), Box::new(leaf)))
-                                 .expect("at least one goal");
+                let goal = leaves
+                    .fold1(|goal, leaf| chalk_ir::Goal::And(Box::new(goal), Box::new(leaf)))
+                    .expect("at least one goal");
                 Ok(Box::new(goal))
             }
         }
@@ -1159,7 +1161,10 @@ impl LowerQuantifiedGoal for Goal {
 
         let parameter_kinds = parameter_kinds.iter().map(|pk| pk.lower());
         let subgoal = env.in_binders(parameter_kinds, |env| self.lower(env))?;
-        Ok(Box::new(chalk_ir::Goal::Quantified(quantifier_kind, subgoal)))
+        Ok(Box::new(chalk_ir::Goal::Quantified(
+            quantifier_kind,
+            subgoal,
+        )))
     }
 }
 

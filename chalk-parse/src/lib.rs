@@ -1,5 +1,4 @@
 #![feature(non_modrs_mods, tool_attributes)]
-
 #![recursion_limit = "1024"]
 
 #[macro_use]
@@ -40,20 +39,30 @@ pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
                 let text = text.replace("\n", " ").replace("\r", " ");
                 write!(output, "position: `{}`\n", text).expect("str-write cannot fail");
                 write!(output, "           ").expect("str-write cannot fail");
-                for _ in 0..start { output.push_str(" "); }
-                for _ in start..end { output.push_str("^"); }
+                for _ in 0..start {
+                    output.push_str(" ");
+                }
+                for _ in start..end {
+                    output.push_str("^");
+                }
                 output.push_str("\n");
                 output
             };
             match e {
-                ParseError::InvalidToken { location } =>
-                    bail!("parse error: {:?}\n{}", e, position_string(location, location+1)),
-                ParseError::UnrecognizedToken { token: Some((start, _, end)), .. } =>
-                    bail!("parse error: {:?}\n{}", e, position_string(start, end)),
-                ParseError::ExtraToken { token: (start, _, end), .. } =>
-                    bail!("parse error: {:?}\n{}", e, position_string(start, end)),
-                _ =>
-                    bail!("parse error: {:?}", e),
+                ParseError::InvalidToken { location } => bail!(
+                    "parse error: {:?}\n{}",
+                    e,
+                    position_string(location, location + 1)
+                ),
+                ParseError::UnrecognizedToken {
+                    token: Some((start, _, end)),
+                    ..
+                } => bail!("parse error: {:?}\n{}", e, position_string(start, end)),
+                ParseError::ExtraToken {
+                    token: (start, _, end),
+                    ..
+                } => bail!("parse error: {:?}\n{}", e, position_string(start, end)),
+                _ => bail!("parse error: {:?}", e),
             }
         }
     }

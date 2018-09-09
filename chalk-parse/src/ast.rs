@@ -15,7 +15,7 @@ impl Span {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Program {
-    pub items: Vec<Item>
+    pub items: Vec<Item>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -118,12 +118,10 @@ pub enum Kind {
 
 impl fmt::Display for Kind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(
-            match *self {
-                Kind::Ty => "type",
-                Kind::Lifetime => "lifetime",
-            }
-        )
+        f.write_str(match *self {
+            Kind::Ty => "type",
+            Kind::Lifetime => "lifetime",
+        })
     }
 }
 
@@ -178,7 +176,7 @@ pub enum Ty {
     },
     Apply {
         name: Identifier,
-        args: Vec<Parameter>
+        args: Vec<Parameter>,
     },
     Projection {
         proj: ProjectionTy,
@@ -188,15 +186,13 @@ pub enum Ty {
     },
     ForAll {
         lifetime_names: Vec<Identifier>,
-        ty: Box<Ty>
-    }
+        ty: Box<Ty>,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Lifetime {
-    Id {
-        name: Identifier,
-    }
+    Id { name: Identifier },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
