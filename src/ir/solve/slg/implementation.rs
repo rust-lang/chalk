@@ -9,7 +9,6 @@ use crate::ir::solve::truncate::{self, Truncated};
 use crate::ir::solve::Solution;
 
 use chalk_engine::context;
-use chalk_engine::forest::Forest;
 use chalk_engine::hh::HhGoal;
 use chalk_engine::{DelayedLiteral, ExClause, Literal};
 
@@ -19,14 +18,8 @@ use std::sync::Arc;
 mod aggregate;
 mod resolvent;
 
-/// Entry point for the chalk solver implementation.
-/// Solve a canonical goal `root_goal` in the given `program` environment.
-pub fn solve_goal_in_program(root_goal: &UCanonical<InEnvironment<Goal>>, program: &Arc<ProgramEnvironment>, max_size: usize) -> Option<Solution> {
-    Forest::new(SlgContext::new(program, max_size)).solve(root_goal)
-}
-
 #[derive(Clone, Debug)]
-pub(super) struct SlgContext {
+crate struct SlgContext {
     program: Arc<ProgramEnvironment>,
     max_size: usize,
 }

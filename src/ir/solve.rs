@@ -1,6 +1,10 @@
+use chalk_engine::context::Context;
+use chalk_engine::context::ContextOps;
+use chalk_engine::forest::Forest;
+use ir::*;
+use ir::solve::slg::implementation::SlgContext;
 use std::fmt;
 use std::sync::Arc;
-use ir::*;
 
 crate mod slg;
 mod truncate;
@@ -86,23 +90,42 @@ impl SolverChoice {
         env: &Arc<ProgramEnvironment>,
         canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Fallible<Option<Solution>> {
-        use self::slg::implementation::solve_goal_in_program;
-
-        match self {
-            SolverChoice::SLG { max_size } => {
-                Ok(solve_goal_in_program(canonical_goal, env, max_size))
-            }
-        }
+        Ok(self.create_solver(env).solve(canonical_goal))
     }
 
     /// Returns the default SLG parameters.
     fn slg() -> Self {
         SolverChoice::SLG { max_size: 10 }
     }
+
+    pub fn create_solver(self, env: &Arc<ProgramEnvironment>) -> Box<Solver> {
+        match self {
+            SolverChoice::SLG { max_size } => {
+                Box::new(Forest::new(SlgContext::new(env, max_size)))
+            }
+        }
+    }
 }
 
 impl Default for SolverChoice {
     fn default() -> Self {
         SolverChoice::slg()
+    }
+}
+
+pub trait Solver {
+    /// Solves a given goal, producing the solution. This will do only
+    /// as much work towards `goal` as it has to (and that works is
+    /// cached for future attempts).
+    fn solve(&mut self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution>;
+}
+
+impl<C, CO> Solver for Forest<C, CO>
+where
+    C: Context<UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal>>, Solution = Solution>,
+    CO: ContextOps<C>,
+{
+    fn solve(&mut self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
+        self.solve(goal)
     }
 }
