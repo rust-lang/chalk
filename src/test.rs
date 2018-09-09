@@ -8,6 +8,7 @@ use std::sync::Arc;
 use test_util::*;
 
 mod bench;
+mod slg;
 
 fn result_to_string(result: &Fallible<Option<Solution>>) -> String {
     match result {
