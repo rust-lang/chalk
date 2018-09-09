@@ -1,12 +1,11 @@
 #![cfg(test)]
 
-use crate::ir;
-use crate::ir::solve::slg::implementation::SlgContext;
+use crate::chalk_ir::solve::slg::implementation::SlgContext;
 
 use chalk_engine::forest::Forest;
 use std::sync::Arc;
 use test_util::*;
-use ir::solve::SolverChoice;
+use chalk_ir::solve::SolverChoice;
 
 macro_rules! test {
     (program $program:tt $(goal $goal:tt first $n:tt with max $depth:tt { $expected:expr })*) => {
@@ -32,7 +31,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
         ).unwrap()
     );
     let env = &Arc::new(program.environment());
-    ir::tls::set_current_program(&program, || {
+    chalk_ir::tls::set_current_program(&program, || {
         for (max_size, num_answers, goal_text, expected) in goals {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
@@ -59,7 +58,7 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
         ).unwrap()
     );
     let env = &Arc::new(program.environment());
-    ir::tls::set_current_program(&program, || {
+    chalk_ir::tls::set_current_program(&program, || {
         for (max_size, num_answers, goal_text, expected) in goals {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);

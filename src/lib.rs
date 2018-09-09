@@ -2,6 +2,7 @@
 #![cfg_attr(test, feature(test))]
 #![feature(crate_in_paths)]
 #![feature(crate_visibility_modifier)]
+#![feature(extern_prelude)]
 #![feature(in_band_lifetimes)]
 #![feature(macro_at_most_once_rep)]
 #![feature(specialization)]
@@ -14,7 +15,7 @@ extern crate chalk_parse;
 extern crate chalk_macros;
 extern crate chalk_engine;
 #[macro_use]
-extern crate chalk_ir as ir;
+extern crate chalk_ir;
 extern crate diff;
 #[macro_use]
 extern crate error_chain;

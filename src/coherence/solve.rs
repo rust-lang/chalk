@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use ir::fold::shift::Shift;
+use chalk_ir::fold::shift::Shift;
 use itertools::Itertools;
 use errors::*;
-use ir::*;
+use chalk_ir::*;
 use rust_ir::*;
-use ir::cast::*;
-use ir::solve::{SolverChoice, Solution};
+use chalk_ir::cast::*;
+use chalk_ir::solve::{SolverChoice, Solution};
 
 struct DisjointSolver {
     env: Arc<ProgramEnvironment>,

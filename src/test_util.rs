@@ -5,9 +5,9 @@ use chalk_parse;
 use itertools::Itertools;
 use std::fmt::Write;
 use rust_ir::lowering::{LowerProgram, LowerGoal};
-use ir::Goal;
+use chalk_ir::Goal;
 use rust_ir::Program;
-use ir::solve::SolverChoice;
+use chalk_ir::solve::SolverChoice;
 use errors::Result;
 
 pub fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<Program> {
@@ -25,7 +25,7 @@ macro_rules! lowering_success {
         assert!(program_text.ends_with("}"));
         let result = parse_and_lower_program(
             &program_text[1..program_text.len()-1],
-            $crate::ir::solve::SolverChoice::default()
+            chalk_ir::solve::SolverChoice::default()
         );
         if let Err(ref e) = result {
             println!("lowering error: {}", e);
@@ -43,7 +43,7 @@ macro_rules! lowering_error {
         assert!(program_text.ends_with("}"));
         let error = parse_and_lower_program(
             &program_text[1..program_text.len()-1],
-            $crate::ir::solve::SolverChoice::default()
+            chalk_ir::solve::SolverChoice::default()
         ).unwrap_err();
         let expected = $crate::errors::Error::from($expected);
         assert_eq!(

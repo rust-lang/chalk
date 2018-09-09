@@ -1,8 +1,8 @@
 #![cfg(test)]
 
 use chalk_engine::fallible::{Fallible, NoSolution};
-use ir;
-use ir::solve::{Solution, SolverChoice};
+use chalk_ir;
+use chalk_ir::solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 use std::sync::Arc;
 use test_util::*;
@@ -95,7 +95,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
             (program, env)
         });
 
-        ir::tls::set_current_program(&program, || {
+        chalk_ir::tls::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));

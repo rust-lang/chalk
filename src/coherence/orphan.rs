@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use errors::*;
-use ir::*;
+use chalk_ir::*;
 use rust_ir::*;
-use ir::cast::*;
-use ir::solve::SolverChoice;
+use chalk_ir::cast::*;
+use chalk_ir::solve::SolverChoice;
 
 struct OrphanSolver {
     env: Arc<ProgramEnvironment>,

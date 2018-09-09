@@ -1,7 +1,7 @@
-use ir::*;
+use chalk_ir::*;
 use rust_ir::*;
-use ir::infer::InferenceTable;
-use ir::cast::Cast;
+use chalk_ir::infer::InferenceTable;
+use chalk_ir::cast::Cast;
 
 impl Program {
     pub fn add_default_impls(&mut self) {

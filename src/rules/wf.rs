@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use ir::*;
+use chalk_ir::*;
 use errors::*;
-use ir::cast::*;
-use ir::fold::*;
-use ir::fold::shift::Shift;
+use chalk_ir::cast::*;
+use chalk_ir::fold::*;
+use chalk_ir::fold::shift::Shift;
 use itertools::Itertools;
 use rust_ir::*;
-use ir::solve::SolverChoice;
+use chalk_ir::solve::SolverChoice;
 
 mod test;
 

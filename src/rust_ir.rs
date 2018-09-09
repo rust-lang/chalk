@@ -2,13 +2,13 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
-use ir::fold::shift::Shift;
-use ir::tls;
-use ir::{
+use chalk_ir::fold::shift::Shift;
+use chalk_ir::tls;
+use chalk_ir::{
     ApplicationTy, Binders, Identifier, ItemId, Lifetime, Parameter, ParameterKind, ProgramClause,
     ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty, WhereClause,
 };
-use ir::debug::Angle;
+use chalk_ir::debug::Angle;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::iter;
