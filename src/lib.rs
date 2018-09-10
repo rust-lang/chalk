@@ -16,6 +16,7 @@ extern crate chalk_macros;
 extern crate chalk_engine;
 #[macro_use]
 extern crate chalk_ir;
+extern crate chalk_solve;
 extern crate diff;
 #[macro_use]
 extern crate error_chain;

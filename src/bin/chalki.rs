@@ -1,6 +1,7 @@
 extern crate chalk;
 extern crate chalk_engine;
 extern crate chalk_ir;
+extern crate chalk_solve;
 extern crate chalk_parse;
 extern crate docopt;
 extern crate rustyline;
@@ -18,7 +19,8 @@ use std::process::exit;
 
 use chalk::rust_ir;
 use chalk::rust_ir::lowering::*;
-use chalk_ir::solve::SolverChoice;
+use chalk_solve::ext::*;
+use chalk_solve::solve::SolverChoice;
 use chalk_engine::fallible::NoSolution;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;

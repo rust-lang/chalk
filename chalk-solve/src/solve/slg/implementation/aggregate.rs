@@ -1,7 +1,9 @@
-use crate::cast::Cast;
-use crate::*;
+use chalk_ir::cast::Cast;
+use chalk_ir::*;
+use crate::ext::*;
 use crate::solve::{Guidance, Solution};
-use crate::solve::infer::InferenceTable;
+use crate::solve::slg::implementation::SubstitutionExt;
+use crate::infer::InferenceTable;
 
 use chalk_engine::context;
 use chalk_engine::SimplifiedAnswer;

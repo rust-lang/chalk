@@ -1,6 +1,6 @@
 use chalk_ir::*;
 use rust_ir::*;
-use chalk_ir::infer::InferenceTable;
+use chalk_solve::infer::InferenceTable;
 use chalk_ir::cast::Cast;
 
 impl Program {

@@ -7,7 +7,8 @@ use chalk_ir::fold::*;
 use chalk_ir::fold::shift::Shift;
 use itertools::Itertools;
 use rust_ir::*;
-use chalk_ir::solve::SolverChoice;
+use chalk_solve::ext::*;
+use chalk_solve::solve::SolverChoice;
 
 mod test;
 

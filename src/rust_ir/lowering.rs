@@ -5,7 +5,7 @@ use lalrpop_intern::intern;
 
 use chalk_ir;
 use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::solve::SolverChoice;
+use chalk_solve::solve::SolverChoice;
 use errors::*;
 use itertools::Itertools;
 use rust_ir::{self, Anonymize, ToParameter};

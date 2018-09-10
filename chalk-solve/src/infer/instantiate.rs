@@ -1,5 +1,5 @@
 use chalk_engine::fallible::*;
-use crate::fold::*;
+use chalk_ir::fold::*;
 use std::fmt::Debug;
 
 use super::*;

@@ -1,5 +1,5 @@
 use ena::unify::{UnifyKey, UnifyValue};
-use crate::*;
+use chalk_ir::*;
 use std::cmp::min;
 use std::fmt;
 use std::u32;

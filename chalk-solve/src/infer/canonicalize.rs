@@ -1,7 +1,7 @@
 use chalk_engine::fallible::*;
-use ::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
-use ::fold::shift::Shift;
-use ::*;
+use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
+use chalk_ir::fold::shift::Shift;
+use chalk_ir::*;
 use std::cmp::max;
 
 use super::{InferenceTable, InferenceVariable, ParameterInferenceVariable};

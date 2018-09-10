@@ -28,6 +28,10 @@ path = "chalk-parse"
 version = "0.1.0"
 path = "chalk-ir"
 
+[dependencies.chalk-solve]
+version = "0.1.0"
+path = "chalk-solve"
+
 [dependencies.chalk-macros]
 version = "0.1.0"
 path = "chalk-macros"

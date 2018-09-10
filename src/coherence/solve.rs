@@ -6,7 +6,8 @@ use errors::*;
 use chalk_ir::*;
 use rust_ir::*;
 use chalk_ir::cast::*;
-use chalk_ir::solve::{SolverChoice, Solution};
+use chalk_solve::ext::*;
+use chalk_solve::solve::{SolverChoice, Solution};
 
 struct DisjointSolver {
     env: Arc<ProgramEnvironment>,

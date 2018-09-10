@@ -3,7 +3,7 @@ use petgraph::prelude::*;
 use errors::Result;
 use chalk_ir::{self, ItemId};
 use rust_ir::Program;
-use chalk_ir::solve::SolverChoice;
+use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
 mod solve;

@@ -1,9 +1,11 @@
 //! Traits for transforming bits of IR.
 
 use cast::Cast;
-use ::*;
+use chalk_engine::context::Context;
+use chalk_engine::{DelayedLiteral, ExClause, Literal};
 use std::fmt::Debug;
 use std::sync::Arc;
+use *;
 
 pub mod shift;
 mod subst;
@@ -364,14 +366,15 @@ macro_rules! copy_fold {
     ($t:ty) => {
         impl $crate::fold::Fold for $t {
             type Result = Self;
-            fn fold_with(&self,
-                         _folder: &mut dyn ($crate::fold::Folder),
-                         _binders: usize)
-                         -> ::chalk_engine::fallible::Fallible<Self::Result> {
+            fn fold_with(
+                &self,
+                _folder: &mut dyn ($crate::fold::Folder),
+                _binders: usize,
+            ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                 Ok(*self)
             }
         }
-    }
+    };
 }
 
 copy_fold!(Identifier);
@@ -379,6 +382,7 @@ copy_fold!(UniverseIndex);
 copy_fold!(ItemId);
 copy_fold!(usize);
 copy_fold!(QuantifierKind);
+copy_fold!(chalk_engine::TableIndex);
 // copy_fold!(TypeName); -- intentionally omitted! This is folded via `fold_ap`
 copy_fold!(());
 
@@ -582,3 +586,65 @@ struct_fold!(ConstrainedSubst {
 });
 
 // struct_fold!(ApplicationTy { name, parameters }); -- intentionally omitted, folded through Ty
+
+impl<C: Context> Fold for ExClause<C>
+where
+    C: Context,
+    C::Substitution: Fold<Result = C::Substitution>,
+    C::RegionConstraint: Fold<Result = C::RegionConstraint>,
+    C::CanonicalConstrainedSubst: Fold<Result = C::CanonicalConstrainedSubst>,
+    C::GoalInEnvironment: Fold<Result = C::GoalInEnvironment>,
+{
+    type Result = ExClause<C>;
+
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
+        let ExClause {
+            subst,
+            delayed_literals,
+            constraints,
+            subgoals,
+        } = self;
+        Ok(ExClause {
+            subst: subst.fold_with(folder, binders)?,
+            delayed_literals: delayed_literals.fold_with(folder, binders)?,
+            constraints: constraints.fold_with(folder, binders)?,
+            subgoals: subgoals.fold_with(folder, binders)?,
+        })
+    }
+}
+
+impl<C: Context> Fold for DelayedLiteral<C>
+where
+    C: Context,
+    C::CanonicalConstrainedSubst: Fold<Result = C::CanonicalConstrainedSubst>,
+{
+    type Result = DelayedLiteral<C>;
+
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
+        match self {
+            DelayedLiteral::CannotProve(()) => Ok(DelayedLiteral::CannotProve(())),
+            DelayedLiteral::Negative(table_index) => Ok(DelayedLiteral::Negative(
+                table_index.fold_with(folder, binders)?,
+            )),
+            DelayedLiteral::Positive(table_index, subst) => Ok(DelayedLiteral::Positive(
+                table_index.fold_with(folder, binders)?,
+                subst.fold_with(folder, binders)?,
+            )),
+        }
+    }
+}
+
+impl<C: Context> Fold for Literal<C>
+where
+    C: Context,
+    C::GoalInEnvironment: Fold<Result = C::GoalInEnvironment>,
+{
+    type Result = Literal<C>;
+
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
+        match self {
+            Literal::Positive(goal) => Ok(Literal::Positive(goal.fold_with(folder, binders)?)),
+            Literal::Negative(goal) => Ok(Literal::Negative(goal.fold_with(folder, binders)?)),
+        }
+    }
+}

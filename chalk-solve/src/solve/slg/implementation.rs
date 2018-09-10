@@ -1,10 +1,10 @@
-use crate::cast::{Cast, Caster};
-use crate::chalk_engine::fallible::Fallible;
-use crate::could_match::CouldMatch;
-use crate::*;
-use crate::solve::infer::ucanonicalize::{UCanonicalized, UniverseMap};
-use crate::solve::infer::unify::UnificationResult;
-use crate::solve::infer::InferenceTable;
+use chalk_engine::fallible::Fallible;
+use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::could_match::CouldMatch;
+use chalk_ir::*;
+use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
+use crate::infer::unify::UnificationResult;
+use crate::infer::InferenceTable;
 use crate::solve::truncate::{self, Truncated};
 use crate::solve::Solution;
 
@@ -260,7 +260,7 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         value: &Canonical<InEnvironment<Goal>>,
     ) -> (
         UCanonical<InEnvironment<Goal>>,
-        crate::solve::infer::ucanonicalize::UniverseMap,
+        crate::infer::ucanonicalize::UniverseMap,
     ) {
         let UCanonicalized {
             quantified,
@@ -314,7 +314,11 @@ fn into_ex_clause(
     ex_clause.constraints.extend(result.constraints);
 }
 
-impl Substitution {
+trait SubstitutionExt {
+    fn may_invalidate(&self, subst: &Canonical<Substitution>) -> bool;
+}
+
+impl SubstitutionExt for Substitution {
     fn may_invalidate(&self, subst: &Canonical<Substitution>) -> bool {
         self.parameters
             .iter()
@@ -459,27 +463,3 @@ impl MayInvalidate {
             .any(|(new, current)| self.aggregate_parameters(new, current))
     }
 }
-
-type ExClauseSlgContext = ExClause<SlgContext>;
-struct_fold!(ExClauseSlgContext {
-    subst,
-    delayed_literals,
-    constraints,
-    subgoals,
-});
-
-type LiteralSlgContext = Literal<SlgContext>;
-enum_fold!(LiteralSlgContext {
-    Literal :: {
-        Positive(a), Negative(a)
-    }
-});
-
-copy_fold!(::chalk_engine::TableIndex);
-
-type DelayedLiteralSlgContext = DelayedLiteral<SlgContext>;
-enum_fold!(DelayedLiteralSlgContext {
-    DelayedLiteral :: {
-        CannotProve(a), Negative(a), Positive(a, b)
-    }
-});

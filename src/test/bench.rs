@@ -4,7 +4,8 @@ extern crate test;
 use self::test::Bencher;
 
 use chalk_ir;
-use chalk_ir::solve::SolverChoice;
+use chalk_solve::ext::*;
+use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
 use super::{parse_and_lower_program,

@@ -1,15 +1,15 @@
 [package]
-name = "chalk-ir"
+name = "chalk-solve"
 version = "0.1.0"
-description = "Chalk's internal representation of types, goals, and clauses"
 license = "Apache-2.0/MIT"
+description = "Combines the chalk-engine with chalk-ir"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang-nursery/chalk"
 readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 
 [dependencies]
-lalrpop-intern = "0.14"
+ena = "0.4"
 
 [dependencies.chalk-macros]
 version = "0.1.0"
@@ -23,3 +23,6 @@ path = "../chalk-engine"
 version = "0.1.0"
 path = "../chalk-parse"
 
+[dependencies.chalk-ir]
+version = "0.1.0"
+path = "../chalk-ir"

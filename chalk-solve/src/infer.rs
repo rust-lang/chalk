@@ -1,7 +1,7 @@
 use ena::unify as ena;
-use ::*;
-use ::fold::Fold;
-use ::fold::shift::Shift;
+use chalk_ir::*;
+use chalk_ir::fold::Fold;
+use chalk_ir::fold::shift::Shift;
 
 pub mod canonicalize;
 pub mod ucanonicalize;
@@ -216,19 +216,12 @@ impl InferenceTable {
     }
 }
 
-impl Ty {
-    /// If this is a `Ty::Var(d)`, returns `Some(d)` else `None`.
-    pub fn var(&self) -> Option<usize> {
-        if let Ty::Var(depth) = *self {
-            Some(depth)
-        } else {
-            None
-        }
-    }
+pub trait ParameterInferenceVariableExt {
+    fn to_parameter(self) -> Parameter;
 }
 
-impl ParameterInferenceVariable {
-    pub fn to_parameter(self) -> Parameter {
+impl ParameterInferenceVariableExt for ParameterInferenceVariable {
+    fn to_parameter(self) -> Parameter {
         match self {
             ParameterKind::Ty(v) => ParameterKind::Ty(v.to_ty()),
             ParameterKind::Lifetime(v) => ParameterKind::Lifetime(v.to_lifetime()),

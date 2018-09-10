@@ -1,7 +1,7 @@
 use chalk_engine::fallible::*;
-use crate::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
-use crate::fold::shift::Shift;
-use crate::*;
+use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
+use chalk_ir::fold::shift::Shift;
+use chalk_ir::*;
 use std::collections::HashMap;
 
 use super::{InferenceTable, InferenceVariable};

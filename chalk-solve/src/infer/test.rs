@@ -1,5 +1,5 @@
 use chalk_engine::fallible::*;
-use crate::fold::*;
+use chalk_ir::fold::*;
 use super::*;
 use super::unify::UnificationResult;
 

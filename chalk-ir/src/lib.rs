@@ -13,12 +13,8 @@ use std::collections::BTreeSet;
 use std::iter;
 use std::sync::Arc;
 
-#[macro_use]
-extern crate chalk_macros;
-
 extern crate chalk_engine;
 extern crate chalk_parse;
-extern crate ena;
 extern crate lalrpop_intern;
 
 #[macro_use]
@@ -34,8 +30,6 @@ pub mod cast;
 
 pub mod could_match;
 pub mod debug;
-pub mod infer;
-pub mod solve;
 pub mod tls;
 
 pub type Identifier = InternedString;
@@ -177,6 +171,15 @@ pub enum Ty {
 }
 
 impl Ty {
+    /// If this is a `Ty::Var(d)`, returns `Some(d)` else `None`.
+    pub fn var(&self) -> Option<usize> {
+        if let Ty::Var(depth) = *self {
+            Some(depth)
+        } else {
+            None
+        }
+    }
+
     pub fn as_projection_ty_enum(&self) -> ProjectionTyRefEnum {
         match *self {
             Ty::Projection(ref proj) => ProjectionTyEnum::Selected(proj),
@@ -711,40 +714,6 @@ pub struct Canonical<T> {
     pub binders: Vec<ParameterKind<UniverseIndex>>,
 }
 
-impl<T> Canonical<T> {
-    /// Maps the contents using `op`, but preserving the binders.
-    ///
-    /// NB. `op` will be invoked with an instantiated version of the
-    /// canonical value, where inference variables (from a fresh
-    /// inference context) are used in place of the quantified free
-    /// variables. The result should be in terms of those same
-    /// inference variables and will be re-canonicalized.
-    pub fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
-    where
-        OP: FnOnce(T::Result) -> U,
-        T: Fold,
-        U: Fold,
-    {
-        // Subtle: It is only quite rarely correct to apply `op` and
-        // just re-use our existing binders. For that to be valid, the
-        // result of `op` would have to ensure that it re-uses all the
-        // existing free variables and in the same order. Otherwise,
-        // the canonical form would be different: the variables might
-        // be numbered differently, or some may not longer be used.
-        // This would mean that two canonical values could no longer
-        // be compared with `Eq`, which defeats a key invariant of the
-        // `Canonical` type (indeed, its entire reason for existence).
-        use self::infer::InferenceTable;
-        let mut infer = InferenceTable::new();
-        let snapshot = infer.snapshot();
-        let instantiated_value = infer.instantiate_canonical(&self);
-        let mapped_value = op(instantiated_value);
-        let result = infer.canonicalize(&mapped_value);
-        infer.rollback_to(snapshot);
-        result.quantified
-    }
-}
-
 /// A "universe canonical" value. This is a wrapper around a
 /// `Canonical`, indicating that the universes within have been
 /// "renumbered" to start from 0 and collapse unimportant
@@ -837,60 +806,6 @@ impl Goal {
 
     pub fn implied_by(self, predicates: Vec<ProgramClause>) -> Goal {
         Goal::Implies(predicates, Box::new(self))
-    }
-
-    /// Returns a canonical goal in which the outermost `exists<>` and
-    /// `forall<>` quantifiers (as well as implications) have been
-    /// "peeled" and are converted into free universal or existential
-    /// variables. Assumes that this goal is a "closed goal" which
-    /// does not -- at present -- contain any variables. Useful for
-    /// REPLs and tests but not much else.
-    pub fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal>> {
-        use self::infer::InferenceTable;
-        let mut infer = InferenceTable::new();
-        let peeled_goal = {
-            let mut env_goal = InEnvironment::new(&Environment::new(), self);
-            loop {
-                let InEnvironment { environment, goal } = env_goal;
-                match goal {
-                    Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                        let subgoal = infer.instantiate_binders_universally(&subgoal);
-                        env_goal = InEnvironment::new(&environment, *subgoal);
-                    }
-
-                    Goal::Quantified(QuantifierKind::Exists, subgoal) => {
-                        let subgoal = infer.instantiate_binders_existentially(&subgoal);
-                        env_goal = InEnvironment::new(&environment, *subgoal);
-                    }
-
-                    Goal::Implies(wc, subgoal) => {
-                        let new_environment = &environment.add_clauses(wc);
-                        env_goal = InEnvironment::new(&new_environment, *subgoal);
-                    }
-
-                    _ => break InEnvironment::new(&environment, goal),
-                }
-            }
-        };
-        let canonical = infer.canonicalize(&peeled_goal).quantified;
-        infer.u_canonicalize(&canonical).quantified
-    }
-
-    /// Given a goal with no free variables (a "closed" goal), creates
-    /// a canonical form suitable for solving. This is a suitable
-    /// choice if you don't actually care about the values of any of
-    /// the variables within; otherwise, you might want
-    /// `into_peeled_goal`.
-    ///
-    /// # Panics
-    ///
-    /// Will panic if this goal does in fact contain free variables.
-    pub fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>> {
-        use self::infer::InferenceTable;
-        let mut infer = InferenceTable::new();
-        let env_goal = InEnvironment::new(&Environment::new(), self);
-        let canonical_goal = infer.canonicalize(&env_goal).quantified;
-        infer.u_canonicalize(&canonical_goal).quantified
     }
 
     pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {

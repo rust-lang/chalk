@@ -2,7 +2,8 @@
 
 use chalk_engine::fallible::{Fallible, NoSolution};
 use chalk_ir;
-use chalk_ir::solve::{Solution, SolverChoice};
+use chalk_solve::ext::*;
+use chalk_solve::solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 use std::sync::Arc;
 use test_util::*;

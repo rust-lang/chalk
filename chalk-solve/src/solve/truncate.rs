@@ -1,10 +1,10 @@
 //!
 
 use chalk_engine::fallible::*;
-use crate::fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
-use crate::fold::shift::Shift;
-use crate::*;
-use crate::solve::infer::InferenceTable;
+use chalk_ir::fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
+use chalk_ir::fold::shift::Shift;
+use chalk_ir::*;
+use crate::infer::InferenceTable;
 
 crate fn truncate<T>(
     infer: &mut InferenceTable,

@@ -1,8 +1,8 @@
-use crate::cast::Cast;
 use chalk_engine::fallible::*;
-use crate::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
+use chalk_ir::cast::Cast;
+use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
+use chalk_ir::zip::{Zip, Zipper};
 use std::sync::Arc;
-use crate::zip::{Zip, Zipper};
 
 use super::*;
 use super::var::*;

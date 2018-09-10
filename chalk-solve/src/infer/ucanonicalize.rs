@@ -1,6 +1,6 @@
 use chalk_engine::fallible::*;
-use crate::fold::{DefaultTypeFolder, Fold, IdentityExistentialFolder, UniversalFolder};
-use crate::*;
+use chalk_ir::fold::{DefaultTypeFolder, Fold, IdentityExistentialFolder, UniversalFolder};
+use chalk_ir::*;
 
 use super::InferenceTable;
 

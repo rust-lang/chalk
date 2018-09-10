@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use chalk_ir::tls;
-use chalk_ir::solve::SolverChoice;
+use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 use test_util::*;
 
