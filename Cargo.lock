@@ -114,7 +114,6 @@ version = "0.1.0"
 dependencies = [
  "chalk-engine 0.7.2",
  "chalk-macros 0.1.0",
- "chalk-parse 0.1.0",
  "lalrpop-intern 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

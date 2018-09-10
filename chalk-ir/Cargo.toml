@@ -18,8 +18,3 @@ path = "../chalk-macros"
 [dependencies.chalk-engine]
 version = "0.7.2"
 path = "../chalk-engine"
-
-[dependencies.chalk-parse]
-version = "0.1.0"
-path = "../chalk-parse"
-

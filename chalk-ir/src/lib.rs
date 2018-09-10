@@ -4,7 +4,6 @@
 #![feature(specialization)]
 
 use chalk_engine::fallible::*;
-use chalk_parse::ast;
 use cast::Cast;
 use fold::shift::Shift;
 use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
@@ -14,7 +13,6 @@ use std::iter;
 use std::sync::Arc;
 
 extern crate chalk_engine;
-extern crate chalk_parse;
 extern crate lalrpop_intern;
 
 #[macro_use]
@@ -294,15 +292,6 @@ impl<T, L> ParameterKind<T, L> {
         match self {
             ParameterKind::Lifetime(t) => Some(t),
             _ => None,
-        }
-    }
-}
-
-impl<T, L> ast::Kinded for ParameterKind<T, L> {
-    fn kind(&self) -> ast::Kind {
-        match *self {
-            ParameterKind::Ty(_) => ast::Kind::Ty,
-            ParameterKind::Lifetime(_) => ast::Kind::Lifetime,
         }
     }
 }

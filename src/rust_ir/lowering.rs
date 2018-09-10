@@ -1183,3 +1183,34 @@ impl<T> ApplyResult for Result<Vec<T>> {
         }
     }
 }
+
+trait Kinded {
+    fn kind(&self) -> Kind;
+}
+
+impl Kinded for ParameterKind {
+    fn kind(&self) -> Kind {
+        match *self {
+            ParameterKind::Ty(_) => Kind::Ty,
+            ParameterKind::Lifetime(_) => Kind::Lifetime,
+        }
+    }
+}
+
+impl Kinded for Parameter {
+    fn kind(&self) -> Kind {
+        match *self {
+            Parameter::Ty(_) => Kind::Ty,
+            Parameter::Lifetime(_) => Kind::Lifetime,
+        }
+    }
+}
+
+impl<T, L> Kinded for chalk_ir::ParameterKind<T, L> {
+    fn kind(&self) -> Kind {
+        match *self {
+            chalk_ir::ParameterKind::Ty(_) => Kind::Ty,
+            chalk_ir::ParameterKind::Lifetime(_) => Kind::Lifetime,
+        }
+    }
+}

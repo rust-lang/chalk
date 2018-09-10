@@ -125,28 +125,6 @@ impl fmt::Display for Kind {
     }
 }
 
-pub trait Kinded {
-    fn kind(&self) -> Kind;
-}
-
-impl Kinded for ParameterKind {
-    fn kind(&self) -> Kind {
-        match *self {
-            ParameterKind::Ty(_) => Kind::Ty,
-            ParameterKind::Lifetime(_) => Kind::Lifetime,
-        }
-    }
-}
-
-impl Kinded for Parameter {
-    fn kind(&self) -> Kind {
-        match *self {
-            Parameter::Ty(_) => Kind::Ty,
-            Parameter::Lifetime(_) => Kind::Lifetime,
-        }
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Impl {
     pub parameter_kinds: Vec<ParameterKind>,
