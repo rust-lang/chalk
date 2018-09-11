@@ -1,5 +1,6 @@
 use chalk_parse::{self, ast};
-use ir;
+use chalk_ir;
+use rust_ir;
 
 error_chain! {
     links {
@@ -29,17 +30,17 @@ error_chain! {
             display("expected a trait, found `{}`, which is not a trait", identifier.str)
         }
 
-        OverlappingImpls(trait_id: ir::Identifier) {
+        OverlappingImpls(trait_id: chalk_ir::Identifier) {
             description("overlapping impls")
             display("overlapping impls of trait {:?}", trait_id)
         }
 
-        IllFormedTypeDecl(ty_id: ir::Identifier) {
+        IllFormedTypeDecl(ty_id: chalk_ir::Identifier) {
             description("ill-formed type declaration")
             display("type declaration {:?} does not meet well-formedness requirements", ty_id)
         }
 
-        IllFormedTraitImpl(trait_id: ir::Identifier) {
+        IllFormedTraitImpl(trait_id: chalk_ir::Identifier) {
             description("ill-formed trait impl")
             display("trait impl for {:?} does not meet well-formedness requirements", trait_id)
         }
@@ -49,12 +50,12 @@ error_chain! {
                 display("could not match")
         }
 
-        DuplicateLangItem(item: ir::LangItem) {
+        DuplicateLangItem(item: rust_ir::LangItem) {
             description("Duplicate lang item")
                 display("Duplicate lang item `{:?}`", item)
         }
 
-        FailedOrphanCheck(trait_id: ir::Identifier) {
+        FailedOrphanCheck(trait_id: chalk_ir::Identifier) {
             description("impl violates the orphan rules")
                 display("impl for trait {:?} violates the orphan rules", trait_id)
         }

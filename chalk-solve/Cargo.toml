@@ -1,0 +1,28 @@
+[package]
+name = "chalk-solve"
+version = "0.1.0"
+license = "Apache-2.0/MIT"
+description = "Combines the chalk-engine with chalk-ir"
+authors = ["Rust Compiler Team", "Chalk developers"]
+repository = "https://github.com/rust-lang-nursery/chalk"
+readme = "README.md"
+keywords = ["compiler", "traits", "prolog"]
+
+[dependencies]
+ena = "0.4"
+
+[dependencies.chalk-macros]
+version = "0.1.0"
+path = "../chalk-macros"
+
+[dependencies.chalk-engine]
+version = "0.7.2"
+path = "../chalk-engine"
+
+[dependencies.chalk-parse]
+version = "0.1.0"
+path = "../chalk-parse"
+
+[dependencies.chalk-ir]
+version = "0.1.0"
+path = "../chalk-ir"

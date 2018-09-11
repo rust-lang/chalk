@@ -2,6 +2,7 @@
 #![cfg_attr(test, feature(test))]
 #![feature(crate_in_paths)]
 #![feature(crate_visibility_modifier)]
+#![feature(extern_prelude)]
 #![feature(in_band_lifetimes)]
 #![feature(macro_at_most_once_rep)]
 #![feature(specialization)]
@@ -13,8 +14,10 @@ extern crate chalk_parse;
 #[macro_use]
 extern crate chalk_macros;
 extern crate chalk_engine;
+#[macro_use]
+extern crate chalk_ir;
+extern crate chalk_solve;
 extern crate diff;
-extern crate ena;
 #[macro_use]
 extern crate error_chain;
 extern crate itertools;
@@ -25,19 +28,11 @@ extern crate stacker;
 #[macro_use]
 mod test_util;
 
-#[macro_use]
-crate mod fold;
+pub mod rust_ir;
 
-#[macro_use]
-crate mod zip;
-
-#[macro_use]
-pub mod ir;
-
-crate mod cast;
 crate mod coherence;
 crate mod rules;
 pub mod errors;
-pub mod solve;
 
-pub use crate::chalk_engine::fallible;
+mod test;
+

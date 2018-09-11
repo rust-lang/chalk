@@ -1,8 +1,9 @@
 use petgraph::prelude::*;
 
 use errors::Result;
-use ir::{self, ItemId, Program};
-use solve::SolverChoice;
+use chalk_ir::{self, ItemId};
+use rust_ir::Program;
+use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
 mod solve;
@@ -11,7 +12,7 @@ mod test;
 
 impl Program {
     crate fn record_specialization_priorities(&mut self, solver_choice: SolverChoice) -> Result<()> {
-        ir::tls::set_current_program(&Arc::new(self.clone()), || {
+        chalk_ir::tls::set_current_program(&Arc::new(self.clone()), || {
             let forest = self.build_specialization_forest(solver_choice)?;
 
             // Visit every root in the forest & set specialization

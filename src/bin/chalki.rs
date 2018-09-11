@@ -1,4 +1,7 @@
 extern crate chalk;
+extern crate chalk_engine;
+extern crate chalk_ir;
+extern crate chalk_solve;
 extern crate chalk_parse;
 extern crate docopt;
 extern crate rustyline;
@@ -14,9 +17,11 @@ use std::fs::File;
 use std::sync::Arc;
 use std::process::exit;
 
-use chalk::ir;
-use chalk::ir::lowering::*;
-use chalk::solve::SolverChoice;
+use chalk::rust_ir;
+use chalk::rust_ir::lowering::*;
+use chalk_solve::ext::*;
+use chalk_solve::solve::SolverChoice;
+use chalk_engine::fallible::NoSolution;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
 
@@ -59,8 +64,8 @@ error_chain! {
 /// A loaded and parsed program.
 struct Program {
     text: String,
-    ir: Arc<ir::Program>,
-    env: Arc<ir::ProgramEnvironment>,
+    ir: Arc<rust_ir::Program>,
+    env: Arc<chalk_ir::ProgramEnvironment>,
 }
 
 impl Program {
@@ -112,11 +117,12 @@ fn run() -> Result<()> {
         // Check that a program was provided.
         // TODO: It's customary to print Usage info when an error like this
         // happens.
-        let prog = prog.ok_or("error: cannot eval without a program; use `--program` to specify one.")?;
+        let prog =
+            prog.ok_or("error: cannot eval without a program; use `--program` to specify one.")?;
 
         // Evaluate the goal(s). If any goal returns an error, print the error
         // and exit.
-        ir::tls::set_current_program(&prog.ir, || -> Result<()> {
+        chalk_ir::tls::set_current_program(&prog.ir, || -> Result<()> {
             for g in &args.flag_goal {
                 if let Err(e) = goal(&args, g, &prog) {
                     eprintln!("error: {}", e);
@@ -174,20 +180,17 @@ fn process(
         // Print out interpreter commands.
         // TODO: Implement "help <command>" for more specific help.
         help()
-
     } else if command == "program" {
         // Load a .chalk file via stdin, until EOF is found.
         *prog = Some(Program::new(read_program(rl)?, args.solver_choice())?);
-
     } else if command.starts_with("load ") {
         // Load a .chalk file.
         let filename = &command["load ".len()..];
         *prog = Some(load_program(args, filename)?);
-
     } else if command.starts_with("debug ") {
         match command.split_whitespace().nth(1) {
             Some(level) => std::env::set_var("CHALK_DEBUG", level),
-            None => println!("debug <level> set debug level to <level>")
+            None => println!("debug <level> set debug level to <level>"),
         }
     } else {
         // The command is either "print", "lowered", or a goal.
@@ -197,7 +200,7 @@ fn process(
             .ok_or("no program currently loaded; type 'help' to see available commands")?;
 
         // Attempt to parse the program.
-        ir::tls::set_current_program(&prog.ir, || -> Result<()> {
+        chalk_ir::tls::set_current_program(&prog.ir, || -> Result<()> {
             match command {
                 // Print out the loaded program.
                 "print" => println!("{}", prog.text),
@@ -257,16 +260,20 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let peeled_goal = goal.into_peeled_goal();
-    match args.solver_choice().solve_root_goal(&prog.env, &peeled_goal) {
+    match args.solver_choice()
+        .solve_root_goal(&prog.env, &peeled_goal)
+    {
         Ok(Some(v)) => println!("{}\n", v),
         Ok(None) => println!("No possible solution.\n"),
-        Err(e) => println!("Solver failed: {}", e),
+        Err(NoSolution) => println!("Solver failed"),
     }
     Ok(())
 }
 
 impl Args {
     fn solver_choice(&self) -> SolverChoice {
-        SolverChoice::SLG { max_size: self.flag_overflow_depth }
+        SolverChoice::SLG {
+            max_size: self.flag_overflow_depth,
+        }
     }
 }

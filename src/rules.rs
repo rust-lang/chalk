@@ -1,7 +1,8 @@
-use cast::{Cast, Caster};
-use fold::shift::Shift;
-use fold::Subst;
-use ir::*;
+use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::fold::shift::Shift;
+use chalk_ir::fold::Subst;
+use chalk_ir::*;
+use rust_ir::*;
 use std::iter;
 
 mod default;
@@ -38,25 +39,34 @@ impl Program {
         // forall<T, U> { Derefs(T, U) :- ProjectionEq(<T as Deref>::Target = U>) }
         if let Some(trait_id) = self.lang_items.get(&LangItem::DerefTrait) {
             // Find `Deref::Target`.
-            let associated_ty_id = self.associated_ty_data.values()
-                                                        .find(|d| d.trait_id == *trait_id)
-                                                        .expect("Deref has no assoc item")
-                                                        .id;
+            let associated_ty_id = self
+                .associated_ty_data
+                .values()
+                .find(|d| d.trait_id == *trait_id)
+                .expect("Deref has no assoc item")
+                .id;
             let t = || Ty::Var(0);
             let u = || Ty::Var(1);
-            program_clauses.push(Binders {
-                binders: vec![ParameterKind::Ty(()), ParameterKind::Ty(())],
-                value: ProgramClauseImplication {
-                    consequence: DomainGoal::Derefs(Derefs { source: t(), target: u() }),
-                    conditions: vec![ProjectionEq {
-                        projection: ProjectionTy {
-                            associated_ty_id,
-                            parameters: vec![t().cast()]
-                        },
-                        ty: u(),
-                    }.cast()]
-                },
-            }.cast());
+            program_clauses.push(
+                Binders {
+                    binders: vec![ParameterKind::Ty(()), ParameterKind::Ty(())],
+                    value: ProgramClauseImplication {
+                        consequence: DomainGoal::Derefs(Derefs {
+                            source: t(),
+                            target: u(),
+                        }),
+                        conditions: vec![
+                            ProjectionEq {
+                                projection: ProjectionTy {
+                                    associated_ty_id,
+                                    parameters: vec![t().cast()],
+                                },
+                                ty: u(),
+                            }.cast(),
+                        ],
+                    },
+                }.cast(),
+            );
         }
 
         for datum in self.impl_data.values() {
@@ -75,12 +85,19 @@ impl Program {
             }
         }
 
-        let trait_data = self.trait_data.clone();
-        let associated_ty_data = self.associated_ty_data.clone();
+        let coinductive_traits = self
+            .trait_data
+            .iter()
+            .filter_map(|(&trait_id, trait_datum)| {
+                if trait_datum.binders.value.flags.auto {
+                    Some(trait_id)
+                } else {
+                    None
+                }
+            }).collect();
 
         ProgramEnvironment {
-            trait_data,
-            associated_ty_data,
+            coinductive_traits,
             program_clauses,
         }
     }
@@ -93,17 +110,11 @@ impl ImplDatum {
     /// forall<T> { (Vec<T>: Clone) :- (T: Clone) }
     /// ```
     fn to_program_clause(&self) -> ProgramClause {
-        self.binders.map_ref(|bound| {
-            ProgramClauseImplication {
+        self.binders
+            .map_ref(|bound| ProgramClauseImplication {
                 consequence: bound.trait_ref.trait_ref().clone().cast(),
-                conditions: bound
-                    .where_clauses
-                    .iter()
-                    .cloned()
-                    .casted()
-                    .collect(),
-            }
-        }).cast()
+                conditions: bound.where_clauses.iter().cloned().casted().collect(),
+            }).cast()
     }
 }
 
@@ -132,21 +143,18 @@ impl DefaultImplDatum {
     /// }
     /// ```
     fn to_program_clause(&self) -> ProgramClause {
-        self.binders.map_ref(|bound| {
-            ProgramClauseImplication {
+        self.binders
+            .map_ref(|bound| ProgramClauseImplication {
                 consequence: bound.trait_ref.clone().cast(),
                 conditions: {
-                    let wc = bound.accessible_tys.iter().cloned().map(|ty| {
-                        TraitRef {
-                            trait_id: bound.trait_ref.trait_id,
-                            parameters: vec![ParameterKind::Ty(ty)],
-                        }
+                    let wc = bound.accessible_tys.iter().cloned().map(|ty| TraitRef {
+                        trait_id: bound.trait_ref.trait_id,
+                        parameters: vec![ParameterKind::Ty(ty)],
                     });
 
                     wc.casted().collect()
                 },
-            }
-        }).cast()
+            }).cast()
     }
 }
 
@@ -185,34 +193,33 @@ impl AssociatedTyValue {
     ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>)
     /// }
     /// ```
-    fn to_program_clauses(
-        &self,
-        program: &Program,
-        impl_datum: &ImplDatum,
-    ) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, program: &Program, impl_datum: &ImplDatum) -> Vec<ProgramClause> {
         let associated_ty = &program.associated_ty_data[&self.associated_ty_id];
 
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
-        let all_binders: Vec<_> = self.value
+        let all_binders: Vec<_> = self
+            .value
             .binders
             .iter()
             .chain(impl_datum.binders.binders.iter())
             .cloned()
             .collect();
 
-        let impl_trait_ref = impl_datum.binders
-                                       .value
-                                       .trait_ref
-                                       .trait_ref()
-                                       .up_shift(self.value.len());
+        let impl_trait_ref = impl_datum
+            .binders
+            .value
+            .trait_ref
+            .trait_ref()
+            .shifted_in(self.value.len());
 
-        let all_parameters: Vec<_> =
-            self.value.binders
-                      .iter()
-                      .zip(0..)
-                      .map(|p| p.to_parameter())
-                      .chain(impl_trait_ref.parameters.iter().cloned())
-                      .collect();
+        let all_parameters: Vec<_> = self
+            .value
+            .binders
+            .iter()
+            .zip(0..)
+            .map(|p| p.to_parameter())
+            .chain(impl_trait_ref.parameters.iter().cloned())
+            .collect();
 
         // Assemble the full list of conditions for projection to be valid.
         // This comes in two parts, marked as (1) and (2) in example above:
@@ -220,14 +227,13 @@ impl AssociatedTyValue {
         // 1. require that the trait is implemented
         // 2. any where-clauses from the `type` declaration in the trait: the
         //    parameters must be substituted with those of the impl
-        let where_clauses =
-            associated_ty.where_clauses
-                         .iter()
-                         .map(|wc| Subst::apply(&all_parameters, wc))
-                         .casted();
+        let where_clauses = associated_ty
+            .where_clauses
+            .iter()
+            .map(|wc| Subst::apply(&all_parameters, wc))
+            .casted();
 
-        let conditions: Vec<Goal> =
-            where_clauses
+        let conditions: Vec<Goal> = where_clauses
             .chain(Some(impl_trait_ref.clone().cast()))
             .collect();
 
@@ -246,10 +252,11 @@ impl AssociatedTyValue {
             associated_ty_id: self.associated_ty_id,
 
             // Add the remaining parameters of the trait-ref, if any
-            parameters: parameters.iter()
-                                  .chain(&impl_trait_ref.parameters[1..])
-                                  .cloned()
-                                  .collect(),
+            parameters: parameters
+                .iter()
+                .chain(&impl_trait_ref.parameters[1..])
+                .cloned()
+                .collect(),
         };
 
         let normalize_goal = DomainGoal::Normalize(Normalize {
@@ -322,26 +329,24 @@ impl StructDatum {
         //    // Generated for both upstream and local fundamental types
         //    forall<T> { DownstreamType(Box<T>) :- DownstreamType(T) }
 
-        let wf = self.binders.map_ref(|bound_datum| {
-            ProgramClauseImplication {
+        let wf = self
+            .binders
+            .map_ref(|bound_datum| ProgramClauseImplication {
                 consequence: WellFormed::Ty(bound_datum.self_ty.clone().cast()).cast(),
 
-                conditions: {
-                    bound_datum.where_clauses
-                                .iter()
-                                .cloned()
-                                .casted()
-                                .collect()
-                },
-            }
-        }).cast();
+                conditions: { bound_datum.where_clauses.iter().cloned().casted().collect() },
+            }).cast();
 
-        let is_fully_visible = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-            consequence: DomainGoal::IsFullyVisible(bound_datum.self_ty.clone().cast()),
-            conditions: bound_datum.self_ty.type_parameters()
-            .map(|ty| DomainGoal::IsFullyVisible(ty).cast())
-            .collect(),
-        }).cast();
+        let is_fully_visible = self
+            .binders
+            .map_ref(|bound_datum| ProgramClauseImplication {
+                consequence: DomainGoal::IsFullyVisible(bound_datum.self_ty.clone().cast()),
+                conditions: bound_datum
+                    .self_ty
+                    .type_parameters()
+                    .map(|ty| DomainGoal::IsFullyVisible(ty).cast())
+                    .collect(),
+            }).cast();
 
         let mut clauses = vec![wf, is_fully_visible];
 
@@ -374,10 +379,12 @@ impl StructDatum {
         // Types that are not marked `#[upstream]` satisfy IsLocal(TypeName)
         if !self.binders.value.flags.upstream {
             // `IsLocalTy(Ty)` depends *only* on whether the type is marked #[upstream] and nothing else
-            let is_local = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
-                conditions: Vec::new(),
-            }).cast();
+            let is_local = self
+                .binders
+                .map_ref(|bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
+                    conditions: Vec::new(),
+                }).cast();
 
             clauses.push(is_local);
         } else if self.binders.value.flags.fundamental {
@@ -388,10 +395,12 @@ impl StructDatum {
         } else {
             // The type is just upstream and not fundamental
 
-            let is_upstream = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsUpstream(bound_datum.self_ty.clone().cast()),
-                conditions: Vec::new(),
-            }).cast();
+            let is_upstream = self
+                .binders
+                .map_ref(|bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::IsUpstream(bound_datum.self_ty.clone().cast()),
+                    conditions: Vec::new(),
+                }).cast();
 
             clauses.push(is_upstream);
         }
@@ -400,16 +409,15 @@ impl StructDatum {
             fundamental_rule!(DownstreamType);
         }
 
-        let condition = DomainGoal::FromEnv(
-            FromEnv::Ty(self.binders.value.self_ty.clone().cast())
-        );
+        let condition = DomainGoal::FromEnv(FromEnv::Ty(self.binders.value.self_ty.clone().cast()));
 
-        for wc in self.binders
-                      .value
-                      .where_clauses
-                      .iter()
-                      .cloned()
-                      .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+        for wc in self
+            .binders
+            .value
+            .where_clauses
+            .iter()
+            .cloned()
+            .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
         {
             // We move the binders of the where-clause to the left, e.g. if we had:
             //
@@ -420,13 +428,19 @@ impl StructDatum {
             // `forall<'a, T> { FromEnv(T: Fn(&'a i32)) :- FromEnv(Foo<T>) }`
             //
             let shift = wc.binders.len();
-            clauses.push(Binders {
-                binders: wc.binders.into_iter().chain(self.binders.binders.clone()).collect(),
-                value: ProgramClauseImplication {
-                    consequence: wc.value,
-                    conditions: vec![condition.clone().up_shift(shift).cast()],
-                }
-            }.cast());
+            clauses.push(
+                Binders {
+                    binders: wc
+                        .binders
+                        .into_iter()
+                        .chain(self.binders.binders.clone())
+                        .collect(),
+                    value: ProgramClauseImplication {
+                        consequence: wc.value,
+                        conditions: vec![condition.clone().shifted_in(shift).cast()],
+                    },
+                }.cast(),
+            );
         }
 
         clauses
@@ -534,25 +548,24 @@ impl TraitDatum {
 
         let trait_ref = self.binders.value.trait_ref.clone();
 
-        let trait_ref_impl = WhereClause::Implemented(
-           self.binders.value.trait_ref.clone()
-        );
+        let trait_ref_impl = WhereClause::Implemented(self.binders.value.trait_ref.clone());
 
-        let wf = self.binders.map_ref(|bound| {
-            ProgramClauseImplication {
+        let wf = self
+            .binders
+            .map_ref(|bound| ProgramClauseImplication {
                 consequence: WellFormed::Trait(trait_ref.clone()).cast(),
 
                 conditions: {
-                    bound.where_clauses
-                            .iter()
-                            .cloned()
-                            .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
-                            .casted()
-                            .chain(Some(DomainGoal::Holds(trait_ref_impl.clone()).cast()))
-                            .collect()
+                    bound
+                        .where_clauses
+                        .iter()
+                        .cloned()
+                        .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
+                        .casted()
+                        .chain(Some(DomainGoal::Holds(trait_ref_impl.clone()).cast()))
+                        .collect()
                 },
-            }
-        }).cast();
+            }).cast();
         clauses.push(wf);
 
         // The number of parameters will always be at least 1 because of the Self parameter
@@ -562,44 +575,50 @@ impl TraitDatum {
 
         // Add all cases for potential downstream impls that could exist
         for i in 0..type_parameters.len() {
-            let impl_may_exist = self.binders.map_ref(|bound_datum|
-                ProgramClauseImplication {
-                    consequence: DomainGoal::Holds(WhereClause::Implemented(bound_datum.trait_ref.clone())),
-                    conditions: bound_datum.where_clauses
-                        .iter()
-                        .cloned()
-                        .casted()
-                        .chain(iter::once(DomainGoal::Compatible(()).cast()))
-                        .chain((0..i).map(|j| DomainGoal::IsFullyVisible(type_parameters[j].clone()).cast()))
-                        .chain(iter::once(DomainGoal::DownstreamType(type_parameters[i].clone()).cast()))
-                        .chain(iter::once(Goal::CannotProve(())))
-                        .collect(),
-                }
-            ).cast();
+            let impl_may_exist =
+                self.binders
+                    .map_ref(|bound_datum| ProgramClauseImplication {
+                        consequence: DomainGoal::Holds(WhereClause::Implemented(
+                            bound_datum.trait_ref.clone(),
+                        )),
+                        conditions: bound_datum
+                            .where_clauses
+                            .iter()
+                            .cloned()
+                            .casted()
+                            .chain(iter::once(DomainGoal::Compatible(()).cast()))
+                            .chain((0..i).map(|j| {
+                                DomainGoal::IsFullyVisible(type_parameters[j].clone()).cast()
+                            })).chain(iter::once(
+                                DomainGoal::DownstreamType(type_parameters[i].clone()).cast(),
+                            )).chain(iter::once(Goal::CannotProve(())))
+                            .collect(),
+                    }).cast();
 
             clauses.push(impl_may_exist);
         }
 
         if !self.binders.value.flags.upstream {
-            let impl_allowed = self.binders.map_ref(|bound_datum|
-                ProgramClauseImplication {
+            let impl_allowed = self
+                .binders
+                .map_ref(|bound_datum| ProgramClauseImplication {
                     consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
                     conditions: Vec::new(),
-                }
-            ).cast();
+                }).cast();
 
             clauses.push(impl_allowed);
         } else {
             for i in 0..type_parameters.len() {
-                let impl_maybe_allowed = self.binders.map_ref(|bound_datum|
-                    ProgramClauseImplication {
+                let impl_maybe_allowed = self
+                    .binders
+                    .map_ref(|bound_datum| ProgramClauseImplication {
                         consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
                         conditions: (0..i)
                             .map(|j| DomainGoal::IsFullyVisible(type_parameters[j].clone()).cast())
-                            .chain(iter::once(DomainGoal::IsLocal(type_parameters[i].clone()).cast()))
-                            .collect(),
-                    }
-                ).cast();
+                            .chain(iter::once(
+                                DomainGoal::IsLocal(type_parameters[i].clone()).cast(),
+                            )).collect(),
+                    }).cast();
 
                 clauses.push(impl_maybe_allowed);
             }
@@ -607,17 +626,26 @@ impl TraitDatum {
             // Fundamental traits can be reasoned about negatively without any ambiguity, so no
             // need for this rule if the trait is fundamental.
             if !self.binders.value.flags.fundamental {
-                let impl_may_exist = self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                    consequence: DomainGoal::Holds(WhereClause::Implemented(bound_datum.trait_ref.clone())),
-                    conditions: bound_datum.where_clauses
-                    .iter()
-                    .cloned()
-                    .casted()
-                    .chain(iter::once(DomainGoal::Compatible(()).cast()))
-                    .chain(bound_datum.trait_ref.type_parameters().map(|ty| DomainGoal::IsUpstream(ty).cast()))
-                    .chain(iter::once(Goal::CannotProve(())))
-                    .collect(),
-                }).cast();
+                let impl_may_exist = self
+                    .binders
+                    .map_ref(|bound_datum| ProgramClauseImplication {
+                        consequence: DomainGoal::Holds(WhereClause::Implemented(
+                            bound_datum.trait_ref.clone(),
+                        )),
+                        conditions: bound_datum
+                            .where_clauses
+                            .iter()
+                            .cloned()
+                            .casted()
+                            .chain(iter::once(DomainGoal::Compatible(()).cast()))
+                            .chain(
+                                bound_datum
+                                    .trait_ref
+                                    .type_parameters()
+                                    .map(|ty| DomainGoal::IsUpstream(ty).cast()),
+                            ).chain(iter::once(Goal::CannotProve(())))
+                            .collect(),
+                    }).cast();
 
                 clauses.push(impl_may_exist);
             }
@@ -625,31 +653,39 @@ impl TraitDatum {
 
         let condition = DomainGoal::FromEnv(FromEnv::Trait(trait_ref.clone()));
 
-        for wc in self.binders
-                      .value
-                      .where_clauses
-                      .iter()
-                      .cloned()
-                      .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+        for wc in self
+            .binders
+            .value
+            .where_clauses
+            .iter()
+            .cloned()
+            .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
         {
             // We move the binders of the where-clause to the left for the reverse rules,
             // cf `StructDatum::to_program_clauses`.
             let shift = wc.binders.len();
-            clauses.push(Binders {
-                binders: wc.binders.into_iter().chain(self.binders.binders.clone()).collect(),
-                value: ProgramClauseImplication {
-                    consequence: wc.value,
-                    conditions: vec![condition.clone().up_shift(shift).cast()],
-                }
-            }.cast());
+            clauses.push(
+                Binders {
+                    binders: wc
+                        .binders
+                        .into_iter()
+                        .chain(self.binders.binders.clone())
+                        .collect(),
+                    value: ProgramClauseImplication {
+                        consequence: wc.value,
+                        conditions: vec![condition.clone().shifted_in(shift).cast()],
+                    },
+                }.cast(),
+            );
         }
 
-        clauses.push(self.binders.map_ref(|_| {
-            ProgramClauseImplication {
-                consequence: DomainGoal::Holds(trait_ref_impl),
-                conditions: vec![condition.cast()],
-            }
-        }).cast());
+        clauses.push(
+            self.binders
+                .map_ref(|_| ProgramClauseImplication {
+                    consequence: DomainGoal::Holds(trait_ref_impl),
+                    conditions: vec![condition.cast()],
+                }).cast(),
+        );
 
         clauses
     }
@@ -696,7 +732,8 @@ impl AssociatedTyDatum {
         // We also generate rules specific to WF requirements and implied bounds,
         // see below.
 
-        let binders: Vec<_> = self.parameter_kinds
+        let binders: Vec<_> = self
+            .parameter_kinds
             .iter()
             .map(|pk| pk.map(|_| ()))
             .collect();
@@ -736,28 +773,32 @@ impl AssociatedTyDatum {
         //    forall<Self> {
         //        ProjectionEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
         //    }
-        clauses.push(Binders {
-            binders: binders.clone(),
-            value: ProgramClauseImplication {
-                consequence: projection_eq.clone().cast(),
-                conditions: vec![],
-            },
-        }.cast());
+        clauses.push(
+            Binders {
+                binders: binders.clone(),
+                value: ProgramClauseImplication {
+                    consequence: projection_eq.clone().cast(),
+                    conditions: vec![],
+                },
+            }.cast(),
+        );
 
         // Well-formedness of projection type.
         //
         //    forall<Self> {
         //        WellFormed((Foo::Assoc)<Self>) :- Self: Foo, WC.
         //    }
-        clauses.push(Binders {
-            binders: binders.clone(),
-            value: ProgramClauseImplication {
-                consequence: WellFormed::Ty(app_ty.clone()).cast(),
-                conditions: iter::once(trait_ref.clone().cast())
-                                .chain(self.where_clauses.iter().cloned().casted())
-                                .collect(),
-            },
-        }.cast());
+        clauses.push(
+            Binders {
+                binders: binders.clone(),
+                value: ProgramClauseImplication {
+                    consequence: WellFormed::Ty(app_ty.clone()).cast(),
+                    conditions: iter::once(trait_ref.clone().cast())
+                        .chain(self.where_clauses.iter().cloned().casted())
+                        .collect(),
+                },
+            }.cast(),
+        );
 
         // Assuming well-formedness of projection type means we can assume
         // the trait ref as well. Mostly used in function bodies.
@@ -765,13 +806,15 @@ impl AssociatedTyDatum {
         //    forall<Self> {
         //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).
         //    }
-        clauses.push(Binders {
-            binders: binders.clone(),
-            value: ProgramClauseImplication {
-                consequence: FromEnv::Trait(trait_ref.clone()).cast(),
-                conditions: vec![FromEnv::Ty(app_ty.clone()).cast()],
-            }
-        }.cast());
+        clauses.push(
+            Binders {
+                binders: binders.clone(),
+                value: ProgramClauseImplication {
+                    consequence: FromEnv::Trait(trait_ref.clone()).cast(),
+                    conditions: vec![FromEnv::Ty(app_ty.clone()).cast()],
+                },
+            }.cast(),
+        );
 
         // Reverse rule for where clauses.
         //
@@ -787,10 +830,8 @@ impl AssociatedTyDatum {
                 binders: wc.binders.iter().chain(binders.iter()).cloned().collect(),
                 value: ProgramClauseImplication {
                     consequence: wc.value.clone().into_from_env_goal(),
-                    conditions: vec![
-                        FromEnv::Ty(app_ty.clone()).up_shift(shift).cast()
-                    ],
-                }
+                    conditions: vec![FromEnv::Ty(app_ty.clone()).shifted_in(shift).cast()],
+                },
             }.cast()
         }));
 
@@ -803,13 +844,16 @@ impl AssociatedTyDatum {
             // Same as above in case of higher-ranked inline bounds.
             let shift = bound.binders.len();
             Binders {
-                binders: bound.binders.iter().chain(binders.iter()).cloned().collect(),
+                binders: bound
+                    .binders
+                    .iter()
+                    .chain(binders.iter())
+                    .cloned()
+                    .collect(),
                 value: ProgramClauseImplication {
                     consequence: bound.value.clone().into_from_env_goal(),
-                    conditions: vec![
-                        FromEnv::Trait(trait_ref.clone()).up_shift(shift).cast()
-                    ],
-                }
+                    conditions: vec![FromEnv::Trait(trait_ref.clone()).shifted_in(shift).cast()],
+                },
             }.cast()
         }));
 
@@ -819,10 +863,16 @@ impl AssociatedTyDatum {
         let ty = Ty::Var(binders.len() - 1);
 
         // `Normalize(<T as Foo>::Assoc -> U)`
-        let normalize = Normalize { projection: projection.clone(), ty: ty.clone() };
+        let normalize = Normalize {
+            projection: projection.clone(),
+            ty: ty.clone(),
+        };
 
         // `ProjectionEq(<T as Foo>::Assoc = U)`
-        let projection_eq = ProjectionEq { projection: projection.clone(), ty };
+        let projection_eq = ProjectionEq {
+            projection: projection.clone(),
+            ty,
+        };
 
         // Projection equality rule from above.
         //
@@ -830,13 +880,15 @@ impl AssociatedTyDatum {
         //        ProjectionEq(<T as Foo>::Assoc = U) :-
         //            Normalize(<T as Foo>::Assoc -> U).
         //    }
-        clauses.push(Binders {
-            binders: binders.clone(),
-            value: ProgramClauseImplication {
-                consequence: projection_eq.clone().cast(),
-                conditions: vec![normalize.clone().cast()],
-            },
-        }.cast());
+        clauses.push(
+            Binders {
+                binders: binders.clone(),
+                value: ProgramClauseImplication {
+                    consequence: projection_eq.clone().cast(),
+                    conditions: vec![normalize.clone().cast()],
+                },
+            }.cast(),
+        );
 
         clauses
     }
