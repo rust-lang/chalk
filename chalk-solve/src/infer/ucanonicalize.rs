@@ -220,17 +220,17 @@ struct UCollector<'q> {
 impl<'q> DefaultTypeFolder for UCollector<'q> {}
 
 impl<'q> UniversalFolder for UCollector<'q> {
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
-        self.universes.add(universe);
-        Ok(TypeName::ForAll(universe).to_ty())
+    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
+        self.universes.add(universe.ui);
+        Ok(universe.to_ty())
     }
 
     fn fold_free_universal_lifetime(
         &mut self,
-        universe: UniverseIndex,
+        universe: UniversalIndex,
         _binders: usize,
     ) -> Fallible<Lifetime> {
-        self.universes.add(universe);
+        self.universes.add(universe.ui);
         Ok(universe.to_lifetime())
     }
 }
@@ -246,20 +246,20 @@ impl<'q> DefaultTypeFolder for UMapToCanonical<'q> {}
 impl<'q> UniversalFolder for UMapToCanonical<'q> {
     fn fold_free_universal_ty(
         &mut self,
-        universe0: UniverseIndex,
+        universe0: UniversalIndex,
         _binders: usize,
     ) -> Fallible<Ty> {
-        let universe = self.universes.map_universe_to_canonical(universe0);
-        Ok(TypeName::ForAll(universe).to_ty())
+        let ui = self.universes.map_universe_to_canonical(universe0.ui);
+        Ok(UniversalIndex { ui, idx: universe0.idx }.to_ty())
     }
 
     fn fold_free_universal_lifetime(
         &mut self,
-        universe0: UniverseIndex,
+        universe0: UniversalIndex,
         _binders: usize,
     ) -> Fallible<Lifetime> {
-        let universe = self.universes.map_universe_to_canonical(universe0);
-        Ok(universe.to_lifetime())
+        let universe = self.universes.map_universe_to_canonical(universe0.ui);
+        Ok(UniversalIndex { ui: universe, idx: universe0.idx }.to_lifetime())
     }
 }
 
@@ -274,20 +274,20 @@ impl<'q> DefaultTypeFolder for UMapFromCanonical<'q> {}
 impl<'q> UniversalFolder for UMapFromCanonical<'q> {
     fn fold_free_universal_ty(
         &mut self,
-        universe0: UniverseIndex,
+        universe0: UniversalIndex,
         _binders: usize,
     ) -> Fallible<Ty> {
-        let universe = self.universes.map_universe_from_canonical(universe0);
-        Ok(TypeName::ForAll(universe).to_ty())
+        let ui = self.universes.map_universe_from_canonical(universe0.ui);
+        Ok(UniversalIndex { ui, idx: universe0.idx }.to_ty())
     }
 
     fn fold_free_universal_lifetime(
         &mut self,
-        universe0: UniverseIndex,
+        universe0: UniversalIndex,
         _binders: usize,
     ) -> Fallible<Lifetime> {
-        let universe = self.universes.map_universe_from_canonical(universe0);
-        Ok(universe.to_lifetime())
+        let universe = self.universes.map_universe_from_canonical(universe0.ui);
+        Ok(UniversalIndex { ui: universe, idx: universe0.idx }.to_lifetime())
     }
 }
 

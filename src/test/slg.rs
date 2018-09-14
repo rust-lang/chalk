@@ -482,7 +482,7 @@ fn subgoal_cycle_uninhabited() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: [?0 := !1],
+                            subst: [?0 := !1_0],
                             constraints: []
                         },
                         binders: []
@@ -550,7 +550,7 @@ fn basic_region_constraint_from_positive_impl() {
                             constraints: [
                                 InEnvironment {
                                     environment: Env([]),
-                                    goal: '!2 == '!1
+                                    goal: '!1_1 == '!1_0
                                 }
                             ]
                         },

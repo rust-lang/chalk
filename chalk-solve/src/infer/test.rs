@@ -294,6 +294,6 @@ fn lifetime_constraint_indirect() {
     assert_eq!(constraints.len(), 1);
     assert_eq!(
         format!("{:?}", constraints[0]),
-        "InEnvironment { environment: Env([]), goal: \'?2 == \'!1 }",
+        "InEnvironment { environment: Env([]), goal: \'?2 == \'!1_0 }",
     );
 }

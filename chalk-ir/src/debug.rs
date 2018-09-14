@@ -30,7 +30,7 @@ impl Debug for TypeName {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             TypeName::ItemId(id) => write!(fmt, "{:?}", id),
-            TypeName::ForAll(universe) => write!(fmt, "!{}", universe.counter),
+            TypeName::ForAll(universe) => write!(fmt, "!{}_{}", universe.ui.counter, universe.idx),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
         }
     }
@@ -60,7 +60,7 @@ impl Debug for Lifetime {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             Lifetime::Var(depth) => write!(fmt, "'?{}", depth),
-            Lifetime::ForAll(universe) => write!(fmt, "'!{}", universe.counter),
+            Lifetime::ForAll(UniversalIndex { ui, idx }) => write!(fmt, "'!{}_{}", ui.counter, idx),
         }
     }
 }

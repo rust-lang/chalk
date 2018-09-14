@@ -166,19 +166,22 @@ impl<'t> Unifier<'t> {
     }
 
     fn unify_forall_tys(&mut self, ty1: &QuantifiedTy, ty2: &QuantifiedTy) -> Fallible<()> {
-        // for<'a...> T == for<'b...> U where 'a != 'b
+        // for<'a...> T == for<'b...> U
         //
         // if:
         //
         // for<'a...> exists<'b...> T == U &&
         // for<'b...> exists<'a...> T == U
+        //
+        // Here we only check for<'a...> exists<'b...> T == U,
+        // can someone smart comment why this is sufficient?
 
         debug!("unify_forall_tys({:?}, {:?})", ty1, ty2);
 
+        let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|_| {
-                let new_universe = self.table.new_universe();
-                Lifetime::ForAll(new_universe).cast()
+            .map(|idx| {
+                Lifetime::ForAll(UniversalIndex { ui, idx }).cast()
             })
             .collect();
 
@@ -239,10 +242,10 @@ impl<'t> Unifier<'t> {
     }
 
     fn unify_forall_apply(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Fallible<()> {
+        let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|_| {
-                let new_universe = self.table.new_universe();
-                Lifetime::ForAll(new_universe).cast()
+            .map(|idx| {
+                Lifetime::ForAll(UniversalIndex { ui, idx }).cast()
             })
             .collect();
 
@@ -294,16 +297,16 @@ impl<'t> Unifier<'t> {
                 Ok(())
             }
 
-            (&Lifetime::Var(depth), &Lifetime::ForAll(ui))
-            | (&Lifetime::ForAll(ui), &Lifetime::Var(depth)) => {
+            (&Lifetime::Var(depth), &Lifetime::ForAll(idx))
+            | (&Lifetime::ForAll(idx), &Lifetime::Var(depth)) => {
                 let var = InferenceVariable::from_depth(depth);
                 let var_ui = self.table.universe_of_unbound_var(var);
-                if var_ui.can_see(ui) {
+                if var_ui.can_see(idx.ui) {
                     debug!(
                         "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
-                        var, var_ui, ui
+                        var, var_ui, idx.ui
                     );
-                    let v = Lifetime::ForAll(ui);
+                    let v = Lifetime::ForAll(idx);
                     self.table
                         .unify
                         .unify_var_value(var, InferenceValue::from(v))
@@ -312,7 +315,7 @@ impl<'t> Unifier<'t> {
                 } else {
                     debug!(
                         "unify_lifetime_lifetime: {:?} in {:?} cannot see {:?}; pushing constraint",
-                        var, var_ui, ui
+                        var, var_ui, idx.ui
                     );
                     Ok(self.push_lifetime_eq_constraint(*a, *b))
                 }
@@ -374,20 +377,20 @@ impl<'u, 't> OccursCheck<'u, 't> {
 impl<'u, 't> DefaultTypeFolder for OccursCheck<'u, 't> {}
 
 impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
-    fn fold_free_universal_ty(&mut self, universe: UniverseIndex, _binders: usize) -> Fallible<Ty> {
-        if self.universe_index < universe {
+    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
+        if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
-            Ok(TypeName::ForAll(universe).to_ty()) // no need to shift, not relative to depth
+            Ok(universe.to_ty()) // no need to shift, not relative to depth
         }
     }
 
     fn fold_free_universal_lifetime(
         &mut self,
-        ui: UniverseIndex,
+        ui: UniversalIndex,
         binders: usize,
     ) -> Fallible<Lifetime> {
-        if self.universe_index < ui {
+        if self.universe_index < ui.ui {
             // Scenario is like:
             //
             // exists<T> forall<'b> ?T = Foo<'b>

@@ -476,7 +476,7 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := !1], lifetime constraints []"
+            "Unique; substitution [?0 := !1_0], lifetime constraints []"
         }
 
         goal {
@@ -506,7 +506,7 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := (Iterator::Item)<!1>]"
+            "Unique; substitution [?0 := (Iterator::Item)<!1_0>]"
         }
 
         goal {
@@ -518,7 +518,7 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := (Iterator::Item)<!1>]"
+            "Unique; substitution [?0 := (Iterator::Item)<!1_0>]"
         }
 
         goal {
@@ -581,7 +581,7 @@ fn normalize_gat1() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Iter<'!2, !1>], lifetime constraints []"
+            "Unique; substitution [?0 := Iter<'!2_0, !1_0>], lifetime constraints []"
         }
     }
 }
@@ -606,7 +606,7 @@ fn normalize_gat2() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Span<'!1, !2>], lifetime constraints []"
+            "Unique; substitution [?0 := Span<'!1_0, !1_1>], lifetime constraints []"
         }
 
         goal {
@@ -664,7 +664,7 @@ fn normalize_gat_with_where_clause() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Value<!1>]"
+            "Unique; substitution [?0 := Value<!1_0>]"
         }
     }
 }
@@ -703,7 +703,7 @@ fn normalize_gat_with_where_clause2() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := !2]"
+            "Unique; substitution [?0 := !1_1]"
         }
     }
 }
@@ -922,7 +922,7 @@ fn region_equality() {
         } yields {
             "Unique; substitution [],
                      lifetime constraints \
-                     [InEnvironment { environment: Env([]), goal: '!2 == '!1 }]
+                     [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }]
                      "
         }
 
@@ -933,7 +933,7 @@ fn region_equality() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := '!1], lifetime constraints []"
+            "Unique; substitution [?0 := '!1_0], lifetime constraints []"
         }
     }
 }
@@ -966,12 +966,12 @@ fn forall_equality() {
             // this is because the region constraints are unsolvable.
             //
             // Note that `?0` (in universe 2) must be equal to both
-            // `!1` and `!2`, which of course it cannot be.
+            // `!1_0` and `!1_1`, which of course it cannot be.
             for<'a, 'b> Ref<'a, Ref<'b, Ref<'a, Unit>>>: Eq<
                 for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
         } yields {
             "Unique; substitution [], lifetime constraints [
-                 InEnvironment { environment: Env([]), goal: '!2 == '!1 }
+                 InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }
              ]"
         }
     }
@@ -1185,7 +1185,7 @@ fn normalize_under_binder() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Ref<'!1, I32>], lifetime constraints []"
+            "Unique; substitution [?0 := Ref<'!1_0, I32>], lifetime constraints []"
         }
 
         goal {
@@ -1197,7 +1197,7 @@ fn normalize_under_binder() {
         } yields {
             "Unique; for<?U0> { \
              substitution [?0 := Ref<'?0, I32>], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1_0 }] \
              }"
         }
     }
@@ -1221,7 +1221,7 @@ fn unify_quantified_lifetimes() {
         } yields {
             "Unique; for<?U0> { \
              substitution [?0 := '?0], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1_0 }] \
              }"
         }
 
@@ -1237,8 +1237,8 @@ fn unify_quantified_lifetimes() {
             }
         } yields {
             "Unique; for<?U0> { \
-             substitution [?0 := '?0, ?1 := '!1], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1 }] \
+             substitution [?0 := '?0, ?1 := '!1_0], \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '?0 == '!1_0 }] \
              }"
         }
     }
@@ -1263,7 +1263,7 @@ fn equality_binder() {
         } yields {
             "Unique; for<?U1> { \
                  substitution [?0 := '?0], \
-                 lifetime constraints [InEnvironment { environment: Env([]), goal: '!2 == '?0 }] \
+                 lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '?0 }] \
              }"
         }
     }
@@ -2394,7 +2394,7 @@ fn quantified_types() {
         } yields {
             // Lifetime constraints are unsatisfiable
             "Unique; substitution [], \
-            lifetime constraints [InEnvironment { environment: Env([]), goal: '!2 == '!1 }]"
+            lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '!1_0 }]"
         }
     }
 }
