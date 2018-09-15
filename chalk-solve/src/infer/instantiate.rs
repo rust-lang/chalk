@@ -174,4 +174,4 @@ impl FreeVarFolder for Instantiator {
     }
 }
 
-impl IdentityPlaceholderFolder for Instantiator {}
+impl DefaultPlaceholderFolder for Instantiator {}

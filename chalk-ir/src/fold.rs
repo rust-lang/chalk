@@ -38,7 +38,7 @@ pub use self::subst::Subst;
 ///
 /// To create a folder type F, one typically does one of two things:
 ///
-/// - Implement `FreeVarFolder` and `IdentityPlaceholderFolder`:
+/// - Implement `FreeVarFolder` and `DefaultPlaceholderFolder`:
 ///   - This ignores universally quantified variables but allows you to
 ///     replace existential variables with new values.
 /// - Implement `FreeVarFolder` and `PlaceholderFolder`:
@@ -113,11 +113,19 @@ pub trait FreeVarFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `PlaceholderFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-pub trait IdentityFreeVarFolder {}
+pub trait DefaultFreeVarFolder {
+    fn forbid() -> bool {
+        false
+    }
+}
 
-impl<T: IdentityFreeVarFolder> FreeVarFolder for T {
+impl<T: DefaultFreeVarFolder> FreeVarFolder for T {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        Ok(Ty::Var(depth + binders))
+        if T::forbid() {
+            panic!("unexpected free variable with depth `{:?}`", depth)
+        } else {
+            Ok(Ty::Var(depth + binders))
+        }
     }
 
     fn fold_free_var_lifetime(
@@ -125,7 +133,11 @@ impl<T: IdentityFreeVarFolder> FreeVarFolder for T {
         depth: usize,
         binders: usize,
     ) -> Fallible<Lifetime> {
-        Ok(Lifetime::Var(depth + binders))
+        if T::forbid() {
+            panic!("unexpected free variable with depth `{:?}`", depth)
+        } else {
+            Ok(Lifetime::Var(depth + binders))
+        }
     }
 }
 
@@ -150,11 +162,19 @@ pub trait PlaceholderFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `PlaceholderFolder` for free that simply ignores
 /// placeholder values (that is, it replaces them with themselves).
-pub trait IdentityPlaceholderFolder {}
+pub trait DefaultPlaceholderFolder {
+    fn forbid() -> bool {
+        false
+    }
+}
 
-impl<T: IdentityPlaceholderFolder> PlaceholderFolder for T {
+impl<T: DefaultPlaceholderFolder> PlaceholderFolder for T {
     fn fold_free_placeholder_ty(&mut self, universe: PlaceholderIndex, _binders: usize) -> Fallible<Ty> {
-        Ok(universe.to_ty())
+        if T::forbid() {
+            panic!("unexpected placeholder type `{:?}`", universe)
+        } else {
+            Ok(universe.to_ty())
+        }
     }
 
     fn fold_free_placeholder_lifetime(
@@ -162,7 +182,11 @@ impl<T: IdentityPlaceholderFolder> PlaceholderFolder for T {
         universe: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Lifetime> {
-        Ok(universe.to_lifetime())
+        if T::forbid() {
+            panic!("unexpected placeholder lifetime `{:?}`", universe)
+        } else {
+            Ok(universe.to_lifetime())
+        }
     }
 }
 

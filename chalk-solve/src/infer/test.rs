@@ -38,7 +38,7 @@ impl<'q> FreeVarFolder for Normalizer<'q> {
     }
 }
 
-impl<'q> IdentityPlaceholderFolder for Normalizer<'q> {}
+impl<'q> DefaultPlaceholderFolder for Normalizer<'q> {}
 
 #[test]
 fn infer() {

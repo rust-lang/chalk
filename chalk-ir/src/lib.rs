@@ -6,7 +6,7 @@
 use chalk_engine::fallible::*;
 use cast::Cast;
 use fold::shift::Shift;
-use fold::{DefaultTypeFolder, FreeVarFolder, Fold, IdentityPlaceholderFolder};
+use fold::{DefaultTypeFolder, FreeVarFolder, Fold, DefaultPlaceholderFolder};
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
@@ -900,7 +900,7 @@ impl<'a> FreeVarFolder for &'a Substitution {
     }
 }
 
-impl<'a> IdentityPlaceholderFolder for &'a Substitution {}
+impl<'a> DefaultPlaceholderFolder for &'a Substitution {}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {

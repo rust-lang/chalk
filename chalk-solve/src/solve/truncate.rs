@@ -1,7 +1,7 @@
 //!
 
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{self, Fold, IdentityFreeVarFolder, IdentityPlaceholderFolder, TypeFolder};
+use chalk_ir::fold::{self, Fold, DefaultFreeVarFolder, DefaultPlaceholderFolder, TypeFolder};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use crate::infer::InferenceTable;
@@ -107,9 +107,9 @@ impl<'infer> TypeFolder for Truncater<'infer> {
     }
 }
 
-impl<'infer> IdentityFreeVarFolder for Truncater<'infer> {}
+impl<'infer> DefaultFreeVarFolder for Truncater<'infer> {}
 
-impl<'infer> IdentityPlaceholderFolder for Truncater<'infer> {}
+impl<'infer> DefaultPlaceholderFolder for Truncater<'infer> {}
 
 #[test]
 fn truncate_types() {

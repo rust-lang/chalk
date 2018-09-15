@@ -1,5 +1,5 @@
 use ::*;
-use super::{DefaultTypeFolder, FreeVarFolder, Fold, IdentityPlaceholderFolder};
+use super::{DefaultTypeFolder, FreeVarFolder, Fold, DefaultPlaceholderFolder};
 
 /// Methods for converting debruijn indices to move values into or out
 /// of binders.
@@ -100,7 +100,7 @@ impl FreeVarFolder for Shifter {
     }
 }
 
-impl IdentityPlaceholderFolder for Shifter {}
+impl DefaultPlaceholderFolder for Shifter {}
 
 //---------------------------------------------------------------------------
 
@@ -142,4 +142,4 @@ impl FreeVarFolder for DownShifter {
     }
 }
 
-impl IdentityPlaceholderFolder for DownShifter {}
+impl DefaultPlaceholderFolder for DownShifter {}

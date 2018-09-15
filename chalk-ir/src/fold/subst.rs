@@ -53,4 +53,4 @@ impl<'b> FreeVarFolder for Subst<'b> {
     }
 }
 
-impl<'b> IdentityPlaceholderFolder for Subst<'b> {}
+impl<'b> DefaultPlaceholderFolder for Subst<'b> {}

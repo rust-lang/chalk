@@ -1,5 +1,5 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, FreeVarFolder, Fold, IdentityPlaceholderFolder};
+use chalk_ir::fold::{DefaultTypeFolder, FreeVarFolder, Fold, DefaultPlaceholderFolder};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 
@@ -30,7 +30,7 @@ struct DeepNormalizer<'table> {
 
 impl<'table> DefaultTypeFolder for DeepNormalizer<'table> {}
 
-impl<'table> IdentityPlaceholderFolder for DeepNormalizer<'table> {}
+impl<'table> DefaultPlaceholderFolder for DeepNormalizer<'table> {}
 
 impl<'table> FreeVarFolder for DeepNormalizer<'table> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {

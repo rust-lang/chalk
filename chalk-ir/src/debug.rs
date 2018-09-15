@@ -30,7 +30,7 @@ impl Debug for TypeName {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             TypeName::ItemId(id) => write!(fmt, "{:?}", id),
-            TypeName::Placeholder(universe) => write!(fmt, "!{}_{}", universe.ui.counter, universe.idx),
+            TypeName::Placeholder(index) => write!(fmt, "{:?}", index),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
         }
     }
@@ -60,8 +60,15 @@ impl Debug for Lifetime {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             Lifetime::Var(depth) => write!(fmt, "'?{}", depth),
-            Lifetime::Placeholder(PlaceholderIndex { ui, idx }) => write!(fmt, "'!{}_{}", ui.counter, idx),
+            Lifetime::Placeholder(index) => write!(fmt, "'{:?}", index),
         }
+    }
+}
+
+impl Debug for PlaceholderIndex {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let PlaceholderIndex { ui, idx } = self;
+        write!(fmt, "!{}_{}", ui.counter, idx)
     }
 }
 
