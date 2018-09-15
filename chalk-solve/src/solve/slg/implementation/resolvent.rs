@@ -388,12 +388,12 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (Lifetime::ForAll(_), Lifetime::ForAll(_)) => {
+            (Lifetime::Placeholder(_), Lifetime::Placeholder(_)) => {
                 assert_eq!(answer, pending);
                 Ok(())
             }
 
-            (Lifetime::Var(_), _) | (Lifetime::ForAll(_), _) => panic!(
+            (Lifetime::Var(_), _) | (Lifetime::Placeholder(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),

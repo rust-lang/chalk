@@ -38,7 +38,7 @@ impl<'q> ExistentialFolder for Normalizer<'q> {
     }
 }
 
-impl<'q> IdentityUniversalFolder for Normalizer<'q> {}
+impl<'q> IdentityPlaceholderFolder for Normalizer<'q> {}
 
 #[test]
 fn infer() {
@@ -63,7 +63,7 @@ fn universe_error() {
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     table
-        .unify(&environment0, &a, &ty!(apply (skol 1)))
+        .unify(&environment0, &a, &ty!(apply (placeholder 1)))
         .unwrap_err();
 }
 
@@ -104,7 +104,7 @@ fn universe_error_indirect_1() {
     let a = table.new_variable(U0).to_ty();
     let b = table.new_variable(U1).to_ty();
     table
-        .unify(&environment0, &b, &ty!(apply (skol 1)))
+        .unify(&environment0, &b, &ty!(apply (placeholder 1)))
         .unwrap();
     table.unify(&environment0, &a, &b).unwrap_err();
 }
@@ -118,7 +118,7 @@ fn universe_error_indirect_2() {
     let b = table.new_variable(U1).to_ty();
     table.unify(&environment0, &a, &b).unwrap();
     table
-        .unify(&environment0, &b, &ty!(apply (skol 1)))
+        .unify(&environment0, &b, &ty!(apply (placeholder 1)))
         .unwrap_err();
 }
 
@@ -148,7 +148,7 @@ fn universe_promote_bad() {
         .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
     table
-        .unify(&environment0, &b, &ty!(apply (skol 1)))
+        .unify(&environment0, &b, &ty!(apply (placeholder 1)))
         .unwrap_err();
 }
 
@@ -277,7 +277,7 @@ fn lifetime_constraint_indirect() {
 
     // Here, we unify '?1 (the lifetime variable in universe 1) with
     // '!1.
-    let t_a = ty!(apply (item 0) (lifetime (skol 1)));
+    let t_a = ty!(apply (item 0) (lifetime (placeholder 1)));
     let t_b = ty!(apply (item 0) (lifetime (var 1)));
     let UnificationResult { goals, constraints } = table.unify(&environment0, &t_a, &t_b).unwrap();
     assert!(goals.is_empty());

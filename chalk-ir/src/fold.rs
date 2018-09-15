@@ -38,10 +38,10 @@ pub use self::subst::Subst;
 ///
 /// To create a folder type F, one typically does one of two things:
 ///
-/// - Implement `ExistentialFolder` and `IdentityUniversalFolder`:
+/// - Implement `ExistentialFolder` and `IdentityPlaceholderFolder`:
 ///   - This ignores universally quantified variables but allows you to
 ///     replace existential variables with new values.
-/// - Implement `ExistentialFolder` and `UniversalFolder`:
+/// - Implement `ExistentialFolder` and `PlaceholderFolder`:
 ///   - This allows you to replace either existential or universal
 ///     variables with new types/lifetimes.
 ///
@@ -52,7 +52,7 @@ pub use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
+pub trait Folder: ExistentialFolder + PlaceholderFolder + TypeFolder {
     /// Returns a "dynamic" version of this trait. There is no
     /// **particular** reason to require this, except that I didn't
     /// feel like making `super_fold_ty` generic for no reason.
@@ -64,7 +64,7 @@ pub trait TypeFolder {
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime>;
 }
 
-impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
+impl<T: ExistentialFolder + PlaceholderFolder + TypeFolder> Folder for T {
     fn to_dyn(&mut self) -> &mut dyn Folder {
         self
     }
@@ -77,7 +77,7 @@ impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
 /// folders implement this trait.
 pub trait DefaultTypeFolder {}
 
-impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for T {
+impl<T: ExistentialFolder + PlaceholderFolder + DefaultTypeFolder> TypeFolder for T {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
         super_fold_ty(self.to_dyn(), ty, binders)
     }
@@ -111,7 +111,7 @@ pub trait ExistentialFolder {
 }
 
 /// A convenience trait. If you implement this, you get an
-/// implementation of `UniversalFolder` for free that simply ignores
+/// implementation of `PlaceholderFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
 pub trait IdentityExistentialFolder {}
 
@@ -129,35 +129,37 @@ impl<T: IdentityExistentialFolder> ExistentialFolder for T {
     }
 }
 
-pub trait UniversalFolder {
-    /// Invoked for `Ty::Apply` instances where the type name is a `TypeName::ForAll`.
-    /// Returns a type to use instead, which should be suitably shifted to account for `binders`.
+pub trait PlaceholderFolder {
+    /// Invoked for each occurence of a placeholder type; these are
+    /// used when we instantiate binders universally. Returns a type
+    /// to use instead, which should be suitably shifted to account
+    /// for `binders`.
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, binders: usize) -> Fallible<Ty>;
+    fn fold_free_placeholder_ty(&mut self, universe: PlaceholderIndex, binders: usize) -> Fallible<Ty>;
 
-    /// As with `fold_free_universal_ty`, but for lifetimes.
-    fn fold_free_universal_lifetime(
+    /// As with `fold_free_placeholder_ty`, but for lifetimes.
+    fn fold_free_placeholder_lifetime(
         &mut self,
-        universe: UniversalIndex,
+        universe: PlaceholderIndex,
         binders: usize,
     ) -> Fallible<Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
-/// implementation of `UniversalFolder` for free that simply ignores
-/// universal values (that is, it replaces them with themselves).
-pub trait IdentityUniversalFolder {}
+/// implementation of `PlaceholderFolder` for free that simply ignores
+/// placeholder values (that is, it replaces them with themselves).
+pub trait IdentityPlaceholderFolder {}
 
-impl<T: IdentityUniversalFolder> UniversalFolder for T {
-    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
+impl<T: IdentityPlaceholderFolder> PlaceholderFolder for T {
+    fn fold_free_placeholder_ty(&mut self, universe: PlaceholderIndex, _binders: usize) -> Fallible<Ty> {
         Ok(universe.to_ty())
     }
 
-    fn fold_free_universal_lifetime(
+    fn fold_free_placeholder_lifetime(
         &mut self,
-        universe: UniversalIndex,
+        universe: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Lifetime> {
         Ok(universe.to_lifetime())
@@ -257,14 +259,14 @@ pub fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fallib
                 ref parameters,
             } = *apply;
             match name {
-                TypeName::ForAll(ui) => {
+                TypeName::Placeholder(ui) => {
                     assert!(
                         parameters.is_empty(),
                         "type {:?} with parameters {:?}",
                         ty,
                         parameters
                     );
-                    folder.fold_free_universal_ty(ui, binders)
+                    folder.fold_free_placeholder_ty(ui, binders)
                 }
 
                 TypeName::ItemId(_) | TypeName::AssociatedType(_) => {
@@ -349,7 +351,7 @@ pub fn super_fold_lifetime(
         } else {
             Ok(Lifetime::Var(depth))
         },
-        Lifetime::ForAll(universe) => folder.fold_free_universal_lifetime(universe, binders),
+        Lifetime::Placeholder(universe) => folder.fold_free_placeholder_lifetime(universe, binders),
     }
 }
 

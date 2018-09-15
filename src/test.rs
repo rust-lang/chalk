@@ -956,7 +956,7 @@ fn forall_equality() {
         goal {
             // A valid equality; we get back a series of solvable
             // region constraints, since each region variable must
-            // refer to exactly one skolemized region, and they are
+            // refer to exactly one placeholder region, and they are
             // all in a valid universe to do so (universe 4).
             for<'a, 'b> Ref<'a, Ref<'b, Unit>>: Eq<for<'c, 'd> Ref<'c, Ref<'d, Unit>>>
         } yields {

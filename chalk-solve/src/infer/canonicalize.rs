@@ -1,5 +1,5 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
+use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, PlaceholderFolder};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use std::cmp::max;
@@ -90,15 +90,15 @@ impl<'q> Canonicalizer<'q> {
 
 impl<'q> DefaultTypeFolder for Canonicalizer<'q> {}
 
-impl<'q> UniversalFolder for Canonicalizer<'q> {
-    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
+impl<'q> PlaceholderFolder for Canonicalizer<'q> {
+    fn fold_free_placeholder_ty(&mut self, universe: PlaceholderIndex, _binders: usize) -> Fallible<Ty> {
         self.max_universe = max(self.max_universe, universe.ui);
         Ok(universe.to_ty())
     }
 
-    fn fold_free_universal_lifetime(
+    fn fold_free_placeholder_lifetime(
         &mut self,
-        universe: UniversalIndex,
+        universe: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Lifetime> {
         self.max_universe = max(self.max_universe, universe.ui);

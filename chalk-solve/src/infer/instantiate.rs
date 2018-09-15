@@ -105,13 +105,13 @@ impl InferenceTable {
             .iter()
             .enumerate()
             .map(|(idx, pk)| {
-                let universal_idx = UniversalIndex { ui, idx };
+                let placeholder_idx = PlaceholderIndex { ui, idx };
                 match *pk {
                     ParameterKind::Lifetime(()) => {
-                        let lt = universal_idx.to_lifetime();
+                        let lt = placeholder_idx.to_lifetime();
                         ParameterKind::Lifetime(lt)
                     }
-                    ParameterKind::Ty(()) => ParameterKind::Ty(universal_idx.to_ty()),
+                    ParameterKind::Ty(()) => ParameterKind::Ty(placeholder_idx.to_ty()),
                 }
             })
             .collect();
@@ -174,4 +174,4 @@ impl ExistentialFolder for Instantiator {
     }
 }
 
-impl IdentityUniversalFolder for Instantiator {}
+impl IdentityPlaceholderFolder for Instantiator {}

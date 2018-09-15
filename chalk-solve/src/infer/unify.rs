@@ -1,6 +1,6 @@
 use chalk_engine::fallible::*;
 use chalk_ir::cast::Cast;
-use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
+use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, PlaceholderFolder};
 use chalk_ir::zip::{Zip, Zipper};
 use std::sync::Arc;
 
@@ -181,7 +181,7 @@ impl<'t> Unifier<'t> {
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|idx| {
-                Lifetime::ForAll(UniversalIndex { ui, idx }).cast()
+                Lifetime::Placeholder(PlaceholderIndex { ui, idx }).cast()
             })
             .collect();
 
@@ -245,7 +245,7 @@ impl<'t> Unifier<'t> {
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|idx| {
-                Lifetime::ForAll(UniversalIndex { ui, idx }).cast()
+                Lifetime::Placeholder(PlaceholderIndex { ui, idx }).cast()
             })
             .collect();
 
@@ -297,8 +297,8 @@ impl<'t> Unifier<'t> {
                 Ok(())
             }
 
-            (&Lifetime::Var(depth), &Lifetime::ForAll(idx))
-            | (&Lifetime::ForAll(idx), &Lifetime::Var(depth)) => {
+            (&Lifetime::Var(depth), &Lifetime::Placeholder(idx))
+            | (&Lifetime::Placeholder(idx), &Lifetime::Var(depth)) => {
                 let var = InferenceVariable::from_depth(depth);
                 let var_ui = self.table.universe_of_unbound_var(var);
                 if var_ui.can_see(idx.ui) {
@@ -306,7 +306,7 @@ impl<'t> Unifier<'t> {
                         "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
                         var, var_ui, idx.ui
                     );
-                    let v = Lifetime::ForAll(idx);
+                    let v = Lifetime::Placeholder(idx);
                     self.table
                         .unify
                         .unify_var_value(var, InferenceValue::from(v))
@@ -321,7 +321,7 @@ impl<'t> Unifier<'t> {
                 }
             }
 
-            (&Lifetime::ForAll(_), &Lifetime::ForAll(_)) => if a != b {
+            (&Lifetime::Placeholder(_), &Lifetime::Placeholder(_)) => if a != b {
                 Ok(self.push_lifetime_eq_constraint(*a, *b))
             } else {
                 Ok(())
@@ -376,8 +376,8 @@ impl<'u, 't> OccursCheck<'u, 't> {
 
 impl<'u, 't> DefaultTypeFolder for OccursCheck<'u, 't> {}
 
-impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
-    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
+impl<'u, 't> PlaceholderFolder for OccursCheck<'u, 't> {
+    fn fold_free_placeholder_ty(&mut self, universe: PlaceholderIndex, _binders: usize) -> Fallible<Ty> {
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
@@ -385,9 +385,9 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
         }
     }
 
-    fn fold_free_universal_lifetime(
+    fn fold_free_placeholder_lifetime(
         &mut self,
-        ui: UniversalIndex,
+        ui: PlaceholderIndex,
         binders: usize,
     ) -> Fallible<Lifetime> {
         if self.universe_index < ui.ui {

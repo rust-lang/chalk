@@ -1,5 +1,5 @@
 use ::*;
-use super::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
+use super::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityPlaceholderFolder};
 
 /// Methods for converting debruijn indices to move values into or out
 /// of binders.
@@ -100,7 +100,7 @@ impl ExistentialFolder for Shifter {
     }
 }
 
-impl IdentityUniversalFolder for Shifter {}
+impl IdentityPlaceholderFolder for Shifter {}
 
 //---------------------------------------------------------------------------
 
@@ -142,4 +142,4 @@ impl ExistentialFolder for DownShifter {
     }
 }
 
-impl IdentityUniversalFolder for DownShifter {}
+impl IdentityPlaceholderFolder for DownShifter {}

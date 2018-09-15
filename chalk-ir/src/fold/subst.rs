@@ -53,4 +53,4 @@ impl<'b> ExistentialFolder for Subst<'b> {
     }
 }
 
-impl<'b> IdentityUniversalFolder for Subst<'b> {}
+impl<'b> IdentityPlaceholderFolder for Subst<'b> {}

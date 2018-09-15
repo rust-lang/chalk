@@ -6,7 +6,7 @@
 use chalk_engine::fallible::*;
 use cast::Cast;
 use fold::shift::Shift;
-use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
+use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityPlaceholderFolder};
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
@@ -95,8 +95,10 @@ pub enum TypeName {
     /// a type like `Vec<T>`
     ItemId(ItemId),
 
-    /// skolemized form of a type parameter like `T`
-    ForAll(UniversalIndex),
+    /// instantiated form a universally quantified type, e.g., from
+    /// `forall<T> { .. }`. Stands in as a representative of "some
+    /// unknown type".
+    Placeholder(PlaceholderIndex),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(ItemId),
@@ -193,28 +195,28 @@ pub struct QuantifiedTy {
 pub enum Lifetime {
     /// See Ty::Var(_).
     Var(usize),
-    ForAll(UniversalIndex),
+    Placeholder(PlaceholderIndex),
 }
 
 /// Index of an universally quantified parameter in the environment.
 /// Two indexes are required, the one of the universe itself
 /// and the relative index inside the universe.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct UniversalIndex {
+pub struct PlaceholderIndex {
     /// Index *of* the universe.
     pub ui: UniverseIndex,
     /// Index *in* the universe.
     pub idx: usize,
 }
 
-impl UniversalIndex {
+impl PlaceholderIndex {
     pub fn to_lifetime(self) -> Lifetime {
-        Lifetime::ForAll(self)
+        Lifetime::Placeholder(self)
     }
 
     pub fn to_ty(self) -> Ty {
         Ty::Apply(ApplicationTy {
-            name: TypeName::ForAll(self),
+            name: TypeName::Placeholder(self),
             parameters: vec![],
         })
     }
@@ -898,7 +900,7 @@ impl<'a> ExistentialFolder for &'a Substitution {
     }
 }
 
-impl<'a> IdentityUniversalFolder for &'a Substitution {}
+impl<'a> IdentityPlaceholderFolder for &'a Substitution {}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {

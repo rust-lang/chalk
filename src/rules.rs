@@ -762,7 +762,7 @@ impl AssociatedTyDatum {
         let mut clauses = vec![];
 
         // Fallback rule. The solver uses this to move between the projection
-        // and skolemized type.
+        // and placeholder type.
         //
         //    forall<Self> {
         //        ProjectionEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).

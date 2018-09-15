@@ -170,7 +170,7 @@ impl InferenceTable {
                 let v1 = self.probe_lifetime_var(InferenceVariable::from_depth(v - binders))?;
                 Some(v1.shifted_in(binders))
             }
-            Lifetime::ForAll(_) => None,
+            Lifetime::Placeholder(_) => None,
         }
     }
 
