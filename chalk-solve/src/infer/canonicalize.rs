@@ -4,7 +4,7 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use std::cmp::max;
 
-use super::{InferenceTable, InferenceVariable, ParameterInferenceVariable};
+use super::{InferenceTable, EnaVariable, ParameterEnaVariable};
 
 impl InferenceTable {
     /// Given a value `value` with variables in it, replaces those variables
@@ -53,7 +53,7 @@ pub struct Canonicalized<T> {
     pub quantified: Canonical<T>,
 
     /// The free existential variables, along with the universes they inhabit.
-    crate free_vars: Vec<ParameterInferenceVariable>,
+    crate free_vars: Vec<ParameterEnaVariable>,
 
     /// The maximum universe of any universally quantified variables
     /// encountered.
@@ -62,7 +62,7 @@ pub struct Canonicalized<T> {
 
 struct Canonicalizer<'q> {
     table: &'q mut InferenceTable,
-    free_vars: Vec<ParameterInferenceVariable>,
+    free_vars: Vec<ParameterEnaVariable>,
     max_universe: UniverseIndex,
 }
 
@@ -79,7 +79,7 @@ impl<'q> Canonicalizer<'q> {
             .collect()
     }
 
-    fn add(&mut self, free_var: ParameterInferenceVariable) -> usize {
+    fn add(&mut self, free_var: ParameterEnaVariable) -> usize {
         self.free_vars.iter().position(|&v| v == free_var).unwrap_or_else(|| {
             let next_index = self.free_vars.len();
             self.free_vars.push(free_var);
@@ -113,7 +113,7 @@ impl<'q> FreeVarFolder for Canonicalizer<'q> {
             depth,
             binders
         );
-        let var = InferenceVariable::from_depth(depth);
+        let var = EnaVariable::from_depth(depth);
         match self.table.probe_ty_var(var) {
             Some(ty) => {
                 debug!("bound to {:?}", ty);
@@ -127,7 +127,7 @@ impl<'q> FreeVarFolder for Canonicalizer<'q> {
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(InferenceVariable::from_depth(position + binders).to_ty())
+                Ok(EnaVariable::from_depth(position + binders).to_ty())
             }
         }
     }
@@ -142,7 +142,7 @@ impl<'q> FreeVarFolder for Canonicalizer<'q> {
             depth,
             binders
         );
-        let var = InferenceVariable::from_depth(depth);
+        let var = EnaVariable::from_depth(depth);
         match self.table.probe_lifetime_var(var) {
             Some(l) => {
                 debug!("bound to {:?}", l);
@@ -152,7 +152,7 @@ impl<'q> FreeVarFolder for Canonicalizer<'q> {
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(InferenceVariable::from_depth(position + binders).to_lifetime())
+                Ok(EnaVariable::from_depth(position + binders).to_lifetime())
             }
         }
     }

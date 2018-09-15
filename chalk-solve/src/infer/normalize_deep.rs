@@ -3,7 +3,7 @@ use chalk_ir::fold::{DefaultTypeFolder, FreeVarFolder, Fold, IdentityPlaceholder
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 
-use super::{InferenceTable, InferenceVariable};
+use super::{InferenceTable, EnaVariable};
 
 impl InferenceTable {
     /// Given a value `value` with variables in it, replaces those variables
@@ -34,10 +34,10 @@ impl<'table> IdentityPlaceholderFolder for DeepNormalizer<'table> {}
 
 impl<'table> FreeVarFolder for DeepNormalizer<'table> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        let var = InferenceVariable::from_depth(depth);
+        let var = EnaVariable::from_depth(depth);
         match self.table.probe_ty_var(var) {
             Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(binders)),
-            None => Ok(InferenceVariable::from_depth(depth + binders).to_ty()),
+            None => Ok(EnaVariable::from_depth(depth + binders).to_ty()),
         }
     }
 
@@ -46,10 +46,10 @@ impl<'table> FreeVarFolder for DeepNormalizer<'table> {
         depth: usize,
         binders: usize,
     ) -> Fallible<Lifetime> {
-        let var = InferenceVariable::from_depth(depth);
+        let var = EnaVariable::from_depth(depth);
         match self.table.probe_lifetime_var(var) {
             Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(binders)),
-            None => Ok(InferenceVariable::from_depth(depth + binders).to_lifetime()),
+            None => Ok(EnaVariable::from_depth(depth + binders).to_lifetime()),
         }
     }
 }

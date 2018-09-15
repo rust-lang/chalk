@@ -17,18 +17,18 @@ use self::var::*;
 
 #[derive(Clone)]
 pub struct InferenceTable {
-    unify: ena::UnificationTable<InferenceVariable>,
-    vars: Vec<InferenceVariable>,
+    unify: ena::UnificationTable<EnaVariable>,
+    vars: Vec<EnaVariable>,
     max_universe: UniverseIndex,
 }
 
 pub struct InferenceSnapshot {
-    unify_snapshot: ena::Snapshot<InferenceVariable>,
+    unify_snapshot: ena::Snapshot<EnaVariable>,
     max_universe: UniverseIndex,
-    vars: Vec<InferenceVariable>,
+    vars: Vec<EnaVariable>,
 }
 
-crate type ParameterInferenceVariable = ParameterKind<InferenceVariable>;
+crate type ParameterEnaVariable = ParameterKind<EnaVariable>;
 
 impl InferenceTable {
     /// Create an empty inference table with no variables.
@@ -100,7 +100,7 @@ impl InferenceTable {
     /// Creates a new inference variable and returns its index. The
     /// kind of the variable should be known by the caller, but is not
     /// tracked directly by the inference table.
-    crate fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
+    crate fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
         debug!("new_variable: var={:?} ui={:?}", var, ui);
@@ -147,7 +147,7 @@ impl InferenceTable {
             if depth < binders {
                 None // bound variable, not an inference var
             } else {
-                let var = InferenceVariable::from_depth(depth - binders);
+                let var = EnaVariable::from_depth(depth - binders);
                 match self.unify.probe_value(var) {
                     InferenceValue::Unbound(_) => None,
                     InferenceValue::Bound(ref val) => {
@@ -167,7 +167,7 @@ impl InferenceTable {
                 if v < binders {
                     return None;
                 }
-                let v1 = self.probe_lifetime_var(InferenceVariable::from_depth(v - binders))?;
+                let v1 = self.probe_lifetime_var(EnaVariable::from_depth(v - binders))?;
                 Some(v1.shifted_in(binders))
             }
             Lifetime::Placeholder(_) => None,
@@ -182,7 +182,7 @@ impl InferenceTable {
     /// This method is only valid for inference variables of kind
     /// type. If this variable is of a different kind, then the
     /// function may panic.
-    fn probe_ty_var(&mut self, var: InferenceVariable) -> Option<Ty> {
+    fn probe_ty_var(&mut self, var: EnaVariable) -> Option<Ty> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().ty().unwrap().clone()),
@@ -196,7 +196,7 @@ impl InferenceTable {
     ///
     /// This method is only valid for inference variables of kind
     /// lifetime. If this variable is of a different kind, then the function may panic.
-    fn probe_lifetime_var(&mut self, var: InferenceVariable) -> Option<Lifetime> {
+    fn probe_lifetime_var(&mut self, var: EnaVariable) -> Option<Lifetime> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().lifetime().unwrap().clone()),
@@ -208,7 +208,7 @@ impl InferenceTable {
     /// # Panics
     ///
     /// Panics if the variable is bound.
-    fn universe_of_unbound_var(&mut self, var: InferenceVariable) -> UniverseIndex {
+    fn universe_of_unbound_var(&mut self, var: EnaVariable) -> UniverseIndex {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(ui) => ui,
             InferenceValue::Bound(_) => panic!("var_universe invoked on bound variable"),
@@ -216,11 +216,11 @@ impl InferenceTable {
     }
 }
 
-pub trait ParameterInferenceVariableExt {
+pub trait ParameterEnaVariableExt {
     fn to_parameter(self) -> Parameter;
 }
 
-impl ParameterInferenceVariableExt for ParameterInferenceVariable {
+impl ParameterEnaVariableExt for ParameterEnaVariable {
     fn to_parameter(self) -> Parameter {
         match self {
             ParameterKind::Ty(v) => ParameterKind::Ty(v.to_ty()),

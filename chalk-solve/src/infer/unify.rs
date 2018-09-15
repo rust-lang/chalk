@@ -104,8 +104,8 @@ impl<'t> Unifier<'t> {
 
         match (a, b) {
             (&Ty::Var(depth1), &Ty::Var(depth2)) => {
-                let var1 = InferenceVariable::from_depth(depth1);
-                let var2 = InferenceVariable::from_depth(depth2);
+                let var1 = EnaVariable::from_depth(depth1);
+                let var2 = EnaVariable::from_depth(depth2);
                 debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
                 Ok(self.table
                     .unify
@@ -117,7 +117,7 @@ impl<'t> Unifier<'t> {
             | (ty @ &Ty::Apply(_), &Ty::Var(depth))
             | (&Ty::Var(depth), ty @ &Ty::ForAll(_))
             | (ty @ &Ty::ForAll(_), &Ty::Var(depth)) => {
-                self.unify_var_ty(InferenceVariable::from_depth(depth), ty)
+                self.unify_var_ty(EnaVariable::from_depth(depth), ty)
             }
 
             (&Ty::ForAll(ref quantified_ty1), &Ty::ForAll(ref quantified_ty2)) => {
@@ -255,7 +255,7 @@ impl<'t> Unifier<'t> {
         self.sub_unify(ty1, ty2)
     }
 
-    fn unify_var_ty(&mut self, var: InferenceVariable, ty: &Ty) -> Fallible<()> {
+    fn unify_var_ty(&mut self, var: EnaVariable, ty: &Ty) -> Fallible<()> {
         debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
 
         // Determine the universe index associated with this
@@ -287,8 +287,8 @@ impl<'t> Unifier<'t> {
 
         match (a, b) {
             (&Lifetime::Var(depth_a), &Lifetime::Var(depth_b)) => {
-                let var_a = InferenceVariable::from_depth(depth_a);
-                let var_b = InferenceVariable::from_depth(depth_b);
+                let var_a = EnaVariable::from_depth(depth_a);
+                let var_b = EnaVariable::from_depth(depth_b);
                 debug!(
                     "unify_lifetime_lifetime: var_a={:?} var_b={:?}",
                     var_a, var_b
@@ -299,7 +299,7 @@ impl<'t> Unifier<'t> {
 
             (&Lifetime::Var(depth), &Lifetime::Placeholder(idx))
             | (&Lifetime::Placeholder(idx), &Lifetime::Var(depth)) => {
-                let var = InferenceVariable::from_depth(depth);
+                let var = EnaVariable::from_depth(depth);
                 let var_ui = self.table.universe_of_unbound_var(var);
                 if var_ui.can_see(idx.ui) {
                     debug!(
@@ -356,14 +356,14 @@ impl<'t> Zipper for Unifier<'t> {
 
 struct OccursCheck<'u, 't: 'u> {
     unifier: &'u mut Unifier<'t>,
-    var: InferenceVariable,
+    var: EnaVariable,
     universe_index: UniverseIndex,
 }
 
 impl<'u, 't> OccursCheck<'u, 't> {
     fn new(
         unifier: &'u mut Unifier<'t>,
-        var: InferenceVariable,
+        var: EnaVariable,
         universe_index: UniverseIndex,
     ) -> Self {
         OccursCheck {
@@ -418,7 +418,7 @@ impl<'u, 't> PlaceholderFolder for OccursCheck<'u, 't> {
 
 impl<'u, 't> FreeVarFolder for OccursCheck<'u, 't> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        let v = InferenceVariable::from_depth(depth);
+        let v = EnaVariable::from_depth(depth);
         match self.unifier.table.unify.probe_value(v) {
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_ty) => {
@@ -460,7 +460,7 @@ impl<'u, 't> FreeVarFolder for OccursCheck<'u, 't> {
     ) -> Fallible<Lifetime> {
         // a free existentially bound region; find the
         // inference variable it corresponds to
-        let v = InferenceVariable::from_depth(depth);
+        let v = EnaVariable::from_depth(depth);
         match self.unifier.table.unify.probe_value(v) {
             InferenceValue::Unbound(ui) => {
                 if self.universe_index < ui {

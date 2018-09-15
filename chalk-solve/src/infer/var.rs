@@ -31,21 +31,21 @@ use std::u32;
 ///     "downcast" the resulting variable using
 ///     e.g. `value.ty().unwrap()`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-crate struct InferenceVariable {
+crate struct EnaVariable {
     index: u32,
 }
 
-impl InferenceVariable {
+impl EnaVariable {
     /// Create an inference variable from a debruijn depth. In terms,
     /// like the `Ty::Var` variant, we use debruijn indices to refer
     /// to either index variables or bound variables. Presuming that
     /// the depth D in the term is greater than the number of
     /// enclosing binders B, then it refers to an inference variable,
     /// and the inference variable can be created via
-    /// `InferenceVariable::from_depth(D - B)`.
-    pub fn from_depth(depth: usize) -> InferenceVariable {
+    /// `EnaVariable::from_depth(D - B)`.
+    pub fn from_depth(depth: usize) -> EnaVariable {
         assert!(depth < u32::MAX as usize);
-        InferenceVariable {
+        EnaVariable {
             index: depth as u32,
         }
     }
@@ -65,7 +65,7 @@ impl InferenceVariable {
     }
 }
 
-impl UnifyKey for InferenceVariable {
+impl UnifyKey for EnaVariable {
     type Value = InferenceValue;
 
     fn index(&self) -> u32 {
@@ -73,17 +73,17 @@ impl UnifyKey for InferenceVariable {
     }
 
     fn from_index(u: u32) -> Self {
-        InferenceVariable { index: u }
+        EnaVariable { index: u }
     }
 
     fn tag() -> &'static str {
-        "InferenceVariable"
+        "EnaVariable"
     }
 }
 
 /// The value of an inference variable. We start out as `Unbound` with a
 /// universe index; when the inference variable is assigned a value, it becomes
-/// bound and records that value. See `InferenceVariable` for more details.
+/// bound and records that value. See `EnaVariable` for more details.
 #[derive(Clone, Debug, PartialEq, Eq)]
 crate enum InferenceValue {
     Unbound(UniverseIndex),
@@ -120,7 +120,7 @@ impl UnifyValue for InferenceValue {
     }
 }
 
-impl fmt::Debug for InferenceVariable {
+impl fmt::Debug for EnaVariable {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(fmt, "?{}", self.index)
     }

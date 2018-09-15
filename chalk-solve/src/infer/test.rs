@@ -21,7 +21,7 @@ impl<'q> DefaultTypeFolder for Normalizer<'q> {}
 impl<'q> FreeVarFolder for Normalizer<'q> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         assert_eq!(binders, 0);
-        let var = InferenceVariable::from_depth(depth);
+        let var = EnaVariable::from_depth(depth);
         match self.table.probe_ty_var(var) {
             Some(ty) => ty.fold_with(self, 0),
             None => Ok(var.to_ty()),
@@ -34,7 +34,7 @@ impl<'q> FreeVarFolder for Normalizer<'q> {
         binders: usize,
     ) -> Fallible<Lifetime> {
         assert_eq!(binders, 0);
-        Ok(InferenceVariable::from_depth(depth).to_lifetime())
+        Ok(EnaVariable::from_depth(depth).to_lifetime())
     }
 }
 

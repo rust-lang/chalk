@@ -4,7 +4,7 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use std::collections::HashMap;
 
-use super::{InferenceTable, InferenceVariable};
+use super::{InferenceTable, EnaVariable};
 use super::canonicalize::Canonicalized;
 
 impl InferenceTable {
@@ -97,8 +97,8 @@ impl InferenceTable {
 
 struct Inverter<'q> {
     table: &'q mut InferenceTable,
-    inverted_ty: HashMap<PlaceholderIndex, InferenceVariable>,
-    inverted_lifetime: HashMap<PlaceholderIndex, InferenceVariable>,
+    inverted_ty: HashMap<PlaceholderIndex, EnaVariable>,
+    inverted_lifetime: HashMap<PlaceholderIndex, EnaVariable>,
 }
 
 impl<'q> Inverter<'q> {
