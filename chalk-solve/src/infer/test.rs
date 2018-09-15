@@ -18,8 +18,8 @@ struct Normalizer<'a> {
 
 impl<'q> DefaultTypeFolder for Normalizer<'q> {}
 
-impl<'q> ExistentialFolder for Normalizer<'q> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<'q> FreeVarFolder for Normalizer<'q> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         assert_eq!(binders, 0);
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_ty_var(var) {
@@ -28,7 +28,7 @@ impl<'q> ExistentialFolder for Normalizer<'q> {
         }
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,

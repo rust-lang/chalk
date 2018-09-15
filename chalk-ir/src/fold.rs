@@ -38,10 +38,10 @@ pub use self::subst::Subst;
 ///
 /// To create a folder type F, one typically does one of two things:
 ///
-/// - Implement `ExistentialFolder` and `IdentityPlaceholderFolder`:
+/// - Implement `FreeVarFolder` and `IdentityPlaceholderFolder`:
 ///   - This ignores universally quantified variables but allows you to
 ///     replace existential variables with new values.
-/// - Implement `ExistentialFolder` and `PlaceholderFolder`:
+/// - Implement `FreeVarFolder` and `PlaceholderFolder`:
 ///   - This allows you to replace either existential or universal
 ///     variables with new types/lifetimes.
 ///
@@ -52,7 +52,7 @@ pub use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder: ExistentialFolder + PlaceholderFolder + TypeFolder {
+pub trait Folder: FreeVarFolder + PlaceholderFolder + TypeFolder {
     /// Returns a "dynamic" version of this trait. There is no
     /// **particular** reason to require this, except that I didn't
     /// feel like making `super_fold_ty` generic for no reason.
@@ -64,7 +64,7 @@ pub trait TypeFolder {
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime>;
 }
 
-impl<T: ExistentialFolder + PlaceholderFolder + TypeFolder> Folder for T {
+impl<T: FreeVarFolder + PlaceholderFolder + TypeFolder> Folder for T {
     fn to_dyn(&mut self) -> &mut dyn Folder {
         self
     }
@@ -77,7 +77,7 @@ impl<T: ExistentialFolder + PlaceholderFolder + TypeFolder> Folder for T {
 /// folders implement this trait.
 pub trait DefaultTypeFolder {}
 
-impl<T: ExistentialFolder + PlaceholderFolder + DefaultTypeFolder> TypeFolder for T {
+impl<T: FreeVarFolder + PlaceholderFolder + DefaultTypeFolder> TypeFolder for T {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
         super_fold_ty(self.to_dyn(), ty, binders)
     }
@@ -91,7 +91,7 @@ impl<T: ExistentialFolder + PlaceholderFolder + DefaultTypeFolder> TypeFolder fo
 /// variables**; for example, if you folded over `Foo<?T> }`, where `?T`
 /// is an inference variable, then this would let you replace `?T` with
 /// some other type.
-pub trait ExistentialFolder {
+pub trait FreeVarFolder {
     /// Invoked for `Ty::Var` instances that are not bound within the type being folded
     /// over:
     ///
@@ -100,10 +100,10 @@ pub trait ExistentialFolder {
     /// - `binders` is the number of binders in scope.
     ///
     /// This should return a type suitable for a context with `binders` in scope.
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty>;
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty>;
 
-    /// As `fold_free_existential_ty`, but for lifetimes.
-    fn fold_free_existential_lifetime(
+    /// As `fold_free_var_ty`, but for lifetimes.
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,
@@ -113,14 +113,14 @@ pub trait ExistentialFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `PlaceholderFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
-pub trait IdentityExistentialFolder {}
+pub trait IdentityFreeVarFolder {}
 
-impl<T: IdentityExistentialFolder> ExistentialFolder for T {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<T: IdentityFreeVarFolder> FreeVarFolder for T {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         Ok(Ty::Var(depth + binders))
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,
@@ -249,7 +249,7 @@ impl Fold for Ty {
 pub fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fallible<Ty> {
     match *ty {
         Ty::Var(depth) => if depth >= binders {
-            folder.fold_free_existential_ty(depth - binders, binders)
+            folder.fold_free_var_ty(depth - binders, binders)
         } else {
             Ok(Ty::Var(depth))
         },
@@ -347,7 +347,7 @@ pub fn super_fold_lifetime(
 ) -> Fallible<Lifetime> {
     match *lifetime {
         Lifetime::Var(depth) => if depth >= binders {
-            folder.fold_free_existential_lifetime(depth - binders, binders)
+            folder.fold_free_var_lifetime(depth - binders, binders)
         } else {
             Ok(Lifetime::Var(depth))
         },

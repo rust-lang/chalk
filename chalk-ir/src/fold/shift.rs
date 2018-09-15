@@ -1,5 +1,5 @@
 use ::*;
-use super::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityPlaceholderFolder};
+use super::{DefaultTypeFolder, FreeVarFolder, Fold, IdentityPlaceholderFolder};
 
 /// Methods for converting debruijn indices to move values into or out
 /// of binders.
@@ -86,12 +86,12 @@ impl Shifter {
 
 impl DefaultTypeFolder for Shifter {}
 
-impl ExistentialFolder for Shifter {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl FreeVarFolder for Shifter {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         Ok(Ty::Var(self.adjust(depth, binders)))
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,
@@ -128,12 +128,12 @@ impl DownShifter {
 
 impl DefaultTypeFolder for DownShifter {}
 
-impl ExistentialFolder for DownShifter {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl FreeVarFolder for DownShifter {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         Ok(Ty::Var(self.adjust(depth, binders)?))
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,

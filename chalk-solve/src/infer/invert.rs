@@ -1,5 +1,5 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, PlaceholderFolder};
+use chalk_ir::fold::{DefaultTypeFolder, FreeVarFolder, Fold, PlaceholderFolder};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use std::collections::HashMap;
@@ -141,12 +141,12 @@ impl<'q> PlaceholderFolder for Inverter<'q> {
     }
 }
 
-impl<'q> ExistentialFolder for Inverter<'q> {
-    fn fold_free_existential_ty(&mut self, _depth: usize, _binders: usize) -> Fallible<Ty> {
+impl<'q> FreeVarFolder for Inverter<'q> {
+    fn fold_free_var_ty(&mut self, _depth: usize, _binders: usize) -> Fallible<Ty> {
         panic!("should not be any existentials")
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         _depth: usize,
         _binders: usize,

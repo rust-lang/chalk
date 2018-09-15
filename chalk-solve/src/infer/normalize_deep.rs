@@ -1,5 +1,5 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityPlaceholderFolder};
+use chalk_ir::fold::{DefaultTypeFolder, FreeVarFolder, Fold, IdentityPlaceholderFolder};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 
@@ -32,8 +32,8 @@ impl<'table> DefaultTypeFolder for DeepNormalizer<'table> {}
 
 impl<'table> IdentityPlaceholderFolder for DeepNormalizer<'table> {}
 
-impl<'table> ExistentialFolder for DeepNormalizer<'table> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<'table> FreeVarFolder for DeepNormalizer<'table> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         let var = InferenceVariable::from_depth(depth);
         match self.table.probe_ty_var(var) {
             Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(binders)),
@@ -41,7 +41,7 @@ impl<'table> ExistentialFolder for DeepNormalizer<'table> {
         }
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,

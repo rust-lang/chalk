@@ -1,6 +1,6 @@
 use chalk_engine::fallible::*;
 use chalk_ir::cast::Cast;
-use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, PlaceholderFolder};
+use chalk_ir::fold::{DefaultTypeFolder, FreeVarFolder, Fold, PlaceholderFolder};
 use chalk_ir::zip::{Zip, Zipper};
 use std::sync::Arc;
 
@@ -416,8 +416,8 @@ impl<'u, 't> PlaceholderFolder for OccursCheck<'u, 't> {
     }
 }
 
-impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<'u, 't> FreeVarFolder for OccursCheck<'u, 't> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         let v = InferenceVariable::from_depth(depth);
         match self.unifier.table.unify.probe_value(v) {
             // If this variable already has a value, fold over that value instead.
@@ -453,7 +453,7 @@ impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
         }
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,

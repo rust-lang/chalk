@@ -1,5 +1,5 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, PlaceholderFolder};
+use chalk_ir::fold::{DefaultTypeFolder, FreeVarFolder, Fold, PlaceholderFolder};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use std::cmp::max;
@@ -106,10 +106,10 @@ impl<'q> PlaceholderFolder for Canonicalizer<'q> {
     }
 }
 
-impl<'q> ExistentialFolder for Canonicalizer<'q> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<'q> FreeVarFolder for Canonicalizer<'q> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         debug_heading!(
-            "fold_free_existential_ty(depth={:?}, binders={:?})",
+            "fold_free_var_ty(depth={:?}, binders={:?})",
             depth,
             binders
         );
@@ -132,13 +132,13 @@ impl<'q> ExistentialFolder for Canonicalizer<'q> {
         }
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,
     ) -> Fallible<Lifetime> {
         debug_heading!(
-            "fold_free_existential_lifetime(depth={:?}, binders={:?})",
+            "fold_free_var_lifetime(depth={:?}, binders={:?})",
             depth,
             binders
         );

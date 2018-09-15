@@ -1,5 +1,5 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, Fold, IdentityExistentialFolder, PlaceholderFolder};
+use chalk_ir::fold::{DefaultTypeFolder, Fold, IdentityFreeVarFolder, PlaceholderFolder};
 use chalk_ir::*;
 
 use super::InferenceTable;
@@ -235,7 +235,7 @@ impl<'q> PlaceholderFolder for UCollector<'q> {
     }
 }
 
-impl<'q> IdentityExistentialFolder for UCollector<'q> {}
+impl<'q> IdentityFreeVarFolder for UCollector<'q> {}
 
 struct UMapToCanonical<'q> {
     universes: &'q UniverseMap,
@@ -263,7 +263,7 @@ impl<'q> PlaceholderFolder for UMapToCanonical<'q> {
     }
 }
 
-impl<'q> IdentityExistentialFolder for UMapToCanonical<'q> {}
+impl<'q> IdentityFreeVarFolder for UMapToCanonical<'q> {}
 
 struct UMapFromCanonical<'q> {
     universes: &'q UniverseMap,
@@ -291,4 +291,4 @@ impl<'q> PlaceholderFolder for UMapFromCanonical<'q> {
     }
 }
 
-impl<'q> IdentityExistentialFolder for UMapFromCanonical<'q> {}
+impl<'q> IdentityFreeVarFolder for UMapFromCanonical<'q> {}

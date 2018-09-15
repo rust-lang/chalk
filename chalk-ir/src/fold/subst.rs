@@ -25,8 +25,8 @@ impl QuantifiedTy {
 
 impl<'b> DefaultTypeFolder for Subst<'b> {}
 
-impl<'b> ExistentialFolder for Subst<'b> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<'b> FreeVarFolder for Subst<'b> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         if depth >= self.parameters.len() {
             Ok(Ty::Var(depth - self.parameters.len() + binders))
         } else {
@@ -37,7 +37,7 @@ impl<'b> ExistentialFolder for Subst<'b> {
         }
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,

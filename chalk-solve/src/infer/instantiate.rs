@@ -152,8 +152,8 @@ impl DefaultTypeFolder for Instantiator {}
 /// `self.vars[i]`. Everything else stays intact, but we have to
 /// subtract `self.vars.len()` to account for the binders we are
 /// instantiating.
-impl ExistentialFolder for Instantiator {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl FreeVarFolder for Instantiator {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         if depth < self.vars.len() {
             Ok(self.vars[depth].assert_ty_ref().shifted_in(binders))
         } else {
@@ -161,7 +161,7 @@ impl ExistentialFolder for Instantiator {
         }
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,

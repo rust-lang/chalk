@@ -6,7 +6,7 @@
 use chalk_engine::fallible::*;
 use cast::Cast;
 use fold::shift::Shift;
-use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityPlaceholderFolder};
+use fold::{DefaultTypeFolder, FreeVarFolder, Fold, IdentityPlaceholderFolder};
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
@@ -882,14 +882,14 @@ impl Substitution {
 
 impl<'a> DefaultTypeFolder for &'a Substitution {}
 
-impl<'a> ExistentialFolder for &'a Substitution {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<'a> FreeVarFolder for &'a Substitution {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         let ty = &self.parameters[depth];
         let ty = ty.assert_ty_ref();
         Ok(ty.shifted_in(binders))
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,
