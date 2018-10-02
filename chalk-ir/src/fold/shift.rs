@@ -1,5 +1,7 @@
-use ::*;
-use super::{DefaultTypeFolder, FreeVarFolder, Fold, DefaultPlaceholderFolder};
+use super::{
+    DefaultTypeFolder, Fold, FreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder,
+};
+use *;
 
 /// Methods for converting debruijn indices to move values into or out
 /// of binders.
@@ -88,19 +90,17 @@ impl DefaultTypeFolder for Shifter {}
 
 impl FreeVarFolder for Shifter {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        Ok(Ty::Var(self.adjust(depth, binders)))
+        Ok(Ty::BoundVar(self.adjust(depth, binders)))
     }
 
-    fn fold_free_var_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
-        Ok(Lifetime::Var(self.adjust(depth, binders)))
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+        Ok(Lifetime::BoundVar(self.adjust(depth, binders)))
     }
 }
 
 impl DefaultPlaceholderFolder for Shifter {}
+
+impl DefaultInferenceFolder for Shifter {}
 
 //---------------------------------------------------------------------------
 
@@ -112,12 +112,14 @@ struct DownShifter {
 }
 
 impl DownShifter {
-    /// Given a reference to a free variable at depth `depth` (appearing within `binders` internal
-    /// binders), attempts to lift that free variable out from `adjustment` levels of binders
-    /// (i.e., convert it to depth `depth - self.adjustment`). If the free variable is bound
-    /// by one of those internal binders (i.e., `depth < self.adjustment`) the this will
-    /// fail with `Err`. Otherwise, returns the variable at this new depth (but adjusted to
-    /// appear within `binders`).
+    /// Given a reference to a free variable at depth `depth`
+    /// (appearing within `binders` internal binders), attempts to
+    /// lift that free variable out from `adjustment` levels of
+    /// binders (i.e., convert it to depth `depth -
+    /// self.adjustment`). If the free variable is bound by one of
+    /// those internal binders (i.e., `depth < self.adjustment`) the
+    /// this will fail with `Err`. Otherwise, returns the variable at
+    /// this new depth (but adjusted to appear within `binders`).
     fn adjust(&self, depth: usize, binders: usize) -> Fallible<usize> {
         match depth.checked_sub(self.adjustment) {
             Some(new_depth) => Ok(new_depth + binders),
@@ -130,16 +132,14 @@ impl DefaultTypeFolder for DownShifter {}
 
 impl FreeVarFolder for DownShifter {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        Ok(Ty::Var(self.adjust(depth, binders)?))
+        Ok(Ty::BoundVar(self.adjust(depth, binders)?))
     }
 
-    fn fold_free_var_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
-        Ok(Lifetime::Var(self.adjust(depth, binders)?))
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+        Ok(Lifetime::BoundVar(self.adjust(depth, binders)?))
     }
 }
 
 impl DefaultPlaceholderFolder for DownShifter {}
+
+impl DefaultInferenceFolder for DownShifter {}

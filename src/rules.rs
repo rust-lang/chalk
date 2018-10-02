@@ -40,8 +40,8 @@ impl Program {
                 .find(|d| d.trait_id == *trait_id)
                 .expect("Deref has no assoc item")
                 .id;
-            let t = || Ty::Var(0);
-            let u = || Ty::Var(1);
+            let t = || Ty::BoundVar(0);
+            let u = || Ty::BoundVar(1);
             program_clauses.push(
                 Binders {
                     binders: vec![ParameterKind::Ty(()), ParameterKind::Ty(())],
@@ -865,7 +865,7 @@ impl AssociatedTyDatum {
         // add new type parameter U
         let mut binders = binders;
         binders.push(ParameterKind::Ty(()));
-        let ty = Ty::Var(binders.len() - 1);
+        let ty = Ty::BoundVar(binders.len() - 1);
 
         // `Normalize(<T as Foo>::Assoc -> U)`
         let normalize = Normalize {

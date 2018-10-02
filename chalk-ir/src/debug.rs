@@ -39,7 +39,8 @@ impl Debug for TypeName {
 impl Debug for Ty {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            Ty::Var(depth) => write!(fmt, "?{}", depth),
+            Ty::BoundVar(depth) => write!(fmt, "^{}", depth),
+            Ty::InferenceVar(var) => write!(fmt, "{:?}", var),
             Ty::Apply(apply) => write!(fmt, "{:?}", apply),
             Ty::Projection(proj) => write!(fmt, "{:?}", proj),
             Ty::UnselectedProjection(proj) => write!(fmt, "{:?}", proj),
@@ -47,6 +48,13 @@ impl Debug for Ty {
         }
     }
 }
+
+impl Debug for InferenceVar {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "?{}", self.index)
+    }
+}
+
 
 impl Debug for QuantifiedTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
@@ -59,7 +67,8 @@ impl Debug for QuantifiedTy {
 impl Debug for Lifetime {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            Lifetime::Var(depth) => write!(fmt, "'?{}", depth),
+            Lifetime::BoundVar(depth) => write!(fmt, "'?{}", depth),
+            Lifetime::InferenceVar(var) => write!(fmt, "'{:?}", var),
             Lifetime::Placeholder(index) => write!(fmt, "'{:?}", index),
         }
     }

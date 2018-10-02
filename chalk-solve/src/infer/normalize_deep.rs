@@ -1,9 +1,11 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, FreeVarFolder, Fold, DefaultPlaceholderFolder};
 use chalk_ir::fold::shift::Shift;
+use chalk_ir::fold::{
+    DefaultFreeVarFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, InferenceFolder,
+};
 use chalk_ir::*;
 
-use super::{InferenceTable, EnaVariable};
+use super::{EnaVariable, InferenceTable};
 
 impl InferenceTable {
     /// Given a value `value` with variables in it, replaces those variables
@@ -32,24 +34,26 @@ impl<'table> DefaultTypeFolder for DeepNormalizer<'table> {}
 
 impl<'table> DefaultPlaceholderFolder for DeepNormalizer<'table> {}
 
-impl<'table> FreeVarFolder for DeepNormalizer<'table> {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        let var = EnaVariable::from_depth(depth);
+impl<'table> InferenceFolder for DeepNormalizer<'table> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty> {
+        let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
-            Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(binders)),
-            None => Ok(EnaVariable::from_depth(depth + binders).to_ty()),
+            Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(binders)), // FIXME shift
+            None => Ok(var.to_ty()),
         }
     }
 
-    fn fold_free_var_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
-        let var = EnaVariable::from_depth(depth);
+    fn fold_inference_lifetime(&mut self, var: InferenceVar, binders: usize) -> Fallible<Lifetime> {
+        let var = EnaVariable::from(var);
         match self.table.probe_lifetime_var(var) {
             Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(binders)),
-            None => Ok(EnaVariable::from_depth(depth + binders).to_lifetime()),
+            None => Ok(var.to_lifetime()), // FIXME shift
         }
+    }
+}
+
+impl<'table> DefaultFreeVarFolder for DeepNormalizer<'table> {
+    fn forbid() -> bool {
+        true
     }
 }

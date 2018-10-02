@@ -10,7 +10,6 @@ pub mod instantiate;
 mod invert;
 pub mod unify;
 pub mod var;
-#[cfg(test)]
 mod test;
 
 use self::var::*;
@@ -143,35 +142,22 @@ impl InferenceTable {
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
     pub fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty> {
-        leaf.var().and_then(|depth| {
-            if depth < binders {
-                None // bound variable, not an inference var
-            } else {
-                let var = EnaVariable::from_depth(depth - binders);
-                match self.unify.probe_value(var) {
-                    InferenceValue::Unbound(_) => None,
-                    InferenceValue::Bound(ref val) => {
-                        let ty = val.as_ref().ty().unwrap();
-                        Some(ty.shifted_in(binders))
-                    }
-                }
+        let var = EnaVariable::from(leaf.inference_var()?);
+        match self.unify.probe_value(var) {
+            InferenceValue::Unbound(_) => None,
+            InferenceValue::Bound(ref val) => {
+                let ty = val.as_ref().ty().unwrap();
+                Some(ty.shifted_in(binders)) // FIXME: assert unnecessary
             }
-        })
+        }
     }
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
     pub fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime> {
-        match *leaf {
-            Lifetime::Var(v) => {
-                if v < binders {
-                    return None;
-                }
-                let v1 = self.probe_lifetime_var(EnaVariable::from_depth(v - binders))?;
-                Some(v1.shifted_in(binders))
-            }
-            Lifetime::Placeholder(_) => None,
-        }
+        let var = EnaVariable::from(leaf.inference_var()?);
+        let v1 = self.probe_lifetime_var(var)?;
+        Some(v1.shifted_in(binders)) // FIXME: assert unnecessary
     }
 
     /// Finds the type to which `var` is bound, returning `None` if it is not yet

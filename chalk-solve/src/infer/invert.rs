@@ -1,11 +1,13 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, FreeVarFolder, Fold, PlaceholderFolder};
 use chalk_ir::fold::shift::Shift;
+use chalk_ir::fold::{
+    DefaultFreeVarFolder, DefaultInferenceFolder, DefaultTypeFolder, Fold, PlaceholderFolder,
+};
 use chalk_ir::*;
 use std::collections::HashMap;
 
-use super::{InferenceTable, EnaVariable};
 use super::canonicalize::Canonicalized;
+use super::{EnaVariable, InferenceTable};
 
 impl InferenceTable {
     /// Converts `value` into a "negation" value -- meaning one that,
@@ -114,15 +116,18 @@ impl<'q> Inverter<'q> {
 impl<'q> DefaultTypeFolder for Inverter<'q> {}
 
 impl<'q> PlaceholderFolder for Inverter<'q> {
-    fn fold_free_placeholder_ty(&mut self, universe: PlaceholderIndex, binders: usize) -> Fallible<Ty> {
+    fn fold_free_placeholder_ty(
+        &mut self,
+        universe: PlaceholderIndex,
+        binders: usize,
+    ) -> Fallible<Ty> {
         let table = &mut self.table;
-        Ok(
-            self.inverted_ty
-                .entry(universe)
-                .or_insert_with(|| table.new_variable(universe.ui))
-                .to_ty()
-                .shifted_in(binders),
-        )
+        Ok(self
+            .inverted_ty
+            .entry(universe)
+            .or_insert_with(|| table.new_variable(universe.ui))
+            .to_ty()
+            .shifted_in(binders))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -131,26 +136,23 @@ impl<'q> PlaceholderFolder for Inverter<'q> {
         binders: usize,
     ) -> Fallible<Lifetime> {
         let table = &mut self.table;
-        Ok(
-            self.inverted_lifetime
-                .entry(universe)
-                .or_insert_with(|| table.new_variable(universe.ui))
-                .to_lifetime()
-                .shifted_in(binders),
-        )
+        Ok(self
+            .inverted_lifetime
+            .entry(universe)
+            .or_insert_with(|| table.new_variable(universe.ui))
+            .to_lifetime()
+            .shifted_in(binders))
     }
 }
 
-impl<'q> FreeVarFolder for Inverter<'q> {
-    fn fold_free_var_ty(&mut self, _depth: usize, _binders: usize) -> Fallible<Ty> {
-        panic!("should not be any existentials")
+impl<'q> DefaultFreeVarFolder for Inverter<'q> {
+    fn forbid() -> bool {
+        true
     }
+}
 
-    fn fold_free_var_lifetime(
-        &mut self,
-        _depth: usize,
-        _binders: usize,
-    ) -> Fallible<Lifetime> {
-        panic!("should not be any existentials")
+impl<'q> DefaultInferenceFolder for Inverter<'q> {
+    fn forbid() -> bool {
+        true
     }
 }

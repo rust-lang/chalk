@@ -157,7 +157,7 @@ impl FreeVarFolder for Instantiator {
         if depth < self.vars.len() {
             Ok(self.vars[depth].assert_ty_ref().shifted_in(binders))
         } else {
-            Ok(Ty::Var(depth + binders - self.vars.len())) // see comment above
+            Ok(Ty::BoundVar(depth + binders - self.vars.len())) // see comment above
         }
     }
 
@@ -169,9 +169,15 @@ impl FreeVarFolder for Instantiator {
         if depth < self.vars.len() {
             Ok(self.vars[depth].assert_lifetime_ref().shifted_in(binders))
         } else {
-            Ok(Lifetime::Var(depth + binders - self.vars.len())) // see comment above
+            Ok(Lifetime::BoundVar(depth + binders - self.vars.len())) // see comment above
         }
     }
 }
 
 impl DefaultPlaceholderFolder for Instantiator {}
+
+impl DefaultInferenceFolder for Instantiator {
+    fn forbid() -> bool {
+        true
+    }
+}

@@ -23,8 +23,12 @@ macro_rules! ty {
         })
     };
 
-    (var $b:expr) => {
-        $crate::Ty::Var($b)
+    (infer $b:expr) => {
+        $crate::Ty::InferenceVar($crate::InferenceVar::from($b))
+    };
+
+    (bound $b:expr) => {
+        $crate::Ty::BoundVar($b)
     };
 
     (expr $b:expr) => {
@@ -49,8 +53,12 @@ macro_rules! arg {
 
 #[macro_export]
 macro_rules! lifetime {
-    (var $b:expr) => {
-        $crate::Lifetime::Var($b)
+    (infer $b:expr) => {
+        $crate::Lifetime::InferenceVar($crate::InferenceVar::from($b))
+    };
+
+    (bound $b:expr) => {
+        $crate::Lifetime::BoundVar($b)
     };
 
     (placeholder $b:expr) => {

@@ -1,5 +1,7 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, Fold, DefaultFreeVarFolder, PlaceholderFolder};
+use chalk_ir::fold::{
+    DefaultFreeVarFolder, DefaultInferenceFolder, DefaultTypeFolder, Fold, PlaceholderFolder,
+};
 use chalk_ir::*;
 
 use super::InferenceTable;
@@ -17,8 +19,7 @@ impl InferenceTable {
                     universes: &mut universes,
                 },
                 0,
-            )
-            .unwrap();
+            ).unwrap();
 
         // Now re-map the universes found in value. We have to do this
         // in a second pass because it is only then that we know the
@@ -30,8 +31,7 @@ impl InferenceTable {
                     universes: &universes,
                 },
                 0,
-            )
-            .unwrap();
+            ).unwrap();
         let binders = value0
             .binders
             .iter()
@@ -173,7 +173,9 @@ impl UniverseMap {
             let difference = universe.counter - self.universes.len();
             let max_counter = self.universes.last().unwrap().counter;
             let new_counter = max_counter + difference + 1;
-            UniverseIndex { counter: new_counter }
+            UniverseIndex {
+                counter: new_counter,
+            }
         }
     }
 
@@ -207,7 +209,9 @@ impl UniverseMap {
     pub fn map_from_canonical<T: Fold>(&self, value: &T) -> T::Result {
         debug!("map_from_canonical(value={:?})", value);
         debug!("map_from_canonical: universes = {:?}", self.universes);
-        value.fold_with(&mut UMapFromCanonical { universes: self }, 0).unwrap()
+        value
+            .fold_with(&mut UMapFromCanonical { universes: self }, 0)
+            .unwrap()
     }
 }
 
@@ -220,7 +224,11 @@ struct UCollector<'q> {
 impl<'q> DefaultTypeFolder for UCollector<'q> {}
 
 impl<'q> PlaceholderFolder for UCollector<'q> {
-    fn fold_free_placeholder_ty(&mut self, universe: PlaceholderIndex, _binders: usize) -> Fallible<Ty> {
+    fn fold_free_placeholder_ty(
+        &mut self,
+        universe: PlaceholderIndex,
+        _binders: usize,
+    ) -> Fallible<Ty> {
         self.universes.add(universe.ui);
         Ok(universe.to_ty())
     }
@@ -237,11 +245,23 @@ impl<'q> PlaceholderFolder for UCollector<'q> {
 
 impl<'q> DefaultFreeVarFolder for UCollector<'q> {}
 
+impl<'q> DefaultInferenceFolder for UCollector<'q> {
+    fn forbid() -> bool {
+        true
+    }
+}
+
 struct UMapToCanonical<'q> {
     universes: &'q UniverseMap,
 }
 
 impl<'q> DefaultTypeFolder for UMapToCanonical<'q> {}
+
+impl<'q> DefaultInferenceFolder for UMapToCanonical<'q> {
+    fn forbid() -> bool {
+        true
+    }
+}
 
 impl<'q> PlaceholderFolder for UMapToCanonical<'q> {
     fn fold_free_placeholder_ty(
@@ -250,7 +270,10 @@ impl<'q> PlaceholderFolder for UMapToCanonical<'q> {
         _binders: usize,
     ) -> Fallible<Ty> {
         let ui = self.universes.map_universe_to_canonical(universe0.ui);
-        Ok(PlaceholderIndex { ui, idx: universe0.idx }.to_ty())
+        Ok(PlaceholderIndex {
+            ui,
+            idx: universe0.idx,
+        }.to_ty())
     }
 
     fn fold_free_placeholder_lifetime(
@@ -259,7 +282,10 @@ impl<'q> PlaceholderFolder for UMapToCanonical<'q> {
         _binders: usize,
     ) -> Fallible<Lifetime> {
         let universe = self.universes.map_universe_to_canonical(universe0.ui);
-        Ok(PlaceholderIndex { ui: universe, idx: universe0.idx }.to_lifetime())
+        Ok(PlaceholderIndex {
+            ui: universe,
+            idx: universe0.idx,
+        }.to_lifetime())
     }
 }
 
@@ -278,7 +304,10 @@ impl<'q> PlaceholderFolder for UMapFromCanonical<'q> {
         _binders: usize,
     ) -> Fallible<Ty> {
         let ui = self.universes.map_universe_from_canonical(universe0.ui);
-        Ok(PlaceholderIndex { ui, idx: universe0.idx }.to_ty())
+        Ok(PlaceholderIndex {
+            ui,
+            idx: universe0.idx,
+        }.to_ty())
     }
 
     fn fold_free_placeholder_lifetime(
@@ -287,8 +316,18 @@ impl<'q> PlaceholderFolder for UMapFromCanonical<'q> {
         _binders: usize,
     ) -> Fallible<Lifetime> {
         let universe = self.universes.map_universe_from_canonical(universe0.ui);
-        Ok(PlaceholderIndex { ui: universe, idx: universe0.idx }.to_lifetime())
+        Ok(PlaceholderIndex {
+            ui: universe,
+            idx: universe0.idx,
+        }.to_lifetime())
     }
 }
 
 impl<'q> DefaultFreeVarFolder for UMapFromCanonical<'q> {}
+
+impl<'q> DefaultInferenceFolder for UMapFromCanonical<'q> {
+    fn forbid() -> bool {
+        true
+    }
+}
+
