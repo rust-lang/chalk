@@ -61,21 +61,7 @@ impl InferenceTable {
         }
 
         let subst = table.fresh_subst(&canonical.binders);
-
-        // Pointless micro-optimization: The fully correct way to
-        // instantiate `value` is to substitute `subst` like so:
-        //
-        //     let value = canonical.substitute(&subst);
-        //
-        // However, because (a) this is a canonical value, and hence
-        // contains no free variables except for those bound in the
-        // canonical binders and (b) we just create the inference
-        // table, and we created all of its variables from those same
-        // binders, we know that this substitution will have the form
-        // `?0 := ?0` and so forth.  So we can just "clone" the
-        // canonical value rather than actually substituting.
-        assert!(subst.is_identity_subst());
-        let value = canonical.value.clone();
+        let value = canonical.value.fold_with(&mut &subst, 0).unwrap();
 
         (table, subst, value)
     }

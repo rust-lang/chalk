@@ -6,7 +6,7 @@
 use chalk_engine::fallible::*;
 use cast::Cast;
 use fold::shift::Shift;
-use fold::{DefaultTypeFolder, FreeVarFolder, Fold, DefaultPlaceholderFolder};
+use fold::{DefaultInferenceFolder, DefaultTypeFolder, FreeVarFolder, Fold, DefaultPlaceholderFolder};
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
@@ -930,6 +930,12 @@ impl Substitution {
 }
 
 impl<'a> DefaultTypeFolder for &'a Substitution {}
+
+impl<'a> DefaultInferenceFolder for &'a Substitution {
+    fn forbid() -> bool {
+        true
+    }
+}
 
 impl<'a> FreeVarFolder for &'a Substitution {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
