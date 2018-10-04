@@ -67,7 +67,7 @@ impl Debug for QuantifiedTy {
 impl Debug for Lifetime {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            Lifetime::BoundVar(depth) => write!(fmt, "'?{}", depth),
+            Lifetime::BoundVar(depth) => write!(fmt, "'^{}", depth),
             Lifetime::InferenceVar(var) => write!(fmt, "'{:?}", var),
             Lifetime::Placeholder(index) => write!(fmt, "'{:?}", index),
         }
