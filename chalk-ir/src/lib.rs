@@ -931,11 +931,7 @@ impl Substitution {
 
 impl<'a> DefaultTypeFolder for &'a Substitution {}
 
-impl<'a> DefaultInferenceFolder for &'a Substitution {
-    fn forbid() -> bool {
-        true
-    }
-}
+impl<'a> DefaultInferenceFolder for &'a Substitution {}
 
 impl<'a> FreeVarFolder for &'a Substitution {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
