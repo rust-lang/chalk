@@ -3,10 +3,12 @@
 #![feature(crate_in_paths)]
 #![feature(specialization)]
 
-use chalk_engine::fallible::*;
 use cast::Cast;
+use chalk_engine::fallible::*;
 use fold::shift::Shift;
-use fold::{DefaultInferenceFolder, DefaultTypeFolder, FreeVarFolder, Fold, DefaultPlaceholderFolder};
+use fold::{
+    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder,
+};
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
@@ -197,7 +199,7 @@ impl Ty {
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct InferenceVar {
-    index: u32
+    index: u32,
 }
 
 impl From<u32> for InferenceVar {
@@ -940,11 +942,7 @@ impl<'a> FreeVarFolder for &'a Substitution {
         Ok(ty.shifted_in(binders))
     }
 
-    fn fold_free_var_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         let l = &self.parameters[depth];
         let l = l.assert_lifetime_ref();
         Ok(l.shifted_in(binders))
