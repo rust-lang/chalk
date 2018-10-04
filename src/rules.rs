@@ -107,7 +107,7 @@ impl ImplDatum {
     /// Given `impl<T: Clone> Clone for Vec<T>`, generate:
     ///
     /// ```notrust
-    /// forall<T> { (Vec<T>: Clone) :- (T: Clone) }
+    /// forall<T> { Implemented(Vec<T>: Clone) :- Implemented(T: Clone) }
     /// ```
     fn to_program_clause(&self) -> ProgramClause {
         self.binders
@@ -137,9 +137,9 @@ impl DefaultImplDatum {
     ///
     /// ```notrust
     /// forall<T> {
-    ///     (MyList<T>: Send) :-
-    ///         (T: Send),
-    ///         (Box<Option<MyList<T>>>: Send)
+    ///     Implemented(MyList<T>: Send) :-
+    ///         Implemented(T: Send),
+    ///         Implemented(Box<Option<MyList<T>>>: Send)
     /// }
     /// ```
     fn to_program_clause(&self) -> ProgramClause {
@@ -179,8 +179,8 @@ impl AssociatedTyValue {
     /// ```notrust
     /// forall<'a, T> {
     ///     Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>>) :-
-    ///         (Vec<T>: Iterable),  // (1)
-    ///         (Iter<'a, T>: 'a)    // (2)
+    ///         Implemented(Vec<T>: Iterable),  // (1)
+    ///         Implemented(Iter<'a, T>: 'a)    // (2)
     /// }
     /// ```
     ///
@@ -304,7 +304,7 @@ impl StructDatum {
         //
         // we generate the following clauses:
         //
-        //    forall<T> { WF(Foo<T>) :- (T: Eq). }
+        //    forall<T> { WF(Foo<T>) :- Implemented(T: Eq). }
         //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
         //    forall<T> { IsFullyVisible(Foo<T>) :- IsFullyVisible(T) }
         //
@@ -456,7 +456,7 @@ impl TraitDatum {
         // we generate the following clause:
         //
         //    forall<Self, T> {
-        //        WF(Self: Ord<T>) :- (Self: Ord<T>), WF(Self: Eq<T>)
+        //        WF(Self: Ord<T>) :- Implemented(Self: Ord<T>), WF(Self: Eq<T>)
         //    }
         //
         // and the reverse rules:
@@ -786,7 +786,7 @@ impl AssociatedTyDatum {
         // Well-formedness of projection type.
         //
         //    forall<Self> {
-        //        WellFormed((Foo::Assoc)<Self>) :- Self: Foo, WC.
+        //        WellFormed((Foo::Assoc)<Self>) :- Implemented(Self: Foo), WC.
         //    }
         clauses.push(
             Binders {
@@ -837,12 +837,23 @@ impl AssociatedTyDatum {
 
         // Reverse rule for implied bounds.
         //
-        //    forall<T> {
-        //        FromEnv(<T as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo)
+        //    forall<Self> {
+        //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), FromEnv(WC)
         //    }
         clauses.extend(self.bounds_on_self().into_iter().map(|bound| {
             // Same as above in case of higher-ranked inline bounds.
             let shift = bound.binders.len();
+            let from_env_trait = iter::once(
+                FromEnv::Trait(trait_ref.clone()).shifted_in(shift).cast()
+            );
+
+            let where_clauses = self.where_clauses
+                .iter()
+                .cloned()
+                // `wc` may be a higher-ranked where clause
+                .map(|wc| wc.map(|value| value.into_from_env_goal()))
+                .casted();
+
             Binders {
                 binders: bound
                     .binders
@@ -852,7 +863,7 @@ impl AssociatedTyDatum {
                     .collect(),
                 value: ProgramClauseImplication {
                     consequence: bound.value.clone().into_from_env_goal(),
-                    conditions: vec![FromEnv::Trait(trait_ref.clone()).shifted_in(shift).cast()],
+                    conditions: from_env_trait.chain(where_clauses).collect(),
                 },
             }.cast()
         }));
