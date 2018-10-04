@@ -1,7 +1,6 @@
 use ena::unify as ena;
 use chalk_ir::*;
 use chalk_ir::fold::Fold;
-use chalk_ir::fold::shift::Shift;
 
 pub mod canonicalize;
 pub mod ucanonicalize;
@@ -127,23 +126,25 @@ impl InferenceTable {
     /// `binders` is the number of binders under which `leaf` appears;
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
-    pub fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty> {
+    pub fn normalize_shallow(&mut self, leaf: &Ty) -> Option<Ty> {
         let var = EnaVariable::from(leaf.inference_var()?);
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => {
-                let ty = val.as_ref().ty().unwrap();
-                Some(ty.shifted_in(binders)) // FIXME: assert unnecessary
+                let ty = val.as_ref().ty().unwrap().clone();
+                assert!(!ty.needs_shift());
+                Some(ty)
             }
         }
     }
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
-    pub fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime> {
+    pub fn normalize_lifetime(&mut self, leaf: &Lifetime) -> Option<Lifetime> {
         let var = EnaVariable::from(leaf.inference_var()?);
         let v1 = self.probe_lifetime_var(var)?;
-        Some(v1.shifted_in(binders)) // FIXME: assert unnecessary
+        assert!(!v1.needs_shift());
+        Some(v1)
     }
 
     /// Finds the type to which `var` is bound, returning `None` if it is not yet

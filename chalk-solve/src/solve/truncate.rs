@@ -66,7 +66,7 @@ impl<'infer> Truncater<'infer> {
 
 impl<'infer> TypeFolder for Truncater<'infer> {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
-        if let Some(normalized_ty) = self.infer.normalize_shallow(ty, binders) {
+        if let Some(normalized_ty) = self.infer.normalize_shallow(ty) {
             return self.fold_ty(&normalized_ty, binders);
         }
 

@@ -195,6 +195,13 @@ impl Ty {
             _ => false,
         }
     }
+
+    /// True if this type contains "bound" types/lifetimes, and hence
+    /// needs to be shifted across binders. This is a very inefficient
+    /// check, intended only for debug assertions, because I am lazy.
+    pub fn needs_shift(&self) -> bool {
+        *self != self.shifted_in(1)
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -245,6 +252,16 @@ impl Lifetime {
             Some(depth)
         } else {
             None
+        }
+    }
+
+    /// True if this lifetime is a "bound" lifetime, and hence
+    /// needs to be shifted across binders. Meant for debug assertions.
+    pub fn needs_shift(&self) -> bool {
+        match self {
+            Lifetime::BoundVar(_) => true,
+            Lifetime::InferenceVar(_) => false,
+            Lifetime::Placeholder(_) => false,
         }
     }
 }

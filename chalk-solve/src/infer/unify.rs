@@ -91,9 +91,9 @@ impl<'t> Unifier<'t> {
 
     fn unify_ty_ty<'a>(&mut self, a: &'a Ty, b: &'a Ty) -> Fallible<()> {
         //         ^^                 ^^         ^^ FIXME rustc bug
-        if let Some(n_a) = self.table.normalize_shallow(a, 0) {
+        if let Some(n_a) = self.table.normalize_shallow(a) {
             return self.unify_ty_ty(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_shallow(b, 0) {
+        } else if let Some(n_b) = self.table.normalize_shallow(b) {
             return self.unify_ty_ty(a, &n_b);
         }
 
@@ -280,9 +280,9 @@ impl<'t> Unifier<'t> {
     }
 
     fn unify_lifetime_lifetime(&mut self, a: &Lifetime, b: &Lifetime) -> Fallible<()> {
-        if let Some(n_a) = self.table.normalize_lifetime(a, 0) {
+        if let Some(n_a) = self.table.normalize_lifetime(a) {
             return self.unify_lifetime_lifetime(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_lifetime(b, 0) {
+        } else if let Some(n_b) = self.table.normalize_lifetime(b) {
             return self.unify_lifetime_lifetime(a, &n_b);
         }
 
@@ -395,7 +395,7 @@ impl<'u, 't> PlaceholderFolder for OccursCheck<'u, 't> {
     fn fold_free_placeholder_lifetime(
         &mut self,
         ui: PlaceholderIndex,
-        binders: usize,
+        _binders: usize,
     ) -> Fallible<Lifetime> {
         if self.universe_index < ui.ui {
             // Scenario is like:
@@ -414,7 +414,7 @@ impl<'u, 't> PlaceholderFolder for OccursCheck<'u, 't> {
             let tick_x = self.unifier.table.new_variable(self.universe_index);
             self.unifier
                 .push_lifetime_eq_constraint(tick_x.to_lifetime(), ui.to_lifetime());
-            Ok(tick_x.to_lifetime().shifted_in(binders))
+            Ok(tick_x.to_lifetime())
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name
             // this lifetime, no problem.
@@ -424,13 +424,15 @@ impl<'u, 't> PlaceholderFolder for OccursCheck<'u, 't> {
 }
 
 impl<'u, 't> InferenceFolder for OccursCheck<'u, 't> {
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty> {
         let var = EnaVariable::from(var);
         match self.unifier.table.unify.probe_value(var) {
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_ty) => {
                 let normalized_ty = normalized_ty.ty().unwrap();
-                Ok(normalized_ty.fold_with(self, 0)?.shifted_in(binders)) // FIXME binders
+                let normalized_ty = normalized_ty.fold_with(self, 0)?;
+                assert!(!normalized_ty.needs_shift());
+                Ok(normalized_ty)
             }
 
             // Otherwise, check the universe of the variable, and also
@@ -483,8 +485,10 @@ impl<'u, 't> InferenceFolder for OccursCheck<'u, 't> {
             }
 
             InferenceValue::Bound(l) => {
-                let l = l.lifetime().unwrap().shifted_in(binders); // FIXME
-                l.fold_with(self, binders)
+                let l = l.lifetime().unwrap();
+                let l = l.fold_with(self, binders)?;
+                assert!(!l.needs_shift());
+                Ok(l.clone())
             }
         }
     }

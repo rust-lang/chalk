@@ -321,7 +321,7 @@ impl<'t> AnswerSubstitutor<'t> {
 
 impl<'t> Zipper for AnswerSubstitutor<'t> {
     fn zip_tys(&mut self, answer: &Ty, pending: &Ty) -> Fallible<()> {
-        if let Some(pending) = self.table.normalize_shallow(pending, self.pending_binders) {
+        if let Some(pending) = self.table.normalize_shallow(pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
@@ -378,7 +378,7 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
     }
 
     fn zip_lifetimes(&mut self, answer: &Lifetime, pending: &Lifetime) -> Fallible<()> {
-        if let Some(pending) = self.table.normalize_lifetime(pending, self.pending_binders) {
+        if let Some(pending) = self.table.normalize_lifetime(pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 

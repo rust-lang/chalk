@@ -61,7 +61,7 @@ pub trait Shift: Fold {
     fn shifted_out(&self, adjustment: usize) -> Fallible<Self::Result>;
 }
 
-impl<T: Fold> Shift for T {
+impl<T: Fold + Eq> Shift for T {
     fn shifted_in(&self, adjustment: usize) -> T::Result {
         self.fold_with(&mut Shifter { adjustment }, 0).unwrap()
     }
