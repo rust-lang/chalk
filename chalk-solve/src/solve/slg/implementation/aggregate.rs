@@ -46,12 +46,6 @@ impl context::AggregateOps<SlgContext> for SlgContext {
 
         // Extract answers and merge them into `subst`. Stop once we have
         // a trivial subst (or run out of answers).
-        //
-        // FIXME -- It would be nice if we could get some idea of the
-        // "shape" of future answers to know if they *might* disrupt
-        // existing substituion; the iterator interface is obviously too
-        // limited for that, but the on-demand SLG solver probably could
-        // give us that information.
         let guidance = loop {
             if subst.value.is_empty() || is_trivial(&subst) {
                 break Guidance::Unknown;
