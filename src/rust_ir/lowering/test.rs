@@ -171,7 +171,7 @@ fn goal_quantifiers() {
     tls::set_current_program(&program, || {
         assert_eq!(
             format!("{:?}", goal),
-            "ForAll<type> { Exists<type> { ForAll<type> { Implemented(?0: Foo<?1, ?2>) } } }"
+            "ForAll<type> { Exists<type> { ForAll<type> { Implemented(^0: Foo<^1, ^2>) } } }"
         );
     });
 }
@@ -204,14 +204,14 @@ fn atc_accounting() {
             r#"ImplDatum {
     binders: for<type> ImplDatumBound {
         trait_ref: Positive(
-            Vec<?0> as Iterable
+            Vec<^0> as Iterable
         ),
         where_clauses: [],
         associated_ty_values: [
             AssociatedTyValue {
                 associated_ty_id: (Iterable::Iter),
                 value: for<lifetime> AssociatedTyValueBound {
-                    ty: Iter<'?0, ?1>
+                    ty: Iter<'^0, ^1>
                 }
             }
         ],
@@ -232,8 +232,8 @@ fn atc_accounting() {
             "ForAll<type> { \
                 ForAll<lifetime> { \
                     ForAll<type> { \
-                        (ProjectionEq(<?2 as Iterable>::Iter<'?1> = ?0), \
-                        Implemented(?2: Iterable)) \
+                        (ProjectionEq(<^2 as Iterable>::Iter<'^1> = ^0), \
+                        Implemented(^2: Iterable)) \
                     } \
                 } \
             }"

@@ -260,7 +260,7 @@ fn flounder() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: [?0 := ?0],
+                            subst: [?0 := ^0],
                             constraints: []
                         },
                         binders: [
@@ -327,7 +327,7 @@ fn only_draw_so_many_blow_up() {
         goal {
             exists<T> { T: Foo }
         } fixed 2 with max 10 {
-            "Some(Ambig(Definite(Canonical { value: [?0 := Vec<?0>], binders: [Ty(U0)] })))"
+            "Some(Ambig(Definite(Canonical { value: [?0 := Vec<^0>], binders: [Ty(U0)] })))"
         }
     }
 }
@@ -874,7 +874,7 @@ fn cached_answers_1() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: [?0 := HotSauce<?0>],
+                            subst: [?0 := HotSauce<^0>],
                             constraints: []
                         },
                         binders: [
@@ -964,7 +964,7 @@ fn cached_answers_2() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: [?0 := HotSauce<?0>],
+                            subst: [?0 := HotSauce<^0>],
                             constraints: []
                         },
                         binders: [
@@ -1042,7 +1042,7 @@ fn cached_answers_3() {
                 Answer {
                     subst: Canonical {
                         value: ConstrainedSubst {
-                            subst: [?0 := HotSauce<?0>],
+                            subst: [?0 := HotSauce<^0>],
                             constraints: []
                         },
                         binders: [
