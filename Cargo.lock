@@ -82,7 +82,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "chalk"
 version = "0.1.0"
 dependencies = [
- "chalk-engine 0.7.2",
+ "chalk-engine 0.8.0",
  "chalk-ir 0.1.0",
  "chalk-macros 0.1.0",
  "chalk-parse 0.1.0",
@@ -101,7 +101,7 @@ dependencies = [
 
 [[package]]
 name = "chalk-engine"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "chalk-macros 0.1.0",
  "rustc-hash 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -112,7 +112,7 @@ dependencies = [
 name = "chalk-ir"
 version = "0.1.0"
 dependencies = [
- "chalk-engine 0.7.2",
+ "chalk-engine 0.8.0",
  "chalk-macros 0.1.0",
  "lalrpop-intern 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -139,7 +139,7 @@ dependencies = [
 name = "chalk-solve"
 version = "0.1.0"
 dependencies = [
- "chalk-engine 0.7.2",
+ "chalk-engine 0.8.0",
  "chalk-ir 0.1.0",
  "chalk-macros 0.1.0",
  "chalk-parse 0.1.0",

@@ -37,7 +37,7 @@ version = "0.1.0"
 path = "chalk-macros"
 
 [dependencies.chalk-engine]
-version = "0.7.2"
+version = "0.8.0"
 path = "chalk-engine"
 
 [workspace]
