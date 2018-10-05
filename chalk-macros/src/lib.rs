@@ -1,5 +1,4 @@
 #![feature(crate_visibility_modifier)]
-#![feature(non_modrs_mods)]
 
 use std::cell::RefCell;
 
