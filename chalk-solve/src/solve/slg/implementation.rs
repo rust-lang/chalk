@@ -62,14 +62,6 @@ impl context::Context for SlgContext {
     fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
         InEnvironment::new(environment, goal)
     }
-
-    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal {
-        domain_goal.cast()
-    }
-
-    fn cannot_prove() -> Self::Goal {
-        Goal::CannotProve(())
-    }
 }
 
 impl context::ContextOps<SlgContext> for SlgContext {
@@ -195,6 +187,14 @@ impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTabl
         clauses: Vec<ProgramClause>,
     ) -> Arc<Environment> {
         Environment::add_clauses(env, clauses)
+    }
+
+    fn into_goal(&self, domain_goal: DomainGoal) -> Goal {
+        domain_goal.cast()
+    }
+
+    fn cannot_prove(&self) -> Goal {
+        Goal::CannotProve(())
     }
 }
 
