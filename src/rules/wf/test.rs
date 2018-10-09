@@ -563,3 +563,78 @@ fn higher_ranked_inline_bound_on_gat() {
         }
     }
 }
+
+#[test]
+fn assoc_type_recursive_bound() {
+    lowering_error! {
+        program {
+            trait Sized { }
+            trait Print {
+                // fn print();
+            }
+
+            trait Foo {
+                type Item: Sized where <Self as Foo>::Item: Sized;
+            }
+
+            struct i32 { }
+            struct str { } // not sized
+
+            impl Foo for i32 {
+                // Well-formedness checks require that the following
+                // goal is true:
+                // ```
+                // if (str: Sized) { # if the where clauses hold
+                //     str: Sized # then the bound on the associated type hold
+                // }
+                // ```
+                // which it is :)
+                type Item = str;
+            }
+
+            struct OnlySized<T> where T: Sized { }
+            impl<T> Print for OnlySized<T> {
+                // fn print() {
+                //     println!("{}", std::mem::size_of::<T>());
+                // }
+            }
+
+            trait Bar {
+                type Assoc: Print;
+            }
+
+            impl<T> Bar for T where T: Foo {
+                type Assoc = OnlySized<<T as Foo>::Item>;
+            }
+
+            // Above, we used to incorrectly assume that `OnlySized<<T as Foo>::Item>`
+            // is well-formed because of the `FromEnv(T: Foo)`, hence making the `T: Bar`
+            // impl pass the well-formedness check. But the following query will
+            // (and should) always succeed, as there is no where clauses on `Assoc`:
+            // ```
+            // forall<T> { if (T: Bar) { WellFormed(<T as Bar>::Assoc) } }
+            // ```
+            //
+            // This may lead to the following code to compile:
+
+            // ```
+            // fn foo<T: Print>() {
+            //     T::print() // oops, in fact `T = OnlySized<str>` which is ill-formed
+            // }
+
+            // fn bar<T: Bar> {
+            //     // ok, we have `FromEnv(T: Bar)` hence 
+            //     // `<T as Bar>::Assoc` is well-formed and
+            //     // `Implemented(<T as Bar>::Assoc: Print)` hold
+            //     foo<<T as Bar>::Assoc>(
+            // }
+
+            // fn main() {
+            //     bar::<i32>() // ok, `Implemented(i32: Bar)` hold
+            // }
+            // ```
+        } error_msg {
+            "trait impl for \"Bar\" does not meet well-formedness requirements"
+        }
+    }
+}
