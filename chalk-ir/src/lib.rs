@@ -228,11 +228,10 @@ pub struct ApplicationTy {
 
 impl ApplicationTy {
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty> + 'a {
-        // This unwrap() is safe because is_ty ensures that we definitely have a Ty
         self.parameters
             .iter()
-            .filter(|p| p.is_ty())
-            .map(|p| p.clone().ty().unwrap())
+            .cloned()
+            .filter_map(|p| p.ty())
     }
 
     pub fn first_type_parameter(&self) -> Option<Ty> {
@@ -337,11 +336,10 @@ pub struct TraitRef {
 
 impl TraitRef {
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty> + 'a {
-        // This unwrap() is safe because is_ty ensures that we definitely have a Ty
         self.parameters
             .iter()
-            .filter(|p| p.is_ty())
-            .map(|p| p.clone().ty().unwrap())
+            .cloned()
+            .filter_map(|p| p.ty())
     }
 }
 
@@ -871,8 +869,8 @@ impl Substitution {
     pub fn is_identity_subst(&self) -> bool {
         self.parameters
             .iter()
-            .zip(0..)
-            .all(|(parameter, index)| match parameter {
+            .enumerate()
+            .all(|(index, parameter)| match parameter {
                 ParameterKind::Ty(Ty::Var(depth)) => index == *depth,
                 ParameterKind::Lifetime(Lifetime::Var(depth)) => index == *depth,
                 _ => false,

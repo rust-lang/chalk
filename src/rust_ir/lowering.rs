@@ -290,8 +290,7 @@ trait LowerParameterMap {
         // probably just kind of messed up right now. That's ok.
         self.all_parameters()
             .into_iter()
-            .enumerate()
-            .map(|(index, id)| (id, index))
+            .zip(0..)
             .collect()
     }
 }
