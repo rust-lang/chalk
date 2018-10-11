@@ -80,14 +80,11 @@ impl<'q> Canonicalizer<'q> {
     }
 
     fn add(&mut self, free_var: ParameterInferenceVariable) -> usize {
-        match self.free_vars.iter().position(|&v| v == free_var) {
-            Some(i) => i,
-            None => {
-                let next_index = self.free_vars.len();
-                self.free_vars.push(free_var);
-                next_index
-            }
-        }
+        self.free_vars.iter().position(|&v| v == free_var).unwrap_or_else(|| {
+            let next_index = self.free_vars.len();
+            self.free_vars.push(free_var);
+            next_index
+        })
     }
 }
 
