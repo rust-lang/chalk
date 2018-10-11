@@ -290,8 +290,7 @@ trait LowerParameterMap {
         // probably just kind of messed up right now. That's ok.
         self.all_parameters()
             .into_iter()
-            .enumerate()
-            .map(|(index, id)| (id, index))
+            .zip(0..)
             .collect()
     }
 }
@@ -977,16 +976,16 @@ impl LowerClause for Clause {
         let implications = env.in_binders(self.all_parameters(), |env| {
             let consequences: Vec<chalk_ir::DomainGoal> = self.consequence.lower(env)?;
 
-            let mut conditions: Vec<chalk_ir::Goal> = self
+            let conditions: Vec<chalk_ir::Goal> = self
                 .conditions
                 .iter()
                 .map(|g| g.lower(env).map(|g| *g))
+                .rev() // (*)
                 .collect::<Result<_>>()?;
 
-            // Subtle: in the SLG solver, we pop conditions from R to
+            // (*) Subtle: in the SLG solver, we pop conditions from R to
             // L. To preserve the expected order (L to R), we must
             // therefore reverse.
-            conditions.reverse();
 
             let implications = consequences
                 .into_iter()

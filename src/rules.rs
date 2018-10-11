@@ -14,26 +14,21 @@ impl Program {
         // of the data above that always has the form:
         //
         //       forall P0...Pn. Something :- Conditions
-        let mut program_clauses = vec![];
-
-        program_clauses.extend(self.custom_clauses.iter().cloned());
-
-        program_clauses.extend(
+        let mut program_clauses = self.custom_clauses.iter().cloned().chain(
             self.struct_data
                 .values()
-                .flat_map(|d| d.to_program_clauses()),
-        );
-        program_clauses.extend(
+                .flat_map(|d| d.to_program_clauses())
+        ).chain(
             self.trait_data
                 .values()
                 .flat_map(|d| d.to_program_clauses()),
-        );
-        program_clauses.extend(
+        ).chain(
             self.associated_ty_data
                 .values()
                 .flat_map(|d| d.to_program_clauses(self)),
-        );
-        program_clauses.extend(self.default_impl_data.iter().map(|d| d.to_program_clause()));
+        ).chain(
+            self.default_impl_data.iter().map(|d| d.to_program_clause())
+        ).collect::<Vec<_>>();
 
         // Adds clause that defines the Derefs domain goal:
         // forall<T, U> { Derefs(T, U) :- ProjectionEq(<T as Deref>::Target = U>) }
@@ -279,7 +274,7 @@ impl AssociatedTyValue {
         };
 
         let unselected_normalization = Binders {
-            binders: all_binders.clone(),
+            binders: all_binders,
             value: ProgramClauseImplication {
                 consequence: DomainGoal::UnselectedNormalize(UnselectedNormalize {
                     projection: unselected_projection,
@@ -544,8 +539,6 @@ impl TraitDatum {
         // upstream types to implement upstream traits. Fundamental traits are not allowed to
         // compatibly do that.
 
-        let mut clauses = Vec::new();
-
         let trait_ref = self.binders.value.trait_ref.clone();
 
         let trait_ref_impl = WhereClause::Implemented(self.binders.value.trait_ref.clone());
@@ -566,7 +559,8 @@ impl TraitDatum {
                         .collect()
                 },
             }).cast();
-        clauses.push(wf);
+
+        let mut clauses = vec![wf];
 
         // The number of parameters will always be at least 1 because of the Self parameter
         // that is automatically added to every trait. This is important because otherwise
@@ -574,7 +568,7 @@ impl TraitDatum {
         let type_parameters: Vec<_> = self.binders.value.trait_ref.type_parameters().collect();
 
         // Add all cases for potential downstream impls that could exist
-        for i in 0..type_parameters.len() {
+        clauses.extend((0..type_parameters.len()).map(|i| {
             let impl_may_exist =
                 self.binders
                     .map_ref(|bound_datum| ProgramClauseImplication {
@@ -595,8 +589,8 @@ impl TraitDatum {
                             .collect(),
                     }).cast();
 
-            clauses.push(impl_may_exist);
-        }
+            impl_may_exist
+        }));
 
         if !self.binders.value.flags.upstream {
             let impl_allowed = self
@@ -608,7 +602,7 @@ impl TraitDatum {
 
             clauses.push(impl_allowed);
         } else {
-            for i in 0..type_parameters.len() {
+            clauses.extend((0..type_parameters.len()).map(|i| {
                 let impl_maybe_allowed = self
                     .binders
                     .map_ref(|bound_datum| ProgramClauseImplication {
@@ -620,8 +614,8 @@ impl TraitDatum {
                             )).collect(),
                     }).cast();
 
-                clauses.push(impl_maybe_allowed);
-            }
+                impl_maybe_allowed
+            }));
 
             // Fundamental traits can be reasoned about negatively without any ambiguity, so no
             // need for this rule if the trait is fundamental.
@@ -653,31 +647,31 @@ impl TraitDatum {
 
         let condition = DomainGoal::FromEnv(FromEnv::Trait(trait_ref.clone()));
 
-        for wc in self
-            .binders
-            .value
-            .where_clauses
-            .iter()
-            .cloned()
-            .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
-        {
-            // We move the binders of the where-clause to the left for the reverse rules,
-            // cf `StructDatum::to_program_clauses`.
-            let shift = wc.binders.len();
-            clauses.push(
-                Binders {
-                    binders: wc
-                        .binders
-                        .into_iter()
-                        .chain(self.binders.binders.clone())
-                        .collect(),
-                    value: ProgramClauseImplication {
-                        consequence: wc.value,
-                        conditions: vec![condition.clone().shifted_in(shift).cast()],
-                    },
-                }.cast(),
-            );
-        }
+        clauses.extend(
+            self.binders
+                .value
+                .where_clauses
+                .iter()
+                .cloned()
+                .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+                .map(|wc| {
+                    // We move the binders of the where-clause to the left for the reverse rules,
+                    // cf `StructDatum::to_program_clauses`.
+                    let shift = wc.binders.len();
+
+                    Binders {
+                        binders: wc
+                            .binders
+                            .into_iter()
+                            .chain(self.binders.binders.clone())
+                            .collect(),
+                        value: ProgramClauseImplication {
+                            consequence: wc.value,
+                            conditions: vec![condition.clone().shifted_in(shift).cast()],
+                        },
+                    }.cast()
+                })
+        );
 
         clauses.push(
             self.binders

@@ -37,14 +37,9 @@ pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
             let position_string = |start: usize, end: usize| {
                 let mut output = String::new();
                 let text = text.replace("\n", " ").replace("\r", " ");
-                write!(output, "position: `{}`\n", text).expect("str-write cannot fail");
-                write!(output, "           ").expect("str-write cannot fail");
-                for _ in 0..start {
-                    output.push_str(" ");
-                }
-                for _ in start..end {
-                    output.push_str("^");
-                }
+                writeln!(output, "position: `{}`", text).expect("str-write cannot fail");
+                output.push_str(&" ".repeat(11 + start));
+                output.push_str(&"^".repeat(end - start));
                 output.push_str("\n");
                 output
             };

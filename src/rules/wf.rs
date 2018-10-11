@@ -64,9 +64,8 @@ impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
 
 impl FoldInputTypes for Parameter {
     fn fold(&self, accumulator: &mut Vec<Ty>) {
-        match self {
-            ParameterKind::Ty(ty) => ty.fold(accumulator),
-            _ => (),
+        if let ParameterKind::Ty(ty) = self {
+            ty.fold(accumulator)
         }
     }
 }
