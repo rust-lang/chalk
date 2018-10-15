@@ -9,7 +9,7 @@ readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 
 [dependencies]
-lalrpop-intern = "0.14"
+lalrpop-intern = "0.15.1"
 
 [dependencies.chalk-macros]
 version = "0.1.0"

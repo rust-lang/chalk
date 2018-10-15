@@ -9,4 +9,4 @@ readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 
 [dependencies]
-lazy_static = "0.2.2"
+lazy_static = "1.1.0"
