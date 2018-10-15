@@ -251,8 +251,7 @@ fn truncate_normalizes_under_binders() {
     let ty0 = ty!(for_all 1
                   (apply (item 0)
                    (apply (item 0)
-                    (infer 1))));
+                    (infer 0))));
 
-    // the index in `(infer 1)` should be adjusted to account for binders
     assert!(!truncate(&mut table, 4, &ty0).overflow);
 }
