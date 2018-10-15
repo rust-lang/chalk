@@ -100,10 +100,10 @@ where
 /// is used when you are instanting previously bound things with some
 /// replacement.
 pub trait FreeVarFolder {
-    /// Invoked for `Ty::Var` instances that are not bound within the type being folded
+    /// Invoked for `Ty::BoundVar` instances that are not bound within the type being folded
     /// over:
     ///
-    /// - `depth` is the depth of the `Ty::Var`; this has been adjusted to account for binders
+    /// - `depth` is the depth of the `Ty::BoundVar`; this has been adjusted to account for binders
     ///   in scope.
     /// - `binders` is the number of binders in scope.
     ///
@@ -115,8 +115,8 @@ pub trait FreeVarFolder {
 }
 
 /// A convenience trait. If you implement this, you get an
-/// implementation of `FreVarFolder` for free that simply ignores
-/// universal values (that is, it replaces them with themselves).
+/// implementation of `FreeVarFolder` for free that simply ignores
+/// free values (that is, it replaces them with themselves).
 ///
 /// You can make it panic if a free-variable is found by overriding
 /// `forbid` to return true.
