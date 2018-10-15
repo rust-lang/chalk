@@ -36,16 +36,18 @@ pub use self::subst::Subst;
 /// (either existentially or universally quantified) and replace them
 /// with other types/lifetimes as appropriate.
 ///
-/// To create a folder type F, one typically does one of two things:
+/// To create a folder `F`, one never implements `Folder` directly, but instead
+/// implements one of each of these three sub-traits:
 ///
-/// - Implement `FreeVarFolder` and `DefaultPlaceholderFolder`:
-///   - This ignores universally quantified variables but allows you to
-///     replace existential variables with new values.
-/// - Implement `FreeVarFolder` and `PlaceholderFolder`:
-///   - This allows you to replace either existential or universal
-///     variables with new types/lifetimes.
-///
-/// There is no reason to implement the `Folder` trait directly.
+/// - `FreeVarFolder` -- folds `BoundVar` instances that appear free
+///   in the term being folded (use `DefaultFreeVarFolder` to
+///   ignore/forbid these altogether)
+/// - `InferenceFolder` -- folds existential `InferenceVar` instances
+///   that appear in the term being folded (use
+///   `DefaultInferenceFolder` to ignore/forbid these altogether)
+/// - `PlaceholderFolder` -- folds universal `Placeholder` instances
+///   that appear in the term being folded (use
+///   `DefaultPlaceholderFolder` to ignore/forbid these altogether)
 ///
 /// To **apply** a folder, use the `Fold::fold_with` method, like so
 ///
@@ -113,8 +115,11 @@ pub trait FreeVarFolder {
 }
 
 /// A convenience trait. If you implement this, you get an
-/// implementation of `PlaceholderFolder` for free that simply ignores
+/// implementation of `FreVarFolder` for free that simply ignores
 /// universal values (that is, it replaces them with themselves).
+///
+/// You can make it panic if a free-variable is found by overriding
+/// `forbid` to return true.
 pub trait DefaultFreeVarFolder {
     fn forbid() -> bool {
         false
@@ -168,6 +173,9 @@ pub trait PlaceholderFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `PlaceholderFolder` for free that simply ignores
 /// placeholder values (that is, it replaces them with themselves).
+///
+/// You can make it panic if a free-variable is found by overriding
+/// `forbid` to return true.
 pub trait DefaultPlaceholderFolder {
     fn forbid() -> bool {
         false
@@ -213,6 +221,9 @@ pub trait InferenceFolder {
 /// A convenience trait. If you implement this, you get an
 /// implementation of `InferenceFolder` for free that simply ignores
 /// inference values (that is, it replaces them with themselves).
+///
+/// You can make it panic if a free-variable is found by overriding
+/// `forbid` to return true.
 pub trait DefaultInferenceFolder {
     fn forbid() -> bool {
         false
