@@ -1,9 +1,9 @@
 use chalk_ir::cast::Cast;
 use chalk_ir::*;
 use crate::ext::*;
-use crate::solve::{Guidance, Solution};
-use crate::solve::slg::implementation::SubstitutionExt;
 use crate::infer::InferenceTable;
+use crate::solve::slg::implementation::SubstitutionExt;
+use crate::solve::{Guidance, Solution};
 
 use chalk_engine::context;
 use chalk_engine::SimplifiedAnswer;
@@ -46,20 +46,14 @@ impl context::AggregateOps<SlgContext> for SlgContext {
 
         // Extract answers and merge them into `subst`. Stop once we have
         // a trivial subst (or run out of answers).
-        //
-        // FIXME -- It would be nice if we could get some idea of the
-        // "shape" of future answers to know if they *might* disrupt
-        // existing substituion; the iterator interface is obviously too
-        // limited for that, but the on-demand SLG solver probably could
-        // give us that information.
         let guidance = loop {
             if subst.value.is_empty() || is_trivial(&subst) {
                 break Guidance::Unknown;
             }
 
-            if !simplified_answers.any_future_answer(|ref mut new_subst| {
-                new_subst.may_invalidate(&subst)
-            }) {
+            if !simplified_answers
+                .any_future_answer(|ref mut new_subst| new_subst.may_invalidate(&subst))
+            {
                 break Guidance::Definite(subst);
             }
 
@@ -129,8 +123,7 @@ fn merge_into_guidance(
                 universe,
             };
             aggr.aggregate_tys(&ty, ty1).cast()
-        })
-        .collect();
+        }).collect();
 
     let aggr_subst = Substitution {
         parameters: aggr_parameters,
@@ -150,7 +143,7 @@ fn is_trivial(subst: &Canonical<Substitution>) -> bool {
             // All types are mapped to distinct variables.  Since this
             // has been canonicalized, those will also be the first N
             // variables.
-            ParameterKind::Ty(t) => match t.var() {
+            ParameterKind::Ty(t) => match t.bound() {
                 None => false,
                 Some(depth) => depth == index,
             },
@@ -180,13 +173,15 @@ impl<'infer> AntiUnifier<'infer> {
             // overgeneralize.  So for example if we have two
             // solutions that are both `(X, X)`, we just produce `(Y,
             // Z)` in all cases.
-            (Ty::Var(_), Ty::Var(_)) => self.new_variable(),
+            (Ty::InferenceVar(_), Ty::InferenceVar(_)) => self.new_variable(),
 
             // Ugh. Aggregating two types like `for<'a> fn(&'a u32,
             // &'a u32)` and `for<'a, 'b> fn(&'a u32, &'b u32)` seems
             // kinda' hard. Don't try to be smart for now, just plop a
             // variable in there and be done with it.
-            (Ty::ForAll(_), Ty::ForAll(_)) => self.new_variable(),
+            (Ty::BoundVar(_), Ty::BoundVar(_)) | (Ty::ForAll(_), Ty::ForAll(_)) => {
+                self.new_variable()
+            }
 
             (Ty::Apply(apply1), Ty::Apply(apply2)) => {
                 self.aggregate_application_tys(apply1, apply2)
@@ -201,7 +196,8 @@ impl<'infer> AntiUnifier<'infer> {
             }
 
             // Mismatched base kinds.
-            (Ty::Var(_), _)
+            (Ty::InferenceVar(_), _)
+            | (Ty::BoundVar(_), _)
             | (Ty::ForAll(_), _)
             | (Ty::Apply(_), _)
             | (Ty::Projection(_), _)
@@ -240,8 +236,7 @@ impl<'infer> AntiUnifier<'infer> {
                     associated_ty_id,
                     parameters,
                 })
-            })
-            .unwrap_or_else(|| self.new_variable())
+            }).unwrap_or_else(|| self.new_variable())
     }
 
     fn aggregate_unselected_projection_tys(
@@ -264,8 +259,7 @@ impl<'infer> AntiUnifier<'infer> {
                     type_name,
                     parameters,
                 })
-            })
-            .unwrap_or_else(|| self.new_variable())
+            }).unwrap_or_else(|| self.new_variable())
     }
 
     fn aggregate_name_and_substs<N>(
@@ -318,9 +312,15 @@ impl<'infer> AntiUnifier<'infer> {
 
     fn aggregate_lifetimes(&mut self, l1: &Lifetime, l2: &Lifetime) -> Lifetime {
         match (l1, l2) {
-            (Lifetime::Var(_), _) | (_, Lifetime::Var(_)) => self.new_lifetime_variable(),
+            (Lifetime::InferenceVar(_), _) | (_, Lifetime::InferenceVar(_)) => {
+                self.new_lifetime_variable()
+            }
 
-            (Lifetime::ForAll(_), Lifetime::ForAll(_)) => if l1 == l2 {
+            (Lifetime::BoundVar(_), _) | (_, Lifetime::BoundVar(_)) => {
+                self.new_lifetime_variable()
+            }
+
+            (Lifetime::Placeholder(_), Lifetime::Placeholder(_)) => if l1 == l2 {
                 *l1
             } else {
                 self.new_lifetime_variable()
@@ -350,7 +350,7 @@ fn vec_i32_vs_vec_u32() {
         &ty!(apply (item 0) (apply (item 1))),
         &ty!(apply (item 0) (apply (item 2))),
     );
-    assert_eq!(ty!(apply (item 0) (var 0)), ty);
+    assert_eq!(ty!(apply (item 0) (infer 0)), ty);
 }
 
 /// Test the equivalent of `Vec<i32>` vs `Vec<i32>`
@@ -381,8 +381,11 @@ fn vec_x_vs_vec_y() {
     // Note that the `var 0` and `var 1` in these types would be
     // referring to canonicalized free variables, not variables in
     // `infer`.
-    let ty = anti_unifier.aggregate_tys(&ty!(apply (item 0) (var 0)), &ty!(apply (item 0) (var 1)));
+    let ty = anti_unifier.aggregate_tys(
+        &ty!(apply (item 0) (infer 0)),
+        &ty!(apply (item 0) (infer 1)),
+    );
 
     // But this `var 0` is from `infer.
-    assert_eq!(ty!(apply (item 0) (var 0)), ty);
+    assert_eq!(ty!(apply (item 0) (infer 0)), ty);
 }

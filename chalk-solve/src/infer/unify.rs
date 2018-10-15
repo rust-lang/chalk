@@ -1,11 +1,13 @@
 use chalk_engine::fallible::*;
 use chalk_ir::cast::Cast;
-use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
+use chalk_ir::fold::{
+    DefaultFreeVarFolder, DefaultTypeFolder, Fold, InferenceFolder, PlaceholderFolder,
+};
 use chalk_ir::zip::{Zip, Zipper};
 use std::sync::Arc;
 
-use super::*;
 use super::var::*;
+use super::*;
 
 impl InferenceTable {
     pub fn unify<T>(
@@ -89,9 +91,9 @@ impl<'t> Unifier<'t> {
 
     fn unify_ty_ty<'a>(&mut self, a: &'a Ty, b: &'a Ty) -> Fallible<()> {
         //         ^^                 ^^         ^^ FIXME rustc bug
-        if let Some(n_a) = self.table.normalize_shallow(a, 0) {
+        if let Some(n_a) = self.table.normalize_shallow(a) {
             return self.unify_ty_ty(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_shallow(b, 0) {
+        } else if let Some(n_b) = self.table.normalize_shallow(b) {
             return self.unify_ty_ty(a, &n_b);
         }
 
@@ -103,21 +105,22 @@ impl<'t> Unifier<'t> {
         );
 
         match (a, b) {
-            (&Ty::Var(depth1), &Ty::Var(depth2)) => {
-                let var1 = InferenceVariable::from_depth(depth1);
-                let var2 = InferenceVariable::from_depth(depth2);
+            (&Ty::InferenceVar(var1), &Ty::InferenceVar(var2)) => {
                 debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
-                Ok(self.table
+                let var1 = EnaVariable::from(var1);
+                let var2 = EnaVariable::from(var2);
+                Ok(self
+                    .table
                     .unify
                     .unify_var_var(var1, var2)
                     .expect("unification of two unbound variables cannot fail"))
             }
 
-            (&Ty::Var(depth), ty @ &Ty::Apply(_))
-            | (ty @ &Ty::Apply(_), &Ty::Var(depth))
-            | (&Ty::Var(depth), ty @ &Ty::ForAll(_))
-            | (ty @ &Ty::ForAll(_), &Ty::Var(depth)) => {
-                self.unify_var_ty(InferenceVariable::from_depth(depth), ty)
+            (&Ty::InferenceVar(var), ty @ &Ty::Apply(_))
+            | (ty @ &Ty::Apply(_), &Ty::InferenceVar(var))
+            | (&Ty::InferenceVar(var), ty @ &Ty::ForAll(_))
+            | (ty @ &Ty::ForAll(_), &Ty::InferenceVar(var)) => {
+                self.unify_var_ty(var, ty)
             }
 
             (&Ty::ForAll(ref quantified_ty1), &Ty::ForAll(ref quantified_ty2)) => {
@@ -139,28 +142,30 @@ impl<'t> Unifier<'t> {
 
             (proj1 @ &Ty::Projection(_), proj2 @ &Ty::UnselectedProjection(_))
             | (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::Projection(_))
-            | (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::UnselectedProjection(_)) => {
-                self.unify_projection_tys(
-                    proj1.as_projection_ty_enum(),
-                    proj2.as_projection_ty_enum(),
-                )
-            }
+            | (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::UnselectedProjection(_)) => self
+                .unify_projection_tys(proj1.as_projection_ty_enum(), proj2.as_projection_ty_enum()),
 
             (ty @ &Ty::Apply(_), &Ty::Projection(ref proj))
             | (ty @ &Ty::ForAll(_), &Ty::Projection(ref proj))
-            | (ty @ &Ty::Var(_), &Ty::Projection(ref proj))
+            | (ty @ &Ty::InferenceVar(_), &Ty::Projection(ref proj))
             | (&Ty::Projection(ref proj), ty @ &Ty::Projection(_))
             | (&Ty::Projection(ref proj), ty @ &Ty::Apply(_))
             | (&Ty::Projection(ref proj), ty @ &Ty::ForAll(_))
-            | (&Ty::Projection(ref proj), ty @ &Ty::Var(_)) => self.unify_projection_ty(proj, ty),
+            | (&Ty::Projection(ref proj), ty @ &Ty::InferenceVar(_)) => {
+                self.unify_projection_ty(proj, ty)
+            }
 
             (ty @ &Ty::Apply(_), &Ty::UnselectedProjection(ref proj))
             | (ty @ &Ty::ForAll(_), &Ty::UnselectedProjection(ref proj))
-            | (ty @ &Ty::Var(_), &Ty::UnselectedProjection(ref proj))
+            | (ty @ &Ty::InferenceVar(_), &Ty::UnselectedProjection(ref proj))
             | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::Apply(_))
             | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::ForAll(_))
-            | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::Var(_)) => {
+            | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::InferenceVar(_)) => {
                 self.unify_unselected_projection_ty(proj, ty)
+            }
+
+            (Ty::BoundVar(_), _) | (_, Ty::BoundVar(_)) => {
+                panic!("unification encountered bound variable: a={:?} b={:?}", a, b)
             }
         }
     }
@@ -180,9 +185,7 @@ impl<'t> Unifier<'t> {
 
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|idx| {
-                Lifetime::ForAll(UniversalIndex { ui, idx }).cast()
-            })
+            .map(|idx| Lifetime::Placeholder(PlaceholderIndex { ui, idx }).cast())
             .collect();
 
         let max_universe = self.table.max_universe;
@@ -244,9 +247,7 @@ impl<'t> Unifier<'t> {
     fn unify_forall_apply(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Fallible<()> {
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|idx| {
-                Lifetime::ForAll(UniversalIndex { ui, idx }).cast()
-            })
+            .map(|idx| Lifetime::Placeholder(PlaceholderIndex { ui, idx }).cast())
             .collect();
 
         let ty1 = ty1.substitute(&lifetimes1);
@@ -255,8 +256,10 @@ impl<'t> Unifier<'t> {
         self.sub_unify(ty1, ty2)
     }
 
-    fn unify_var_ty(&mut self, var: InferenceVariable, ty: &Ty) -> Fallible<()> {
+    fn unify_var_ty(&mut self, var: InferenceVar, ty: &Ty) -> Fallible<()> {
         debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
+
+        let var = EnaVariable::from(var);
 
         // Determine the universe index associated with this
         // variable. This is basically a count of the number of
@@ -277,18 +280,18 @@ impl<'t> Unifier<'t> {
     }
 
     fn unify_lifetime_lifetime(&mut self, a: &Lifetime, b: &Lifetime) -> Fallible<()> {
-        if let Some(n_a) = self.table.normalize_lifetime(a, 0) {
+        if let Some(n_a) = self.table.normalize_lifetime(a) {
             return self.unify_lifetime_lifetime(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_lifetime(b, 0) {
+        } else if let Some(n_b) = self.table.normalize_lifetime(b) {
             return self.unify_lifetime_lifetime(a, &n_b);
         }
 
         debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
 
         match (a, b) {
-            (&Lifetime::Var(depth_a), &Lifetime::Var(depth_b)) => {
-                let var_a = InferenceVariable::from_depth(depth_a);
-                let var_b = InferenceVariable::from_depth(depth_b);
+            (&Lifetime::InferenceVar(var_a), &Lifetime::InferenceVar(var_b)) => {
+                let var_a = EnaVariable::from(var_a);
+                let var_b = EnaVariable::from(var_b);
                 debug!(
                     "unify_lifetime_lifetime: var_a={:?} var_b={:?}",
                     var_a, var_b
@@ -297,16 +300,16 @@ impl<'t> Unifier<'t> {
                 Ok(())
             }
 
-            (&Lifetime::Var(depth), &Lifetime::ForAll(idx))
-            | (&Lifetime::ForAll(idx), &Lifetime::Var(depth)) => {
-                let var = InferenceVariable::from_depth(depth);
+            (&Lifetime::InferenceVar(var), &Lifetime::Placeholder(idx))
+            | (&Lifetime::Placeholder(idx), &Lifetime::InferenceVar(var)) => {
+                let var = EnaVariable::from(var);
                 let var_ui = self.table.universe_of_unbound_var(var);
                 if var_ui.can_see(idx.ui) {
                     debug!(
                         "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
                         var, var_ui, idx.ui
                     );
-                    let v = Lifetime::ForAll(idx);
+                    let v = Lifetime::Placeholder(idx);
                     self.table
                         .unify
                         .unify_var_value(var, InferenceValue::from(v))
@@ -321,11 +324,15 @@ impl<'t> Unifier<'t> {
                 }
             }
 
-            (&Lifetime::ForAll(_), &Lifetime::ForAll(_)) => if a != b {
+            (&Lifetime::Placeholder(_), &Lifetime::Placeholder(_)) => if a != b {
                 Ok(self.push_lifetime_eq_constraint(*a, *b))
             } else {
                 Ok(())
             },
+
+            (Lifetime::BoundVar(_), _) | (_, Lifetime::BoundVar(_)) => {
+                panic!("unification encountered bound variable: a={:?} b={:?}", a, b)
+            }
         }
     }
 
@@ -356,16 +363,12 @@ impl<'t> Zipper for Unifier<'t> {
 
 struct OccursCheck<'u, 't: 'u> {
     unifier: &'u mut Unifier<'t>,
-    var: InferenceVariable,
+    var: EnaVariable,
     universe_index: UniverseIndex,
 }
 
 impl<'u, 't> OccursCheck<'u, 't> {
-    fn new(
-        unifier: &'u mut Unifier<'t>,
-        var: InferenceVariable,
-        universe_index: UniverseIndex,
-    ) -> Self {
+    fn new(unifier: &'u mut Unifier<'t>, var: EnaVariable, universe_index: UniverseIndex) -> Self {
         OccursCheck {
             unifier,
             var,
@@ -376,8 +379,12 @@ impl<'u, 't> OccursCheck<'u, 't> {
 
 impl<'u, 't> DefaultTypeFolder for OccursCheck<'u, 't> {}
 
-impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
-    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
+impl<'u, 't> PlaceholderFolder for OccursCheck<'u, 't> {
+    fn fold_free_placeholder_ty(
+        &mut self,
+        universe: PlaceholderIndex,
+        _binders: usize,
+    ) -> Fallible<Ty> {
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
@@ -385,10 +392,10 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
         }
     }
 
-    fn fold_free_universal_lifetime(
+    fn fold_free_placeholder_lifetime(
         &mut self,
-        ui: UniversalIndex,
-        binders: usize,
+        ui: PlaceholderIndex,
+        _binders: usize,
     ) -> Fallible<Lifetime> {
         if self.universe_index < ui.ui {
             // Scenario is like:
@@ -407,7 +414,7 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
             let tick_x = self.unifier.table.new_variable(self.universe_index);
             self.unifier
                 .push_lifetime_eq_constraint(tick_x.to_lifetime(), ui.to_lifetime());
-            Ok(tick_x.to_lifetime().shifted_in(binders))
+            Ok(tick_x.to_lifetime())
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name
             // this lifetime, no problem.
@@ -416,21 +423,23 @@ impl<'u, 't> UniversalFolder for OccursCheck<'u, 't> {
     }
 }
 
-impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        let v = InferenceVariable::from_depth(depth);
-        match self.unifier.table.unify.probe_value(v) {
+impl<'u, 't> InferenceFolder for OccursCheck<'u, 't> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty> {
+        let var = EnaVariable::from(var);
+        match self.unifier.table.unify.probe_value(var) {
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_ty) => {
                 let normalized_ty = normalized_ty.ty().unwrap();
-                Ok(normalized_ty.fold_with(self, 0)?.shifted_in(binders))
+                let normalized_ty = normalized_ty.fold_with(self, 0)?;
+                assert!(!normalized_ty.needs_shift());
+                Ok(normalized_ty)
             }
 
             // Otherwise, check the universe of the variable, and also
             // check for cycles with `self.var` (which this will soon
             // become the value of).
             InferenceValue::Unbound(ui) => {
-                if self.unifier.table.unify.unioned(v, self.var) {
+                if self.unifier.table.unify.unioned(var, self.var) {
                     return Err(NoSolution);
                 }
 
@@ -444,24 +453,20 @@ impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
                     self.unifier
                         .table
                         .unify
-                        .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
+                        .unify_var_value(var, InferenceValue::Unbound(self.universe_index))
                         .unwrap();
                 }
 
-                Ok(Ty::Var(depth)) // depth already includes binders
+                Ok(var.to_ty())
             }
         }
     }
 
-    fn fold_free_existential_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
+    fn fold_inference_lifetime(&mut self, var: InferenceVar, binders: usize) -> Fallible<Lifetime> {
         // a free existentially bound region; find the
         // inference variable it corresponds to
-        let v = InferenceVariable::from_depth(depth);
-        match self.unifier.table.unify.probe_value(v) {
+        let var = EnaVariable::from(var);
+        match self.unifier.table.unify.probe_value(var) {
             InferenceValue::Unbound(ui) => {
                 if self.universe_index < ui {
                     // Scenario is like:
@@ -473,16 +478,24 @@ impl<'u, 't> ExistentialFolder for OccursCheck<'u, 't> {
                     self.unifier
                         .table
                         .unify
-                        .unify_var_value(v, InferenceValue::Unbound(self.universe_index))
+                        .unify_var_value(var, InferenceValue::Unbound(self.universe_index))
                         .unwrap();
                 }
-                Ok(Lifetime::Var(depth).shifted_in(binders))
+                Ok(var.to_lifetime())
             }
 
             InferenceValue::Bound(l) => {
-                let l = l.lifetime().unwrap().shifted_in(binders);
-                l.fold_with(self, binders)
+                let l = l.lifetime().unwrap();
+                let l = l.fold_with(self, binders)?;
+                assert!(!l.needs_shift());
+                Ok(l.clone())
             }
         }
+    }
+}
+
+impl<'u, 't> DefaultFreeVarFolder for OccursCheck<'u, 't> {
+    fn forbid() -> bool {
+        true
     }
 }

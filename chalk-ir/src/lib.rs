@@ -1,12 +1,12 @@
-#![feature(non_modrs_mods)]
 #![feature(crate_visibility_modifier)]
-#![feature(crate_in_paths)]
 #![feature(specialization)]
 
-use chalk_engine::fallible::*;
 use cast::Cast;
+use chalk_engine::fallible::*;
 use fold::shift::Shift;
-use fold::{DefaultTypeFolder, ExistentialFolder, Fold, IdentityUniversalFolder};
+use fold::{
+    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder,
+};
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
@@ -95,8 +95,10 @@ pub enum TypeName {
     /// a type like `Vec<T>`
     ItemId(ItemId),
 
-    /// skolemized form of a type parameter like `T`
-    ForAll(UniversalIndex),
+    /// instantiated form a universally quantified type, e.g., from
+    /// `forall<T> { .. }`. Stands in as a representative of "some
+    /// unknown type".
+    Placeholder(PlaceholderIndex),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(ItemId),
@@ -145,20 +147,32 @@ pub enum TypeSort {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Ty {
-    /// References the binding at the given depth (deBruijn index
-    /// style). In an inference context (i.e., when solving goals),
-    /// free bindings refer into the inference table.
-    Var(usize),
     Apply(ApplicationTy),
     Projection(ProjectionTy),
     UnselectedProjection(UnselectedProjectionTy),
     ForAll(Box<QuantifiedTy>),
+
+    /// References the binding at the given depth (deBruijn index
+    /// style).
+    BoundVar(usize),
+
+    /// Inference variable.
+    InferenceVar(InferenceVar),
 }
 
 impl Ty {
-    /// If this is a `Ty::Var(d)`, returns `Some(d)` else `None`.
-    pub fn var(&self) -> Option<usize> {
-        if let Ty::Var(depth) = *self {
+    /// If this is a `Ty::BoundVar(d)`, returns `Some(d)` else `None`.
+    pub fn bound(&self) -> Option<usize> {
+        if let Ty::BoundVar(depth) = *self {
+            Some(depth)
+        } else {
+            None
+        }
+    }
+
+    /// If this is a `Ty::InferenceVar(d)`, returns `Some(d)` else `None`.
+    pub fn inference_var(&self) -> Option<InferenceVar> {
+        if let Ty::InferenceVar(depth) = *self {
             Some(depth)
         } else {
             None
@@ -179,6 +193,38 @@ impl Ty {
             _ => false,
         }
     }
+
+    /// True if this type contains "bound" types/lifetimes, and hence
+    /// needs to be shifted across binders. This is a very inefficient
+    /// check, intended only for debug assertions, because I am lazy.
+    pub fn needs_shift(&self) -> bool {
+        *self != self.shifted_in(1)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct InferenceVar {
+    index: u32,
+}
+
+impl From<u32> for InferenceVar {
+    fn from(index: u32) -> InferenceVar {
+        InferenceVar { index }
+    }
+}
+
+impl InferenceVar {
+    pub fn index(self) -> u32 {
+        self.index
+    }
+
+    pub fn to_ty(self) -> Ty {
+        Ty::InferenceVar(self)
+    }
+
+    pub fn to_lifetime(self) -> Lifetime {
+        Lifetime::InferenceVar(self)
+    }
 }
 
 /// for<'a...'z> X -- all binders are instantiated at once,
@@ -192,29 +238,51 @@ pub struct QuantifiedTy {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Lifetime {
     /// See Ty::Var(_).
-    Var(usize),
-    ForAll(UniversalIndex),
+    BoundVar(usize),
+    InferenceVar(InferenceVar),
+    Placeholder(PlaceholderIndex),
+}
+
+impl Lifetime {
+    /// If this is a `Lifetime::InferenceVar(d)`, returns `Some(d)` else `None`.
+    pub fn inference_var(&self) -> Option<InferenceVar> {
+        if let Lifetime::InferenceVar(depth) = *self {
+            Some(depth)
+        } else {
+            None
+        }
+    }
+
+    /// True if this lifetime is a "bound" lifetime, and hence
+    /// needs to be shifted across binders. Meant for debug assertions.
+    pub fn needs_shift(&self) -> bool {
+        match self {
+            Lifetime::BoundVar(_) => true,
+            Lifetime::InferenceVar(_) => false,
+            Lifetime::Placeholder(_) => false,
+        }
+    }
 }
 
 /// Index of an universally quantified parameter in the environment.
 /// Two indexes are required, the one of the universe itself
 /// and the relative index inside the universe.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct UniversalIndex {
+pub struct PlaceholderIndex {
     /// Index *of* the universe.
     pub ui: UniverseIndex,
     /// Index *in* the universe.
     pub idx: usize,
 }
 
-impl UniversalIndex {
+impl PlaceholderIndex {
     pub fn to_lifetime(self) -> Lifetime {
-        Lifetime::ForAll(self)
+        Lifetime::Placeholder(self)
     }
 
     pub fn to_ty(self) -> Ty {
         Ty::Apply(ApplicationTy {
-            name: TypeName::ForAll(self),
+            name: TypeName::Placeholder(self),
             parameters: vec![],
         })
     }
@@ -624,7 +692,7 @@ impl<T> Binders<T> {
         T: Shift,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
-        let new_var = Ty::Var(0);
+        let new_var = Ty::BoundVar(0);
         let value = op(self.value.shifted_in(1), new_var);
         Binders {
             binders: iter::once(ParameterKind::Ty(()))
@@ -869,10 +937,10 @@ impl Substitution {
     pub fn is_identity_subst(&self) -> bool {
         self.parameters
             .iter()
-            .enumerate()
-            .all(|(index, parameter)| match parameter {
-                ParameterKind::Ty(Ty::Var(depth)) => index == *depth,
-                ParameterKind::Lifetime(Lifetime::Var(depth)) => index == *depth,
+            .zip(0..)
+            .all(|(parameter, index)| match parameter {
+                ParameterKind::Ty(Ty::BoundVar(depth)) => index == *depth,
+                ParameterKind::Lifetime(Lifetime::BoundVar(depth)) => index == *depth,
                 _ => false,
             })
     }
@@ -880,25 +948,23 @@ impl Substitution {
 
 impl<'a> DefaultTypeFolder for &'a Substitution {}
 
-impl<'a> ExistentialFolder for &'a Substitution {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<'a> DefaultInferenceFolder for &'a Substitution {}
+
+impl<'a> FreeVarFolder for &'a Substitution {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         let ty = &self.parameters[depth];
         let ty = ty.assert_ty_ref();
         Ok(ty.shifted_in(binders))
     }
 
-    fn fold_free_existential_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         let l = &self.parameters[depth];
         let l = l.assert_lifetime_ref();
         Ok(l.shifted_in(binders))
     }
 }
 
-impl<'a> IdentityUniversalFolder for &'a Substitution {}
+impl<'a> DefaultPlaceholderFolder for &'a Substitution {}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {

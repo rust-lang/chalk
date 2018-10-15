@@ -36,23 +36,25 @@ pub use self::subst::Subst;
 /// (either existentially or universally quantified) and replace them
 /// with other types/lifetimes as appropriate.
 ///
-/// To create a folder type F, one typically does one of two things:
+/// To create a folder `F`, one never implements `Folder` directly, but instead
+/// implements one of each of these three sub-traits:
 ///
-/// - Implement `ExistentialFolder` and `IdentityUniversalFolder`:
-///   - This ignores universally quantified variables but allows you to
-///     replace existential variables with new values.
-/// - Implement `ExistentialFolder` and `UniversalFolder`:
-///   - This allows you to replace either existential or universal
-///     variables with new types/lifetimes.
-///
-/// There is no reason to implement the `Folder` trait directly.
+/// - `FreeVarFolder` -- folds `BoundVar` instances that appear free
+///   in the term being folded (use `DefaultFreeVarFolder` to
+///   ignore/forbid these altogether)
+/// - `InferenceFolder` -- folds existential `InferenceVar` instances
+///   that appear in the term being folded (use
+///   `DefaultInferenceFolder` to ignore/forbid these altogether)
+/// - `PlaceholderFolder` -- folds universal `Placeholder` instances
+///   that appear in the term being folded (use
+///   `DefaultPlaceholderFolder` to ignore/forbid these altogether)
 ///
 /// To **apply** a folder, use the `Fold::fold_with` method, like so
 ///
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder: ExistentialFolder + UniversalFolder + TypeFolder {
+pub trait Folder: FreeVarFolder + InferenceFolder + PlaceholderFolder + TypeFolder {
     /// Returns a "dynamic" version of this trait. There is no
     /// **particular** reason to require this, except that I didn't
     /// feel like making `super_fold_ty` generic for no reason.
@@ -64,7 +66,10 @@ pub trait TypeFolder {
     fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime>;
 }
 
-impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
+impl<T> Folder for T
+where
+    T: FreeVarFolder + InferenceFolder + PlaceholderFolder + TypeFolder,
+{
     fn to_dyn(&mut self) -> &mut dyn Folder {
         self
     }
@@ -77,7 +82,10 @@ impl<T: ExistentialFolder + UniversalFolder + TypeFolder> Folder for T {
 /// folders implement this trait.
 pub trait DefaultTypeFolder {}
 
-impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for T {
+impl<T> TypeFolder for T
+where
+    T: FreeVarFolder + InferenceFolder + PlaceholderFolder + DefaultTypeFolder,
+{
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
         super_fold_ty(self.to_dyn(), ty, binders)
     }
@@ -87,80 +95,160 @@ impl<T: ExistentialFolder + UniversalFolder + DefaultTypeFolder> TypeFolder for 
     }
 }
 
-/// The methods for folding free **existentially quantified
-/// variables**; for example, if you folded over `Foo<?T> }`, where `?T`
-/// is an inference variable, then this would let you replace `?T` with
-/// some other type.
-pub trait ExistentialFolder {
-    /// Invoked for `Ty::Var` instances that are not bound within the type being folded
+/// The methods for folding **free variables**. These are `BoundVar`
+/// instances where the binder is not something we folded over.  This
+/// is used when you are instanting previously bound things with some
+/// replacement.
+pub trait FreeVarFolder {
+    /// Invoked for `Ty::BoundVar` instances that are not bound within the type being folded
     /// over:
     ///
-    /// - `depth` is the depth of the `Ty::Var`; this has been adjusted to account for binders
+    /// - `depth` is the depth of the `Ty::BoundVar`; this has been adjusted to account for binders
     ///   in scope.
     /// - `binders` is the number of binders in scope.
     ///
     /// This should return a type suitable for a context with `binders` in scope.
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty>;
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty>;
 
-    /// As `fold_free_existential_ty`, but for lifetimes.
-    fn fold_free_existential_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime>;
+    /// As `fold_free_var_ty`, but for lifetimes.
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
-/// implementation of `UniversalFolder` for free that simply ignores
-/// universal values (that is, it replaces them with themselves).
-pub trait IdentityExistentialFolder {}
+/// implementation of `FreeVarFolder` for free that simply ignores
+/// free values (that is, it replaces them with themselves).
+///
+/// You can make it panic if a free-variable is found by overriding
+/// `forbid` to return true.
+pub trait DefaultFreeVarFolder {
+    fn forbid() -> bool {
+        false
+    }
+}
 
-impl<T: IdentityExistentialFolder> ExistentialFolder for T {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        Ok(Ty::Var(depth + binders))
+impl<T: DefaultFreeVarFolder> FreeVarFolder for T {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+        if T::forbid() {
+            panic!("unexpected free variable with depth `{:?}`", depth)
+        } else {
+            Ok(Ty::BoundVar(depth + binders))
+        }
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,
     ) -> Fallible<Lifetime> {
-        Ok(Lifetime::Var(depth + binders))
+        if T::forbid() {
+            panic!("unexpected free variable with depth `{:?}`", depth)
+        } else {
+            Ok(Lifetime::BoundVar(depth + binders))
+        }
     }
 }
 
-pub trait UniversalFolder {
-    /// Invoked for `Ty::Apply` instances where the type name is a `TypeName::ForAll`.
-    /// Returns a type to use instead, which should be suitably shifted to account for `binders`.
+pub trait PlaceholderFolder {
+    /// Invoked for each occurence of a placeholder type; these are
+    /// used when we instantiate binders universally. Returns a type
+    /// to use instead, which should be suitably shifted to account
+    /// for `binders`.
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, binders: usize) -> Fallible<Ty>;
-
-    /// As with `fold_free_universal_ty`, but for lifetimes.
-    fn fold_free_universal_lifetime(
+    fn fold_free_placeholder_ty(
         &mut self,
-        universe: UniversalIndex,
+        universe: PlaceholderIndex,
+        binders: usize,
+    ) -> Fallible<Ty>;
+
+    /// As with `fold_free_placeholder_ty`, but for lifetimes.
+    fn fold_free_placeholder_lifetime(
+        &mut self,
+        universe: PlaceholderIndex,
         binders: usize,
     ) -> Fallible<Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
-/// implementation of `UniversalFolder` for free that simply ignores
-/// universal values (that is, it replaces them with themselves).
-pub trait IdentityUniversalFolder {}
+/// implementation of `PlaceholderFolder` for free that simply ignores
+/// placeholder values (that is, it replaces them with themselves).
+///
+/// You can make it panic if a free-variable is found by overriding
+/// `forbid` to return true.
+pub trait DefaultPlaceholderFolder {
+    fn forbid() -> bool {
+        false
+    }
+}
 
-impl<T: IdentityUniversalFolder> UniversalFolder for T {
-    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, _binders: usize) -> Fallible<Ty> {
-        Ok(universe.to_ty())
+impl<T: DefaultPlaceholderFolder> PlaceholderFolder for T {
+    fn fold_free_placeholder_ty(&mut self, universe: PlaceholderIndex, _binders: usize) -> Fallible<Ty> {
+        if T::forbid() {
+            panic!("unexpected placeholder type `{:?}`", universe)
+        } else {
+            Ok(universe.to_ty())
+        }
     }
 
-    fn fold_free_universal_lifetime(
+    fn fold_free_placeholder_lifetime(
         &mut self,
-        universe: UniversalIndex,
+        universe: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Lifetime> {
-        Ok(universe.to_lifetime())
+        if T::forbid() {
+            panic!("unexpected placeholder lifetime `{:?}`", universe)
+        } else {
+            Ok(universe.to_lifetime())
+        }
+    }
+}
+
+pub trait InferenceFolder {
+    /// Invoked for each occurence of a inference type; these are
+    /// used when we instantiate binders universally. Returns a type
+    /// to use instead, which should be suitably shifted to account
+    /// for `binders`.
+    ///
+    /// - `universe` is the universe of the `TypeName::ForAll` that was found
+    /// - `binders` is the number of binders in scope
+    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty>;
+
+    /// As with `fold_free_inference_ty`, but for lifetimes.
+    fn fold_inference_lifetime(&mut self, var: InferenceVar, binders: usize) -> Fallible<Lifetime>;
+}
+
+/// A convenience trait. If you implement this, you get an
+/// implementation of `InferenceFolder` for free that simply ignores
+/// inference values (that is, it replaces them with themselves).
+///
+/// You can make it panic if a free-variable is found by overriding
+/// `forbid` to return true.
+pub trait DefaultInferenceFolder {
+    fn forbid() -> bool {
+        false
+    }
+}
+
+impl<T: DefaultInferenceFolder> InferenceFolder for T {
+    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty> {
+        if T::forbid() {
+            panic!("unexpected inference type `{:?}`", var)
+        } else {
+            Ok(var.to_ty())
+        }
+    }
+
+    fn fold_inference_lifetime(
+        &mut self,
+        var: InferenceVar,
+        _binders: usize,
+    ) -> Fallible<Lifetime> {
+        if T::forbid() {
+            panic!("unexpected inference lifetime `'{:?}`", var)
+        } else {
+            Ok(var.to_lifetime())
+        }
     }
 }
 
@@ -246,25 +334,26 @@ impl Fold for Ty {
 
 pub fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fallible<Ty> {
     match *ty {
-        Ty::Var(depth) => if depth >= binders {
-            folder.fold_free_existential_ty(depth - binders, binders)
+        Ty::BoundVar(depth) => if depth >= binders {
+            folder.fold_free_var_ty(depth - binders, binders)
         } else {
-            Ok(Ty::Var(depth))
+            Ok(Ty::BoundVar(depth))
         },
+        Ty::InferenceVar(var) => folder.fold_inference_ty(var, binders),
         Ty::Apply(ref apply) => {
             let ApplicationTy {
                 name,
                 ref parameters,
             } = *apply;
             match name {
-                TypeName::ForAll(ui) => {
+                TypeName::Placeholder(ui) => {
                     assert!(
                         parameters.is_empty(),
                         "type {:?} with parameters {:?}",
                         ty,
                         parameters
                     );
-                    folder.fold_free_universal_ty(ui, binders)
+                    folder.fold_free_placeholder_ty(ui, binders)
                 }
 
                 TypeName::ItemId(_) | TypeName::AssociatedType(_) => {
@@ -344,12 +433,13 @@ pub fn super_fold_lifetime(
     binders: usize,
 ) -> Fallible<Lifetime> {
     match *lifetime {
-        Lifetime::Var(depth) => if depth >= binders {
-            folder.fold_free_existential_lifetime(depth - binders, binders)
+        Lifetime::BoundVar(depth) => if depth >= binders {
+            folder.fold_free_var_lifetime(depth - binders, binders)
         } else {
-            Ok(Lifetime::Var(depth))
+            Ok(Lifetime::BoundVar(depth))
         },
-        Lifetime::ForAll(universe) => folder.fold_free_universal_lifetime(universe, binders),
+        Lifetime::InferenceVar(var) => folder.fold_inference_lifetime(var, binders),
+        Lifetime::Placeholder(universe) => folder.fold_free_placeholder_lifetime(universe, binders),
     }
 }
 

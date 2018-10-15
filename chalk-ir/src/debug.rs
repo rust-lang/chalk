@@ -30,7 +30,7 @@ impl Debug for TypeName {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             TypeName::ItemId(id) => write!(fmt, "{:?}", id),
-            TypeName::ForAll(universe) => write!(fmt, "!{}_{}", universe.ui.counter, universe.idx),
+            TypeName::Placeholder(index) => write!(fmt, "{:?}", index),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
         }
     }
@@ -39,7 +39,8 @@ impl Debug for TypeName {
 impl Debug for Ty {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            Ty::Var(depth) => write!(fmt, "?{}", depth),
+            Ty::BoundVar(depth) => write!(fmt, "^{}", depth),
+            Ty::InferenceVar(var) => write!(fmt, "{:?}", var),
             Ty::Apply(apply) => write!(fmt, "{:?}", apply),
             Ty::Projection(proj) => write!(fmt, "{:?}", proj),
             Ty::UnselectedProjection(proj) => write!(fmt, "{:?}", proj),
@@ -47,6 +48,13 @@ impl Debug for Ty {
         }
     }
 }
+
+impl Debug for InferenceVar {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "?{}", self.index)
+    }
+}
+
 
 impl Debug for QuantifiedTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
@@ -59,9 +67,17 @@ impl Debug for QuantifiedTy {
 impl Debug for Lifetime {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            Lifetime::Var(depth) => write!(fmt, "'?{}", depth),
-            Lifetime::ForAll(UniversalIndex { ui, idx }) => write!(fmt, "'!{}_{}", ui.counter, idx),
+            Lifetime::BoundVar(depth) => write!(fmt, "'^{}", depth),
+            Lifetime::InferenceVar(var) => write!(fmt, "'{:?}", var),
+            Lifetime::Placeholder(index) => write!(fmt, "'{:?}", index),
         }
+    }
+}
+
+impl Debug for PlaceholderIndex {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let PlaceholderIndex { ui, idx } = self;
+        write!(fmt, "!{}_{}", ui.counter, idx)
     }
 }
 

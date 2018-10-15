@@ -319,8 +319,8 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
     fn to_parameter(&self) -> Parameter {
         let &(binder, index) = self;
         match *binder {
-            ParameterKind::Lifetime(_) => ParameterKind::Lifetime(Lifetime::Var(index)),
-            ParameterKind::Ty(_) => ParameterKind::Ty(Ty::Var(index)),
+            ParameterKind::Lifetime(_) => ParameterKind::Lifetime(Lifetime::BoundVar(index)),
+            ParameterKind::Ty(_) => ParameterKind::Ty(Ty::BoundVar(index)),
         }
     }
 }

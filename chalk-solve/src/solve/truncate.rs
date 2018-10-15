@@ -1,16 +1,14 @@
 //!
 
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{self, Fold, IdentityExistentialFolder, IdentityUniversalFolder, TypeFolder};
 use chalk_ir::fold::shift::Shift;
+use chalk_ir::fold::{
+    self, DefaultFreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder, Fold, TypeFolder,
+};
 use chalk_ir::*;
 use crate::infer::InferenceTable;
 
-crate fn truncate<T>(
-    infer: &mut InferenceTable,
-    max_size: usize,
-    value: &T,
-) -> Truncated<T::Result>
+crate fn truncate<T>(infer: &mut InferenceTable, max_size: usize, value: &T) -> Truncated<T::Result>
 where
     T: Fold,
 {
@@ -68,7 +66,7 @@ impl<'infer> Truncater<'infer> {
 
 impl<'infer> TypeFolder for Truncater<'infer> {
     fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
-        if let Some(normalized_ty) = self.infer.normalize_shallow(ty, binders) {
+        if let Some(normalized_ty) = self.infer.normalize_shallow(ty) {
             return self.fold_ty(&normalized_ty, binders);
         }
 
@@ -107,9 +105,11 @@ impl<'infer> TypeFolder for Truncater<'infer> {
     }
 }
 
-impl<'infer> IdentityExistentialFolder for Truncater<'infer> {}
+impl<'infer> DefaultFreeVarFolder for Truncater<'infer> {}
 
-impl<'infer> IdentityUniversalFolder for Truncater<'infer> {}
+impl<'infer> DefaultInferenceFolder for Truncater<'infer> {}
+
+impl<'infer> DefaultPlaceholderFolder for Truncater<'infer> {}
 
 #[test]
 fn truncate_types() {
@@ -122,7 +122,7 @@ fn truncate_types() {
                   (apply (item 0)
                    (apply (item 0)
                     (apply (item 0)
-                     (apply (skol 1))))));
+                     (apply (placeholder 1))))));
 
     // test: no truncation with size 5
     let Truncated {
@@ -135,7 +135,7 @@ fn truncate_types() {
     // test: with size 3, truncates to `Vec<Vec<X>>`
     let ty_expect = ty!(apply (item 0)
                         (apply (item 0)
-                         (var 0)));
+                         (infer 0)));
     let Truncated {
         overflow,
         value: ty_overflow,
@@ -147,7 +147,7 @@ fn truncate_types() {
     let _u2 = table.new_universe();
     let ty_in_u2 = ty!(apply (item 0)
                        (apply (item 0)
-                        (apply (skol 2))));
+                        (apply (placeholder 2))));
     table
         .unify(environment0, &ty_overflow, &ty_in_u2)
         .unwrap_err();
@@ -163,7 +163,7 @@ fn truncate_multiple_types() {
                   (apply (item 0)
                    (apply (item 0)
                     (apply (item 0)
-                     (apply (skol 1))))));
+                     (apply (placeholder 1))))));
 
     // test: no truncation with size 5
     let ty0_3 = vec![ty0.clone(), ty0.clone(), ty0.clone()];
@@ -192,9 +192,9 @@ fn truncate_multiple_types() {
     assert!(overflow);
     assert_eq!(
         vec![
-            ty!(apply (item 0) (apply (item 0) (var 0))),
-            ty!(apply (item 0) (apply (item 0) (var 1))),
-            ty!(apply (item 0) (apply (item 0) (var 2))),
+            ty!(apply (item 0) (apply (item 0) (infer 0))),
+            ty!(apply (item 0) (apply (item 0) (infer 1))),
+            ty!(apply (item 0) (apply (item 0) (infer 2))),
         ],
         ty_overflow
     );
@@ -211,12 +211,12 @@ fn truncate_normalizes() {
     let v0 = table.new_variable(u1);
     let ty0 = ty!(apply (item 0)
                   (apply (item 0)
-                   (var 0)));
+                   (infer 0)));
 
     // ty1 = Vec<Vec<T>>
     let ty1 = ty!(apply (item 0)
                   (apply (item 0)
-                   (apply (skol 1))));
+                   (apply (placeholder 1))));
 
     // test: truncating *before* unifying has no effect
     assert!(!truncate(&mut table, 3, &ty0).overflow);
@@ -233,7 +233,7 @@ fn truncate_normalizes() {
     assert_eq!(
         ty!(apply (item 0)
             (apply (item 0)
-             (var 1))),
+             (infer 1))),
         ty_overflow
     );
 }
@@ -251,8 +251,7 @@ fn truncate_normalizes_under_binders() {
     let ty0 = ty!(for_all 1
                   (apply (item 0)
                    (apply (item 0)
-                    (var 1))));
+                    (infer 0))));
 
-    // the index in `(var 1)` should be adjusted to account for binders
     assert!(!truncate(&mut table, 4, &ty0).overflow);
 }

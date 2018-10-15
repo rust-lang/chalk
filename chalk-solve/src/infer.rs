@@ -1,7 +1,6 @@
 use ena::unify as ena;
 use chalk_ir::*;
 use chalk_ir::fold::Fold;
-use chalk_ir::fold::shift::Shift;
 
 pub mod canonicalize;
 pub mod ucanonicalize;
@@ -10,25 +9,24 @@ pub mod instantiate;
 mod invert;
 pub mod unify;
 pub mod var;
-#[cfg(test)]
 mod test;
 
 use self::var::*;
 
 #[derive(Clone)]
 pub struct InferenceTable {
-    unify: ena::UnificationTable<InferenceVariable>,
-    vars: Vec<InferenceVariable>,
+    unify: ena::UnificationTable<EnaVariable>,
+    vars: Vec<EnaVariable>,
     max_universe: UniverseIndex,
 }
 
 pub struct InferenceSnapshot {
-    unify_snapshot: ena::Snapshot<InferenceVariable>,
+    unify_snapshot: ena::Snapshot<EnaVariable>,
     max_universe: UniverseIndex,
-    vars: Vec<InferenceVariable>,
+    vars: Vec<EnaVariable>,
 }
 
-crate type ParameterInferenceVariable = ParameterKind<InferenceVariable>;
+crate type ParameterEnaVariable = ParameterKind<EnaVariable>;
 
 impl InferenceTable {
     /// Create an empty inference table with no variables.
@@ -62,21 +60,7 @@ impl InferenceTable {
         }
 
         let subst = table.fresh_subst(&canonical.binders);
-
-        // Pointless micro-optimization: The fully correct way to
-        // instantiate `value` is to substitute `subst` like so:
-        //
-        //     let value = canonical.substitute(&subst);
-        //
-        // However, because (a) this is a canonical value, and hence
-        // contains no free variables except for those bound in the
-        // canonical binders and (b) we just create the inference
-        // table, and we created all of its variables from those same
-        // binders, we know that this substitution will have the form
-        // `?0 := ?0` and so forth.  So we can just "clone" the
-        // canonical value rather than actually substituting.
-        assert!(subst.is_identity_subst());
-        let value = canonical.value.clone();
+        let value = canonical.value.fold_with(&mut &subst, 0).unwrap();
 
         (table, subst, value)
     }
@@ -100,7 +84,7 @@ impl InferenceTable {
     /// Creates a new inference variable and returns its index. The
     /// kind of the variable should be known by the caller, but is not
     /// tracked directly by the inference table.
-    crate fn new_variable(&mut self, ui: UniverseIndex) -> InferenceVariable {
+    crate fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
         debug!("new_variable: var={:?} ui={:?}", var, ui);
@@ -142,36 +126,25 @@ impl InferenceTable {
     /// `binders` is the number of binders under which `leaf` appears;
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
-    pub fn normalize_shallow(&mut self, leaf: &Ty, binders: usize) -> Option<Ty> {
-        leaf.var().and_then(|depth| {
-            if depth < binders {
-                None // bound variable, not an inference var
-            } else {
-                let var = InferenceVariable::from_depth(depth - binders);
-                match self.unify.probe_value(var) {
-                    InferenceValue::Unbound(_) => None,
-                    InferenceValue::Bound(ref val) => {
-                        let ty = val.as_ref().ty().unwrap();
-                        Some(ty.shifted_in(binders))
-                    }
-                }
+    pub fn normalize_shallow(&mut self, leaf: &Ty) -> Option<Ty> {
+        let var = EnaVariable::from(leaf.inference_var()?);
+        match self.unify.probe_value(var) {
+            InferenceValue::Unbound(_) => None,
+            InferenceValue::Bound(ref val) => {
+                let ty = val.as_ref().ty().unwrap().clone();
+                assert!(!ty.needs_shift());
+                Some(ty)
             }
-        })
+        }
     }
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
-    pub fn normalize_lifetime(&mut self, leaf: &Lifetime, binders: usize) -> Option<Lifetime> {
-        match *leaf {
-            Lifetime::Var(v) => {
-                if v < binders {
-                    return None;
-                }
-                let v1 = self.probe_lifetime_var(InferenceVariable::from_depth(v - binders))?;
-                Some(v1.shifted_in(binders))
-            }
-            Lifetime::ForAll(_) => None,
-        }
+    pub fn normalize_lifetime(&mut self, leaf: &Lifetime) -> Option<Lifetime> {
+        let var = EnaVariable::from(leaf.inference_var()?);
+        let v1 = self.probe_lifetime_var(var)?;
+        assert!(!v1.needs_shift());
+        Some(v1)
     }
 
     /// Finds the type to which `var` is bound, returning `None` if it is not yet
@@ -182,7 +155,7 @@ impl InferenceTable {
     /// This method is only valid for inference variables of kind
     /// type. If this variable is of a different kind, then the
     /// function may panic.
-    fn probe_ty_var(&mut self, var: InferenceVariable) -> Option<Ty> {
+    fn probe_ty_var(&mut self, var: EnaVariable) -> Option<Ty> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().ty().unwrap().clone()),
@@ -196,7 +169,7 @@ impl InferenceTable {
     ///
     /// This method is only valid for inference variables of kind
     /// lifetime. If this variable is of a different kind, then the function may panic.
-    fn probe_lifetime_var(&mut self, var: InferenceVariable) -> Option<Lifetime> {
+    fn probe_lifetime_var(&mut self, var: EnaVariable) -> Option<Lifetime> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().lifetime().unwrap().clone()),
@@ -208,7 +181,7 @@ impl InferenceTable {
     /// # Panics
     ///
     /// Panics if the variable is bound.
-    fn universe_of_unbound_var(&mut self, var: InferenceVariable) -> UniverseIndex {
+    fn universe_of_unbound_var(&mut self, var: EnaVariable) -> UniverseIndex {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(ui) => ui,
             InferenceValue::Bound(_) => panic!("var_universe invoked on bound variable"),
@@ -216,11 +189,11 @@ impl InferenceTable {
     }
 }
 
-pub trait ParameterInferenceVariableExt {
+pub trait ParameterEnaVariableExt {
     fn to_parameter(self) -> Parameter;
 }
 
-impl ParameterInferenceVariableExt for ParameterInferenceVariable {
+impl ParameterEnaVariableExt for ParameterEnaVariable {
     fn to_parameter(self) -> Parameter {
         match self {
             ParameterKind::Ty(v) => ParameterKind::Ty(v.to_ty()),

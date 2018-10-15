@@ -15,7 +15,7 @@ pub enum HhGoal<C: Context> {
 
     /// Indicates something that cannot be proven to be true or false
     /// definitively. This can occur with overflow but also with
-    /// unifications of skolemized variables like `forall<X,Y> { X = Y
+    /// unifications of placeholder variables like `forall<X,Y> { X = Y
     /// }`. Of course, that statement is false, as there exist types
     /// X, Y where `X = Y` is not true. But we treat it as "cannot
     /// prove" so that `forall<X,Y> { not { X = Y } }` also winds up

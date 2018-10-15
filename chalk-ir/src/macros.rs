@@ -23,8 +23,12 @@ macro_rules! ty {
         })
     };
 
-    (var $b:expr) => {
-        $crate::Ty::Var($b)
+    (infer $b:expr) => {
+        $crate::Ty::InferenceVar($crate::InferenceVar::from($b))
+    };
+
+    (bound $b:expr) => {
+        $crate::Ty::BoundVar($b)
     };
 
     (expr $b:expr) => {
@@ -49,12 +53,16 @@ macro_rules! arg {
 
 #[macro_export]
 macro_rules! lifetime {
-    (var $b:expr) => {
-        $crate::Lifetime::Var($b)
+    (infer $b:expr) => {
+        $crate::Lifetime::InferenceVar($crate::InferenceVar::from($b))
     };
 
-    (skol $b:expr) => {
-        $crate::Lifetime::ForAll(UniversalIndex { ui: UniverseIndex { counter: $b }, idx: 0})
+    (bound $b:expr) => {
+        $crate::Lifetime::BoundVar($b)
+    };
+
+    (placeholder $b:expr) => {
+        $crate::Lifetime::Placeholder(PlaceholderIndex { ui: UniverseIndex { counter: $b }, idx: 0})
     };
 
     (expr $b:expr) => {
@@ -69,8 +77,8 @@ macro_rules! lifetime {
 #[macro_export]
 macro_rules! ty_name {
     ((item $n:expr)) => { $crate::TypeName::ItemId(ItemId { index: $n }) };
-    ((skol $n:expr)) => { $crate::TypeName::ForAll(
-                            UniversalIndex {
+    ((placeholder $n:expr)) => { $crate::TypeName::Placeholder(
+                            PlaceholderIndex {
                                 ui: UniverseIndex { counter: $n },
                                 idx: 0,
                             })

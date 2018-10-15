@@ -110,8 +110,10 @@ impl context::ContextOps<SlgContext> for SlgContext {
         &u_canon.canonical
     }
 
-    fn is_trivial_substitution(u_canon: &UCanonical<InEnvironment<Goal>>,
-                               canonical_subst: &Canonical<ConstrainedSubst>) -> bool {
+    fn is_trivial_substitution(
+        u_canon: &UCanonical<InEnvironment<Goal>>,
+        canonical_subst: &Canonical<ConstrainedSubst>,
+    ) -> bool {
         u_canon.is_trivial_substitution(canonical_subst)
     }
 
@@ -210,7 +212,8 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
             .filter(|&env_clause| env_clause.could_match(goal))
             .cloned();
 
-        let program_clauses = self.program
+        let program_clauses = self
+            .program
             .program_clauses
             .iter()
             .filter(|&clause| clause.could_match(goal))
@@ -227,10 +230,7 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         *self.infer.instantiate_binders_existentially(arg)
     }
 
-    fn debug_ex_clause<'v>(
-        &mut self,
-        value: &'v ExClause<SlgContext>,
-    ) -> Box<dyn Debug + 'v> {
+    fn debug_ex_clause<'v>(&mut self, value: &'v ExClause<SlgContext>) -> Box<dyn Debug + 'v> {
         Box::new(self.infer.normalize_deep(value))
     }
 
@@ -294,20 +294,13 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         c
     }
 
-    fn into_ex_clause(
-        &mut self,
-        result: UnificationResult,
-        ex_clause: &mut ExClause<SlgContext>,
-    ) {
+    fn into_ex_clause(&mut self, result: UnificationResult, ex_clause: &mut ExClause<SlgContext>) {
         into_ex_clause(result, ex_clause)
     }
 }
 
 /// Helper function
-fn into_ex_clause(
-    result: UnificationResult,
-    ex_clause: &mut ExClause<SlgContext>,
-) {
+fn into_ex_clause(result: UnificationResult, ex_clause: &mut ExClause<SlgContext>) {
     ex_clause
         .subgoals
         .extend(result.goals.into_iter().casted().map(Literal::Positive));
@@ -347,24 +340,38 @@ impl MayInvalidate {
     // Returns true if the two types could be unequal.
     fn aggregate_tys(&mut self, new: &Ty, current: &Ty) -> bool {
         match (new, current) {
-            (_, Ty::Var(_)) => {
-                // If the aggregate solution already has an inference variable here, then no matter
-                // what type we produce, the aggregate cannot get 'more generalized' than it already
-                // is. So return false, we cannot invalidate.
+            (_, Ty::BoundVar(_)) => {
+                // If the aggregate solution already has an inference
+                // variable here, then no matter what type we produce,
+                // the aggregate cannot get 'more generalized' than it
+                // already is. So return false, we cannot invalidate.
+                //
+                // (Note that "inference variables" show up as *bound
+                // variables* here, because we are looking at the
+                // canonical form.)
                 false
             }
 
-            (Ty::Var(_), _) => {
-                // If we see a type variable in the potential future solution, we have to be
-                // conservative. We don't know what type variable will wind up being! Remember that
-                // the future solution could be any instantiation of `ty0` -- or it could leave this
-                // variable unbound, if the result is true for all types.
+            (Ty::BoundVar(_), _) => {
+                // If we see a type variable in the potential future
+                // solution, we have to be conservative. We don't know
+                // what type variable will wind up being! Remember
+                // that the future solution could be any instantiation
+                // of `ty0` -- or it could leave this variable
+                // unbound, if the result is true for all types.
+                //
+                // (Note that "inference variables" show up as *bound
+                // variables* here, because we are looking at the
+                // canonical form.)
                 true
             }
 
-            // Aggregating universally-quantified types seems hard according to Niko. ;)
-            // Since this is the case, we are conservative here and just say we may invalidate.
-            (Ty::ForAll(_), Ty::ForAll(_)) => true,
+            (Ty::InferenceVar(_), _) | (_, Ty::InferenceVar(_)) => {
+                panic!(
+                    "unexpected free inference variable in may-invalidate: {:?} vs {:?}",
+                    new, current,
+                );
+            }
 
             (Ty::Apply(apply1), Ty::Apply(apply2)) => {
                 self.aggregate_application_tys(apply1, apply2)
@@ -378,6 +385,7 @@ impl MayInvalidate {
                 self.aggregate_unselected_projection_tys(apply1, apply2)
             }
 
+            // For everything else, be conservative here and just say we may invalidate.
             (Ty::ForAll(_), _)
             | (Ty::Apply(_), _)
             | (Ty::Projection(_), _)

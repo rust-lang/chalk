@@ -1,10 +1,10 @@
 use chalk_engine::fallible::Fallible;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
+use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::*;
 use crate::infer::InferenceTable;
 use crate::solve::slg::implementation::{self, SlgContext, TruncatingInferenceTable};
-use chalk_ir::zip::{Zip, Zipper};
 
 use chalk_engine::context;
 use chalk_engine::{ExClause, Literal};
@@ -321,7 +321,7 @@ impl<'t> AnswerSubstitutor<'t> {
 
 impl<'t> Zipper for AnswerSubstitutor<'t> {
     fn zip_tys(&mut self, answer: &Ty, pending: &Ty) -> Fallible<()> {
-        if let Some(pending) = self.table.normalize_shallow(pending, self.pending_binders) {
+        if let Some(pending) = self.table.normalize_shallow(pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
@@ -329,7 +329,7 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
         // "inputs" to the subgoal table. We need to extract the
         // resulting answer that the subgoal found and unify it with
         // the value from our "pending subgoal".
-        if let Ty::Var(answer_depth) = answer {
+        if let Ty::BoundVar(answer_depth) = answer {
             if self.unify_free_answer_var(*answer_depth, ParameterKind::Ty(pending))? {
                 return Ok(());
             }
@@ -338,7 +338,7 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
         // Otherwise, the answer and the selected subgoal ought to be a perfect match for
         // one another.
         match (answer, pending) {
-            (Ty::Var(answer_depth), Ty::Var(pending_depth)) => {
+            (Ty::BoundVar(answer_depth), Ty::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
@@ -361,7 +361,12 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
                 Ok(())
             }
 
-            (Ty::Var(_), _)
+            (Ty::InferenceVar(_), _) | (_, Ty::InferenceVar(_)) => panic!(
+                "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
+                answer, pending,
+            ),
+
+            (Ty::BoundVar(_), _)
             | (Ty::Apply(_), _)
             | (Ty::Projection(_), _)
             | (Ty::UnselectedProjection(_), _)
@@ -373,27 +378,32 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
     }
 
     fn zip_lifetimes(&mut self, answer: &Lifetime, pending: &Lifetime) -> Fallible<()> {
-        if let Some(pending) = self.table.normalize_lifetime(pending, self.pending_binders) {
+        if let Some(pending) = self.table.normalize_lifetime(pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
-        if let Lifetime::Var(answer_depth) = answer {
+        if let Lifetime::BoundVar(answer_depth) = answer {
             if self.unify_free_answer_var(*answer_depth, ParameterKind::Lifetime(pending))? {
                 return Ok(());
             }
         }
 
         match (answer, pending) {
-            (Lifetime::Var(answer_depth), Lifetime::Var(pending_depth)) => {
+            (Lifetime::BoundVar(answer_depth), Lifetime::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (Lifetime::ForAll(_), Lifetime::ForAll(_)) => {
+            (Lifetime::Placeholder(_), Lifetime::Placeholder(_)) => {
                 assert_eq!(answer, pending);
                 Ok(())
             }
 
-            (Lifetime::Var(_), _) | (Lifetime::ForAll(_), _) => panic!(
+            (Lifetime::InferenceVar(_), _) | (_, Lifetime::InferenceVar(_)) => panic!(
+                "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
+                answer, pending,
+            ),
+
+            (Lifetime::BoundVar(_), _) | (Lifetime::Placeholder(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),

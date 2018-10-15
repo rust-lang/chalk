@@ -1,11 +1,13 @@
 use chalk_engine::fallible::*;
-use chalk_ir::fold::{DefaultTypeFolder, ExistentialFolder, Fold, UniversalFolder};
 use chalk_ir::fold::shift::Shift;
+use chalk_ir::fold::{
+    DefaultFreeVarFolder, DefaultInferenceFolder, DefaultTypeFolder, Fold, PlaceholderFolder,
+};
 use chalk_ir::*;
 use std::collections::HashMap;
 
-use super::{InferenceTable, InferenceVariable};
 use super::canonicalize::Canonicalized;
+use super::{EnaVariable, InferenceTable};
 
 impl InferenceTable {
     /// Converts `value` into a "negation" value -- meaning one that,
@@ -44,12 +46,12 @@ impl InferenceTable {
     ///
     /// An additional complication arises around free universal
     /// variables.  Consider a query like `not { !0 = !1 }`, where
-    /// `!0` and `!1` represent universally quantified types (i.e.,
-    /// `TypeName::ForAll`). If we just tried to prove `!0 = !1`, we
-    /// would get false, because those types cannot be unified -- this
-    /// would then allow us to conclude that `not { !0 = !1 }`, i.e.,
-    /// `forall<X, Y> { not { X = Y } }`, but this is clearly not true
-    /// -- what if X were to be equal to Y?
+    /// `!0` and `!1` are placeholders for universally quantified
+    /// types (i.e., `TypeName::Placeholder`). If we just tried to
+    /// prove `!0 = !1`, we would get false, because those types
+    /// cannot be unified -- this would then allow us to conclude that
+    /// `not { !0 = !1 }`, i.e., `forall<X, Y> { not { X = Y } }`, but
+    /// this is clearly not true -- what if X were to be equal to Y?
     ///
     /// Interestingly, the semantics of existential variables turns
     /// out to be exactly what we want here. So, in addition to
@@ -97,8 +99,8 @@ impl InferenceTable {
 
 struct Inverter<'q> {
     table: &'q mut InferenceTable,
-    inverted_ty: HashMap<UniversalIndex, InferenceVariable>,
-    inverted_lifetime: HashMap<UniversalIndex, InferenceVariable>,
+    inverted_ty: HashMap<PlaceholderIndex, EnaVariable>,
+    inverted_lifetime: HashMap<PlaceholderIndex, EnaVariable>,
 }
 
 impl<'q> Inverter<'q> {
@@ -113,44 +115,44 @@ impl<'q> Inverter<'q> {
 
 impl<'q> DefaultTypeFolder for Inverter<'q> {}
 
-impl<'q> UniversalFolder for Inverter<'q> {
-    fn fold_free_universal_ty(&mut self, universe: UniversalIndex, binders: usize) -> Fallible<Ty> {
+impl<'q> PlaceholderFolder for Inverter<'q> {
+    fn fold_free_placeholder_ty(
+        &mut self,
+        universe: PlaceholderIndex,
+        binders: usize,
+    ) -> Fallible<Ty> {
         let table = &mut self.table;
-        Ok(
-            self.inverted_ty
-                .entry(universe)
-                .or_insert_with(|| table.new_variable(universe.ui))
-                .to_ty()
-                .shifted_in(binders),
-        )
+        Ok(self
+            .inverted_ty
+            .entry(universe)
+            .or_insert_with(|| table.new_variable(universe.ui))
+            .to_ty()
+            .shifted_in(binders))
     }
 
-    fn fold_free_universal_lifetime(
+    fn fold_free_placeholder_lifetime(
         &mut self,
-        universe: UniversalIndex,
+        universe: PlaceholderIndex,
         binders: usize,
     ) -> Fallible<Lifetime> {
         let table = &mut self.table;
-        Ok(
-            self.inverted_lifetime
-                .entry(universe)
-                .or_insert_with(|| table.new_variable(universe.ui))
-                .to_lifetime()
-                .shifted_in(binders),
-        )
+        Ok(self
+            .inverted_lifetime
+            .entry(universe)
+            .or_insert_with(|| table.new_variable(universe.ui))
+            .to_lifetime()
+            .shifted_in(binders))
     }
 }
 
-impl<'q> ExistentialFolder for Inverter<'q> {
-    fn fold_free_existential_ty(&mut self, _depth: usize, _binders: usize) -> Fallible<Ty> {
-        panic!("should not be any existentials")
+impl<'q> DefaultFreeVarFolder for Inverter<'q> {
+    fn forbid() -> bool {
+        true
     }
+}
 
-    fn fold_free_existential_lifetime(
-        &mut self,
-        _depth: usize,
-        _binders: usize,
-    ) -> Fallible<Lifetime> {
-        panic!("should not be any existentials")
+impl<'q> DefaultInferenceFolder for Inverter<'q> {
+    fn forbid() -> bool {
+        true
     }
 }

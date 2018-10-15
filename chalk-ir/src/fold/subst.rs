@@ -25,10 +25,10 @@ impl QuantifiedTy {
 
 impl<'b> DefaultTypeFolder for Subst<'b> {}
 
-impl<'b> ExistentialFolder for Subst<'b> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<'b> FreeVarFolder for Subst<'b> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
         if depth >= self.parameters.len() {
-            Ok(Ty::Var(depth - self.parameters.len() + binders))
+            Ok(Ty::BoundVar(depth - self.parameters.len() + binders))
         } else {
             match self.parameters[depth] {
                 ParameterKind::Ty(ref t) => Ok(t.shifted_in(binders)),
@@ -37,13 +37,13 @@ impl<'b> ExistentialFolder for Subst<'b> {
         }
     }
 
-    fn fold_free_existential_lifetime(
+    fn fold_free_var_lifetime(
         &mut self,
         depth: usize,
         binders: usize,
     ) -> Fallible<Lifetime> {
         if depth >= self.parameters.len() {
-            Ok(Lifetime::Var(depth - self.parameters.len() + binders))
+            Ok(Lifetime::BoundVar(depth - self.parameters.len() + binders))
         } else {
             match self.parameters[depth] {
                 ParameterKind::Lifetime(ref l) => Ok(l.shifted_in(binders)),
@@ -53,4 +53,6 @@ impl<'b> ExistentialFolder for Subst<'b> {
     }
 }
 
-impl<'b> IdentityUniversalFolder for Subst<'b> {}
+impl<'b> DefaultPlaceholderFolder for Subst<'b> {}
+
+impl<'b> DefaultInferenceFolder for Subst<'b> {}

@@ -843,7 +843,7 @@ impl LowerTy for Ty {
                         parameters: vec![],
                     }))
                 }
-                NameLookup::Parameter(d) => Ok(chalk_ir::Ty::Var(d)),
+                NameLookup::Parameter(d) => Ok(chalk_ir::Ty::BoundVar(d)),
             },
 
             Ty::Apply { name, ref args } => {
@@ -924,7 +924,7 @@ impl LowerLifetime for Lifetime {
     fn lower(&self, env: &Env) -> Result<chalk_ir::Lifetime> {
         match *self {
             Lifetime::Id { name } => match env.lookup_lifetime(name)? {
-                LifetimeLookup::Parameter(d) => Ok(chalk_ir::Lifetime::Var(d)),
+                LifetimeLookup::Parameter(d) => Ok(chalk_ir::Lifetime::BoundVar(d)),
             },
         }
     }

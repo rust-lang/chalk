@@ -88,13 +88,18 @@ impl FoldInputTypes for Ty {
 
             // Type parameters do not carry any input types (so we can sort of assume they are
             // always WF).
-            Ty::Var(..) => (),
+            Ty::BoundVar(..) => (),
 
             // Higher-kinded types such as `for<'a> fn(&'a u32)` introduce their own implied
             // bounds, and these bounds will be enforced upon calling such a function. In some
             // sense, well-formedness requirements for the input types of an HKT will be enforced
             // lazily, so no need to include them here.
             Ty::ForAll(..) => (),
+
+            Ty::InferenceVar(..) => panic!(
+                "unexpected inference variable in wf rules: {:?}",
+                self,
+            ),
         }
     }
 }

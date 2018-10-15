@@ -1,39 +1,9 @@
-use chalk_engine::fallible::*;
 use chalk_ir::fold::*;
 use std::fmt::Debug;
 
 use super::*;
 
 impl InferenceTable {
-    /// Create a instance of `arg` where each variable is replaced with
-    /// a fresh inference variable of suitable kind.
-    fn instantiate<U, T>(&mut self, universes: U, arg: &T) -> T::Result
-    where
-        T: Fold + Debug,
-        U: IntoIterator<Item = ParameterKind<UniverseIndex>>,
-    {
-        debug!("instantiate(arg={:?})", arg);
-        let vars: Vec<_> = universes
-            .into_iter()
-            .map(|param_kind| self.parameter_kind_to_parameter(param_kind))
-            .collect();
-        debug!("instantiate: vars={:?}", vars);
-        let mut instantiator = Instantiator { vars };
-        arg.fold_with(&mut instantiator, 0).expect("")
-    }
-
-    fn parameter_kind_to_parameter(
-        &mut self,
-        param_kind: ParameterKind<UniverseIndex>,
-    ) -> Parameter {
-        match param_kind {
-            ParameterKind::Ty(ui) => ParameterKind::Ty(self.new_variable(ui).to_ty()),
-            ParameterKind::Lifetime(ui) => {
-                ParameterKind::Lifetime(self.new_variable(ui).to_lifetime())
-            }
-        }
-    }
-
     /// Given the binders from a canonicalized value C, returns a
     /// substitution S mapping each free variable in C to a fresh
     /// inference variable. This substitution can then be applied to
@@ -56,7 +26,8 @@ impl InferenceTable {
     where
         T: Fold + Debug,
     {
-        self.instantiate(bound.binders.iter().cloned(), &bound.value)
+        let subst = self.fresh_subst(&bound.binders);
+        bound.value.fold_with(&mut &subst, 0).unwrap()
     }
 
     /// Instantiates `arg` with fresh existential variables in the
@@ -74,7 +45,9 @@ impl InferenceTable {
         T: Fold,
         U: IntoIterator<Item = ParameterKind<()>>,
     {
-        self.instantiate(binders.into_iter().map(|pk| pk.map(|_| universe)), arg)
+        let binders: Vec<_> = binders.into_iter().map(|pk| pk.map(|()| universe)).collect();
+        let subst = self.fresh_subst(&binders);
+        arg.fold_with(&mut &subst, 0).unwrap()
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
@@ -105,13 +78,13 @@ impl InferenceTable {
             .iter()
             .enumerate()
             .map(|(idx, pk)| {
-                let universal_idx = UniversalIndex { ui, idx };
+                let placeholder_idx = PlaceholderIndex { ui, idx };
                 match *pk {
                     ParameterKind::Lifetime(()) => {
-                        let lt = universal_idx.to_lifetime();
+                        let lt = placeholder_idx.to_lifetime();
                         ParameterKind::Lifetime(lt)
                     }
-                    ParameterKind::Ty(()) => ParameterKind::Ty(universal_idx.to_ty()),
+                    ParameterKind::Ty(()) => ParameterKind::Ty(placeholder_idx.to_ty()),
                 }
             })
             .collect();
@@ -140,38 +113,3 @@ impl<'a, T> BindersAndValue for (&'a Vec<ParameterKind<()>>, &'a T) {
         (&self.0, &self.1)
     }
 }
-
-struct Instantiator {
-    vars: Vec<Parameter>,
-}
-
-impl DefaultTypeFolder for Instantiator {}
-
-/// When we encounter a free variable (of any kind) with index
-/// `i`, we want to map anything in the first N binders to
-/// `self.vars[i]`. Everything else stays intact, but we have to
-/// subtract `self.vars.len()` to account for the binders we are
-/// instantiating.
-impl ExistentialFolder for Instantiator {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        if depth < self.vars.len() {
-            Ok(self.vars[depth].assert_ty_ref().shifted_in(binders))
-        } else {
-            Ok(Ty::Var(depth + binders - self.vars.len())) // see comment above
-        }
-    }
-
-    fn fold_free_existential_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
-        if depth < self.vars.len() {
-            Ok(self.vars[depth].assert_lifetime_ref().shifted_in(binders))
-        } else {
-            Ok(Lifetime::Var(depth + binders - self.vars.len())) // see comment above
-        }
-    }
-}
-
-impl IdentityUniversalFolder for Instantiator {}

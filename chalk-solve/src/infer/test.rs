@@ -1,44 +1,7 @@
-use chalk_engine::fallible::*;
-use chalk_ir::fold::*;
+#![cfg(test)]
+
 use super::*;
 use super::unify::UnificationResult;
-
-impl InferenceTable {
-    pub fn normalize<T>(&mut self, value: &T) -> T::Result
-    where
-        T: Fold,
-    {
-        value.fold_with(&mut Normalizer { table: self }, 0).unwrap()
-    }
-}
-
-struct Normalizer<'a> {
-    table: &'a mut InferenceTable,
-}
-
-impl<'q> DefaultTypeFolder for Normalizer<'q> {}
-
-impl<'q> ExistentialFolder for Normalizer<'q> {
-    fn fold_free_existential_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
-        assert_eq!(binders, 0);
-        let var = InferenceVariable::from_depth(depth);
-        match self.table.probe_ty_var(var) {
-            Some(ty) => ty.fold_with(self, 0),
-            None => Ok(var.to_ty()),
-        }
-    }
-
-    fn fold_free_existential_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
-        assert_eq!(binders, 0);
-        Ok(InferenceVariable::from_depth(depth).to_lifetime())
-    }
-}
-
-impl<'q> IdentityUniversalFolder for Normalizer<'q> {}
 
 #[test]
 fn infer() {
@@ -49,11 +12,11 @@ fn infer() {
     table
         .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
-    assert_eq!(table.normalize(&a), ty!(apply (item 0) (expr b)));
+    assert_eq!(table.normalize_deep(&a), ty!(apply (item 0) (expr b)));
     table
         .unify(&environment0, &b, &ty!(apply (item 1)))
         .unwrap();
-    assert_eq!(table.normalize(&a), ty!(apply (item 0) (apply (item 1))));
+    assert_eq!(table.normalize_deep(&a), ty!(apply (item 0) (apply (item 1))));
 }
 
 #[test]
@@ -63,7 +26,7 @@ fn universe_error() {
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     table
-        .unify(&environment0, &a, &ty!(apply (skol 1)))
+        .unify(&environment0, &a, &ty!(apply (placeholder 1)))
         .unwrap_err();
 }
 
@@ -79,7 +42,7 @@ fn cycle_error() {
 
     // exists(A -> A = for<'a> A)
     table
-        .unify(&environment0, &a, &ty!(for_all 1 (var 1)))
+        .unify(&environment0, &a, &ty!(for_all 1 (infer 0)))
         .unwrap_err();
 }
 
@@ -104,7 +67,7 @@ fn universe_error_indirect_1() {
     let a = table.new_variable(U0).to_ty();
     let b = table.new_variable(U1).to_ty();
     table
-        .unify(&environment0, &b, &ty!(apply (skol 1)))
+        .unify(&environment0, &b, &ty!(apply (placeholder 1)))
         .unwrap();
     table.unify(&environment0, &a, &b).unwrap_err();
 }
@@ -118,7 +81,7 @@ fn universe_error_indirect_2() {
     let b = table.new_variable(U1).to_ty();
     table.unify(&environment0, &a, &b).unwrap();
     table
-        .unify(&environment0, &b, &ty!(apply (skol 1)))
+        .unify(&environment0, &b, &ty!(apply (placeholder 1)))
         .unwrap_err();
 }
 
@@ -148,7 +111,7 @@ fn universe_promote_bad() {
         .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
     table
-        .unify(&environment0, &b, &ty!(apply (skol 1)))
+        .unify(&environment0, &b, &ty!(apply (placeholder 1)))
         .unwrap_err();
 }
 
@@ -191,10 +154,10 @@ fn quantify_simple() {
 
     assert_eq!(
         table
-            .canonicalize(&ty!(apply (item 0) (var 2) (var 1) (var 0)))
+            .canonicalize(&ty!(apply (item 0) (infer 2) (infer 1) (infer 0)))
             .quantified,
         Canonical {
-            value: ty!(apply (item 0) (var 0) (var 1) (var 2)),
+            value: ty!(apply (item 0) (bound 0) (bound 1) (bound 2)),
             binders: vec![
                 ParameterKind::Ty(U2),
                 ParameterKind::Ty(U1),
@@ -227,7 +190,7 @@ fn quantify_bound() {
             .canonicalize(&ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0)))
             .quantified,
         Canonical {
-            value: ty!(apply (item 0) (apply (item 1) (var 0) (var 1)) (var 2) (var 0) (var 1)),
+            value: ty!(apply (item 0) (apply (item 1) (bound 0) (bound 1)) (bound 2) (bound 0) (bound 1)),
             binders: vec![
                 ParameterKind::Ty(U1),
                 ParameterKind::Ty(U0),
@@ -242,7 +205,7 @@ fn quantify_ty_under_binder() {
     let mut table = make_table();
     let v0 = table.new_variable(U0);
     let v1 = table.new_variable(U0);
-    let _r0 = table.new_variable(U0);
+    let _r2 = table.new_variable(U0);
 
     // Unify v0 and v1.
     let environment0 = Environment::new();
@@ -250,16 +213,18 @@ fn quantify_ty_under_binder() {
         .unify(&environment0, &v0.to_ty(), &v1.to_ty())
         .unwrap();
 
-    // Here: the `for_all` introduces 3 binders, so `(var 3)`
-    // references `v0` and `(var v4)` references `v1` above.
+    // Here: the `for_all` introduces 3 binders, so in the result,
+    // `(bound 3)` references the first canonicalized inference
+    // variable. -- note that `infer 0` and `infer 1` have been
+    // unified above, as well.
     assert_eq!(
         table
             .canonicalize(
-                &ty!(for_all 3 (apply (item 0) (var 1) (var 3) (var 4) (lifetime (var 3))))
+                &ty!(for_all 3 (apply (item 0) (bound 1) (infer 0) (infer 1) (lifetime (infer 2))))
             )
             .quantified,
         Canonical {
-            value: ty!(for_all 3 (apply (item 0) (var 1) (var 3) (var 3) (lifetime (var 4)))),
+            value: ty!(for_all 3 (apply (item 0) (bound 1) (bound 3) (bound 3) (lifetime (bound 4)))),
             binders: vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)],
         }
     );
@@ -277,8 +242,8 @@ fn lifetime_constraint_indirect() {
 
     // Here, we unify '?1 (the lifetime variable in universe 1) with
     // '!1.
-    let t_a = ty!(apply (item 0) (lifetime (skol 1)));
-    let t_b = ty!(apply (item 0) (lifetime (var 1)));
+    let t_a = ty!(apply (item 0) (lifetime (placeholder 1)));
+    let t_b = ty!(apply (item 0) (lifetime (infer 1)));
     let UnificationResult { goals, constraints } = table.unify(&environment0, &t_a, &t_b).unwrap();
     assert!(goals.is_empty());
     assert!(constraints.is_empty());
@@ -288,7 +253,7 @@ fn lifetime_constraint_indirect() {
     // unified with `'!1`, and `'!1` is not visible from universe 0,
     // we will replace `'!1` with a new variable `'?2` and introduce a
     // (likely unsatisfiable) constraint relating them.
-    let t_c = ty!(var 0);
+    let t_c = ty!(infer 0);
     let UnificationResult { goals, constraints } = table.unify(&environment0, &t_c, &t_b).unwrap();
     assert!(goals.is_empty());
     assert_eq!(constraints.len(), 1);
