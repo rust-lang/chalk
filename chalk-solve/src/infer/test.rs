@@ -157,7 +157,7 @@ fn quantify_simple() {
             .canonicalize(&ty!(apply (item 0) (infer 2) (infer 1) (infer 0)))
             .quantified,
         Canonical {
-            value: ty!(apply (item 0) (infer 0) (infer 1) (infer 2)),
+            value: ty!(apply (item 0) (bound 0) (bound 1) (bound 2)),
             binders: vec![
                 ParameterKind::Ty(U2),
                 ParameterKind::Ty(U1),
@@ -190,7 +190,7 @@ fn quantify_bound() {
             .canonicalize(&ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0)))
             .quantified,
         Canonical {
-            value: ty!(apply (item 0) (apply (item 1) (infer 0) (infer 1)) (infer 2) (infer 0) (infer 1)),
+            value: ty!(apply (item 0) (apply (item 1) (bound 0) (bound 1)) (bound 2) (bound 0) (bound 1)),
             binders: vec![
                 ParameterKind::Ty(U1),
                 ParameterKind::Ty(U0),
@@ -205,7 +205,7 @@ fn quantify_ty_under_binder() {
     let mut table = make_table();
     let v0 = table.new_variable(U0);
     let v1 = table.new_variable(U0);
-    let r2 = table.new_variable(U0);
+    let _r2 = table.new_variable(U0);
 
     // Unify v0 and v1.
     let environment0 = Environment::new();
@@ -215,7 +215,8 @@ fn quantify_ty_under_binder() {
 
     // Here: the `for_all` introduces 3 binders, so in the result,
     // `(bound 3)` references the first canonicalized inference
-    // variable.
+    // variable. -- note that `infer 0` and `infer 1` have been
+    // unified above, as well.
     assert_eq!(
         table
             .canonicalize(
