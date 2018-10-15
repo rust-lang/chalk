@@ -1,5 +1,3 @@
-#![feature(non_modrs_mods)]
-#![feature(crate_in_paths)]
 #![feature(crate_visibility_modifier)]
 
 #[macro_use]
