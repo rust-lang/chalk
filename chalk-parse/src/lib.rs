@@ -1,4 +1,3 @@
-#![feature(non_modrs_mods, tool_attributes)]
 #![recursion_limit = "1024"]
 
 #[macro_use]

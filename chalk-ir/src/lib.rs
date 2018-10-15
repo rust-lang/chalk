@@ -1,6 +1,4 @@
-#![feature(non_modrs_mods)]
 #![feature(crate_visibility_modifier)]
-#![feature(crate_in_paths)]
 #![feature(specialization)]
 
 use chalk_engine::fallible::*;
