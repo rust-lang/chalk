@@ -3,34 +3,35 @@
 #[macro_use]
 extern crate error_chain;
 
-extern crate lalrpop_intern;
+#[macro_use] 
 extern crate lalrpop_util;
+extern crate lalrpop_intern;
 
 pub mod ast;
 pub mod errors;
 #[rustfmt::skip]
-mod parser;
+lalrpop_mod!(pub parser);
 
 use errors::Result;
 use lalrpop_util::ParseError;
 use std::fmt::Write;
 
 pub fn parse_program(text: &str) -> Result<ast::Program> {
-    match parser::parse_Program(text) {
+    match parser::ProgramParser::new().parse(text) {
         Ok(v) => Ok(v),
         Err(e) => bail!("parse error: {:?}", e),
     }
 }
 
 pub fn parse_ty(text: &str) -> Result<ast::Ty> {
-    match parser::parse_Ty(text) {
+    match parser::TyParser::new().parse(text) {
         Ok(v) => Ok(v),
         Err(e) => bail!("error parsing `{}`: {:?}", text, e),
     }
 }
 
 pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
-    match parser::parse_Goal(text) {
+    match parser::GoalParser::new().parse(text) {
         Ok(v) => Ok(v),
         Err(e) => {
             let position_string = |start: usize, end: usize| {
