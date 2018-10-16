@@ -15,13 +15,13 @@ use self::var::*;
 
 #[derive(Clone)]
 pub struct InferenceTable {
-    unify: ena::UnificationTable<EnaVariable>,
+    unify: ena::InPlaceUnificationTable<EnaVariable>,
     vars: Vec<EnaVariable>,
     max_universe: UniverseIndex,
 }
 
 pub struct InferenceSnapshot {
-    unify_snapshot: ena::Snapshot<EnaVariable>,
+    unify_snapshot: ena::Snapshot<ena::InPlace<EnaVariable>>,
     max_universe: UniverseIndex,
     vars: Vec<EnaVariable>,
 }
