@@ -95,6 +95,8 @@ impl From<Lifetime> for InferenceValue {
 }
 
 impl UnifyValue for InferenceValue {
+    type Error = (InferenceValue, InferenceValue);
+
     fn unify_values(
         a: &InferenceValue,
         b: &InferenceValue,

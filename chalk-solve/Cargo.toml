@@ -9,7 +9,7 @@ readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 
 [dependencies]
-ena = "0.4"
+ena = "0.10.1"
 
 [dependencies.chalk-macros]
 version = "0.1.0"
