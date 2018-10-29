@@ -10,6 +10,7 @@ script:
 deploy:
   - provider: script
     script: mkdir -p target/gh-pages && mv target/doc target/gh-pages/
+    skip-cleanup: true
     on:
       branch: master
   - provider: pages
