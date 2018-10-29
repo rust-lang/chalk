@@ -8,9 +8,13 @@ script:
   - RUSTC_BOOTSTRAP=1 cargo test --all
   - RUSTC_BOOTSTRAP=1 cargo doc --document-private-items
 deploy:
-  provider: pages
-  local-dir: ./target/doc
-  skip-cleanup: true
-  github-token: $GITHUB_TOKEN
-  on:
-    branch: master
+  - provider: script
+    script: mkdir -p target/gh-pages && mv target/doc target/gh-pages/
+    on:
+      branch: master
+  - provider: pages
+    local-dir: ./target/gh-pages
+    skip-cleanup: true
+    github-token: $GITHUB_TOKEN
+    on:
+      branch: master
