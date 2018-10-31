@@ -6,6 +6,7 @@
 #![feature(specialization)]
 #![feature(step_trait)]
 #![feature(underscore_imports)]
+#![feature(non_modrs_mods)]
 
 extern crate chalk_parse;
 #[macro_use]

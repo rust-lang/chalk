@@ -1,4 +1,5 @@
 #![feature(crate_visibility_modifier)]
+#![feature(non_modrs_mods)]
 
 #[macro_use]
 extern crate chalk_macros;
