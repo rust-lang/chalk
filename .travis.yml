@@ -6,7 +6,7 @@ script:
   - cd chalk-engine && RUSTC_BOOTSTRAP=1 cargo build --no-default-features && cd ..
   - cd chalk-engine && RUSTC_BOOTSTRAP=1 cargo build --all-features && cd ..
   - RUSTC_BOOTSTRAP=1 cargo test --all
-  - RUSTC_BOOTSTRAP=1 cargo doc --document-private-items
+  - RUSTC_BOOTSTRAP=1 cargo doc --all --document-private-items
 deploy:
   - provider: script
     script: mkdir -p target/gh-pages && mv target/doc target/gh-pages/
