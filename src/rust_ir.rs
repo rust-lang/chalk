@@ -198,7 +198,8 @@ crate trait IntoWhereClauses {
 impl IntoWhereClauses for InlineBound {
     type Output = WhereClause;
 
-    /// Applies the `InlineBound` to `self_ty` and lowers to a [`DomainGoal`].
+    /// Applies the `InlineBound` to `self_ty` and lowers to a
+    /// [`chalk_ir::DomainGoal`].
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
