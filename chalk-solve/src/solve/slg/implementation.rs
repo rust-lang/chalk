@@ -58,6 +58,7 @@ impl context::Context for SlgContext {
     type GoalInEnvironment = InEnvironment<Goal>;
     type Substitution = Substitution;
     type RegionConstraint = InEnvironment<Constraint>;
+    type Variance = ();
 
     fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
         InEnvironment::new(environment, goal)
@@ -176,7 +177,7 @@ impl context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTabl
             Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
             Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
             Goal::Not(g1) => HhGoal::Not(*g1),
-            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify(a, b),
+            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify((), a, b),
             Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
             Goal::CannotProve(()) => HhGoal::CannotProve,
         }
@@ -276,6 +277,7 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
     fn unify_parameters(
         &mut self,
         environment: &Arc<Environment>,
+        _: (),
         a: &Parameter,
         b: &Parameter,
     ) -> Fallible<UnificationResult> {
