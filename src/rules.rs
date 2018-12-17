@@ -99,10 +99,13 @@ impl Program {
 }
 
 impl ImplDatum {
-    /// Given `impl<T: Clone> Clone for Vec<T>`, generate:
+    /// Given `impl<T: Clone> Clone for Vec<T> { ... }`, generate:
     ///
     /// ```notrust
-    /// forall<T> { Implemented(Vec<T>: Clone) :- Implemented(T: Clone) }
+    /// -- Rule Implemented-From-Impl
+    /// forall<T> {
+    ///     Implemented(Vec<T>: Clone) :- Implemented(T: Clone).
+    /// }
     /// ```
     fn to_program_clause(&self) -> ProgramClause {
         self.binders
@@ -134,7 +137,7 @@ impl DefaultImplDatum {
     /// forall<T> {
     ///     Implemented(MyList<T>: Send) :-
     ///         Implemented(T: Send),
-    ///         Implemented(Box<Option<MyList<T>>>: Send)
+    ///         Implemented(Box<Option<MyList<T>>>: Send).
     /// }
     /// ```
     fn to_program_clause(&self) -> ProgramClause {
@@ -172,10 +175,11 @@ impl AssociatedTyValue {
     /// we generate:
     ///
     /// ```notrust
+    /// -- Rule Normalize-From-Impl
     /// forall<'a, T> {
     ///     Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>>) :-
     ///         Implemented(Vec<T>: Iterable),  // (1)
-    ///         Implemented(Iter<'a, T>: 'a)    // (2)
+    ///         Implemented(Iter<'a, T>: 'a).   // (2)
     /// }
     /// ```
     ///
@@ -185,7 +189,7 @@ impl AssociatedTyValue {
     /// forall<'a, T> {
     ///     UnselectedNormalize(Vec<T>::IntoIter<'a> -> Iter<'a, T>) :-
     ///         InScope(Iterable),
-    ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>)
+    ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>).
     /// }
     /// ```
     fn to_program_clauses(&self, program: &Program, impl_datum: &ImplDatum) -> Vec<ProgramClause> {
@@ -217,7 +221,7 @@ impl AssociatedTyValue {
             .collect();
 
         // Assemble the full list of conditions for projection to be valid.
-        // This comes in two parts, marked as (1) and (2) in example above:
+        // This comes in two parts, marked as (1) and (2) in doc above:
         //
         // 1. require that the trait is implemented
         // 2. any where-clauses from the `type` declaration in the trait: the
@@ -292,38 +296,55 @@ impl AssociatedTyValue {
 }
 
 impl StructDatum {
+    /// Given the following type definition: `struct Foo<T: Eq> { }`, generate:
+    ///
+    /// ```notrust
+    /// -- Rule WellFormed-Type
+    /// forall<T> {
+    ///     WF(Foo<T>) :- Implemented(T: Eq).
+    /// }
+    ///
+    /// -- Rule Implied-Bound-From-Type
+    /// forall<T> {
+    ///     FromEnv(T: Eq) :- FromEnv(Foo<T>).
+    /// }
+    ///
+    /// forall<T> {
+    ///     IsFullyVisible(Foo<T>) :- IsFullyVisible(T).
+    /// }
+    /// ```
+    ///
+    /// If the type `Foo` is marked `#[upstream]`, we also generate:
+    ///
+    /// ```notrust
+    /// forall<T> { IsUpstream(Foo<T>). }
+    /// ```
+    ///
+    /// Otherwise, if the type `Foo` is not marked `#[upstream]`, we generate:
+    /// ```notrust
+    /// forall<T> { IsLocal(Foo<T>). }
+    /// ```
+    ///
+    /// Given an `#[upstream]` type that is also fundamental:
+    ///
+    /// ```notrust
+    /// #[upstream]
+    /// #[fundamental]
+    /// struct Box<T> {}
+    /// ```
+    ///
+    /// We generate the following clauses:
+    ///
+    /// ```notrust
+    /// forall<T> { IsLocal(Box<T>) :- IsLocal(T). }
+    ///
+    /// forall<T> { IsUpstream(Box<T>) :- IsUpstream(T). }
+    ///
+    /// // Generated for both upstream and local fundamental types
+    /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
+    /// ```
+    ///
     fn to_program_clauses(&self) -> Vec<ProgramClause> {
-        // Given:
-        //
-        //    struct Foo<T: Eq> { }
-        //
-        // we generate the following clauses:
-        //
-        //    forall<T> { WF(Foo<T>) :- Implemented(T: Eq). }
-        //    forall<T> { FromEnv(T: Eq) :- FromEnv(Foo<T>). }
-        //    forall<T> { IsFullyVisible(Foo<T>) :- IsFullyVisible(T) }
-        //
-        // If the type Foo is marked `#[upstream]`, we also generate:
-        //
-        //    forall<T> { IsUpstream(Foo<T>) }
-        //
-        // Otherwise, if the type Foo is not marked `#[upstream]`, we generate:
-        //
-        //    forall<T> { IsLocal(Foo<T>) }
-        //
-        // Given an `#[upstream]` type that is also fundamental:
-        //
-        //    #[upstream]
-        //    #[fundamental]
-        //    struct Box<T> {}
-        //
-        // We generate the following clause:
-        //
-        //    forall<T> { IsLocal(Box<T>) :- IsLocal(T) }
-        //    forall<T> { IsUpstream(Box<T>) :- IsUpstream(T) }
-        //    // Generated for both upstream and local fundamental types
-        //    forall<T> { DownstreamType(Box<T>) :- DownstreamType(T) }
-
         let wf = self
             .binders
             .map_ref(|bound_datum| ProgramClauseImplication {
@@ -443,102 +464,120 @@ impl StructDatum {
 }
 
 impl TraitDatum {
+    /// Given the following trait declaration: `trait Ord<T> where Self: Eq<T> { ... }`, generate:
+    ///
+    /// ```notrust
+    /// -- Rule WellFormed-TraitRef
+    /// forall<Self, T> {
+    ///    WF(Self: Ord<T>) :- Implemented(Self: Ord<T>), WF(Self: Eq<T>).
+    /// }
+    /// ```
+    ///
+    /// and the reverse rules:
+    ///
+    /// ```notrust
+    /// -- Rule Implemented-From-Env
+    /// forall<Self, T> {
+    ///    (Self: Ord<T>) :- FromEnv(Self: Ord<T>).
+    /// }
+    ///
+    /// -- Rule Implied-Bound-From-Trait
+    /// forall<Self, T> {
+    ///     FromEnv(Self: Eq<T>) :- FromEnv(Self: Ord<T>).
+    /// }
+    /// ```
+    ///
+    /// As specified in the orphan rules, if a trait is not marked `#[upstream]`, the current crate
+    /// can implement it for any type. To represent that, we generate:
+    ///
+    /// ```notrust
+    /// // `Ord<T>` would not be `#[upstream]` when compiling `std`
+    /// forall<Self, T> { LocalImplAllowed(Self: Ord<T>). }
+    /// ```
+    ///
+    /// For traits that are `#[upstream]` (i.e. not in the current crate), the orphan rules dictate
+    /// that impls are allowed as long as at least one type parameter is local and each type
+    /// prior to that is fully visible. That means that each type prior to the first local
+    /// type cannot contain any of the type parameters of the impl.
+    ///
+    /// This rule is fairly complex, so we expand it and generate a program clause for each
+    /// possible case. This is represented as follows:
+    ///
+    /// ```notrust
+    /// // for `#[upstream] trait Foo<T, U, V> where Self: Eq<T> { ... }`
+    /// forall<Self, T, U, V> {
+    ///     LocalImplAllowed(Self: Foo<T, U, V>) :- IsLocal(Self).
+    /// }
+    ///
+    /// forall<Self, T, U, V> {
+    ///     LocalImplAllowed(Self: Foo<T, U, V>) :-
+    ///         IsFullyVisible(Self),
+    ///         IsLocal(T).
+    /// }
+    ///
+    /// forall<Self, T, U, V> {
+    ///     LocalImplAllowed(Self: Foo<T, U, V>) :-
+    ///         IsFullyVisible(Self),
+    ///         IsFullyVisible(T),
+    ///         IsLocal(U).
+    /// }
+    ///
+    /// forall<Self, T, U, V> {
+    ///     LocalImplAllowed(Self: Foo<T, U, V>) :-
+    ///         IsFullyVisible(Self),
+    ///         IsFullyVisible(T),
+    ///         IsFullyVisible(U),
+    ///         IsLocal(V).
+    /// }
+    /// ```
+    ///
+    /// The overlap check uses compatible { ... } mode to ensure that it accounts for impls that
+    /// may exist in some other *compatible* world. For every upstream trait, we add a rule to
+    /// account for the fact that upstream crates are able to compatibly add impls of upstream
+    /// traits for upstream types.
+    ///
+    /// ```notrust
+    /// // For `#[upstream] trait Foo<T, U, V> where Self: Eq<T> { ... }`
+    /// forall<Self, T, U, V> {
+    ///     Implemented(Self: Foo<T, U, V>) :-
+    ///         Implemented(Self: Eq<T>), // where clauses
+    ///         Compatible,               // compatible modality
+    ///         IsUpstream(Self),
+    ///         IsUpstream(T),
+    ///         IsUpstream(U),
+    ///         IsUpstream(V),
+    ///         CannotProve.              // returns ambiguous
+    /// }
+    /// ```
+    ///
+    /// In certain situations, this is too restrictive. Consider the following code:
+    ///
+    /// ```notrust
+    /// /* In crate std */
+    /// trait Sized { }
+    /// struct str { }
+    ///
+    /// /* In crate bar (depends on std) */
+    /// trait Bar { }
+    /// impl Bar for str { }
+    /// impl<T> Bar for T where T: Sized { }
+    /// ```
+    ///
+    /// Here, because of the rules we've defined, these two impls overlap. The std crate is
+    /// upstream to bar, and thus it is allowed to compatibly implement Sized for str. If str
+    /// can implement Sized in a compatible future, these two impls definitely overlap since the
+    /// second impl covers all types that implement Sized.
+    ///
+    /// The solution we've got right now is to mark Sized as "fundamental" when it is defined.
+    /// This signals to the Rust compiler that it can rely on the fact that str does not
+    /// implement Sized in all contexts. A consequence of this is that we can no longer add an
+    /// implementation of Sized compatibly for str. This is the trade off you make when defining
+    /// a fundamental trait.
+    ///
+    /// To implement fundamental traits, we simply just do not add the rule above that allows
+    /// upstream types to implement upstream traits. Fundamental traits are not allowed to
+    /// compatibly do that.
     fn to_program_clauses(&self) -> Vec<ProgramClause> {
-        // Given:
-        //
-        //    trait Ord<T> where Self: Eq<T> { ... }
-        //
-        // we generate the following clause:
-        //
-        //    forall<Self, T> {
-        //        WF(Self: Ord<T>) :- Implemented(Self: Ord<T>), WF(Self: Eq<T>)
-        //    }
-        //
-        // and the reverse rules:
-        //
-        //    forall<Self, T> { (Self: Ord<T>) :- FromEnv(Self: Ord<T>) }
-        //    forall<Self, T> { FromEnv(Self: Eq<T>) :- FromEnv(Self: Ord<T>) }
-        //
-        // As specified in the orphan rules, if a trait is not marked `#[upstream]`, the current crate
-        // can implement it for any type. To represent that, we generate:
-        //
-        //    // `Ord<T>` would not be `#[upstream]` when compiling `std`
-        //    forall<Self, T> { LocalImplAllowed(Self: Ord<T>) }
-        //
-        // For traits that are `#[upstream]` (i.e. not in the current crate), the orphan rules dictate
-        // that impls are allowed as long as at least one type parameter is local and each type
-        // prior to that is fully visible. That means that each type prior to the first local
-        // type cannot contain any of the type parameters of the impl.
-        //
-        // This rule is fairly complex, so we expand it and generate a program clause for each
-        // possible case. This is represented as follows:
-        //
-        //    // for `#[upstream] trait Foo<T, U, V> where Self: Eq<T> { ... }`
-        //    forall<Self, T, U, V> {
-        //      LocalImplAllowed(Self: Foo<T, U, V>) :- IsLocal(Self)
-        //    }
-        //    forall<Self, T, U, V> {
-        //      LocalImplAllowed(Self: Foo<T, U, V>) :-
-        //          IsFullyVisible(Self),
-        //          IsLocal(T)
-        //    }
-        //    forall<Self, T, U, V> {
-        //      LocalImplAllowed(Self: Foo<T, U, V>) :-
-        //          IsFullyVisible(Self),
-        //          IsFullyVisible(T),
-        //          IsLocal(U)
-        //    }
-        //    forall<Self, T, U, V> {
-        //      LocalImplAllowed(Self: Foo<T, U, V>) :-
-        //          IsFullyVisible(Self),
-        //          IsFullyVisible(T),
-        //          IsFullyVisible(U),
-        //          IsLocal(V)
-        //    }
-        //
-        // The overlap check uses compatible { ... } mode to ensure that it accounts for impls that
-        // may exist in some other *compatible* world. For every upstream trait, we add a rule to
-        // account for the fact that upstream crates are able to compatibly add impls of upstream
-        // traits for upstream types.
-        //
-        //     // For `#[upstream] trait Foo<T, U, V> where Self: Eq<T> { ... }`
-        //     forall<Self, T, U, V> {
-        //         Implemented(Self: Foo<T, U, V>) :-
-        //             Implemented(Self: Eq<T>), // where clauses
-        //             Compatible,               // compatible modality
-        //             IsUpstream(Self),
-        //             IsUpstream(T),
-        //             IsUpstream(U),
-        //             IsUpstream(V),
-        //             CannotProve,              // returns ambiguous
-        //     }
-        //
-        // In certain situations, this is too restrictive. Consider the following code:
-        //
-        //    // In crate std:
-        //    trait Sized { }
-        //    struct str { }
-        //
-        //    // In crate bar: (depends on std)
-        //    trait Bar { }
-        //    impl Bar for str { }
-        //    impl<T> Bar for T where T: Sized { }
-        //
-        // Here, because of the rules we've defined, these two impls overlap. The std crate is
-        // upstream to bar, and thus it is allowed to compatibly implement Sized for str. If str
-        // can implement Sized in a compatible future, these two impls definitely overlap since the
-        // second impl covers all types that implement Sized.
-        //
-        // The solution we've got right now is to mark Sized as "fundamental" when it is defined.
-        // This signals to the Rust compiler that it can rely on the fact that str does not
-        // implement Sized in all contexts. A consequence of this is that we can no longer add an
-        // implementation of Sized compatibly for str. This is the trade off you make when defining
-        // a fundamental trait.
-        //
-        // To implement fundamental traits, we simply just do not add the rule above that allows
-        // upstream types to implement upstream traits. Fundamental traits are not allowed to
-        // compatibly do that.
-
         let trait_ref = self.binders.value.trait_ref.clone();
 
         let trait_ref_impl = WhereClause::Implemented(self.binders.value.trait_ref.clone());
@@ -686,46 +725,75 @@ impl TraitDatum {
 }
 
 impl AssociatedTyDatum {
+    /// For each associated type, we define the "projection
+    /// equality" rules. There are always two; one for a successful normalization,
+    /// and one for the "fallback" notion of equality.
+    ///
+    /// Given: (here, `'a` and `T` represent zero or more parameters)
+    ///
+    /// ```notrust
+    /// trait Foo {
+    ///     type Assoc<'a, T>: Bounds where WC;
+    /// }
+    /// ```
+    ///
+    /// we generate the 'fallback' rule:
+    ///
+    /// ```notrust
+    /// -- Rule ProjectionEq-Placeholder
+    /// forall<Self, 'a, T> {
+    ///     ProjectionEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
+    /// }
+    /// ```
+    ///
+    /// and
+    ///
+    /// ```notrust
+    /// -- Rule ProjectionEq-Normalize
+    /// forall<Self, 'a, T, U> {
+    ///     ProjectionEq(<T as Foo>::Assoc<'a, T> = U) :-
+    ///         Normalize(<T as Foo>::Assoc -> U).
+    /// }
+    /// ```
+    ///
+    /// We used to generate an "elaboration" rule like this:
+    ///
+    /// ```notrust
+    /// forall<T> {
+    ///     T: Foo :- exists<U> { ProjectionEq(<T as Foo>::Assoc = U) }.
+    /// }
+    /// ```
+    ///
+    /// but this caused problems with the recursive solver. In
+    /// particular, whenever normalization is possible, we cannot
+    /// solve that projection uniquely, since we can now elaborate
+    /// `ProjectionEq` to fallback *or* normalize it. So instead we
+    /// handle this kind of reasoning through the `FromEnv` predicate.
+    ///
+    /// We also generate rules specific to WF requirements and implied bounds:
+    ///
+    /// ```notrust
+    /// -- Rule WellFormed-AssocTy
+    /// forall<Self, 'a, T> {
+    ///     WellFormed((Foo::Assoc)<Self, 'a, T>) :- Implemented(Self: Foo), WC.
+    /// }
+    ///
+    /// -- Rule Implied-WC-From-AssocTy
+    /// forall<Self, 'a, T> {
+    ///     FromEnv(WC) :- FromEnv((Foo::Assoc)<Self, 'a, T>).
+    /// }
+    ///
+    /// -- Rule Implied-Bound-From-AssocTy
+    /// forall<Self, 'a, T> {
+    ///     FromEnv(<Self as Foo>::Assoc<'a,T>: Bounds) :- FromEnv(Self: Foo), WC.
+    /// }
+    ///
+    /// -- Rule Implied-Trait-From-AssocTy
+    /// forall<Self,'a, T> {
+    ///     FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self, 'a,T>).
+    /// }
+    /// ```
     fn to_program_clauses(&self, program: &Program) -> Vec<ProgramClause> {
-        // For each associated type, we define the "projection
-        // equality" rules. There are always two; one for a successful normalization,
-        // and one for the "fallback" notion of equality.
-        //
-        // Given: (here, `'a` and `T` represent zero or more parameters)
-        //
-        //    trait Foo {
-        //        type Assoc<'a, T>: Bounds where WC;
-        //    }
-        //
-        // we generate the 'fallback' rule:
-        //
-        //    forall<Self, 'a, T> {
-        //        ProjectionEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
-        //    }
-        //
-        // and
-        //
-        //    forall<Self, 'a, T, U> {
-        //        ProjectionEq(<T as Foo>::Assoc<'a, T> = U) :-
-        //            Normalize(<T as Foo>::Assoc -> U)
-        //    }
-        //
-        // We used to generate an "elaboration" rule like this:
-        //
-        //    forall<T> {
-        //        T: Foo :-
-        //            exists<U> { ProjectionEq(<T as Foo>::Assoc = U) }
-        //    }
-        //
-        // but this caused problems with the recursive solver. In
-        // particular, whenever normalization is possible, we cannot
-        // solve that projection uniquely, since we can now elaborate
-        // `ProjectionEq` to fallback *or* normalize it. So instead we
-        // handle this kind of reasoning through the `FromEnv` predicate.
-        //
-        // We also generate rules specific to WF requirements and implied bounds,
-        // see below.
-
         let binders: Vec<_> = self
             .parameter_kinds
             .iter()
@@ -832,7 +900,7 @@ impl AssociatedTyDatum {
         // Reverse rule for implied bounds.
         //
         //    forall<Self> {
-        //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), FromEnv(WC)
+        //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), WC
         //    }
         clauses.extend(self.bounds_on_self().into_iter().map(|bound| {
             // Same as above in case of higher-ranked inline bounds.
@@ -844,8 +912,6 @@ impl AssociatedTyDatum {
             let where_clauses = self.where_clauses
                 .iter()
                 .cloned()
-                // `wc` may be a higher-ranked where clause
-                .map(|wc| wc.map(|value| value.into_from_env_goal()))
                 .casted();
 
             Binders {
