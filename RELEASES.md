@@ -3,6 +3,14 @@ crates.io periodically for use by the compiler. The rest of chalk is
 not yet published, though it might be nice to publish the interpreter
 at some point.
 
+# Release 0.9.0
+
+- Added the variance parameter
+
+# Releases 0.6.0 .. 0.8.1
+
+Forgot to write release notes =)
+
 # Release 0.5.0
 
 **Tag:** `chalk-engine-v0.5.0`
