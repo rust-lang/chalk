@@ -103,6 +103,11 @@ pub trait Context: Clone + Debug {
     /// A vector of program clauses.
     type ProgramClauses: Debug;
 
+    /// How to relate two kinds when unifying: for example in rustc, we
+    /// may want to unify parameters either for the sub-typing relation or for
+    /// the equality relation.
+    type Variance;
+
     /// The successful result from unification: contains new subgoals
     /// and things that can be attached to an ex-clause.
     type UnificationResult;
@@ -307,6 +312,7 @@ pub trait UnificationOps<C: Context, I: Context> {
     fn unify_parameters(
         &mut self,
         environment: &I::Environment,
+        variance: I::Variance,
         a: &I::Parameter,
         b: &I::Parameter,
     ) -> Fallible<I::UnificationResult>;

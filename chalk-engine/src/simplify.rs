@@ -47,8 +47,8 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
                         .subgoals
                         .push(Literal::Negative(I::goal_in_environment(&environment, subgoal)));
                 }
-                HhGoal::Unify(a, b) => {
-                    let result = infer.unify_parameters(&environment, &a, &b)?;
+                HhGoal::Unify(variance, a, b) => {
+                    let result = infer.unify_parameters(&environment, variance, &a, &b)?;
                     infer.into_ex_clause(result, &mut ex_clause)
                 }
                 HhGoal::DomainGoal(domain_goal) => {
