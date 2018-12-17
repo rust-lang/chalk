@@ -7,7 +7,7 @@ the compiler, but also for experimentation.
 
 ## FAQ
 
-**How does chalk relate to rustc?** The plan is to have rustc use the `chalk-engine` crate (in this repo), which defines chalk's solver. The rest of chalk can then be considered an elaborate unit testing harness. For more details, see [the Traits chapter of the rustc-guide](https://rust-lang-nursery.github.io/rustc-guide/traits/index.html).
+**How does chalk relate to rustc?** The plan is to have rustc use the `chalk-engine` crate (in this repo), which defines chalk's solver. The rest of chalk can then be considered an elaborate unit testing harness. For more details, see [the Traits chapter of the rustc-guide](https://rust-lang.github.io/rustc-guide/traits/index.html).
 
 **Where does the name come from?** `chalk` is named after [Chalkidiki], the area where [Aristotle] was
 born. Since Prolog is a logic programming language, this seemed a
