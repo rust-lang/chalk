@@ -12,7 +12,7 @@ pub mod errors;
 #[rustfmt::skip]
 lalrpop_mod!(pub parser);
 
-use errors::Result;
+use crate::errors::Result;
 use lalrpop_util::ParseError;
 use std::fmt::Write;
 
