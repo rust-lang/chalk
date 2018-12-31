@@ -1,6 +1,6 @@
 use chalk_parse::{self, ast};
 use chalk_ir;
-use rust_ir;
+use crate::rust_ir;
 
 error_chain! {
     links {

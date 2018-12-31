@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use test_util::*;
+use crate::test_util::*;
 
 #[test]
 fn two_impls_for_same_type() {

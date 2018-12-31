@@ -4,7 +4,7 @@ use chalk_solve::ext::*;
 use chalk_solve::solve::slg::implementation::SlgContext;
 use chalk_engine::forest::Forest;
 use std::sync::Arc;
-use test_util::*;
+use crate::test_util::*;
 use chalk_solve::solve::SolverChoice;
 
 macro_rules! test {

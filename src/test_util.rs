@@ -4,11 +4,11 @@ use diff;
 use chalk_parse;
 use itertools::Itertools;
 use std::fmt::Write;
-use rust_ir::lowering::{LowerProgram, LowerGoal};
+use crate::rust_ir::lowering::{LowerProgram, LowerGoal};
 use chalk_ir::Goal;
-use rust_ir::Program;
+use crate::rust_ir::Program;
 use chalk_solve::solve::SolverChoice;
-use errors::Result;
+use crate::errors::Result;
 
 pub fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<Program> {
     chalk_parse::parse_program(text)?.lower(solver_choice)

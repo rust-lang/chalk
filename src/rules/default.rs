@@ -1,5 +1,5 @@
 use chalk_ir::*;
-use rust_ir::*;
+use crate::rust_ir::*;
 use chalk_solve::infer::InferenceTable;
 use chalk_ir::cast::Cast;
 
