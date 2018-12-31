@@ -1,4 +1,4 @@
-use ena::unify as ena;
+use ::ena::unify as ena;
 use chalk_ir::*;
 use chalk_ir::fold::Fold;
 
