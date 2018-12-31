@@ -1,11 +1,11 @@
 //! Traits for transforming bits of IR.
 
-use cast::Cast;
+use crate::*;
+use crate::cast::Cast;
 use chalk_engine::context::Context;
 use chalk_engine::{DelayedLiteral, ExClause, Literal};
 use std::fmt::Debug;
 use std::sync::Arc;
-use *;
 
 pub mod shift;
 mod subst;

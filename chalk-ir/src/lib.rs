@@ -2,10 +2,10 @@
 #![feature(specialization)]
 #![feature(non_modrs_mods)]
 
-use cast::Cast;
+use crate::cast::Cast;
 use chalk_engine::fallible::*;
-use fold::shift::Shift;
-use fold::{
+use crate::fold::shift::Shift;
+use crate::fold::{
     DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder,
 };
 use lalrpop_intern::InternedString;

@@ -1,4 +1,4 @@
-use ::*;
+use crate::*;
 use std::marker::PhantomData;
 
 /// The `Cast` trait is used to make annoying upcasts between
