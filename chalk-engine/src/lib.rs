@@ -193,7 +193,8 @@ pub enum DelayedLiteral<C: Context> {
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
 #[derive(Clone, Debug)]
-pub enum Literal<C: Context> { // FIXME: pub b/c fold
+pub enum Literal<C: Context> {
+    // FIXME: pub b/c fold
     Positive(C::GoalInEnvironment),
     Negative(C::GoalInEnvironment),
 }
