@@ -1,7 +1,11 @@
 //! An alternative solver based around the SLG algorithm, which
-//! implements the well-formed semantics. This algorithm is very
-//! closed based on the description found in the following paper,
-//! which I will refer to in the comments as EWFS:
+//! implements the well-formed semantics. For an overview of how the solver
+//! works, see [The On-Demand SLG Solver][guide] in the rustc guide.
+//!
+//! [guide]: https://rust-lang.github.io/rustc-guide/traits/slg.html
+//!
+//! This algorithm is very closed based on the description found in the
+//! following paper, which I will refer to in the comments as EWFS:
 //!
 //! > Efficient Top-Down Computation of Queries Under the Well-formed Semantics
 //! > (Chen, Swift, and Warren; Journal of Logic Programming '95)
