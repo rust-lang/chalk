@@ -2,11 +2,8 @@
 #![cfg_attr(test, feature(test))]
 #![feature(crate_visibility_modifier)]
 #![feature(in_band_lifetimes)]
-#![feature(macro_at_most_once_rep)]
 #![feature(specialization)]
 #![feature(step_trait)]
-#![feature(underscore_imports)]
-#![feature(non_modrs_mods)]
 
 extern crate chalk_parse;
 #[macro_use]

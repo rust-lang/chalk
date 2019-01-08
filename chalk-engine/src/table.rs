@@ -1,6 +1,6 @@
-use {DelayedLiteralSet, DelayedLiteralSets};
-use context::prelude::*;
-use strand::CanonicalStrand;
+use crate::{DelayedLiteralSet, DelayedLiteralSets};
+use crate::context::prelude::*;
+use crate::strand::CanonicalStrand;
 use rustc_hash::FxHashMap;
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;

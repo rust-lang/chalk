@@ -1,6 +1,5 @@
-use fold::shift::Shift;
-use ::*;
-
+use crate::fold::shift::Shift;
+use crate::*;
 use super::*;
 
 pub struct Subst<'s> {

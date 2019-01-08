@@ -6,9 +6,9 @@ use lalrpop_intern::intern;
 use chalk_ir;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_solve::solve::SolverChoice;
-use errors::*;
+use crate::errors::*;
 use itertools::Itertools;
-use rust_ir::{self, Anonymize, ToParameter};
+use crate::rust_ir::{self, Anonymize, ToParameter};
 
 mod test;
 
@@ -685,7 +685,10 @@ impl LowerProjectionEqBound for ProjectionEqBound {
             Some(info) => info,
             None => bail!("no associated type `{}` defined in trait", self.name.str),
         };
-        let args: Vec<_> = try!(self.args.iter().map(|a| a.lower(env)).collect());
+        let args: Vec<_> = self.args
+            .iter()
+            .map(|a| a.lower(env))
+            .collect::<Result<_>>()?;
 
         if args.len() != info.addl_parameter_kinds.len() {
             bail!(
@@ -782,7 +785,10 @@ impl LowerProjectionTy for ProjectionTy {
             Some(info) => info,
             None => bail!("no associated type `{}` defined in trait", name.str),
         };
-        let mut args: Vec<_> = try!(args.iter().map(|a| a.lower(env)).collect());
+        let mut args: Vec<_> = args
+            .iter()
+            .map(|a| a.lower(env))
+            .collect::<Result<_>>()?;
 
         if args.len() != info.addl_parameter_kinds.len() {
             bail!(
@@ -811,7 +817,10 @@ trait LowerUnselectedProjectionTy {
 
 impl LowerUnselectedProjectionTy for UnselectedProjectionTy {
     fn lower(&self, env: &Env) -> Result<chalk_ir::UnselectedProjectionTy> {
-        let parameters: Vec<_> = try!(self.args.iter().map(|a| a.lower(env)).collect());
+        let parameters: Vec<_> = self.args
+            .iter()
+            .map(|a| a.lower(env))
+            .collect::<Result<_>>()?;
         let ret = chalk_ir::UnselectedProjectionTy {
             type_name: self.name.str,
             parameters: parameters,
@@ -945,12 +954,10 @@ impl LowerImpl for Impl {
 
             let trait_id = trait_ref.trait_ref().trait_id;
             let where_clauses = self.lower_where_clauses(&env)?;
-            let associated_ty_values = try!(
-                self.assoc_ty_values
+            let associated_ty_values = self.assoc_ty_values
                     .iter()
                     .map(|v| v.lower(trait_id, env))
-                    .collect()
-            );
+                    .collect::<Result<_>>()?;
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
                 where_clauses,

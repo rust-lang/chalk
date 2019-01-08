@@ -61,7 +61,7 @@ extern crate stacker;
 
 extern crate rustc_hash;
 
-use context::Context;
+use crate::context::Context;
 use rustc_hash::FxHashSet;
 use std::cmp::min;
 use std::usize;

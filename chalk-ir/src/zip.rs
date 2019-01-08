@@ -1,5 +1,5 @@
-use fold::Fold;
-use ::*;
+use crate::fold::Fold;
+use crate::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 

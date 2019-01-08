@@ -1,4 +1,4 @@
-use ast::*;
+use crate::ast::*;
 use lalrpop_intern::intern;
 
 grammar;

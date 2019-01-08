@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Error, Formatter};
-use {ExClause, TableIndex};
-use context::{Context, InferenceTable};
-use table::AnswerIndex;
+use crate::{ExClause, TableIndex};
+use crate::context::{Context, InferenceTable};
+use crate::table::AnswerIndex;
 
 #[derive(Debug)]
 pub(crate) struct CanonicalStrand<C: Context> {

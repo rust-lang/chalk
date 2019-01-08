@@ -6,7 +6,7 @@ use chalk_solve::ext::*;
 use chalk_solve::solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 use std::sync::Arc;
-use test_util::*;
+use crate::test_util::*;
 
 mod bench;
 mod slg;

@@ -1,9 +1,7 @@
-use ::ProjectionTy;
+use crate::{ItemId, ProjectionTy};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
-
-use ::ItemId;
 
 thread_local! {
     static PROGRAM: RefCell<Option<Arc<dyn DebugContext>>> = RefCell::new(None)

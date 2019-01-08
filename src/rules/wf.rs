@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use chalk_ir::*;
-use errors::*;
+use crate::errors::*;
 use chalk_ir::cast::*;
 use chalk_ir::fold::*;
 use chalk_ir::fold::shift::Shift;
 use itertools::Itertools;
-use rust_ir::*;
+use crate::rust_ir::*;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
 

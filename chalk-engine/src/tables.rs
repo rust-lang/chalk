@@ -1,6 +1,6 @@
-use TableIndex;
-use context::prelude::*;
-use table::Table;
+use crate::TableIndex;
+use crate::context::prelude::*;
+use crate::table::Table;
 use rustc_hash::FxHashMap;
 use std::ops::{Index, IndexMut};
 

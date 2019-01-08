@@ -1,8 +1,8 @@
 use petgraph::prelude::*;
 
-use errors::Result;
+use crate::errors::Result;
 use chalk_ir::{self, ItemId};
-use rust_ir::Program;
+use crate::rust_ir::Program;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 

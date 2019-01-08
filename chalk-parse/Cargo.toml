@@ -8,6 +8,7 @@ repository = "https://github.com/rust-lang-nursery/chalk"
 readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 build = "build.rs" # LALRPOP preprocessing
+edition = "2018"
 
 # Add a dependency on the LALRPOP runtime library:
 [dependencies.lalrpop-util]

@@ -7,6 +7,7 @@ authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang-nursery/chalk"
 readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
+edition = "2018"
 
 [dependencies]
 diff = "0.1.11"

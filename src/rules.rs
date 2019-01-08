@@ -2,7 +2,7 @@ use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Subst;
 use chalk_ir::*;
-use rust_ir::*;
+use crate::rust_ir::*;
 use std::iter;
 
 mod default;

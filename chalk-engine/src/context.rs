@@ -1,6 +1,6 @@
-use fallible::Fallible;
-use hh::HhGoal;
-use {DelayedLiteral, ExClause, SimplifiedAnswer};
+use crate::fallible::Fallible;
+use crate::hh::HhGoal;
+use crate::{DelayedLiteral, ExClause, SimplifiedAnswer};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -165,13 +165,13 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     fn canonical(u_canon: &C::UCanonicalGoalInEnvironment) -> &C::CanonicalGoalInEnvironment;
     fn is_trivial_substitution(u_canon: &C::UCanonicalGoalInEnvironment,
                                canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
-    fn num_universes(&C::UCanonicalGoalInEnvironment) -> usize;
+    fn num_universes(_: &C::UCanonicalGoalInEnvironment) -> usize;
 
     /// Convert a goal G *from* the canonical universes *into* our
     /// local universes. This will yield a goal G' that is the same
     /// but for the universes of universally quantified names.
     fn map_goal_from_canonical(
-        &C::UniverseMap,
+        _: &C::UniverseMap,
         value: &C::CanonicalGoalInEnvironment,
     ) -> C::CanonicalGoalInEnvironment;
 
@@ -180,7 +180,7 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     /// the same but for the universes of universally quantified
     /// names.
     fn map_subst_from_canonical(
-        &C::UniverseMap,
+        _: &C::UniverseMap,
         value: &C::CanonicalConstrainedSubst,
     ) -> C::CanonicalConstrainedSubst;
 }

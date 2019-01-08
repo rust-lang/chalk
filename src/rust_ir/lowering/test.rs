@@ -3,7 +3,7 @@
 use chalk_ir::tls;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
-use test_util::*;
+use crate::test_util::*;
 
 #[test]
 fn lower_success() {

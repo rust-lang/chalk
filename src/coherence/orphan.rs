@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use errors::*;
+use crate::errors::*;
 use chalk_ir::*;
-use rust_ir::*;
+use crate::rust_ir::*;
 use chalk_ir::cast::*;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
