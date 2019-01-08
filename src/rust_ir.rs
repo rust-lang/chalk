@@ -7,11 +7,11 @@ use chalk_ir::tls;
 use chalk_ir::{
     ApplicationTy, Binders, Identifier, ItemId, Lifetime, Parameter, ParameterKind, ProgramClause,
     ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty, WhereClause,
+    InlineBound, QuantifiedInlineBound, TraitBound, ProjectionEqBound,
 };
 use chalk_ir::debug::Angle;
 use std::collections::BTreeMap;
 use std::fmt;
-use std::iter;
 
 pub mod lowering;
 
@@ -178,17 +178,6 @@ pub struct TraitFlags {
     pub deref: bool,
 }
 
-/// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum InlineBound {
-    TraitBound(TraitBound),
-    ProjectionEqBound(ProjectionEqBound),
-}
-
-enum_fold!(InlineBound[] { TraitBound(a), ProjectionEqBound(a) });
-
-pub type QuantifiedInlineBound = Binders<InlineBound>;
-
 crate trait IntoWhereClauses {
     type Output;
 
@@ -226,54 +215,18 @@ impl IntoWhereClauses for QuantifiedInlineBound {
     }
 }
 
-/// Represents a trait bound on e.g. a type or type parameter.
-/// Does not know anything about what it's binding.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TraitBound {
-    crate trait_id: ItemId,
-    crate args_no_self: Vec<Parameter>,
-}
+impl IntoWhereClauses for TraitBound {
+    type Output = WhereClause;
 
-struct_fold!(TraitBound {
-    trait_id,
-    args_no_self,
-});
-
-impl TraitBound {
     fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
         let trait_ref = self.as_trait_ref(self_ty);
         vec![WhereClause::Implemented(trait_ref)]
     }
-
-    crate fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
-        let self_ty = ParameterKind::Ty(self_ty);
-        TraitRef {
-            trait_id: self.trait_id,
-            parameters: iter::once(self_ty)
-                .chain(self.args_no_self.iter().cloned())
-                .collect(),
-        }
-    }
-}
-/// Represents a projection equality bound on e.g. a type or type parameter.
-/// Does not know anything about what it's binding.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ProjectionEqBound {
-    crate trait_bound: TraitBound,
-    crate associated_ty_id: ItemId,
-    /// Does not include trait parameters.
-    crate parameters: Vec<Parameter>,
-    crate value: Ty,
 }
 
-struct_fold!(ProjectionEqBound {
-    trait_bound,
-    associated_ty_id,
-    parameters,
-    value,
-});
+impl IntoWhereClauses for ProjectionEqBound {
+    type Output = WhereClause;
 
-impl ProjectionEqBound {
     fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 

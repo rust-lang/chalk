@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 mod aggregate;
 mod resolvent;
+mod clauses;
 
 #[derive(Clone, Debug)]
 pub struct SlgContext {
@@ -220,7 +221,10 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
             .filter(|&clause| clause.could_match(goal))
             .cloned();
 
-        environment_clauses.chain(program_clauses).collect()
+        environment_clauses
+            .chain(program_clauses)
+            .chain(clauses::program_clauses_for_dynamic_types(goal))
+            .collect()
     }
 
     fn instantiate_binders_universally(&mut self, arg: &Binders<Box<Goal>>) -> Goal {
@@ -391,6 +395,7 @@ impl MayInvalidate {
             (Ty::ForAll(_), _)
             | (Ty::Apply(_), _)
             | (Ty::Projection(_), _)
+            | (Ty::Dynamic(_), _)
             | (Ty::UnselectedProjection(_), _) => true,
         }
     }

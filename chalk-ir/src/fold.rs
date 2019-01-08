@@ -367,6 +367,7 @@ pub fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fallib
             Ok(Ty::UnselectedProjection(proj.fold_with(folder, binders)?))
         }
         Ty::ForAll(ref quantified_ty) => Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?)),
+        Ty::Dynamic(ref bounds) => Ok(Ty::Dynamic(bounds.fold_with(folder, binders)?)),
     }
 }
 
@@ -522,7 +523,8 @@ enum_fold!(WellFormed[] { Trait(a), Ty(a) });
 enum_fold!(FromEnv[] { Trait(a), Ty(a) });
 enum_fold!(DomainGoal[] { Holds(a), WellFormed(a), FromEnv(a), Normalize(a), UnselectedNormalize(a),
                           InScope(a), Derefs(a), IsLocal(a), IsUpstream(a), IsFullyVisible(a),
-                          LocalImplAllowed(a), Compatible(a), DownstreamType(a) });
+                          LocalImplAllowed(a), Compatible(a), DownstreamType(a), ObjectSafe(a),
+                          Shallow(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
@@ -673,6 +675,20 @@ struct_fold!(ProgramClauseImplication {
 struct_fold!(ConstrainedSubst {
     subst, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
     constraints,
+});
+
+enum_fold!(InlineBound[] { TraitBound(a), ProjectionEqBound(a) });
+
+struct_fold!(TraitBound {
+    trait_id,
+    args_no_self,
+});
+
+struct_fold!(ProjectionEqBound {
+    trait_bound,
+    associated_ty_id,
+    parameters,
+    value,
 });
 
 // struct_fold!(ApplicationTy { name, parameters }); -- intentionally omitted, folded through Ty

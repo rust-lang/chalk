@@ -45,6 +45,14 @@ impl Debug for Ty {
             Ty::Projection(proj) => write!(fmt, "{:?}", proj),
             Ty::UnselectedProjection(proj) => write!(fmt, "{:?}", proj),
             Ty::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
+            Ty::Dynamic(bounds) => {
+                let bounds = bounds
+                    .iter()
+                    .map(|bound| format!("{:?}", bound))
+                    .collect::<Vec<_>>()
+                    .join("+");
+                write!(fmt, "dyn {}", bounds)
+            }
         }
     }
 }
@@ -222,6 +230,8 @@ impl Debug for DomainGoal {
             ),
             DomainGoal::Compatible(_) => write!(fmt, "Compatible"),
             DomainGoal::DownstreamType(n) => write!(fmt, "DownstreamType({:?})", n),
+            DomainGoal::ObjectSafe(id) => write!(fmt, "ObjectSafe({:?})", id),
+            DomainGoal::Shallow(tr) => write!(fmt, "Shallow({:?})", tr),
         }
     }
 }

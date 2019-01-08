@@ -720,6 +720,40 @@ impl TraitDatum {
                 }).cast(),
         );
 
+        let self_ty = self.binders.value.trait_ref.parameters[0].assert_ty_ref().clone();
+        let shallow_conditions = self.binders.value.where_clauses
+            .iter()
+            .cloned()
+            .map(|wc| wc.map(|bound| bound.into_shallow_goal(&self_ty)))
+            .casted()
+            .collect();
+        
+        // `Shallow(Self: Trait) :- ...`
+        clauses.push(
+            self.binders
+                .map_ref(|bound| ProgramClauseImplication {
+                    consequence: DomainGoal::Shallow(bound.trait_ref.clone()),
+                    conditions: shallow_conditions,
+                }).cast()
+        );
+
+        // We push `ObjectSafe(Trait)` if `Self` does not appear as a type parameter
+        // in any of the where clauses of the trait `Trait`. For example:
+        // ```rust,ignore
+        // trait Foo: Debug { } // This trait is object-safe.
+        //
+        // trait Bar: From<Vec<Self>> { }// This type is not.
+        // ```
+
+        // FIXME: for now, we just say that every trait is object-safe.
+        clauses.push(
+            self.binders
+                .map_ref(|bound| ProgramClauseImplication {
+                    consequence: DomainGoal::ObjectSafe(bound.trait_ref.trait_id),
+                    conditions: vec![],
+                }).cast()
+        );
+
         clauses
     }
 }

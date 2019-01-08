@@ -195,13 +195,18 @@ impl<'infer> AntiUnifier<'infer> {
                 self.aggregate_unselected_projection_tys(apply1, apply2)
             }
 
+            (Ty::Dynamic(_dyn1), Ty::Dynamic(_dyn2)) => {
+                self.new_variable()
+            }
+
             // Mismatched base kinds.
             (Ty::InferenceVar(_), _)
             | (Ty::BoundVar(_), _)
             | (Ty::ForAll(_), _)
             | (Ty::Apply(_), _)
             | (Ty::Projection(_), _)
-            | (Ty::UnselectedProjection(_), _) => self.new_variable(),
+            | (Ty::UnselectedProjection(_), _)
+            | (Ty::Dynamic(..), _) => self.new_variable(),
         }
     }
 

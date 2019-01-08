@@ -2443,6 +2443,73 @@ fn higher_ranked_implied_bounds() {
 }
 
 #[test]
+fn dynamic_types_wf() {
+    test! {
+        program {
+            trait Foo { }
+
+            trait Bar where Self: Foo { }
+
+            trait Animal<T> where T: Foo { }
+
+            trait Baz<T> where Self: Animal<T> { }
+
+            struct i32 { }
+            struct f32 { }
+            impl Foo for i32 { }
+
+            goal {
+                WellFormed(dyn Foo)
+            } yields {
+                "Unique"
+            }
+
+            goal {
+                WellFormed(dyn Bar)
+            } yields {
+                "Unique"
+            }
+
+            goal {
+                WellFormed(dyn Animal<i32>)
+            } yields {
+                "Unique"
+            }
+
+            goal {
+                WellFormed(dyn Animal<f32>)
+            } yields {
+                "No solution"
+            }
+
+            goal {
+                WellFormed(dyn Baz<i32>)
+            } yields {
+                "Unique"
+            }
+
+            goal {
+                WellFormed(dyn Baz<f32>)
+            } yields {
+                "No solution"
+            }
+
+            goal {
+                WellFormed(dyn Bar + Animal<i32>)
+            } yields {
+                "Unique"
+            }
+
+            goal {
+                WellFormed(dyn Bar + Animal<f32>)
+            } yields {
+                "No solution"
+            }
+        }
+    }
+}
+
+#[test]
 fn deref_goal() {
     test! {
         program {

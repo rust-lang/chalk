@@ -908,6 +908,11 @@ impl LowerTy for Ty {
                 };
                 Ok(chalk_ir::Ty::ForAll(Box::new(quantified_ty)))
             }
+
+            Ty::Dynamic { ref traits } => {
+                let traits: Result<_> = traits.iter().map(|tr| tr.lower(env)).collect();
+                Ok(chalk_ir::Ty::Dynamic(traits?))
+            }
         }
     }
 }

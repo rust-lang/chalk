@@ -361,6 +361,10 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
                 Ok(())
             }
 
+            (Ty::Dynamic(answer), Ty::Dynamic(pending)) => {
+                Zip::zip_with(self, answer, pending)
+            }
+
             (Ty::InferenceVar(_), _) | (_, Ty::InferenceVar(_)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
                 answer, pending,
@@ -370,6 +374,7 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
             | (Ty::Apply(_), _)
             | (Ty::Projection(_), _)
             | (Ty::UnselectedProjection(_), _)
+            | (Ty::Dynamic(..), _)
             | (Ty::ForAll(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,

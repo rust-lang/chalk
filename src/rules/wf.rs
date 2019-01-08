@@ -54,11 +54,17 @@ trait FoldInputTypes {
     fn fold(&self, accumulator: &mut Vec<Ty>);
 }
 
-impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
+impl<T: FoldInputTypes> FoldInputTypes for &[T] {
     fn fold(&self, accumulator: &mut Vec<Ty>) {
-        for f in self {
+        for f in *self {
             f.fold(accumulator);
         }
+    }
+}
+
+impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
+    fn fold(&self, accumulator: &mut Vec<Ty>) {
+        self.as_slice().fold(accumulator);
     }
 }
 
@@ -84,6 +90,10 @@ impl FoldInputTypes for Ty {
             Ty::UnselectedProjection(proj) => {
                 accumulator.push(self.clone());
                 proj.parameters.fold(accumulator);
+            }
+            Ty::Dynamic(traits) => {
+                accumulator.push(self.clone());
+                traits.fold(accumulator);
             }
 
             // Type parameters do not carry any input types (so we can sort of assume they are
@@ -114,6 +124,28 @@ impl FoldInputTypes for ProjectionEq {
     fn fold(&self, accumulator: &mut Vec<Ty>) {
         Ty::Projection(self.projection.clone()).fold(accumulator);
         self.ty.fold(accumulator);
+    }
+}
+
+impl FoldInputTypes for InlineBound {
+    fn fold(&self, accumulator: &mut Vec<Ty>) {
+        match self {
+            InlineBound::TraitBound(bound) => bound.fold(accumulator),
+            InlineBound::ProjectionEqBound(bound) => bound.fold(accumulator),
+        }
+    }
+}
+
+impl FoldInputTypes for TraitBound {
+    fn fold(&self, accumulator: &mut Vec<Ty>) {
+        self.args_no_self.fold(accumulator);
+    }
+}
+
+impl FoldInputTypes for ProjectionEqBound {
+    fn fold(&self, accumulator: &mut Vec<Ty>) {
+        self.parameters.fold(accumulator);
+        self.value.fold(accumulator);
     }
 }
 

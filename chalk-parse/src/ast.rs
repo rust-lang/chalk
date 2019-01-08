@@ -1,7 +1,7 @@
 use lalrpop_intern::InternedString;
 use std::fmt;
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
@@ -73,13 +73,13 @@ pub enum ParameterKind {
     Lifetime(Identifier),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Parameter {
     Ty(Ty),
     Lifetime(Lifetime),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
 pub enum InlineBound {
     TraitBound(TraitBound),
@@ -92,7 +92,7 @@ pub struct QuantifiedInlineBound {
     pub bound: InlineBound,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 pub struct TraitBound {
@@ -100,7 +100,7 @@ pub struct TraitBound {
     pub args_no_self: Vec<Parameter>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 /// Represents a projection equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 pub struct ProjectionEqBound {
@@ -147,7 +147,7 @@ pub struct AssocTyValue {
     pub value: Ty,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Ty {
     Id {
         name: Identifier,
@@ -155,6 +155,10 @@ pub enum Ty {
     Apply {
         name: Identifier,
         args: Vec<Parameter>,
+    },
+    Dynamic {
+        // Does not handle `dyn Foo<Item = u32>` for now.
+        traits: Vec<TraitBound>,
     },
     Projection {
         proj: ProjectionTy,
@@ -168,25 +172,25 @@ pub enum Ty {
     },
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Lifetime {
     Id { name: Identifier },
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
     pub args: Vec<Parameter>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct UnselectedProjectionTy {
     pub name: Identifier,
     pub args: Vec<Parameter>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct TraitRef {
     pub trait_name: Identifier,
     pub args: Vec<Parameter>,
@@ -208,7 +212,7 @@ impl PolarizedTraitRef {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Identifier {
     pub str: InternedString,
     pub span: Span,

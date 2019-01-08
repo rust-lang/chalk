@@ -192,6 +192,18 @@ struct_zip!(ProgramClauseImplication {
 });
 struct_zip!(Derefs { source, target });
 
+struct_zip!(TraitBound {
+    trait_id,
+    args_no_self,
+});
+
+struct_zip!(ProjectionEqBound {
+    trait_bound,
+    associated_ty_id,
+    parameters,
+    value,
+});
+
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
@@ -242,10 +254,13 @@ enum_zip!(DomainGoal {
     IsFullyVisible,
     LocalImplAllowed,
     Compatible,
-    DownstreamType
+    DownstreamType,
+    ObjectSafe,
+    Shallow,
 });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(ProgramClause { Implies, ForAll });
+enum_zip!(InlineBound[] { TraitBound, ProjectionEqBound });
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the

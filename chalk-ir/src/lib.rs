@@ -158,6 +158,8 @@ pub enum Ty {
 
     /// Inference variable.
     InferenceVar(InferenceVar),
+
+    Dynamic(Vec<TraitBound>),
 }
 
 impl Ty {
@@ -411,11 +413,51 @@ impl TraitRef {
     }
 }
 
+/// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum InlineBound {
+    TraitBound(TraitBound),
+    ProjectionEqBound(ProjectionEqBound),
+}
+
+pub type QuantifiedInlineBound = Binders<InlineBound>;
+
 /// Where clauses that can be written by a Rust programmer.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum WhereClause {
     Implemented(TraitRef),
     ProjectionEq(ProjectionEq),
+}
+
+/// Represents a trait bound on e.g. a type or type parameter.
+/// Does not know anything about what it's binding.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TraitBound {
+    pub trait_id: ItemId,
+    pub args_no_self: Vec<Parameter>,
+}
+
+impl TraitBound {
+    pub fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
+        let self_ty = ParameterKind::Ty(self_ty);
+        TraitRef {
+            trait_id: self.trait_id,
+            parameters: iter::once(self_ty)
+                .chain(self.args_no_self.iter().cloned())
+                .collect(),
+        }
+    }
+}
+
+/// Represents a projection equality bound on e.g. a type or type parameter.
+/// Does not know anything about what it's binding.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ProjectionEqBound {
+    pub trait_bound: TraitBound,
+    pub associated_ty_id: ItemId,
+    /// Does not include trait parameters.
+    pub parameters: Vec<Parameter>,
+    pub value: Ty,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
@@ -555,6 +597,10 @@ pub enum DomainGoal {
     ///
     /// This makes a new type `T` available and makes `DownstreamType(T)` provable for that type.
     DownstreamType(Ty),
+
+    ObjectSafe(ItemId),
+
+    Shallow(TraitRef),
 }
 
 pub type QuantifiedWhereClause = Binders<WhereClause>;
@@ -576,6 +622,24 @@ impl WhereClause {
         match self {
             WhereClause::Implemented(trait_ref) => FromEnv::Trait(trait_ref).cast(),
             wc => wc.cast(),
+        }
+    }
+
+    pub fn into_shallow_goal(self, self_ty: &Ty) -> DomainGoal {
+        match self {
+            WhereClause::Implemented(trait_ref) => {
+                if trait_ref.parameters[0].assert_ty_ref() == self_ty {
+                    // `Shallow(Self: Trait)` if the where clause is of the form
+                    // `Implemented(Self: Trait)`.
+                    DomainGoal::Shallow(trait_ref)
+                } else {
+                    // Identity otherwise.
+                    DomainGoal::Holds(WhereClause::Implemented(trait_ref))
+                }
+            }
+
+            // Outlive requirements will go there as well
+            _ => DomainGoal::Holds(self),
         }
     }
 }

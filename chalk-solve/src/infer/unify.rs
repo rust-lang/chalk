@@ -119,7 +119,9 @@ impl<'t> Unifier<'t> {
             (&Ty::InferenceVar(var), ty @ &Ty::Apply(_))
             | (ty @ &Ty::Apply(_), &Ty::InferenceVar(var))
             | (&Ty::InferenceVar(var), ty @ &Ty::ForAll(_))
-            | (ty @ &Ty::ForAll(_), &Ty::InferenceVar(var)) => {
+            | (ty @ &Ty::ForAll(_), &Ty::InferenceVar(var))
+            | (ty @ &Ty::Dynamic(..), &Ty::InferenceVar(var))
+            | (&Ty::InferenceVar(var), ty @ &Ty::Dynamic(..)) => {
                 self.unify_var_ty(var, ty)
             }
 
@@ -138,6 +140,14 @@ impl<'t> Unifier<'t> {
                 }
 
                 Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
+            }
+
+            (Ty::Dynamic(dyn1), Ty::Dynamic(dyn2)) => {
+                if dyn1.len() != dyn2.len() {
+                    return Err(NoSolution);
+                }
+
+                Zip::zip_with(self, dyn1, dyn2)
             }
 
             (proj1 @ &Ty::Projection(_), proj2 @ &Ty::UnselectedProjection(_))
@@ -162,6 +172,10 @@ impl<'t> Unifier<'t> {
             | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::ForAll(_))
             | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::InferenceVar(_)) => {
                 self.unify_unselected_projection_ty(proj, ty)
+            }
+
+            (Ty::Dynamic(..), _) | (_, Ty::Dynamic(..)) => {
+                Err(NoSolution)
             }
 
             (Ty::BoundVar(_), _) | (_, Ty::BoundVar(_)) => {
