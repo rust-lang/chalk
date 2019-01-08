@@ -562,7 +562,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
         let delayed_literals = {
-            let mut delayed_literals: FxHashSet<_> = delayed_literals.into_iter()
+            let delayed_literals: FxHashSet<_> = delayed_literals.into_iter()
                 .map(|dl| infer.lift_delayed_literal(dl))
                 .collect();
             DelayedLiteralSet { delayed_literals }
