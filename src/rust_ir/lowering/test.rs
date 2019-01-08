@@ -3,7 +3,6 @@
 use crate::test_util::*;
 use chalk_ir::tls;
 use chalk_solve::solve::SolverChoice;
-use std::sync::Arc;
 
 #[test]
 fn lower_success() {
@@ -158,8 +157,7 @@ fn assoc_tys() {
 
 #[test]
 fn goal_quantifiers() {
-    let program =
-        Arc::new(parse_and_lower_program("trait Foo<A, B> { }", SolverChoice::default()).unwrap());
+    let program = parse_and_lower_program("trait Foo<A, B> { }", SolverChoice::default()).unwrap();
     let goal =
         parse_and_lower_goal(&program, "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}").unwrap();
     tls::set_current_program(&program, || {
@@ -172,9 +170,8 @@ fn goal_quantifiers() {
 
 #[test]
 fn atc_accounting() {
-    let program = Arc::new(
-        parse_and_lower_program(
-            "
+    let program = parse_and_lower_program(
+        "
             struct Vec<T> { }
 
             trait Iterable {
@@ -187,10 +184,9 @@ fn atc_accounting() {
 
             struct Iter<'a, T> { }
             ",
-            SolverChoice::default(),
-        )
-        .unwrap(),
-    );
+        SolverChoice::default(),
+    )
+    .unwrap();
     tls::set_current_program(&program, || {
         let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
         println!("{}", impl_text);

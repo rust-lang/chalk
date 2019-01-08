@@ -90,7 +90,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
     for (goal_text, solver_choice, expected) in goals {
         let (program, env) = program_env_cache.entry(solver_choice).or_insert_with(|| {
             let program_text = &program_text[1..program_text.len() - 1]; // exclude `{}`
-            let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
+            let program = parse_and_lower_program(program_text, solver_choice).unwrap();
             let env = Arc::new(program.environment());
             (program, env)
         });
