@@ -1,3 +1,10 @@
+//! Defines traits used to embed the chalk-engine in another crate.
+//!
+//! chalk and rustc both define types which implement the traits in this
+//! module. This allows each user of chalk-engine to define their own
+//! `DomainGoal` type, add arena lifetime parameters, and more. See
+//! [`Context`] trait for a list of types.
+
 use crate::fallible::Fallible;
 use crate::hh::HhGoal;
 use crate::{DelayedLiteral, ExClause, SimplifiedAnswer};
@@ -163,8 +170,10 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     fn empty_constraints(ccs: &C::CanonicalConstrainedSubst) -> bool;
 
     fn canonical(u_canon: &C::UCanonicalGoalInEnvironment) -> &C::CanonicalGoalInEnvironment;
-    fn is_trivial_substitution(u_canon: &C::UCanonicalGoalInEnvironment,
-                               canonical_subst: &C::CanonicalConstrainedSubst) -> bool;
+    fn is_trivial_substitution(
+        u_canon: &C::UCanonicalGoalInEnvironment,
+        canonical_subst: &C::CanonicalConstrainedSubst,
+    ) -> bool;
     fn num_universes(_: &C::UCanonicalGoalInEnvironment) -> usize;
 
     /// Convert a goal G *from* the canonical universes *into* our
@@ -244,11 +253,7 @@ pub trait InferenceTable<C: Context, I: Context>:
     fn into_hh_goal(&mut self, goal: I::Goal) -> HhGoal<I>;
 
     // Used by: simplify
-    fn add_clauses(
-        &mut self,
-        env: &I::Environment,
-        clauses: I::ProgramClauses,
-    ) -> I::Environment;
+    fn add_clauses(&mut self, env: &I::Environment, clauses: I::ProgramClauses) -> I::Environment;
 
     /// Upcast this domain goal into a more general goal.
     fn into_goal(&self, domain_goal: I::DomainGoal) -> I::Goal;
@@ -300,10 +305,7 @@ pub trait UnificationOps<C: Context, I: Context> {
         value: &C::CanonicalConstrainedSubst,
     ) -> I::CanonicalConstrainedSubst;
 
-    fn lift_delayed_literal(
-        &self,
-        value: DelayedLiteral<I>,
-    ) -> DelayedLiteral<C>;
+    fn lift_delayed_literal(&self, value: DelayedLiteral<I>) -> DelayedLiteral<C>;
 
     // Used by: logic
     fn invert_goal(&mut self, value: &I::GoalInEnvironment) -> Option<I::GoalInEnvironment>;
@@ -324,9 +326,10 @@ pub trait UnificationOps<C: Context, I: Context> {
 
 /// "Truncation" (called "abstraction" in the papers referenced below)
 /// refers to the act of modifying a goal or answer that has become
-/// too large in order to guarantee termination. The SLG solver
-/// doesn't care about the precise truncation function, so long as
-/// it's deterministic and so forth.
+/// too large in order to guarantee termination.
+///
+/// The SLG solver doesn't care about the precise truncation function,
+/// so long as it's deterministic and so forth.
 ///
 /// Citations:
 ///

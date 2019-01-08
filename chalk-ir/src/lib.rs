@@ -1,6 +1,5 @@
 #![feature(crate_visibility_modifier)]
 #![feature(specialization)]
-#![feature(non_modrs_mods)]
 
 use crate::cast::Cast;
 use chalk_engine::fallible::*;
