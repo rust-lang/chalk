@@ -2,6 +2,7 @@ language: rust
 rust:
   - beta
   - nightly
+cache: cargo
 script:
   # RUSTC_BOOTSTRAP enables e.g. #![feature] on beta
   - rustup component add rustfmt
