@@ -1,12 +1,12 @@
 //!
 
+use crate::infer::InferenceTable;
 use chalk_engine::fallible::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{
     self, DefaultFreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder, Fold, TypeFolder,
 };
 use chalk_ir::*;
-use crate::infer::InferenceTable;
 
 crate fn truncate<T>(infer: &mut InferenceTable, max_size: usize, value: &T) -> Truncated<T::Result>
 where

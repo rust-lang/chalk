@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use chalk_ir::fold::shift::Shift;
-use itertools::Itertools;
 use crate::errors::*;
-use chalk_ir::*;
 use crate::rust_ir::*;
 use chalk_ir::cast::*;
+use chalk_ir::fold::shift::Shift;
+use chalk_ir::*;
 use chalk_solve::ext::*;
-use chalk_solve::solve::{SolverChoice, Solution};
+use chalk_solve::solve::{Solution, SolverChoice};
+use itertools::Itertools;
 
 struct DisjointSolver {
     env: Arc<ProgramEnvironment>,
@@ -29,7 +29,8 @@ impl Program {
         };
 
         // Create a vector of references to impl datums, sorted by trait ref.
-        let impl_data = self.impl_data
+        let impl_data = self
+            .impl_data
             .iter()
             .filter(|&(_, impl_datum)| {
                 // Ignore impls for marker traits as they are allowed to overlap.
@@ -47,10 +48,9 @@ impl Program {
             });
 
         // Group impls by trait.
-        let impl_groupings = impl_data.into_iter().group_by(|&(_, impl_datum)| {
-            impl_datum.binders.value.trait_ref.trait_ref().trait_id
-        });
-
+        let impl_groupings = impl_data
+            .into_iter()
+            .group_by(|&(_, impl_datum)| impl_datum.binders.value.trait_ref.trait_ref().trait_id);
 
         // Iterate over every pair of impls for the same trait.
         for (trait_id, impls) in &impl_groupings {
@@ -139,7 +139,8 @@ impl DisjointSolver {
 
         // Upshift the rhs variables in where clauses
         let lhs_where_clauses = lhs.binders.value.where_clauses.iter().cloned();
-        let rhs_where_clauses = rhs.binders
+        let rhs_where_clauses = rhs
+            .binders
             .value
             .where_clauses
             .iter()
@@ -161,7 +162,8 @@ impl DisjointSolver {
             .negate();
 
         let canonical_goal = &goal.into_closed_goal();
-        let solution = self.solver_choice
+        let solution = self
+            .solver_choice
             .solve_root_goal(&self.env, canonical_goal)
             .unwrap(); // internal errors in the solver are fatal
         let result = match solution {
@@ -242,7 +244,8 @@ impl DisjointSolver {
             .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
         let canonical_goal = &goal.into_closed_goal();
-        let result = match self.solver_choice
+        let result = match self
+            .solver_choice
             .solve_root_goal(&self.env, canonical_goal)
             .unwrap()
         {

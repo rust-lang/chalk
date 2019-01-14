@@ -19,7 +19,8 @@ impl InferenceTable {
                     universes: &mut universes,
                 },
                 0,
-            ).unwrap();
+            )
+            .unwrap();
 
         // Now re-map the universes found in value. We have to do this
         // in a second pass because it is only then that we know the
@@ -31,7 +32,8 @@ impl InferenceTable {
                     universes: &universes,
                 },
                 0,
-            ).unwrap();
+            )
+            .unwrap();
         let binders = value0
             .binders
             .iter()
@@ -273,7 +275,8 @@ impl<'q> PlaceholderFolder for UMapToCanonical<'q> {
         Ok(PlaceholderIndex {
             ui,
             idx: universe0.idx,
-        }.to_ty())
+        }
+        .to_ty())
     }
 
     fn fold_free_placeholder_lifetime(
@@ -285,7 +288,8 @@ impl<'q> PlaceholderFolder for UMapToCanonical<'q> {
         Ok(PlaceholderIndex {
             ui: universe,
             idx: universe0.idx,
-        }.to_lifetime())
+        }
+        .to_lifetime())
     }
 }
 
@@ -307,7 +311,8 @@ impl<'q> PlaceholderFolder for UMapFromCanonical<'q> {
         Ok(PlaceholderIndex {
             ui,
             idx: universe0.idx,
-        }.to_ty())
+        }
+        .to_ty())
     }
 
     fn fold_free_placeholder_lifetime(
@@ -319,7 +324,8 @@ impl<'q> PlaceholderFolder for UMapFromCanonical<'q> {
         Ok(PlaceholderIndex {
             ui: universe,
             idx: universe0.idx,
-        }.to_lifetime())
+        }
+        .to_lifetime())
     }
 }
 
@@ -330,4 +336,3 @@ impl<'q> DefaultInferenceFolder for UMapFromCanonical<'q> {
         true
     }
 }
-

@@ -2,21 +2,24 @@
 // because the `#[derive()]` would add requirements onto the context
 // object that are not needed.
 
-use std::cmp::{PartialEq, Eq};
+use super::*;
+use std::cmp::{Eq, PartialEq};
 use std::hash::{Hash, Hasher};
 use std::mem;
-use super::*;
 
 impl<C: Context> PartialEq for DelayedLiteralSet<C> {
     fn eq(&self, other: &Self) -> bool {
-        let DelayedLiteralSet { delayed_literals: a1 } = self;
-        let DelayedLiteralSet { delayed_literals: a2 } = other;
+        let DelayedLiteralSet {
+            delayed_literals: a1,
+        } = self;
+        let DelayedLiteralSet {
+            delayed_literals: a2,
+        } = other;
         a1 == a2
     }
 }
 
-impl<C: Context> Eq for DelayedLiteralSet<C> {
-}
+impl<C: Context> Eq for DelayedLiteralSet<C> {}
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -27,22 +30,20 @@ impl<C: Context> PartialEq for DelayedLiteral<C> {
         }
 
         match (self, other) {
-            (DelayedLiteral::CannotProve(()), DelayedLiteral::CannotProve(())) =>
-                true,
+            (DelayedLiteral::CannotProve(()), DelayedLiteral::CannotProve(())) => true,
 
-            (DelayedLiteral::Negative(a1), DelayedLiteral::Negative(a2)) =>
-                a1 == a2,
+            (DelayedLiteral::Negative(a1), DelayedLiteral::Negative(a2)) => a1 == a2,
 
-            (DelayedLiteral::Positive(a1, b1), DelayedLiteral::Positive(a2, b2)) =>
-                a1 == a2 && b1 == b2,
+            (DelayedLiteral::Positive(a1, b1), DelayedLiteral::Positive(a2, b2)) => {
+                a1 == a2 && b1 == b2
+            }
 
-            _ => panic!()
+            _ => panic!(),
         }
     }
 }
 
-impl<C: Context> Eq for DelayedLiteral<C> {
-}
+impl<C: Context> Eq for DelayedLiteral<C> {}
 
 impl<C: Context> Hash for DelayedLiteral<C> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
@@ -76,8 +77,7 @@ impl<C: Context> PartialEq for Literal<C> {
     }
 }
 
-impl<C: Context> Eq for Literal<C> {
-}
+impl<C: Context> Eq for Literal<C> {}
 
 impl<C: Context> Hash for Literal<C> {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -89,4 +89,3 @@ impl<C: Context> Hash for Literal<C> {
         }
     }
 }
-

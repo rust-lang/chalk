@@ -1,9 +1,9 @@
-use chalk_ir::cast::Cast;
-use chalk_ir::*;
 use crate::ext::*;
 use crate::infer::InferenceTable;
 use crate::solve::slg::implementation::SubstitutionExt;
 use crate::solve::{Guidance, Solution};
+use chalk_ir::cast::Cast;
+use chalk_ir::*;
 
 use chalk_engine::context;
 use chalk_engine::SimplifiedAnswer;
@@ -123,7 +123,8 @@ fn merge_into_guidance(
                 universe,
             };
             aggr.aggregate_tys(&ty, ty1).cast()
-        }).collect();
+        })
+        .collect();
 
     let aggr_subst = Substitution {
         parameters: aggr_parameters,
@@ -236,7 +237,8 @@ impl<'infer> AntiUnifier<'infer> {
                     associated_ty_id,
                     parameters,
                 })
-            }).unwrap_or_else(|| self.new_variable())
+            })
+            .unwrap_or_else(|| self.new_variable())
     }
 
     fn aggregate_unselected_projection_tys(
@@ -259,7 +261,8 @@ impl<'infer> AntiUnifier<'infer> {
                     type_name,
                     parameters,
                 })
-            }).unwrap_or_else(|| self.new_variable())
+            })
+            .unwrap_or_else(|| self.new_variable())
     }
 
     fn aggregate_name_and_substs<N>(
@@ -316,15 +319,15 @@ impl<'infer> AntiUnifier<'infer> {
                 self.new_lifetime_variable()
             }
 
-            (Lifetime::BoundVar(_), _) | (_, Lifetime::BoundVar(_)) => {
-                self.new_lifetime_variable()
-            }
+            (Lifetime::BoundVar(_), _) | (_, Lifetime::BoundVar(_)) => self.new_lifetime_variable(),
 
-            (Lifetime::Placeholder(_), Lifetime::Placeholder(_)) => if l1 == l2 {
-                *l1
-            } else {
-                self.new_lifetime_variable()
-            },
+            (Lifetime::Placeholder(_), Lifetime::Placeholder(_)) => {
+                if l1 == l2 {
+                    *l1
+                } else {
+                    self.new_lifetime_variable()
+                }
+            }
         }
     }
 

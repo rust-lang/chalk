@@ -2,11 +2,11 @@
 #![feature(specialization)]
 
 use crate::cast::Cast;
-use chalk_engine::fallible::*;
 use crate::fold::shift::Shift;
 use crate::fold::{
     DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder,
 };
+use chalk_engine::fallible::*;
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
@@ -296,10 +296,7 @@ pub struct ApplicationTy {
 
 impl ApplicationTy {
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty> + 'a {
-        self.parameters
-            .iter()
-            .cloned()
-            .filter_map(|p| p.ty())
+        self.parameters.iter().cloned().filter_map(|p| p.ty())
     }
 
     pub fn first_type_parameter(&self) -> Option<Ty> {
@@ -404,10 +401,7 @@ pub struct TraitRef {
 
 impl TraitRef {
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty> + 'a {
-        self.parameters
-            .iter()
-            .cloned()
-            .filter_map(|p| p.ty())
+        self.parameters.iter().cloned().filter_map(|p| p.ty())
     }
 }
 
@@ -858,7 +852,8 @@ impl Goal {
             Binders {
                 value: Box::new(self),
                 binders: Vec::new(),
-            }.with_fresh_type_var(|goal, ty| {
+            }
+            .with_fresh_type_var(|goal, ty| {
                 Box::new(Goal::Implies(
                     vec![
                         DomainGoal::Compatible(()).cast(),

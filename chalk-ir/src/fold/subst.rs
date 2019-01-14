@@ -1,6 +1,6 @@
+use super::*;
 use crate::fold::shift::Shift;
 use crate::*;
-use super::*;
 
 pub struct Subst<'s> {
     /// Values to substitute. A reference to a free variable with
@@ -36,11 +36,7 @@ impl<'b> FreeVarFolder for Subst<'b> {
         }
     }
 
-    fn fold_free_var_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         if depth >= self.parameters.len() {
             Ok(Lifetime::BoundVar(depth - self.parameters.len() + binders))
         } else {

@@ -8,16 +8,14 @@ use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
-use super::{parse_and_lower_program,
-            parse_and_lower_goal,
-            assert_result};
+use super::{assert_result, parse_and_lower_goal, parse_and_lower_program};
 
 fn run_bench(
     program_text: &str,
     solver_choice: SolverChoice,
     goal_text: &str,
     bencher: &mut Bencher,
-    expected: &str
+    expected: &str,
 ) {
     let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
     let env = Arc::new(program.environment());
@@ -102,11 +100,9 @@ forall<T> {
 fn cycley_slg(b: &mut Bencher) {
     run_bench(
         CYCLEY,
-        SolverChoice::SLG {
-            max_size: 20,
-        },
+        SolverChoice::SLG { max_size: 20 },
         CYCLEY_GOAL,
         b,
-        "Unique"
+        "Unique",
     );
 }

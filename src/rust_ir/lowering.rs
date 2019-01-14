@@ -3,12 +3,12 @@ use std::collections::BTreeMap;
 use chalk_parse::ast::*;
 use lalrpop_intern::intern;
 
+use crate::errors::*;
+use crate::rust_ir::{self, Anonymize, ToParameter};
 use chalk_ir;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_solve::solve::SolverChoice;
-use crate::errors::*;
 use itertools::Itertools;
-use crate::rust_ir::{self, Anonymize, ToParameter};
 
 mod test;
 
@@ -288,10 +288,7 @@ trait LowerParameterMap {
         // trait is not object-safe, and hence not supposed to be used
         // as an object. Actually the handling of object types is
         // probably just kind of messed up right now. That's ok.
-        self.all_parameters()
-            .into_iter()
-            .zip(0..)
-            .collect()
+        self.all_parameters().into_iter().zip(0..).collect()
     }
 }
 
@@ -432,7 +429,8 @@ impl LowerWhereClauseVec for [QuantifiedWhereClause] {
             .flat_map(|wc| match wc.lower(env) {
                 Ok(v) => v.into_iter().map(Ok).collect(),
                 Err(e) => vec![Err(e)],
-            }).collect()
+            })
+            .collect()
     }
 }
 
@@ -547,18 +545,16 @@ impl LowerLeafGoal for LeafGoal {
                 .into_iter()
                 .map(|goal| chalk_ir::LeafGoal::DomainGoal(goal))
                 .collect(),
-            LeafGoal::UnifyTys { a, b } => vec![
-                chalk_ir::EqGoal {
-                    a: chalk_ir::ParameterKind::Ty(a.lower(env)?),
-                    b: chalk_ir::ParameterKind::Ty(b.lower(env)?),
-                }.cast(),
-            ],
-            LeafGoal::UnifyLifetimes { ref a, ref b } => vec![
-                chalk_ir::EqGoal {
-                    a: chalk_ir::ParameterKind::Lifetime(a.lower(env)?),
-                    b: chalk_ir::ParameterKind::Lifetime(b.lower(env)?),
-                }.cast(),
-            ],
+            LeafGoal::UnifyTys { a, b } => vec![chalk_ir::EqGoal {
+                a: chalk_ir::ParameterKind::Ty(a.lower(env)?),
+                b: chalk_ir::ParameterKind::Ty(b.lower(env)?),
+            }
+            .cast()],
+            LeafGoal::UnifyLifetimes { ref a, ref b } => vec![chalk_ir::EqGoal {
+                a: chalk_ir::ParameterKind::Lifetime(a.lower(env)?),
+                b: chalk_ir::ParameterKind::Lifetime(b.lower(env)?),
+            }
+            .cast()],
         };
         Ok(goals)
     }
@@ -623,7 +619,8 @@ impl LowerTraitRef for TraitRef {
         let without_self = TraitBound {
             trait_name: self.trait_name,
             args_no_self: self.args.iter().cloned().skip(1).collect(),
-        }.lower(env)?;
+        }
+        .lower(env)?;
 
         let self_parameter = self.args[0].lower(env)?;
         Ok(without_self.as_trait_ref(self_parameter.ty().unwrap()))
@@ -685,7 +682,8 @@ impl LowerProjectionEqBound for ProjectionEqBound {
             Some(info) => info,
             None => bail!("no associated type `{}` defined in trait", self.name.str),
         };
-        let args: Vec<_> = self.args
+        let args: Vec<_> = self
+            .args
             .iter()
             .map(|a| a.lower(env))
             .collect::<Result<_>>()?;
@@ -785,10 +783,7 @@ impl LowerProjectionTy for ProjectionTy {
             Some(info) => info,
             None => bail!("no associated type `{}` defined in trait", name.str),
         };
-        let mut args: Vec<_> = args
-            .iter()
-            .map(|a| a.lower(env))
-            .collect::<Result<_>>()?;
+        let mut args: Vec<_> = args.iter().map(|a| a.lower(env)).collect::<Result<_>>()?;
 
         if args.len() != info.addl_parameter_kinds.len() {
             bail!(
@@ -817,7 +812,8 @@ trait LowerUnselectedProjectionTy {
 
 impl LowerUnselectedProjectionTy for UnselectedProjectionTy {
     fn lower(&self, env: &Env) -> Result<chalk_ir::UnselectedProjectionTy> {
-        let parameters: Vec<_> = self.args
+        let parameters: Vec<_> = self
+            .args
             .iter()
             .map(|a| a.lower(env))
             .collect::<Result<_>>()?;
@@ -954,10 +950,11 @@ impl LowerImpl for Impl {
 
             let trait_id = trait_ref.trait_ref().trait_id;
             let where_clauses = self.lower_where_clauses(&env)?;
-            let associated_ty_values = self.assoc_ty_values
-                    .iter()
-                    .map(|v| v.lower(trait_id, env))
-                    .collect::<Result<_>>()?;
+            let associated_ty_values = self
+                .assoc_ty_values
+                .iter()
+                .map(|v| v.lower(trait_id, env))
+                .collect::<Result<_>>()?;
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
                 where_clauses,
@@ -999,7 +996,8 @@ impl LowerClause for Clause {
                 .map(|consequence| chalk_ir::ProgramClauseImplication {
                     consequence,
                     conditions: conditions.clone(),
-                }).collect::<Vec<_>>();
+                })
+                .collect::<Vec<_>>();
             Ok(implications)
         })?;
 
@@ -1013,7 +1011,8 @@ impl LowerClause for Clause {
                         chalk_ir::ProgramClause::ForAll(implication)
                     }
                 },
-            ).collect();
+            )
+            .collect();
         Ok(clauses)
     }
 }
@@ -1094,7 +1093,8 @@ impl LowerGoal<rust_ir::Program> for Goal {
                     addl_parameter_kinds,
                 };
                 ((datum.trait_id, datum.name), info)
-            }).collect();
+            })
+            .collect();
 
         let env = Env {
             type_ids: &program.type_ids,

@@ -119,9 +119,7 @@ impl<'t> Unifier<'t> {
             (&Ty::InferenceVar(var), ty @ &Ty::Apply(_))
             | (ty @ &Ty::Apply(_), &Ty::InferenceVar(var))
             | (&Ty::InferenceVar(var), ty @ &Ty::ForAll(_))
-            | (ty @ &Ty::ForAll(_), &Ty::InferenceVar(var)) => {
-                self.unify_var_ty(var, ty)
-            }
+            | (ty @ &Ty::ForAll(_), &Ty::InferenceVar(var)) => self.unify_var_ty(var, ty),
 
             (&Ty::ForAll(ref quantified_ty1), &Ty::ForAll(ref quantified_ty2)) => {
                 self.unify_forall_tys(quantified_ty1, quantified_ty2)
@@ -164,9 +162,10 @@ impl<'t> Unifier<'t> {
                 self.unify_unselected_projection_ty(proj, ty)
             }
 
-            (Ty::BoundVar(_), _) | (_, Ty::BoundVar(_)) => {
-                panic!("unification encountered bound variable: a={:?} b={:?}", a, b)
-            }
+            (Ty::BoundVar(_), _) | (_, Ty::BoundVar(_)) => panic!(
+                "unification encountered bound variable: a={:?} b={:?}",
+                a, b
+            ),
         }
     }
 
@@ -226,7 +225,8 @@ impl<'t> Unifier<'t> {
             ProjectionEq {
                 projection: proj.clone(),
                 ty: ty.clone(),
-            }.cast(),
+            }
+            .cast(),
         )))
     }
 
@@ -240,7 +240,8 @@ impl<'t> Unifier<'t> {
             UnselectedNormalize {
                 projection: proj.clone(),
                 ty: ty.clone(),
-            }.cast(),
+            }
+            .cast(),
         )))
     }
 
@@ -324,15 +325,18 @@ impl<'t> Unifier<'t> {
                 }
             }
 
-            (&Lifetime::Placeholder(_), &Lifetime::Placeholder(_)) => if a != b {
-                Ok(self.push_lifetime_eq_constraint(*a, *b))
-            } else {
-                Ok(())
-            },
-
-            (Lifetime::BoundVar(_), _) | (_, Lifetime::BoundVar(_)) => {
-                panic!("unification encountered bound variable: a={:?} b={:?}", a, b)
+            (&Lifetime::Placeholder(_), &Lifetime::Placeholder(_)) => {
+                if a != b {
+                    Ok(self.push_lifetime_eq_constraint(*a, *b))
+                } else {
+                    Ok(())
+                }
             }
+
+            (Lifetime::BoundVar(_), _) | (_, Lifetime::BoundVar(_)) => panic!(
+                "unification encountered bound variable: a={:?} b={:?}",
+                a, b
+            ),
         }
     }
 

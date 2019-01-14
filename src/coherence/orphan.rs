@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use crate::errors::*;
-use chalk_ir::*;
 use crate::rust_ir::*;
 use chalk_ir::cast::*;
+use chalk_ir::*;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
 
@@ -19,7 +19,8 @@ impl Program {
             solver_choice,
         };
 
-        let local_impls = self.impl_data
+        let local_impls = self
+            .impl_data
             .values()
             // Only keep local impls (i.e. impls in the current crate)
             .filter(|impl_datum| impl_datum.binders.value.impl_type == ImplType::Local);
@@ -47,13 +48,17 @@ impl OrphanSolver {
     fn orphan_check(&self, impl_datum: &ImplDatum) -> bool {
         debug_heading!("orphan_check(impl={:#?})", impl_datum);
 
-        let impl_allowed: Goal = impl_datum.binders.map_ref(|bound_impl| {
-            // Ignoring the polarization of the impl's polarized trait ref
-            DomainGoal::LocalImplAllowed(bound_impl.trait_ref.trait_ref().clone())
-        }).cast();
+        let impl_allowed: Goal = impl_datum
+            .binders
+            .map_ref(|bound_impl| {
+                // Ignoring the polarization of the impl's polarized trait ref
+                DomainGoal::LocalImplAllowed(bound_impl.trait_ref.trait_ref().clone())
+            })
+            .cast();
 
         let canonical_goal = &impl_allowed.into_closed_goal();
-        let result = self.solver_choice
+        let result = self
+            .solver_choice
             .solve_root_goal(&self.env, canonical_goal)
             .unwrap()
             .is_some();

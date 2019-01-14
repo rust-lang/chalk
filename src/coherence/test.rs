@@ -287,7 +287,6 @@ fn fundamental_traits() {
             impl<T> Bar for T where T: Sized { }
         }
     }
-
 }
 
 #[test]

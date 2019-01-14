@@ -26,8 +26,7 @@ mod test_util;
 pub mod rust_ir;
 
 crate mod coherence;
-crate mod rules;
 pub mod errors;
+crate mod rules;
 
 mod test;
-

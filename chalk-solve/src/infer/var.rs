@@ -1,5 +1,5 @@
-use ena::unify::{UnifyKey, UnifyValue};
 use chalk_ir::*;
+use ena::unify::{UnifyKey, UnifyValue};
 use std::cmp::min;
 use std::fmt;
 use std::u32;
@@ -105,8 +105,8 @@ impl UnifyValue for InferenceValue {
             (&InferenceValue::Unbound(ui_a), &InferenceValue::Unbound(ui_b)) => {
                 Ok(InferenceValue::Unbound(min(ui_a, ui_b)))
             }
-            (bound @ &InferenceValue::Bound(_), &InferenceValue::Unbound(_)) |
-            (&InferenceValue::Unbound(_), bound @ &InferenceValue::Bound(_)) => Ok(bound.clone()),
+            (bound @ &InferenceValue::Bound(_), &InferenceValue::Unbound(_))
+            | (&InferenceValue::Unbound(_), bound @ &InferenceValue::Bound(_)) => Ok(bound.clone()),
             (&InferenceValue::Bound(_), &InferenceValue::Bound(_)) => {
                 panic!("we should not be asked to unify two bound things")
             }

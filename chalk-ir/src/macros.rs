@@ -76,11 +76,13 @@ macro_rules! lifetime {
 
 #[macro_export]
 macro_rules! ty_name {
-    ((item $n:expr)) => { $crate::TypeName::ItemId(ItemId { index: $n }) };
-    ((placeholder $n:expr)) => { $crate::TypeName::Placeholder(
-                            PlaceholderIndex {
-                                ui: UniverseIndex { counter: $n },
-                                idx: 0,
-                            })
-                        }
+    ((item $n:expr)) => {
+        $crate::TypeName::ItemId(ItemId { index: $n })
+    };
+    ((placeholder $n:expr)) => {
+        $crate::TypeName::Placeholder(PlaceholderIndex {
+            ui: UniverseIndex { counter: $n },
+            idx: 0,
+        })
+    };
 }

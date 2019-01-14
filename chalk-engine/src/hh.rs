@@ -22,4 +22,3 @@ pub enum HhGoal<C: Context> {
     /// as cannot prove.
     CannotProve,
 }
-
