@@ -1,9 +1,9 @@
-use crate::{DelayedLiteralSet, DelayedLiteralSets};
 use crate::context::prelude::*;
 use crate::strand::CanonicalStrand;
+use crate::{DelayedLiteralSet, DelayedLiteralSets};
 use rustc_hash::FxHashMap;
-use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
+use std::collections::VecDeque;
 use std::mem;
 
 pub(crate) struct Table<C: Context> {
@@ -37,7 +37,6 @@ index_struct! {
     }
 }
 
-
 /// An "answer" in the on-demand solver corresponds to a fully solved
 /// goal for a particular table (modulo delayed literals). It contains
 /// a substitution
@@ -48,7 +47,10 @@ pub struct Answer<C: Context> {
 }
 
 impl<C: Context> Table<C> {
-    pub(crate) fn new(table_goal: C::UCanonicalGoalInEnvironment, coinductive_goal: bool) -> Table<C> {
+    pub(crate) fn new(
+        table_goal: C::UCanonicalGoalInEnvironment,
+        coinductive_goal: bool,
+    ) -> Table<C> {
         Table {
             table_goal,
             coinductive_goal,
@@ -93,7 +95,9 @@ impl<C: Context> Table<C> {
 
         let added = match self.answers_hash.entry(answer.subst.clone()) {
             Entry::Vacant(entry) => {
-                entry.insert(DelayedLiteralSets::singleton(answer.delayed_literals.clone()));
+                entry.insert(DelayedLiteralSets::singleton(
+                    answer.delayed_literals.clone(),
+                ));
                 true
             }
 

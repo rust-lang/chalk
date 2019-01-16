@@ -1,8 +1,8 @@
 extern crate chalk;
 extern crate chalk_engine;
 extern crate chalk_ir;
-extern crate chalk_solve;
 extern crate chalk_parse;
+extern crate chalk_solve;
 extern crate docopt;
 extern crate rustyline;
 
@@ -12,16 +12,16 @@ extern crate serde_derive;
 #[macro_use]
 extern crate error_chain;
 
-use std::io::Read;
 use std::fs::File;
-use std::sync::Arc;
+use std::io::Read;
 use std::process::exit;
+use std::sync::Arc;
 
 use chalk::rust_ir;
 use chalk::rust_ir::lowering::*;
+use chalk_engine::fallible::NoSolution;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
-use chalk_engine::fallible::NoSolution;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
 
@@ -196,7 +196,8 @@ fn process(
         // The command is either "print", "lowered", or a goal.
 
         // Check that a program has been loaded.
-        let prog = prog.as_ref()
+        let prog = prog
+            .as_ref()
             .ok_or("no program currently loaded; type 'help' to see available commands")?;
 
         // Attempt to parse the program.
@@ -260,7 +261,8 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let peeled_goal = goal.into_peeled_goal();
-    match args.solver_choice()
+    match args
+        .solver_choice()
         .solve_root_goal(&prog.env, &peeled_goal)
     {
         Ok(Some(v)) => println!("{}\n", v),

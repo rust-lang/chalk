@@ -45,7 +45,10 @@ impl InferenceTable {
         T: Fold,
         U: IntoIterator<Item = ParameterKind<()>>,
     {
-        let binders: Vec<_> = binders.into_iter().map(|pk| pk.map(|()| universe)).collect();
+        let binders: Vec<_> = binders
+            .into_iter()
+            .map(|pk| pk.map(|()| universe))
+            .collect();
         let subst = self.fresh_subst(&binders);
         arg.fold_with(&mut &subst, 0).unwrap()
     }

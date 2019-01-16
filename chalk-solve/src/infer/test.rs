@@ -1,7 +1,7 @@
 #![cfg(test)]
 
-use super::*;
 use super::unify::UnificationResult;
+use super::*;
 
 #[test]
 fn infer() {
@@ -16,7 +16,10 @@ fn infer() {
     table
         .unify(&environment0, &b, &ty!(apply (item 1)))
         .unwrap();
-    assert_eq!(table.normalize_deep(&a), ty!(apply (item 0) (apply (item 1))));
+    assert_eq!(
+        table.normalize_deep(&a),
+        ty!(apply (item 0) (apply (item 1)))
+    );
 }
 
 #[test]

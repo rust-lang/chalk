@@ -1,8 +1,8 @@
+use crate::context::prelude::*;
 use crate::fallible::Fallible;
-use crate::{ExClause, Literal};
 use crate::forest::Forest;
 use crate::hh::HhGoal;
-use crate::context::prelude::*;
+use crate::{ExClause, Literal};
 
 impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// Simplifies an HH goal into a series of positive domain goals
@@ -45,7 +45,10 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
                 HhGoal::Not(subgoal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(I::goal_in_environment(&environment, subgoal)));
+                        .push(Literal::Negative(I::goal_in_environment(
+                            &environment,
+                            subgoal,
+                        )));
                 }
                 HhGoal::Unify(variance, a, b) => {
                     let result = infer.unify_parameters(&environment, variance, &a, &b)?;
@@ -69,7 +72,10 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
                     let goal = infer.cannot_prove();
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(I::goal_in_environment(&environment, goal)));
+                        .push(Literal::Negative(I::goal_in_environment(
+                            &environment,
+                            goal,
+                        )));
                 }
             }
         }

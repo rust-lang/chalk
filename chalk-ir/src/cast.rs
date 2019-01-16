@@ -64,19 +64,28 @@ impl Cast<WhereClause> for ProjectionEq {
     }
 }
 
-impl<T> Cast<DomainGoal> for T where T: Cast<WhereClause> {
+impl<T> Cast<DomainGoal> for T
+where
+    T: Cast<WhereClause>,
+{
     fn cast(self) -> DomainGoal {
         DomainGoal::Holds(self.cast())
     }
 }
 
-impl<T> Cast<LeafGoal> for T where T: Cast<DomainGoal> {
+impl<T> Cast<LeafGoal> for T
+where
+    T: Cast<DomainGoal>,
+{
     fn cast(self) -> LeafGoal {
         LeafGoal::DomainGoal(self.cast())
     }
 }
 
-impl<T> Cast<Goal> for T where T: Cast<LeafGoal> {
+impl<T> Cast<Goal> for T
+where
+    T: Cast<LeafGoal>,
+{
     fn cast(self) -> Goal {
         Goal::Leaf(self.cast())
     }
@@ -119,7 +128,7 @@ impl<T: Cast<Goal>> Cast<Goal> for Binders<T> {
         } else {
             Goal::Quantified(
                 QuantifierKind::ForAll,
-                self.map(|bound| Box::new(bound.cast()))
+                self.map(|bound| Box::new(bound.cast())),
             )
         }
     }
@@ -149,7 +158,10 @@ impl Cast<Parameter> for Lifetime {
     }
 }
 
-impl<T> Cast<ProgramClause> for T where T: Cast<DomainGoal> {
+impl<T> Cast<ProgramClause> for T
+where
+    T: Cast<DomainGoal>,
+{
     fn cast(self) -> ProgramClause {
         ProgramClause::Implies(ProgramClauseImplication {
             consequence: self.cast(),
@@ -161,14 +173,12 @@ impl<T> Cast<ProgramClause> for T where T: Cast<DomainGoal> {
 impl<T: Cast<DomainGoal>> Cast<ProgramClause> for Binders<T> {
     fn cast(self) -> ProgramClause {
         if self.binders.is_empty() {
-           Cast::<ProgramClause>::cast(self.value)
+            Cast::<ProgramClause>::cast(self.value)
         } else {
-            ProgramClause::ForAll(
-                self.map(|bound| ProgramClauseImplication {
-                    consequence: bound.cast(),
-                    conditions: vec![],
-                })
-            )
+            ProgramClause::ForAll(self.map(|bound| ProgramClauseImplication {
+                consequence: bound.cast(),
+                conditions: vec![],
+            }))
         }
     }
 }

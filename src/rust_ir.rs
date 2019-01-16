@@ -2,13 +2,13 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
+use chalk_ir::debug::Angle;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::tls;
 use chalk_ir::{
     ApplicationTy, Binders, Identifier, ItemId, Lifetime, Parameter, ParameterKind, ProgramClause,
     ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty, WhereClause,
 };
-use chalk_ir::debug::Angle;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::iter;
@@ -88,8 +88,7 @@ impl tls::DebugContext for Program {
         projection_ty: &ProjectionTy,
         fmt: &mut fmt::Formatter,
     ) -> Result<(), fmt::Error> {
-        let (associated_ty_data, trait_params, other_params) =
-            self.split_projection(projection_ty);
+        let (associated_ty_data, trait_params, other_params) = self.split_projection(projection_ty);
         write!(
             fmt,
             "<{:?} as {:?}{:?}>::{}{:?}",
@@ -222,7 +221,8 @@ impl IntoWhereClauses for QuantifiedInlineBound {
             .map(|wc| Binders {
                 binders: self.binders.clone(),
                 value: wc,
-            }).collect()
+            })
+            .collect()
     }
 }
 

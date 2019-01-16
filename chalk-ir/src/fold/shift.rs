@@ -1,7 +1,7 @@
-use crate::*;
 use super::{
-    DefaultTypeFolder, Fold, FreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder,
+    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder,
 };
+use crate::*;
 
 /// Methods for converting debruijn indices to move values into or out
 /// of binders.

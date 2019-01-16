@@ -55,7 +55,6 @@ impl Debug for InferenceVar {
     }
 }
 
-
 impl Debug for QuantifiedTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         // FIXME -- we should introduce some names or something here

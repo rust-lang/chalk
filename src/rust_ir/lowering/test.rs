@@ -1,9 +1,9 @@
 #![cfg(test)]
 
+use crate::test_util::*;
 use chalk_ir::tls;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
-use crate::test_util::*;
 
 #[test]
 fn lower_success() {
@@ -158,16 +158,10 @@ fn assoc_tys() {
 
 #[test]
 fn goal_quantifiers() {
-    let program = Arc::new(
-        parse_and_lower_program(
-            "trait Foo<A, B> { }",
-            SolverChoice::default()
-        ).unwrap()
-    );
-    let goal = parse_and_lower_goal(
-        &program,
-        "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}"
-    ).unwrap();
+    let program =
+        Arc::new(parse_and_lower_program("trait Foo<A, B> { }", SolverChoice::default()).unwrap());
+    let goal =
+        parse_and_lower_goal(&program, "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}").unwrap();
     tls::set_current_program(&program, || {
         assert_eq!(
             format!("{:?}", goal),
@@ -193,8 +187,9 @@ fn atc_accounting() {
 
             struct Iter<'a, T> { }
             ",
-            SolverChoice::default()
-        ).unwrap(),
+            SolverChoice::default(),
+        )
+        .unwrap(),
     );
     tls::set_current_program(&program, || {
         let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
@@ -224,19 +219,20 @@ fn atc_accounting() {
             &program,
             "forall<X> { forall<'a> { forall<Y> { \
              X: Iterable<Iter<'a> = Y> } } }",
-        ).unwrap();
+        )
+        .unwrap();
         let goal_text = format!("{:?}", goal);
         println!("{}", goal_text);
         assert_eq!(
             goal_text,
             "ForAll<type> { \
-                ForAll<lifetime> { \
-                    ForAll<type> { \
-                        (ProjectionEq(<^2 as Iterable>::Iter<'^1> = ^0), \
-                        Implemented(^2: Iterable)) \
-                    } \
-                } \
-            }"
+             ForAll<lifetime> { \
+             ForAll<type> { \
+             (ProjectionEq(<^2 as Iterable>::Iter<'^1> = ^0), \
+             Implemented(^2: Iterable)) \
+             } \
+             } \
+             }"
         );
     });
 }

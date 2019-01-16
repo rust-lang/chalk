@@ -1,17 +1,20 @@
 use petgraph::prelude::*;
 
 use crate::errors::Result;
-use chalk_ir::{self, ItemId};
 use crate::rust_ir::Program;
+use chalk_ir::{self, ItemId};
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
-mod solve;
 mod orphan;
+mod solve;
 mod test;
 
 impl Program {
-    crate fn record_specialization_priorities(&mut self, solver_choice: SolverChoice) -> Result<()> {
+    crate fn record_specialization_priorities(
+        &mut self,
+        solver_choice: SolverChoice,
+    ) -> Result<()> {
         chalk_ir::tls::set_current_program(&Arc::new(self.clone()), || {
             let forest = self.build_specialization_forest(solver_choice)?;
 
@@ -51,7 +54,8 @@ impl Program {
             let impl_id = forest
                 .node_weight(idx)
                 .expect("index should be a valid index into graph");
-            let impl_datum = self.impl_data
+            let impl_datum = self
+                .impl_data
                 .get_mut(impl_id)
                 .expect("node should be valid impl id");
             impl_datum.binders.value.specialization_priority = p;

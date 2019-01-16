@@ -17,7 +17,6 @@ lazy_static! {
             .map(|x| x >= 2)
             .unwrap_or(false)
     };
-
     pub static ref INFO_ENABLED: bool = {
         use std::env;
         env::var("CHALK_DEBUG")

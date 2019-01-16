@@ -1,15 +1,15 @@
 use ::ena::unify as ena;
-use chalk_ir::*;
 use chalk_ir::fold::Fold;
+use chalk_ir::*;
 
 pub mod canonicalize;
-pub mod ucanonicalize;
-mod normalize_deep;
 pub mod instantiate;
 mod invert;
+mod normalize_deep;
+mod test;
+pub mod ucanonicalize;
 pub mod unify;
 pub mod var;
-mod test;
 
 use self::var::*;
 

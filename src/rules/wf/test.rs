@@ -623,7 +623,7 @@ fn assoc_type_recursive_bound() {
             // }
 
             // fn bar<T: Bar> {
-            //     // ok, we have `FromEnv(T: Bar)` hence 
+            //     // ok, we have `FromEnv(T: Bar)` hence
             //     // `<T as Bar>::Assoc` is well-formed and
             //     // `Implemented(<T as Bar>::Assoc: Print)` hold
             //     foo<<T as Bar>::Assoc>(

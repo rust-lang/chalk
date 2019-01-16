@@ -1,7 +1,7 @@
 use chalk_engine::fallible::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{
-    DefaultTypeFolder, Fold, DefaultFreeVarFolder, InferenceFolder, PlaceholderFolder,
+    DefaultFreeVarFolder, DefaultTypeFolder, Fold, InferenceFolder, PlaceholderFolder,
 };
 use chalk_ir::*;
 use std::cmp::max;
@@ -82,11 +82,14 @@ impl<'q> Canonicalizer<'q> {
     }
 
     fn add(&mut self, free_var: ParameterEnaVariable) -> usize {
-        self.free_vars.iter().position(|&v| v == free_var).unwrap_or_else(|| {
-            let next_index = self.free_vars.len();
-            self.free_vars.push(free_var);
-            next_index
-        })
+        self.free_vars
+            .iter()
+            .position(|&v| v == free_var)
+            .unwrap_or_else(|| {
+                let next_index = self.free_vars.len();
+                self.free_vars.push(free_var);
+                next_index
+            })
     }
 }
 
@@ -120,11 +123,7 @@ impl<'q> DefaultFreeVarFolder for Canonicalizer<'q> {
 
 impl<'q> InferenceFolder for Canonicalizer<'q> {
     fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty> {
-        debug_heading!(
-            "fold_inference_ty(depth={:?}, binders={:?})",
-            var,
-            binders
-        );
+        debug_heading!("fold_inference_ty(depth={:?}, binders={:?})", var, binders);
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
             Some(ty) => {

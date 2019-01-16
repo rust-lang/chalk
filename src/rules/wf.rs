@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-use chalk_ir::*;
 use crate::errors::*;
-use chalk_ir::cast::*;
-use chalk_ir::fold::*;
-use chalk_ir::fold::shift::Shift;
-use itertools::Itertools;
 use crate::rust_ir::*;
+use chalk_ir::cast::*;
+use chalk_ir::fold::shift::Shift;
+use chalk_ir::fold::*;
+use chalk_ir::*;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
+use itertools::Itertools;
 
 mod test;
 
@@ -20,7 +20,9 @@ struct WfSolver<'me> {
 
 impl Program {
     pub fn verify_well_formedness(&self, solver_choice: SolverChoice) -> Result<()> {
-        tls::set_current_program(&Arc::new(self.clone()), || self.solve_wf_requirements(solver_choice))
+        tls::set_current_program(&Arc::new(self.clone()), || {
+            self.solve_wf_requirements(solver_choice)
+        })
     }
 
     fn solve_wf_requirements(&self, solver_choice: SolverChoice) -> Result<()> {
@@ -96,10 +98,9 @@ impl FoldInputTypes for Ty {
             // lazily, so no need to include them here.
             Ty::ForAll(..) => (),
 
-            Ty::InferenceVar(..) => panic!(
-                "unexpected inference variable in wf rules: {:?}",
-                self,
-            ),
+            Ty::InferenceVar(..) => {
+                panic!("unexpected inference variable in wf rules: {:?}", self,)
+            }
         }
     }
 }
@@ -137,34 +138,44 @@ impl<'me> WfSolver<'me> {
         // We retrieve all the input types of the struct fields.
         let mut input_types = Vec::new();
         struct_datum.binders.value.fields.fold(&mut input_types);
-        struct_datum.binders.value.where_clauses.fold(&mut input_types);
+        struct_datum
+            .binders
+            .value
+            .where_clauses
+            .fold(&mut input_types);
 
         if input_types.is_empty() {
             return true;
         }
 
-        let goals = input_types.into_iter()
-                               .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
-                               .casted();
-        let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-                        .expect("at least one goal");
+        let goals = input_types
+            .into_iter()
+            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
+            .casted();
+        let goal = goals
+            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
+            .expect("at least one goal");
 
-        let hypotheses =
-            struct_datum.binders
-                        .value
-                        .where_clauses
-                        .iter()
-                        .cloned()
-                        .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
-                        .casted()
-                        .collect();
+        let hypotheses = struct_datum
+            .binders
+            .value
+            .where_clauses
+            .iter()
+            .cloned()
+            .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+            .casted()
+            .collect();
 
         // We ask that the above input types are well-formed provided that all the where-clauses
         // on the struct definition hold.
         let goal = Goal::Implies(hypotheses, Box::new(goal))
             .quantify(QuantifierKind::ForAll, struct_datum.binders.binders.clone());
 
-        match self.solver_choice.solve_root_goal(&self.env, &goal.into_closed_goal()).unwrap() {
+        match self
+            .solver_choice
+            .solve_root_goal(&self.env, &goal.into_closed_goal())
+            .unwrap()
+        {
             Some(sol) => sol.is_unique(),
             None => false,
         }
@@ -173,7 +184,7 @@ impl<'me> WfSolver<'me> {
     fn verify_trait_impl(&self, impl_datum: &ImplDatum) -> bool {
         let trait_ref = match impl_datum.binders.value.trait_ref {
             PolarizedTraitRef::Positive(ref trait_ref) => trait_ref,
-            _ => return true
+            _ => return true,
         };
 
         // We retrieve all the input types of the where clauses appearing on the trait impl,
@@ -185,7 +196,11 @@ impl<'me> WfSolver<'me> {
         // We will have to prove that these types are well-formed (e.g. an additional `K: Hash`
         // bound would be needed here).
         let mut input_types = Vec::new();
-        impl_datum.binders.value.where_clauses.fold(&mut input_types);
+        impl_datum
+            .binders
+            .value
+            .where_clauses
+            .fold(&mut input_types);
 
         // We retrieve all the input types of the type on which we implement the trait: we will
         // *assume* that these types are well-formed, e.g. we will be able to derive that
@@ -222,29 +237,31 @@ impl<'me> WfSolver<'me> {
             let mut input_types = Vec::new();
             assoc_ty.value.value.ty.fold(&mut input_types);
 
-            let wf_goals =
-                input_types.into_iter()
-                           .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
-                           .casted();
-            
+            let wf_goals = input_types
+                .into_iter()
+                .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
+                .casted();
+
             let trait_ref = trait_ref.shifted_in(assoc_ty.value.binders.len());
 
-            let all_parameters: Vec<_> =
-                assoc_ty.value.binders.iter()
-                                      .zip(0..)
-                                      .map(|p| p.to_parameter())
-                                      .chain(trait_ref.parameters.iter().cloned())
-                                      .collect();
+            let all_parameters: Vec<_> = assoc_ty
+                .value
+                .binders
+                .iter()
+                .zip(0..)
+                .map(|p| p.to_parameter())
+                .chain(trait_ref.parameters.iter().cloned())
+                .collect();
 
             // Add bounds from the trait. Because they are defined on the trait,
             // their parameters must be substituted with those of the impl.
-            let bound_goals =
-                bounds.iter()
-                      .map(|b| Subst::apply(&all_parameters, b))
-                      .flat_map(|b| b.into_where_clauses(assoc_ty.value.value.ty.clone()))
-                      .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
-                      .casted();
-            
+            let bound_goals = bounds
+                .iter()
+                .map(|b| Subst::apply(&all_parameters, b))
+                .flat_map(|b| b.into_where_clauses(assoc_ty.value.value.ty.clone()))
+                .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
+                .casted();
+
             let goals = wf_goals.chain(bound_goals);
             let goal = match goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf))) {
                 Some(goal) => goal,
@@ -253,67 +270,68 @@ impl<'me> WfSolver<'me> {
 
             // Add where clauses from the associated ty definition. We must
             // substitute parameters here, like we did with the bounds above.
-            let hypotheses =
-                assoc_ty_datum.where_clauses
-                              .iter()
-                              .map(|wc| Subst::apply(&all_parameters, wc))
-                              .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
-                              .casted()
-                              .collect();
+            let hypotheses = assoc_ty_datum
+                .where_clauses
+                .iter()
+                .map(|wc| Subst::apply(&all_parameters, wc))
+                .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+                .casted()
+                .collect();
 
-            let goal = Goal::Implies(
-                hypotheses,
-                Box::new(goal)
-            );
+            let goal = Goal::Implies(hypotheses, Box::new(goal));
 
             Some(goal.quantify(QuantifierKind::ForAll, assoc_ty.value.binders.clone()))
         };
 
-        let assoc_ty_goals =
-            impl_datum.binders
-                      .value
-                      .associated_ty_values
-                      .iter()
-                      .filter_map(compute_assoc_ty_goal);
+        let assoc_ty_goals = impl_datum
+            .binders
+            .value
+            .associated_ty_values
+            .iter()
+            .filter_map(compute_assoc_ty_goal);
 
         // Things to prove well-formed: input types of the where-clauses, projection types
         // appearing in the header, associated type values, and of course the trait ref.
-        let trait_ref_wf = DomainGoal::WellFormed(
-            WellFormed::Trait(trait_ref.clone())
-        );
-        let goals =
-            input_types.into_iter()
-                       .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)).cast())
-                       .chain(assoc_ty_goals)
-                       .chain(Some(trait_ref_wf).cast());
+        let trait_ref_wf = DomainGoal::WellFormed(WellFormed::Trait(trait_ref.clone()));
+        let goals = input_types
+            .into_iter()
+            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)).cast())
+            .chain(assoc_ty_goals)
+            .chain(Some(trait_ref_wf).cast());
 
-        let goal = goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-                        .expect("at least one goal");
+        let goal = goals
+            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
+            .expect("at least one goal");
 
         // Assumptions: types appearing in the header which are not projection types are
         // assumed to be well-formed, and where clauses declared on the impl are assumed
         // to hold.
-        let hypotheses =
-            impl_datum.binders
-                      .value
-                      .where_clauses
-                      .iter()
-                      .cloned()
-                      .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
-                      .casted()
-                      .chain(
-                          header_input_types.into_iter()
-                                            .map(|ty| DomainGoal::FromEnv(FromEnv::Ty(ty)))
-                                            .casted()
-                      )
-                      .collect();
+        let hypotheses = impl_datum
+            .binders
+            .value
+            .where_clauses
+            .iter()
+            .cloned()
+            .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+            .casted()
+            .chain(
+                header_input_types
+                    .into_iter()
+                    .map(|ty| DomainGoal::FromEnv(FromEnv::Ty(ty)))
+                    .casted(),
+            )
+            .collect();
 
         let goal = Goal::Implies(hypotheses, Box::new(goal))
             .quantify(QuantifierKind::ForAll, impl_datum.binders.binders.clone());
 
         debug!("WF trait goal: {:?}", goal);
 
-        match self.solver_choice.solve_root_goal(&self.env, &goal.into_closed_goal()).unwrap() {
+        match self
+            .solver_choice
+            .solve_root_goal(&self.env, &goal.into_closed_goal())
+            .unwrap()
+        {
             Some(sol) => sol.is_unique(),
             None => false,
         }

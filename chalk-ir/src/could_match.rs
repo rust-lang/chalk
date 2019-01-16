@@ -1,5 +1,5 @@
-use crate::*;
 use crate::zip::{Zip, Zipper};
+use crate::*;
 
 /// A fast check to see whether two things could ever possibly match.
 pub trait CouldMatch<T> {
@@ -52,12 +52,8 @@ impl<T: Zip> CouldMatch<T> for T {
 impl CouldMatch<DomainGoal> for ProgramClause {
     fn could_match(&self, other: &DomainGoal) -> bool {
         match self {
-            ProgramClause::Implies(implication) => {
-                implication.consequence.could_match(other)
-            }
-            ProgramClause::ForAll(clause) => {
-                clause.value.consequence.could_match(other)
-            }
+            ProgramClause::Implies(implication) => implication.consequence.could_match(other),
+            ProgramClause::ForAll(clause) => clause.value.consequence.could_match(other),
         }
     }
 }

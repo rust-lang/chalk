@@ -1,7 +1,7 @@
 //! Traits for transforming bits of IR.
 
-use crate::*;
 use crate::cast::Cast;
+use crate::*;
 use chalk_engine::context::Context;
 use chalk_engine::{DelayedLiteral, ExClause, Literal};
 use std::fmt::Debug;
@@ -135,11 +135,7 @@ impl<T: DefaultFreeVarFolder> FreeVarFolder for T {
         }
     }
 
-    fn fold_free_var_lifetime(
-        &mut self,
-        depth: usize,
-        binders: usize,
-    ) -> Fallible<Lifetime> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
         if T::forbid() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
@@ -183,7 +179,11 @@ pub trait DefaultPlaceholderFolder {
 }
 
 impl<T: DefaultPlaceholderFolder> PlaceholderFolder for T {
-    fn fold_free_placeholder_ty(&mut self, universe: PlaceholderIndex, _binders: usize) -> Fallible<Ty> {
+    fn fold_free_placeholder_ty(
+        &mut self,
+        universe: PlaceholderIndex,
+        _binders: usize,
+    ) -> Fallible<Ty> {
         if T::forbid() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
@@ -334,11 +334,13 @@ impl Fold for Ty {
 
 pub fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fallible<Ty> {
     match *ty {
-        Ty::BoundVar(depth) => if depth >= binders {
-            folder.fold_free_var_ty(depth - binders, binders)
-        } else {
-            Ok(Ty::BoundVar(depth))
-        },
+        Ty::BoundVar(depth) => {
+            if depth >= binders {
+                folder.fold_free_var_ty(depth - binders, binders)
+            } else {
+                Ok(Ty::BoundVar(depth))
+            }
+        }
         Ty::InferenceVar(var) => folder.fold_inference_ty(var, binders),
         Ty::Apply(ref apply) => {
             let ApplicationTy {
@@ -433,11 +435,13 @@ pub fn super_fold_lifetime(
     binders: usize,
 ) -> Fallible<Lifetime> {
     match *lifetime {
-        Lifetime::BoundVar(depth) => if depth >= binders {
-            folder.fold_free_var_lifetime(depth - binders, binders)
-        } else {
-            Ok(Lifetime::BoundVar(depth))
-        },
+        Lifetime::BoundVar(depth) => {
+            if depth >= binders {
+                folder.fold_free_var_lifetime(depth - binders, binders)
+            } else {
+                Ok(Lifetime::BoundVar(depth))
+            }
+        }
         Lifetime::InferenceVar(var) => folder.fold_inference_lifetime(var, binders),
         Lifetime::Placeholder(universe) => folder.fold_free_placeholder_lifetime(universe, binders),
     }

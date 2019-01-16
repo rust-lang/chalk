@@ -1,8 +1,8 @@
+use crate::solve::slg::implementation::SlgContext;
 use chalk_engine::context::Context;
 use chalk_engine::context::ContextOps;
 use chalk_engine::fallible::*;
 use chalk_engine::forest::Forest;
-use crate::solve::slg::implementation::SlgContext;
 use chalk_ir::*;
 use std::fmt;
 use std::sync::Arc;

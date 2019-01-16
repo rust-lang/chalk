@@ -2,9 +2,13 @@ language: rust
 rust:
   - beta
   - nightly
+cache: cargo
 script:
+  # RUSTC_BOOTSTRAP enables e.g. #![feature] on beta
+  - rustup component add rustfmt
   - cd chalk-engine && RUSTC_BOOTSTRAP=1 cargo build --no-default-features && cd ..
   - cd chalk-engine && RUSTC_BOOTSTRAP=1 cargo build --all-features && cd ..
+  - cargo fmt --all -- --check
   - RUSTC_BOOTSTRAP=1 cargo test --all
   - RUSTC_BOOTSTRAP=1 cargo doc --all --document-private-items
 deploy:

@@ -1,12 +1,12 @@
-use chalk_engine::fallible::Fallible;
-use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::could_match::CouldMatch;
-use chalk_ir::*;
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
 use crate::solve::truncate::{self, Truncated};
 use crate::solve::Solution;
+use chalk_engine::fallible::Fallible;
+use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::could_match::CouldMatch;
+use chalk_ir::*;
 
 use chalk_engine::context;
 use chalk_engine::hh::HhGoal;

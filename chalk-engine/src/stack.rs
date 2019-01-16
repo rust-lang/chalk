@@ -48,7 +48,7 @@ impl Stack {
     }
 
     pub(super) fn top_of_stack_from(&self, depth: StackIndex) -> Range<StackIndex> {
-        depth .. StackIndex::from(self.stack.len())
+        depth..StackIndex::from(self.stack.len())
     }
 
     pub(super) fn push(&mut self, table: TableIndex, dfn: DepthFirstNumber) -> StackIndex {

@@ -1,10 +1,10 @@
-use crate::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
 use crate::context::prelude::*;
 use crate::context::AnswerStream;
 use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
-use crate::tables::Tables;
 use crate::table::{Answer, AnswerIndex};
+use crate::tables::Tables;
+use crate::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
 
 pub struct Forest<C: Context, CO: ContextOps<C>> {
     #[allow(dead_code)]
@@ -79,7 +79,9 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
     pub fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<C::Solution> {
-        self.context.clone().make_solution(CO::canonical(&goal), self.iter_answers(goal))
+        self.context
+            .clone()
+            .make_solution(CO::canonical(&goal), self.iter_answers(goal))
     }
 
     /// True if all the tables on the stack starting from `depth` and

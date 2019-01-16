@@ -1,6 +1,6 @@
-use chalk_ir::*;
-use chalk_ir::fold::Fold;
 use crate::infer::InferenceTable;
+use chalk_ir::fold::Fold;
+use chalk_ir::*;
 
 pub trait CanonicalExt<T> {
     fn map<OP, U>(self, op: OP) -> Canonical<U::Result>

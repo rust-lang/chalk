@@ -1,12 +1,13 @@
-use chalk_ir::*;
 use crate::rust_ir::*;
-use chalk_solve::infer::InferenceTable;
 use chalk_ir::cast::Cast;
+use chalk_ir::*;
+use chalk_solve::infer::InferenceTable;
 
 impl Program {
     pub fn add_default_impls(&mut self) {
         // For each auto trait `MyAutoTrait` and for each struct/type `MyStruct`
-        for auto_trait in self.trait_data
+        for auto_trait in self
+            .trait_data
             .values()
             .filter(|t| t.binders.value.flags.auto)
         {
@@ -14,9 +15,9 @@ impl Program {
                 // `MyStruct: MyAutoTrait`
                 let trait_ref = TraitRef {
                     trait_id: auto_trait.binders.value.trait_ref.trait_id,
-                    parameters: vec![
-                        ParameterKind::Ty(Ty::Apply(struct_datum.binders.value.self_ty.clone())),
-                    ],
+                    parameters: vec![ParameterKind::Ty(Ty::Apply(
+                        struct_datum.binders.value.self_ty.clone(),
+                    ))],
                 };
 
                 // If a positive or negative impl is already provided for a type family

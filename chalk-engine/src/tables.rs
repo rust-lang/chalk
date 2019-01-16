@@ -1,6 +1,6 @@
-use crate::TableIndex;
 use crate::context::prelude::*;
 use crate::table::Table;
+use crate::TableIndex;
 use rustc_hash::FxHashMap;
 use std::ops::{Index, IndexMut};
 
@@ -29,7 +29,11 @@ impl<C: Context> Tables<C> {
         }
     }
 
-    pub(super) fn insert(&mut self, goal: C::UCanonicalGoalInEnvironment, coinductive_goal: bool) -> TableIndex {
+    pub(super) fn insert(
+        &mut self,
+        goal: C::UCanonicalGoalInEnvironment,
+        coinductive_goal: bool,
+    ) -> TableIndex {
         let index = self.next_index();
         self.tables.push(Table::new(goal.clone(), coinductive_goal));
         self.table_indices.insert(goal, index);
@@ -63,4 +67,3 @@ impl<'a, C: Context> IntoIterator for &'a mut Tables<C> {
         IntoIterator::into_iter(&mut self.tables)
     }
 }
-

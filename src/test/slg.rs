@@ -1,11 +1,11 @@
 #![cfg(test)]
 
+use crate::test_util::*;
+use chalk_engine::forest::Forest;
 use chalk_solve::ext::*;
 use chalk_solve::solve::slg::implementation::SlgContext;
-use chalk_engine::forest::Forest;
-use std::sync::Arc;
-use crate::test_util::*;
 use chalk_solve::solve::SolverChoice;
+use std::sync::Arc;
 
 macro_rules! test {
     (program $program:tt $(goal $goal:tt first $n:tt with max $depth:tt { $expected:expr })*) => {
@@ -24,11 +24,12 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-   let program = &Arc::new(
+    let program = &Arc::new(
         parse_and_lower_program(
             &program_text[1..program_text.len() - 1],
-            SolverChoice::default()
-        ).unwrap()
+            SolverChoice::default(),
+        )
+        .unwrap(),
     );
     let env = &Arc::new(program.environment());
     chalk_ir::tls::set_current_program(&program, || {
@@ -54,8 +55,9 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
     let program = &Arc::new(
         parse_and_lower_program(
             &program_text[1..program_text.len() - 1],
-            SolverChoice::default()
-        ).unwrap()
+            SolverChoice::default(),
+        )
+        .unwrap(),
     );
     let env = &Arc::new(program.environment());
     chalk_ir::tls::set_current_program(&program, || {

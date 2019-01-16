@@ -1,12 +1,13 @@
-use crate::{DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal, Minimums,
-            TableIndex};
+use crate::context::{prelude::*, WithInstantiatedExClause, WithInstantiatedUCanonicalGoal};
 use crate::fallible::NoSolution;
-use crate::context::{WithInstantiatedExClause, WithInstantiatedUCanonicalGoal, prelude::*};
 use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::stack::StackIndex;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{Answer, AnswerIndex};
+use crate::{
+    DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal, Minimums, TableIndex,
+};
 use rustc_hash::FxHashSet;
 use std::marker::PhantomData;
 use std::mem;
@@ -117,7 +118,9 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         }
 
         self.tables[table].strands_mut().any(|strand| {
-            test(CO::inference_normalized_subst_from_ex_clause(&strand.canonical_ex_clause))
+            test(CO::inference_normalized_subst_from_ex_clause(
+                &strand.canonical_ex_clause,
+            ))
         })
     }
 
@@ -291,7 +294,8 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         }
 
         impl<C: Context, CO: ContextOps<C>, OP: WithInstantiatedStrand<C, CO>>
-            WithInstantiatedExClause<C> for With<C, CO, OP> {
+            WithInstantiatedExClause<C> for With<C, CO, OP>
+        {
             type Output = OP::Output;
 
             fn with<I: Context>(
@@ -401,7 +405,11 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// encounters a cycle, and that some of those cycles involve
     /// negative edges. In that case, walks all negative edges and
     /// converts them to delayed literals.
-    fn delay_strands_after_cycle(&mut self, table: TableIndex, visited: &mut FxHashSet<TableIndex>) {
+    fn delay_strands_after_cycle(
+        &mut self,
+        table: TableIndex,
+        visited: &mut FxHashSet<TableIndex>,
+    ) {
         let mut tables = vec![];
 
         let num_universes = CO::num_universes(&self.tables[table].table_goal);
@@ -562,7 +570,8 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
         let delayed_literals = {
-            let delayed_literals: FxHashSet<_> = delayed_literals.into_iter()
+            let delayed_literals: FxHashSet<_> = delayed_literals
+                .into_iter()
                 .map(|dl| infer.lift_delayed_literal(dl))
                 .collect();
             DelayedLiteralSet { delayed_literals }
@@ -739,7 +748,8 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         }
 
         impl<C: Context, CO: ContextOps<C>> WithInstantiatedUCanonicalGoal<C>
-                                                for PushInitialStrandsInstantiated<'a, C, CO> {
+            for PushInitialStrandsInstantiated<'a, C, CO>
+        {
             type Output = ();
 
             fn with<I: Context>(
@@ -1052,10 +1062,14 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             ),
         };
 
-        let table_goal = &CO::map_goal_from_canonical(&universe_map,
-                                                     &CO::canonical(&self.tables[subgoal_table].table_goal));
-        let answer_subst =
-            &CO::map_subst_from_canonical(&universe_map, &self.answer(subgoal_table, answer_index).subst);
+        let table_goal = &CO::map_goal_from_canonical(
+            &universe_map,
+            &CO::canonical(&self.tables[subgoal_table].table_goal),
+        );
+        let answer_subst = &CO::map_subst_from_canonical(
+            &universe_map,
+            &self.answer(subgoal_table, answer_index).subst,
+        );
         match infer.apply_answer_subst(ex_clause, &subgoal, table_goal, answer_subst) {
             Ok(mut ex_clause) => {
                 // If the answer had delayed literals, we have to
