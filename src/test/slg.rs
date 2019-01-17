@@ -24,13 +24,11 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let program = &Arc::new(
-        parse_and_lower_program(
-            &program_text[1..program_text.len() - 1],
-            SolverChoice::default(),
-        )
-        .unwrap(),
-    );
+    let program = &parse_and_lower_program(
+        &program_text[1..program_text.len() - 1],
+        SolverChoice::default(),
+    )
+    .unwrap();
     let env = &Arc::new(program.environment());
     chalk_ir::tls::set_current_program(&program, || {
         for (max_size, num_answers, goal_text, expected) in goals {
@@ -52,13 +50,11 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let program = &Arc::new(
-        parse_and_lower_program(
-            &program_text[1..program_text.len() - 1],
-            SolverChoice::default(),
-        )
-        .unwrap(),
-    );
+    let program = &parse_and_lower_program(
+        &program_text[1..program_text.len() - 1],
+        SolverChoice::default(),
+    )
+    .unwrap();
     let env = &Arc::new(program.environment());
     chalk_ir::tls::set_current_program(&program, || {
         for (max_size, num_answers, goal_text, expected) in goals {

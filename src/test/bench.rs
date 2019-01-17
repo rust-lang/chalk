@@ -17,7 +17,7 @@ fn run_bench(
     bencher: &mut Bencher,
     expected: &str,
 ) {
-    let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
+    let program = parse_and_lower_program(program_text, solver_choice).unwrap();
     let env = Arc::new(program.environment());
     chalk_ir::tls::set_current_program(&program, || {
         let goal = parse_and_lower_goal(&program, goal_text).unwrap();

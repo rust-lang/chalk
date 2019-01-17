@@ -4,6 +4,7 @@
 #![feature(in_band_lifetimes)]
 #![feature(specialization)]
 #![feature(step_trait)]
+#![feature(try_blocks)]
 
 extern crate chalk_parse;
 #[macro_use]
@@ -28,5 +29,8 @@ pub mod rust_ir;
 crate mod coherence;
 pub mod errors;
 crate mod rules;
+
+mod db;
+mod query;
 
 mod test;

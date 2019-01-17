@@ -1,17 +1,31 @@
 #![cfg(test)]
 
+use crate::db::ChalkDatabase;
 use crate::errors::Result;
-use crate::rust_ir::lowering::{LowerGoal, LowerProgram};
+use crate::query::LoweringDatabase;
+use crate::query::ProgramText;
+use crate::rust_ir::lowering::LowerGoal;
 use crate::rust_ir::Program;
 use chalk_ir::Goal;
 use chalk_parse;
 use chalk_solve::solve::SolverChoice;
 use diff;
 use itertools::Itertools;
+use salsa::Database;
 use std::fmt::Write;
+use std::prelude::v1::Result as StdResult;
+use std::sync::Arc;
 
-pub fn parse_and_lower_program(text: &str, solver_choice: SolverChoice) -> Result<Program> {
-    chalk_parse::parse_program(text)?.lower(solver_choice)
+pub fn parse_and_lower_program(
+    text: &str,
+    solver_choice: SolverChoice,
+) -> StdResult<Arc<Program>, String> {
+    let mut db = ChalkDatabase::default();
+
+    db.query_mut(ProgramText)
+        .set((), Arc::new(text.to_string()));
+
+    db.lowered_program(solver_choice)
 }
 
 pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {

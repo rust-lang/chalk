@@ -1,5 +1,6 @@
 use super::*;
 use crate::fold::shift::Shift;
+use crate::*;
 
 pub struct Subst<'s> {
     /// Values to substitute. A reference to a free variable with
