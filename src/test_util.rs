@@ -3,7 +3,7 @@
 use crate::db::ChalkDatabase;
 use crate::errors::Result;
 use crate::query::LoweringDatabase;
-use crate::query::ProgramText;
+use crate::query::{ProgramSolverChoice, ProgramText};
 use crate::rust_ir::lowering::LowerGoal;
 use crate::rust_ir::Program;
 use chalk_ir::Goal;
@@ -24,8 +24,9 @@ pub fn parse_and_lower_program(
 
     db.query_mut(ProgramText)
         .set((), Arc::new(text.to_string()));
+    db.query_mut(ProgramSolverChoice).set((), solver_choice);
 
-    db.lowered_program(solver_choice)
+    db.lowered_program()
 }
 
 pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {

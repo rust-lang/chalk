@@ -14,8 +14,14 @@ salsa::query_group! {
             storage input;
         }
 
+        fn solver_choice() -> SolverChoice {
+            type ProgramSolverChoice;
+
+            storage input;
+        }
+
         // FIXME: Arc<Result<...>> is only needed because the error type is not clone
-        fn lowered_program(solver_choice: SolverChoice) -> Result<Arc<rust_ir::Program>, String> {
+        fn lowered_program() -> Result<Arc<rust_ir::Program>, String> {
             type LoweredProgram;
 
             // FIXME: only volatile because the Error type does not implement Eq
@@ -24,13 +30,10 @@ salsa::query_group! {
     }
 }
 
-fn lowered_program(
-    db: &impl LoweringDatabase,
-    solver_choice: SolverChoice,
-) -> Result<Arc<rust_ir::Program>, String> {
+fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
     let x: crate::errors::Result<_> = try {
         let text = db.program_text();
-        Arc::new(chalk_parse::parse_program(&text)?.lower(solver_choice)?)
+        Arc::new(chalk_parse::parse_program(&text)?.lower(db.solver_choice())?)
     };
 
     x.map_err(|err| err.to_string())

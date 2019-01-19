@@ -15,6 +15,7 @@ salsa::database_storage! {
     pub struct DatabaseStorage for ChalkDatabase {
         impl query::LoweringDatabase {
             fn program_text() for query::ProgramText;
+            fn solver_choice() for query::ProgramSolverChoice;
             fn lowered_program() for query::LoweredProgram;
         }
     }
