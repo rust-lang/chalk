@@ -2,6 +2,7 @@ use petgraph::prelude::*;
 
 use crate::errors::Result;
 use crate::rust_ir::Program;
+use chalk_ir::ProgramEnvironment;
 use chalk_ir::{self, ItemId};
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
@@ -13,10 +14,11 @@ mod test;
 impl Program {
     crate fn record_specialization_priorities(
         &mut self,
+        env: Arc<ProgramEnvironment>,
         solver_choice: SolverChoice,
     ) -> Result<()> {
         chalk_ir::tls::set_current_program(&Arc::new(self.clone()), || {
-            let forest = self.build_specialization_forest(solver_choice)?;
+            let forest = self.build_specialization_forest(env, solver_choice)?;
 
             // Visit every root in the forest & set specialization
             // priority for the tree that is the root of.
@@ -31,6 +33,7 @@ impl Program {
     // Build the forest of specialization relationships.
     fn build_specialization_forest(
         &self,
+        env: Arc<ProgramEnvironment>,
         solver_choice: SolverChoice,
     ) -> Result<Graph<ItemId, ()>> {
         // The forest is returned as a graph but built as a GraphMap; this is
@@ -40,7 +43,7 @@ impl Program {
         // Find all specializations (implemented in coherence/solve)
         // Record them in the forest by adding an edge from the less special
         // to the more special.
-        self.visit_specializations(solver_choice, |less_special, more_special| {
+        self.visit_specializations(env, solver_choice, |less_special, more_special| {
             forest.add_edge(less_special, more_special, ());
         })?;
 

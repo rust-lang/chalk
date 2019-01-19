@@ -84,7 +84,7 @@ impl Program {
         db.query_mut(ProgramSolverChoice).set((), solver_choice);
 
         let ir = db.checked_program().unwrap();
-        let env = Arc::new(ir.environment());
+        let env = db.environment().unwrap();
         Ok(Program { text, ir, env })
     }
 }

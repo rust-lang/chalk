@@ -16,8 +16,10 @@ salsa::database_storage! {
         impl query::LoweringDatabase {
             fn program_text() for query::ProgramText;
             fn solver_choice() for query::ProgramSolverChoice;
+            fn program_ir() for query::ProgramIr;
             fn lowered_program() for query::LoweredProgram;
             fn checked_program() for query::CheckedProgram;
+            fn environment() for query::Environment;
         }
     }
 }

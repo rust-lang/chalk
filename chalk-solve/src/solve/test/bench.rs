@@ -3,23 +3,30 @@
 extern crate test;
 use self::test::Bencher;
 
+use crate::db::ChalkDatabase;
+use crate::query::{ProgramSolverChoice, ProgramText};
+use chalk_solve::solve::SolverChoice;
 use ir;
 use ir::solve::SolverChoice;
 use std::sync::Arc;
 
-use super::{parse_and_lower_program,
-            parse_and_lower_goal,
-            assert_result};
+use super::{assert_result, parse_and_lower_goal, parse_and_lower_program};
 
 fn run_bench(
     program_text: &str,
     solver_choice: SolverChoice,
     goal_text: &str,
     bencher: &mut Bencher,
-    expected: &str
+    expected: &str,
 ) {
-    let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
-    let env = Arc::new(program.environment());
+    let mut db = ChalkDatabase::default();
+
+    db.query_mut(ProgramText)
+        .set((), Arc::new(text.to_string()));
+    db.query_mut(ProgramSolverChoice).set((), solver_choice);
+
+    let program = db.lowered_program().unwrap();
+    let env = db.environment().unwrap();
     ir::tls::set_current_program(&program, || {
         let goal = parse_and_lower_goal(&program, goal_text).unwrap();
         let peeled_goal = goal.into_peeled_goal();
@@ -101,11 +108,9 @@ forall<T> {
 fn cycley_slg(b: &mut Bencher) {
     run_bench(
         CYCLEY,
-        SolverChoice::SLG {
-            max_size: 20,
-        },
+        SolverChoice::SLG { max_size: 20 },
         CYCLEY_GOAL,
         b,
-        "Unique"
+        "Unique",
     );
 }

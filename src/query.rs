@@ -5,6 +5,7 @@ use crate::coherence::orphan;
 use crate::rules::wf;
 use crate::rust_ir;
 use crate::rust_ir::lowering::LowerProgram;
+use chalk_ir::ProgramEnvironment;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
@@ -24,6 +25,12 @@ salsa::query_group! {
 
         // FIXME: Result<..., String> is only needed because the error type is not clone
 
+        /// The program IR before recording specialization priorities.
+        /// Do not use this query directly.
+        fn program_ir() -> Result<Arc<rust_ir::Program>, String> {
+            type ProgramIr;
+        }
+
         /// The lowered IR.
         fn lowered_program() -> Result<Arc<rust_ir::Program>, String> {
             type LoweredProgram;
@@ -33,13 +40,30 @@ salsa::query_group! {
         fn checked_program() -> Result<Arc<rust_ir::Program>, String> {
             type CheckedProgram;
         }
+
+        /// The program as logic.
+        fn environment() -> Result<Arc<ProgramEnvironment>, String> {
+            type Environment;
+        }
     }
 }
 
-fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
+fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
     let x: crate::errors::Result<_> = try {
         let text = db.program_text();
-        Arc::new(chalk_parse::parse_program(&text)?.lower(db.solver_choice())?)
+        Arc::new(chalk_parse::parse_program(&text)?.lower()?)
+    };
+
+    x.map_err(|err| err.to_string())
+}
+
+fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
+    let mut program = db.program_ir()?;
+    let env = db.environment()?;
+
+    let x: crate::errors::Result<_> = try {
+        Arc::make_mut(&mut program).record_specialization_priorities(env, db.solver_choice())?;
+        program
     };
 
     x.map_err(|err| err.to_string())
@@ -47,7 +71,7 @@ fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, 
 
 fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
     let program = db.lowered_program()?;
-    let env = Arc::new(program.environment());
+    let env = db.environment()?;
 
     let x: crate::errors::Result<_> = try {
         orphan::perform_orphan_check(program.clone(), env.clone(), db.solver_choice())?;
@@ -55,4 +79,9 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, 
         program
     };
     x.map_err(|err| err.to_string())
+}
+
+fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, String> {
+    let env = db.program_ir()?.environment();
+    Ok(Arc::new(env))
 }

@@ -6,9 +6,8 @@ use self::test::Bencher;
 use chalk_ir;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
-use std::sync::Arc;
 
-use super::{assert_result, parse_and_lower_goal, parse_and_lower_program};
+use super::{assert_result, parse_and_lower_goal, parse_and_lower_program_with_env};
 
 fn run_bench(
     program_text: &str,
@@ -17,8 +16,7 @@ fn run_bench(
     bencher: &mut Bencher,
     expected: &str,
 ) {
-    let program = parse_and_lower_program(program_text, solver_choice).unwrap();
-    let env = Arc::new(program.environment());
+    let (program, env) = parse_and_lower_program_with_env(program_text, solver_choice).unwrap();
     chalk_ir::tls::set_current_program(&program, || {
         let goal = parse_and_lower_goal(&program, goal_text).unwrap();
         let peeled_goal = goal.into_peeled_goal();
