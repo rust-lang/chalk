@@ -30,7 +30,7 @@ crate mod coherence;
 pub mod errors;
 crate mod rules;
 
-mod db;
-mod query;
+pub mod db;
+pub mod query;
 
 mod test;

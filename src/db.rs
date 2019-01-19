@@ -17,6 +17,7 @@ salsa::database_storage! {
             fn program_text() for query::ProgramText;
             fn solver_choice() for query::ProgramSolverChoice;
             fn lowered_program() for query::LoweredProgram;
+            fn checked_program() for query::CheckedProgram;
         }
     }
 }

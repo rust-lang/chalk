@@ -17,6 +17,8 @@ use std::io::Read;
 use std::process::exit;
 use std::sync::Arc;
 
+use chalk::db::ChalkDatabase;
+use chalk::query::{LoweringDatabase, ProgramSolverChoice, ProgramText};
 use chalk::rust_ir;
 use chalk::rust_ir::lowering::*;
 use chalk_engine::fallible::NoSolution;
@@ -24,6 +26,7 @@ use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
+use salsa::Database;
 
 const USAGE: &'static str = "
 chalk repl
@@ -74,7 +77,13 @@ impl Program {
     ///
     /// [`SolverChoice`]: struct.solve.SolverChoice.html
     fn new(text: String, solver_choice: SolverChoice) -> Result<Program> {
-        let ir = Arc::new(chalk_parse::parse_program(&text)?.lower(solver_choice)?);
+        let mut db = ChalkDatabase::default();
+
+        db.query_mut(ProgramText)
+            .set((), Arc::new(text.to_string()));
+        db.query_mut(ProgramSolverChoice).set((), solver_choice);
+
+        let ir = db.checked_program().unwrap();
         let env = Arc::new(ir.environment());
         Ok(Program { text, ir, env })
     }

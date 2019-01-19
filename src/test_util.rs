@@ -26,7 +26,7 @@ pub fn parse_and_lower_program(
         .set((), Arc::new(text.to_string()));
     db.query_mut(ProgramSolverChoice).set((), solver_choice);
 
-    db.lowered_program()
+    db.checked_program()
 }
 
 pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {

@@ -20,12 +20,16 @@ salsa::query_group! {
             storage input;
         }
 
-        // FIXME: Arc<Result<...>> is only needed because the error type is not clone
+        // FIXME: Result<..., String> is only needed because the error type is not clone
+
+        /// The lowered IR.
         fn lowered_program() -> Result<Arc<rust_ir::Program>, String> {
             type LoweredProgram;
+        }
 
-            // FIXME: only volatile because the Error type does not implement Eq
-            storage volatile;
+        /// The lowered IR, with checks performed.
+        fn checked_program() -> Result<Arc<rust_ir::Program>, String> {
+            type CheckedProgram;
         }
     }
 }
@@ -37,4 +41,13 @@ fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, 
     };
 
     x.map_err(|err| err.to_string())
+}
+
+fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
+    db.lowered_program().and_then(|program| {
+        program
+            .perform_checks(db.solver_choice())
+            .map_err(|err| err.to_string())?;
+        Ok(program)
+    })
 }
