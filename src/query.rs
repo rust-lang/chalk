@@ -1,6 +1,8 @@
 // https://crates.io/crates/salsa
 // hello world https://github.com/salsa-rs/salsa/blob/master/examples/hello_world/main.rs
 
+use crate::coherence::orphan;
+use crate::rules::wf;
 use crate::rust_ir;
 use crate::rust_ir::lowering::LowerProgram;
 use chalk_solve::solve::SolverChoice;
@@ -44,10 +46,13 @@ fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, 
 }
 
 fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
-    db.lowered_program().and_then(|program| {
+    let program = db.lowered_program()?;
+    let env = Arc::new(program.environment());
+
+    let x: crate::errors::Result<_> = try {
+        orphan::perform_orphan_check(program.clone(), env.clone(), db.solver_choice())?;
+        wf::verify_well_formedness(program.clone(), env, db.solver_choice())?;
         program
-            .perform_checks(db.solver_choice())
-            .map_err(|err| err.to_string())?;
-        Ok(program)
-    })
+    };
+    x.map_err(|err| err.to_string())
 }

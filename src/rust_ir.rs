@@ -9,7 +9,6 @@ use chalk_ir::{
     ApplicationTy, Binders, Identifier, ItemId, Lifetime, Parameter, ParameterKind, ProgramClause,
     ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty, WhereClause,
 };
-use chalk_solve::solve::SolverChoice;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::iter;
@@ -47,13 +46,6 @@ pub struct Program {
 }
 
 impl Program {
-    /// Checks the lowered program to ensure it is valid.
-    crate fn perform_checks(&self, solver_choice: SolverChoice) -> crate::errors::Result<()> {
-        self.verify_well_formedness(solver_choice)?;
-        self.perform_orphan_check(solver_choice)?;
-        Ok(())
-    }
-
     /// Given a projection of an associated type, split the type parameters
     /// into those that come from the *trait* and those that come from the
     /// *associated type itself*. So e.g. if you have `(Iterator::Item)<F>`,

@@ -6,7 +6,7 @@ use chalk_ir::{self, ItemId};
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
-mod orphan;
+crate mod orphan;
 mod solve;
 mod test;
 

@@ -18,37 +18,43 @@ struct WfSolver<'me> {
     solver_choice: SolverChoice,
 }
 
-impl Program {
-    pub fn verify_well_formedness(&self, solver_choice: SolverChoice) -> Result<()> {
-        tls::set_current_program(&Arc::new(self.clone()), || {
-            self.solve_wf_requirements(solver_choice)
-        })
+pub fn verify_well_formedness(
+    program: Arc<Program>,
+    env: Arc<ProgramEnvironment>,
+    solver_choice: SolverChoice,
+) -> Result<()> {
+    tls::set_current_program(&program, || {
+        solve_wf_requirements(program.clone(), env, solver_choice)
+    })
+}
+
+fn solve_wf_requirements(
+    program: Arc<Program>,
+    env: Arc<ProgramEnvironment>,
+    solver_choice: SolverChoice,
+) -> Result<()> {
+    let solver = WfSolver {
+        program: &program,
+        env,
+        solver_choice,
+    };
+
+    for (id, struct_datum) in &program.struct_data {
+        if !solver.verify_struct_decl(struct_datum) {
+            let name = program.type_kinds.get(id).unwrap().name;
+            return Err(Error::from_kind(ErrorKind::IllFormedTypeDecl(name)));
+        }
     }
 
-    fn solve_wf_requirements(&self, solver_choice: SolverChoice) -> Result<()> {
-        let solver = WfSolver {
-            program: self,
-            env: Arc::new(self.environment()),
-            solver_choice,
-        };
-
-        for (id, struct_datum) in &self.struct_data {
-            if !solver.verify_struct_decl(struct_datum) {
-                let name = self.type_kinds.get(id).unwrap().name;
-                return Err(Error::from_kind(ErrorKind::IllFormedTypeDecl(name)));
-            }
+    for impl_datum in program.impl_data.values() {
+        if !solver.verify_trait_impl(impl_datum) {
+            let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
+            let name = program.type_kinds.get(&trait_ref.trait_id).unwrap().name;
+            return Err(Error::from_kind(ErrorKind::IllFormedTraitImpl(name)));
         }
-
-        for impl_datum in self.impl_data.values() {
-            if !solver.verify_trait_impl(impl_datum) {
-                let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
-                let name = self.type_kinds.get(&trait_ref.trait_id).unwrap().name;
-                return Err(Error::from_kind(ErrorKind::IllFormedTraitImpl(name)));
-            }
-        }
-
-        Ok(())
     }
+
+    Ok(())
 }
 
 /// A trait for retrieving all types appearing in some Chalk construction.
