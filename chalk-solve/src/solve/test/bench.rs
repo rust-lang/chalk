@@ -19,26 +19,22 @@ fn run_bench(
     bencher: &mut Bencher,
     expected: &str,
 ) {
-    let mut db = ChalkDatabase::default();
+    ChalkDatabase::with_program(Arc::new(program_text.to_string()), solver_choice, |db| {
+        let program = db.lowered_program().unwrap();
+        let env = db.environment().unwrap();
+        ir::tls::set_current_program(&program, || {
+            let goal = parse_and_lower_goal(&program, goal_text).unwrap();
+            let peeled_goal = goal.into_peeled_goal();
 
-    db.query_mut(ProgramText)
-        .set((), Arc::new(text.to_string()));
-    db.query_mut(ProgramSolverChoice).set((), solver_choice);
+            // Execute once to get an expected result.
+            let result = solver_choice.solve_root_goal(&env, &peeled_goal);
 
-    let program = db.lowered_program().unwrap();
-    let env = db.environment().unwrap();
-    ir::tls::set_current_program(&program, || {
-        let goal = parse_and_lower_goal(&program, goal_text).unwrap();
-        let peeled_goal = goal.into_peeled_goal();
+            // Check expectation.
+            assert_result(&result, expected);
 
-        // Execute once to get an expected result.
-        let result = solver_choice.solve_root_goal(&env, &peeled_goal);
-
-        // Check expectation.
-        assert_result(&result, expected);
-
-        // Then do it many times to measure time.
-        bencher.iter(|| solver_choice.solve_root_goal(&env, &peeled_goal));
+            // Then do it many times to measure time.
+            bencher.iter(|| solver_choice.solve_root_goal(&env, &peeled_goal));
+        });
     });
 }
 
