@@ -12,29 +12,28 @@ struct OrphanSolver {
     solver_choice: SolverChoice,
 }
 
-impl Program {
-    crate fn perform_orphan_check(&self, solver_choice: SolverChoice) -> Result<()> {
-        let solver = OrphanSolver {
-            env: Arc::new(self.environment()),
-            solver_choice,
-        };
+crate fn perform_orphan_check(
+    program: Arc<Program>,
+    env: Arc<ProgramEnvironment>,
+    solver_choice: SolverChoice,
+) -> Result<()> {
+    let solver = OrphanSolver { env, solver_choice };
 
-        let local_impls = self
-            .impl_data
-            .values()
-            // Only keep local impls (i.e. impls in the current crate)
-            .filter(|impl_datum| impl_datum.binders.value.impl_type == ImplType::Local);
+    let local_impls = program
+        .impl_data
+        .values()
+        // Only keep local impls (i.e. impls in the current crate)
+        .filter(|impl_datum| impl_datum.binders.value.impl_type == ImplType::Local);
 
-        for impl_datum in local_impls {
-            if !solver.orphan_check(impl_datum) {
-                let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
-                let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
-                return Err(Error::from_kind(ErrorKind::FailedOrphanCheck(trait_id)));
-            }
+    for impl_datum in local_impls {
+        if !solver.orphan_check(impl_datum) {
+            let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
+            let trait_id = program.type_kinds.get(&trait_id).unwrap().name;
+            return Err(Error::from_kind(ErrorKind::FailedOrphanCheck(trait_id)));
         }
-
-        Ok(())
     }
+
+    Ok(())
 }
 
 impl OrphanSolver {

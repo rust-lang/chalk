@@ -7,7 +7,6 @@ use crate::errors::*;
 use crate::rust_ir::{self, Anonymize, ToParameter};
 use chalk_ir;
 use chalk_ir::cast::{Cast, Caster};
-use chalk_solve::solve::SolverChoice;
 use itertools::Itertools;
 
 mod test;
@@ -115,13 +114,13 @@ impl<'k> Env<'k> {
     }
 }
 
-pub trait LowerProgram {
+crate trait LowerProgram {
     /// Lowers from a Program AST to the internal IR for a program.
-    fn lower(&self, solver_choice: SolverChoice) -> Result<rust_ir::Program>;
+    fn lower(&self) -> Result<rust_ir::Program>;
 }
 
 impl LowerProgram for Program {
-    fn lower(&self, solver_choice: SolverChoice) -> Result<rust_ir::Program> {
+    fn lower(&self) -> Result<rust_ir::Program> {
         let mut index = 0;
         let mut next_item_id = || -> chalk_ir::ItemId {
             let i = index;
@@ -239,9 +238,6 @@ impl LowerProgram for Program {
         };
 
         program.add_default_impls();
-        program.record_specialization_priorities(solver_choice)?;
-        program.verify_well_formedness(solver_choice)?;
-        program.perform_orphan_check(solver_choice)?;
         Ok(program)
     }
 }

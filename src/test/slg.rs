@@ -5,7 +5,6 @@ use chalk_engine::forest::Forest;
 use chalk_solve::ext::*;
 use chalk_solve::solve::slg::implementation::SlgContext;
 use chalk_solve::solve::SolverChoice;
-use std::sync::Arc;
 
 macro_rules! test {
     (program $program:tt $(goal $goal:tt first $n:tt with max $depth:tt { $expected:expr })*) => {
@@ -24,12 +23,11 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let program = &parse_and_lower_program(
+    let (program, env) = parse_and_lower_program_with_env(
         &program_text[1..program_text.len() - 1],
         SolverChoice::default(),
     )
     .unwrap();
-    let env = &Arc::new(program.environment());
     chalk_ir::tls::set_current_program(&program, || {
         for (max_size, num_answers, goal_text, expected) in goals {
             println!("----------------------------------------------------------------------");
@@ -38,7 +36,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
             assert!(goal_text.ends_with("}"));
             let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let mut forest = Forest::new(SlgContext::new(env, max_size));
+            let mut forest = Forest::new(SlgContext::new(&env, max_size));
             let result = format!("{:#?}", forest.force_answers(peeled_goal, num_answers));
 
             assert_test_result_eq(&expected, &result);
@@ -50,12 +48,11 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let program = &parse_and_lower_program(
+    let (program, env) = &parse_and_lower_program_with_env(
         &program_text[1..program_text.len() - 1],
         SolverChoice::default(),
     )
     .unwrap();
-    let env = &Arc::new(program.environment());
     chalk_ir::tls::set_current_program(&program, || {
         for (max_size, num_answers, goal_text, expected) in goals {
             println!("----------------------------------------------------------------------");

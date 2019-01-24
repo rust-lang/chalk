@@ -6,7 +6,6 @@ use chalk_ir;
 use chalk_solve::ext::*;
 use chalk_solve::solve::{Solution, SolverChoice};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 mod bench;
 mod slg;
@@ -90,9 +89,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
     for (goal_text, solver_choice, expected) in goals {
         let (program, env) = program_env_cache.entry(solver_choice).or_insert_with(|| {
             let program_text = &program_text[1..program_text.len() - 1]; // exclude `{}`
-            let program = parse_and_lower_program(program_text, solver_choice).unwrap();
-            let env = Arc::new(program.environment());
-            (program, env)
+            parse_and_lower_program_with_env(program_text, solver_choice).unwrap()
         });
 
         chalk_ir::tls::set_current_program(&program, || {

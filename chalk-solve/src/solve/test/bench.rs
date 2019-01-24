@@ -3,35 +3,38 @@
 extern crate test;
 use self::test::Bencher;
 
+use crate::db::ChalkDatabase;
+use crate::query::{ProgramSolverChoice, ProgramText};
+use chalk_solve::solve::SolverChoice;
 use ir;
 use ir::solve::SolverChoice;
 use std::sync::Arc;
 
-use super::{parse_and_lower_program,
-            parse_and_lower_goal,
-            assert_result};
+use super::{assert_result, parse_and_lower_goal, parse_and_lower_program};
 
 fn run_bench(
     program_text: &str,
     solver_choice: SolverChoice,
     goal_text: &str,
     bencher: &mut Bencher,
-    expected: &str
+    expected: &str,
 ) {
-    let program = Arc::new(parse_and_lower_program(program_text, solver_choice).unwrap());
-    let env = Arc::new(program.environment());
-    ir::tls::set_current_program(&program, || {
-        let goal = parse_and_lower_goal(&program, goal_text).unwrap();
-        let peeled_goal = goal.into_peeled_goal();
+    ChalkDatabase::with_program(Arc::new(program_text.to_string()), solver_choice, |db| {
+        let program = db.lowered_program().unwrap();
+        let env = db.environment().unwrap();
+        ir::tls::set_current_program(&program, || {
+            let goal = parse_and_lower_goal(&program, goal_text).unwrap();
+            let peeled_goal = goal.into_peeled_goal();
 
-        // Execute once to get an expected result.
-        let result = solver_choice.solve_root_goal(&env, &peeled_goal);
+            // Execute once to get an expected result.
+            let result = solver_choice.solve_root_goal(&env, &peeled_goal);
 
-        // Check expectation.
-        assert_result(&result, expected);
+            // Check expectation.
+            assert_result(&result, expected);
 
-        // Then do it many times to measure time.
-        bencher.iter(|| solver_choice.solve_root_goal(&env, &peeled_goal));
+            // Then do it many times to measure time.
+            bencher.iter(|| solver_choice.solve_root_goal(&env, &peeled_goal));
+        });
     });
 }
 
@@ -101,11 +104,9 @@ forall<T> {
 fn cycley_slg(b: &mut Bencher) {
     run_bench(
         CYCLEY,
-        SolverChoice::SLG {
-            max_size: 20,
-        },
+        SolverChoice::SLG { max_size: 20 },
         CYCLEY_GOAL,
         b,
-        "Unique"
+        "Unique",
     );
 }

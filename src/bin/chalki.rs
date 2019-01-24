@@ -17,6 +17,8 @@ use std::io::Read;
 use std::process::exit;
 use std::sync::Arc;
 
+use chalk::db::ChalkDatabase;
+use chalk::query::LoweringDatabase;
 use chalk::rust_ir;
 use chalk::rust_ir::lowering::*;
 use chalk_engine::fallible::NoSolution;
@@ -74,9 +76,11 @@ impl Program {
     ///
     /// [`SolverChoice`]: struct.solve.SolverChoice.html
     fn new(text: String, solver_choice: SolverChoice) -> Result<Program> {
-        let ir = Arc::new(chalk_parse::parse_program(&text)?.lower(solver_choice)?);
-        let env = Arc::new(ir.environment());
-        Ok(Program { text, ir, env })
+        ChalkDatabase::with_program(Arc::new(text.clone()), solver_choice, |db| {
+            let ir = db.checked_program().unwrap();
+            let env = db.environment().unwrap();
+            Ok(Program { text, ir, env })
+        })
     }
 }
 

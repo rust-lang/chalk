@@ -17,16 +17,14 @@ struct DisjointSolver {
 impl Program {
     pub(super) fn visit_specializations<F>(
         &self,
+        env: Arc<ProgramEnvironment>,
         solver_choice: SolverChoice,
         mut record_specialization: F,
     ) -> Result<()>
     where
         F: FnMut(ItemId, ItemId),
     {
-        let mut solver = DisjointSolver {
-            env: Arc::new(self.environment()),
-            solver_choice,
-        };
+        let mut solver = DisjointSolver { env, solver_choice };
 
         // Create a vector of references to impl datums, sorted by trait ref.
         let impl_data = self

@@ -6,7 +6,7 @@ use chalk_ir::*;
 use std::iter;
 
 mod default;
-mod wf;
+crate mod wf;
 
 impl Program {
     pub fn environment(&self) -> ProgramEnvironment {

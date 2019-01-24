@@ -3,15 +3,14 @@
 use crate::db::ChalkDatabase;
 use crate::errors::Result;
 use crate::query::LoweringDatabase;
-use crate::query::ProgramText;
 use crate::rust_ir::lowering::LowerGoal;
 use crate::rust_ir::Program;
 use chalk_ir::Goal;
+use chalk_ir::ProgramEnvironment;
 use chalk_parse;
 use chalk_solve::solve::SolverChoice;
 use diff;
 use itertools::Itertools;
-use salsa::Database;
 use std::fmt::Write;
 use std::prelude::v1::Result as StdResult;
 use std::sync::Arc;
@@ -20,12 +19,19 @@ pub fn parse_and_lower_program(
     text: &str,
     solver_choice: SolverChoice,
 ) -> StdResult<Arc<Program>, String> {
-    let mut db = ChalkDatabase::default();
+    ChalkDatabase::with_program(Arc::new(text.to_string()), solver_choice, |db| {
+        db.checked_program()
+    })
+}
 
-    db.query_mut(ProgramText)
-        .set((), Arc::new(text.to_string()));
-
-    db.lowered_program(solver_choice)
+pub fn parse_and_lower_program_with_env(
+    text: &str,
+    solver_choice: SolverChoice,
+) -> StdResult<(Arc<Program>, Arc<ProgramEnvironment>), String> {
+    ChalkDatabase::with_program(Arc::new(text.to_string()), solver_choice, |db| {
+        db.checked_program()
+            .and_then(|program| Ok((program, db.environment()?)))
+    })
 }
 
 pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
