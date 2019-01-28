@@ -210,6 +210,18 @@ impl<'me> context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenc
     fn cannot_prove(&self) -> Goal {
         Goal::CannotProve(())
     }
+
+    // Used by: logic
+    fn next_subgoal_index(&mut self, ex_clause: &ExClause<SlgContext>) -> usize {
+        // For now, we always pick the last subgoal in the
+        // list.
+        //
+        // FIXME(rust-lang-nursery/chalk#80) -- we should be more
+        // selective. For example, we don't want to pick a
+        // negative literal that will flounder, and we don't want
+        // to pick things like `?T: Sized` if we can help it.
+        ex_clause.subgoals.len() - 1
+    }
 }
 
 impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {

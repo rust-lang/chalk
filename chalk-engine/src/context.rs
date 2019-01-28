@@ -262,6 +262,10 @@ pub trait InferenceTable<C: Context, I: Context>:
 
     /// Create a "cannot prove" goal (see `HhGoal::CannotProve`).
     fn cannot_prove(&self) -> I::Goal;
+
+    /// Selects the next appropriate subgoal index for evaluation.
+    /// Used by: logic
+    fn next_subgoal_index(&mut self, ex_clause: &ExClause<I>) -> usize;
 }
 
 /// Methods for unifying and manipulating terms and binders.

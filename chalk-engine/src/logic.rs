@@ -497,14 +497,7 @@ impl<C: Context> Forest<C> {
                 return self.pursue_answer(depth, strand);
             }
 
-            // For now, we always pick the last subgoal in the
-            // list.
-            //
-            // FIXME(rust-lang/chalk#80) -- we should be more
-            // selective. For example, we don't want to pick a
-            // negative literal that will flounder, and we don't want
-            // to pick things like `?T: Sized` if we can help it.
-            let subgoal_index = strand.ex_clause.subgoals.len() - 1;
+            let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
 
             // Get or create table for this subgoal.
             match self.get_or_create_table_for_subgoal(
