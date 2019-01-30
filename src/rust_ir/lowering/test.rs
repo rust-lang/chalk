@@ -434,7 +434,7 @@ fn deref_trait() {
             #[lang_deref] trait Deref { }
             #[lang_deref] trait DerefDupe { }
         } error_msg {
-            "Duplicate lang item `DerefTrait`"
+            "duplicate lang item `DerefTrait`"
         }
     }
 }

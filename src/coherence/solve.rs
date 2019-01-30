@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use crate::errors::*;
+use super::CoherenceError;
 use crate::rust_ir::*;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use chalk_solve::ext::*;
 use chalk_solve::solve::{Solution, SolverChoice};
+use failure::Fallible;
 use itertools::Itertools;
 
 struct DisjointSolver {
@@ -20,7 +21,7 @@ impl Program {
         env: Arc<ProgramEnvironment>,
         solver_choice: SolverChoice,
         mut record_specialization: F,
-    ) -> Result<()>
+    ) -> Fallible<()>
     where
         F: FnMut(ItemId, ItemId),
     {
@@ -71,7 +72,7 @@ impl Program {
                         (false, true) => record_specialization(r_id, l_id),
                         (_, _) => {
                             let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
-                            return Err(Error::from_kind(ErrorKind::OverlappingImpls(trait_id)));
+                            Err(CoherenceError::OverlappingImpls(trait_id))?;
                         }
                     }
                 }

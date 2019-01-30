@@ -1,36 +1,35 @@
 #![recursion_limit = "1024"]
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 
 #[macro_use]
 extern crate lalrpop_util;
 extern crate lalrpop_intern;
 
 pub mod ast;
-pub mod errors;
 #[rustfmt::skip]
 lalrpop_mod!(pub parser);
 
-use crate::errors::Result;
+use failure::Fallible;
 use lalrpop_util::ParseError;
 use std::fmt::Write;
 
-pub fn parse_program(text: &str) -> Result<ast::Program> {
+pub fn parse_program(text: &str) -> Fallible<ast::Program> {
     match parser::ProgramParser::new().parse(text) {
         Ok(v) => Ok(v),
-        Err(e) => bail!("parse error: {:?}", e),
+        Err(e) => Err(format_err!("parse error: {:?}", e)),
     }
 }
 
-pub fn parse_ty(text: &str) -> Result<ast::Ty> {
+pub fn parse_ty(text: &str) -> Fallible<ast::Ty> {
     match parser::TyParser::new().parse(text) {
         Ok(v) => Ok(v),
-        Err(e) => bail!("error parsing `{}`: {:?}", text, e),
+        Err(e) => Err(format_err!("error parsing `{}`: {:?}", text, e)),
     }
 }
 
-pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
+pub fn parse_goal(text: &str) -> Fallible<Box<ast::Goal>> {
     match parser::GoalParser::new().parse(text) {
         Ok(v) => Ok(v),
         Err(e) => {
@@ -44,20 +43,28 @@ pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
                 output
             };
             match e {
-                ParseError::InvalidToken { location } => bail!(
+                ParseError::InvalidToken { location } => Err(format_err!(
                     "parse error: {:?}\n{}",
                     e,
                     position_string(location, location + 1)
-                ),
+                )),
                 ParseError::UnrecognizedToken {
                     token: Some((start, _, end)),
                     ..
-                } => bail!("parse error: {:?}\n{}", e, position_string(start, end)),
+                } => Err(format_err!(
+                    "parse error: {:?}\n{}",
+                    e,
+                    position_string(start, end)
+                )),
                 ParseError::ExtraToken {
                     token: (start, _, end),
                     ..
-                } => bail!("parse error: {:?}\n{}", e, position_string(start, end)),
-                _ => bail!("parse error: {:?}", e),
+                } => Err(format_err!(
+                    "parse error: {:?}\n{}",
+                    e,
+                    position_string(start, end)
+                )),
+                _ => Err(format_err!("parse error: {:?}", e)),
             }
         }
     }

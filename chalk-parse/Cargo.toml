@@ -18,6 +18,6 @@ version = "0.16"
 version = "0.16"
 
 [dependencies]
-error-chain = "0.12.0"
+failure = "0.1"
 lalrpop-intern = "0.15.1"
 regex = "1.0.5"
