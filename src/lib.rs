@@ -15,7 +15,7 @@ extern crate chalk_ir;
 extern crate chalk_solve;
 extern crate diff;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate itertools;
 extern crate lalrpop_intern;
 extern crate petgraph;
@@ -27,7 +27,6 @@ mod test_util;
 pub mod rust_ir;
 
 crate mod coherence;
-pub mod errors;
 crate mod rules;
 
 pub mod db;

@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use crate::errors::*;
+use super::CoherenceError;
 use crate::rust_ir::*;
 use chalk_ir::cast::*;
 use chalk_ir::*;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
+use failure::Fallible;
 
 struct OrphanSolver {
     env: Arc<ProgramEnvironment>,
@@ -16,7 +17,7 @@ crate fn perform_orphan_check(
     program: Arc<Program>,
     env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,
-) -> Result<()> {
+) -> Fallible<()> {
     let solver = OrphanSolver { env, solver_choice };
 
     let local_impls = program
@@ -29,7 +30,7 @@ crate fn perform_orphan_check(
         if !solver.orphan_check(impl_datum) {
             let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
             let trait_id = program.type_kinds.get(&trait_id).unwrap().name;
-            return Err(Error::from_kind(ErrorKind::FailedOrphanCheck(trait_id)));
+            Err(CoherenceError::FailedOrphanCheck(trait_id))?;
         }
     }
 

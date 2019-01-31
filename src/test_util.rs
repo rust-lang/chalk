@@ -1,7 +1,6 @@
 #![cfg(test)]
 
 use crate::db::ChalkDatabase;
-use crate::errors::Result;
 use crate::query::LoweringDatabase;
 use crate::rust_ir::lowering::LowerGoal;
 use crate::rust_ir::Program;
@@ -10,15 +9,15 @@ use chalk_ir::ProgramEnvironment;
 use chalk_parse;
 use chalk_solve::solve::SolverChoice;
 use diff;
+use failure::Error;
 use itertools::Itertools;
 use std::fmt::Write;
-use std::prelude::v1::Result as StdResult;
 use std::sync::Arc;
 
 pub fn parse_and_lower_program(
     text: &str,
     solver_choice: SolverChoice,
-) -> StdResult<Arc<Program>, String> {
+) -> Result<Arc<Program>, String> {
     ChalkDatabase::with_program(Arc::new(text.to_string()), solver_choice, |db| {
         db.checked_program()
     })
@@ -27,14 +26,14 @@ pub fn parse_and_lower_program(
 pub fn parse_and_lower_program_with_env(
     text: &str,
     solver_choice: SolverChoice,
-) -> StdResult<(Arc<Program>, Arc<ProgramEnvironment>), String> {
+) -> Result<(Arc<Program>, Arc<ProgramEnvironment>), String> {
     ChalkDatabase::with_program(Arc::new(text.to_string()), solver_choice, |db| {
         db.checked_program()
             .and_then(|program| Ok((program, db.environment()?)))
     })
 }
 
-pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>> {
+pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>, Error> {
     chalk_parse::parse_goal(text)?.lower(program)
 }
 
@@ -64,7 +63,7 @@ macro_rules! lowering_error {
             chalk_solve::solve::SolverChoice::default(),
         )
         .unwrap_err();
-        let expected = $crate::errors::Error::from($expected);
+        let expected = $expected;
         assert_eq!(error.to_string(), expected.to_string());
     };
 }

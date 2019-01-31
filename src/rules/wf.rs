@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::errors::*;
 use crate::rust_ir::*;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
@@ -8,9 +7,24 @@ use chalk_ir::fold::*;
 use chalk_ir::*;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
+use failure::{Fail, Fallible};
 use itertools::Itertools;
 
 mod test;
+
+#[derive(Fail, Debug)]
+pub enum WfError {
+    #[fail(
+        display = "type declaration {:?} does not meet well-formedness requirements",
+        _0
+    )]
+    IllFormedTypeDecl(chalk_ir::Identifier),
+    #[fail(
+        display = "trait impl for {:?} does not meet well-formedness requirements",
+        _0
+    )]
+    IllFormedTraitImpl(chalk_ir::Identifier),
+}
 
 struct WfSolver<'me> {
     program: &'me Program,
@@ -22,7 +36,7 @@ pub fn verify_well_formedness(
     program: Arc<Program>,
     env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,
-) -> Result<()> {
+) -> Fallible<()> {
     tls::set_current_program(&program, || {
         solve_wf_requirements(program.clone(), env, solver_choice)
     })
@@ -32,7 +46,7 @@ fn solve_wf_requirements(
     program: Arc<Program>,
     env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,
-) -> Result<()> {
+) -> Fallible<()> {
     let solver = WfSolver {
         program: &program,
         env,
@@ -42,7 +56,7 @@ fn solve_wf_requirements(
     for (id, struct_datum) in &program.struct_data {
         if !solver.verify_struct_decl(struct_datum) {
             let name = program.type_kinds.get(id).unwrap().name;
-            return Err(Error::from_kind(ErrorKind::IllFormedTypeDecl(name)));
+            Err(WfError::IllFormedTypeDecl(name))?;
         }
     }
 
@@ -50,7 +64,7 @@ fn solve_wf_requirements(
         if !solver.verify_trait_impl(impl_datum) {
             let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
             let name = program.type_kinds.get(&trait_ref.trait_id).unwrap().name;
-            return Err(Error::from_kind(ErrorKind::IllFormedTraitImpl(name)));
+            Err(WfError::IllFormedTraitImpl(name))?;
         }
     }
 

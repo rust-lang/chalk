@@ -1,22 +1,30 @@
 use petgraph::prelude::*;
 
-use crate::errors::Result;
 use crate::rust_ir::Program;
 use chalk_ir::ProgramEnvironment;
-use chalk_ir::{self, ItemId};
+use chalk_ir::{self, Identifier, ItemId};
 use chalk_solve::solve::SolverChoice;
+use failure::Fallible;
 use std::sync::Arc;
 
 crate mod orphan;
 mod solve;
 mod test;
 
+#[derive(Fail, Debug)]
+pub enum CoherenceError {
+    #[fail(display = "overlapping impls of trait {:?}", _0)]
+    OverlappingImpls(Identifier),
+    #[fail(display = "impl for trait {:?} violates the orphan rules", _0)]
+    FailedOrphanCheck(Identifier),
+}
+
 impl Program {
     crate fn record_specialization_priorities(
         &mut self,
         env: Arc<ProgramEnvironment>,
         solver_choice: SolverChoice,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         chalk_ir::tls::set_current_program(&Arc::new(self.clone()), || {
             let forest = self.build_specialization_forest(env, solver_choice)?;
 
@@ -35,7 +43,7 @@ impl Program {
         &self,
         env: Arc<ProgramEnvironment>,
         solver_choice: SolverChoice,
-    ) -> Result<Graph<ItemId, ()>> {
+    ) -> Fallible<Graph<ItemId, ()>> {
         // The forest is returned as a graph but built as a GraphMap; this is
         // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraphMap::new();

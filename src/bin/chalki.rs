@@ -10,7 +10,7 @@ extern crate rustyline;
 extern crate serde_derive;
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 
 use std::fs::File;
 use std::io::Read;
@@ -25,6 +25,7 @@ use chalk_engine::fallible::NoSolution;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
 use docopt::Docopt;
+use failure::Fallible;
 use rustyline::error::ReadlineError;
 
 const USAGE: &'static str = "
@@ -51,18 +52,6 @@ struct Args {
     flag_no_cache: bool,
 }
 
-error_chain! {
-    links {
-        Parse(chalk_parse::errors::Error, chalk_parse::errors::ErrorKind);
-        Chalk(chalk::errors::Error, chalk::errors::ErrorKind);
-    }
-
-    foreign_links {
-        Io(::std::io::Error);
-        Rustyline(ReadlineError);
-    }
-}
-
 /// A loaded and parsed program.
 struct Program {
     text: String,
@@ -75,7 +64,7 @@ impl Program {
     /// a [`SolverChoice`].
     ///
     /// [`SolverChoice`]: struct.solve.SolverChoice.html
-    fn new(text: String, solver_choice: SolverChoice) -> Result<Program> {
+    fn new(text: String, solver_choice: SolverChoice) -> Fallible<Program> {
         ChalkDatabase::with_program(Arc::new(text.clone()), solver_choice, |db| {
             let ir = db.checked_program().unwrap();
             let env = db.environment().unwrap();
@@ -84,9 +73,7 @@ impl Program {
     }
 }
 
-quick_main!(run);
-
-fn run() -> Result<()> {
+fn run() -> Fallible<()> {
     // Parse the command line arguments.
     let args: &Args = &Docopt::new(USAGE)
         .and_then(|d| d.deserialize())
@@ -121,12 +108,13 @@ fn run() -> Result<()> {
         // Check that a program was provided.
         // TODO: It's customary to print Usage info when an error like this
         // happens.
-        let prog =
-            prog.ok_or("error: cannot eval without a program; use `--program` to specify one.")?;
+        let prog = prog.ok_or(format_err!(
+            "error: cannot eval without a program; use `--program` to specify one."
+        ))?;
 
         // Evaluate the goal(s). If any goal returns an error, print the error
         // and exit.
-        chalk_ir::tls::set_current_program(&prog.ir, || -> Result<()> {
+        chalk_ir::tls::set_current_program(&prog.ir, || -> Fallible<()> {
             for g in &args.flag_goal {
                 if let Err(e) = goal(&args, g, &prog) {
                     eprintln!("error: {}", e);
@@ -145,7 +133,7 @@ fn run() -> Result<()> {
 ///
 /// The loop terminates (and the program ends) when EOF is reached or if an error
 /// occurs while reading the next line.
-fn readline_loop<F>(rl: &mut rustyline::Editor<()>, prompt: &str, mut f: F) -> Result<()>
+fn readline_loop<F>(rl: &mut rustyline::Editor<()>, prompt: &str, mut f: F) -> Fallible<()>
 where
     F: FnMut(&mut rustyline::Editor<()>, &str),
 {
@@ -179,7 +167,7 @@ fn process(
     command: &str,
     rl: &mut rustyline::Editor<()>,
     prog: &mut Option<Program>,
-) -> Result<()> {
+) -> Fallible<()> {
     if command == "help" || command == "h" {
         // Print out interpreter commands.
         // TODO: Implement "help <command>" for more specific help.
@@ -200,12 +188,12 @@ fn process(
         // The command is either "print", "lowered", or a goal.
 
         // Check that a program has been loaded.
-        let prog = prog
-            .as_ref()
-            .ok_or("no program currently loaded; type 'help' to see available commands")?;
+        let prog = prog.as_ref().ok_or(format_err!(
+            "no program currently loaded; type 'help' to see available commands"
+        ))?;
 
         // Attempt to parse the program.
-        chalk_ir::tls::set_current_program(&prog.ir, || -> Result<()> {
+        chalk_ir::tls::set_current_program(&prog.ir, || -> Fallible<()> {
             match command {
                 // Print out the loaded program.
                 "print" => println!("{}", prog.text),
@@ -228,7 +216,7 @@ fn process(
 /// Load the file into a string, and parse it.
 // TODO: Could we pass in an Options struct or something? The Args struct
 // still has Strings where it should have Enums... (e.g. solver_choice)
-fn load_program(args: &Args, filename: &str) -> Result<Program> {
+fn load_program(args: &Args, filename: &str) -> Fallible<Program> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
     Ok(Program::new(text, args.solver_choice())?)
@@ -248,8 +236,8 @@ fn help() {
 }
 
 /// Read a program from the command-line. Stop reading when EOF is read. If
-/// an error occurs while reading, a Result::Err is returned.
-fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
+/// an error occurs while reading, a `Err` is returned.
+fn read_program(rl: &mut rustyline::Editor<()>) -> Fallible<String> {
     println!("Enter a program; press Ctrl-D when finished");
     let mut text = String::new();
     readline_loop(rl, "| ", |_, line| {
@@ -262,7 +250,7 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 /// Parse a goal and attempt to solve it, using the specified solver.
 // TODO: Could we pass in an Options struct or something? The Args struct
 // still has Strings where it should have Enums... (e.g. solver_choice)
-fn goal(args: &Args, text: &str, prog: &Program) -> Result<()> {
+fn goal(args: &Args, text: &str, prog: &Program) -> Fallible<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let peeled_goal = goal.into_peeled_goal();
     match args
@@ -282,4 +270,16 @@ impl Args {
             max_size: self.flag_overflow_depth,
         }
     }
+}
+
+fn main() {
+    use ::std::io::Write;
+
+    ::std::process::exit(match run() {
+        Ok(_) => 0,
+        Err(ref e) => {
+            write!(&mut ::std::io::stderr(), "{}", e).expect("Error writing to stderr");
+            1
+        }
+    });
 }

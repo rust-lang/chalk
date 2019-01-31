@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 diff = "0.1.11"
 docopt = "1.0.0"
-error-chain = "0.12.0"
+failure = "0.1"
 itertools = "0.7.8"
 lalrpop-intern = "0.15.1"
 petgraph = "0.4.13"
