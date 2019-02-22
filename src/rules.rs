@@ -312,7 +312,7 @@ impl StructDatum {
     /// ```notrust
     /// -- Rule WellFormed-Type
     /// forall<T> {
-    ///     WF(Foo<T>) :- Implemented(T: Eq).
+    ///     WF(Foo<T>) :- WF(T: Eq).
     /// }
     ///
     /// -- Rule Implied-Bound-From-Type
@@ -361,7 +361,13 @@ impl StructDatum {
             .map_ref(|bound_datum| ProgramClauseImplication {
                 consequence: WellFormed::Ty(bound_datum.self_ty.clone().cast()).cast(),
 
-                conditions: { bound_datum.where_clauses.iter().cloned().casted().collect() },
+                conditions: bound_datum
+                    .where_clauses
+                    .iter()
+                    .cloned()
+                    .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
+                    .casted()
+                    .collect(),
             })
             .cast();
 
@@ -802,7 +808,7 @@ impl AssociatedTyDatum {
     /// ```notrust
     /// -- Rule WellFormed-AssocTy
     /// forall<Self, 'a, T> {
-    ///     WellFormed((Foo::Assoc)<Self, 'a, T>) :- Implemented(Self: Foo), WC.
+    ///     WellFormed((Foo::Assoc)<Self, 'a, T>) :- WellFormed(Self: Foo), WellFormed(WC).
     /// }
     ///
     /// -- Rule Implied-WC-From-AssocTy
@@ -876,15 +882,21 @@ impl AssociatedTyDatum {
         // Well-formedness of projection type.
         //
         //    forall<Self> {
-        //        WellFormed((Foo::Assoc)<Self>) :- Implemented(Self: Foo), WC.
+        //        WellFormed((Foo::Assoc)<Self>) :- WellFormed(Self: Foo), WellFormed(WC).
         //    }
         clauses.push(
             Binders {
                 binders: binders.clone(),
                 value: ProgramClauseImplication {
                     consequence: WellFormed::Ty(app_ty.clone()).cast(),
-                    conditions: iter::once(trait_ref.clone().cast())
-                        .chain(self.where_clauses.iter().cloned().casted())
+                    conditions: iter::once(WellFormed::Trait(trait_ref.clone()).cast())
+                        .chain(
+                            self.where_clauses
+                                .iter()
+                                .cloned()
+                                .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
+                                .casted(),
+                        )
                         .collect(),
                 },
             }
