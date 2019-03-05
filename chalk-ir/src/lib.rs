@@ -904,10 +904,6 @@ pub struct Substitution {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
     /// the kind of the value.
-    ///
-    /// This is a map because the substitution is not necessarily
-    /// complete. We use a btree map to ensure that the result is in a
-    /// deterministic order.
     pub parameters: Vec<Parameter>,
 }
 
