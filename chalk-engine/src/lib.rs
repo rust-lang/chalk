@@ -53,8 +53,6 @@
 //! - HH: Hereditary harrop predicates. What Chalk deals in.
 //!   Popularized by Lambda Prolog.
 
-#![feature(step_trait)]
-
 #[macro_use]
 extern crate chalk_macros;
 

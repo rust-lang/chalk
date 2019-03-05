@@ -1,6 +1,5 @@
 #![recursion_limit = "1024"]
 #![cfg_attr(test, feature(test))]
-#![feature(step_trait)]
 
 extern crate chalk_parse;
 #[macro_use]
