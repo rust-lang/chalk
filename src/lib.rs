@@ -2,7 +2,6 @@
 #![cfg_attr(test, feature(test))]
 #![feature(crate_visibility_modifier)]
 #![feature(in_band_lifetimes)]
-#![feature(specialization)]
 #![feature(step_trait)]
 #![feature(try_blocks)]
 

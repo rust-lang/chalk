@@ -259,7 +259,7 @@ fn flounder() {
                             constraints: []
                         },
                         binders: [
-                            Ty(U0)
+                            U0
                         ]
                     },
                     delayed_literals: DelayedLiteralSet {
@@ -322,7 +322,7 @@ fn only_draw_so_many_blow_up() {
         goal {
             exists<T> { T: Foo }
         } fixed 2 with max 10 {
-            "Some(Ambig(Definite(Canonical { value: [?0 := Vec<^0>], binders: [Ty(U0)] })))"
+            "Some(Ambig(Definite(Canonical { value: [?0 := Vec<^0>], binders: [U0] })))"
         }
     }
 }
@@ -873,7 +873,7 @@ fn cached_answers_1() {
                             constraints: []
                         },
                         binders: [
-                            Ty(U0)
+                            U0
                         ]
                     },
                     delayed_literals: DelayedLiteralSet {
@@ -963,7 +963,7 @@ fn cached_answers_2() {
                             constraints: []
                         },
                         binders: [
-                            Ty(U0)
+                            U0
                         ]
                     },
                     delayed_literals: DelayedLiteralSet {
@@ -1041,7 +1041,7 @@ fn cached_answers_3() {
                             constraints: []
                         },
                         binders: [
-                            Ty(U0)
+                            U0
                         ]
                     },
                     delayed_literals: DelayedLiteralSet {
