@@ -1,6 +1,5 @@
 #![recursion_limit = "1024"]
 #![cfg_attr(test, feature(test))]
-#![feature(in_band_lifetimes)]
 #![feature(step_trait)]
 #![feature(try_blocks)]
 
