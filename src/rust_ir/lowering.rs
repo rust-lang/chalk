@@ -135,7 +135,7 @@ impl<'k> Env<'k> {
     }
 }
 
-crate trait LowerProgram {
+pub(crate) trait LowerProgram {
     /// Lowers from a Program AST to the internal IR for a program.
     fn lower(&self) -> Fallible<rust_ir::Program>;
 }

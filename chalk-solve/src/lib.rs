@@ -1,5 +1,3 @@
-#![feature(crate_visibility_modifier)]
-
 #[macro_use]
 extern crate chalk_macros;
 extern crate chalk_engine;

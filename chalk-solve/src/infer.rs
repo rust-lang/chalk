@@ -26,7 +26,7 @@ pub struct InferenceSnapshot {
     vars: Vec<EnaVariable>,
 }
 
-crate type ParameterEnaVariable = ParameterKind<EnaVariable>;
+pub(crate) type ParameterEnaVariable = ParameterKind<EnaVariable>;
 
 impl InferenceTable {
     /// Create an empty inference table with no variables.
@@ -84,7 +84,7 @@ impl InferenceTable {
     /// Creates a new inference variable and returns its index. The
     /// kind of the variable should be known by the caller, but is not
     /// tracked directly by the inference table.
-    crate fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable {
+    pub(crate) fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
         debug!("new_variable: var={:?} ui={:?}", var, ui);

@@ -8,7 +8,7 @@ use chalk_ir::fold::{
 };
 use chalk_ir::*;
 
-crate fn truncate<T>(infer: &mut InferenceTable, max_size: usize, value: &T) -> Truncated<T::Result>
+pub(crate) fn truncate<T>(infer: &mut InferenceTable, max_size: usize, value: &T) -> Truncated<T::Result>
 where
     T: Fold,
 {
@@ -29,14 +29,14 @@ where
 }
 
 /// Result from `truncate`.
-crate struct Truncated<T> {
+pub(crate) struct Truncated<T> {
     /// If true, then `value` was truncated relative to the original
     /// (e.g., fresh inference variables were introduced). If false,
     /// then it is effectively a clone of the original.
-    crate overflow: bool,
+    pub(crate) overflow: bool,
 
     /// Possibly truncate value.
-    crate value: T,
+    pub(crate) value: T,
 }
 
 struct Truncater<'infer> {

@@ -18,31 +18,31 @@ pub mod lowering;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// From type-name to item-id. Used during lowering only.
-    crate type_ids: BTreeMap<Identifier, ItemId>,
+    pub(crate) type_ids: BTreeMap<Identifier, ItemId>,
 
     /// For each struct/trait:
-    crate type_kinds: BTreeMap<ItemId, TypeKind>,
+    pub(crate) type_kinds: BTreeMap<ItemId, TypeKind>,
 
     /// For each struct:
-    crate struct_data: BTreeMap<ItemId, StructDatum>,
+    pub(crate) struct_data: BTreeMap<ItemId, StructDatum>,
 
     /// For each impl:
-    crate impl_data: BTreeMap<ItemId, ImplDatum>,
+    pub(crate) impl_data: BTreeMap<ItemId, ImplDatum>,
 
     /// For each trait:
-    crate trait_data: BTreeMap<ItemId, TraitDatum>,
+    pub(crate) trait_data: BTreeMap<ItemId, TraitDatum>,
 
     /// For each associated ty:
-    crate associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
+    pub(crate) associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
 
     /// For each default impl (automatically generated for auto traits):
-    crate default_impl_data: Vec<DefaultImplDatum>,
+    pub(crate) default_impl_data: Vec<DefaultImplDatum>,
 
     /// For each user-specified clause
-    crate custom_clauses: Vec<ProgramClause>,
+    pub(crate) custom_clauses: Vec<ProgramClause>,
 
     /// Special types and traits.
-    crate lang_items: BTreeMap<LangItem, ItemId>,
+    pub(crate) lang_items: BTreeMap<LangItem, ItemId>,
 }
 
 impl Program {
@@ -53,7 +53,7 @@ impl Program {
     /// and hence doesn't have any type parameters itself.
     ///
     /// Used primarily for debugging output.
-    crate fn split_projection<'p>(
+    pub(crate) fn split_projection<'p>(
         &self,
         projection: &'p ProjectionTy,
     ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
@@ -108,16 +108,16 @@ pub enum LangItem {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum {
-    crate binders: Binders<ImplDatumBound>,
+    pub(crate) binders: Binders<ImplDatumBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
-    crate trait_ref: PolarizedTraitRef,
-    crate where_clauses: Vec<QuantifiedWhereClause>,
-    crate associated_ty_values: Vec<AssociatedTyValue>,
-    crate specialization_priority: usize,
-    crate impl_type: ImplType,
+    pub(crate) trait_ref: PolarizedTraitRef,
+    pub(crate) where_clauses: Vec<QuantifiedWhereClause>,
+    pub(crate) associated_ty_values: Vec<AssociatedTyValue>,
+    pub(crate) specialization_priority: usize,
+    pub(crate) impl_type: ImplType,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -128,52 +128,52 @@ pub enum ImplType {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DefaultImplDatum {
-    crate binders: Binders<DefaultImplDatumBound>,
+    pub(crate) binders: Binders<DefaultImplDatumBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DefaultImplDatumBound {
-    crate trait_ref: TraitRef,
-    crate accessible_tys: Vec<Ty>,
+    pub(crate) trait_ref: TraitRef,
+    pub(crate) accessible_tys: Vec<Ty>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatum {
-    crate binders: Binders<StructDatumBound>,
+    pub(crate) binders: Binders<StructDatumBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
-    crate self_ty: ApplicationTy,
-    crate fields: Vec<Ty>,
-    crate where_clauses: Vec<QuantifiedWhereClause>,
-    crate flags: StructFlags,
+    pub(crate) self_ty: ApplicationTy,
+    pub(crate) fields: Vec<Ty>,
+    pub(crate) where_clauses: Vec<QuantifiedWhereClause>,
+    pub(crate) flags: StructFlags,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructFlags {
-    crate upstream: bool,
-    crate fundamental: bool,
+    pub(crate) upstream: bool,
+    pub(crate) fundamental: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum {
-    crate binders: Binders<TraitDatumBound>,
+    pub(crate) binders: Binders<TraitDatumBound>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
-    crate trait_ref: TraitRef,
-    crate where_clauses: Vec<QuantifiedWhereClause>,
-    crate flags: TraitFlags,
+    pub(crate) trait_ref: TraitRef,
+    pub(crate) where_clauses: Vec<QuantifiedWhereClause>,
+    pub(crate) flags: TraitFlags,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitFlags {
-    crate auto: bool,
-    crate marker: bool,
-    crate upstream: bool,
-    crate fundamental: bool,
+    pub(crate) auto: bool,
+    pub(crate) marker: bool,
+    pub(crate) upstream: bool,
+    pub(crate) fundamental: bool,
     pub deref: bool,
 }
 
@@ -188,7 +188,7 @@ enum_fold!(InlineBound[] { TraitBound(a), ProjectionEqBound(a) });
 
 pub type QuantifiedInlineBound = Binders<InlineBound>;
 
-crate trait IntoWhereClauses {
+pub(crate) trait IntoWhereClauses {
     type Output;
 
     fn into_where_clauses(&self, self_ty: Ty) -> Vec<Self::Output>;
@@ -230,8 +230,8 @@ impl IntoWhereClauses for QuantifiedInlineBound {
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitBound {
-    crate trait_id: ItemId,
-    crate args_no_self: Vec<Parameter>,
+    pub(crate) trait_id: ItemId,
+    pub(crate) args_no_self: Vec<Parameter>,
 }
 
 struct_fold!(TraitBound {
@@ -245,7 +245,7 @@ impl TraitBound {
         vec![WhereClause::Implemented(trait_ref)]
     }
 
-    crate fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
+    pub(crate) fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
         let self_ty = ParameterKind::Ty(self_ty);
         TraitRef {
             trait_id: self.trait_id,
@@ -259,11 +259,11 @@ impl TraitBound {
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProjectionEqBound {
-    crate trait_bound: TraitBound,
-    crate associated_ty_id: ItemId,
+    pub(crate) trait_bound: TraitBound,
+    pub(crate) associated_ty_id: ItemId,
     /// Does not include trait parameters.
-    crate parameters: Vec<Parameter>,
-    crate value: Ty,
+    pub(crate) parameters: Vec<Parameter>,
+    pub(crate) value: Ty,
 }
 
 struct_fold!(ProjectionEqBound {
@@ -329,26 +329,26 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyDatum {
     /// The trait this associated type is defined in.
-    crate trait_id: ItemId,
+    pub(crate) trait_id: ItemId,
 
     /// The ID of this associated type
-    crate id: ItemId,
+    pub(crate) id: ItemId,
 
     /// Name of this associated type.
-    crate name: Identifier,
+    pub(crate) name: Identifier,
 
     /// Parameters on this associated type, beginning with those from the trait,
     /// but possibly including more.
-    crate parameter_kinds: Vec<ParameterKind<Identifier>>,
+    pub(crate) parameter_kinds: Vec<ParameterKind<Identifier>>,
 
     /// Bounds on the associated type itself.
     ///
     /// These must be proven by the implementer, for all possible parameters that
     /// would result in a well-formed projection.
-    crate bounds: Vec<QuantifiedInlineBound>,
+    pub(crate) bounds: Vec<QuantifiedInlineBound>,
 
     /// Where clauses that must hold for the projection to be well-formed.
-    crate where_clauses: Vec<QuantifiedWhereClause>,
+    pub(crate) where_clauses: Vec<QuantifiedWhereClause>,
 }
 
 impl AssociatedTyDatum {
@@ -357,7 +357,7 @@ impl AssociatedTyDatum {
     /// ```notrust
     /// Implemented(<?0 as Foo>::Item<?1>: Sized)
     /// ```
-    crate fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause> {
+    pub(crate) fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause> {
         let parameters = self
             .parameter_kinds
             .anonymize()
@@ -378,10 +378,10 @@ impl AssociatedTyDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyValue {
-    crate associated_ty_id: ItemId,
+    pub(crate) associated_ty_id: ItemId,
 
     // note: these binders are in addition to those from the impl
-    crate value: Binders<AssociatedTyValueBound>,
+    pub(crate) value: Binders<AssociatedTyValueBound>,
 }
 
 struct_fold!(AssociatedTyValue {
@@ -392,16 +392,16 @@ struct_fold!(AssociatedTyValue {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
-    crate ty: Ty,
+    pub(crate) ty: Ty,
 }
 
 struct_fold!(AssociatedTyValueBound { ty });
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {
-    crate sort: TypeSort,
-    crate name: Identifier,
-    crate binders: Binders<()>,
+    pub(crate) sort: TypeSort,
+    pub(crate) name: Identifier,
+    pub(crate) binders: Binders<()>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -419,14 +419,14 @@ pub enum PolarizedTraitRef {
 enum_fold!(PolarizedTraitRef[] { Positive(a), Negative(a) });
 
 impl PolarizedTraitRef {
-    crate fn is_positive(&self) -> bool {
+    pub(crate) fn is_positive(&self) -> bool {
         match *self {
             PolarizedTraitRef::Positive(_) => true,
             PolarizedTraitRef::Negative(_) => false,
         }
     }
 
-    crate fn trait_ref(&self) -> &TraitRef {
+    pub(crate) fn trait_ref(&self) -> &TraitRef {
         match *self {
             PolarizedTraitRef::Positive(ref tr) | PolarizedTraitRef::Negative(ref tr) => tr,
         }

@@ -1,5 +1,3 @@
-#![feature(crate_visibility_modifier)]
-
 use crate::cast::Cast;
 use crate::fold::shift::Shift;
 use crate::fold::{

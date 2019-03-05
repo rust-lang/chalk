@@ -7,7 +7,7 @@ use chalk_solve::solve::SolverChoice;
 use failure::Fallible;
 use std::sync::Arc;
 
-crate mod orphan;
+pub(crate) mod orphan;
 mod solve;
 mod test;
 
@@ -20,7 +20,7 @@ pub enum CoherenceError {
 }
 
 impl Program {
-    crate fn record_specialization_priorities(
+    pub(crate) fn record_specialization_priorities(
         &mut self,
         env: Arc<ProgramEnvironment>,
         solver_choice: SolverChoice,

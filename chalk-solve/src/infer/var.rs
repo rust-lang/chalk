@@ -33,7 +33,7 @@ use std::u32;
 ///     "downcast" the resulting variable using
 ///     e.g. `value.ty().unwrap()`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-crate struct EnaVariable(InferenceVar);
+pub(crate) struct EnaVariable(InferenceVar);
 
 impl From<InferenceVar> for EnaVariable {
     fn from(var: InferenceVar) -> EnaVariable {
@@ -77,7 +77,7 @@ impl UnifyKey for EnaVariable {
 /// universe index; when the inference variable is assigned a value, it becomes
 /// bound and records that value. See `EnaVariable` for more details.
 #[derive(Clone, Debug, PartialEq, Eq)]
-crate enum InferenceValue {
+pub(crate) enum InferenceValue {
     Unbound(UniverseIndex),
     Bound(Parameter),
 }
