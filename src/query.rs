@@ -50,7 +50,9 @@ salsa::query_group! {
 
 fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
     let text = db.program_text();
-    let x = chalk_parse::parse_program(&text).and_then(|p| p.lower()).map(Arc::new);
+    let x = chalk_parse::parse_program(&text)
+        .and_then(|p| p.lower())
+        .map(Arc::new);
 
     x.map_err(|err| err.to_string())
 }
@@ -59,7 +61,8 @@ fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, 
     let mut program = db.program_ir()?;
     let env = db.environment()?;
 
-    Arc::make_mut(&mut program).record_specialization_priorities(env, db.solver_choice())
+    Arc::make_mut(&mut program)
+        .record_specialization_priorities(env, db.solver_choice())
         .map_err(|e| e.to_string())?;
 
     Ok(program)

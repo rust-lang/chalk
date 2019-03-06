@@ -8,7 +8,11 @@ use chalk_ir::fold::{
 };
 use chalk_ir::*;
 
-pub(crate) fn truncate<T>(infer: &mut InferenceTable, max_size: usize, value: &T) -> Truncated<T::Result>
+pub(crate) fn truncate<T>(
+    infer: &mut InferenceTable,
+    max_size: usize,
+    value: &T,
+) -> Truncated<T::Result>
 where
     T: Fold,
 {
