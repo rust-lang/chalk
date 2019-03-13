@@ -20,7 +20,7 @@ rustyline = "1.0"
 salsa = "0.9.1"
 serde = "1.0"
 serde_derive = "1.0"
-stacker = "0.1.2"
+stacker = "0.1.5"
 
 [dependencies.chalk-parse]
 version = "0.1.0"
