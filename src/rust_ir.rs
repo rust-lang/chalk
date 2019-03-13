@@ -7,8 +7,9 @@ use chalk_ir::debug::Angle;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::tls;
 use chalk_ir::{
-    ApplicationTy, Binders, Identifier, ItemId, Lifetime, Parameter, ParameterKind, ProgramClause,
-    ProjectionEq, ProjectionTy, QuantifiedWhereClause, TraitRef, Ty, WhereClause,
+    ApplicationTy, Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProgramClause,
+    ProjectionEq, ProjectionTy, QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty,
+    TypeId, TypeKindId, WhereClause,
 };
 use std::collections::BTreeMap;
 use std::fmt;
@@ -19,22 +20,22 @@ pub mod lowering;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// From type-name to item-id. Used during lowering only.
-    pub(crate) type_ids: BTreeMap<Identifier, ItemId>,
+    pub(crate) type_ids: BTreeMap<Identifier, TypeId>,
 
     /// For each struct/trait:
-    pub(crate) type_kinds: BTreeMap<ItemId, TypeKind>,
+    pub(crate) type_kinds: BTreeMap<TypeKindId, TypeKind>,
 
     /// For each struct:
-    pub(crate) struct_data: BTreeMap<ItemId, StructDatum>,
+    pub(crate) struct_data: BTreeMap<StructId, StructDatum>,
 
     /// For each impl:
-    pub(crate) impl_data: BTreeMap<ItemId, ImplDatum>,
+    pub(crate) impl_data: BTreeMap<ImplId, ImplDatum>,
 
     /// For each trait:
-    pub(crate) trait_data: BTreeMap<ItemId, TraitDatum>,
+    pub(crate) trait_data: BTreeMap<TraitId, TraitDatum>,
 
     /// For each associated ty:
-    pub(crate) associated_ty_data: BTreeMap<ItemId, AssociatedTyDatum>,
+    pub(crate) associated_ty_data: BTreeMap<TypeId, AssociatedTyDatum>,
 
     /// For each default impl (automatically generated for auto traits):
     pub(crate) default_impl_data: Vec<DefaultImplDatum>,
@@ -43,7 +44,7 @@ pub struct Program {
     pub(crate) custom_clauses: Vec<ProgramClause>,
 
     /// Special types and traits.
-    pub(crate) lang_items: BTreeMap<LangItem, ItemId>,
+    pub(crate) lang_items: BTreeMap<LangItem, TraitId>,
 }
 
 impl Program {
@@ -72,14 +73,16 @@ impl Program {
 }
 
 impl tls::DebugContext for Program {
-    fn debug_item_id(&self, item_id: ItemId, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        if let Some(k) = self.type_kinds.get(&item_id) {
+    fn debug_raw_id(&self, raw_id: RawId, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        if let Some(k) = self.type_kinds.get(&TypeKindId::TypeId(TypeId(raw_id))) {
             write!(fmt, "{}", k.name)
-        } else if let Some(k) = self.associated_ty_data.get(&item_id) {
+        } else if let Some(k) = self.type_kinds.get(&TypeKindId::TraitId(TraitId(raw_id))) {
+            write!(fmt, "{}", k.name)
+        } else if let Some(k) = self.associated_ty_data.get(&TypeId(raw_id)) {
             write!(fmt, "({:?}::{})", k.trait_id, k.name)
         } else {
             fmt.debug_struct("InvalidItemId")
-                .field("index", &item_id.index)
+                .field("index", &raw_id.index)
                 .finish()
         }
     }
@@ -231,7 +234,7 @@ impl IntoWhereClauses for QuantifiedInlineBound {
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitBound {
-    pub(crate) trait_id: ItemId,
+    pub(crate) trait_id: TraitId,
     pub(crate) args_no_self: Vec<Parameter>,
 }
 
@@ -260,7 +263,7 @@ impl TraitBound {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ProjectionEqBound {
     pub(crate) trait_bound: TraitBound,
-    pub(crate) associated_ty_id: ItemId,
+    pub(crate) associated_ty_id: TypeId,
     /// Does not include trait parameters.
     pub(crate) parameters: Vec<Parameter>,
     pub(crate) value: Ty,
@@ -329,10 +332,10 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyDatum {
     /// The trait this associated type is defined in.
-    pub(crate) trait_id: ItemId,
+    pub(crate) trait_id: TraitId,
 
     /// The ID of this associated type
-    pub(crate) id: ItemId,
+    pub(crate) id: TypeId,
 
     /// Name of this associated type.
     pub(crate) name: Identifier,
@@ -378,7 +381,7 @@ impl AssociatedTyDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyValue {
-    pub(crate) associated_ty_id: ItemId,
+    pub(crate) associated_ty_id: TypeId,
 
     // note: these binders are in addition to those from the impl
     pub(crate) value: Binders<AssociatedTyValueBound>,

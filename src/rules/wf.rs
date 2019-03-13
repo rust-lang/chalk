@@ -55,7 +55,11 @@ fn solve_wf_requirements(
 
     for (id, struct_datum) in &program.struct_data {
         if !solver.verify_struct_decl(struct_datum) {
-            let name = program.type_kinds.get(id).unwrap().name;
+            let name = program
+                .type_kinds
+                .get(&TypeKindId::StructId(*id))
+                .unwrap()
+                .name;
             Err(WfError::IllFormedTypeDecl(name))?;
         }
     }
@@ -63,7 +67,11 @@ fn solve_wf_requirements(
     for impl_datum in program.impl_data.values() {
         if !solver.verify_trait_impl(impl_datum) {
             let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
-            let name = program.type_kinds.get(&trait_ref.trait_id).unwrap().name;
+            let name = program
+                .type_kinds
+                .get(&trait_ref.trait_id.into())
+                .unwrap()
+                .name;
             Err(WfError::IllFormedTraitImpl(name))?;
         }
     }

@@ -1,3 +1,15 @@
+macro_rules! impl_froms {
+    ($e:ident: $($v:ident), *) => {
+        $(
+            impl From<$v> for $e {
+                fn from(it: $v) -> $e {
+                    $e::$v(it)
+                }
+            }
+        )*
+    }
+}
+
 use crate::cast::Cast;
 use crate::fold::shift::Shift;
 use crate::fold::{
@@ -33,7 +45,7 @@ pub type Identifier = InternedString;
 pub struct ProgramEnvironment {
     /// Indicates whether a given trait has coinductive semantics --
     /// at present, this is true only for auto traits.
-    pub coinductive_traits: BTreeSet<ItemId>,
+    pub coinductive_traits: BTreeSet<TraitId>,
 
     /// Compiled forms of the above:
     pub program_clauses: Vec<ProgramClause>,
@@ -98,7 +110,7 @@ pub enum TypeName {
     Placeholder(PlaceholderIndex),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
-    AssociatedType(ItemId),
+    AssociatedType(TypeId),
 }
 
 /// An universe index is how a universally quantified parameter is
@@ -131,9 +143,55 @@ impl UniverseIndex {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct StructId(pub RawId);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TraitId(pub RawId);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ImplId(pub RawId);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ClauseId(pub RawId);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TypeId(pub RawId);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ItemId {
+    StructId(StructId),
+    TraitId(TraitId),
+    ImplId(ImplId),
+    ClauseId(ClauseId),
+    TypeId(TypeId),
+}
+
+impl_froms!(ItemId: StructId, TraitId, ImplId, ClauseId, TypeId);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TypeKindId {
+    TypeId(TypeId),
+    TraitId(TraitId),
+    StructId(StructId),
+}
+
+impl_froms!(TypeKindId: TypeId, TraitId, StructId);
+
+impl From<TypeKindId> for ItemId {
+    fn from(type_kind_id: TypeKindId) -> ItemId {
+        match type_kind_id {
+            TypeKindId::TypeId(id) => ItemId::TypeId(id),
+            TypeKindId::TraitId(id) => ItemId::TraitId(id),
+            TypeKindId::StructId(id) => ItemId::StructId(id),
+        }
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ItemId {
-    pub index: usize,
+#[allow(non_camel_case_types)]
+pub struct RawId {
+    pub index: u32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -411,7 +469,7 @@ impl Parameter {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ProjectionTy {
-    pub associated_ty_id: ItemId,
+    pub associated_ty_id: TypeId,
     pub parameters: Vec<Parameter>,
 }
 
@@ -431,7 +489,7 @@ pub type ProjectionTyRefEnum<'a> = ProjectionTyEnum<&'a ProjectionTy, &'a Unsele
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TraitRef {
-    pub trait_id: ItemId,
+    pub trait_id: TraitId,
     pub parameters: Vec<Parameter>,
 }
 

@@ -23,7 +23,7 @@ impl Program {
         mut record_specialization: F,
     ) -> Fallible<()>
     where
-        F: FnMut(ItemId, ItemId),
+        F: FnMut(ImplId, ImplId),
     {
         let mut solver = DisjointSolver { env, solver_choice };
 
@@ -53,7 +53,7 @@ impl Program {
 
         // Iterate over every pair of impls for the same trait.
         for (trait_id, impls) in &impl_groupings {
-            let impls: Vec<(&ItemId, &ImplDatum)> = impls.collect();
+            let impls: Vec<(&ImplId, &ImplDatum)> = impls.collect();
 
             for ((&l_id, lhs), (&r_id, rhs)) in impls.into_iter().tuple_combinations() {
                 // Two negative impls never overlap.
@@ -71,7 +71,7 @@ impl Program {
                         (true, false) => record_specialization(l_id, r_id),
                         (false, true) => record_specialization(r_id, l_id),
                         (_, _) => {
-                            let trait_id = self.type_kinds.get(&trait_id).unwrap().name;
+                            let trait_id = self.type_kinds.get(&trait_id.into()).unwrap().name;
                             Err(CoherenceError::OverlappingImpls(trait_id))?;
                         }
                     }

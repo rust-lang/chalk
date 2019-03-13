@@ -2,12 +2,12 @@ use std::fmt::{Debug, Display, Error, Formatter};
 
 use super::*;
 
-impl Debug for ItemId {
+impl Debug for RawId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         tls::with_current_program(|p| match p {
-            Some(prog) => prog.debug_item_id(*self, fmt),
+            Some(prog) => prog.debug_raw_id(*self, fmt),
             None => fmt
-                .debug_struct("ItemId")
+                .debug_struct("RawId")
                 .field("index", &self.index)
                 .finish(),
         })

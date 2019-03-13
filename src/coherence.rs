@@ -2,7 +2,7 @@ use petgraph::prelude::*;
 
 use crate::rust_ir::Program;
 use chalk_ir::ProgramEnvironment;
-use chalk_ir::{self, Identifier, ItemId};
+use chalk_ir::{self, Identifier, ImplId};
 use chalk_solve::solve::SolverChoice;
 use failure::Fallible;
 use std::sync::Arc;
@@ -43,7 +43,7 @@ impl Program {
         &self,
         env: Arc<ProgramEnvironment>,
         solver_choice: SolverChoice,
-    ) -> Fallible<Graph<ItemId, ()>> {
+    ) -> Fallible<Graph<ImplId, ()>> {
         // The forest is returned as a graph but built as a GraphMap; this is
         // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraphMap::new();
@@ -59,7 +59,7 @@ impl Program {
     }
 
     // Recursively set priorities for those node and all of its children.
-    fn set_priorities(&mut self, idx: NodeIndex, forest: &Graph<ItemId, ()>, p: usize) {
+    fn set_priorities(&mut self, idx: NodeIndex, forest: &Graph<ImplId, ()>, p: usize) {
         // Get the impl datum recorded at this node and reset its priority
         {
             let impl_id = forest

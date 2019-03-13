@@ -4,16 +4,16 @@ use chalk_parse::ast::*;
 use lalrpop_intern::intern;
 
 use crate::rust_ir::{self, Anonymize, ToParameter};
-use chalk_ir;
 use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
 use failure::{Fail, Fallible};
 use itertools::Itertools;
 
 mod test;
 
-type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::ItemId>;
-type TypeKinds = BTreeMap<chalk_ir::ItemId, rust_ir::TypeKind>;
-type AssociatedTyInfos = BTreeMap<(chalk_ir::ItemId, chalk_ir::Identifier), AssociatedTyInfo>;
+type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeId>;
+type TypeKinds = BTreeMap<chalk_ir::TypeKindId, rust_ir::TypeKind>;
+type AssociatedTyInfos = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyInfo>;
 type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usize>;
 
 #[derive(Fail, Debug)]
@@ -49,12 +49,12 @@ struct Env<'k> {
 
 #[derive(Debug, PartialEq, Eq)]
 struct AssociatedTyInfo {
-    id: chalk_ir::ItemId,
+    id: chalk_ir::TypeId,
     addl_parameter_kinds: Vec<chalk_ir::ParameterKind<chalk_ir::Identifier>>,
 }
 
 enum NameLookup {
-    Type(chalk_ir::ItemId),
+    Type(chalk_ir::TypeKindId),
     Parameter(usize),
 }
 
@@ -74,7 +74,7 @@ impl<'k> Env<'k> {
         }
 
         if let Some(id) = self.type_ids.get(&name.str) {
-            return Ok(NameLookup::Type(*id));
+            return Ok(NameLookup::Type(TypeKindId::TypeId(*id)));
         }
 
         Err(RustIrError::InvalidTypeName(name))?
@@ -91,7 +91,7 @@ impl<'k> Env<'k> {
         Err(format_err!("invalid lifetime name: {:?}", name.str))
     }
 
-    fn type_kind(&self, id: chalk_ir::ItemId) -> &rust_ir::TypeKind {
+    fn type_kind(&self, id: chalk_ir::TypeKindId) -> &rust_ir::TypeKind {
         &self.type_kinds[&id]
     }
 
@@ -143,19 +143,19 @@ pub(crate) trait LowerProgram {
 impl LowerProgram for Program {
     fn lower(&self) -> Fallible<rust_ir::Program> {
         let mut index = 0;
-        let mut next_item_id = || -> chalk_ir::ItemId {
+        let mut next_item_id = || -> chalk_ir::RawId {
             let i = index;
             index += 1;
-            chalk_ir::ItemId { index: i }
+            chalk_ir::RawId { index: i }
         };
 
         // Make a vector mapping each thing in `items` to an id,
         // based just on its position:
-        let item_ids: Vec<_> = self.items.iter().map(|_| next_item_id()).collect();
+        let raw_ids: Vec<_> = self.items.iter().map(|_| next_item_id()).collect();
 
         // Create ids for associated types
         let mut associated_ty_infos = BTreeMap::new();
-        for (item, &item_id) in self.items.iter().zip(&item_ids) {
+        for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             if let Item::TraitDefn(ref d) = *item {
                 if d.flags.auto && !d.assoc_ty_defns.is_empty() {
                     return Err(format_err!("auto trait cannot define associated types"));
@@ -163,25 +163,26 @@ impl LowerProgram for Program {
                 for defn in &d.assoc_ty_defns {
                     let addl_parameter_kinds = defn.all_parameters();
                     let info = AssociatedTyInfo {
-                        id: next_item_id(),
+                        id: TypeId(next_item_id()),
                         addl_parameter_kinds,
                     };
-                    associated_ty_infos.insert((item_id, defn.name.str), info);
+                    associated_ty_infos.insert((TraitId(raw_id), defn.name.str), info);
                 }
             }
         }
 
         let mut type_ids = BTreeMap::new();
         let mut type_kinds = BTreeMap::new();
-        for (item, &item_id) in self.items.iter().zip(&item_ids) {
+        for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let k = match *item {
                 Item::StructDefn(ref d) => d.lower_type_kind()?,
                 Item::TraitDefn(ref d) => d.lower_type_kind()?,
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
             };
-            type_ids.insert(k.name, item_id);
-            type_kinds.insert(item_id, k);
+            let type_id = TypeId(raw_id);
+            type_ids.insert(k.name, type_id);
+            type_kinds.insert(type_id.into(), k);
         }
 
         let mut struct_data = BTreeMap::new();
@@ -190,7 +191,7 @@ impl LowerProgram for Program {
         let mut associated_ty_data = BTreeMap::new();
         let mut custom_clauses = Vec::new();
         let mut lang_items = BTreeMap::new();
-        for (item, &item_id) in self.items.iter().zip(&item_ids) {
+        for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
@@ -200,13 +201,15 @@ impl LowerProgram for Program {
 
             match *item {
                 Item::StructDefn(ref d) => {
-                    struct_data.insert(item_id, d.lower_struct(item_id, &empty_env)?);
+                    let struct_id = StructId(raw_id);
+                    struct_data.insert(struct_id, d.lower_struct(struct_id, &empty_env)?);
                 }
                 Item::TraitDefn(ref d) => {
-                    trait_data.insert(item_id, d.lower_trait(item_id, &empty_env)?);
+                    let trait_id = TraitId(raw_id);
+                    trait_data.insert(trait_id, d.lower_trait(trait_id, &empty_env)?);
 
                     for defn in &d.assoc_ty_defns {
-                        let info = &associated_ty_infos[&(item_id, defn.name.str)];
+                        let info = &associated_ty_infos[&(trait_id, defn.name.str)];
 
                         let mut parameter_kinds = defn.all_parameters();
                         parameter_kinds.extend(d.all_parameters());
@@ -215,7 +218,7 @@ impl LowerProgram for Program {
                         associated_ty_data.insert(
                             info.id,
                             rust_ir::AssociatedTyDatum {
-                                trait_id: item_id,
+                                trait_id: TraitId(raw_id),
                                 id: info.id,
                                 name: defn.name.str,
                                 parameter_kinds: parameter_kinds,
@@ -229,7 +232,7 @@ impl LowerProgram for Program {
                         use std::collections::btree_map::Entry::*;
                         match lang_items.entry(rust_ir::LangItem::DerefTrait) {
                             Vacant(entry) => {
-                                entry.insert(item_id);
+                                entry.insert(TraitId(raw_id));
                             }
                             Occupied(_) => Err(RustIrError::DuplicateLangItem(
                                 rust_ir::LangItem::DerefTrait,
@@ -238,7 +241,7 @@ impl LowerProgram for Program {
                     }
                 }
                 Item::Impl(ref d) => {
-                    impl_data.insert(item_id, d.lower_impl(&empty_env)?);
+                    impl_data.insert(ImplId(raw_id), d.lower_impl(&empty_env)?);
                 }
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
@@ -522,7 +525,7 @@ impl LowerDomainGoal for DomainGoal {
                     Err(RustIrError::NotTrait(*trait_name))?;
                 }
 
-                vec![chalk_ir::DomainGoal::InScope(id)]
+                vec![chalk_ir::DomainGoal::InScope(id.into())]
             }
             DomainGoal::Derefs { source, target } => {
                 vec![chalk_ir::DomainGoal::Derefs(chalk_ir::Derefs {
@@ -577,14 +580,22 @@ impl LowerLeafGoal for LeafGoal {
 }
 
 trait LowerStructDefn {
-    fn lower_struct(&self, item_id: chalk_ir::ItemId, env: &Env) -> Fallible<rust_ir::StructDatum>;
+    fn lower_struct(
+        &self,
+        struct_id: chalk_ir::StructId,
+        env: &Env,
+    ) -> Fallible<rust_ir::StructDatum>;
 }
 
 impl LowerStructDefn for StructDefn {
-    fn lower_struct(&self, item_id: chalk_ir::ItemId, env: &Env) -> Fallible<rust_ir::StructDatum> {
+    fn lower_struct(
+        &self,
+        struct_id: chalk_ir::StructId,
+        env: &Env,
+    ) -> Fallible<rust_ir::StructDatum> {
         let binders = env.in_binders(self.all_parameters(), |env| {
             let self_ty = chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::ItemId(item_id),
+                name: chalk_ir::TypeName::ItemId(struct_id.into()),
                 parameters: self
                     .all_parameters()
                     .anonymize()
@@ -656,12 +667,14 @@ trait LowerTraitBound {
 
 impl LowerTraitBound for TraitBound {
     fn lower(&self, env: &Env) -> Fallible<rust_ir::TraitBound> {
-        let id = match env.lookup(self.trait_name)? {
-            NameLookup::Type(id) => id,
-            NameLookup::Parameter(_) => Err(RustIrError::NotTrait(self.trait_name))?,
+        let trait_id = match env.lookup(self.trait_name)? {
+            NameLookup::Type(TypeKindId::TraitId(trait_id)) => trait_id,
+            NameLookup::Type(_) | NameLookup::Parameter(_) => {
+                Err(RustIrError::NotTrait(self.trait_name))?
+            }
         };
 
-        let k = env.type_kind(id);
+        let k = env.type_kind(trait_id.into());
         if k.sort != rust_ir::TypeSort::Trait {
             Err(RustIrError::NotTrait(self.trait_name))?;
         }
@@ -685,7 +698,7 @@ impl LowerTraitBound for TraitBound {
         }
 
         Ok(rust_ir::TraitBound {
-            trait_id: id,
+            trait_id,
             args_no_self: parameters,
         })
     }
@@ -807,7 +820,7 @@ impl LowerProjectionTy for ProjectionTy {
             trait_id,
             parameters: trait_parameters,
         } = trait_ref.lower(env)?;
-        let info = match env.associated_ty_infos.get(&(trait_id, name.str)) {
+        let info = match env.associated_ty_infos.get(&(trait_id.into(), name.str)) {
             Some(info) => info,
             None => {
                 return Err(format_err!(
@@ -876,7 +889,7 @@ impl LowerTy for Ty {
                         })?
                     } else {
                         Ok(chalk_ir::Ty::Apply(chalk_ir::ApplicationTy {
-                            name: chalk_ir::TypeName::ItemId(id),
+                            name: chalk_ir::TypeName::ItemId(id.into()),
                             parameters: vec![],
                         }))
                     }
@@ -909,7 +922,7 @@ impl LowerTy for Ty {
                 }
 
                 Ok(chalk_ir::Ty::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::ItemId(id),
+                    name: chalk_ir::TypeName::ItemId(id.into()),
                     parameters: parameters,
                 }))
             }
@@ -988,7 +1001,7 @@ impl LowerImpl for Impl {
             let associated_ty_values = self
                 .assoc_ty_values
                 .iter()
-                .map(|v| v.lower(trait_id, env))
+                .map(|v| v.lower(trait_id.into(), env))
                 .collect::<Fallible<_>>()?;
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
@@ -1053,11 +1066,16 @@ impl LowerClause for Clause {
 }
 
 trait LowerAssocTyValue {
-    fn lower(&self, trait_id: chalk_ir::ItemId, env: &Env) -> Fallible<rust_ir::AssociatedTyValue>;
+    fn lower(&self, trait_id: chalk_ir::TraitId, env: &Env)
+        -> Fallible<rust_ir::AssociatedTyValue>;
 }
 
 impl LowerAssocTyValue for AssocTyValue {
-    fn lower(&self, trait_id: chalk_ir::ItemId, env: &Env) -> Fallible<rust_ir::AssociatedTyValue> {
+    fn lower(
+        &self,
+        trait_id: chalk_ir::TraitId,
+        env: &Env,
+    ) -> Fallible<rust_ir::AssociatedTyValue> {
         let info = &env.associated_ty_infos[&(trait_id, self.name.str)];
         let value = env.in_binders(self.all_parameters(), |env| {
             Ok(rust_ir::AssociatedTyValueBound {
@@ -1072,11 +1090,11 @@ impl LowerAssocTyValue for AssocTyValue {
 }
 
 trait LowerTrait {
-    fn lower_trait(&self, trait_id: chalk_ir::ItemId, env: &Env) -> Fallible<rust_ir::TraitDatum>;
+    fn lower_trait(&self, trait_id: chalk_ir::TraitId, env: &Env) -> Fallible<rust_ir::TraitDatum>;
 }
 
 impl LowerTrait for TraitDefn {
-    fn lower_trait(&self, trait_id: chalk_ir::ItemId, env: &Env) -> Fallible<rust_ir::TraitDatum> {
+    fn lower_trait(&self, trait_id: chalk_ir::TraitId, env: &Env) -> Fallible<rust_ir::TraitDatum> {
         let binders = env.in_binders(self.all_parameters(), |env| {
             let trait_ref = chalk_ir::TraitRef {
                 trait_id: trait_id,

@@ -29,7 +29,7 @@ pub(crate) fn perform_orphan_check(
     for impl_datum in local_impls {
         if !solver.orphan_check(impl_datum) {
             let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
-            let trait_id = program.type_kinds.get(&trait_id).unwrap().name;
+            let trait_id = program.type_kinds.get(&trait_id.into()).unwrap().name;
             Err(CoherenceError::FailedOrphanCheck(trait_id))?;
         }
     }
