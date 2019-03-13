@@ -1,3 +1,4 @@
+use chalk_ir::cast::Cast;
 use chalk_ir::*;
 use ena::unify::{UnifyKey, UnifyValue};
 use std::cmp::min;
@@ -84,13 +85,13 @@ pub(crate) enum InferenceValue {
 
 impl From<Ty> for InferenceValue {
     fn from(ty: Ty) -> Self {
-        InferenceValue::Bound(ParameterKind::Ty(ty))
+        InferenceValue::Bound(ty.cast())
     }
 }
 
 impl From<Lifetime> for InferenceValue {
     fn from(lifetime: Lifetime) -> Self {
-        InferenceValue::Bound(ParameterKind::Lifetime(lifetime))
+        InferenceValue::Bound(lifetime.cast())
     }
 }
 

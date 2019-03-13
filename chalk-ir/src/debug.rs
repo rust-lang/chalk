@@ -346,8 +346,17 @@ impl<T: Display> Display for Canonical<T> {
 impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match *self {
-            ParameterKind::Ty(ref n) => write!(fmt, "{:?}", n),
-            ParameterKind::Lifetime(ref n) => write!(fmt, "{:?}", n),
+            ParameterKind::Ty(ref n) => write!(fmt, "Ty({:?})", n),
+            ParameterKind::Lifetime(ref n) => write!(fmt, "Lifetime({:?})", n),
+        }
+    }
+}
+
+impl Debug for Parameter {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match &self.0 {
+            ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
+            ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
         }
     }
 }

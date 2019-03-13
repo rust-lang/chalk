@@ -455,6 +455,14 @@ impl Fold for Substitution {
     }
 }
 
+impl Fold for Parameter {
+    type Result = Parameter;
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
+        let inner = self.0.fold_with(folder, binders)?;
+        Ok(Parameter(inner))
+    }
+}
+
 #[macro_export]
 macro_rules! copy_fold {
     ($t:ty) => {

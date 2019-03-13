@@ -1,6 +1,6 @@
 use ::ena::unify as ena;
-use chalk_ir::fold::Fold;
 use chalk_ir::*;
+use chalk_ir::{cast::Cast, fold::Fold};
 
 pub mod canonicalize;
 pub mod instantiate;
@@ -196,8 +196,8 @@ pub trait ParameterEnaVariableExt {
 impl ParameterEnaVariableExt for ParameterEnaVariable {
     fn to_parameter(self) -> Parameter {
         match self {
-            ParameterKind::Ty(v) => ParameterKind::Ty(v.to_ty()),
-            ParameterKind::Lifetime(v) => ParameterKind::Lifetime(v.to_lifetime()),
+            ParameterKind::Ty(v) => v.to_ty().cast(),
+            ParameterKind::Lifetime(v) => v.to_lifetime().cast(),
         }
     }
 }

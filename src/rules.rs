@@ -155,7 +155,7 @@ impl DefaultImplDatum {
                 conditions: {
                     let wc = bound.accessible_tys.iter().cloned().map(|ty| TraitRef {
                         trait_id: bound.trait_ref.trait_id,
-                        parameters: vec![ParameterKind::Ty(ty)],
+                        parameters: vec![ty.cast()],
                     });
 
                     wc.casted().collect()

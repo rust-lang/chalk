@@ -28,7 +28,7 @@ impl<'b> FreeVarFolder for Subst<'b> {
         if depth >= self.parameters.len() {
             Ok(Ty::BoundVar(depth - self.parameters.len() + binders))
         } else {
-            match self.parameters[depth] {
+            match self.parameters[depth].0 {
                 ParameterKind::Ty(ref t) => Ok(t.shifted_in(binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
@@ -39,7 +39,7 @@ impl<'b> FreeVarFolder for Subst<'b> {
         if depth >= self.parameters.len() {
             Ok(Lifetime::BoundVar(depth - self.parameters.len() + binders))
         } else {
-            match self.parameters[depth] {
+            match self.parameters[depth].0 {
                 ParameterKind::Lifetime(ref l) => Ok(l.shifted_in(binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }

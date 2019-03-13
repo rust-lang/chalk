@@ -106,7 +106,7 @@ fn merge_into_guidance(
             // of X.
             let universe = root_goal.binders[index].into_inner();
 
-            let ty = match value {
+            let ty = match &value.0 {
                 ParameterKind::Ty(ty) => ty,
                 ParameterKind::Lifetime(_) => {
                     // Ignore the lifetimes from the substitution: we're just
@@ -140,7 +140,7 @@ fn is_trivial(subst: &Canonical<Substitution>) -> bool {
         .parameters
         .iter()
         .enumerate()
-        .all(|(index, parameter)| match parameter {
+        .all(|(index, parameter)| match &parameter.0 {
             // All types are mapped to distinct variables.  Since this
             // has been canonicalized, those will also be the first N
             // variables.
@@ -300,12 +300,10 @@ impl<'infer> AntiUnifier<'infer> {
     }
 
     fn aggregate_parameters(&mut self, p1: &Parameter, p2: &Parameter) -> Parameter {
-        match (p1, p2) {
-            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => {
-                ParameterKind::Ty(self.aggregate_tys(ty1, ty2))
-            }
+        match (&p1.0, &p2.0) {
+            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2).cast(),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
-                ParameterKind::Lifetime(self.aggregate_lifetimes(l1, l2))
+                self.aggregate_lifetimes(l1, l2).cast()
             }
             (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
                 panic!("mismatched parameter kinds: p1={:?} p2={:?}", p1, p2)

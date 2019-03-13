@@ -284,7 +284,7 @@ impl<'t> AnswerSubstitutor<'t> {
 
         let answer_param = &self.answer_subst.parameters[answer_depth - self.answer_binders];
 
-        let pending_shifted = &pending
+        let pending_shifted = pending
             .shifted_out(self.pending_binders)
             .unwrap_or_else(|_| {
                 panic!(
@@ -295,7 +295,7 @@ impl<'t> AnswerSubstitutor<'t> {
 
         implementation::into_ex_clause(
             self.table
-                .unify(&self.environment, answer_param, pending_shifted)?,
+                .unify(&self.environment, answer_param, &Parameter(pending_shifted))?,
             &mut self.ex_clause,
         );
 

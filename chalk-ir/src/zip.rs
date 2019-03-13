@@ -294,3 +294,9 @@ impl<T: Zip, L: Zip> Zip for ParameterKind<T, L> {
         }
     }
 }
+
+impl Zip for Parameter {
+    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+        Zip::zip_with(zipper, &a.0, &b.0)
+    }
+}

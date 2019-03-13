@@ -368,7 +368,46 @@ impl<T, L> ParameterKind<T, L> {
     }
 }
 
-pub type Parameter = ParameterKind<Ty, Lifetime>;
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Parameter(pub ParameterKind<Ty, Lifetime>);
+
+impl Parameter {
+    pub fn assert_ty_ref(&self) -> &Ty {
+        self.as_ref().ty().unwrap()
+    }
+
+    pub fn assert_lifetime_ref(&self) -> &Lifetime {
+        self.as_ref().lifetime().unwrap()
+    }
+
+    pub fn as_ref(&self) -> ParameterKind<&Ty, &Lifetime> {
+        match &self.0 {
+            ParameterKind::Ty(t) => ParameterKind::Ty(t),
+            ParameterKind::Lifetime(l) => ParameterKind::Lifetime(l),
+        }
+    }
+
+    pub fn is_ty(&self) -> bool {
+        match self.0 {
+            ParameterKind::Ty(_) => true,
+            ParameterKind::Lifetime(_) => false,
+        }
+    }
+
+    pub fn ty(self) -> Option<Ty> {
+        match self.0 {
+            ParameterKind::Ty(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    pub fn lifetime(self) -> Option<Lifetime> {
+        match self.0 {
+            ParameterKind::Lifetime(t) => Some(t),
+            _ => None,
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ProjectionTy {
@@ -926,9 +965,9 @@ impl Substitution {
         self.parameters
             .iter()
             .zip(0..)
-            .all(|(parameter, index)| match parameter {
-                ParameterKind::Ty(Ty::BoundVar(depth)) => index == *depth,
-                ParameterKind::Lifetime(Lifetime::BoundVar(depth)) => index == *depth,
+            .all(|(parameter, index)| match parameter.0 {
+                ParameterKind::Ty(Ty::BoundVar(depth)) => index == depth,
+                ParameterKind::Lifetime(Lifetime::BoundVar(depth)) => index == depth,
                 _ => false,
             })
     }

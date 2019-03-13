@@ -2,6 +2,7 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
+use chalk_ir::cast::Cast;
 use chalk_ir::debug::Angle;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::tls;
@@ -246,10 +247,9 @@ impl TraitBound {
     }
 
     pub(crate) fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
-        let self_ty = ParameterKind::Ty(self_ty);
         TraitRef {
             trait_id: self.trait_id,
-            parameters: iter::once(self_ty)
+            parameters: iter::once(self_ty.cast())
                 .chain(self.args_no_self.iter().cloned())
                 .collect(),
         }
@@ -320,8 +320,8 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
     fn to_parameter(&self) -> Parameter {
         let &(binder, index) = self;
         match *binder {
-            ParameterKind::Lifetime(_) => ParameterKind::Lifetime(Lifetime::BoundVar(index)),
-            ParameterKind::Ty(_) => ParameterKind::Ty(Ty::BoundVar(index)),
+            ParameterKind::Lifetime(_) => Lifetime::BoundVar(index).cast(),
+            ParameterKind::Ty(_) => Ty::BoundVar(index).cast(),
         }
     }
 }

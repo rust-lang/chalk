@@ -562,13 +562,13 @@ impl LowerLeafGoal for LeafGoal {
                 .map(|goal| chalk_ir::LeafGoal::DomainGoal(goal))
                 .collect(),
             LeafGoal::UnifyTys { a, b } => vec![chalk_ir::EqGoal {
-                a: chalk_ir::ParameterKind::Ty(a.lower(env)?),
-                b: chalk_ir::ParameterKind::Ty(b.lower(env)?),
+                a: a.lower(env)?.cast(),
+                b: b.lower(env)?.cast(),
             }
             .cast()],
             LeafGoal::UnifyLifetimes { ref a, ref b } => vec![chalk_ir::EqGoal {
-                a: chalk_ir::ParameterKind::Lifetime(a.lower(env)?),
-                b: chalk_ir::ParameterKind::Lifetime(b.lower(env)?),
+                a: a.lower(env)?.cast(),
+                b: b.lower(env)?.cast(),
             }
             .cast()],
         };
@@ -948,8 +948,8 @@ trait LowerParameter {
 impl LowerParameter for Parameter {
     fn lower(&self, env: &Env) -> Fallible<chalk_ir::Parameter> {
         match *self {
-            Parameter::Ty(ref t) => Ok(chalk_ir::ParameterKind::Ty(t.lower(env)?)),
-            Parameter::Lifetime(ref l) => Ok(chalk_ir::ParameterKind::Lifetime(l.lower(env)?)),
+            Parameter::Ty(ref t) => Ok(t.lower(env)?.cast()),
+            Parameter::Lifetime(ref l) => Ok(l.lower(env)?.cast()),
         }
     }
 }
@@ -1253,5 +1253,11 @@ impl<T, L> Kinded for chalk_ir::ParameterKind<T, L> {
             chalk_ir::ParameterKind::Ty(_) => Kind::Ty,
             chalk_ir::ParameterKind::Lifetime(_) => Kind::Lifetime,
         }
+    }
+}
+
+impl Kinded for chalk_ir::Parameter {
+    fn kind(&self) -> Kind {
+        self.0.kind()
     }
 }
