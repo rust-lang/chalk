@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/rust-lang-nursery/chalk.svg?branch=master)](https://travis-ci.org/rust-lang-nursery/chalk)
+[![Build Status](https://travis-ci.com/rust-lang/chalk.svg?branch=master)](https://travis-ci.com/rust-lang/chalk)
 
 # chalk
 

@@ -140,7 +140,7 @@ where
                 Ok(()) => {
                     let answer = self.forest.answer(self.table, self.answer);
 
-                    // FIXME(rust-lang-nursery/chalk#79) -- if answer
+                    // FIXME(rust-lang/chalk#79) -- if answer
                     // has delayed literals, we *should* try to
                     // simplify here (which might involve forcing
                     // `table` and its dependencies to completion. But

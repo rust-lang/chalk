@@ -48,7 +48,7 @@ pub trait Context: Clone + Debug {
     /// free inference variables have been bound into the canonical
     /// binder. See [the rustc-guide] for more information.
     ///
-    /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html
+    /// [the rustc-guide]: https://rust-lang.github.io/rustc-guide/traits/canonicalization.html
     type CanonicalGoalInEnvironment: Debug;
 
     /// A u-canonicalized `GoalInEnvironment` -- this is one where the
@@ -64,7 +64,7 @@ pub trait Context: Clone + Debug {
     /// Part of an answer: represents a canonicalized substitution,
     /// combined with region constraints. See [the rustc-guide] for more information.
     ///
-    /// [the rustc-guide]: https://rust-lang-nursery.github.io/rustc-guide/traits-canonicalization.html#canonicalizing-the-query-result
+    /// [the rustc-guide]: https://rust-lang.github.io/rustc-guide/traits/canonicalization.html#canonicalizing-the-query-result
     type CanonicalConstrainedSubst: Clone + Debug + Eq + Hash;
 
     /// Represents a substitution from the "canonical variables" found
