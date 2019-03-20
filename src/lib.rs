@@ -1,10 +1,5 @@
 #![recursion_limit = "1024"]
-#![cfg_attr(test, feature(test))]
-#![feature(crate_visibility_modifier)]
-#![feature(in_band_lifetimes)]
-#![feature(specialization)]
-#![feature(step_trait)]
-#![feature(try_blocks)]
+#![cfg_attr(feature = "bench", feature(test))]
 
 extern crate chalk_parse;
 #[macro_use]
@@ -26,8 +21,8 @@ mod test_util;
 
 pub mod rust_ir;
 
-crate mod coherence;
-crate mod rules;
+pub(crate) mod coherence;
+pub(crate) mod rules;
 
 pub mod db;
 pub mod query;

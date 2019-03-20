@@ -59,7 +59,7 @@ pub struct UCanonicalized<T> {
     pub quantified: UCanonical<T>,
 
     /// A map between the universes in `quantified` and the original universes
-    crate universes: UniverseMap,
+    pub(crate) universes: UniverseMap,
 }
 
 /// Maps the universes found in the `u_canonicalize` result (the

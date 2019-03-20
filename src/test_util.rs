@@ -68,7 +68,7 @@ macro_rules! lowering_error {
     };
 }
 
-crate fn assert_test_result_eq(expected: &str, actual: &str) {
+pub(crate) fn assert_test_result_eq(expected: &str, actual: &str) {
     let expected_trimmed: String = expected
         .lines()
         .map(|l| l.trim())

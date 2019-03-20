@@ -9,6 +9,9 @@ readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
+[features]
+bench = []
+
 [dependencies]
 diff = "0.1.11"
 docopt = "1.0.0"

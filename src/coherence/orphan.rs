@@ -13,7 +13,7 @@ struct OrphanSolver {
     solver_choice: SolverChoice,
 }
 
-crate fn perform_orphan_check(
+pub(crate) fn perform_orphan_check(
     program: Arc<Program>,
     env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,

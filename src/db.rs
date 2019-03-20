@@ -1,3 +1,5 @@
+#![allow(non_camel_case_types)]
+
 use crate::query::{self, ProgramSolverChoice, ProgramText};
 use chalk_solve::solve::SolverChoice;
 use salsa::Database;

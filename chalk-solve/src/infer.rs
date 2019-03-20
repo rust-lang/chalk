@@ -1,6 +1,6 @@
 use ::ena::unify as ena;
-use chalk_ir::fold::Fold;
 use chalk_ir::*;
+use chalk_ir::{cast::Cast, fold::Fold};
 
 pub mod canonicalize;
 pub mod instantiate;
@@ -26,7 +26,7 @@ pub struct InferenceSnapshot {
     vars: Vec<EnaVariable>,
 }
 
-crate type ParameterEnaVariable = ParameterKind<EnaVariable>;
+pub(crate) type ParameterEnaVariable = ParameterKind<EnaVariable>;
 
 impl InferenceTable {
     /// Create an empty inference table with no variables.
@@ -84,7 +84,7 @@ impl InferenceTable {
     /// Creates a new inference variable and returns its index. The
     /// kind of the variable should be known by the caller, but is not
     /// tracked directly by the inference table.
-    crate fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable {
+    pub(crate) fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
         debug!("new_variable: var={:?} ui={:?}", var, ui);
@@ -196,8 +196,8 @@ pub trait ParameterEnaVariableExt {
 impl ParameterEnaVariableExt for ParameterEnaVariable {
     fn to_parameter(self) -> Parameter {
         match self {
-            ParameterKind::Ty(v) => ParameterKind::Ty(v.to_ty()),
-            ParameterKind::Lifetime(v) => ParameterKind::Lifetime(v.to_lifetime()),
+            ParameterKind::Ty(v) => v.to_ty().cast(),
+            ParameterKind::Lifetime(v) => v.to_lifetime().cast(),
         }
     }
 }

@@ -15,9 +15,7 @@ impl Program {
                 // `MyStruct: MyAutoTrait`
                 let trait_ref = TraitRef {
                     trait_id: auto_trait.binders.value.trait_ref.trait_id,
-                    parameters: vec![ParameterKind::Ty(Ty::Apply(
-                        struct_datum.binders.value.self_ty.clone(),
-                    ))],
+                    parameters: vec![Ty::Apply(struct_datum.binders.value.self_ty.clone()).cast()],
                 };
 
                 // If a positive or negative impl is already provided for a type family

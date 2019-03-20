@@ -6,7 +6,7 @@ use chalk_ir::*;
 use std::iter;
 
 mod default;
-crate mod wf;
+pub(crate) mod wf;
 
 impl Program {
     pub fn environment(&self) -> ProgramEnvironment {
@@ -155,7 +155,7 @@ impl DefaultImplDatum {
                 conditions: {
                     let wc = bound.accessible_tys.iter().cloned().map(|ty| TraitRef {
                         trait_id: bound.trait_ref.trait_id,
-                        parameters: vec![ParameterKind::Ty(ty)],
+                        parameters: vec![ty.cast()],
                     });
 
                     wc.casted().collect()

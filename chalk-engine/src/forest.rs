@@ -111,7 +111,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// coinductive goal. But `top_of_stack_is_coinductive_from(0)` is
     /// false, since `XXX` is not an auto trait.
     pub(super) fn top_of_stack_is_coinductive_from(&self, depth: StackIndex) -> bool {
-        self.stack.top_of_stack_from(depth).all(|d| {
+        StackIndex::iterate_range(self.stack.top_of_stack_from(depth)).all(|d| {
             let table = self.stack[d].table;
             self.tables[table].coinductive_goal
         })

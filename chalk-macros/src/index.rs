@@ -22,45 +22,16 @@ macro_rules! index_struct {
             $v fn increment(&mut self) {
                 self.value += 1;
             }
+
+            // TODO: Once the Step trait is stabilized (https://github.com/rust-lang/rust/issues/42168), instead implement it and use the Iterator implementation of Range
+            pub fn iterate_range(range: ::std::ops::Range<Self>) -> impl Iterator<Item = $n> {
+                (range.start.value..range.end.value).into_iter().map(|i| Self { value: i })
+            }
         }
 
         impl ::std::fmt::Debug for $n {
             fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
                 write!(fmt, "{}({})", stringify!($n), self.value)
-            }
-        }
-
-        impl ::std::iter::Step for $n {
-            fn steps_between(start: &Self, end: &Self) -> Option<usize> {
-                usize::steps_between(&start.value, &end.value)
-            }
-
-            fn replace_one(&mut self) -> Self {
-                Self {
-                    value: usize::replace_one(&mut self.value),
-                }
-            }
-
-            fn replace_zero(&mut self) -> Self {
-                Self {
-                    value: usize::replace_zero(&mut self.value),
-                }
-            }
-
-            fn add_one(&self) -> Self {
-                Self {
-                    value: usize::add_one(&self.value),
-                }
-            }
-
-            fn sub_one(&self) -> Self {
-                Self {
-                    value: usize::sub_one(&self.value),
-                }
-            }
-
-            fn add_usize(&self, n: usize) -> Option<Self> {
-                usize::add_usize(&self.value, n).map(|value| Self { value })
             }
         }
 

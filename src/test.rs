@@ -7,6 +7,7 @@ use chalk_solve::ext::*;
 use chalk_solve::solve::{Solution, SolverChoice};
 use std::collections::HashMap;
 
+#[cfg(feature = "bench")]
 mod bench;
 mod slg;
 

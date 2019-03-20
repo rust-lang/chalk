@@ -85,9 +85,9 @@ impl InferenceTable {
                 match *pk {
                     ParameterKind::Lifetime(()) => {
                         let lt = placeholder_idx.to_lifetime();
-                        ParameterKind::Lifetime(lt)
+                        lt.cast()
                     }
-                    ParameterKind::Ty(()) => ParameterKind::Ty(placeholder_idx.to_ty()),
+                    ParameterKind::Ty(()) => placeholder_idx.to_ty().cast(),
                 }
             })
             .collect();

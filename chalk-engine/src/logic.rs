@@ -747,7 +747,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             this: &'a mut Forest<C, CO>,
         }
 
-        impl<C: Context, CO: ContextOps<C>> WithInstantiatedUCanonicalGoal<C>
+        impl<'a, C: Context, CO: ContextOps<C>> WithInstantiatedUCanonicalGoal<C>
             for PushInitialStrandsInstantiated<'a, C, CO>
         {
             type Output = ();
@@ -1334,7 +1334,7 @@ struct PursueStrand<'a, C: Context + 'a, CO: ContextOps<C> + 'a> {
     depth: StackIndex,
 }
 
-impl<C: Context, CO: ContextOps<C>> WithInstantiatedStrand<C, CO> for PursueStrand<'a, C, CO> {
+impl<'a, C: Context, CO: ContextOps<C>> WithInstantiatedStrand<C, CO> for PursueStrand<'a, C, CO> {
     type Output = StrandResult<C, ()>;
 
     fn with(self, strand: Strand<'_, C, impl Context>) -> Self::Output {

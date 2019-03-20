@@ -7,7 +7,6 @@ use crate::rust_ir;
 use crate::rust_ir::lowering::LowerProgram;
 use chalk_ir::ProgramEnvironment;
 use chalk_solve::solve::SolverChoice;
-use failure::Fallible;
 use std::sync::Arc;
 
 salsa::query_group! {
@@ -50,10 +49,10 @@ salsa::query_group! {
 }
 
 fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
-    let x: Fallible<_> = try {
-        let text = db.program_text();
-        Arc::new(chalk_parse::parse_program(&text)?.lower()?)
-    };
+    let text = db.program_text();
+    let x = chalk_parse::parse_program(&text)
+        .and_then(|p| p.lower())
+        .map(Arc::new);
 
     x.map_err(|err| err.to_string())
 }
@@ -62,24 +61,24 @@ fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, 
     let mut program = db.program_ir()?;
     let env = db.environment()?;
 
-    let x: Fallible<_> = try {
-        Arc::make_mut(&mut program).record_specialization_priorities(env, db.solver_choice())?;
-        program
-    };
+    Arc::make_mut(&mut program)
+        .record_specialization_priorities(env, db.solver_choice())
+        .map_err(|e| e.to_string())?;
 
-    x.map_err(|err| err.to_string())
+    Ok(program)
 }
 
 fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {
     let program = db.lowered_program()?;
     let env = db.environment()?;
 
-    let x: Fallible<_> = try {
-        orphan::perform_orphan_check(program.clone(), env.clone(), db.solver_choice())?;
-        wf::verify_well_formedness(program.clone(), env, db.solver_choice())?;
-        program
-    };
-    x.map_err(|err| err.to_string())
+    orphan::perform_orphan_check(program.clone(), env.clone(), db.solver_choice())
+        .map_err(|e| e.to_string())?;
+
+    wf::verify_well_formedness(program.clone(), env, db.solver_choice())
+        .map_err(|e| e.to_string())?;
+
+    Ok(program)
 }
 
 fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, String> {

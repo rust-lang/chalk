@@ -48,8 +48,8 @@ struct Unifier<'t> {
 
 #[derive(Debug)]
 pub struct UnificationResult {
-    crate goals: Vec<InEnvironment<DomainGoal>>,
-    crate constraints: Vec<InEnvironment<Constraint>>,
+    pub(crate) goals: Vec<InEnvironment<DomainGoal>>,
+    pub(crate) constraints: Vec<InEnvironment<Constraint>>,
 }
 
 impl<'t> Unifier<'t> {

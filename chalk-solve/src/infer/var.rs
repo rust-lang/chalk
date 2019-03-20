@@ -1,3 +1,4 @@
+use chalk_ir::cast::Cast;
 use chalk_ir::*;
 use ena::unify::{UnifyKey, UnifyValue};
 use std::cmp::min;
@@ -33,7 +34,7 @@ use std::u32;
 ///     "downcast" the resulting variable using
 ///     e.g. `value.ty().unwrap()`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-crate struct EnaVariable(InferenceVar);
+pub(crate) struct EnaVariable(InferenceVar);
 
 impl From<InferenceVar> for EnaVariable {
     fn from(var: InferenceVar) -> EnaVariable {
@@ -77,20 +78,20 @@ impl UnifyKey for EnaVariable {
 /// universe index; when the inference variable is assigned a value, it becomes
 /// bound and records that value. See `EnaVariable` for more details.
 #[derive(Clone, Debug, PartialEq, Eq)]
-crate enum InferenceValue {
+pub(crate) enum InferenceValue {
     Unbound(UniverseIndex),
     Bound(Parameter),
 }
 
 impl From<Ty> for InferenceValue {
     fn from(ty: Ty) -> Self {
-        InferenceValue::Bound(ParameterKind::Ty(ty))
+        InferenceValue::Bound(ty.cast())
     }
 }
 
 impl From<Lifetime> for InferenceValue {
     fn from(lifetime: Lifetime) -> Self {
-        InferenceValue::Bound(ParameterKind::Lifetime(lifetime))
+        InferenceValue::Bound(lifetime.cast())
     }
 }
 

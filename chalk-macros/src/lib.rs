@@ -1,5 +1,3 @@
-#![feature(crate_visibility_modifier)]
-
 use std::cell::RefCell;
 
 #[macro_use]
@@ -28,7 +26,7 @@ lazy_static! {
 }
 
 thread_local! {
-    crate static INDENT: RefCell<Vec<String>> = RefCell::new(vec![]);
+    pub(crate) static INDENT: RefCell<Vec<String>> = RefCell::new(vec![]);
 }
 
 // When CHALK_DEBUG is enabled, we only allow this many frames of

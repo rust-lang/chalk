@@ -279,7 +279,7 @@ pub trait UnificationOps<C: Context, I: Context> {
     fn instantiate_binders_existentially(&mut self, arg: &I::BindersGoal) -> I::Goal;
 
     // Used by: logic (but for debugging only)
-    fn debug_ex_clause(&mut self, value: &'v ExClause<I>) -> Box<dyn Debug + 'v>;
+    fn debug_ex_clause<'v>(&mut self, value: &'v ExClause<I>) -> Box<dyn Debug + 'v>;
 
     // Used by: logic
     fn canonicalize_goal(&mut self, value: &I::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;

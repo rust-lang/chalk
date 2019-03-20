@@ -55,7 +55,7 @@ pub struct Canonicalized<T> {
     pub quantified: Canonical<T>,
 
     /// The free existential variables, along with the universes they inhabit.
-    crate free_vars: Vec<ParameterEnaVariable>,
+    pub(crate) free_vars: Vec<ParameterEnaVariable>,
 
     /// The maximum universe of any universally quantified variables
     /// encountered.

@@ -327,7 +327,7 @@ struct MayInvalidate;
 
 impl MayInvalidate {
     fn aggregate_parameters(&mut self, new: &Parameter, current: &Parameter) -> bool {
-        match (new, current) {
+        match (&new.0, &current.0) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2)

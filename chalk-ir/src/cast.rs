@@ -148,13 +148,13 @@ impl Cast<Ty> for ProjectionTy {
 
 impl Cast<Parameter> for Ty {
     fn cast(self) -> Parameter {
-        ParameterKind::Ty(self)
+        Parameter(ParameterKind::Ty(self))
     }
 }
 
 impl Cast<Parameter> for Lifetime {
     fn cast(self) -> Parameter {
-        ParameterKind::Lifetime(self)
+        Parameter(ParameterKind::Lifetime(self))
     }
 }
 
