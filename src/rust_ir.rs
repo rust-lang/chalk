@@ -20,7 +20,7 @@ pub mod lowering;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// From type-name to item-id. Used during lowering only.
-    pub(crate) type_ids: BTreeMap<Identifier, TypeId>,
+    pub(crate) type_ids: BTreeMap<Identifier, TypeKindId>,
 
     /// For each struct/trait:
     pub(crate) type_kinds: BTreeMap<TypeKindId, TypeKind>,

@@ -11,7 +11,7 @@ use itertools::Itertools;
 
 mod test;
 
-type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeId>;
+type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeKindId>;
 type TypeKinds = BTreeMap<chalk_ir::TypeKindId, rust_ir::TypeKind>;
 type AssociatedTyInfos = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyInfo>;
 type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usize>;
@@ -74,7 +74,7 @@ impl<'k> Env<'k> {
         }
 
         if let Some(id) = self.type_ids.get(&name.str) {
-            return Ok(NameLookup::Type(TypeKindId::TypeId(*id)));
+            return Ok(NameLookup::Type(*id));
         }
 
         Err(RustIrError::InvalidTypeName(name))?
@@ -174,15 +174,14 @@ impl LowerProgram for Program {
         let mut type_ids = BTreeMap::new();
         let mut type_kinds = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
-            let k = match *item {
-                Item::StructDefn(ref d) => d.lower_type_kind()?,
-                Item::TraitDefn(ref d) => d.lower_type_kind()?,
+            let (k, id) = match *item {
+                Item::StructDefn(ref d) => (d.lower_type_kind()?, StructId(raw_id).into()),
+                Item::TraitDefn(ref d) => (d.lower_type_kind()?, TraitId(raw_id).into()),
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
             };
-            let type_id = TypeId(raw_id);
-            type_ids.insert(k.name, type_id);
-            type_kinds.insert(type_id.into(), k);
+            type_ids.insert(k.name, id);
+            type_kinds.insert(id, k);
         }
 
         let mut struct_data = BTreeMap::new();
