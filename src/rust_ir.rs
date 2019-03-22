@@ -8,8 +8,8 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::tls;
 use chalk_ir::{
     ApplicationTy, Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProgramClause,
-    ProjectionEq, ProjectionTy, QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty,
-    TypeId, TypeKindId, WhereClause,
+    ProjectionEq, ProjectionTy, QuantifiedWhereClause, StructId, TraitId, TraitRef, Ty, TypeId,
+    TypeKindId, WhereClause,
 };
 use std::collections::BTreeMap;
 use std::fmt;
@@ -73,16 +73,26 @@ impl Program {
 }
 
 impl tls::DebugContext for Program {
-    fn debug_raw_id(&self, raw_id: RawId, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        if let Some(k) = self.type_kinds.get(&TypeKindId::TypeId(TypeId(raw_id))) {
+    fn debug_type_kind_id(
+        &self,
+        type_kind_id: TypeKindId,
+        fmt: &mut fmt::Formatter,
+    ) -> Result<(), fmt::Error> {
+        if let Some(k) = self.type_kinds.get(&type_kind_id) {
             write!(fmt, "{}", k.name)
-        } else if let Some(k) = self.type_kinds.get(&TypeKindId::TraitId(TraitId(raw_id))) {
+        } else if let Some(k) = self.type_kinds.get(&type_kind_id) {
             write!(fmt, "{}", k.name)
-        } else if let Some(k) = self.associated_ty_data.get(&TypeId(raw_id)) {
-            write!(fmt, "({:?}::{})", k.trait_id, k.name)
+        } else if let TypeKindId::TypeId(type_id) = type_kind_id {
+            if let Some(k) = self.associated_ty_data.get(&type_id) {
+                write!(fmt, "({:?}::{})", k.trait_id, k.name)
+            } else {
+                fmt.debug_struct("InvalidItemId")
+                    .field("index", &type_id.0)
+                    .finish()
+            }
         } else {
             fmt.debug_struct("InvalidItemId")
-                .field("index", &raw_id.index)
+                .field("index", &type_kind_id.raw_id())
                 .finish()
         }
     }

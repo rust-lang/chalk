@@ -485,6 +485,7 @@ copy_fold!(ItemId);
 copy_fold!(StructId);
 copy_fold!(TraitId);
 copy_fold!(TypeId);
+copy_fold!(TypeKindId);
 copy_fold!(usize);
 copy_fold!(QuantifierKind);
 copy_fold!(chalk_engine::TableIndex);

@@ -10,6 +10,18 @@ macro_rules! impl_froms {
     }
 }
 
+macro_rules! impl_debugs {
+    ($($id:ident), *) => {
+        $(
+            impl std::fmt::Debug for $id {
+                fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+                    write!(fmt, "{:?}", self.0)
+                }
+            }
+        )*
+    };
+}
+
 use crate::cast::Cast;
 use crate::fold::shift::Shift;
 use crate::fold::{
@@ -143,22 +155,22 @@ impl UniverseIndex {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct StructId(pub RawId);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TraitId(pub RawId);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ImplId(pub RawId);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ClauseId(pub RawId);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TypeId(pub RawId);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ItemId {
     StructId(StructId),
     TraitId(TraitId),
@@ -168,12 +180,23 @@ pub enum ItemId {
 }
 
 impl_froms!(ItemId: StructId, TraitId, ImplId, ClauseId, TypeId);
+impl_debugs!(ImplId, ClauseId);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeKindId {
     TypeId(TypeId),
     TraitId(TraitId),
     StructId(StructId),
+}
+
+impl TypeKindId {
+    pub fn raw_id(&self) -> RawId {
+        match self {
+            TypeKindId::TypeId(id) => id.0,
+            TypeKindId::TraitId(id) => id.0,
+            TypeKindId::StructId(id) => id.0,
+        }
+    }
 }
 
 impl_froms!(TypeKindId: TypeId, TraitId, StructId);

@@ -1,4 +1,4 @@
-use crate::{ProjectionTy, RawId};
+use crate::{ProjectionTy, TypeKindId};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
@@ -8,7 +8,11 @@ thread_local! {
 }
 
 pub trait DebugContext {
-    fn debug_raw_id(&self, id: RawId, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error>;
+    fn debug_type_kind_id(
+        &self,
+        id: TypeKindId,
+        fmt: &mut fmt::Formatter,
+    ) -> Result<(), fmt::Error>;
 
     fn debug_projection(
         &self,
