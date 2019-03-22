@@ -7,6 +7,7 @@ authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
 readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
+edition = "2018"
 
 [dependencies]
 lazy_static = "1.1.0"
