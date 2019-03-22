@@ -114,7 +114,7 @@ impl<G> InEnvironment<G> {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeName {
     /// a type like `Vec<T>`
-    ItemId(ItemId),
+    TypeKindId(TypeKindId),
 
     /// instantiated form a universally quantified type, e.g., from
     /// `forall<T> { .. }`. Stands in as a representative of "some
@@ -606,7 +606,7 @@ pub enum DomainGoal {
     Normalize(Normalize),
     UnselectedNormalize(UnselectedNormalize),
 
-    InScope(ItemId),
+    InScope(TypeKindId),
 
     /// Whether a type can deref into another. Right now this is just:
     /// ```notrust

@@ -62,7 +62,7 @@ impl Debug for UniverseIndex {
 impl Debug for TypeName {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            TypeName::ItemId(id) => write!(fmt, "{:?}", id),
+            TypeName::TypeKindId(id) => write!(fmt, "{:?}", id),
             TypeName::Placeholder(index) => write!(fmt, "{:?}", index),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
         }

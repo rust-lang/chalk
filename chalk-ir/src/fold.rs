@@ -358,7 +358,7 @@ pub fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fallib
                     folder.fold_free_placeholder_ty(ui, binders)
                 }
 
-                TypeName::ItemId(_) | TypeName::AssociatedType(_) => {
+                TypeName::TypeKindId(_) | TypeName::AssociatedType(_) => {
                     let parameters = parameters.fold_with(folder, binders)?;
                     Ok(ApplicationTy { name, parameters }.cast())
                 }

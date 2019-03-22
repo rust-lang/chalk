@@ -594,7 +594,7 @@ impl LowerStructDefn for StructDefn {
     ) -> Fallible<rust_ir::StructDatum> {
         let binders = env.in_binders(self.all_parameters(), |env| {
             let self_ty = chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::ItemId(struct_id.into()),
+                name: chalk_ir::TypeName::TypeKindId(struct_id.into()),
                 parameters: self
                     .all_parameters()
                     .anonymize()
@@ -888,7 +888,7 @@ impl LowerTy for Ty {
                         })?
                     } else {
                         Ok(chalk_ir::Ty::Apply(chalk_ir::ApplicationTy {
-                            name: chalk_ir::TypeName::ItemId(id.into()),
+                            name: chalk_ir::TypeName::TypeKindId(id.into()),
                             parameters: vec![],
                         }))
                     }
@@ -921,7 +921,7 @@ impl LowerTy for Ty {
                 }
 
                 Ok(chalk_ir::Ty::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::ItemId(id.into()),
+                    name: chalk_ir::TypeName::TypeKindId(id.into()),
                     parameters: parameters,
                 }))
             }
