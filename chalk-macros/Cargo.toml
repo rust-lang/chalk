@@ -4,7 +4,7 @@ version = "0.1.1"
 description = "Macros for Chalk"
 license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]
-repository = "https://github.com/rust-lang-nursery/chalk"
+repository = "https://github.com/rust-lang/chalk"
 readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 
