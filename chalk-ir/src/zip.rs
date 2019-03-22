@@ -148,6 +148,10 @@ macro_rules! eq_zip {
 }
 
 eq_zip!(ItemId);
+eq_zip!(StructId);
+eq_zip!(TraitId);
+eq_zip!(TypeId);
+eq_zip!(TypeKindId);
 eq_zip!(TypeName);
 eq_zip!(Identifier);
 eq_zip!(QuantifierKind);

@@ -296,7 +296,7 @@ impl AssociatedTyValue {
                 }),
                 conditions: vec![
                     normalize_goal.cast(),
-                    DomainGoal::InScope(impl_trait_ref.trait_id).cast(),
+                    DomainGoal::InScope(impl_trait_ref.trait_id.into()).cast(),
                 ],
             },
         }

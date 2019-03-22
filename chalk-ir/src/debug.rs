@@ -2,14 +2,47 @@ use std::fmt::{Debug, Display, Error, Formatter};
 
 use super::*;
 
-impl Debug for ItemId {
+impl Debug for RawId {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        fmt.debug_struct("RawId")
+            .field("index", &self.index)
+            .finish()
+    }
+}
+
+impl Debug for TypeKindId {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match self {
+            TypeKindId::TypeId(id) => write!(fmt, "{:?}", id),
+            TypeKindId::TraitId(id) => write!(fmt, "{:?}", id),
+            TypeKindId::StructId(id) => write!(fmt, "{:?}", id),
+        }
+    }
+}
+
+impl Debug for TypeId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         tls::with_current_program(|p| match p {
-            Some(prog) => prog.debug_item_id(*self, fmt),
-            None => fmt
-                .debug_struct("ItemId")
-                .field("index", &self.index)
-                .finish(),
+            Some(prog) => prog.debug_type_kind_id(TypeKindId::TypeId(*self), fmt),
+            None => write!(fmt, "{:?}", self.0),
+        })
+    }
+}
+
+impl Debug for TraitId {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        tls::with_current_program(|p| match p {
+            Some(prog) => prog.debug_type_kind_id(TypeKindId::TraitId(*self), fmt),
+            None => write!(fmt, "{:?}", self.0),
+        })
+    }
+}
+
+impl Debug for StructId {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        tls::with_current_program(|p| match p {
+            Some(prog) => prog.debug_type_kind_id(TypeKindId::StructId(*self), fmt),
+            None => write!(fmt, "{:?}", self.0),
         })
     }
 }
@@ -29,9 +62,21 @@ impl Debug for UniverseIndex {
 impl Debug for TypeName {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            TypeName::ItemId(id) => write!(fmt, "{:?}", id),
+            TypeName::TypeKindId(id) => write!(fmt, "{:?}", id),
             TypeName::Placeholder(index) => write!(fmt, "{:?}", index),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
+        }
+    }
+}
+
+impl Debug for ItemId {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match self {
+            ItemId::StructId(id @ StructId(_)) => write!(fmt, "{:?}", TypeKindId::StructId(*id)),
+            ItemId::TraitId(id @ TraitId(_)) => write!(fmt, "{:?}", TypeKindId::TraitId(*id)),
+            ItemId::TypeId(id @ TypeId(_)) => write!(fmt, "{:?}", TypeKindId::TypeId(*id)),
+            ItemId::ImplId(ImplId(id)) => write!(fmt, "{:?}", id),
+            ItemId::ClauseId(ClauseId(id)) => write!(fmt, "{:?}", id),
         }
     }
 }
