@@ -1,10 +1,11 @@
 #![allow(non_camel_case_types)]
 
-use crate::query::{self, ProgramSolverChoice, ProgramText};
+use crate::query::{Lowering, LoweringDatabase};
 use chalk_solve::solve::SolverChoice;
 use salsa::Database;
 use std::sync::Arc;
 
+#[salsa::database(Lowering)]
 #[derive(Default)]
 pub struct ChalkDatabase {
     runtime: salsa::Runtime<ChalkDatabase>,
@@ -24,22 +25,9 @@ impl ChalkDatabase {
     ) -> R {
         let mut db = ChalkDatabase::default();
 
-        db.query_mut(ProgramText).set((), program_text);
-        db.query_mut(ProgramSolverChoice).set((), solver_choice);
+        db.set_program_text(program_text);
+        db.set_solver_choice(solver_choice);
 
         f(&mut db)
-    }
-}
-
-salsa::database_storage! {
-    pub struct DatabaseStorage for ChalkDatabase {
-        impl query::LoweringDatabase {
-            fn program_text() for query::ProgramText;
-            fn solver_choice() for query::ProgramSolverChoice;
-            fn program_ir() for query::ProgramIr;
-            fn lowered_program() for query::LoweredProgram;
-            fn checked_program() for query::CheckedProgram;
-            fn environment() for query::Environment;
-        }
     }
 }
