@@ -9,43 +9,28 @@ use chalk_ir::ProgramEnvironment;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
-salsa::query_group! {
-    pub trait LoweringDatabase: salsa::Database {
-        fn program_text() -> Arc<String> {
-            type ProgramText;
+#[salsa::query_group(Lowering)]
+pub trait LoweringDatabase {
+    #[salsa::input]
+    fn program_text(&self) -> Arc<String>;
 
-            storage input;
-        }
+    #[salsa::input]
+    fn solver_choice(&self) -> SolverChoice;
 
-        fn solver_choice() -> SolverChoice {
-            type ProgramSolverChoice;
+    // FIXME: Result<..., String> is only needed because the error type is not clone
 
-            storage input;
-        }
+    /// The program IR before recording specialization priorities.
+    /// Do not use this query directly.
+    fn program_ir(&self) -> Result<Arc<rust_ir::Program>, String>;
 
-        // FIXME: Result<..., String> is only needed because the error type is not clone
+    /// The lowered IR.
+    fn lowered_program(&self) -> Result<Arc<rust_ir::Program>, String>;
 
-        /// The program IR before recording specialization priorities.
-        /// Do not use this query directly.
-        fn program_ir() -> Result<Arc<rust_ir::Program>, String> {
-            type ProgramIr;
-        }
+    /// The lowered IR, with checks performed.
+    fn checked_program(&self) -> Result<Arc<rust_ir::Program>, String>;
 
-        /// The lowered IR.
-        fn lowered_program() -> Result<Arc<rust_ir::Program>, String> {
-            type LoweredProgram;
-        }
-
-        /// The lowered IR, with checks performed.
-        fn checked_program() -> Result<Arc<rust_ir::Program>, String> {
-            type CheckedProgram;
-        }
-
-        /// The program as logic.
-        fn environment() -> Result<Arc<ProgramEnvironment>, String> {
-            type Environment;
-        }
-    }
+    /// The program as logic.
+    fn environment(&self) -> Result<Arc<ProgramEnvironment>, String>;
 }
 
 fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, String> {

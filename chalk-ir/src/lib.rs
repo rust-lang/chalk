@@ -225,16 +225,45 @@ pub enum TypeSort {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Ty {
+    /// An "application" type is one that applies the set of type
+    /// arguments to some base type. For example, `Vec<u32>` would be
+    /// "applying" the parameters `[u32]` to the code type `Vec`.
+    /// This type is also used for base types like `u32` (which just apply
+    /// an empty list).
     Apply(ApplicationTy),
+
+    /// A "projection" type corresponds to an (unnormalized)
+    /// projection like `<P0 as Trait<P1..Pn>>::Foo`. Note that the
+    /// trait and all its parameters are fully known.
     Projection(ProjectionTy),
+
+    /// This is a variant of a projection in which the trait is
+    /// **not** known.  It corresponds to a case where people write
+    /// `T::Item` without specifying the trait. We would then try to
+    /// figure out the trait by looking at all the traits that are in
+    /// scope.
     UnselectedProjection(UnselectedProjectionTy),
+
+    /// A "higher-ranked" type. In the Rust surface syntax, this can
+    /// only be a funtion type (e.g., `for<'a> fn(&'a u32)`) or a dyn
+    /// type (e.g., `dyn for<'a> SomeTrait<&'a u32>`). However, in
+    /// Chalk's representation, we separate out the `for<'a>` part
+    /// from the underlying type, so technically we can represent
+    /// things like `for<'a> SomeStruct<'a>`, although that has no
+    /// meaning in Rust.
     ForAll(Box<QuantifiedTy>),
 
-    /// References the binding at the given depth (deBruijn index
-    /// style).
+    /// References the binding at the given depth. The index is a [de
+    /// Bruijn index], so it counts back through the in-scope biners,
+    /// with 0 being the innermost binder. This is used in impls and
+    /// the like. For example, if we had a rule like `for<T> { (T:
+    /// Clone) :- (T: Copy) }`, then `T` would be represented as a
+    /// `BoundVar(0)` (as the `for` is the innermost binder).
+    ///
+    /// [de Bruijn index]: https://en.wikipedia.org/wiki/De_Bruijn_index
     BoundVar(usize),
 
-    /// Inference variable.
+    /// Inference variable defined in the current inference context.
     InferenceVar(InferenceVar),
 }
 
