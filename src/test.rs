@@ -1,12 +1,12 @@
 #![cfg(test)]
 
+use crate::db::ChalkDatabase;
+use crate::query::LoweringDatabase;
 use crate::test_util::*;
 use chalk_engine::fallible::{Fallible, NoSolution};
 use chalk_ir;
 use chalk_solve::ext::*;
 use chalk_solve::solve::{Solution, SolverChoice};
-use crate::db::ChalkDatabase;
-use crate::query::LoweringDatabase;
 
 #[cfg(feature = "bench")]
 mod bench;
@@ -97,7 +97,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
         if db.solver_choice() != solver_choice {
             db.set_solver_choice(solver_choice);
         }
-        
+
         let program = db.checked_program().unwrap();
         let env = db.environment().unwrap();
 
@@ -106,7 +106,9 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
-            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
+            let goal = db
+                .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
+                .unwrap();
 
             println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
