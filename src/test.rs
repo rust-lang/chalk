@@ -5,7 +5,8 @@ use chalk_engine::fallible::{Fallible, NoSolution};
 use chalk_ir;
 use chalk_solve::ext::*;
 use chalk_solve::solve::{Solution, SolverChoice};
-use std::collections::HashMap;
+use crate::db::ChalkDatabase;
+use crate::query::LoweringDatabase;
 
 #[cfg(feature = "bench")]
 mod bench;
@@ -86,12 +87,19 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let mut program_env_cache = HashMap::new();
+
+    let mut db = ChalkDatabase::with(
+        &program_text[1..program_text.len() - 1],
+        SolverChoice::default(),
+    );
+
     for (goal_text, solver_choice, expected) in goals {
-        let (program, env) = program_env_cache.entry(solver_choice).or_insert_with(|| {
-            let program_text = &program_text[1..program_text.len() - 1]; // exclude `{}`
-            parse_and_lower_program_with_env(program_text, solver_choice).unwrap()
-        });
+        if db.solver_choice() != solver_choice {
+            db.set_solver_choice(solver_choice);
+        }
+        
+        let program = db.checked_program().unwrap();
+        let env = db.environment().unwrap();
 
         chalk_ir::tls::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");

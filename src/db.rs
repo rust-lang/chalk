@@ -18,6 +18,16 @@ impl Database for ChalkDatabase {
 }
 
 impl ChalkDatabase {
+    pub fn with(
+        program_text: &str,
+        solver_choice: SolverChoice
+    ) -> Self {
+        let mut db = ChalkDatabase::default();
+        db.set_program_text(Arc::new(program_text.to_string()));
+        db.set_solver_choice(solver_choice);
+        db
+    }
+
     pub fn with_program<F: FnOnce(&mut ChalkDatabase) -> R, R>(
         program_text: Arc<String>,
         solver_choice: SolverChoice,
