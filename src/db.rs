@@ -2,6 +2,8 @@
 
 use crate::query::{Lowering, LoweringDatabase};
 use crate::rust_ir::lowering::LowerGoal;
+use crate::rust_ir::Program;
+use chalk_ir::tls;
 use chalk_ir::Goal;
 use chalk_solve::solve::SolverChoice;
 use salsa::Database;
@@ -27,24 +29,16 @@ impl ChalkDatabase {
         db
     }
 
+    pub fn with_program<R>(&self, op: impl FnOnce(&Program) -> R) -> R {
+        let program = &self.checked_program().unwrap();
+        tls::set_current_program(&program, || op(&program))
+    }
+
     pub fn parse_and_lower_goal(&self, text: &str) -> Result<Box<Goal>, String> {
         let program = self.checked_program()?;
         chalk_parse::parse_goal(text)
             .map_err(|e| e.to_string())?
             .lower(&*program)
             .map_err(|e| e.to_string())
-    }
-
-    pub fn with_program<F: FnOnce(&mut ChalkDatabase) -> R, R>(
-        program_text: Arc<String>,
-        solver_choice: SolverChoice,
-        f: F,
-    ) -> R {
-        let mut db = ChalkDatabase::default();
-
-        db.set_program_text(program_text);
-        db.set_solver_choice(solver_choice);
-
-        f(&mut db)
     }
 }

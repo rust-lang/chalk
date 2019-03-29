@@ -65,11 +65,10 @@ impl Program {
     ///
     /// [`SolverChoice`]: struct.solve.SolverChoice.html
     fn new(text: String, solver_choice: SolverChoice) -> Fallible<Program> {
-        ChalkDatabase::with_program(Arc::new(text.clone()), solver_choice, |db| {
-            let ir = db.checked_program().unwrap();
-            let env = db.environment().unwrap();
-            Ok(Program { text, ir, env })
-        })
+        let db = ChalkDatabase::with(&text, solver_choice);
+        let ir = db.checked_program().unwrap();
+        let env = db.environment().unwrap();
+        Ok(Program { text, ir, env })
     }
 }
 
@@ -273,7 +272,7 @@ impl Args {
 }
 
 fn main() {
-    use ::std::io::Write;
+    use std::io::Write;
 
     ::std::process::exit(match run() {
         Ok(_) => 0,

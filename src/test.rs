@@ -2,7 +2,6 @@
 
 use crate::db::ChalkDatabase;
 use crate::query::LoweringDatabase;
-use crate::test_util::*;
 use chalk_engine::fallible::{Fallible, NoSolution};
 use chalk_ir;
 use chalk_solve::ext::*;

@@ -18,19 +18,17 @@ pub fn parse_and_lower_program(
     text: &str,
     solver_choice: SolverChoice,
 ) -> Result<Arc<Program>, String> {
-    ChalkDatabase::with_program(Arc::new(text.to_string()), solver_choice, |db| {
-        db.checked_program()
-    })
+    let db = ChalkDatabase::with(text, solver_choice);
+    db.checked_program()
 }
 
 pub fn parse_and_lower_program_with_env(
     text: &str,
     solver_choice: SolverChoice,
 ) -> Result<(Arc<Program>, Arc<ProgramEnvironment>), String> {
-    ChalkDatabase::with_program(Arc::new(text.to_string()), solver_choice, |db| {
-        db.checked_program()
-            .and_then(|program| Ok((program, db.environment()?)))
-    })
+    let db = ChalkDatabase::with(text, solver_choice);
+    db.checked_program()
+        .and_then(|program| Ok((program, db.environment()?)))
 }
 
 pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>, Error> {
