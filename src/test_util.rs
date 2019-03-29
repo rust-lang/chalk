@@ -1,31 +1,19 @@
 #![cfg(test)]
 
-use crate::db::ChalkDatabase;
-use crate::query::LoweringDatabase;
-use crate::rust_ir::Program;
-use chalk_solve::solve::SolverChoice;
 use diff;
 use itertools::Itertools;
 use std::fmt::Write;
-use std::sync::Arc;
-
-pub fn parse_and_lower_program(
-    text: &str,
-    solver_choice: SolverChoice,
-) -> Result<Arc<Program>, String> {
-    let db = ChalkDatabase::with(text, solver_choice);
-    db.checked_program()
-}
 
 macro_rules! lowering_success {
     (program $program:tt) => {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let result = parse_and_lower_program(
+        let result = crate::db::ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
             chalk_solve::solve::SolverChoice::default(),
-        );
+        )
+        .checked_program();
         if let Err(ref e) = result {
             println!("lowering error: {}", e);
         }
@@ -38,10 +26,11 @@ macro_rules! lowering_error {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let error = parse_and_lower_program(
+        let error = crate::db::ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
             chalk_solve::solve::SolverChoice::default(),
         )
+        .checked_program()
         .unwrap_err();
         let expected = $expected;
         assert_eq!(error.to_string(), expected.to_string());
