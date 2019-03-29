@@ -1,5 +1,7 @@
 #![cfg(test)]
 
+use crate::db::ChalkDatabase;
+use crate::query::LoweringDatabase;
 use crate::test_util::*;
 use chalk_engine::forest::Forest;
 use chalk_solve::ext::*;
@@ -23,19 +25,21 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let (program, env) = parse_and_lower_program_with_env(
+    let db = ChalkDatabase::with(
         &program_text[1..program_text.len() - 1],
         SolverChoice::default(),
-    )
-    .unwrap();
-    chalk_ir::tls::set_current_program(&program, || {
+    );
+    db.with_program(|_| {
         for (max_size, num_answers, goal_text, expected) in goals {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
-            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
+            let goal = db
+                .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
+                .unwrap();
             let peeled_goal = goal.into_peeled_goal();
+            let env = db.environment().unwrap();
             let mut forest = Forest::new(SlgContext::new(&env, max_size));
             let result = format!("{:#?}", forest.force_answers(peeled_goal, num_answers));
 
@@ -48,20 +52,22 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let (program, env) = &parse_and_lower_program_with_env(
+    let db = ChalkDatabase::with(
         &program_text[1..program_text.len() - 1],
         SolverChoice::default(),
-    )
-    .unwrap();
-    chalk_ir::tls::set_current_program(&program, || {
+    );
+    db.with_program(|_| {
         for (max_size, num_answers, goal_text, expected) in goals {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
-            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
+            let goal = db
+                .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
+                .unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let mut forest = Forest::new(SlgContext::new(env, max_size));
+            let env = db.environment().unwrap();
+            let mut forest = Forest::new(SlgContext::new(&env, max_size));
             let result = format!("{:?}", forest.solve(&peeled_goal));
 
             assert_test_result_eq(&expected, &result);

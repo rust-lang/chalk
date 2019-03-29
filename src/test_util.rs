@@ -2,14 +2,9 @@
 
 use crate::db::ChalkDatabase;
 use crate::query::LoweringDatabase;
-use crate::rust_ir::lowering::LowerGoal;
 use crate::rust_ir::Program;
-use chalk_ir::Goal;
-use chalk_ir::ProgramEnvironment;
-use chalk_parse;
 use chalk_solve::solve::SolverChoice;
 use diff;
-use failure::Error;
 use itertools::Itertools;
 use std::fmt::Write;
 use std::sync::Arc;
@@ -20,19 +15,6 @@ pub fn parse_and_lower_program(
 ) -> Result<Arc<Program>, String> {
     let db = ChalkDatabase::with(text, solver_choice);
     db.checked_program()
-}
-
-pub fn parse_and_lower_program_with_env(
-    text: &str,
-    solver_choice: SolverChoice,
-) -> Result<(Arc<Program>, Arc<ProgramEnvironment>), String> {
-    let db = ChalkDatabase::with(text, solver_choice);
-    db.checked_program()
-        .and_then(|program| Ok((program, db.environment()?)))
-}
-
-pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>, Error> {
-    chalk_parse::parse_goal(text)?.lower(program)
 }
 
 macro_rules! lowering_success {

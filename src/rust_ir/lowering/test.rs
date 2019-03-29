@@ -211,12 +211,12 @@ fn atc_accounting() {
     }
 }"#
         );
-        let goal = parse_and_lower_goal(
-            &program,
-            "forall<X> { forall<'a> { forall<Y> { \
-             X: Iterable<Iter<'a> = Y> } } }",
-        )
-        .unwrap();
+        let goal = db
+            .parse_and_lower_goal(
+                "forall<X> { forall<'a> { forall<Y> { \
+                 X: Iterable<Iter<'a> = Y> } } }",
+            )
+            .unwrap();
         let goal_text = format!("{:?}", goal);
         println!("{}", goal_text);
         assert_eq!(
