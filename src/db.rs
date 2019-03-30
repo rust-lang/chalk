@@ -1,5 +1,6 @@
 #![allow(non_camel_case_types)]
 
+use crate::error::ChalkError;
 use crate::query::{Lowering, LoweringDatabase};
 use crate::rust_ir::lowering::LowerGoal;
 use crate::rust_ir::Program;
@@ -34,11 +35,8 @@ impl ChalkDatabase {
         tls::set_current_program(&program, || op(&program))
     }
 
-    pub fn parse_and_lower_goal(&self, text: &str) -> Result<Box<Goal>, String> {
+    pub fn parse_and_lower_goal(&self, text: &str) -> Result<Box<Goal>, ChalkError> {
         let program = self.checked_program()?;
-        chalk_parse::parse_goal(text)
-            .map_err(|e| e.to_string())?
-            .lower(&*program)
-            .map_err(|e| e.to_string())
+        Ok(chalk_parse::parse_goal(text)?.lower(&*program)?)
     }
 }
