@@ -1,7 +1,7 @@
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
-use crate::program_environment::ProgramEnvironment;
+use crate::program_environment::ProgramClauseSet;
 use crate::solve::truncate::{self, Truncated};
 use crate::solve::Solution;
 use chalk_engine::fallible::Fallible;
@@ -21,18 +21,18 @@ mod resolvent;
 
 #[derive(Clone, Debug)]
 pub struct SlgContext {
-    program: Arc<ProgramEnvironment>,
+    program: Arc<dyn ProgramClauseSet>,
     max_size: usize,
 }
 
 pub(super) struct TruncatingInferenceTable {
-    program: Arc<ProgramEnvironment>,
+    program: Arc<dyn ProgramClauseSet>,
     max_size: usize,
     infer: InferenceTable,
 }
 
 impl SlgContext {
-    pub fn new(program: &Arc<ProgramEnvironment>, max_size: usize) -> SlgContext {
+    pub fn new(program: &Arc<impl ProgramClauseSet + 'static>, max_size: usize) -> SlgContext {
         SlgContext {
             program: program.clone(),
             max_size,
@@ -68,7 +68,7 @@ impl context::Context for SlgContext {
 
 impl context::ContextOps<SlgContext> for SlgContext {
     fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal>>) -> bool {
-        goal.is_coinductive(&*self.program)
+        goal.is_coinductive(self.program.upcast())
     }
 
     fn instantiate_ucanonical_goal<R>(
@@ -139,7 +139,7 @@ impl context::ContextOps<SlgContext> for SlgContext {
 }
 
 impl TruncatingInferenceTable {
-    fn new(program: &Arc<ProgramEnvironment>, max_size: usize, infer: InferenceTable) -> Self {
+    fn new(program: &Arc<dyn ProgramClauseSet>, max_size: usize, infer: InferenceTable) -> Self {
         Self {
             program: program.clone(),
             max_size,

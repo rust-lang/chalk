@@ -4,6 +4,13 @@ use chalk_ir::IsCoinductive;
 use chalk_ir::ProgramClause;
 use chalk_ir::TraitId;
 use std::collections::BTreeSet;
+use std::fmt::Debug;
+
+pub trait ProgramClauseSet: Debug + IsCoinductive {
+    fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>);
+
+    fn upcast(&self) -> &dyn IsCoinductive;
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProgramEnvironment {
@@ -22,18 +29,20 @@ impl ProgramEnvironment {
             program_clauses,
         }
     }
+}
 
-    pub fn program_clauses_that_could_match(
-        &self,
-        goal: &DomainGoal,
-        vec: &mut Vec<ProgramClause>,
-    ) {
+impl ProgramClauseSet for ProgramEnvironment {
+    fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>) {
         vec.extend(
             self.program_clauses
                 .iter()
                 .filter(|&clause| clause.could_match(goal))
                 .cloned(),
         );
+    }
+
+    fn upcast(&self) -> &dyn IsCoinductive {
+        self
     }
 }
 

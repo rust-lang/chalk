@@ -1,4 +1,4 @@
-use crate::program_environment::ProgramEnvironment;
+use crate::program_environment::ProgramClauseSet;
 use crate::solve::slg::implementation::SlgContext;
 use chalk_engine::context::Context;
 use chalk_engine::context::ContextOps;
@@ -89,7 +89,7 @@ impl SolverChoice {
     ///   reflect success nor failure.
     pub fn solve_root_goal(
         self,
-        env: &Arc<ProgramEnvironment>,
+        env: &Arc<impl ProgramClauseSet + 'static>,
         canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Fallible<Option<Solution>> {
         Ok(self.create_solver(env).solve(canonical_goal))
@@ -100,7 +100,7 @@ impl SolverChoice {
         SolverChoice::SLG { max_size: 10 }
     }
 
-    pub fn create_solver(self, env: &Arc<ProgramEnvironment>) -> Box<Solver> {
+    pub fn create_solver(self, env: &Arc<impl ProgramClauseSet + 'static>) -> Box<Solver> {
         match self {
             SolverChoice::SLG { max_size } => Box::new(Forest::new(SlgContext::new(env, max_size))),
         }
