@@ -422,24 +422,6 @@ fn upstream_items() {
 }
 
 #[test]
-fn deref_trait() {
-    lowering_success! {
-        program {
-            #[lang_deref] trait Deref { type Target; }
-        }
-    }
-
-    lowering_error! {
-        program {
-            #[lang_deref] trait Deref { }
-            #[lang_deref] trait DerefDupe { }
-        } error_msg {
-            "duplicate lang item `DerefTrait`"
-        }
-    }
-}
-
-#[test]
 fn fundamental_multiple_type_parameters() {
     lowering_error! {
         program {

@@ -42,9 +42,6 @@ pub struct Program {
 
     /// For each user-specified clause
     pub(crate) custom_clauses: Vec<ProgramClause>,
-
-    /// Special types and traits.
-    pub(crate) lang_items: BTreeMap<LangItem, TraitId>,
 }
 
 impl Program {
@@ -116,9 +113,7 @@ impl tls::DebugContext for Program {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum LangItem {
-    DerefTrait,
-}
+pub enum LangItem {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum {
@@ -188,7 +183,6 @@ pub struct TraitFlags {
     pub(crate) marker: bool,
     pub(crate) upstream: bool,
     pub(crate) fundamental: bool,
-    pub deref: bool,
 }
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.

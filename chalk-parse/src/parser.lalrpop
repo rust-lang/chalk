@@ -39,7 +39,6 @@ Goal1: Box<Goal> = {
 UpstreamKeyword: () = "#" "[" "upstream" "]";
 AutoKeyword: () = "#" "[" "auto" "]";
 MarkerKeyword: () = "#" "[" "marker" "]";
-DerefLangItem: () = "#" "[" "lang_deref" "]";
 FundamentalKeyword: () = "#" "[" "fundamental" "]";
 
 StructDefn: StructDefn = {
@@ -58,7 +57,7 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <deref:DerefLangItem?> "trait" <n:Id><p:Angle<ParameterKind>>
+    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> "trait" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
     {
         name: n,
@@ -70,7 +69,6 @@ TraitDefn: TraitDefn = {
             marker: marker.is_some(),
             upstream: upstream.is_some(),
             fundamental: fundamental.is_some(),
-            deref: deref.is_some(),
         },
     }
 };
@@ -298,8 +296,6 @@ DomainGoal: DomainGoal = {
     "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
 
     "InScope" "(" <t:Id> ")" => DomainGoal::TraitInScope { trait_name: t },
-
-    "Derefs" "(" <source:Ty> "," <target:Ty> ")" => DomainGoal::Derefs { source, target },
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
     "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },

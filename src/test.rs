@@ -2469,55 +2469,6 @@ fn recursive_where_clause_on_type() {
 }
 
 #[test]
-fn deref_goal() {
-    test! {
-        program {
-            #[lang_deref]
-            trait Deref { type Target; }
-            struct Foo { }
-            struct Bar { }
-            struct Baz { }
-            impl Deref for Foo { type Target = Bar; }
-        }
-
-        goal {
-            Derefs(Foo, Bar)
-        } yields {
-            "Unique"
-        }
-
-        goal {
-            Derefs(Foo, Baz)
-        } yields {
-            "No possible solution"
-        }
-    }
-
-    test! {
-        program {
-            #[lang_deref]
-            trait Deref { type Target; }
-            struct Arc<T> { }
-            struct i32 { }
-            struct u64 { }
-            impl<T> Deref for Arc<T> { type Target = T; }
-        }
-
-        goal {
-            Derefs(Arc<i32>, i32)
-        } yields {
-            "Unique"
-        }
-
-        goal {
-            Derefs(Arc<i32>, u64)
-        } yields {
-            "No possible solution"
-        }
-    }
-}
-
-#[test]
 fn local_and_upstream_types() {
     test! {
         program {

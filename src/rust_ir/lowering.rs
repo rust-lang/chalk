@@ -189,7 +189,6 @@ impl LowerProgram for Program {
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut custom_clauses = Vec::new();
-        let mut lang_items = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
                 type_ids: &type_ids,
@@ -226,18 +225,6 @@ impl LowerProgram for Program {
                             },
                         );
                     }
-
-                    if d.flags.deref {
-                        use std::collections::btree_map::Entry::*;
-                        match lang_items.entry(rust_ir::LangItem::DerefTrait) {
-                            Vacant(entry) => {
-                                entry.insert(TraitId(raw_id));
-                            }
-                            Occupied(_) => Err(RustIrError::DuplicateLangItem(
-                                rust_ir::LangItem::DerefTrait,
-                            ))?,
-                        }
-                    }
                 }
                 Item::Impl(ref d) => {
                     impl_data.insert(ImplId(raw_id), d.lower_impl(&empty_env)?);
@@ -256,7 +243,6 @@ impl LowerProgram for Program {
             impl_data,
             associated_ty_data,
             custom_clauses,
-            lang_items,
             default_impl_data: Vec::new(),
         };
 
@@ -525,12 +511,6 @@ impl LowerDomainGoal for DomainGoal {
                 }
 
                 vec![chalk_ir::DomainGoal::InScope(id.into())]
-            }
-            DomainGoal::Derefs { source, target } => {
-                vec![chalk_ir::DomainGoal::Derefs(chalk_ir::Derefs {
-                    source: source.lower(env)?,
-                    target: target.lower(env)?,
-                })]
             }
             DomainGoal::IsLocal { ty } => vec![chalk_ir::DomainGoal::IsLocal(ty.lower(env)?)],
             DomainGoal::IsUpstream { ty } => vec![chalk_ir::DomainGoal::IsUpstream(ty.lower(env)?)],
@@ -1117,7 +1097,6 @@ impl LowerTrait for TraitDefn {
                     marker: self.flags.marker,
                     upstream: self.flags.upstream,
                     fundamental: self.flags.fundamental,
-                    deref: self.flags.deref,
                 },
             })
         })?;

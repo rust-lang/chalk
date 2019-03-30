@@ -552,12 +552,6 @@ pub enum WhereClause {
     ProjectionEq(ProjectionEq),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
-pub struct Derefs {
-    pub source: Ty,
-    pub target: Ty,
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum WellFormed {
     /// A predicate which is true is some trait ref is well-formed.
@@ -630,13 +624,6 @@ pub enum DomainGoal {
     UnselectedNormalize(UnselectedNormalize),
 
     InScope(TypeKindId),
-
-    /// Whether a type can deref into another. Right now this is just:
-    /// ```notrust
-    /// Derefs(T, U) :- Implemented(T: Deref<Target = U>)
-    /// ```
-    /// In Rust there are also raw pointers which can be deref'd but do not implement Deref.
-    Derefs(Derefs),
 
     /// True if a type is considered to have been "defined" by the current crate. This is true for
     /// a `struct Foo { }` but false for a `#[upstream] struct Foo { }`. However, for fundamental types
