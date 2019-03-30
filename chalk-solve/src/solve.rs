@@ -1,11 +1,14 @@
-use crate::program_environment::ProgramClauseSet;
 use crate::solve::slg::implementation::SlgContext;
 use chalk_engine::context::Context;
 use chalk_engine::context::ContextOps;
 use chalk_engine::fallible::*;
 use chalk_engine::forest::Forest;
+use chalk_ir::DomainGoal;
+use chalk_ir::IsCoinductive;
+use chalk_ir::ProgramClause;
 use chalk_ir::*;
 use std::fmt;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 pub mod slg;
@@ -128,4 +131,10 @@ where
     fn solve(&mut self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
         self.solve(goal)
     }
+}
+
+pub trait ProgramClauseSet: Debug + IsCoinductive {
+    fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>);
+
+    fn upcast(&self) -> &dyn IsCoinductive;
 }

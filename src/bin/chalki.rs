@@ -18,12 +18,12 @@ use std::process::exit;
 use std::sync::Arc;
 
 use chalk::db::ChalkDatabase;
+use chalk::program_environment::ProgramEnvironment;
 use chalk::query::LoweringDatabase;
 use chalk::rust_ir;
 use chalk::rust_ir::lowering::*;
 use chalk_engine::fallible::NoSolution;
 use chalk_solve::ext::*;
-use chalk_solve::program_environment::ProgramEnvironment;
 use chalk_solve::solve::SolverChoice;
 use docopt::Docopt;
 use failure::Fallible;
