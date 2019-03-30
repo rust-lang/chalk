@@ -53,6 +53,10 @@ pub mod tls;
 
 pub type Identifier = InternedString;
 
+pub trait IsCoinductive {
+    fn is_coinductive_trait(&self, trait_id: TraitId) -> bool;
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProgramEnvironment {
     /// Indicates whether a given trait has coinductive semantics --
@@ -61,6 +65,12 @@ pub struct ProgramEnvironment {
 
     /// Compiled forms of the above:
     pub program_clauses: Vec<ProgramClause>,
+}
+
+impl IsCoinductive for ProgramEnvironment {
+    fn is_coinductive_trait(&self, trait_id: TraitId) -> bool {
+        self.coinductive_traits.contains(&trait_id)
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -945,7 +955,7 @@ impl UCanonical<InEnvironment<Goal>> {
     /// form `WellFormed(T: Trait)` where `Trait` is any trait. The latter is needed for dealing
     /// with WF requirements and cyclic traits, which generates cycles in the proof tree which must
     /// not be rejected but instead must be treated as a success.
-    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+    pub fn is_coinductive(&self, program: &dyn IsCoinductive) -> bool {
         self.canonical.value.goal.is_coinductive(program)
     }
 }
@@ -1015,10 +1025,10 @@ impl Goal {
         Goal::Implies(predicates, Box::new(self))
     }
 
-    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
+    pub fn is_coinductive(&self, program: &dyn IsCoinductive) -> bool {
         match self {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => match wca {
-                WhereClause::Implemented(tr) => program.coinductive_traits.contains(&tr.trait_id),
+                WhereClause::Implemented(tr) => program.is_coinductive_trait(tr.trait_id),
                 WhereClause::ProjectionEq(..) => false,
             },
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..)))) => true,
