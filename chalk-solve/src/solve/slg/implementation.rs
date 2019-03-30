@@ -208,20 +208,17 @@ impl context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTabl
         environment: &Arc<Environment>,
         goal: &DomainGoal,
     ) -> Vec<ProgramClause> {
-        let environment_clauses = environment
+        let mut clauses: Vec<_> = environment
             .clauses
             .iter()
             .filter(|&env_clause| env_clause.could_match(goal))
-            .cloned();
+            .cloned()
+            .collect();
 
-        let program_clauses = self
-            .program
-            .program_clauses
-            .iter()
-            .filter(|&clause| clause.could_match(goal))
-            .cloned();
+        self.program
+            .program_clauses_that_could_match(goal, &mut clauses);
 
-        environment_clauses.chain(program_clauses).collect()
+        clauses
     }
 
     fn instantiate_binders_universally(&mut self, arg: &Binders<Box<Goal>>) -> Goal {

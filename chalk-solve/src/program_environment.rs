@@ -1,3 +1,5 @@
+use chalk_ir::could_match::CouldMatch;
+use chalk_ir::DomainGoal;
 use chalk_ir::IsCoinductive;
 use chalk_ir::ProgramClause;
 use chalk_ir::TraitId;
@@ -7,10 +9,32 @@ use std::collections::BTreeSet;
 pub struct ProgramEnvironment {
     /// Indicates whether a given trait has coinductive semantics --
     /// at present, this is true only for auto traits.
-    pub coinductive_traits: BTreeSet<TraitId>,
+    coinductive_traits: BTreeSet<TraitId>,
 
     /// Compiled forms of the above:
-    pub program_clauses: Vec<ProgramClause>,
+    program_clauses: Vec<ProgramClause>,
+}
+
+impl ProgramEnvironment {
+    pub fn new(coinductive_traits: BTreeSet<TraitId>, program_clauses: Vec<ProgramClause>) -> Self {
+        Self {
+            coinductive_traits,
+            program_clauses,
+        }
+    }
+
+    pub fn program_clauses_that_could_match(
+        &self,
+        goal: &DomainGoal,
+        vec: &mut Vec<ProgramClause>,
+    ) {
+        vec.extend(
+            self.program_clauses
+                .iter()
+                .filter(|&clause| clause.could_match(goal))
+                .cloned(),
+        );
+    }
 }
 
 impl IsCoinductive for ProgramEnvironment {

@@ -99,10 +99,7 @@ impl Program {
             })
             .collect();
 
-        ProgramEnvironment {
-            coinductive_traits,
-            program_clauses,
-        }
+        ProgramEnvironment::new(coinductive_traits, program_clauses)
     }
 }
 
