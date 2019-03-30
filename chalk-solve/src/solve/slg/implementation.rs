@@ -1,6 +1,7 @@
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
+use crate::program_environment::ProgramEnvironment;
 use crate::solve::truncate::{self, Truncated};
 use crate::solve::Solution;
 use chalk_engine::fallible::Fallible;

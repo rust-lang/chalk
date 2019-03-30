@@ -3,6 +3,7 @@ use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Subst;
 use chalk_ir::*;
+use chalk_solve::program_environment::ProgramEnvironment;
 use std::iter;
 
 mod default;

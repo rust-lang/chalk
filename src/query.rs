@@ -6,7 +6,7 @@ use crate::error::ChalkError;
 use crate::rules::wf;
 use crate::rust_ir;
 use crate::rust_ir::lowering::LowerProgram;
-use chalk_ir::ProgramEnvironment;
+use chalk_solve::program_environment::ProgramEnvironment;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 

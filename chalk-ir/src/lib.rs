@@ -57,22 +57,6 @@ pub trait IsCoinductive {
     fn is_coinductive_trait(&self, trait_id: TraitId) -> bool;
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ProgramEnvironment {
-    /// Indicates whether a given trait has coinductive semantics --
-    /// at present, this is true only for auto traits.
-    pub coinductive_traits: BTreeSet<TraitId>,
-
-    /// Compiled forms of the above:
-    pub program_clauses: Vec<ProgramClause>,
-}
-
-impl IsCoinductive for ProgramEnvironment {
-    fn is_coinductive_trait(&self, trait_id: TraitId) -> bool {
-        self.coinductive_traits.contains(&trait_id)
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.

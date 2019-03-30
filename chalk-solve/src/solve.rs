@@ -1,3 +1,4 @@
+use crate::program_environment::ProgramEnvironment;
 use crate::solve::slg::implementation::SlgContext;
 use chalk_engine::context::Context;
 use chalk_engine::context::ContextOps;

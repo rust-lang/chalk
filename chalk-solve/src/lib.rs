@@ -6,4 +6,5 @@ extern crate ena;
 
 pub mod ext;
 pub mod infer;
+pub mod program_environment;
 pub mod solve;

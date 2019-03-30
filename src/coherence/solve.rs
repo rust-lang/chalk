@@ -6,6 +6,7 @@ use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use chalk_solve::ext::*;
+use chalk_solve::program_environment::ProgramEnvironment;
 use chalk_solve::solve::{Solution, SolverChoice};
 use failure::Fallible;
 use itertools::Itertools;

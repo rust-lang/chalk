@@ -23,6 +23,7 @@ use chalk::rust_ir;
 use chalk::rust_ir::lowering::*;
 use chalk_engine::fallible::NoSolution;
 use chalk_solve::ext::*;
+use chalk_solve::program_environment::ProgramEnvironment;
 use chalk_solve::solve::SolverChoice;
 use docopt::Docopt;
 use failure::Fallible;
@@ -56,7 +57,7 @@ struct Args {
 struct Program {
     text: String,
     ir: Arc<rust_ir::Program>,
-    env: Arc<chalk_ir::ProgramEnvironment>,
+    env: Arc<ProgramEnvironment>,
 }
 
 impl Program {
