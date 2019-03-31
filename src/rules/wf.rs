@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::program_environment::ProgramEnvironment;
+use crate::rules::RustIrSource;
 use crate::rust_ir::*;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
@@ -28,7 +29,7 @@ pub enum WfError {
 }
 
 struct WfSolver<'me> {
-    program: &'me Program,
+    program: &'me dyn RustIrSource,
     env: Arc<ProgramEnvironment>,
     solver_choice: SolverChoice,
 }
@@ -49,7 +50,7 @@ fn solve_wf_requirements(
     solver_choice: SolverChoice,
 ) -> Fallible<()> {
     let solver = WfSolver {
-        program: &program,
+        program: &*program,
         env,
         solver_choice,
     };
@@ -260,7 +261,7 @@ impl<'me> WfSolver<'me> {
         // ```
         // we would issue the following subgoal: `forall<'a> { WellFormed(Box<&'a T>) }`.
         let compute_assoc_ty_goal = |assoc_ty: &AssociatedTyValue| {
-            let assoc_ty_datum = &self.program.associated_ty_data[&assoc_ty.associated_ty_id];
+            let assoc_ty_datum = self.program.associated_ty_data(assoc_ty.associated_ty_id);
             let bounds = &assoc_ty_datum.bounds;
 
             let mut input_types = Vec::new();
