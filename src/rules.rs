@@ -57,14 +57,18 @@ impl Program {
                     .values()
                     .flat_map(|d| d.to_program_clauses(self)),
             )
-            .chain(self.default_impl_data.iter().map(|d| d.to_program_clause()))
+            .chain(
+                self.default_impl_data
+                    .iter()
+                    .flat_map(|d| d.to_program_clauses()),
+            )
             .collect::<Vec<_>>();
 
         for datum in self.impl_data.values() {
             // If we encounter a negative impl, do not generate any rule. Negative impls
             // are currently just there to deactivate default impls for auto traits.
             if datum.binders.value.trait_ref.is_positive() {
-                program_clauses.push(datum.to_program_clause());
+                program_clauses.extend(datum.to_program_clauses());
                 program_clauses.extend(
                     datum
                         .binders
@@ -101,13 +105,14 @@ impl ImplDatum {
     ///     Implemented(Vec<T>: Clone) :- Implemented(T: Clone).
     /// }
     /// ```
-    fn to_program_clause(&self) -> ProgramClause {
-        self.binders
+    fn to_program_clauses(&self) -> Vec<ProgramClause> {
+        vec![self
+            .binders
             .map_ref(|bound| ProgramClauseImplication {
                 consequence: bound.trait_ref.trait_ref().clone().cast(),
                 conditions: bound.where_clauses.iter().cloned().casted().collect(),
             })
-            .cast()
+            .cast()]
     }
 }
 
@@ -135,8 +140,9 @@ impl DefaultImplDatum {
     ///         Implemented(Box<Option<MyList<T>>>: Send).
     /// }
     /// ```
-    fn to_program_clause(&self) -> ProgramClause {
-        self.binders
+    fn to_program_clauses(&self) -> Vec<ProgramClause> {
+        vec![self
+            .binders
             .map_ref(|bound| ProgramClauseImplication {
                 consequence: bound.trait_ref.clone().cast(),
                 conditions: {
@@ -148,7 +154,7 @@ impl DefaultImplDatum {
                     wc.casted().collect()
                 },
             })
-            .cast()
+            .cast()]
     }
 }
 
