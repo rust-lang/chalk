@@ -14,6 +14,7 @@ use chalk_ir::{
 use std::collections::BTreeMap;
 use std::fmt;
 use std::iter;
+use std::sync::Arc;
 
 pub mod lowering;
 
@@ -35,7 +36,7 @@ pub struct Program {
     pub(crate) trait_data: BTreeMap<TraitId, TraitDatum>,
 
     /// For each associated ty:
-    pub(crate) associated_ty_data: BTreeMap<TypeId, AssociatedTyDatum>,
+    pub(crate) associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum>>,
 
     /// For each default impl (automatically generated for auto traits):
     pub(crate) default_impl_data: Vec<DefaultImplDatum>,
@@ -55,7 +56,7 @@ impl Program {
     pub(crate) fn split_projection<'p>(
         &self,
         projection: &'p ProjectionTy,
-    ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
+    ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]) {
         let ProjectionTy {
             associated_ty_id,
             ref parameters,
@@ -65,7 +66,7 @@ impl Program {
         let trait_num_params = trait_datum.binders.len();
         let split_point = parameters.len() - trait_num_params;
         let (other_params, trait_params) = parameters.split_at(split_point);
-        (associated_ty_data, trait_params, other_params)
+        (associated_ty_data.clone(), trait_params, other_params)
     }
 }
 

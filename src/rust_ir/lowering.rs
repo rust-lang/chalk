@@ -1,13 +1,12 @@
-use std::collections::BTreeMap;
-
-use chalk_parse::ast::*;
-use lalrpop_intern::intern;
-
 use crate::rust_ir::{self, Anonymize, ToParameter};
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
+use chalk_parse::ast::*;
 use failure::{Fail, Fallible};
 use itertools::Itertools;
+use lalrpop_intern::intern;
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
 mod test;
 
@@ -215,14 +214,14 @@ impl LowerProgram for Program {
 
                         associated_ty_data.insert(
                             info.id,
-                            rust_ir::AssociatedTyDatum {
+                            Arc::new(rust_ir::AssociatedTyDatum {
                                 trait_id: TraitId(raw_id),
                                 id: info.id,
                                 name: defn.name.str,
                                 parameter_kinds: parameter_kinds,
                                 bounds: defn.bounds.lower(&env)?,
                                 where_clauses: defn.where_clauses.lower(&env)?,
-                            },
+                            }),
                         );
                     }
                 }

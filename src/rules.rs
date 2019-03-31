@@ -5,28 +5,29 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Subst;
 use chalk_ir::*;
 use std::iter;
+use std::sync::Arc;
 
 mod default;
 pub(crate) mod wf;
 
 pub trait RustIrSource {
-    fn associated_ty_data(&self, ty: TypeId) -> &AssociatedTyDatum;
+    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
 
     fn split_projection<'p>(
         &self,
         projection: &'p ProjectionTy,
-    ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]);
+    ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]);
 }
 
 impl RustIrSource for Program {
-    fn associated_ty_data(&self, ty: TypeId) -> &AssociatedTyDatum {
-        &self.associated_ty_data[&ty]
+    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
+        self.associated_ty_data[&ty].clone()
     }
 
     fn split_projection<'p>(
         &self,
         projection: &'p ProjectionTy,
-    ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
+    ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]) {
         self.split_projection(projection)
     }
 }
