@@ -9,6 +9,28 @@ use std::iter;
 mod default;
 pub(crate) mod wf;
 
+pub trait RustIrSource {
+    fn associated_ty_data(&self, ty: TypeId) -> &AssociatedTyDatum;
+
+    fn split_projection<'p>(
+        &self,
+        projection: &'p ProjectionTy,
+    ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]);
+}
+
+impl RustIrSource for Program {
+    fn associated_ty_data(&self, ty: TypeId) -> &AssociatedTyDatum {
+        &self.associated_ty_data[&ty]
+    }
+
+    fn split_projection<'p>(
+        &self,
+        projection: &'p ProjectionTy,
+    ) -> (&AssociatedTyDatum, &'p [Parameter], &'p [Parameter]) {
+        self.split_projection(projection)
+    }
+}
+
 impl Program {
     pub fn environment(&self) -> ProgramEnvironment {
         // Construct the set of *clauses*; these are sort of a compiled form
@@ -165,8 +187,12 @@ impl AssociatedTyValue {
     ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, program: &Program, impl_datum: &ImplDatum) -> Vec<ProgramClause> {
-        let associated_ty = &program.associated_ty_data[&self.associated_ty_id];
+    fn to_program_clauses(
+        &self,
+        program: &dyn RustIrSource,
+        impl_datum: &ImplDatum,
+    ) -> Vec<ProgramClause> {
+        let associated_ty = program.associated_ty_data(self.associated_ty_id);
 
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
         let all_binders: Vec<_> = self
@@ -790,7 +816,7 @@ impl AssociatedTyDatum {
     ///     FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self, 'a,T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, program: &Program) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, program: &dyn RustIrSource) -> Vec<ProgramClause> {
         let binders: Vec<_> = self
             .parameter_kinds
             .iter()
