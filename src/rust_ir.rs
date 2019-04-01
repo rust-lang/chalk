@@ -384,15 +384,55 @@ impl AssociatedTyDatum {
     }
 }
 
+/// Represents the *value* of an associated type that is assigned
+/// from within some impl.
+///
+/// ```ignore
+/// impl Iterator for Foo {
+///     type Item = XXX; // <-- represents this line!
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyValue {
+    /// Impl in which this associated type value is found.  You might
+    /// need to look at this to find the generic parameters defined on
+    /// the impl, for example.
+    ///
+    /// ```ignore
+    /// impl Iterator for Foo { // <-- refers to this impl
+    ///     type Item = XXX; // <-- (where this is self)
+    /// }
+    /// ```
+    pub(crate) impl_id: ImplId,
+
+    /// Associated type being defined.
+    ///
+    /// ```ignore
+    /// impl Iterator for Foo {
+    ///     type Item = XXX; // <-- (where this is self)
+    /// }
+    /// ...
+    /// trait Iterator {
+    ///     type Item; // <-- refers to this declaration here!
+    /// }
+    /// ```
     pub(crate) associated_ty_id: TypeId,
 
-    // note: these binders are in addition to those from the impl
+    /// Additional binders declared on the associated type itself,
+    /// beyond thos from the impl. This would be empty for normal
+    /// associated types, but non-empty for generic associated types.
+    ///
+    /// ```ignore
+    /// impl<T> Iterable for Vec<T> {
+    ///     type Iter<'a> = vec::Iter<'a, T>;
+    ///           // ^^^^ refers to these generics here
+    /// }
+    /// ```
     pub(crate) value: Binders<AssociatedTyValueBound>,
 }
 
 struct_fold!(AssociatedTyValue {
+    impl_id,
     associated_ty_id,
     value,
 });

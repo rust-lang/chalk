@@ -226,7 +226,8 @@ impl LowerProgram for Program {
                     }
                 }
                 Item::Impl(ref d) => {
-                    impl_data.insert(ImplId(raw_id), d.lower_impl(&empty_env)?);
+                    let impl_id = ImplId(raw_id);
+                    impl_data.insert(impl_id, d.lower_impl(&empty_env, impl_id)?);
                 }
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
@@ -960,11 +961,11 @@ impl LowerLifetime for Lifetime {
 }
 
 trait LowerImpl {
-    fn lower_impl(&self, empty_env: &Env) -> Fallible<rust_ir::ImplDatum>;
+    fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, empty_env: &Env) -> Fallible<rust_ir::ImplDatum> {
+    fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum> {
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
 
@@ -979,7 +980,7 @@ impl LowerImpl for Impl {
             let associated_ty_values = self
                 .assoc_ty_values
                 .iter()
-                .map(|v| v.lower(trait_id.into(), env))
+                .map(|v| v.lower(trait_id.into(), impl_id, env))
                 .collect::<Fallible<_>>()?;
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
@@ -1044,14 +1045,19 @@ impl LowerClause for Clause {
 }
 
 trait LowerAssocTyValue {
-    fn lower(&self, trait_id: chalk_ir::TraitId, env: &Env)
-        -> Fallible<rust_ir::AssociatedTyValue>;
+    fn lower(
+        &self,
+        trait_id: chalk_ir::TraitId,
+        impl_id: chalk_ir::ImplId,
+        env: &Env,
+    ) -> Fallible<rust_ir::AssociatedTyValue>;
 }
 
 impl LowerAssocTyValue for AssocTyValue {
     fn lower(
         &self,
         trait_id: chalk_ir::TraitId,
+        impl_id: chalk_ir::ImplId,
         env: &Env,
     ) -> Fallible<rust_ir::AssociatedTyValue> {
         let info = &env.associated_ty_infos[&(trait_id, self.name.str)];
@@ -1061,6 +1067,7 @@ impl LowerAssocTyValue for AssocTyValue {
             })
         })?;
         Ok(rust_ir::AssociatedTyValue {
+            impl_id,
             associated_ty_id: info.id,
             value: value,
         })

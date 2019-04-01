@@ -75,7 +75,7 @@ impl Debug for ItemId {
             ItemId::StructId(id @ StructId(_)) => write!(fmt, "{:?}", TypeKindId::StructId(*id)),
             ItemId::TraitId(id @ TraitId(_)) => write!(fmt, "{:?}", TypeKindId::TraitId(*id)),
             ItemId::TypeId(id @ TypeId(_)) => write!(fmt, "{:?}", TypeKindId::TypeId(*id)),
-            ItemId::ImplId(ImplId(id)) => write!(fmt, "{:?}", id),
+            ItemId::ImplId(id @ ImplId(_)) => write!(fmt, "{:?}", id),
             ItemId::ClauseId(ClauseId(id)) => write!(fmt, "{:?}", id),
         }
     }

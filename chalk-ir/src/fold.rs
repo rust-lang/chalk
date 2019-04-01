@@ -482,6 +482,7 @@ macro_rules! copy_fold {
 copy_fold!(Identifier);
 copy_fold!(UniverseIndex);
 copy_fold!(ItemId);
+copy_fold!(ImplId);
 copy_fold!(StructId);
 copy_fold!(TraitId);
 copy_fold!(TypeId);

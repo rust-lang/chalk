@@ -13,6 +13,8 @@ pub(crate) mod wf;
 pub trait RustIrSource {
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
 
+    fn impl_datum(&self, impl_id: ImplId) -> &ImplDatum;
+
     fn split_projection<'p>(
         &self,
         projection: &'p ProjectionTy,
@@ -22,6 +24,10 @@ pub trait RustIrSource {
 impl RustIrSource for Program {
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
         self.associated_ty_data[&ty].clone()
+    }
+
+    fn impl_datum(&self, id: ImplId) -> &ImplDatum {
+        &self.impl_data[&id]
     }
 
     fn split_projection<'p>(
@@ -75,7 +81,7 @@ impl Program {
                         .value
                         .associated_ty_values
                         .iter()
-                        .flat_map(|atv| atv.to_program_clauses(self, datum)),
+                        .flat_map(|atv| atv.to_program_clauses(self)),
                 );
             }
         }
@@ -194,11 +200,8 @@ impl AssociatedTyValue {
     ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>).
     /// }
     /// ```
-    fn to_program_clauses(
-        &self,
-        program: &dyn RustIrSource,
-        impl_datum: &ImplDatum,
-    ) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, program: &dyn RustIrSource) -> Vec<ProgramClause> {
+        let impl_datum = program.impl_datum(self.impl_id);
         let associated_ty = program.associated_ty_data(self.associated_ty_id);
 
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).

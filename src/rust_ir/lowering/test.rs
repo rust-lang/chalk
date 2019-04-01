@@ -200,6 +200,7 @@ fn atc_accounting() {
         where_clauses: [],
         associated_ty_values: [
             AssociatedTyValue {
+                impl_id: ImplId(2),
                 associated_ty_id: (Iterable::Iter),
                 value: for<lifetime> AssociatedTyValueBound {
                     ty: Iter<'^0, ^1>
