@@ -38,9 +38,6 @@ pub struct Program {
     /// For each associated ty:
     pub(crate) associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum>>,
 
-    /// For each default impl (automatically generated for auto traits):
-    pub(crate) default_impl_data: Vec<DefaultImplDatum>,
-
     /// For each user-specified clause
     pub(crate) custom_clauses: Vec<ProgramClause>,
 }

@@ -15,7 +15,7 @@ macro_rules! impl_debugs {
         $(
             impl std::fmt::Debug for $id {
                 fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-                    write!(fmt, "{:?}", self.0)
+                    write!(fmt, "{}({:?})", stringify!($id), self.0.index)
                 }
             }
         )*

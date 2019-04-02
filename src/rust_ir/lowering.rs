@@ -235,7 +235,7 @@ impl LowerProgram for Program {
             }
         }
 
-        let mut program = rust_ir::Program {
+        let program = rust_ir::Program {
             type_ids,
             type_kinds,
             struct_data,
@@ -243,10 +243,8 @@ impl LowerProgram for Program {
             impl_data,
             associated_ty_data,
             custom_clauses,
-            default_impl_data: Vec::new(),
         };
 
-        program.add_default_impls();
         Ok(program)
     }
 }

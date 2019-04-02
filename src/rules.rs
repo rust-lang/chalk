@@ -7,13 +7,14 @@ use chalk_ir::*;
 use std::iter;
 use std::sync::Arc;
 
-mod default;
 pub(crate) mod wf;
 
 pub trait RustIrSource {
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
 
     fn impl_datum(&self, impl_id: ImplId) -> &ImplDatum;
+
+    fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool;
 
     fn split_projection<'p>(
         &self,
@@ -28,6 +29,24 @@ impl RustIrSource for Program {
 
     fn impl_datum(&self, id: ImplId) -> &ImplDatum {
         &self.impl_data[&id]
+    }
+
+    fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool {
+        // Look for an impl like `impl Send for Foo` where `Foo` is
+        // the struct.  See `push_auto_trait_impls` for more.
+        let type_kind_id = TypeKindId::StructId(struct_id);
+        self.impl_data.values().any(|impl_datum| {
+            let impl_trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
+            impl_trait_ref.trait_id == auto_trait_id
+                && match impl_trait_ref.parameters[0].assert_ty_ref() {
+                    Ty::Apply(apply) => match apply.name {
+                        TypeName::TypeKindId(id) => id == type_kind_id,
+                        _ => false,
+                    },
+
+                    _ => false,
+                }
+        })
     }
 
     fn split_projection<'p>(
@@ -63,12 +82,24 @@ impl Program {
                     .values()
                     .flat_map(|d| d.to_program_clauses(self)),
             )
-            .chain(
-                self.default_impl_data
-                    .iter()
-                    .flat_map(|d| d.to_program_clauses()),
-            )
             .collect::<Vec<_>>();
+
+        for (&auto_trait_id, auto_trait) in self
+            .trait_data
+            .iter()
+            .filter(|(_, auto_trait)| auto_trait.binders.value.flags.auto)
+        {
+            for (&struct_id, struct_datum) in self.struct_data.iter() {
+                push_auto_trait_impls(
+                    auto_trait_id,
+                    auto_trait,
+                    struct_id,
+                    struct_datum,
+                    self,
+                    &mut program_clauses,
+                );
+            }
+        }
 
         for datum in self.impl_data.values() {
             // If we encounter a negative impl, do not generate any rule. Negative impls
@@ -122,46 +153,87 @@ impl ImplDatum {
     }
 }
 
-impl DefaultImplDatum {
-    /// For each accessible type `T` in a struct which needs a default implementation for the auto
-    /// trait `Foo` (accessible types are the struct fields types), we add a bound `T: Foo` (which
-    /// is then expanded with `WF(T: Foo)`). For example, given:
-    ///
-    /// ```notrust
-    /// #[auto] trait Send { }
-    ///
-    /// struct MyList<T> {
-    ///     data: T,
-    ///     next: Box<Option<MyList<T>>>,
-    /// }
-    ///
-    /// ```
-    ///
-    /// generate:
-    ///
-    /// ```notrust
-    /// forall<T> {
-    ///     Implemented(MyList<T>: Send) :-
-    ///         Implemented(T: Send),
-    ///         Implemented(Box<Option<MyList<T>>>: Send).
-    /// }
-    /// ```
-    fn to_program_clauses(&self) -> Vec<ProgramClause> {
-        vec![self
-            .binders
-            .map_ref(|bound| ProgramClauseImplication {
-                consequence: bound.trait_ref.clone().cast(),
-                conditions: {
-                    let wc = bound.accessible_tys.iter().cloned().map(|ty| TraitRef {
-                        trait_id: bound.trait_ref.trait_id,
-                        parameters: vec![ty.cast()],
-                    });
+/// For auto-traits, we generate a default rule for every struct,
+/// unless there is a manual impl for that struct given explicitly.
+///
+/// So, if you have `impl Send for MyList<Foo>`, then we would
+/// generate no rule for `MyList` at all -- similarly if you have
+/// `impl !Send for MyList<Foo>`, or `impl<T> Send for MyList<T>`.
+///
+/// But if you have no rules at all for `Send` / `MyList`, then we
+/// generate an impl based on the field types of `MyList`. For example
+/// given the following program:
+///
+/// ```notrust
+/// #[auto] trait Send { }
+///
+/// struct MyList<T> {
+///     data: T,
+///     next: Box<Option<MyList<T>>>,
+/// }
+///
+/// ```
+///
+/// we generate:
+///
+/// ```notrust
+/// forall<T> {
+///     Implemented(MyList<T>: Send) :-
+///         Implemented(T: Send),
+///         Implemented(Box<Option<MyList<T>>>: Send).
+/// }
+/// ```
+fn push_auto_trait_impls(
+    auto_trait_id: TraitId,
+    auto_trait: &TraitDatum,
+    struct_id: StructId,
+    struct_datum: &StructDatum,
+    program: &dyn RustIrSource,
+    vec: &mut Vec<ProgramClause>,
+) {
+    // Must be an auto trait.
+    assert!(auto_trait.binders.value.flags.auto);
 
-                    wc.casted().collect()
-                },
-            })
-            .cast()]
+    // Auto traits never have generic parameters of their own (apart from `Self`).
+    assert_eq!(auto_trait.binders.binders.len(), 1);
+
+    // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
+    // for Foo<..>`, where `Foo` is the struct we're looking at, then
+    // we don't generate our own rules.
+    if program.impl_provided_for(auto_trait_id, struct_id) {
+        return;
     }
+
+    vec.push({
+        // trait_ref = `MyStruct<...>: MyAutoTrait`
+        let auto_trait_ref = TraitRef {
+            trait_id: auto_trait.binders.value.trait_ref.trait_id,
+            parameters: vec![Ty::Apply(struct_datum.binders.value.self_ty.clone()).cast()],
+        };
+
+        // forall<P0..Pn> { // generic parameters from struct
+        //   MyStruct<...>: MyAutoTrait :-
+        //      Field0: MyAutoTrait,
+        //      ...
+        //      FieldN: MyAutoTrait
+        // }
+        struct_datum
+            .binders
+            .map_ref(|struct_contents| ProgramClauseImplication {
+                consequence: auto_trait_ref.clone().cast(),
+                conditions: struct_contents
+                    .fields
+                    .iter()
+                    .cloned()
+                    .map(|field_ty| TraitRef {
+                        trait_id: auto_trait_id,
+                        parameters: vec![field_ty.cast()],
+                    })
+                    .casted()
+                    .collect(),
+            })
+            .cast()
+    });
 }
 
 impl AssociatedTyValue {
