@@ -68,11 +68,6 @@ impl Program {
             .iter()
             .cloned()
             .chain(
-                self.struct_data
-                    .values()
-                    .flat_map(|d| d.to_program_clauses()),
-            )
-            .chain(
                 self.trait_data
                     .values()
                     .flat_map(|d| d.to_program_clauses()),
@@ -83,6 +78,10 @@ impl Program {
                     .flat_map(|d| d.to_program_clauses(self)),
             )
             .collect::<Vec<_>>();
+
+        self.struct_data
+            .values()
+            .for_each(|d| d.to_program_clauses(self, &mut program_clauses));
 
         for (&auto_trait_id, auto_trait) in self
             .trait_data
@@ -105,15 +104,13 @@ impl Program {
             // If we encounter a negative impl, do not generate any rule. Negative impls
             // are currently just there to deactivate default impls for auto traits.
             if datum.binders.value.trait_ref.is_positive() {
-                program_clauses.extend(datum.to_program_clauses());
-                program_clauses.extend(
-                    datum
-                        .binders
-                        .value
-                        .associated_ty_values
-                        .iter()
-                        .flat_map(|atv| atv.to_program_clauses(self)),
-                );
+                datum.to_program_clauses(self, &mut program_clauses);
+                datum
+                    .binders
+                    .value
+                    .associated_ty_values
+                    .iter()
+                    .for_each(|atv| atv.to_program_clauses(self, &mut program_clauses));
             }
         }
 
@@ -133,7 +130,11 @@ impl Program {
     }
 }
 
-impl ImplDatum {
+trait ToProgramClauses {
+    fn to_program_clauses(&self, program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>);
+}
+
+impl ToProgramClauses for ImplDatum {
     /// Given `impl<T: Clone> Clone for Vec<T> { ... }`, generate:
     ///
     /// ```notrust
@@ -142,14 +143,15 @@ impl ImplDatum {
     ///     Implemented(Vec<T>: Clone) :- Implemented(T: Clone).
     /// }
     /// ```
-    fn to_program_clauses(&self) -> Vec<ProgramClause> {
-        vec![self
-            .binders
-            .map_ref(|bound| ProgramClauseImplication {
-                consequence: bound.trait_ref.trait_ref().clone().cast(),
-                conditions: bound.where_clauses.iter().cloned().casted().collect(),
-            })
-            .cast()]
+    fn to_program_clauses(&self, _program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
+        clauses.push(
+            self.binders
+                .map_ref(|bound| ProgramClauseImplication {
+                    consequence: bound.trait_ref.trait_ref().clone().cast(),
+                    conditions: bound.where_clauses.iter().cloned().casted().collect(),
+                })
+                .cast(),
+        );
     }
 }
 
@@ -236,7 +238,7 @@ fn push_auto_trait_impls(
     });
 }
 
-impl AssociatedTyValue {
+impl ToProgramClauses for AssociatedTyValue {
     /// Given the following trait:
     ///
     /// ```notrust
@@ -272,7 +274,7 @@ impl AssociatedTyValue {
     ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, program: &dyn RustIrSource) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
         let impl_datum = program.impl_datum(self.impl_id);
         let associated_ty = program.associated_ty_data(self.associated_ty_id);
 
@@ -374,11 +376,12 @@ impl AssociatedTyValue {
         }
         .cast();
 
-        vec![normalization, unselected_normalization]
+        clauses.push(normalization);
+        clauses.push(unselected_normalization);
     }
 }
 
-impl StructDatum {
+impl ToProgramClauses for StructDatum {
     /// Given the following type definition: `struct Foo<T: Eq> { }`, generate:
     ///
     /// ```notrust
@@ -427,7 +430,7 @@ impl StructDatum {
     /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
     /// ```
     ///
-    fn to_program_clauses(&self) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, _program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
         let wf = self
             .binders
             .map_ref(|bound_datum| ProgramClauseImplication {
@@ -455,7 +458,8 @@ impl StructDatum {
             })
             .cast();
 
-        let mut clauses = vec![wf, is_fully_visible];
+        clauses.push(wf);
+        clauses.push(is_fully_visible);
 
         // Fundamental types often have rules in the form of:
         //     Goal(FundamentalType<T>) :- Goal(T)
@@ -552,8 +556,6 @@ impl StructDatum {
                 .cast(),
             );
         }
-
-        clauses
     }
 }
 
