@@ -3,10 +3,10 @@
 
 use crate::coherence::orphan;
 use crate::error::ChalkError;
+use crate::lowering::LowerProgram;
 use crate::program_environment::ProgramEnvironment;
 use crate::rules::wf;
 use crate::rust_ir;
-use crate::rust_ir::lowering::LowerProgram;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 

@@ -26,6 +26,7 @@ pub(crate) mod rules;
 
 pub mod db;
 pub mod error;
+pub mod lowering;
 pub mod program_environment;
 pub mod query;
 

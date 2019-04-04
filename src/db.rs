@@ -1,8 +1,8 @@
 #![allow(non_camel_case_types)]
 
 use crate::error::ChalkError;
+use crate::lowering::LowerGoal;
 use crate::query::{Lowering, LoweringDatabase};
-use crate::rust_ir::lowering::LowerGoal;
 use crate::rust_ir::Program;
 use chalk_ir::tls;
 use chalk_ir::Goal;

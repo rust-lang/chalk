@@ -16,8 +16,6 @@ use std::fmt;
 use std::iter;
 use std::sync::Arc;
 
-pub mod lowering;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// From type-name to item-id. Used during lowering only.
