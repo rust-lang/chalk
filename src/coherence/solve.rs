@@ -1,9 +1,10 @@
 use super::CoherenceError;
+use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
-use crate::rust_ir::*;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
+use chalk_rust_ir::*;
 use chalk_solve::ext::*;
 use chalk_solve::solve::{Solution, SolverChoice};
 use failure::Fallible;

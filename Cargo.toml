@@ -45,4 +45,8 @@ path = "chalk-macros"
 version = "0.9.0"
 path = "chalk-engine"
 
+[dependencies.chalk-rust-ir]
+version = "0.1.0"
+path = "chalk-rust-ir"
+
 [workspace]

@@ -1,7 +1,9 @@
-use crate::rust_ir::{self, Anonymize, ToParameter};
+use crate::program::Program as LoweredProgram;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
 use chalk_parse::ast::*;
+use chalk_rust_ir as rust_ir;
+use chalk_rust_ir::{Anonymize, ToParameter};
 use failure::{Fail, Fallible};
 use itertools::Itertools;
 use lalrpop_intern::intern;
@@ -136,11 +138,11 @@ impl<'k> Env<'k> {
 
 pub(crate) trait LowerProgram {
     /// Lowers from a Program AST to the internal IR for a program.
-    fn lower(&self) -> Fallible<rust_ir::Program>;
+    fn lower(&self) -> Fallible<LoweredProgram>;
 }
 
 impl LowerProgram for Program {
-    fn lower(&self) -> Fallible<rust_ir::Program> {
+    fn lower(&self) -> Fallible<LoweredProgram> {
         let mut index = 0;
         let mut next_item_id = || -> chalk_ir::RawId {
             let i = index;
@@ -235,7 +237,7 @@ impl LowerProgram for Program {
             }
         }
 
-        let program = rust_ir::Program {
+        let program = LoweredProgram {
             type_ids,
             type_kinds,
             struct_data,
@@ -1113,8 +1115,8 @@ pub trait LowerGoal<A> {
     fn lower(&self, arg: &A) -> Fallible<Box<chalk_ir::Goal>>;
 }
 
-impl LowerGoal<rust_ir::Program> for Goal {
-    fn lower(&self, program: &rust_ir::Program) -> Fallible<Box<chalk_ir::Goal>> {
+impl LowerGoal<LoweredProgram> for Goal {
+    fn lower(&self, program: &LoweredProgram) -> Fallible<Box<chalk_ir::Goal>> {
         let associated_ty_infos: BTreeMap<_, _> = program
             .associated_ty_data
             .iter()

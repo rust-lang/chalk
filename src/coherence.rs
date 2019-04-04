@@ -1,7 +1,7 @@
 use petgraph::prelude::*;
 
+use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
-use crate::rust_ir::Program;
 use chalk_ir::{self, Identifier, ImplId};
 use chalk_solve::solve::SolverChoice;
 use failure::Fallible;

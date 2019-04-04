@@ -4,9 +4,9 @@
 use crate::coherence::orphan;
 use crate::error::ChalkError;
 use crate::lowering::LowerProgram;
+use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::rules::wf;
-use crate::rust_ir;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
@@ -20,24 +20,24 @@ pub trait LoweringDatabase {
 
     /// The program IR before recording specialization priorities.
     /// Do not use this query directly.
-    fn program_ir(&self) -> Result<Arc<rust_ir::Program>, ChalkError>;
+    fn program_ir(&self) -> Result<Arc<Program>, ChalkError>;
 
     /// The lowered IR.
-    fn lowered_program(&self) -> Result<Arc<rust_ir::Program>, ChalkError>;
+    fn lowered_program(&self) -> Result<Arc<Program>, ChalkError>;
 
     /// The lowered IR, with checks performed.
-    fn checked_program(&self) -> Result<Arc<rust_ir::Program>, ChalkError>;
+    fn checked_program(&self) -> Result<Arc<Program>, ChalkError>;
 
     /// The program as logic.
     fn environment(&self) -> Result<Arc<ProgramEnvironment>, ChalkError>;
 }
 
-fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, ChalkError> {
+fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
     let text = db.program_text();
     Ok(Arc::new(chalk_parse::parse_program(&text)?.lower()?))
 }
 
-fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, ChalkError> {
+fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
     let mut program = db.program_ir()?;
     let env = db.environment()?;
 
@@ -46,7 +46,7 @@ fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, 
     Ok(program)
 }
 
-fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<rust_ir::Program>, ChalkError> {
+fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
     let program = db.lowered_program()?;
     let env = db.environment()?;
 

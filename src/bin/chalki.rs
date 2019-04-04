@@ -19,9 +19,9 @@ use std::sync::Arc;
 
 use chalk::db::ChalkDatabase;
 use chalk::lowering::*;
+use chalk::program::Program;
 use chalk::program_environment::ProgramEnvironment;
 use chalk::query::LoweringDatabase;
-use chalk::rust_ir;
 use chalk_engine::fallible::NoSolution;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
@@ -54,22 +54,22 @@ struct Args {
 }
 
 /// A loaded and parsed program.
-struct Program {
+struct LoadedProgram {
     text: String,
-    ir: Arc<rust_ir::Program>,
+    ir: Arc<Program>,
     env: Arc<ProgramEnvironment>,
 }
 
-impl Program {
+impl LoadedProgram {
     /// Creates a new Program struct, given a `.chalk` file as a String and
     /// a [`SolverChoice`].
     ///
     /// [`SolverChoice`]: struct.solve.SolverChoice.html
-    fn new(text: String, solver_choice: SolverChoice) -> Fallible<Program> {
+    fn new(text: String, solver_choice: SolverChoice) -> Fallible<LoadedProgram> {
         let db = ChalkDatabase::with(&text, solver_choice);
         let ir = db.checked_program().unwrap();
         let env = db.environment().unwrap();
-        Ok(Program { text, ir, env })
+        Ok(LoadedProgram { text, ir, env })
     }
 }
 
@@ -166,7 +166,7 @@ fn process(
     args: &Args,
     command: &str,
     rl: &mut rustyline::Editor<()>,
-    prog: &mut Option<Program>,
+    prog: &mut Option<LoadedProgram>,
 ) -> Fallible<()> {
     if command == "help" || command == "h" {
         // Print out interpreter commands.
@@ -174,7 +174,7 @@ fn process(
         help()
     } else if command == "program" {
         // Load a .chalk file via stdin, until EOF is found.
-        *prog = Some(Program::new(read_program(rl)?, args.solver_choice())?);
+        *prog = Some(LoadedProgram::new(read_program(rl)?, args.solver_choice())?);
     } else if command.starts_with("load ") {
         // Load a .chalk file.
         let filename = &command["load ".len()..];
@@ -216,10 +216,10 @@ fn process(
 /// Load the file into a string, and parse it.
 // TODO: Could we pass in an Options struct or something? The Args struct
 // still has Strings where it should have Enums... (e.g. solver_choice)
-fn load_program(args: &Args, filename: &str) -> Fallible<Program> {
+fn load_program(args: &Args, filename: &str) -> Fallible<LoadedProgram> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
-    Ok(Program::new(text, args.solver_choice())?)
+    Ok(LoadedProgram::new(text, args.solver_choice())?)
 }
 
 /// Print out help for commands in interpreter mode.
@@ -250,7 +250,7 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Fallible<String> {
 /// Parse a goal and attempt to solve it, using the specified solver.
 // TODO: Could we pass in an Options struct or something? The Args struct
 // still has Strings where it should have Enums... (e.g. solver_choice)
-fn goal(args: &Args, text: &str, prog: &Program) -> Fallible<()> {
+fn goal(args: &Args, text: &str, prog: &LoadedProgram) -> Fallible<()> {
     let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
     let peeled_goal = goal.into_peeled_goal();
     match args
