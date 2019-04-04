@@ -68,16 +68,15 @@ impl Program {
             .iter()
             .cloned()
             .chain(
-                self.trait_data
-                    .values()
-                    .flat_map(|d| d.to_program_clauses()),
-            )
-            .chain(
                 self.associated_ty_data
                     .values()
                     .flat_map(|d| d.to_program_clauses(self)),
             )
             .collect::<Vec<_>>();
+
+        self.trait_data
+            .values()
+            .for_each(|d| d.to_program_clauses(self, &mut program_clauses));
 
         self.struct_data
             .values()
@@ -559,7 +558,7 @@ impl ToProgramClauses for StructDatum {
     }
 }
 
-impl TraitDatum {
+impl ToProgramClauses for TraitDatum {
     /// Given the following trait declaration: `trait Ord<T> where Self: Eq<T> { ... }`, generate:
     ///
     /// ```notrust
@@ -673,7 +672,7 @@ impl TraitDatum {
     /// To implement fundamental traits, we simply just do not add the rule above that allows
     /// upstream types to implement upstream traits. Fundamental traits are not allowed to
     /// compatibly do that.
-    fn to_program_clauses(&self) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, _program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
         let trait_ref = self.binders.value.trait_ref.clone();
 
         let trait_ref_impl = WhereClause::Implemented(self.binders.value.trait_ref.clone());
@@ -696,7 +695,7 @@ impl TraitDatum {
             })
             .cast();
 
-        let mut clauses = vec![wf];
+        clauses.push(wf);
 
         // The number of parameters will always be at least 1 because of the Self parameter
         // that is automatically added to every trait. This is important because otherwise
@@ -826,8 +825,6 @@ impl TraitDatum {
                 })
                 .cast(),
         );
-
-        clauses
     }
 }
 
