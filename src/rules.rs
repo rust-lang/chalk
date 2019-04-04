@@ -63,16 +63,11 @@ impl Program {
         // of the data above that always has the form:
         //
         //       forall P0...Pn. Something :- Conditions
-        let mut program_clauses = self
-            .custom_clauses
-            .iter()
-            .cloned()
-            .chain(
-                self.associated_ty_data
-                    .values()
-                    .flat_map(|d| d.to_program_clauses(self)),
-            )
-            .collect::<Vec<_>>();
+        let mut program_clauses = self.custom_clauses.clone();
+
+        self.associated_ty_data
+            .values()
+            .for_each(|d| d.to_program_clauses(self, &mut program_clauses));
 
         self.trait_data
             .values()
@@ -828,7 +823,7 @@ impl ToProgramClauses for TraitDatum {
     }
 }
 
-impl AssociatedTyDatum {
+impl ToProgramClauses for AssociatedTyDatum {
     /// For each associated type, we define the "projection
     /// equality" rules. There are always two; one for a successful normalization,
     /// and one for the "fallback" notion of equality.
@@ -897,7 +892,7 @@ impl AssociatedTyDatum {
     ///     FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self, 'a,T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, program: &dyn RustIrSource) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
         let binders: Vec<_> = self
             .parameter_kinds
             .iter()
@@ -930,8 +925,6 @@ impl AssociatedTyDatum {
             projection: projection.clone(),
             ty: app_ty.clone(),
         };
-
-        let mut clauses = vec![];
 
         // Fallback rule. The solver uses this to move between the projection
         // and placeholder type.
@@ -1072,7 +1065,5 @@ impl AssociatedTyDatum {
             }
             .cast(),
         );
-
-        clauses
     }
 }
