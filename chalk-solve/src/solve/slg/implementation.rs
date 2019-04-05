@@ -64,35 +64,6 @@ impl context::Context for SlgContext {
     fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
         InEnvironment::new(environment, goal)
     }
-}
-
-impl context::ContextOps<SlgContext> for SlgContext {
-    fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal>>) -> bool {
-        goal.is_coinductive(self.program.upcast())
-    }
-
-    fn instantiate_ucanonical_goal<R>(
-        &self,
-        arg: &UCanonical<InEnvironment<Goal>>,
-        op: impl context::WithInstantiatedUCanonicalGoal<Self, Output = R>,
-    ) -> R {
-        let (infer, subst, InEnvironment { environment, goal }) =
-            InferenceTable::from_canonical(arg.universes, &arg.canonical);
-        let dyn_infer = &mut TruncatingInferenceTable::new(&self.program, self.max_size, infer);
-        op.with(dyn_infer, subst, environment, goal)
-    }
-
-    fn instantiate_ex_clause<R>(
-        &self,
-        num_universes: usize,
-        canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
-        op: impl context::WithInstantiatedExClause<Self, Output = R>,
-    ) -> R {
-        let (infer, _subst, ex_cluse) =
-            InferenceTable::from_canonical(num_universes, canonical_ex_clause);
-        let dyn_infer = &mut TruncatingInferenceTable::new(&self.program, self.max_size, infer);
-        op.with(dyn_infer, ex_cluse)
-    }
 
     fn inference_normalized_subst_from_ex_clause(
         canon_ex_clause: &Canonical<ExClause<SlgContext>>,
@@ -135,6 +106,35 @@ impl context::ContextOps<SlgContext> for SlgContext {
         value: &Canonical<ConstrainedSubst>,
     ) -> Canonical<ConstrainedSubst> {
         map.map_from_canonical(value)
+    }
+}
+
+impl context::ContextOps<SlgContext> for SlgContext {
+    fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal>>) -> bool {
+        goal.is_coinductive(self.program.upcast())
+    }
+
+    fn instantiate_ucanonical_goal<R>(
+        &self,
+        arg: &UCanonical<InEnvironment<Goal>>,
+        op: impl context::WithInstantiatedUCanonicalGoal<Self, Output = R>,
+    ) -> R {
+        let (infer, subst, InEnvironment { environment, goal }) =
+            InferenceTable::from_canonical(arg.universes, &arg.canonical);
+        let dyn_infer = &mut TruncatingInferenceTable::new(&self.program, self.max_size, infer);
+        op.with(dyn_infer, subst, environment, goal)
+    }
+
+    fn instantiate_ex_clause<R>(
+        &self,
+        num_universes: usize,
+        canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
+        op: impl context::WithInstantiatedExClause<Self, Output = R>,
+    ) -> R {
+        let (infer, _subst, ex_cluse) =
+            InferenceTable::from_canonical(num_universes, canonical_ex_clause);
+        let dyn_infer = &mut TruncatingInferenceTable::new(&self.program, self.max_size, infer);
+        op.with(dyn_infer, ex_cluse)
     }
 }
 

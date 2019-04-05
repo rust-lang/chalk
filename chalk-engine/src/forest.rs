@@ -81,7 +81,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     pub fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<C::Solution> {
         self.context
             .clone()
-            .make_solution(CO::canonical(&goal), self.iter_answers(goal))
+            .make_solution(C::canonical(&goal), self.iter_answers(goal))
     }
 
     /// True if all the tables on the stack starting from `depth` and

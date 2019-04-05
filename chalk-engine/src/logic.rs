@@ -114,11 +114,11 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     ) -> bool {
         if let Some(answer) = self.tables[table].answer(answer) {
             info!("answer cached = {:?}", answer);
-            return test(CO::inference_normalized_subst_from_subst(&answer.subst));
+            return test(C::inference_normalized_subst_from_subst(&answer.subst));
         }
 
         self.tables[table].strands_mut().any(|strand| {
-            test(CO::inference_normalized_subst_from_ex_clause(
+            test(C::inference_normalized_subst_from_ex_clause(
                 &strand.canonical_ex_clause,
             ))
         })
@@ -210,7 +210,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         loop {
             match self.tables[table].pop_next_strand() {
                 Some(canonical_strand) => {
-                    let num_universes = CO::num_universes(&self.tables[table].table_goal);
+                    let num_universes = C::num_universes(&self.tables[table].table_goal);
                     let result = Self::with_instantiated_strand(
                         self.context.clone(),
                         num_universes,
@@ -412,7 +412,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     ) {
         let mut tables = vec![];
 
-        let num_universes = CO::num_universes(&self.tables[table].table_goal);
+        let num_universes = C::num_universes(&self.tables[table].table_goal);
         for canonical_strand in self.tables[table].strands_mut() {
             // FIXME if CanonicalExClause were not held abstract, we
             // could do this in place like we used to (and
@@ -643,8 +643,8 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         // must be backed by an impl *eventually*).
         let is_trivial_answer = {
             answer.delayed_literals.is_empty()
-                && CO::is_trivial_substitution(&self.tables[table].table_goal, &answer.subst)
-                && CO::empty_constraints(&answer.subst)
+                && C::is_trivial_substitution(&self.tables[table].table_goal, &answer.subst)
+                && C::empty_constraints(&answer.subst)
         };
 
         if self.tables[table].push_answer(answer) {
@@ -1062,11 +1062,11 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             ),
         };
 
-        let table_goal = &CO::map_goal_from_canonical(
+        let table_goal = &C::map_goal_from_canonical(
             &universe_map,
-            &CO::canonical(&self.tables[subgoal_table].table_goal),
+            &C::canonical(&self.tables[subgoal_table].table_goal),
         );
-        let answer_subst = &CO::map_subst_from_canonical(
+        let answer_subst = &C::map_subst_from_canonical(
             &universe_map,
             &self.answer(subgoal_table, answer_index).subst,
         );
