@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::rules::RustIrSource;
 use chalk_ir::cast::*;
@@ -10,7 +9,7 @@ use chalk_ir::*;
 use chalk_rust_ir::*;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
-use failure::{Fail, Fallible};
+use failure::Fail;
 use itertools::Itertools;
 
 mod test;
@@ -29,57 +28,10 @@ pub enum WfError {
     IllFormedTraitImpl(chalk_ir::Identifier),
 }
 
-struct WfSolver<'me> {
-    program: &'me dyn RustIrSource,
-    env: Arc<ProgramEnvironment>,
-    solver_choice: SolverChoice,
-}
-
-pub fn verify_well_formedness(
-    program: Arc<Program>,
-    env: Arc<ProgramEnvironment>,
-    solver_choice: SolverChoice,
-) -> Fallible<()> {
-    tls::set_current_program(&program, || {
-        solve_wf_requirements(program.clone(), env, solver_choice)
-    })
-}
-
-fn solve_wf_requirements(
-    program: Arc<Program>,
-    env: Arc<ProgramEnvironment>,
-    solver_choice: SolverChoice,
-) -> Fallible<()> {
-    let solver = WfSolver {
-        program: &*program,
-        env,
-        solver_choice,
-    };
-
-    for (id, struct_datum) in &program.struct_data {
-        if !solver.verify_struct_decl(struct_datum) {
-            let name = program
-                .type_kinds
-                .get(&TypeKindId::StructId(*id))
-                .unwrap()
-                .name;
-            Err(WfError::IllFormedTypeDecl(name))?;
-        }
-    }
-
-    for impl_datum in program.impl_data.values() {
-        if !solver.verify_trait_impl(impl_datum) {
-            let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
-            let name = program
-                .type_kinds
-                .get(&trait_ref.trait_id.into())
-                .unwrap()
-                .name;
-            Err(WfError::IllFormedTraitImpl(name))?;
-        }
-    }
-
-    Ok(())
+pub struct WfSolver<'me> {
+    pub program: &'me dyn RustIrSource,
+    pub env: Arc<ProgramEnvironment>,
+    pub solver_choice: SolverChoice,
 }
 
 /// A trait for retrieving all types appearing in some Chalk construction.
@@ -165,7 +117,7 @@ impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
 }
 
 impl<'me> WfSolver<'me> {
-    fn verify_struct_decl(&self, struct_datum: &StructDatum) -> bool {
+    pub fn verify_struct_decl(&self, struct_datum: &StructDatum) -> bool {
         // We retrieve all the input types of the struct fields.
         let mut input_types = Vec::new();
         struct_datum.binders.value.fields.fold(&mut input_types);
@@ -212,7 +164,7 @@ impl<'me> WfSolver<'me> {
         }
     }
 
-    fn verify_trait_impl(&self, impl_datum: &ImplDatum) -> bool {
+    pub fn verify_trait_impl(&self, impl_datum: &ImplDatum) -> bool {
         let trait_ref = match impl_datum.binders.value.trait_ref {
             PolarizedTraitRef::Positive(ref trait_ref) => trait_ref,
             _ => return true,

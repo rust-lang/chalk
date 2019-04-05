@@ -7,6 +7,8 @@ use crate::lowering::LowerProgram;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::rules::wf;
+use chalk_ir::tls;
+use chalk_ir::TypeKindId;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
@@ -52,7 +54,38 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
 
     orphan::perform_orphan_check(program.clone(), env.clone(), db.solver_choice())?;
 
-    wf::verify_well_formedness(program.clone(), env, db.solver_choice())?;
+    let () = tls::set_current_program(&program, || {
+        let solver = wf::WfSolver {
+            program: &*program,
+            env: env,
+            solver_choice: db.solver_choice(),
+        };
+
+        for (id, struct_datum) in &program.struct_data {
+            if !solver.verify_struct_decl(struct_datum) {
+                let name = program
+                    .type_kinds
+                    .get(&TypeKindId::StructId(*id))
+                    .unwrap()
+                    .name;
+                return Err(wf::WfError::IllFormedTypeDecl(name));
+            }
+        }
+
+        for impl_datum in program.impl_data.values() {
+            if !solver.verify_trait_impl(impl_datum) {
+                let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
+                let name = program
+                    .type_kinds
+                    .get(&trait_ref.trait_id.into())
+                    .unwrap()
+                    .name;
+                return Err(wf::WfError::IllFormedTraitImpl(name));
+            }
+        }
+
+        Ok(())
+    })?;
 
     Ok(program)
 }
