@@ -2,6 +2,7 @@
 // hello world https://github.com/salsa-rs/salsa/blob/master/examples/hello_world/main.rs
 
 use crate::coherence::orphan;
+use crate::coherence::SpecializationPriorities;
 use crate::error::ChalkError;
 use crate::lowering::LowerProgram;
 use crate::program::Program;
@@ -21,14 +22,13 @@ pub trait LoweringDatabase: ProgramClauseSet {
     #[salsa::input]
     fn solver_choice(&self) -> SolverChoice;
 
-    /// The program IR before recording specialization priorities.
-    /// Do not use this query directly.
     fn program_ir(&self) -> Result<Arc<Program>, ChalkError>;
 
-    /// The lowered IR.
-    fn lowered_program(&self) -> Result<Arc<Program>, ChalkError>;
+    /// Performs coherence check and computes which impls specialize
+    /// one another (the "specialization priorities").
+    fn coherence(&self) -> Result<Arc<SpecializationPriorities>, ChalkError>;
 
-    /// The lowered IR, with checks performed.
+    /// The lowered IR, with coherence, orphan, and WF checks performed.
     fn checked_program(&self) -> Result<Arc<Program>, ChalkError>;
 
     /// The program as logic.
@@ -40,18 +40,17 @@ fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
     Ok(Arc::new(chalk_parse::parse_program(&text)?.lower()?))
 }
 
-fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
-    let mut program = db.program_ir()?;
-
-    Arc::make_mut(&mut program).record_specialization_priorities(db, db.solver_choice())?;
-
-    Ok(program)
+fn coherence(db: &impl LoweringDatabase) -> Result<Arc<SpecializationPriorities>, ChalkError> {
+    let program = db.program_ir()?;
+    let priorities = program.specialization_priorities(db, db.solver_choice())?;
+    orphan::perform_orphan_check(program, db, db.solver_choice())?;
+    Ok(priorities)
 }
 
 fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
-    let program = db.lowered_program()?;
+    let program = db.program_ir()?;
 
-    orphan::perform_orphan_check(program.clone(), db, db.solver_choice())?;
+    db.coherence()?;
 
     let () = tls::set_current_program(&program, || {
         let solver = wf::WfSolver {

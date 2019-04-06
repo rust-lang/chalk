@@ -5,6 +5,7 @@ use chalk_ir::{self, Identifier, ImplId};
 use chalk_solve::solve::ProgramClauseSet;
 use chalk_solve::solve::SolverChoice;
 use failure::Fallible;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 pub(crate) mod orphan;
@@ -19,22 +20,51 @@ pub enum CoherenceError {
     FailedOrphanCheck(Identifier),
 }
 
+/// Stores the specialization priorities for a set of impls.
+/// This basically encodes which impls specialize one another.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SpecializationPriorities {
+    map: BTreeMap<ImplId, SpecializationPriority>,
+}
+
+impl SpecializationPriorities {
+    /// Lookup the priority of an impl in the set (panics if impl is not in set).
+    pub fn priority(&self, impl_id: ImplId) -> SpecializationPriority {
+        self.map[&impl_id]
+    }
+
+    /// Store the priority of an impl (used during construction).
+    /// Panics if we have already stored the priority for this impl.
+    fn insert(&mut self, impl_id: ImplId, p: SpecializationPriority) {
+        let old_value = self.map.insert(impl_id, p);
+        assert!(old_value.is_none());
+    }
+}
+
+/// Impls with higher priority take precedence over impls with lower
+/// priority (if both apply to the same types). Impls with equal
+/// priority should never apply to the same set of input types.
+#[derive(Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Debug)]
+pub struct SpecializationPriority(usize);
+
 impl Program {
-    pub(crate) fn record_specialization_priorities(
-        &mut self,
+    pub(crate) fn specialization_priorities(
+        &self,
         env: &dyn ProgramClauseSet,
         solver_choice: SolverChoice,
-    ) -> Fallible<()> {
+    ) -> Fallible<Arc<SpecializationPriorities>> {
+        let mut result = SpecializationPriorities::default();
+
         chalk_ir::tls::set_current_program(&Arc::new(self.clone()), || {
             let forest = self.build_specialization_forest(env, solver_choice)?;
 
             // Visit every root in the forest & set specialization
             // priority for the tree that is the root of.
             for root_idx in forest.externals(Direction::Incoming) {
-                self.set_priorities(root_idx, &forest, 0);
+                self.set_priorities(root_idx, &forest, 0, &mut result);
             }
 
-            Ok(())
+            Ok(Arc::new(result))
         })
     }
 
@@ -59,22 +89,24 @@ impl Program {
     }
 
     // Recursively set priorities for those node and all of its children.
-    fn set_priorities(&mut self, idx: NodeIndex, forest: &Graph<ImplId, ()>, p: usize) {
+    fn set_priorities(
+        &self,
+        idx: NodeIndex,
+        forest: &Graph<ImplId, ()>,
+        p: usize,
+        map: &mut SpecializationPriorities,
+    ) {
         // Get the impl datum recorded at this node and reset its priority
         {
             let impl_id = forest
                 .node_weight(idx)
                 .expect("index should be a valid index into graph");
-            let impl_datum = self
-                .impl_data
-                .get_mut(impl_id)
-                .expect("node should be valid impl id");
-            impl_datum.binders.value.specialization_priority = p;
+            map.insert(*impl_id, SpecializationPriority(p));
         }
 
         // Visit all children of this node, setting their priority to this + 1
         for child_idx in forest.neighbors(idx) {
-            self.set_priorities(child_idx, forest, p + 1)
+            self.set_priorities(child_idx, forest, p + 1, map);
         }
     }
 }

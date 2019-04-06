@@ -207,7 +207,6 @@ fn atc_accounting() {
                 }
             }
         ],
-        specialization_priority: 0,
         impl_type: Local
     }
 }"#

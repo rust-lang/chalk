@@ -26,7 +26,6 @@ pub struct ImplDatumBound {
     pub trait_ref: PolarizedTraitRef,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
-    pub specialization_priority: usize,
     pub impl_type: ImplType,
 }
 
