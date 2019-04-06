@@ -9,11 +9,12 @@ use crate::program_environment::ProgramEnvironment;
 use crate::rules::wf;
 use chalk_ir::tls;
 use chalk_ir::TypeKindId;
+use chalk_solve::solve::ProgramClauseSet;
 use chalk_solve::solve::SolverChoice;
 use std::sync::Arc;
 
 #[salsa::query_group(Lowering)]
-pub trait LoweringDatabase {
+pub trait LoweringDatabase: ProgramClauseSet {
     #[salsa::input]
     fn program_text(&self) -> Arc<String>;
 
@@ -57,7 +58,7 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
     let () = tls::set_current_program(&program, || {
         let solver = wf::WfSolver {
             program: &*program,
-            env: env,
+            env: db,
             solver_choice: db.solver_choice(),
         };
 

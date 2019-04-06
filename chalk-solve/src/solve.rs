@@ -89,7 +89,7 @@ impl SolverChoice {
     ///   reflect success nor failure.
     pub fn solve_root_goal(
         self,
-        program: &impl ProgramClauseSet,
+        program: &dyn ProgramClauseSet,
         canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Fallible<Option<Solution>> {
         Ok(self.create_solver().solve(program, canonical_goal))
