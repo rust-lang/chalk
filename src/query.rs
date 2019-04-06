@@ -42,9 +42,8 @@ fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
 
 fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
     let mut program = db.program_ir()?;
-    let env = db.environment()?;
 
-    Arc::make_mut(&mut program).record_specialization_priorities(env, db.solver_choice())?;
+    Arc::make_mut(&mut program).record_specialization_priorities(db, db.solver_choice())?;
 
     Ok(program)
 }

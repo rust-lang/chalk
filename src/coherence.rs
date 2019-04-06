@@ -1,8 +1,8 @@
 use petgraph::prelude::*;
 
 use crate::program::Program;
-use crate::program_environment::ProgramEnvironment;
 use chalk_ir::{self, Identifier, ImplId};
+use chalk_solve::solve::ProgramClauseSet;
 use chalk_solve::solve::SolverChoice;
 use failure::Fallible;
 use std::sync::Arc;
@@ -22,7 +22,7 @@ pub enum CoherenceError {
 impl Program {
     pub(crate) fn record_specialization_priorities(
         &mut self,
-        env: Arc<ProgramEnvironment>,
+        env: &dyn ProgramClauseSet,
         solver_choice: SolverChoice,
     ) -> Fallible<()> {
         chalk_ir::tls::set_current_program(&Arc::new(self.clone()), || {
@@ -41,7 +41,7 @@ impl Program {
     // Build the forest of specialization relationships.
     fn build_specialization_forest(
         &self,
-        env: Arc<ProgramEnvironment>,
+        env: &dyn ProgramClauseSet,
         solver_choice: SolverChoice,
     ) -> Fallible<Graph<ImplId, ()>> {
         // The forest is returned as a graph but built as a GraphMap; this is

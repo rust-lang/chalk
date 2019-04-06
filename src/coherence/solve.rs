@@ -1,25 +1,24 @@
 use super::CoherenceError;
 use crate::program::Program;
-use crate::program_environment::ProgramEnvironment;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use chalk_solve::ext::*;
+use chalk_solve::solve::ProgramClauseSet;
 use chalk_solve::solve::{Solution, SolverChoice};
 use failure::Fallible;
 use itertools::Itertools;
-use std::sync::Arc;
 
-struct DisjointSolver {
-    env: Arc<ProgramEnvironment>,
+struct DisjointSolver<'me> {
+    env: &'me dyn ProgramClauseSet,
     solver_choice: SolverChoice,
 }
 
 impl Program {
     pub(super) fn visit_specializations<F>(
         &self,
-        env: Arc<ProgramEnvironment>,
+        env: &dyn ProgramClauseSet,
         solver_choice: SolverChoice,
         mut record_specialization: F,
     ) -> Fallible<()>
@@ -84,7 +83,7 @@ impl Program {
     }
 }
 
-impl DisjointSolver {
+impl<'me> DisjointSolver<'me> {
     // Test if the set of types that these two impls apply to overlap. If the test succeeds, these
     // two impls are disjoint.
     //
