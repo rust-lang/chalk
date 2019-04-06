@@ -1,4 +1,4 @@
-use crate::solve::slg::implementation::SlgContext;
+use crate::solve::slg::SlgContext;
 use chalk_engine::fallible::*;
 use chalk_engine::forest::Forest;
 use chalk_ir::DomainGoal;

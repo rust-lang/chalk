@@ -4,7 +4,7 @@ use crate::db::ChalkDatabase;
 use crate::test_util::*;
 use chalk_engine::forest::Forest;
 use chalk_solve::ext::*;
-use chalk_solve::solve::slg::implementation::SlgContext;
+use chalk_solve::solve::slg::SlgContext;
 use chalk_solve::solve::SolverChoice;
 
 macro_rules! test {

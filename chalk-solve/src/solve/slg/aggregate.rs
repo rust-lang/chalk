@@ -1,8 +1,8 @@
 use crate::ext::*;
 use crate::infer::InferenceTable;
-use crate::solve::slg::implementation::SlgContext;
-use crate::solve::slg::implementation::SlgContextOps;
-use crate::solve::slg::implementation::SubstitutionExt;
+use crate::solve::slg::SlgContext;
+use crate::solve::slg::SlgContextOps;
+use crate::solve::slg::SubstitutionExt;
 use crate::solve::{Guidance, Solution};
 use chalk_ir::cast::Cast;
 use chalk_ir::*;
