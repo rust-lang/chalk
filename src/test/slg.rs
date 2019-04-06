@@ -1,7 +1,6 @@
 #![cfg(test)]
 
 use crate::db::ChalkDatabase;
-use crate::query::LoweringDatabase;
 use crate::test_util::*;
 use chalk_engine::forest::Forest;
 use chalk_solve::ext::*;
