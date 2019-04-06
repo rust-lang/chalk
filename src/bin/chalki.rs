@@ -15,12 +15,9 @@ extern crate failure;
 use std::fs::File;
 use std::io::Read;
 use std::process::exit;
-use std::sync::Arc;
 
 use chalk::db::ChalkDatabase;
 use chalk::lowering::*;
-use chalk::program::Program;
-use chalk::program_environment::ProgramEnvironment;
 use chalk::query::LoweringDatabase;
 use chalk_engine::fallible::NoSolution;
 use chalk_solve::ext::*;
@@ -56,8 +53,7 @@ struct Args {
 /// A loaded and parsed program.
 struct LoadedProgram {
     text: String,
-    ir: Arc<Program>,
-    env: Arc<ProgramEnvironment>,
+    db: ChalkDatabase,
 }
 
 impl LoadedProgram {
@@ -67,9 +63,7 @@ impl LoadedProgram {
     /// [`SolverChoice`]: struct.solve.SolverChoice.html
     fn new(text: String, solver_choice: SolverChoice) -> Fallible<LoadedProgram> {
         let db = ChalkDatabase::with(&text, solver_choice);
-        let ir = db.checked_program().unwrap();
-        let env = db.environment().unwrap();
-        Ok(LoadedProgram { text, ir, env })
+        Ok(LoadedProgram { text, db })
     }
 }
 
@@ -114,7 +108,7 @@ fn run() -> Fallible<()> {
 
         // Evaluate the goal(s). If any goal returns an error, print the error
         // and exit.
-        chalk_ir::tls::set_current_program(&prog.ir, || -> Fallible<()> {
+        prog.db.with_program(|_| -> Fallible<()> {
             for g in &args.flag_goal {
                 if let Err(e) = goal(&args, g, &prog) {
                     eprintln!("error: {}", e);
@@ -193,13 +187,13 @@ fn process(
         ))?;
 
         // Attempt to parse the program.
-        chalk_ir::tls::set_current_program(&prog.ir, || -> Fallible<()> {
+        prog.db.with_program(|_| -> Fallible<()> {
             match command {
                 // Print out the loaded program.
                 "print" => println!("{}", prog.text),
 
                 // TODO: Write a line of documentation here.
-                "lowered" => println!("{:#?}", prog.env),
+                "lowered" => println!("{:#?}", prog.db.environment()),
 
                 // Assume this is a goal.
                 // TODO: Print out "type 'help' to see available commands" if it
@@ -251,12 +245,10 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Fallible<String> {
 // TODO: Could we pass in an Options struct or something? The Args struct
 // still has Strings where it should have Enums... (e.g. solver_choice)
 fn goal(args: &Args, text: &str, prog: &LoadedProgram) -> Fallible<()> {
-    let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
+    let program = prog.db.checked_program()?;
+    let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
     let peeled_goal = goal.into_peeled_goal();
-    match args
-        .solver_choice()
-        .solve_root_goal(&*prog.env, &peeled_goal)
-    {
+    match args.solver_choice().solve_root_goal(&prog.db, &peeled_goal) {
         Ok(Some(v)) => println!("{}\n", v),
         Ok(None) => println!("No possible solution.\n"),
         Err(NoSolution) => println!("Solver failed"),

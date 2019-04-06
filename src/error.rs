@@ -31,3 +31,5 @@ impl std::fmt::Display for ChalkError {
         write!(f, "{}", self.error_text)
     }
 }
+
+impl std::error::Error for ChalkError {}
