@@ -98,7 +98,6 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
         }
 
         let program = db.checked_program().unwrap();
-        let env = db.environment().unwrap();
 
         chalk_ir::tls::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
@@ -111,7 +110,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
 
             println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
-            let result = solver_choice.solve_root_goal(&*env, &peeled_goal);
+            let result = solver_choice.solve_root_goal(&db, &peeled_goal);
             assert_result(&result, expected);
         });
     }

@@ -39,9 +39,8 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
                 .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
                 .unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let env = db.environment().unwrap();
             let mut forest = Forest::new(SlgContext::new(max_size));
-            let ops = forest.context().ops(&*env);
+            let ops = forest.context().ops(&db);
             let result = format!(
                 "{:#?}",
                 forest.force_answers(&ops, peeled_goal, num_answers)
@@ -70,9 +69,8 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
                 .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
                 .unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let env = db.environment().unwrap();
             let mut forest = Forest::new(SlgContext::new(max_size));
-            let ops = &forest.context().ops(&*env);
+            let ops = &forest.context().ops(&db);
             let result = format!("{:?}", forest.solve(ops, &peeled_goal));
 
             assert_test_result_eq(&expected, &result);
