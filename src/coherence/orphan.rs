@@ -1,23 +1,22 @@
-use std::sync::Arc;
-
 use super::CoherenceError;
 use crate::program::Program;
-use crate::program_environment::ProgramEnvironment;
 use chalk_ir::cast::*;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use chalk_solve::ext::*;
+use chalk_solve::solve::ProgramClauseSet;
 use chalk_solve::solve::SolverChoice;
 use failure::Fallible;
+use std::sync::Arc;
 
-struct OrphanSolver {
-    env: Arc<ProgramEnvironment>,
+struct OrphanSolver<'me> {
+    env: &'me dyn ProgramClauseSet,
     solver_choice: SolverChoice,
 }
 
 pub(crate) fn perform_orphan_check(
     program: Arc<Program>,
-    env: Arc<ProgramEnvironment>,
+    env: &dyn ProgramClauseSet,
     solver_choice: SolverChoice,
 ) -> Fallible<()> {
     let solver = OrphanSolver { env, solver_choice };
@@ -39,7 +38,7 @@ pub(crate) fn perform_orphan_check(
     Ok(())
 }
 
-impl OrphanSolver {
+impl<'me> OrphanSolver<'me> {
     // Test if a local impl violates the orphan rules.
     //
     // For `impl<T> Trait for MyType<T>` we generate:

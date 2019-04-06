@@ -51,9 +51,8 @@ fn lowered_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
 
 fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
     let program = db.lowered_program()?;
-    let env = db.environment()?;
 
-    orphan::perform_orphan_check(program.clone(), env.clone(), db.solver_choice())?;
+    orphan::perform_orphan_check(program.clone(), db, db.solver_choice())?;
 
     let () = tls::set_current_program(&program, || {
         let solver = wf::WfSolver {
