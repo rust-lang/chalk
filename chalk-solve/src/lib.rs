@@ -5,5 +5,5 @@ extern crate chalk_ir;
 extern crate ena;
 
 pub mod ext;
-pub mod infer;
+mod infer;
 pub mod solve;
