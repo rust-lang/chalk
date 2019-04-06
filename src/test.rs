@@ -111,7 +111,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
 
             println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
-            let result = solver_choice.solve_root_goal(&env, &peeled_goal);
+            let result = solver_choice.solve_root_goal(&*env, &peeled_goal);
             assert_result(&result, expected);
         });
     }

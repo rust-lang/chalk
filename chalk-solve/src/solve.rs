@@ -1,6 +1,4 @@
 use crate::solve::slg::implementation::SlgContext;
-use chalk_engine::context::Context;
-use chalk_engine::context::ContextOps;
 use chalk_engine::fallible::*;
 use chalk_engine::forest::Forest;
 use chalk_ir::DomainGoal;
@@ -9,7 +7,6 @@ use chalk_ir::ProgramClause;
 use chalk_ir::*;
 use std::fmt;
 use std::fmt::Debug;
-use std::sync::Arc;
 
 pub mod slg;
 mod truncate;
@@ -92,10 +89,10 @@ impl SolverChoice {
     ///   reflect success nor failure.
     pub fn solve_root_goal(
         self,
-        env: &Arc<impl ProgramClauseSet + 'static>,
+        program: &impl ProgramClauseSet,
         canonical_goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Fallible<Option<Solution>> {
-        Ok(self.create_solver(env).solve(canonical_goal))
+        Ok(self.create_solver().solve(program, canonical_goal))
     }
 
     /// Returns the default SLG parameters.
@@ -103,9 +100,9 @@ impl SolverChoice {
         SolverChoice::SLG { max_size: 10 }
     }
 
-    pub fn create_solver(self, env: &Arc<impl ProgramClauseSet + 'static>) -> Box<Solver> {
+    pub fn create_solver(self) -> Box<dyn Solver> {
         match self {
-            SolverChoice::SLG { max_size } => Box::new(Forest::new(SlgContext::new(env, max_size))),
+            SolverChoice::SLG { max_size } => Box::new(Forest::new(SlgContext::new(max_size))),
         }
     }
 }
@@ -120,16 +117,21 @@ pub trait Solver {
     /// Solves a given goal, producing the solution. This will do only
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
-    fn solve(&mut self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution>;
+    fn solve(
+        &mut self,
+        program: &dyn ProgramClauseSet,
+        goal: &UCanonical<InEnvironment<Goal>>,
+    ) -> Option<Solution>;
 }
 
-impl<C, CO> Solver for Forest<C, CO>
-where
-    C: Context<UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal>>, Solution = Solution>,
-    CO: ContextOps<C>,
-{
-    fn solve(&mut self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
-        self.solve(goal)
+impl Solver for Forest<SlgContext> {
+    fn solve(
+        &mut self,
+        program: &dyn ProgramClauseSet,
+        goal: &UCanonical<InEnvironment<Goal>>,
+    ) -> Option<Solution> {
+        let ops = self.context().ops(program);
+        self.solve(&ops, goal)
     }
 }
 

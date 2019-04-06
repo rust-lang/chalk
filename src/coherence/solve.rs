@@ -164,7 +164,7 @@ impl DisjointSolver {
         let canonical_goal = &goal.into_closed_goal();
         let solution = self
             .solver_choice
-            .solve_root_goal(&self.env, canonical_goal)
+            .solve_root_goal(&*self.env, canonical_goal)
             .unwrap(); // internal errors in the solver are fatal
         let result = match solution {
             // Goal was proven with a unique solution, so no impl was found that causes these two
@@ -246,7 +246,7 @@ impl DisjointSolver {
         let canonical_goal = &goal.into_closed_goal();
         let result = match self
             .solver_choice
-            .solve_root_goal(&self.env, canonical_goal)
+            .solve_root_goal(&*self.env, canonical_goal)
             .unwrap()
         {
             Some(sol) => sol.is_unique(),

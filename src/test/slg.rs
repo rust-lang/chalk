@@ -40,8 +40,12 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
                 .unwrap();
             let peeled_goal = goal.into_peeled_goal();
             let env = db.environment().unwrap();
-            let mut forest = Forest::new(SlgContext::new(&env, max_size));
-            let result = format!("{:#?}", forest.force_answers(peeled_goal, num_answers));
+            let mut forest = Forest::new(SlgContext::new(max_size));
+            let ops = forest.context().ops(&*env);
+            let result = format!(
+                "{:#?}",
+                forest.force_answers(&ops, peeled_goal, num_answers)
+            );
 
             assert_test_result_eq(&expected, &result);
         }
@@ -67,12 +71,13 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
                 .unwrap();
             let peeled_goal = goal.into_peeled_goal();
             let env = db.environment().unwrap();
-            let mut forest = Forest::new(SlgContext::new(&env, max_size));
-            let result = format!("{:?}", forest.solve(&peeled_goal));
+            let mut forest = Forest::new(SlgContext::new(max_size));
+            let ops = &forest.context().ops(&*env);
+            let result = format!("{:?}", forest.solve(ops, &peeled_goal));
 
             assert_test_result_eq(&expected, &result);
 
-            let num_cached_answers_for_goal = forest.num_cached_answers_for_goal(&peeled_goal);
+            let num_cached_answers_for_goal = forest.num_cached_answers_for_goal(ops, &peeled_goal);
             // ::test_util::assert_test_result_eq(
             //     &format!("{}", num_cached_answers_for_goal),
             //     &format!("{}", expected_num_answers)

@@ -46,7 +46,7 @@ use std::sync::Arc;
 //
 // is the SLG resolvent of G with C.
 
-impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable {
+impl<'me> context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
     /// Applies the SLG resolvent algorithm to incorporate a program
     /// clause into the main X-clause, producing a new X-clause that
     /// must be solved.

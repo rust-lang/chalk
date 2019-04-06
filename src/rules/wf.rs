@@ -156,7 +156,7 @@ impl<'me> WfSolver<'me> {
 
         match self
             .solver_choice
-            .solve_root_goal(&self.env, &goal.into_closed_goal())
+            .solve_root_goal(&*self.env, &goal.into_closed_goal())
             .unwrap()
         {
             Some(sol) => sol.is_unique(),
@@ -312,7 +312,7 @@ impl<'me> WfSolver<'me> {
 
         match self
             .solver_choice
-            .solve_root_goal(&self.env, &goal.into_closed_goal())
+            .solve_root_goal(&*self.env, &goal.into_closed_goal())
             .unwrap()
         {
             Some(sol) => sol.is_unique(),

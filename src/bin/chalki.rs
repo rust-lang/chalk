@@ -255,7 +255,7 @@ fn goal(args: &Args, text: &str, prog: &LoadedProgram) -> Fallible<()> {
     let peeled_goal = goal.into_peeled_goal();
     match args
         .solver_choice()
-        .solve_root_goal(&prog.env, &peeled_goal)
+        .solve_root_goal(&*prog.env, &peeled_goal)
     {
         Ok(Some(v)) => println!("{}\n", v),
         Ok(None) => println!("No possible solution.\n"),

@@ -61,7 +61,7 @@ impl OrphanSolver {
         let canonical_goal = &impl_allowed.into_closed_goal();
         let result = self
             .solver_choice
-            .solve_root_goal(&self.env, canonical_goal)
+            .solve_root_goal(&*self.env, canonical_goal)
             .unwrap()
             .is_some();
         debug!("overlaps: result = {:?}", result);

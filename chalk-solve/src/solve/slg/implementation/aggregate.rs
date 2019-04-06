@@ -1,5 +1,7 @@
 use crate::ext::*;
 use crate::infer::InferenceTable;
+use crate::solve::slg::implementation::SlgContext;
+use crate::solve::slg::implementation::SlgContextOps;
 use crate::solve::slg::implementation::SubstitutionExt;
 use crate::solve::{Guidance, Solution};
 use chalk_ir::cast::Cast;
@@ -9,11 +11,9 @@ use chalk_engine::context;
 use chalk_engine::SimplifiedAnswer;
 use std::fmt::Debug;
 
-use super::SlgContext;
-
 /// Draws as many answers as it needs from `simplified_answers` (but
 /// no more!) in order to come up with a solution.
-impl context::AggregateOps<SlgContext> for SlgContext {
+impl<'me> context::AggregateOps<SlgContext> for SlgContextOps<'me> {
     fn make_solution(
         &self,
         root_goal: &Canonical<InEnvironment<Goal>>,
