@@ -4,6 +4,7 @@ use crate::error::ChalkError;
 use crate::lowering::LowerGoal;
 use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
+use chalk_ir::could_match::CouldMatch;
 use chalk_ir::tls;
 use chalk_ir::DomainGoal;
 use chalk_ir::Goal;
@@ -49,7 +50,12 @@ impl ChalkDatabase {
 impl ProgramClauseSet for ChalkDatabase {
     fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>) {
         if let Ok(env) = self.environment() {
-            env.program_clauses_that_could_match(goal, vec);
+            vec.extend(
+                env.program_clauses
+                    .iter()
+                    .filter(|&clause| clause.could_match(goal))
+                    .cloned(),
+            );
         }
     }
 
@@ -61,7 +67,7 @@ impl ProgramClauseSet for ChalkDatabase {
 impl IsCoinductive for ChalkDatabase {
     fn is_coinductive_trait(&self, trait_id: TraitId) -> bool {
         if let Ok(env) = self.environment() {
-            env.is_coinductive_trait(trait_id)
+            env.coinductive_traits.contains(&trait_id)
         } else {
             false
         }
