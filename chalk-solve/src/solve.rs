@@ -81,9 +81,9 @@ impl SolverChoice {
     }
 
     /// Creates a solver state.
-    pub fn solver_state(self) -> SolverState {
+    pub fn into_solver(self) -> Solver {
         match self {
-            SolverChoice::SLG { max_size } => SolverState {
+            SolverChoice::SLG { max_size } => Solver {
                 forest: Forest::new(SlgContext::new(max_size)),
             },
         }
@@ -96,11 +96,11 @@ impl Default for SolverChoice {
     }
 }
 
-pub struct SolverState {
+pub struct Solver {
     forest: Forest<SlgContext>,
 }
 
-impl SolverState {
+impl Solver {
     /// Attempts to solve the given goal, which must be in canonical
     /// form. Returns a unique solution (if one exists).  This will do
     /// only as much work towards `goal` as it has to (and that works
@@ -120,10 +120,36 @@ impl SolverState {
         self.forest.solve(&ops, goal)
     }
 
+    pub fn into_test(self) -> TestSolver {
+        TestSolver { state: self }
+    }
+}
+
+/// Wrapper around a `Solver` that exposes
+/// additional methods meant only for testing.
+pub struct TestSolver {
+    state: Solver,
+}
+
+impl std::ops::Deref for TestSolver {
+    type Target = Solver;
+
+    fn deref(&self) -> &Solver {
+        &self.state
+    }
+}
+
+impl std::ops::DerefMut for TestSolver {
+    fn deref_mut(&mut self) -> &mut Solver {
+        &mut self.state
+    }
+}
+
+impl TestSolver {
     /// Force the first `num_answers` answers. Meant only for testing,
     /// and hence the precise return type is obscured (but you can get
     /// its debug representation).
-    pub fn test_force_answers(
+    pub fn force_answers(
         &mut self,
         program: &dyn ProgramClauseSet,
         goal: &UCanonical<InEnvironment<Goal>>,

@@ -36,10 +36,10 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
                 .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
                 .unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let mut slg_solver = SolverChoice::SLG { max_size }.solver_state();
+            let mut slg_solver = SolverChoice::SLG { max_size }.into_solver().into_test();
             let result = format!(
                 "{:#?}",
-                slg_solver.test_force_answers(&db, &peeled_goal, num_answers)
+                slg_solver.force_answers(&db, &peeled_goal, num_answers)
             );
             assert_test_result_eq(&expected, &result);
         }
@@ -64,7 +64,7 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
                 .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
                 .unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let mut solver = SolverChoice::SLG { max_size }.solver_state();
+            let mut solver = SolverChoice::SLG { max_size }.into_solver().into_test();
             let result = format!("{:?}", solver.solve(&db, &peeled_goal));
             assert_test_result_eq(&expected, &result);
 

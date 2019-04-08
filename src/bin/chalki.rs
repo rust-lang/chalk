@@ -249,7 +249,7 @@ fn goal(args: &Args, text: &str, prog: &LoadedProgram) -> Fallible<()> {
     let peeled_goal = goal.into_peeled_goal();
     match args
         .solver_choice()
-        .solver_state()
+        .into_solver()
         .solve(&prog.db, &peeled_goal)
     {
         Some(v) => println!("{}\n", v),
