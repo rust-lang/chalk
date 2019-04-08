@@ -27,7 +27,7 @@ impl InferenceTable {
     ///
     /// A substitution mapping from the free variables to their re-bound form is
     /// also returned.
-    pub fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T::Result> {
+    pub(crate) fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T::Result> {
         debug!("canonicalize({:#?})", value);
         let mut q = Canonicalizer {
             table: self,
@@ -50,9 +50,9 @@ impl InferenceTable {
 }
 
 #[derive(Debug)]
-pub struct Canonicalized<T> {
+pub(crate) struct Canonicalized<T> {
     /// The canonicalized result.
-    pub quantified: Canonical<T>,
+    pub(crate) quantified: Canonical<T>,
 
     /// The free existential variables, along with the universes they inhabit.
     pub(crate) free_vars: Vec<ParameterEnaVariable>,

@@ -7,7 +7,7 @@ use chalk_ir::*;
 use std::fmt;
 use std::fmt::Debug;
 
-pub mod slg;
+mod slg;
 mod truncate;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -118,6 +118,30 @@ impl SolverState {
     ) -> Option<Solution> {
         let ops = self.forest.context().ops(program);
         self.forest.solve(&ops, goal)
+    }
+
+    /// Force the first `num_answers` answers. Meant only for testing,
+    /// and hence the precise return type is obscured (but you can get
+    /// its debug representation).
+    pub fn test_force_answers(
+        &mut self,
+        program: &dyn ProgramClauseSet,
+        goal: &UCanonical<InEnvironment<Goal>>,
+        num_answers: usize,
+    ) -> Box<std::fmt::Debug> {
+        let ops = self.forest.context().ops(program);
+        Box::new(self.forest.force_answers(&ops, goal.clone(), num_answers))
+    }
+
+    /// Returns then number of cached answers for `goal`. Used only in
+    /// testing.
+    pub fn num_cached_answers_for_goal(
+        &mut self,
+        program: &dyn ProgramClauseSet,
+        goal: &UCanonical<InEnvironment<Goal>>,
+    ) -> usize {
+        let ops = self.forest.context().ops(program);
+        self.forest.num_cached_answers_for_goal(&ops, goal)
     }
 }
 

@@ -1,27 +1,26 @@
-use ::ena::unify as ena;
 use chalk_ir::*;
 use chalk_ir::{cast::Cast, fold::Fold};
 
-pub mod canonicalize;
-pub mod instantiate;
+pub(crate) mod canonicalize;
+pub(crate) mod instantiate;
 mod invert;
 mod normalize_deep;
 mod test;
-pub mod ucanonicalize;
-pub mod unify;
-pub mod var;
+pub(crate) mod ucanonicalize;
+pub(crate) mod unify;
+pub(crate) mod var;
 
 use self::var::*;
 
 #[derive(Clone)]
-pub struct InferenceTable {
-    unify: ena::InPlaceUnificationTable<EnaVariable>,
+pub(crate) struct InferenceTable {
+    unify: ena::unify::InPlaceUnificationTable<EnaVariable>,
     vars: Vec<EnaVariable>,
     max_universe: UniverseIndex,
 }
 
-pub struct InferenceSnapshot {
-    unify_snapshot: ena::Snapshot<ena::InPlace<EnaVariable>>,
+pub(crate) struct InferenceSnapshot {
+    unify_snapshot: ena::unify::Snapshot<ena::unify::InPlace<EnaVariable>>,
     max_universe: UniverseIndex,
     vars: Vec<EnaVariable>,
 }
@@ -30,9 +29,9 @@ pub(crate) type ParameterEnaVariable = ParameterKind<EnaVariable>;
 
 impl InferenceTable {
     /// Create an empty inference table with no variables.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         InferenceTable {
-            unify: ena::UnificationTable::new(),
+            unify: ena::unify::UnificationTable::new(),
             vars: vec![],
             max_universe: UniverseIndex::root(),
         }
@@ -45,7 +44,7 @@ impl InferenceTable {
     /// the substitution mapping from each canonical binder to its
     /// corresponding existential variable, along with the
     /// instantiated result.
-    pub fn from_canonical<T>(
+    pub(crate) fn from_canonical<T>(
         num_universes: usize,
         canonical: &Canonical<T>,
     ) -> (Self, Substitution, T)
@@ -69,7 +68,7 @@ impl InferenceTable {
     /// others created within this inference table. This universe is
     /// able to see all previously created universes (though hopefully
     /// it is only brought into contact with its logical *parents*).
-    pub fn new_universe(&mut self) -> UniverseIndex {
+    pub(crate) fn new_universe(&mut self) -> UniverseIndex {
         let u = self.max_universe.next();
         self.max_universe = u;
         debug!("new_universe: {:?}", u);
@@ -77,7 +76,7 @@ impl InferenceTable {
     }
 
     /// Current maximum universe -- one that can see all existing names.
-    pub fn max_universe(&self) -> UniverseIndex {
+    pub(crate) fn max_universe(&self) -> UniverseIndex {
         self.max_universe
     }
 
@@ -97,7 +96,7 @@ impl InferenceTable {
     /// must respect a stack discipline (i.e., rollback or commit
     /// snapshots in reverse order of that with which they were
     /// created).
-    pub fn snapshot(&mut self) -> InferenceSnapshot {
+    pub(crate) fn snapshot(&mut self) -> InferenceSnapshot {
         let unify_snapshot = self.unify.snapshot();
         let vars = self.vars.clone();
         let max_universe = self.max_universe;
@@ -109,14 +108,14 @@ impl InferenceTable {
     }
 
     /// Restore the table to the state it had when the snapshot was taken.
-    pub fn rollback_to(&mut self, snapshot: InferenceSnapshot) {
+    pub(crate) fn rollback_to(&mut self, snapshot: InferenceSnapshot) {
         self.unify.rollback_to(snapshot.unify_snapshot);
         self.vars = snapshot.vars;
         self.max_universe = snapshot.max_universe;
     }
 
     /// Make permanent the changes made since the snapshot was taken.
-    pub fn commit(&mut self, snapshot: InferenceSnapshot) {
+    pub(crate) fn commit(&mut self, snapshot: InferenceSnapshot) {
         self.unify.commit(snapshot.unify_snapshot);
     }
 
@@ -126,7 +125,7 @@ impl InferenceTable {
     /// `binders` is the number of binders under which `leaf` appears;
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
-    pub fn normalize_shallow(&mut self, leaf: &Ty) -> Option<Ty> {
+    pub(crate) fn normalize_shallow(&mut self, leaf: &Ty) -> Option<Ty> {
         let var = EnaVariable::from(leaf.inference_var()?);
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
@@ -140,7 +139,7 @@ impl InferenceTable {
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
-    pub fn normalize_lifetime(&mut self, leaf: &Lifetime) -> Option<Lifetime> {
+    pub(crate) fn normalize_lifetime(&mut self, leaf: &Lifetime) -> Option<Lifetime> {
         let var = EnaVariable::from(leaf.inference_var()?);
         let v1 = self.probe_lifetime_var(var)?;
         assert!(!v1.needs_shift());
@@ -189,7 +188,7 @@ impl InferenceTable {
     }
 }
 
-pub trait ParameterEnaVariableExt {
+pub(crate) trait ParameterEnaVariableExt {
     fn to_parameter(self) -> Parameter;
 }
 

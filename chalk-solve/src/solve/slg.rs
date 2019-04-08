@@ -20,16 +20,16 @@ mod aggregate;
 mod resolvent;
 
 #[derive(Clone, Debug)]
-pub struct SlgContext {
+pub(crate) struct SlgContext {
     max_size: usize,
 }
 
 impl SlgContext {
-    pub fn new(max_size: usize) -> SlgContext {
+    pub(crate) fn new(max_size: usize) -> SlgContext {
         SlgContext { max_size }
     }
 
-    pub fn ops<'p>(&self, program: &'p dyn ProgramClauseSet) -> SlgContextOps<'p> {
+    pub(crate) fn ops<'p>(&self, program: &'p dyn ProgramClauseSet) -> SlgContextOps<'p> {
         SlgContextOps {
             program,
             max_size: self.max_size,
@@ -38,7 +38,7 @@ impl SlgContext {
 }
 
 #[derive(Clone, Debug)]
-pub struct SlgContextOps<'me> {
+pub(crate) struct SlgContextOps<'me> {
     program: &'me dyn ProgramClauseSet,
     max_size: usize,
 }
