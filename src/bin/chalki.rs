@@ -19,7 +19,6 @@ use std::process::exit;
 use chalk::db::ChalkDatabase;
 use chalk::lowering::*;
 use chalk::query::LoweringDatabase;
-use chalk_engine::fallible::NoSolution;
 use chalk_solve::ext::*;
 use chalk_solve::solve::SolverChoice;
 use docopt::Docopt;
@@ -248,10 +247,13 @@ fn goal(args: &Args, text: &str, prog: &LoadedProgram) -> Fallible<()> {
     let program = prog.db.checked_program()?;
     let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
     let peeled_goal = goal.into_peeled_goal();
-    match args.solver_choice().solve_root_goal(&prog.db, &peeled_goal) {
-        Ok(Some(v)) => println!("{}\n", v),
-        Ok(None) => println!("No possible solution.\n"),
-        Err(NoSolution) => println!("Solver failed"),
+    match args
+        .solver_choice()
+        .solver_state()
+        .solve(&prog.db, &peeled_goal)
+    {
+        Some(v) => println!("{}\n", v),
+        None => println!("No possible solution.\n"),
     }
     Ok(())
 }

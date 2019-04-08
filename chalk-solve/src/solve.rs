@@ -1,5 +1,4 @@
 use crate::solve::slg::SlgContext;
-use chalk_engine::fallible::*;
 use chalk_engine::forest::Forest;
 use chalk_ir::DomainGoal;
 use chalk_ir::IsCoinductive;
@@ -76,33 +75,17 @@ pub enum SolverChoice {
 }
 
 impl SolverChoice {
-    /// Attempts to solve the given root goal, which must be in
-    /// canonical form. The solution is searching for unique answers
-    /// to any free existential variables in this goal.
-    ///
-    /// # Returns
-    ///
-    /// - `Ok(None)` is the goal cannot be proven.
-    /// - `Ok(Some(solution))` if we succeeded in finding *some* answers,
-    ///   although `solution` may reflect ambiguity and unknowns.
-    /// - `Err` if there was an internal error solving the goal, which does not
-    ///   reflect success nor failure.
-    pub fn solve_root_goal(
-        self,
-        program: &dyn ProgramClauseSet,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
-    ) -> Fallible<Option<Solution>> {
-        Ok(self.create_solver().solve(program, canonical_goal))
-    }
-
     /// Returns the default SLG parameters.
     fn slg() -> Self {
         SolverChoice::SLG { max_size: 10 }
     }
 
-    pub fn create_solver(self) -> Box<dyn Solver> {
+    /// Creates a solver state.
+    pub fn solver_state(self) -> SolverState {
         match self {
-            SolverChoice::SLG { max_size } => Box::new(Forest::new(SlgContext::new(max_size))),
+            SolverChoice::SLG { max_size } => SolverState {
+                forest: Forest::new(SlgContext::new(max_size)),
+            },
         }
     }
 }
@@ -113,25 +96,28 @@ impl Default for SolverChoice {
     }
 }
 
-pub trait Solver {
-    /// Solves a given goal, producing the solution. This will do only
-    /// as much work towards `goal` as it has to (and that works is
-    /// cached for future attempts).
-    fn solve(
-        &mut self,
-        program: &dyn ProgramClauseSet,
-        goal: &UCanonical<InEnvironment<Goal>>,
-    ) -> Option<Solution>;
+pub struct SolverState {
+    forest: Forest<SlgContext>,
 }
 
-impl Solver for Forest<SlgContext> {
-    fn solve(
+impl SolverState {
+    /// Attempts to solve the given goal, which must be in canonical
+    /// form. Returns a unique solution (if one exists).  This will do
+    /// only as much work towards `goal` as it has to (and that works
+    /// is cached for future attempts).
+    ///
+    /// # Returns
+    ///
+    /// - `None` is the goal cannot be proven.
+    /// - `Some(solution)` if we succeeded in finding *some* answers,
+    ///   although `solution` may reflect ambiguity and unknowns.
+    pub fn solve(
         &mut self,
         program: &dyn ProgramClauseSet,
         goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Option<Solution> {
-        let ops = self.context().ops(program);
-        self.solve(&ops, goal)
+        let ops = self.forest.context().ops(program);
+        self.forest.solve(&ops, goal)
     }
 }
 

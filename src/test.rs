@@ -2,7 +2,6 @@
 
 use crate::db::ChalkDatabase;
 use crate::query::LoweringDatabase;
-use chalk_engine::fallible::{Fallible, NoSolution};
 use chalk_ir;
 use chalk_solve::ext::*;
 use chalk_solve::solve::{Solution, SolverChoice};
@@ -11,16 +10,11 @@ use chalk_solve::solve::{Solution, SolverChoice};
 mod bench;
 mod slg;
 
-fn result_to_string(result: &Fallible<Option<Solution>>) -> String {
-    match result {
-        Ok(Some(v)) => format!("{}", v),
-        Ok(None) => format!("No possible solution"),
-        Err(NoSolution) => format!("Error"),
-    }
-}
-
-fn assert_result(result: &Fallible<Option<Solution>>, expected: &str) {
-    let result = result_to_string(result);
+fn assert_result(result: &Option<Solution>, expected: &str) {
+    let result = match result {
+        Some(v) => format!("{}", v),
+        None => format!("No possible solution"),
+    };
 
     println!("expected:\n{}", expected);
     println!("actual:\n{}", result);
@@ -110,7 +104,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
 
             println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
-            let result = solver_choice.solve_root_goal(&db, &peeled_goal);
+            let result = solver_choice.solver_state().solve(&db, &peeled_goal);
             assert_result(&result, expected);
         });
     }

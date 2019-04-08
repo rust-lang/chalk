@@ -163,8 +163,8 @@ impl<'me> DisjointSolver<'me> {
         let canonical_goal = &goal.into_closed_goal();
         let solution = self
             .solver_choice
-            .solve_root_goal(&*self.env, canonical_goal)
-            .unwrap(); // internal errors in the solver are fatal
+            .solver_state()
+            .solve(&*self.env, canonical_goal);
         let result = match solution {
             // Goal was proven with a unique solution, so no impl was found that causes these two
             // to overlap
@@ -245,8 +245,8 @@ impl<'me> DisjointSolver<'me> {
         let canonical_goal = &goal.into_closed_goal();
         let result = match self
             .solver_choice
-            .solve_root_goal(&*self.env, canonical_goal)
-            .unwrap()
+            .solver_state()
+            .solve(&*self.env, canonical_goal)
         {
             Some(sol) => sol.is_unique(),
             None => false,
