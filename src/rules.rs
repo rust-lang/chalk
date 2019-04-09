@@ -23,6 +23,9 @@ pub trait RustIrSource {
     /// user gave).
     fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool;
 
+    /// Returns the name for the type with the given id.
+    fn type_name(&self, id: TypeKindId) -> Identifier;
+
     /// Given a projection of an associated type, splits the type
     /// parameters into two parts: those that come from the trait, and
     /// those that come from the associated type itself.

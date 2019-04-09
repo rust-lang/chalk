@@ -6,7 +6,7 @@ use chalk_ir::{
     Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, Ty, TypeId,
     TypeKindId, TypeName,
 };
-use chalk_rust_ir::{AssociatedTyDatum, ImplDatum, StructDatum, TraitDatum, TypeKind};
+use chalk_rust_ir::{AssociatedTyDatum, ImplDatum, ImplType, StructDatum, TraitDatum, TypeKind};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
@@ -57,6 +57,15 @@ impl Program {
         let split_point = parameters.len() - trait_num_params;
         let (other_params, trait_params) = parameters.split_at(split_point);
         (associated_ty_data.clone(), trait_params, other_params)
+    }
+
+    /// Returns the ids for all impls declared in this crate.
+    pub(crate) fn local_impl_ids(&self) -> Vec<ImplId> {
+        self.impl_data
+            .iter()
+            .filter(|(_, impl_datum)| impl_datum.binders.value.impl_type == ImplType::Local)
+            .map(|(&impl_id, _)| impl_id)
+            .collect()
     }
 }
 
@@ -128,6 +137,13 @@ impl RustIrSource for Program {
                     _ => false,
                 }
         })
+    }
+
+    fn type_name(&self, id: TypeKindId) -> Identifier {
+        match self.type_kinds.get(&id) {
+            Some(v) => v.name,
+            None => panic!("no type with id `{:?}`", id),
+        }
     }
 
     fn split_projection<'p>(
