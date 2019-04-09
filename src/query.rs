@@ -10,8 +10,8 @@ use crate::program_environment::ProgramEnvironment;
 use crate::rules::wf;
 use chalk_ir::tls;
 use chalk_ir::TypeKindId;
-use chalk_solve::solve::ProgramClauseSet;
-use chalk_solve::solve::SolverChoice;
+use chalk_solve::ProgramClauseSet;
+use chalk_solve::SolverChoice;
 use std::sync::Arc;
 
 #[salsa::query_group(Lowering)]

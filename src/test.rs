@@ -4,7 +4,7 @@ use crate::db::ChalkDatabase;
 use crate::query::LoweringDatabase;
 use chalk_ir;
 use chalk_solve::ext::*;
-use chalk_solve::solve::{Solution, SolverChoice};
+use chalk_solve::{Solution, SolverChoice};
 
 #[cfg(feature = "bench")]
 mod bench;

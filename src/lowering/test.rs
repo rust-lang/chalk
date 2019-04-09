@@ -2,7 +2,7 @@
 
 use crate::db::ChalkDatabase;
 use crate::query::LoweringDatabase;
-use chalk_solve::solve::SolverChoice;
+use chalk_solve::SolverChoice;
 
 #[test]
 fn lower_success() {

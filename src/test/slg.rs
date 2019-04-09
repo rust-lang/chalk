@@ -3,7 +3,7 @@
 use crate::db::ChalkDatabase;
 use crate::test_util::*;
 use chalk_solve::ext::*;
-use chalk_solve::solve::SolverChoice;
+use chalk_solve::SolverChoice;
 
 macro_rules! test {
     (program $program:tt $(goal $goal:tt first $n:tt with max $depth:tt { $expected:expr })*) => {

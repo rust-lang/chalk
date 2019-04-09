@@ -2,8 +2,8 @@ use petgraph::prelude::*;
 
 use crate::program::Program;
 use chalk_ir::{self, Identifier, ImplId};
-use chalk_solve::solve::ProgramClauseSet;
-use chalk_solve::solve::SolverChoice;
+use chalk_solve::ProgramClauseSet;
+use chalk_solve::SolverChoice;
 use failure::Fallible;
 use std::collections::BTreeMap;
 use std::sync::Arc;

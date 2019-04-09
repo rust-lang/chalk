@@ -4,8 +4,8 @@ use chalk_ir::cast::*;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use chalk_solve::ext::*;
-use chalk_solve::solve::ProgramClauseSet;
-use chalk_solve::solve::SolverChoice;
+use chalk_solve::ProgramClauseSet;
+use chalk_solve::SolverChoice;
 use failure::Fallible;
 use std::sync::Arc;
 

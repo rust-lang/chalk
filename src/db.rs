@@ -11,8 +11,8 @@ use chalk_ir::Goal;
 use chalk_ir::IsCoinductive;
 use chalk_ir::ProgramClause;
 use chalk_ir::TraitId;
-use chalk_solve::solve::ProgramClauseSet;
-use chalk_solve::solve::SolverChoice;
+use chalk_solve::ProgramClauseSet;
+use chalk_solve::SolverChoice;
 use salsa::Database;
 use std::sync::Arc;
 

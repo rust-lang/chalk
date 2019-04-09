@@ -5,4 +5,10 @@ extern crate chalk_ir;
 
 pub mod ext;
 mod infer;
-pub mod solve;
+mod solve;
+
+pub use solve::ProgramClauseSet;
+pub use solve::Solution;
+pub use solve::Solver;
+pub use solve::SolverChoice;
+pub use solve::TestSolver;
