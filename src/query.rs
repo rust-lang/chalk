@@ -43,7 +43,7 @@ fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
 fn coherence(db: &impl LoweringDatabase) -> Result<Arc<SpecializationPriorities>, ChalkError> {
     let program = db.program_ir()?;
     let priorities = program.specialization_priorities(db, db.solver_choice())?;
-    orphan::perform_orphan_check(program, db, db.solver_choice())?;
+    orphan::perform_orphan_check(&program, db, db.solver_choice())?;
     Ok(priorities)
 }
 

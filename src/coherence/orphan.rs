@@ -7,7 +7,6 @@ use chalk_solve::ext::*;
 use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;
 use failure::Fallible;
-use std::sync::Arc;
 
 struct OrphanSolver<'me> {
     env: &'me dyn ProgramClauseSet,
@@ -15,7 +14,7 @@ struct OrphanSolver<'me> {
 }
 
 pub(crate) fn perform_orphan_check(
-    program: Arc<Program>,
+    program: &Program,
     env: &dyn ProgramClauseSet,
     solver_choice: SolverChoice,
 ) -> Fallible<()> {
