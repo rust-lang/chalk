@@ -11,8 +11,7 @@ mod slg;
 mod truncate;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-/// A (possible) solution for a proposed goal. Usually packaged in a `Result`,
-/// where `Err` represents definite *failure* to prove a goal.
+/// A (possible) solution for a proposed goal.
 pub enum Solution {
     /// The goal indeed holds, and there is a unique value for all existential
     /// variables. In this case, we also record a set of lifetime constraints
@@ -96,6 +95,10 @@ impl Default for SolverChoice {
     }
 }
 
+/// Finds the solution to "goals", or trait queries -- i.e., figures
+/// out what sets of types implement which traits. Also, between
+/// queries, this struct stores the cached state from previous solver
+/// attempts, which can then be re-used later.
 pub struct Solver {
     forest: Forest<SlgContext>,
 }
@@ -103,8 +106,16 @@ pub struct Solver {
 impl Solver {
     /// Attempts to solve the given goal, which must be in canonical
     /// form. Returns a unique solution (if one exists).  This will do
-    /// only as much work towards `goal` as it has to (and that works
+    /// only as much work towards `goal` as it has to (and that work
     /// is cached for future attempts).
+    ///
+    /// # Parameters
+    ///
+    /// - `program` -- defines the program clauses in scope.
+    ///   - **Important:** You must supply the same set of program clauses
+    ///     each time you invoke `solve`, as otherwise the cached data may be
+    ///     invalid.
+    /// - `goal` the goal to solve
     ///
     /// # Returns
     ///
@@ -171,8 +182,17 @@ impl TestSolver {
     }
 }
 
+/// The trait for defining the program clauses that are in scope when
+/// solving a goal.
 pub trait ProgramClauseSet: Debug + IsCoinductive {
+    /// Returns a set of program clauses that could possibly match
+    /// `goal`. This can be any superset of the correct set, but the
+    /// more precise you can make it, the more efficient solving will
+    /// be.
     fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>);
 
+    /// Converts a `dyn ProgramClauseSet` into a `dyn
+    /// IsCoinductive`. This is a workaround for the fact that rust
+    /// doesn't present permit such an upcast automatically.
     fn upcast(&self) -> &dyn IsCoinductive;
 }

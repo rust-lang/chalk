@@ -1084,6 +1084,11 @@ impl<'a> FreeVarFolder for &'a Substitution {
 
 impl<'a> DefaultPlaceholderFolder for &'a Substitution {}
 
+/// Combines a substitution (`subst`) with a set of region constraints
+/// (`constraints`). This represents the result of a query; the
+/// substitution stores the values for the query's unknown variables,
+/// and the constraints represents any region constriants that must
+/// additionally be solved.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {
     pub subst: Substitution,
