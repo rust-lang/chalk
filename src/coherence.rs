@@ -1,9 +1,10 @@
 use petgraph::prelude::*;
 
-use crate::program::Program;
-use chalk_ir::{self, Identifier, ImplId};
+use crate::rules::RustIrSource;
+use chalk_ir::{self, Identifier, ImplId, TraitId};
 use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;
+use derive_new::new;
 use failure::Fallible;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -11,6 +12,14 @@ use std::sync::Arc;
 pub(crate) mod orphan;
 mod solve;
 mod test;
+
+#[derive(new)]
+pub struct CoherenceSolver<'me> {
+    program: &'me dyn RustIrSource,
+    env: &'me dyn ProgramClauseSet,
+    solver_choice: SolverChoice,
+    trait_id: TraitId,
+}
 
 #[derive(Fail, Debug)]
 pub enum CoherenceError {
@@ -47,33 +56,23 @@ impl SpecializationPriorities {
 #[derive(Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub struct SpecializationPriority(usize);
 
-impl Program {
-    pub(crate) fn specialization_priorities(
-        &self,
-        env: &dyn ProgramClauseSet,
-        solver_choice: SolverChoice,
-    ) -> Fallible<Arc<SpecializationPriorities>> {
+impl<'me> CoherenceSolver<'me> {
+    pub fn specialization_priorities(&self) -> Fallible<Arc<SpecializationPriorities>> {
         let mut result = SpecializationPriorities::default();
 
-        chalk_ir::tls::set_current_program(&Arc::new(self.clone()), || {
-            let forest = self.build_specialization_forest(env, solver_choice)?;
+        let forest = self.build_specialization_forest()?;
 
-            // Visit every root in the forest & set specialization
-            // priority for the tree that is the root of.
-            for root_idx in forest.externals(Direction::Incoming) {
-                self.set_priorities(root_idx, &forest, 0, &mut result);
-            }
+        // Visit every root in the forest & set specialization
+        // priority for the tree that is the root of.
+        for root_idx in forest.externals(Direction::Incoming) {
+            self.set_priorities(root_idx, &forest, 0, &mut result);
+        }
 
-            Ok(Arc::new(result))
-        })
+        Ok(Arc::new(result))
     }
 
     // Build the forest of specialization relationships.
-    fn build_specialization_forest(
-        &self,
-        env: &dyn ProgramClauseSet,
-        solver_choice: SolverChoice,
-    ) -> Fallible<Graph<ImplId, ()>> {
+    fn build_specialization_forest(&self) -> Fallible<Graph<ImplId, ()>> {
         // The forest is returned as a graph but built as a GraphMap; this is
         // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraphMap::new();
@@ -81,12 +80,9 @@ impl Program {
         // Find all specializations (implemented in coherence/solve)
         // Record them in the forest by adding an edge from the less special
         // to the more special.
-        let solver = solve::DisjointSolver::new(self, env, solver_choice);
-        for &trait_id in self.trait_data.keys() {
-            solver.visit_specializations_of_trait(trait_id, |less_special, more_special| {
-                forest.add_edge(less_special, more_special, ());
-            })?;
-        }
+        self.visit_specializations_of_trait(|less_special, more_special| {
+            forest.add_edge(less_special, more_special, ());
+        })?;
 
         Ok(forest.into_graph())
     }

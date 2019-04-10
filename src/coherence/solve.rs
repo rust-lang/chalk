@@ -1,41 +1,20 @@
-use super::CoherenceError;
-use crate::rules::RustIrSource;
+use super::{CoherenceError, CoherenceSolver};
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use chalk_solve::ext::*;
-use chalk_solve::ProgramClauseSet;
-use chalk_solve::{Solution, SolverChoice};
+use chalk_solve::Solution;
 use failure::Fallible;
 use itertools::Itertools;
 
-pub struct DisjointSolver<'me> {
-    program: &'me dyn RustIrSource,
-    env: &'me dyn ProgramClauseSet,
-    solver_choice: SolverChoice,
-}
-
-impl<'me> DisjointSolver<'me> {
-    pub fn new(
-        program: &'me dyn RustIrSource,
-        env: &'me dyn ProgramClauseSet,
-        solver_choice: SolverChoice,
-    ) -> Self {
-        Self {
-            program,
-            env,
-            solver_choice,
-        }
-    }
-
-    pub fn visit_specializations_of_trait(
+impl<'me> CoherenceSolver<'me> {
+    pub(super) fn visit_specializations_of_trait(
         &self,
-        trait_id: TraitId,
         mut record_specialization: impl FnMut(ImplId, ImplId),
     ) -> Fallible<()> {
         // Ignore impls for marker traits as they are allowed to overlap.
-        let trait_datum = self.program.trait_datum(trait_id);
+        let trait_datum = self.program.trait_datum(self.trait_id);
         if trait_datum.binders.value.flags.marker {
             return Ok(());
         }
@@ -45,7 +24,7 @@ impl<'me> DisjointSolver<'me> {
         // FIXME -- Ideally, we would only need to do this iteration
         // for the impls **added by the current crate**. I'm not sure
         // how to structure this though in terms of queries.
-        let impls = self.program.impls_for_trait(trait_id);
+        let impls = self.program.impls_for_trait(self.trait_id);
         for (l_id, r_id) in impls.into_iter().tuple_combinations() {
             let lhs = &self.program.impl_datum(l_id);
             let rhs = &self.program.impl_datum(r_id);
@@ -65,7 +44,7 @@ impl<'me> DisjointSolver<'me> {
                     (true, false) => record_specialization(l_id, r_id),
                     (false, true) => record_specialization(r_id, l_id),
                     (_, _) => {
-                        let trait_name = self.program.type_name(trait_id.into());
+                        let trait_name = self.program.type_name(self.trait_id.into());
                         Err(CoherenceError::OverlappingImpls(trait_name))?;
                     }
                 }

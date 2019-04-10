@@ -2,15 +2,17 @@
 // hello world https://github.com/salsa-rs/salsa/blob/master/examples/hello_world/main.rs
 
 use crate::coherence::orphan;
-use crate::coherence::SpecializationPriorities;
+use crate::coherence::{CoherenceSolver, SpecializationPriorities};
 use crate::error::ChalkError;
 use crate::lowering::LowerProgram;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::rules::wf;
 use chalk_ir::tls;
+use chalk_ir::TraitId;
 use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 #[salsa::query_group(Lowering)]
@@ -25,7 +27,7 @@ pub trait LoweringDatabase: ProgramClauseSet {
 
     /// Performs coherence check and computes which impls specialize
     /// one another (the "specialization priorities").
-    fn coherence(&self) -> Result<Arc<SpecializationPriorities>, ChalkError>;
+    fn coherence(&self) -> Result<BTreeMap<TraitId, Arc<SpecializationPriorities>>, ChalkError>;
 
     fn orphan_check(&self) -> Result<(), ChalkError>;
 
@@ -54,11 +56,25 @@ fn orphan_check(db: &impl LoweringDatabase) -> Result<(), ChalkError> {
     })
 }
 
-fn coherence(db: &impl LoweringDatabase) -> Result<Arc<SpecializationPriorities>, ChalkError> {
+fn coherence(
+    db: &impl LoweringDatabase,
+) -> Result<BTreeMap<TraitId, Arc<SpecializationPriorities>>, ChalkError> {
     let program = db.program_ir()?;
-    let priorities = program.specialization_priorities(db, db.solver_choice())?;
+
+    let priorities_map: Result<BTreeMap<_, _>, ChalkError> = program
+        .trait_data
+        .keys()
+        .map(|&trait_id| {
+            let solver = CoherenceSolver::new(&*program, db, db.solver_choice(), trait_id);
+            let priorities = solver.specialization_priorities()?;
+            Ok((trait_id, priorities))
+        })
+        .collect();
+    let priorities_map = priorities_map?;
+
     let () = db.orphan_check()?;
-    Ok(priorities)
+
+    Ok(priorities_map)
 }
 
 fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
