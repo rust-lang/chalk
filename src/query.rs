@@ -8,7 +8,6 @@ use crate::lowering::LowerProgram;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::rules::wf;
-use crate::rules::RustIrSource;
 use chalk_ir::tls;
 use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;
@@ -67,7 +66,7 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
 
     db.coherence()?;
 
-    let () = tls::set_current_program(&program, || {
+    let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let solver = wf::WfSolver {
             program: &*program,
             env: db,
@@ -79,12 +78,7 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
         }
 
         for &impl_id in program.impl_data.keys() {
-            if !solver.verify_trait_impl(impl_id) {
-                let impl_datum = program.impl_datum(impl_id);
-                let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
-                let name = program.type_name(trait_ref.trait_id.into());
-                return Err(wf::WfError::IllFormedTraitImpl(name));
-            }
+            solver.verify_trait_impl(impl_id)?;
         }
 
         Ok(())

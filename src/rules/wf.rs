@@ -171,12 +171,12 @@ impl<'me> WfSolver<'me> {
         }
     }
 
-    pub fn verify_trait_impl(&self, impl_id: ImplId) -> bool {
+    pub fn verify_trait_impl(&self, impl_id: ImplId) -> Result<(), WfError> {
         let impl_datum = self.program.impl_datum(impl_id);
 
         let trait_ref = match impl_datum.binders.value.trait_ref {
             PolarizedTraitRef::Positive(ref trait_ref) => trait_ref,
-            _ => return true,
+            _ => return Ok(()),
         };
 
         // We retrieve all the input types of the where clauses appearing on the trait impl,
@@ -328,6 +328,12 @@ impl<'me> WfSolver<'me> {
             None => false,
         };
 
-        is_legal
+        if is_legal {
+            Ok(())
+        } else {
+            let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
+            let name = self.program.type_name(trait_ref.trait_id.into());
+            Err(WfError::IllFormedTraitImpl(name))
+        }
     }
 }
