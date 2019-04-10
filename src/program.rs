@@ -20,13 +20,13 @@ pub struct Program {
     pub(crate) type_kinds: BTreeMap<TypeKindId, TypeKind>,
 
     /// For each struct:
-    pub(crate) struct_data: BTreeMap<StructId, StructDatum>,
+    pub(crate) struct_data: BTreeMap<StructId, Arc<StructDatum>>,
 
     /// For each impl:
-    pub(crate) impl_data: BTreeMap<ImplId, ImplDatum>,
+    pub(crate) impl_data: BTreeMap<ImplId, Arc<ImplDatum>>,
 
     /// For each trait:
-    pub(crate) trait_data: BTreeMap<TraitId, TraitDatum>,
+    pub(crate) trait_data: BTreeMap<TraitId, Arc<TraitDatum>>,
 
     /// For each associated ty:
     pub(crate) associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum>>,
@@ -117,12 +117,12 @@ impl RustIrSource for Program {
         self.associated_ty_data[&ty].clone()
     }
 
-    fn impl_datum(&self, id: ImplId) -> &ImplDatum {
-        &self.impl_data[&id]
+    fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum> {
+        self.impl_data[&id].clone()
     }
 
-    fn struct_datum(&self, id: StructId) -> &StructDatum {
-        &self.struct_data[&id]
+    fn struct_datum(&self, id: StructId) -> Arc<StructDatum> {
+        self.struct_data[&id].clone()
     }
 
     fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool {

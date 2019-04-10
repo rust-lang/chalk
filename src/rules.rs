@@ -13,10 +13,10 @@ pub trait RustIrSource {
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
 
     /// Returns the datum for the impl with the given id.
-    fn struct_datum(&self, struct_id: StructId) -> &StructDatum;
+    fn struct_datum(&self, struct_id: StructId) -> Arc<StructDatum>;
 
     /// Returns the datum for the impl with the given id.
-    fn impl_datum(&self, impl_id: ImplId) -> &ImplDatum;
+    fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum>;
 
     /// Returns true if there is an explicit impl of the auto trait
     /// `auto_trait_id` for the struct `struct_id`. This is part of

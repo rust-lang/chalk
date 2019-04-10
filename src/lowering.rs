@@ -201,11 +201,11 @@ impl LowerProgram for Program {
             match *item {
                 Item::StructDefn(ref d) => {
                     let struct_id = StructId(raw_id);
-                    struct_data.insert(struct_id, d.lower_struct(struct_id, &empty_env)?);
+                    struct_data.insert(struct_id, Arc::new(d.lower_struct(struct_id, &empty_env)?));
                 }
                 Item::TraitDefn(ref d) => {
                     let trait_id = TraitId(raw_id);
-                    trait_data.insert(trait_id, d.lower_trait(trait_id, &empty_env)?);
+                    trait_data.insert(trait_id, Arc::new(d.lower_trait(trait_id, &empty_env)?));
 
                     for defn in &d.assoc_ty_defns {
                         let info = &associated_ty_infos[&(trait_id, defn.name.str)];
@@ -229,7 +229,7 @@ impl LowerProgram for Program {
                 }
                 Item::Impl(ref d) => {
                     let impl_id = ImplId(raw_id);
-                    impl_data.insert(impl_id, d.lower_impl(&empty_env, impl_id)?);
+                    impl_data.insert(impl_id, Arc::new(d.lower_impl(&empty_env, impl_id)?));
                 }
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);

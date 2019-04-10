@@ -1,5 +1,6 @@
 use super::CoherenceError;
 use crate::program::Program;
+use crate::rules::RustIrSource;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
@@ -9,6 +10,7 @@ use chalk_solve::ProgramClauseSet;
 use chalk_solve::{Solution, SolverChoice};
 use failure::Fallible;
 use itertools::Itertools;
+use std::sync::Arc;
 
 struct DisjointSolver<'me> {
     env: &'me dyn ProgramClauseSet,
@@ -53,7 +55,7 @@ impl Program {
 
         // Iterate over every pair of impls for the same trait.
         for (trait_id, impls) in &impl_groupings {
-            let impls: Vec<(&ImplId, &ImplDatum)> = impls.collect();
+            let impls: Vec<(&ImplId, &Arc<ImplDatum>)> = impls.collect();
 
             for ((&l_id, lhs), (&r_id, rhs)) in impls.into_iter().tuple_combinations() {
                 // Two negative impls never overlap.
@@ -71,8 +73,8 @@ impl Program {
                         (true, false) => record_specialization(l_id, r_id),
                         (false, true) => record_specialization(r_id, l_id),
                         (_, _) => {
-                            let trait_id = self.type_kinds.get(&trait_id.into()).unwrap().name;
-                            Err(CoherenceError::OverlappingImpls(trait_id))?;
+                            let trait_name = self.type_name(trait_id.into());
+                            Err(CoherenceError::OverlappingImpls(trait_name))?;
                         }
                     }
                 }
