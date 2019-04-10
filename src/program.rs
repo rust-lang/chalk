@@ -5,7 +5,8 @@ use chalk_ir::{
     Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, Ty, TypeId,
     TypeKindId, TypeName,
 };
-use chalk_rules::{RustIrSource, ToProgramClauses};
+use chalk_rules::clauses::ToProgramClauses;
+use chalk_rules::RustIrSource;
 use chalk_rust_ir::{AssociatedTyDatum, ImplDatum, ImplType, StructDatum, TraitDatum, TypeKind};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -199,7 +200,7 @@ impl Program {
             .filter(|(_, auto_trait)| auto_trait.binders.value.flags.auto)
         {
             for (&struct_id, struct_datum) in self.struct_data.iter() {
-                chalk_rules::push_auto_trait_impls(
+                chalk_rules::clauses::push_auto_trait_impls(
                     auto_trait_id,
                     auto_trait,
                     struct_id,
