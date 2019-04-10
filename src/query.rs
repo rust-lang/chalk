@@ -78,8 +78,9 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
             solver.verify_struct_decl(id)?;
         }
 
-        for impl_datum in program.impl_data.values() {
-            if !solver.verify_trait_impl(impl_datum) {
+        for &impl_id in program.impl_data.keys() {
+            if !solver.verify_trait_impl(impl_id) {
+                let impl_datum = program.impl_datum(impl_id);
                 let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
                 let name = program.type_name(trait_ref.trait_id.into());
                 return Err(wf::WfError::IllFormedTraitImpl(name));

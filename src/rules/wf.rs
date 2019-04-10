@@ -171,7 +171,9 @@ impl<'me> WfSolver<'me> {
         }
     }
 
-    pub fn verify_trait_impl(&self, impl_datum: &ImplDatum) -> bool {
+    pub fn verify_trait_impl(&self, impl_id: ImplId) -> bool {
+        let impl_datum = self.program.impl_datum(impl_id);
+
         let trait_ref = match impl_datum.binders.value.trait_ref {
             PolarizedTraitRef::Positive(ref trait_ref) => trait_ref,
             _ => return true,
@@ -317,13 +319,15 @@ impl<'me> WfSolver<'me> {
 
         debug!("WF trait goal: {:?}", goal);
 
-        match self
+        let is_legal = match self
             .solver_choice
             .into_solver()
             .solve(self.env, &goal.into_closed_goal())
         {
             Some(sol) => sol.is_unique(),
             None => false,
-        }
+        };
+
+        is_legal
     }
 }
