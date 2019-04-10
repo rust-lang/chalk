@@ -9,6 +9,7 @@ use chalk_solve::{Solution, SolverChoice};
 #[cfg(feature = "bench")]
 mod bench;
 mod slg;
+mod wf;
 
 fn assert_result(result: &Option<Solution>, expected: &str) {
     let result = match result {

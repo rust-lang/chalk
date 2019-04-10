@@ -19,7 +19,6 @@ extern crate stacker;
 mod test_util;
 
 pub(crate) mod coherence;
-pub(crate) mod rules;
 
 pub mod db;
 pub mod error;

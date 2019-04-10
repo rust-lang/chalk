@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate chalk_macros;
+
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Subst;
@@ -6,7 +9,7 @@ use chalk_rust_ir::*;
 use std::iter;
 use std::sync::Arc;
 
-pub(crate) mod wf;
+pub mod wf;
 
 pub trait RustIrSource {
     /// Returns the datum for the associated type with the given id.

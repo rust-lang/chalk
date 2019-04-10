@@ -117,6 +117,7 @@ dependencies = [
  "chalk-ir 0.1.0",
  "chalk-macros 0.1.1",
  "chalk-parse 0.1.0",
+ "chalk-rules 0.1.0",
  "chalk-rust-ir 0.1.0",
  "chalk-solve 0.1.0",
  "derive-new 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -167,6 +168,18 @@ dependencies = [
  "lalrpop-intern 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop-util 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "chalk-rules"
+version = "0.1.0"
+dependencies = [
+ "chalk-ir 0.1.0",
+ "chalk-macros 0.1.1",
+ "chalk-rust-ir 0.1.0",
+ "chalk-solve 0.1.0",
+ "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "itertools 0.7.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

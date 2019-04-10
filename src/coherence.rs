@@ -1,7 +1,7 @@
 use petgraph::prelude::*;
 
-use crate::rules::RustIrSource;
 use chalk_ir::{self, Identifier, ImplId, TraitId};
+use chalk_rules::RustIrSource;
 use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;
 use derive_new::new;

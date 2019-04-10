@@ -50,4 +50,8 @@ path = "chalk-engine"
 version = "0.1.0"
 path = "chalk-rust-ir"
 
+[dependencies.chalk-rules]
+version = "0.1.0"
+path = "chalk-rules"
+
 [workspace]

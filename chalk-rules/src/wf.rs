@@ -1,4 +1,4 @@
-use crate::rules::RustIrSource;
+use crate::RustIrSource;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::*;
@@ -9,8 +9,6 @@ use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;
 use failure::Fail;
 use itertools::Itertools;
-
-mod test;
 
 #[derive(Fail, Debug)]
 pub enum WfError {

@@ -1,7 +1,7 @@
 use super::CoherenceError;
-use crate::rules::RustIrSource;
 use chalk_ir::cast::*;
 use chalk_ir::*;
+use chalk_rules::RustIrSource;
 use chalk_solve::ext::*;
 use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;
