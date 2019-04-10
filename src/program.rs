@@ -117,12 +117,27 @@ impl RustIrSource for Program {
         self.associated_ty_data[&ty].clone()
     }
 
+    fn trait_datum(&self, id: TraitId) -> Arc<TraitDatum> {
+        self.trait_data[&id].clone()
+    }
+
     fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum> {
         self.impl_data[&id].clone()
     }
 
     fn struct_datum(&self, id: StructId) -> Arc<StructDatum> {
         self.struct_data[&id].clone()
+    }
+
+    fn impls_for_trait(&self, trait_id: TraitId) -> Vec<ImplId> {
+        self.impl_data
+            .iter()
+            .filter(|(_, impl_datum)| {
+                let impl_trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
+                impl_trait_id == trait_id
+            })
+            .map(|(&impl_id, _)| impl_id)
+            .collect()
     }
 
     fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool {

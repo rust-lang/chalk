@@ -1,5 +1,4 @@
 use super::CoherenceError;
-use crate::program::Program;
 use crate::rules::RustIrSource;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
@@ -10,72 +9,64 @@ use chalk_solve::ProgramClauseSet;
 use chalk_solve::{Solution, SolverChoice};
 use failure::Fallible;
 use itertools::Itertools;
-use std::sync::Arc;
 
-struct DisjointSolver<'me> {
+pub struct DisjointSolver<'me> {
+    program: &'me dyn RustIrSource,
     env: &'me dyn ProgramClauseSet,
     solver_choice: SolverChoice,
 }
 
-impl Program {
-    pub(super) fn visit_specializations<F>(
-        &self,
-        env: &dyn ProgramClauseSet,
+impl<'me> DisjointSolver<'me> {
+    pub fn new(
+        program: &'me dyn RustIrSource,
+        env: &'me dyn ProgramClauseSet,
         solver_choice: SolverChoice,
-        mut record_specialization: F,
-    ) -> Fallible<()>
-    where
-        F: FnMut(ImplId, ImplId),
-    {
-        let mut solver = DisjointSolver { env, solver_choice };
+    ) -> Self {
+        Self {
+            program,
+            env,
+            solver_choice,
+        }
+    }
 
-        // Create a vector of references to impl datums, sorted by trait ref.
-        let impl_data = self
-            .impl_data
-            .iter()
-            .filter(|&(_, impl_datum)| {
-                // Ignore impls for marker traits as they are allowed to overlap.
-                let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
-                let trait_datum = &self.trait_data[&trait_id];
-                !trait_datum.binders.value.flags.marker
-            })
-            .sorted_by(|&(_, lhs), &(_, rhs)| {
-                lhs.binders
-                    .value
-                    .trait_ref
-                    .trait_ref()
-                    .trait_id
-                    .cmp(&rhs.binders.value.trait_ref.trait_ref().trait_id)
-            });
-
-        // Group impls by trait.
-        let impl_groupings = impl_data
-            .into_iter()
-            .group_by(|&(_, impl_datum)| impl_datum.binders.value.trait_ref.trait_ref().trait_id);
+    pub fn visit_specializations_of_trait(
+        &self,
+        trait_id: TraitId,
+        mut record_specialization: impl FnMut(ImplId, ImplId),
+    ) -> Fallible<()> {
+        // Ignore impls for marker traits as they are allowed to overlap.
+        let trait_datum = self.program.trait_datum(trait_id);
+        if trait_datum.binders.value.flags.marker {
+            return Ok(());
+        }
 
         // Iterate over every pair of impls for the same trait.
-        for (trait_id, impls) in &impl_groupings {
-            let impls: Vec<(&ImplId, &Arc<ImplDatum>)> = impls.collect();
+        //
+        // FIXME -- Ideally, we would only need to do this iteration
+        // for the impls **added by the current crate**. I'm not sure
+        // how to structure this though in terms of queries.
+        let impls = self.program.impls_for_trait(trait_id);
+        for (l_id, r_id) in impls.into_iter().tuple_combinations() {
+            let lhs = &self.program.impl_datum(l_id);
+            let rhs = &self.program.impl_datum(r_id);
 
-            for ((&l_id, lhs), (&r_id, rhs)) in impls.into_iter().tuple_combinations() {
-                // Two negative impls never overlap.
-                if !lhs.binders.value.trait_ref.is_positive()
-                    && !rhs.binders.value.trait_ref.is_positive()
-                {
-                    continue;
-                }
+            // Two negative impls never overlap.
+            if !lhs.binders.value.trait_ref.is_positive()
+                && !rhs.binders.value.trait_ref.is_positive()
+            {
+                continue;
+            }
 
-                // Check if the impls overlap, then if they do, check if one specializes
-                // the other. Note that specialization can only run one way - if both
-                // specialization checks return *either* true or false, that's an error.
-                if !solver.disjoint(lhs, rhs) {
-                    match (solver.specializes(lhs, rhs), solver.specializes(rhs, lhs)) {
-                        (true, false) => record_specialization(l_id, r_id),
-                        (false, true) => record_specialization(r_id, l_id),
-                        (_, _) => {
-                            let trait_name = self.type_name(trait_id.into());
-                            Err(CoherenceError::OverlappingImpls(trait_name))?;
-                        }
+            // Check if the impls overlap, then if they do, check if one specializes
+            // the other. Note that specialization can only run one way - if both
+            // specialization checks return *either* true or false, that's an error.
+            if !self.disjoint(lhs, rhs) {
+                match (self.specializes(lhs, rhs), self.specializes(rhs, lhs)) {
+                    (true, false) => record_specialization(l_id, r_id),
+                    (false, true) => record_specialization(r_id, l_id),
+                    (_, _) => {
+                        let trait_name = self.program.type_name(trait_id.into());
+                        Err(CoherenceError::OverlappingImpls(trait_name))?;
                     }
                 }
             }
@@ -83,9 +74,7 @@ impl Program {
 
         Ok(())
     }
-}
 
-impl<'me> DisjointSolver<'me> {
     // Test if the set of types that these two impls apply to overlap. If the test succeeds, these
     // two impls are disjoint.
     //
@@ -196,7 +185,7 @@ impl<'me> DisjointSolver<'me> {
     //    }
     //  }
     // }
-    fn specializes(&mut self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
+    fn specializes(&self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
         debug_heading!(
             "specializes(less_special={:#?}, more_special={:#?})",
             less_special,

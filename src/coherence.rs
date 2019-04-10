@@ -81,9 +81,12 @@ impl Program {
         // Find all specializations (implemented in coherence/solve)
         // Record them in the forest by adding an edge from the less special
         // to the more special.
-        self.visit_specializations(env, solver_choice, |less_special, more_special| {
-            forest.add_edge(less_special, more_special, ());
-        })?;
+        let solver = solve::DisjointSolver::new(self, env, solver_choice);
+        for &trait_id in self.trait_data.keys() {
+            solver.visit_specializations_of_trait(trait_id, |less_special, more_special| {
+                forest.add_edge(less_special, more_special, ());
+            })?;
+        }
 
         Ok(forest.into_graph())
     }
