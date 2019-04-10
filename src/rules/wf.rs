@@ -115,7 +115,7 @@ impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
 }
 
 impl<'me> WfSolver<'me> {
-    pub fn verify_struct_decl(&self, struct_id: StructId) -> bool {
+    pub fn verify_struct_decl(&self, struct_id: StructId) -> Result<(), WfError> {
         let struct_datum = self.program.struct_datum(struct_id);
 
         // We retrieve all the input types of the struct fields.
@@ -128,7 +128,7 @@ impl<'me> WfSolver<'me> {
             .fold(&mut input_types);
 
         if input_types.is_empty() {
-            return true;
+            return Ok(());
         }
 
         let goals = input_types
@@ -154,13 +154,20 @@ impl<'me> WfSolver<'me> {
         let goal = Goal::Implies(hypotheses, Box::new(goal))
             .quantify(QuantifierKind::ForAll, struct_datum.binders.binders.clone());
 
-        match self
+        let is_legal = match self
             .solver_choice
             .into_solver()
             .solve(self.env, &goal.into_closed_goal())
         {
             Some(sol) => sol.is_unique(),
             None => false,
+        };
+
+        if !is_legal {
+            let name = self.program.type_name(struct_id.into());
+            Err(WfError::IllFormedTypeDecl(name))
+        } else {
+            Ok(())
         }
     }
 

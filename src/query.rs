@@ -75,10 +75,7 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
         };
 
         for &id in program.struct_data.keys() {
-            if !solver.verify_struct_decl(id) {
-                let name = program.type_name(id.into());
-                return Err(wf::WfError::IllFormedTypeDecl(name));
-            }
+            solver.verify_struct_decl(id)?;
         }
 
         for impl_datum in program.impl_data.values() {
