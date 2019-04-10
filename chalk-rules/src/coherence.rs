@@ -1,7 +1,7 @@
 use petgraph::prelude::*;
 
+use crate::RustIrSource;
 use chalk_ir::{self, Identifier, ImplId, TraitId};
-use chalk_rules::RustIrSource;
 use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;
 use derive_new::new;
@@ -9,7 +9,7 @@ use failure::Fallible;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-pub(crate) mod orphan;
+pub mod orphan;
 mod solve;
 
 #[derive(new)]

@@ -1,14 +1,14 @@
 // https://crates.io/crates/salsa
 // hello world https://github.com/salsa-rs/salsa/blob/master/examples/hello_world/main.rs
 
-use crate::coherence::orphan;
-use crate::coherence::{CoherenceSolver, SpecializationPriorities};
 use crate::error::ChalkError;
 use crate::lowering::LowerProgram;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use chalk_ir::tls;
 use chalk_ir::TraitId;
+use chalk_rules::coherence::orphan;
+use chalk_rules::coherence::{CoherenceSolver, SpecializationPriorities};
 use chalk_rules::wf;
 use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;

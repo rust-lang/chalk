@@ -1,7 +1,7 @@
 use super::CoherenceError;
+use crate::RustIrSource;
 use chalk_ir::cast::*;
 use chalk_ir::*;
-use chalk_rules::RustIrSource;
 use chalk_solve::ext::*;
 use chalk_solve::ProgramClauseSet;
 use chalk_solve::SolverChoice;
@@ -14,7 +14,7 @@ use failure::Fallible;
 //     forall<T> { LocalImplAllowed(MyType<T>: Trait) }
 //
 // This must be provable in order to pass the orphan check.
-pub(crate) fn perform_orphan_check(
+pub fn perform_orphan_check(
     program: &impl RustIrSource,
     env: &impl ProgramClauseSet,
     solver_choice: SolverChoice,

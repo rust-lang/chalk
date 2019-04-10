@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate chalk_macros;
+#[macro_use]
+extern crate failure;
 
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::fold::shift::Shift;
@@ -9,6 +11,7 @@ use chalk_rust_ir::*;
 use std::iter;
 use std::sync::Arc;
 
+pub mod coherence;
 pub mod wf;
 
 pub trait RustIrSource {
