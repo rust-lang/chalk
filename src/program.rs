@@ -121,6 +121,10 @@ impl RustIrSource for Program {
         &self.impl_data[&id]
     }
 
+    fn struct_datum(&self, id: StructId) -> &StructDatum {
+        &self.struct_data[&id]
+    }
+
     fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool {
         // Look for an impl like `impl Send for Foo` where `Foo` is
         // the struct.  See `push_auto_trait_impls` for more.

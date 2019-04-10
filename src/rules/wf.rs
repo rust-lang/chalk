@@ -115,7 +115,9 @@ impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
 }
 
 impl<'me> WfSolver<'me> {
-    pub fn verify_struct_decl(&self, struct_datum: &StructDatum) -> bool {
+    pub fn verify_struct_decl(&self, struct_id: StructId) -> bool {
+        let struct_datum = self.program.struct_datum(struct_id);
+
         // We retrieve all the input types of the struct fields.
         let mut input_types = Vec::new();
         struct_datum.binders.value.fields.fold(&mut input_types);
