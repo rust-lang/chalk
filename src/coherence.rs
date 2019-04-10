@@ -11,7 +11,6 @@ use std::sync::Arc;
 
 pub(crate) mod orphan;
 mod solve;
-mod test;
 
 #[derive(new)]
 pub struct CoherenceSolver<'me> {

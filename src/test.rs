@@ -8,6 +8,7 @@ use chalk_solve::{Solution, SolverChoice};
 
 #[cfg(feature = "bench")]
 mod bench;
+mod coherence;
 mod slg;
 mod wf;
 
