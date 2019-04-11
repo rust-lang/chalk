@@ -120,7 +120,7 @@ impl context::Context for SlgContext {
 
 impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
     fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal>>) -> bool {
-        goal.is_coinductive(self.program.upcast())
+        goal.is_coinductive(IsCoinductive::as_dyn(self.program))
     }
 
     fn instantiate_ucanonical_goal<R>(

@@ -185,14 +185,13 @@ impl TestSolver {
 /// The trait for defining the program clauses that are in scope when
 /// solving a goal.
 pub trait ProgramClauseSet: Debug + IsCoinductive {
+    /// Convert to a dyn trait value representing `self`. This is a
+    /// workaround for the lack of proper upcasting in Rust.
+    fn as_dyn(&self) -> &dyn ProgramClauseSet;
+
     /// Returns a set of program clauses that could possibly match
     /// `goal`. This can be any superset of the correct set, but the
     /// more precise you can make it, the more efficient solving will
     /// be.
     fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>);
-
-    /// Converts a `dyn ProgramClauseSet` into a `dyn
-    /// IsCoinductive`. This is a workaround for the fact that rust
-    /// doesn't present permit such an upcast automatically.
-    fn upcast(&self) -> &dyn IsCoinductive;
 }

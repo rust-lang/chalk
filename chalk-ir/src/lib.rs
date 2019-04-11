@@ -54,6 +54,10 @@ pub mod tls;
 pub type Identifier = InternedString;
 
 pub trait IsCoinductive {
+    /// Convert to a dyn trait value representing `self`. This is a
+    /// workaround for the lack of proper upcasting in Rust.
+    fn as_dyn(&self) -> &dyn IsCoinductive;
+
     fn is_coinductive_trait(&self, trait_id: TraitId) -> bool;
 }
 

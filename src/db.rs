@@ -60,6 +60,10 @@ impl ChalkDatabase {
 }
 
 impl ProgramClauseSet for ChalkDatabase {
+    fn as_dyn(&self) -> &dyn ProgramClauseSet {
+        self
+    }
+
     fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>) {
         if let Ok(env) = self.environment() {
             vec.extend(
@@ -70,13 +74,13 @@ impl ProgramClauseSet for ChalkDatabase {
             );
         }
     }
-
-    fn upcast(&self) -> &dyn IsCoinductive {
-        self
-    }
 }
 
 impl IsCoinductive for ChalkDatabase {
+    fn as_dyn(&self) -> &dyn IsCoinductive {
+        self
+    }
+
     fn is_coinductive_trait(&self, trait_id: TraitId) -> bool {
         if let Ok(env) = self.environment() {
             env.coinductive_traits.contains(&trait_id)
@@ -87,6 +91,10 @@ impl IsCoinductive for ChalkDatabase {
 }
 
 impl RustIrSource for ChalkDatabase {
+    fn as_dyn(&self) -> &dyn RustIrSource {
+        self
+    }
+
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
         self.program_ir().unwrap().associated_ty_data[&ty].clone()
     }
