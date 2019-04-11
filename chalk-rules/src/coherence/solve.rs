@@ -1,4 +1,5 @@
-use super::{CoherenceError, CoherenceSolver};
+use crate::coherence::{CoherenceError, CoherenceSolver};
+use crate::ChalkRulesDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
@@ -8,13 +9,16 @@ use chalk_solve::Solution;
 use failure::Fallible;
 use itertools::Itertools;
 
-impl<'me> CoherenceSolver<'me> {
+impl<'db, DB> CoherenceSolver<'db, DB>
+where
+    DB: ChalkRulesDatabase,
+{
     pub(super) fn visit_specializations_of_trait(
         &self,
         mut record_specialization: impl FnMut(ImplId, ImplId),
     ) -> Fallible<()> {
         // Ignore impls for marker traits as they are allowed to overlap.
-        let trait_datum = self.program.trait_datum(self.trait_id);
+        let trait_datum = self.db.trait_datum(self.trait_id);
         if trait_datum.binders.value.flags.marker {
             return Ok(());
         }
@@ -24,10 +28,10 @@ impl<'me> CoherenceSolver<'me> {
         // FIXME -- Ideally, we would only need to do this iteration
         // for the impls **added by the current crate**. I'm not sure
         // how to structure this though in terms of queries.
-        let impls = self.program.impls_for_trait(self.trait_id);
+        let impls = self.db.impls_for_trait(self.trait_id);
         for (l_id, r_id) in impls.into_iter().tuple_combinations() {
-            let lhs = &self.program.impl_datum(l_id);
-            let rhs = &self.program.impl_datum(r_id);
+            let lhs = &self.db.impl_datum(l_id);
+            let rhs = &self.db.impl_datum(r_id);
 
             // Two negative impls never overlap.
             if !lhs.binders.value.trait_ref.is_positive()
@@ -44,7 +48,7 @@ impl<'me> CoherenceSolver<'me> {
                     (true, false) => record_specialization(l_id, r_id),
                     (false, true) => record_specialization(r_id, l_id),
                     (_, _) => {
-                        let trait_name = self.program.type_name(self.trait_id.into());
+                        let trait_name = self.db.type_name(self.trait_id.into());
                         Err(CoherenceError::OverlappingImpls(trait_name))?;
                     }
                 }
@@ -131,10 +135,7 @@ impl<'me> CoherenceSolver<'me> {
             .negate();
 
         let canonical_goal = &goal.into_closed_goal();
-        let solution = self
-            .solver_choice
-            .into_solver()
-            .solve(&*self.env, canonical_goal);
+        let solution = self.db.solve(canonical_goal);
         let result = match solution {
             // Goal was proven with a unique solution, so no impl was found that causes these two
             // to overlap
@@ -213,11 +214,7 @@ impl<'me> CoherenceSolver<'me> {
             .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
         let canonical_goal = &goal.into_closed_goal();
-        let result = match self
-            .solver_choice
-            .into_solver()
-            .solve(&*self.env, canonical_goal)
-        {
+        let result = match self.db.solve(canonical_goal) {
             Some(sol) => sol.is_unique(),
             None => false,
         };

@@ -11,14 +11,17 @@ use chalk_rules::clauses::ToProgramClauses;
 use chalk_rules::coherence::orphan;
 use chalk_rules::coherence::{CoherenceSolver, SpecializationPriorities};
 use chalk_rules::wf;
+use chalk_rules::ChalkRulesDatabase;
 use chalk_rules::RustIrSource;
 use chalk_solve::ProgramClauseSet;
+use chalk_solve::Solver;
 use chalk_solve::SolverChoice;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 #[salsa::query_group(Lowering)]
-pub trait LoweringDatabase: ProgramClauseSet + RustIrSource {
+pub trait LoweringDatabase: ChalkRulesDatabase + ProgramClauseSet + RustIrSource {
     #[salsa::input]
     fn program_text(&self) -> Arc<String>;
 
@@ -38,6 +41,15 @@ pub trait LoweringDatabase: ProgramClauseSet + RustIrSource {
 
     /// The program as logic.
     fn environment(&self) -> Result<Arc<ProgramEnvironment>, ChalkError>;
+
+    /// Creates the solver we can use to solve goals. This solver
+    /// stores intermediate, cached state, which is why it is behind a
+    /// mutex. Moreover, if the set of program clauses change, that
+    /// cached state becomes invalid, so the query is marked as
+    /// volatile, thus ensuring that the solver is recreated in every
+    /// revision (i.e., each time source program changes).
+    #[salsa::volatile]
+    fn solver(&self) -> Arc<Mutex<Solver>>;
 }
 
 fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
@@ -67,7 +79,7 @@ fn coherence(
         .trait_data
         .keys()
         .map(|&trait_id| {
-            let solver = CoherenceSolver::new(db, db, db.solver_choice(), trait_id);
+            let solver = CoherenceSolver::new(db, trait_id);
             let priorities = solver.specialization_priorities()?;
             Ok((trait_id, priorities))
         })
@@ -85,11 +97,7 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
     db.coherence()?;
 
     let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
-        let solver = wf::WfSolver {
-            program: db,
-            env: db,
-            solver_choice: db.solver_choice(),
-        };
+        let solver = wf::WfSolver::new(db);
 
         for &id in program.struct_data.keys() {
             solver.verify_struct_decl(id)?;
@@ -176,4 +184,9 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         coinductive_traits,
         program_clauses,
     )))
+}
+
+fn solver(db: &impl LoweringDatabase) -> Arc<Mutex<Solver>> {
+    let choice = db.solver_choice();
+    Arc::new(Mutex::new(choice.into_solver()))
 }

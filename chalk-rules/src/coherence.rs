@@ -1,9 +1,7 @@
 use petgraph::prelude::*;
 
-use crate::RustIrSource;
+use crate::ChalkRulesDatabase;
 use chalk_ir::{self, Identifier, ImplId, TraitId};
-use chalk_solve::ProgramClauseSet;
-use chalk_solve::SolverChoice;
 use derive_new::new;
 use failure::Fallible;
 use std::collections::BTreeMap;
@@ -13,10 +11,11 @@ pub mod orphan;
 mod solve;
 
 #[derive(new)]
-pub struct CoherenceSolver<'me> {
-    program: &'me dyn RustIrSource,
-    env: &'me dyn ProgramClauseSet,
-    solver_choice: SolverChoice,
+pub struct CoherenceSolver<'db, DB>
+where
+    DB: ChalkRulesDatabase,
+{
+    db: &'db DB,
     trait_id: TraitId,
 }
 
@@ -55,7 +54,10 @@ impl SpecializationPriorities {
 #[derive(Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub struct SpecializationPriority(usize);
 
-impl<'me> CoherenceSolver<'me> {
+impl<'db, DB> CoherenceSolver<'db, DB>
+where
+    DB: ChalkRulesDatabase,
+{
     pub fn specialization_priorities(&self) -> Fallible<Arc<SpecializationPriorities>> {
         let mut result = SpecializationPriorities::default();
 

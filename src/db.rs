@@ -8,6 +8,7 @@ use chalk_ir::DomainGoal;
 use chalk_ir::Goal;
 use chalk_ir::Identifier;
 use chalk_ir::ImplId;
+use chalk_ir::InEnvironment;
 use chalk_ir::IsCoinductive;
 use chalk_ir::Parameter;
 use chalk_ir::ProgramClause;
@@ -18,12 +19,16 @@ use chalk_ir::Ty;
 use chalk_ir::TypeId;
 use chalk_ir::TypeKindId;
 use chalk_ir::TypeName;
+use chalk_ir::UCanonical;
+use chalk_rules::ChalkRulesDatabase;
+use chalk_rules::GoalSolver;
 use chalk_rules::RustIrSource;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_solve::ProgramClauseSet;
+use chalk_solve::Solution;
 use chalk_solve::SolverChoice;
 use salsa::Database;
 use std::sync::Arc;
@@ -160,3 +165,13 @@ impl RustIrSource for ChalkDatabase {
         self.program_ir().unwrap().split_projection(projection)
     }
 }
+
+impl GoalSolver for ChalkDatabase {
+    fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
+        let solver = self.solver();
+        let solution = solver.lock().unwrap().solve(self, goal);
+        solution
+    }
+}
+
+impl ChalkRulesDatabase for ChalkDatabase {}

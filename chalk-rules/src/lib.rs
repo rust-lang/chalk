@@ -5,11 +5,18 @@ extern crate failure;
 
 use chalk_ir::*;
 use chalk_rust_ir::*;
+use chalk_solve::Solution;
 use std::sync::Arc;
 
 pub mod clauses;
 pub mod coherence;
 pub mod wf;
+
+pub trait ChalkRulesDatabase: GoalSolver + RustIrSource {}
+
+pub trait GoalSolver {
+    fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution>;
+}
 
 pub trait RustIrSource {
     /// Convert to a dyn trait value representing `self`. This is a

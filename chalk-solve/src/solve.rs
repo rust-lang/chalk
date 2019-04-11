@@ -136,6 +136,12 @@ impl Solver {
     }
 }
 
+impl std::fmt::Debug for Solver {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "Solver {{ .. }}")
+    }
+}
+
 /// Wrapper around a `Solver` that exposes
 /// additional methods meant only for testing.
 pub struct TestSolver {
