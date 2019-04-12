@@ -20,10 +20,6 @@ path = "../chalk-macros"
 version = "0.9.0"
 path = "../chalk-engine"
 
-[dependencies.chalk-parse]
-version = "0.1.0"
-path = "../chalk-parse"
-
 [dependencies.chalk-ir]
 version = "0.1.0"
 path = "../chalk-ir"

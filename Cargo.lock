@@ -199,7 +199,6 @@ dependencies = [
  "chalk-engine 0.9.0",
  "chalk-ir 0.1.0",
  "chalk-macros 0.1.1",
- "chalk-parse 0.1.0",
  "ena 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
