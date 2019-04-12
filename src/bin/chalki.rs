@@ -1,11 +1,3 @@
-extern crate chalk;
-extern crate chalk_engine;
-extern crate chalk_ir;
-extern crate chalk_parse;
-extern crate chalk_solve;
-extern crate docopt;
-extern crate rustyline;
-
 #[macro_use]
 extern crate serde_derive;
 
