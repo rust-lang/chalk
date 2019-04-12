@@ -59,12 +59,11 @@ fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
 
 fn orphan_check(db: &impl LoweringDatabase) -> Result<(), ChalkError> {
     let program = db.program_ir()?;
-    let solver_choice = db.solver_choice();
 
     tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let local_impls = program.local_impl_ids();
         for impl_id in local_impls {
-            orphan::perform_orphan_check(db, db, solver_choice, impl_id)?;
+            orphan::perform_orphan_check(db, impl_id)?;
         }
         Ok(())
     })

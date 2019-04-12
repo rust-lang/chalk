@@ -3,6 +3,7 @@
 use crate::db::ChalkDatabase;
 use crate::query::LoweringDatabase;
 use chalk_ir;
+use chalk_rules::GoalSolver;
 use chalk_solve::ext::*;
 use chalk_solve::{Solution, SolverChoice};
 
@@ -106,7 +107,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
 
             println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
-            let result = solver_choice.into_solver().solve(&db, &peeled_goal);
+            let result = db.solve(&peeled_goal);
             assert_result(&result, expected);
         });
     }
