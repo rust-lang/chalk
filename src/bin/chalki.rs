@@ -19,6 +19,7 @@ use std::process::exit;
 use chalk::db::ChalkDatabase;
 use chalk::lowering::*;
 use chalk::query::LoweringDatabase;
+use chalk_rules::GoalSolver;
 use chalk_solve::ext::*;
 use chalk_solve::SolverChoice;
 use docopt::Docopt;
@@ -63,6 +64,18 @@ impl LoadedProgram {
     fn new(text: String, solver_choice: SolverChoice) -> Fallible<LoadedProgram> {
         let db = ChalkDatabase::with(&text, solver_choice);
         Ok(LoadedProgram { text, db })
+    }
+
+    /// Parse a goal and attempt to solve it, using the specified solver.
+    fn goal(&self, text: &str) -> Fallible<()> {
+        let program = self.db.checked_program()?;
+        let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
+        let peeled_goal = goal.into_peeled_goal();
+        match self.db.solve(&peeled_goal) {
+            Some(v) => println!("{}\n", v),
+            None => println!("No possible solution.\n"),
+        }
+        Ok(())
     }
 }
 
@@ -109,7 +122,7 @@ fn run() -> Fallible<()> {
         // and exit.
         prog.db.with_program(|_| -> Fallible<()> {
             for g in &args.flag_goal {
-                if let Err(e) = goal(&args, g, &prog) {
+                if let Err(e) = prog.goal(g) {
                     eprintln!("error: {}", e);
                     exit(1);
                 }
@@ -197,7 +210,7 @@ fn process(
                 // Assume this is a goal.
                 // TODO: Print out "type 'help' to see available commands" if it
                 // fails to parse?
-                _ => goal(args, command, prog)?,
+                _ => prog.goal(command)?,
             }
             Ok(())
         })?
@@ -238,24 +251,6 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Fallible<String> {
         text += "\n";
     })?;
     Ok(text)
-}
-
-/// Parse a goal and attempt to solve it, using the specified solver.
-// TODO: Could we pass in an Options struct or something? The Args struct
-// still has Strings where it should have Enums... (e.g. solver_choice)
-fn goal(args: &Args, text: &str, prog: &LoadedProgram) -> Fallible<()> {
-    let program = prog.db.checked_program()?;
-    let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
-    let peeled_goal = goal.into_peeled_goal();
-    match args
-        .solver_choice()
-        .into_solver()
-        .solve(&prog.db, &peeled_goal)
-    {
-        Some(v) => println!("{}\n", v),
-        None => println!("No possible solution.\n"),
-    }
-    Ok(())
 }
 
 impl Args {
