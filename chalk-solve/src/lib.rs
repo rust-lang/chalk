@@ -7,7 +7,7 @@ pub mod ext;
 mod infer;
 mod solve;
 
-pub use solve::ProgramClauseSet;
+pub use solve::ChalkSolveDatabase;
 pub use solve::Solution;
 pub use solve::Solver;
 pub use solve::SolverChoice;

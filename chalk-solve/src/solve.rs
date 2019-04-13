@@ -124,7 +124,7 @@ impl Solver {
     ///   although `solution` may reflect ambiguity and unknowns.
     pub fn solve(
         &mut self,
-        program: &dyn ProgramClauseSet,
+        program: &dyn ChalkSolveDatabase,
         goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Option<Solution> {
         let ops = self.forest.context().ops(program);
@@ -168,7 +168,7 @@ impl TestSolver {
     /// its debug representation).
     pub fn force_answers(
         &mut self,
-        program: &dyn ProgramClauseSet,
+        program: &dyn ChalkSolveDatabase,
         goal: &UCanonical<InEnvironment<Goal>>,
         num_answers: usize,
     ) -> Box<std::fmt::Debug> {
@@ -180,7 +180,7 @@ impl TestSolver {
     /// testing.
     pub fn num_cached_answers_for_goal(
         &mut self,
-        program: &dyn ProgramClauseSet,
+        program: &dyn ChalkSolveDatabase,
         goal: &UCanonical<InEnvironment<Goal>>,
     ) -> usize {
         let ops = self.forest.context().ops(program);
@@ -190,10 +190,10 @@ impl TestSolver {
 
 /// The trait for defining the program clauses that are in scope when
 /// solving a goal.
-pub trait ProgramClauseSet: Debug + IsCoinductive {
+pub trait ChalkSolveDatabase: Debug + IsCoinductive {
     /// Convert to a dyn trait value representing `self`. This is a
     /// workaround for the lack of proper upcasting in Rust.
-    fn as_dyn(&self) -> &dyn ProgramClauseSet;
+    fn as_dyn(&self) -> &dyn ChalkSolveDatabase;
 
     /// Returns a set of program clauses that could possibly match
     /// `goal`. This can be any superset of the correct set, but the

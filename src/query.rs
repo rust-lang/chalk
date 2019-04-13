@@ -13,7 +13,7 @@ use chalk_rules::coherence::{CoherenceSolver, SpecializationPriorities};
 use chalk_rules::wf;
 use chalk_rules::ChalkRulesDatabase;
 use chalk_rules::RustIrSource;
-use chalk_solve::ProgramClauseSet;
+use chalk_solve::ChalkSolveDatabase;
 use chalk_solve::Solver;
 use chalk_solve::SolverChoice;
 use std::collections::BTreeMap;
@@ -21,7 +21,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 #[salsa::query_group(Lowering)]
-pub trait LoweringDatabase: ChalkRulesDatabase + ProgramClauseSet + RustIrSource {
+pub trait LoweringDatabase: ChalkRulesDatabase + ChalkSolveDatabase + RustIrSource {
     #[salsa::input]
     fn program_text(&self) -> Arc<String>;
 

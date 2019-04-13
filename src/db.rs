@@ -27,7 +27,7 @@ use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
-use chalk_solve::ProgramClauseSet;
+use chalk_solve::ChalkSolveDatabase;
 use chalk_solve::Solution;
 use chalk_solve::SolverChoice;
 use salsa::Database;
@@ -64,8 +64,8 @@ impl ChalkDatabase {
     }
 }
 
-impl ProgramClauseSet for ChalkDatabase {
-    fn as_dyn(&self) -> &dyn ProgramClauseSet {
+impl ChalkSolveDatabase for ChalkDatabase {
+    fn as_dyn(&self) -> &dyn ChalkSolveDatabase {
         self
     }
 
