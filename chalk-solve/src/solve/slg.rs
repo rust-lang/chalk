@@ -1,9 +1,10 @@
+use crate::coinductive_goal::IsCoinductive;
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
 use crate::solve::truncate::{self, Truncated};
-use crate::solve::ChalkSolveDatabase;
 use crate::solve::Solution;
+use crate::ChalkSolveDatabase;
 use chalk_engine::fallible::Fallible;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::could_match::CouldMatch;
@@ -120,7 +121,7 @@ impl context::Context for SlgContext {
 
 impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
     fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal>>) -> bool {
-        goal.is_coinductive(IsCoinductive::as_dyn(self.program))
+        goal.is_coinductive(self.program)
     }
 
     fn instantiate_ucanonical_goal<R>(

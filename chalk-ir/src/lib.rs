@@ -53,14 +53,6 @@ pub mod tls;
 
 pub type Identifier = InternedString;
 
-pub trait IsCoinductive {
-    /// Convert to a dyn trait value representing `self`. This is a
-    /// workaround for the lack of proper upcasting in Rust.
-    fn as_dyn(&self) -> &dyn IsCoinductive;
-
-    fn is_coinductive_trait(&self, trait_id: TraitId) -> bool;
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
@@ -925,16 +917,6 @@ impl<T> UCanonical<T> {
     }
 }
 
-impl UCanonical<InEnvironment<Goal>> {
-    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`, or if it is of the
-    /// form `WellFormed(T: Trait)` where `Trait` is any trait. The latter is needed for dealing
-    /// with WF requirements and cyclic traits, which generates cycles in the proof tree which must
-    /// not be rejected but instead must be treated as a success.
-    pub fn is_coinductive(&self, program: &dyn IsCoinductive) -> bool {
-        self.canonical.value.goal.is_coinductive(program)
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum Goal {
@@ -998,18 +980,6 @@ impl Goal {
 
     pub fn implied_by(self, predicates: Vec<ProgramClause>) -> Goal {
         Goal::Implies(predicates, Box::new(self))
-    }
-
-    pub fn is_coinductive(&self, program: &dyn IsCoinductive) -> bool {
-        match self {
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => match wca {
-                WhereClause::Implemented(tr) => program.is_coinductive_trait(tr.trait_id),
-                WhereClause::ProjectionEq(..) => false,
-            },
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..)))) => true,
-            Goal::Quantified(QuantifierKind::ForAll, goal) => goal.value.is_coinductive(program),
-            _ => false,
-        }
     }
 }
 

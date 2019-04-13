@@ -19,10 +19,6 @@ pub trait GoalSolver {
 }
 
 pub trait RustIrSource {
-    /// Convert to a dyn trait value representing `self`. This is a
-    /// workaround for the lack of proper upcasting in Rust.
-    fn as_dyn(&self) -> &dyn RustIrSource;
-
     /// Returns the datum for the associated type with the given id.
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
 

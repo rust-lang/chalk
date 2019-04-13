@@ -1,11 +1,8 @@
 use crate::solve::slg::SlgContext;
+use crate::ChalkSolveDatabase;
 use chalk_engine::forest::Forest;
-use chalk_ir::DomainGoal;
-use chalk_ir::IsCoinductive;
-use chalk_ir::ProgramClause;
 use chalk_ir::*;
 use std::fmt;
-use std::fmt::Debug;
 
 mod slg;
 mod truncate;
@@ -186,18 +183,4 @@ impl TestSolver {
         let ops = self.forest.context().ops(program);
         self.forest.num_cached_answers_for_goal(&ops, goal)
     }
-}
-
-/// The trait for defining the program clauses that are in scope when
-/// solving a goal.
-pub trait ChalkSolveDatabase: Debug + IsCoinductive {
-    /// Convert to a dyn trait value representing `self`. This is a
-    /// workaround for the lack of proper upcasting in Rust.
-    fn as_dyn(&self) -> &dyn ChalkSolveDatabase;
-
-    /// Returns a set of program clauses that could possibly match
-    /// `goal`. This can be any superset of the correct set, but the
-    /// more precise you can make it, the more efficient solving will
-    /// be.
-    fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>);
 }

@@ -9,7 +9,6 @@ use chalk_ir::Goal;
 use chalk_ir::Identifier;
 use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
-use chalk_ir::IsCoinductive;
 use chalk_ir::Parameter;
 use chalk_ir::ProgramClause;
 use chalk_ir::ProjectionTy;
@@ -65,10 +64,6 @@ impl ChalkDatabase {
 }
 
 impl ChalkSolveDatabase for ChalkDatabase {
-    fn as_dyn(&self) -> &dyn ChalkSolveDatabase {
-        self
-    }
-
     fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>) {
         if let Ok(env) = self.environment() {
             vec.extend(
@@ -78,12 +73,6 @@ impl ChalkSolveDatabase for ChalkDatabase {
                     .cloned(),
             );
         }
-    }
-}
-
-impl IsCoinductive for ChalkDatabase {
-    fn as_dyn(&self) -> &dyn IsCoinductive {
-        self
     }
 
     fn is_coinductive_trait(&self, trait_id: TraitId) -> bool {
@@ -96,10 +85,6 @@ impl IsCoinductive for ChalkDatabase {
 }
 
 impl RustIrSource for ChalkDatabase {
-    fn as_dyn(&self) -> &dyn RustIrSource {
-        self
-    }
-
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
         self.program_ir().unwrap().associated_ty_data[&ty].clone()
     }
