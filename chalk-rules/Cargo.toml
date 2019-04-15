@@ -1,0 +1,28 @@
+[package]
+name = "chalk-rules"
+version = "0.1.0"
+authors = ["Rust Compiler Team", "Chalk developers"]
+edition = "2018"
+
+[dependencies]
+derive-new = "0.5.6"
+failure = "0.1"
+itertools = "0.7.8"
+petgraph = "0.4.13"
+
+[dependencies.chalk-ir]
+version = "0.1.0"
+path = "../chalk-ir"
+
+[dependencies.chalk-rust-ir]
+version = "0.1.0"
+path = "../chalk-rust-ir"
+
+[dependencies.chalk-solve]
+version = "0.1.0"
+path = "../chalk-solve"
+
+[dependencies.chalk-macros]
+version = "0.1.0"
+path = "../chalk-macros"
+

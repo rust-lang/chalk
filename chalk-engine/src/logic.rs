@@ -9,7 +9,6 @@ use crate::{
     DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal, Minimums, TableIndex,
 };
 use rustc_hash::FxHashSet;
-use std::marker::PhantomData;
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -81,19 +80,20 @@ enum EnsureSuccess {
     Coinductive,
 }
 
-impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
+impl<C: Context> Forest<C> {
     /// Ensures that answer with the given index is available from the
     /// given table. This may require activating a strand. Returns
     /// `Ok(())` if the answer is available and otherwise a
     /// `RootSearchFail` result.
     pub(super) fn ensure_root_answer(
         &mut self,
+        context: &impl ContextOps<C>,
         table: TableIndex,
         answer: AnswerIndex,
     ) -> RootSearchResult<()> {
         assert!(self.stack.is_empty());
 
-        match self.ensure_answer_recursively(table, answer) {
+        match self.ensure_answer_recursively(context, table, answer) {
             Ok(EnsureSuccess::AnswerAvailable) => Ok(()),
             Err(RecursiveSearchFail::NoMoreSolutions) => Err(RootSearchFail::NoMoreSolutions),
             Err(RecursiveSearchFail::QuantumExceeded) => Err(RootSearchFail::QuantumExceeded),
@@ -114,11 +114,11 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     ) -> bool {
         if let Some(answer) = self.tables[table].answer(answer) {
             info!("answer cached = {:?}", answer);
-            return test(CO::inference_normalized_subst_from_subst(&answer.subst));
+            return test(C::inference_normalized_subst_from_subst(&answer.subst));
         }
 
         self.tables[table].strands_mut().any(|strand| {
-            test(CO::inference_normalized_subst_from_ex_clause(
+            test(C::inference_normalized_subst_from_ex_clause(
                 &strand.canonical_ex_clause,
             ))
         })
@@ -144,6 +144,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// possible.
     fn ensure_answer_recursively(
         &mut self,
+        context: &impl ContextOps<C>,
         table: TableIndex,
         answer: AnswerIndex,
     ) -> RecursiveSearchResult<EnsureSuccess> {
@@ -181,7 +182,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
 
         let dfn = self.next_dfn();
         let depth = self.stack.push(table, dfn);
-        let result = self.pursue_next_strand(depth);
+        let result = self.pursue_next_strand(context, depth);
         self.stack.pop(table, depth);
         info!("ensure_answer: result = {:?}", result);
         result.map(|()| EnsureSuccess::AnswerAvailable)
@@ -197,7 +198,11 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// reaches one that did not encounter a cycle; that result is
     /// propagated.  If all strands return a cycle, then the entire
     /// subtree is "completed" by invoking `cycle`.
-    fn pursue_next_strand(&mut self, depth: StackIndex) -> RecursiveSearchResult<()> {
+    fn pursue_next_strand(
+        &mut self,
+        context: &impl ContextOps<C>,
+        depth: StackIndex,
+    ) -> RecursiveSearchResult<()> {
         // This is a bit complicated because this is where we handle cycles.
         let table = self.stack[depth].table;
 
@@ -210,13 +215,14 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         loop {
             match self.tables[table].pop_next_strand() {
                 Some(canonical_strand) => {
-                    let num_universes = CO::num_universes(&self.tables[table].table_goal);
+                    let num_universes = C::num_universes(&self.tables[table].table_goal);
                     let result = Self::with_instantiated_strand(
-                        self.context.clone(),
+                        context,
                         num_universes,
                         &canonical_strand,
                         PursueStrand {
                             forest: self,
+                            context,
                             depth,
                         },
                     );
@@ -258,7 +264,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
                         return Err(RecursiveSearchFail::NoMoreSolutions);
                     } else {
                         let c = mem::replace(&mut cyclic_strands, vec![]);
-                        if let Some(err) = self.cycle(depth, c, cyclic_minimums) {
+                        if let Some(err) = self.cycle(context, depth, c, cyclic_minimums) {
                             return Err(err);
                         }
                     }
@@ -268,10 +274,10 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     }
 
     fn with_instantiated_strand<R>(
-        context: CO,
+        context: &impl ContextOps<C>,
         num_universes: usize,
         canonical_strand: &CanonicalStrand<C>,
-        op: impl WithInstantiatedStrand<C, CO, Output = R>,
+        op: impl WithInstantiatedStrand<C, Output = R>,
     ) -> R {
         let CanonicalStrand {
             canonical_ex_clause,
@@ -283,19 +289,15 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             With {
                 op,
                 selected_subgoal: selected_subgoal.clone(),
-                ops: PhantomData,
             },
         );
 
-        struct With<C: Context, CO: ContextOps<C>, OP: WithInstantiatedStrand<C, CO>> {
+        struct With<C: Context, OP: WithInstantiatedStrand<C>> {
             op: OP,
             selected_subgoal: Option<SelectedSubgoal<C>>,
-            ops: PhantomData<CO>,
         }
 
-        impl<C: Context, CO: ContextOps<C>, OP: WithInstantiatedStrand<C, CO>>
-            WithInstantiatedExClause<C> for With<C, CO, OP>
-        {
+        impl<C: Context, OP: WithInstantiatedStrand<C>> WithInstantiatedExClause<C> for With<C, OP> {
             type Output = OP::Output;
 
             fn with<I: Context>(
@@ -343,6 +345,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// an error that we can propagate higher up.
     fn cycle(
         &mut self,
+        context: &impl ContextOps<C>,
         depth: StackIndex,
         strands: Vec<CanonicalStrand<C>>,
         minimums: Minimums,
@@ -362,7 +365,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             let mut visited = FxHashSet::default();
             visited.insert(table);
             self.tables[table].extend_strands(strands);
-            self.delay_strands_after_cycle(table, &mut visited);
+            self.delay_strands_after_cycle(context, table, &mut visited);
             None
         } else {
             self.tables[table].extend_strands(strands);
@@ -407,12 +410,13 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// converts them to delayed literals.
     fn delay_strands_after_cycle(
         &mut self,
+        context: &impl ContextOps<C>,
         table: TableIndex,
         visited: &mut FxHashSet<TableIndex>,
     ) {
         let mut tables = vec![];
 
-        let num_universes = CO::num_universes(&self.tables[table].table_goal);
+        let num_universes = C::num_universes(&self.tables[table].table_goal);
         for canonical_strand in self.tables[table].strands_mut() {
             // FIXME if CanonicalExClause were not held abstract, we
             // could do this in place like we used to (and
@@ -420,7 +424,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             // don't really need to instantiate here to do this
             // operation.
             let (delayed_strand, subgoal_table) = Self::with_instantiated_strand(
-                self.context.clone(),
+                context,
                 num_universes,
                 canonical_strand,
                 DelayStrandAfterCycle { table },
@@ -434,7 +438,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         }
 
         for table in tables {
-            self.delay_strands_after_cycle(table, visited);
+            self.delay_strands_after_cycle(context, table, visited);
         }
     }
 
@@ -475,6 +479,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// the table on the stack at the given `depth`.
     fn pursue_strand(
         &mut self,
+        context: &impl ContextOps<C>,
         depth: StackIndex,
         mut strand: Strand<'_, C, impl Context>,
     ) -> StrandResult<C, ()> {
@@ -503,6 +508,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
 
             // Get or create table for this subgoal.
             match self.get_or_create_table_for_subgoal(
+                context,
                 &mut *strand.infer,
                 &strand.ex_clause.subgoals[subgoal_index],
             ) {
@@ -534,8 +540,12 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         // Find the selected subgoal and ask it for the next answer.
         let selected_subgoal = strand.selected_subgoal.clone().unwrap();
         match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
-            Literal::Positive(_) => self.pursue_positive_subgoal(depth, strand, &selected_subgoal),
-            Literal::Negative(_) => self.pursue_negative_subgoal(depth, strand, &selected_subgoal),
+            Literal::Positive(_) => {
+                self.pursue_positive_subgoal(context, depth, strand, &selected_subgoal)
+            }
+            Literal::Negative(_) => {
+                self.pursue_negative_subgoal(context, depth, strand, &selected_subgoal)
+            }
         }
     }
 
@@ -643,8 +653,8 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         // must be backed by an impl *eventually*).
         let is_trivial_answer = {
             answer.delayed_literals.is_empty()
-                && CO::is_trivial_substitution(&self.tables[table].table_goal, &answer.subst)
-                && CO::empty_constraints(&answer.subst)
+                && C::is_trivial_substitution(&self.tables[table].table_goal, &answer.subst)
+                && C::empty_constraints(&answer.subst)
         };
 
         if self.tables[table].push_answer(answer) {
@@ -674,6 +684,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// Resolution* steps.
     fn get_or_create_table_for_subgoal<I: Context>(
         &mut self,
+        context: &impl ContextOps<C>,
         infer: &mut dyn InferenceTable<C, I>,
         subgoal: &Literal<I>,
     ) -> Option<(TableIndex, C::UniverseMap)> {
@@ -689,7 +700,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
 
         let (ucanonical_subgoal, universe_map) = infer.u_canonicalize_goal(&canonical_subgoal);
 
-        let table = self.get_or_create_table_for_ucanonical_goal(ucanonical_subgoal);
+        let table = self.get_or_create_table_for_ucanonical_goal(context, ucanonical_subgoal);
 
         Some((table, universe_map))
     }
@@ -703,6 +714,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// Resolution* steps.
     pub(crate) fn get_or_create_table_for_ucanonical_goal(
         &mut self,
+        context: &impl ContextOps<C>,
         goal: C::UCanonicalGoalInEnvironment,
     ) -> TableIndex {
         debug_heading!("get_or_create_table_for_ucanonical_goal({:?})", goal);
@@ -717,9 +729,9 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             self.tables.next_index(),
             goal
         );
-        let coinductive_goal = self.context.is_coinductive(&goal);
+        let coinductive_goal = context.is_coinductive(&goal);
         let table = self.tables.insert(goal, coinductive_goal);
-        self.push_initial_strands(table);
+        self.push_initial_strands(context, table);
         table
     }
 
@@ -734,22 +746,20 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// In terms of the NFTD paper, this corresponds to the *Program
     /// Clause Resolution* step being applied eagerly, as many times
     /// as possible.
-    fn push_initial_strands(&mut self, table: TableIndex) {
+    fn push_initial_strands(&mut self, context: &impl ContextOps<C>, table: TableIndex) {
         // Instantiate the table goal with fresh inference variables.
         let table_goal = self.tables[table].table_goal.clone();
-        self.context.clone().instantiate_ucanonical_goal(
+        context.instantiate_ucanonical_goal(
             &table_goal,
             PushInitialStrandsInstantiated { table, this: self },
         );
 
-        struct PushInitialStrandsInstantiated<'a, C: Context + 'a, CO: ContextOps<C> + 'a> {
+        struct PushInitialStrandsInstantiated<'a, C: Context + 'a> {
             table: TableIndex,
-            this: &'a mut Forest<C, CO>,
+            this: &'a mut Forest<C>,
         }
 
-        impl<'a, C: Context, CO: ContextOps<C>> WithInstantiatedUCanonicalGoal<C>
-            for PushInitialStrandsInstantiated<'a, C, CO>
-        {
+        impl<'a, C: Context> WithInstantiatedUCanonicalGoal<C> for PushInitialStrandsInstantiated<'a, C> {
             type Output = ();
 
             fn with<I: Context>(
@@ -983,6 +993,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// from the NFTD paper.
     fn pursue_positive_subgoal(
         &mut self,
+        context: &impl ContextOps<C>,
         depth: StackIndex,
         mut strand: Strand<'_, C, impl Context>,
         selected_subgoal: &SelectedSubgoal<C>,
@@ -995,7 +1006,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             ref universe_map,
         } = *selected_subgoal;
 
-        match self.ensure_answer_recursively(subgoal_table, answer_index) {
+        match self.ensure_answer_recursively(context, subgoal_table, answer_index) {
             Ok(EnsureSuccess::AnswerAvailable) => {
                 // The given answer is available; we'll process it below.
             }
@@ -1016,6 +1027,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
                 } = strand;
                 ex_clause.subgoals.remove(subgoal_index);
                 return self.pursue_strand_recursively(
+                    context,
                     depth,
                     Strand {
                         infer,
@@ -1062,11 +1074,11 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
             ),
         };
 
-        let table_goal = &CO::map_goal_from_canonical(
+        let table_goal = &C::map_goal_from_canonical(
             &universe_map,
-            &CO::canonical(&self.tables[subgoal_table].table_goal),
+            &C::canonical(&self.tables[subgoal_table].table_goal),
         );
-        let answer_subst = &CO::map_subst_from_canonical(
+        let answer_subst = &C::map_subst_from_canonical(
             &universe_map,
             &self.answer(subgoal_table, answer_index).subst,
         );
@@ -1090,6 +1102,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
                 let ex_clause = self.truncate_returned(ex_clause, &mut *infer);
 
                 self.pursue_strand_recursively(
+                    context,
                     depth,
                     Strand {
                         infer,
@@ -1178,10 +1191,11 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     // check in case we have to grow the stack.
     fn pursue_strand_recursively(
         &mut self,
+        context: &impl ContextOps<C>,
         depth: StackIndex,
         strand: Strand<'_, C, impl Context>,
     ) -> StrandResult<C, ()> {
-        crate::maybe_grow_stack(|| self.pursue_strand(depth, strand))
+        crate::maybe_grow_stack(|| self.pursue_strand(context, depth, strand))
     }
 
     /// Invoked when we have found a successful answer to the given
@@ -1205,6 +1219,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
 
     fn pursue_negative_subgoal(
         &mut self,
+        context: &impl ContextOps<C>,
         depth: StackIndex,
         strand: Strand<'_, C, impl Context>,
         selected_subgoal: &SelectedSubgoal<C>,
@@ -1226,7 +1241,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         // Before exiting the match, then, we set `delayed_literal` to
         // either `Some` or `None` depending.
         let delayed_literal: Option<DelayedLiteral<_>>;
-        match self.ensure_answer_recursively(subgoal_table, answer_index) {
+        match self.ensure_answer_recursively(context, subgoal_table, answer_index) {
             Ok(EnsureSuccess::AnswerAvailable) => {
                 if self.answer(subgoal_table, answer_index).is_unconditional() {
                     // We want to disproval the subgoal, but we
@@ -1313,6 +1328,7 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
         ex_clause.subgoals.remove(selected_subgoal.subgoal_index); // (i)
         ex_clause.delayed_literals.extend(delayed_literal); // (ii)
         self.pursue_strand_recursively(
+            context,
             depth,
             Strand {
                 infer,
@@ -1323,22 +1339,23 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     }
 }
 
-trait WithInstantiatedStrand<C: Context, CO: AggregateOps<C>> {
+trait WithInstantiatedStrand<C: Context> {
     type Output;
 
     fn with(self, strand: Strand<'_, C, impl Context>) -> Self::Output;
 }
 
-struct PursueStrand<'a, C: Context + 'a, CO: ContextOps<C> + 'a> {
-    forest: &'a mut Forest<C, CO>,
+struct PursueStrand<'me, C: Context, CO: ContextOps<C>> {
+    forest: &'me mut Forest<C>,
+    context: &'me CO,
     depth: StackIndex,
 }
 
-impl<'a, C: Context, CO: ContextOps<C>> WithInstantiatedStrand<C, CO> for PursueStrand<'a, C, CO> {
+impl<'me, C: Context, CO: ContextOps<C>> WithInstantiatedStrand<C> for PursueStrand<'me, C, CO> {
     type Output = StrandResult<C, ()>;
 
     fn with(self, strand: Strand<'_, C, impl Context>) -> Self::Output {
-        self.forest.pursue_strand(self.depth, strand)
+        self.forest.pursue_strand(self.context, self.depth, strand)
     }
 }
 
@@ -1346,10 +1363,10 @@ struct DelayStrandAfterCycle {
     table: TableIndex,
 }
 
-impl<C: Context, CO: ContextOps<C>> WithInstantiatedStrand<C, CO> for DelayStrandAfterCycle {
+impl<C: Context> WithInstantiatedStrand<C> for DelayStrandAfterCycle {
     type Output = (CanonicalStrand<C>, TableIndex);
 
     fn with(self, strand: Strand<'_, C, impl Context>) -> Self::Output {
-        <Forest<C, CO>>::delay_strand_after_cycle(self.table, strand)
+        <Forest<C>>::delay_strand_after_cycle(self.table, strand)
     }
 }

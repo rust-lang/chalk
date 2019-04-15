@@ -1,5 +1,5 @@
 use crate::infer::InferenceTable;
-use crate::solve::slg::implementation::{self, SlgContext, TruncatingInferenceTable};
+use crate::solve::slg::{self, SlgContext, TruncatingInferenceTable};
 use chalk_engine::fallible::Fallible;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
@@ -46,7 +46,7 @@ use std::sync::Arc;
 //
 // is the SLG resolvent of G with C.
 
-impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable {
+impl<'me> context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
     /// Applies the SLG resolvent algorithm to incorporate a program
     /// clause into the main X-clause, producing a new X-clause that
     /// must be solved.
@@ -105,7 +105,7 @@ impl context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceTable 
         };
 
         // Add the subgoals/region-constraints that unification gave us.
-        implementation::into_ex_clause(unification_result, &mut ex_clause);
+        slg::into_ex_clause(unification_result, &mut ex_clause);
 
         // Add the `conditions` from the program clause into the result too.
         ex_clause
@@ -293,7 +293,7 @@ impl<'t> AnswerSubstitutor<'t> {
                 )
             });
 
-        implementation::into_ex_clause(
+        slg::into_ex_clause(
             self.table
                 .unify(&self.environment, answer_param, &Parameter(pending_shifted))?,
             &mut self.ex_clause,

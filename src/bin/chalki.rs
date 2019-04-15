@@ -1,11 +1,3 @@
-extern crate chalk;
-extern crate chalk_engine;
-extern crate chalk_ir;
-extern crate chalk_parse;
-extern crate chalk_solve;
-extern crate docopt;
-extern crate rustyline;
-
 #[macro_use]
 extern crate serde_derive;
 
@@ -15,15 +7,13 @@ extern crate failure;
 use std::fs::File;
 use std::io::Read;
 use std::process::exit;
-use std::sync::Arc;
 
 use chalk::db::ChalkDatabase;
+use chalk::lowering::*;
 use chalk::query::LoweringDatabase;
-use chalk::rust_ir;
-use chalk::rust_ir::lowering::*;
-use chalk_engine::fallible::NoSolution;
+use chalk_rules::GoalSolver;
 use chalk_solve::ext::*;
-use chalk_solve::solve::SolverChoice;
+use chalk_solve::SolverChoice;
 use docopt::Docopt;
 use failure::Fallible;
 use rustyline::error::ReadlineError;
@@ -53,23 +43,31 @@ struct Args {
 }
 
 /// A loaded and parsed program.
-struct Program {
+struct LoadedProgram {
     text: String,
-    ir: Arc<rust_ir::Program>,
-    env: Arc<chalk_ir::ProgramEnvironment>,
+    db: ChalkDatabase,
 }
 
-impl Program {
+impl LoadedProgram {
     /// Creates a new Program struct, given a `.chalk` file as a String and
     /// a [`SolverChoice`].
     ///
     /// [`SolverChoice`]: struct.solve.SolverChoice.html
-    fn new(text: String, solver_choice: SolverChoice) -> Fallible<Program> {
-        ChalkDatabase::with_program(Arc::new(text.clone()), solver_choice, |db| {
-            let ir = db.checked_program().unwrap();
-            let env = db.environment().unwrap();
-            Ok(Program { text, ir, env })
-        })
+    fn new(text: String, solver_choice: SolverChoice) -> Fallible<LoadedProgram> {
+        let db = ChalkDatabase::with(&text, solver_choice);
+        Ok(LoadedProgram { text, db })
+    }
+
+    /// Parse a goal and attempt to solve it, using the specified solver.
+    fn goal(&self, text: &str) -> Fallible<()> {
+        let program = self.db.checked_program()?;
+        let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
+        let peeled_goal = goal.into_peeled_goal();
+        match self.db.solve(&peeled_goal) {
+            Some(v) => println!("{}\n", v),
+            None => println!("No possible solution.\n"),
+        }
+        Ok(())
     }
 }
 
@@ -114,9 +112,9 @@ fn run() -> Fallible<()> {
 
         // Evaluate the goal(s). If any goal returns an error, print the error
         // and exit.
-        chalk_ir::tls::set_current_program(&prog.ir, || -> Fallible<()> {
+        prog.db.with_program(|_| -> Fallible<()> {
             for g in &args.flag_goal {
-                if let Err(e) = goal(&args, g, &prog) {
+                if let Err(e) = prog.goal(g) {
                     eprintln!("error: {}", e);
                     exit(1);
                 }
@@ -166,7 +164,7 @@ fn process(
     args: &Args,
     command: &str,
     rl: &mut rustyline::Editor<()>,
-    prog: &mut Option<Program>,
+    prog: &mut Option<LoadedProgram>,
 ) -> Fallible<()> {
     if command == "help" || command == "h" {
         // Print out interpreter commands.
@@ -174,7 +172,7 @@ fn process(
         help()
     } else if command == "program" {
         // Load a .chalk file via stdin, until EOF is found.
-        *prog = Some(Program::new(read_program(rl)?, args.solver_choice())?);
+        *prog = Some(LoadedProgram::new(read_program(rl)?, args.solver_choice())?);
     } else if command.starts_with("load ") {
         // Load a .chalk file.
         let filename = &command["load ".len()..];
@@ -193,18 +191,18 @@ fn process(
         ))?;
 
         // Attempt to parse the program.
-        chalk_ir::tls::set_current_program(&prog.ir, || -> Fallible<()> {
+        prog.db.with_program(|_| -> Fallible<()> {
             match command {
                 // Print out the loaded program.
                 "print" => println!("{}", prog.text),
 
                 // TODO: Write a line of documentation here.
-                "lowered" => println!("{:#?}", prog.env),
+                "lowered" => println!("{:#?}", prog.db.environment()),
 
                 // Assume this is a goal.
                 // TODO: Print out "type 'help' to see available commands" if it
                 // fails to parse?
-                _ => goal(args, command, prog)?,
+                _ => prog.goal(command)?,
             }
             Ok(())
         })?
@@ -216,10 +214,10 @@ fn process(
 /// Load the file into a string, and parse it.
 // TODO: Could we pass in an Options struct or something? The Args struct
 // still has Strings where it should have Enums... (e.g. solver_choice)
-fn load_program(args: &Args, filename: &str) -> Fallible<Program> {
+fn load_program(args: &Args, filename: &str) -> Fallible<LoadedProgram> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
-    Ok(Program::new(text, args.solver_choice())?)
+    Ok(LoadedProgram::new(text, args.solver_choice())?)
 }
 
 /// Print out help for commands in interpreter mode.
@@ -247,23 +245,6 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Fallible<String> {
     Ok(text)
 }
 
-/// Parse a goal and attempt to solve it, using the specified solver.
-// TODO: Could we pass in an Options struct or something? The Args struct
-// still has Strings where it should have Enums... (e.g. solver_choice)
-fn goal(args: &Args, text: &str, prog: &Program) -> Fallible<()> {
-    let goal = chalk_parse::parse_goal(text)?.lower(&*prog.ir)?;
-    let peeled_goal = goal.into_peeled_goal();
-    match args
-        .solver_choice()
-        .solve_root_goal(&prog.env, &peeled_goal)
-    {
-        Ok(Some(v)) => println!("{}\n", v),
-        Ok(None) => println!("No possible solution.\n"),
-        Err(NoSolution) => println!("Solver failed"),
-    }
-    Ok(())
-}
-
 impl Args {
     fn solver_choice(&self) -> SolverChoice {
         SolverChoice::SLG {
@@ -273,7 +254,7 @@ impl Args {
 }
 
 fn main() {
-    use ::std::io::Write;
+    use std::io::Write;
 
     ::std::process::exit(match run() {
         Ok(_) => 0,

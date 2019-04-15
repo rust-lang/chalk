@@ -56,7 +56,6 @@ pub struct TraitFlags {
     pub marker: bool,
     pub upstream: bool,
     pub fundamental: bool,
-    pub deref: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -235,7 +234,6 @@ pub enum DomainGoal {
     TyFromEnv { ty: Ty },
     TraitRefFromEnv { trait_ref: TraitRef },
     TraitInScope { trait_name: Identifier },
-    Derefs { source: Ty, target: Ty },
     IsLocal { ty: Ty },
     IsUpstream { ty: Ty },
     IsFullyVisible { ty: Ty },

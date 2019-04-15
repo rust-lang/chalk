@@ -1,51 +1,19 @@
 #![cfg(test)]
 
-use crate::db::ChalkDatabase;
-use crate::query::LoweringDatabase;
-use crate::rust_ir::lowering::LowerGoal;
-use crate::rust_ir::Program;
-use chalk_ir::Goal;
-use chalk_ir::ProgramEnvironment;
-use chalk_parse;
-use chalk_solve::solve::SolverChoice;
 use diff;
-use failure::Error;
 use itertools::Itertools;
 use std::fmt::Write;
-use std::sync::Arc;
-
-pub fn parse_and_lower_program(
-    text: &str,
-    solver_choice: SolverChoice,
-) -> Result<Arc<Program>, String> {
-    ChalkDatabase::with_program(Arc::new(text.to_string()), solver_choice, |db| {
-        db.checked_program()
-    })
-}
-
-pub fn parse_and_lower_program_with_env(
-    text: &str,
-    solver_choice: SolverChoice,
-) -> Result<(Arc<Program>, Arc<ProgramEnvironment>), String> {
-    ChalkDatabase::with_program(Arc::new(text.to_string()), solver_choice, |db| {
-        db.checked_program()
-            .and_then(|program| Ok((program, db.environment()?)))
-    })
-}
-
-pub fn parse_and_lower_goal(program: &Program, text: &str) -> Result<Box<Goal>, Error> {
-    chalk_parse::parse_goal(text)?.lower(program)
-}
 
 macro_rules! lowering_success {
     (program $program:tt) => {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let result = parse_and_lower_program(
+        let result = crate::db::ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
-            chalk_solve::solve::SolverChoice::default(),
-        );
+            chalk_solve::SolverChoice::default(),
+        )
+        .checked_program();
         if let Err(ref e) = result {
             println!("lowering error: {}", e);
         }
@@ -58,10 +26,11 @@ macro_rules! lowering_error {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let error = parse_and_lower_program(
+        let error = crate::db::ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
-            chalk_solve::solve::SolverChoice::default(),
+            chalk_solve::SolverChoice::default(),
         )
+        .checked_program()
         .unwrap_err();
         let expected = $expected;
         assert_eq!(error.to_string(), expected.to_string());

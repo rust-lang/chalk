@@ -10,7 +10,7 @@ use super::var::*;
 use super::*;
 
 impl InferenceTable {
-    pub fn unify<T>(
+    pub(crate) fn unify<T>(
         &mut self,
         environment: &Arc<Environment>,
         a: &T,
@@ -47,7 +47,7 @@ struct Unifier<'t> {
 }
 
 #[derive(Debug)]
-pub struct UnificationResult {
+pub(crate) struct UnificationResult {
     pub(crate) goals: Vec<InEnvironment<DomainGoal>>,
     pub(crate) constraints: Vec<InEnvironment<Constraint>>,
 }

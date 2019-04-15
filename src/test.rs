@@ -1,26 +1,23 @@
 #![cfg(test)]
 
-use crate::test_util::*;
-use chalk_engine::fallible::{Fallible, NoSolution};
+use crate::db::ChalkDatabase;
+use crate::query::LoweringDatabase;
 use chalk_ir;
+use chalk_rules::GoalSolver;
 use chalk_solve::ext::*;
-use chalk_solve::solve::{Solution, SolverChoice};
-use std::collections::HashMap;
+use chalk_solve::{Solution, SolverChoice};
 
 #[cfg(feature = "bench")]
 mod bench;
+mod coherence;
 mod slg;
+mod wf;
 
-fn result_to_string(result: &Fallible<Option<Solution>>) -> String {
-    match result {
-        Ok(Some(v)) => format!("{}", v),
-        Ok(None) => format!("No possible solution"),
-        Err(NoSolution) => format!("Error"),
-    }
-}
-
-fn assert_result(result: &Fallible<Option<Solution>>, expected: &str) {
-    let result = result_to_string(result);
+fn assert_result(result: &Option<Solution>, expected: &str) {
+    let result = match result {
+        Some(v) => format!("{}", v),
+        None => format!("No possible solution"),
+    };
 
     println!("expected:\n{}", expected);
     println!("actual:\n{}", result);
@@ -86,23 +83,31 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
-    let mut program_env_cache = HashMap::new();
+
+    let mut db = ChalkDatabase::with(
+        &program_text[1..program_text.len() - 1],
+        SolverChoice::default(),
+    );
+
     for (goal_text, solver_choice, expected) in goals {
-        let (program, env) = program_env_cache.entry(solver_choice).or_insert_with(|| {
-            let program_text = &program_text[1..program_text.len() - 1]; // exclude `{}`
-            parse_and_lower_program_with_env(program_text, solver_choice).unwrap()
-        });
+        if db.solver_choice() != solver_choice {
+            db.set_solver_choice(solver_choice);
+        }
+
+        let program = db.checked_program().unwrap();
 
         chalk_ir::tls::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
-            let goal = parse_and_lower_goal(&program, &goal_text[1..goal_text.len() - 1]).unwrap();
+            let goal = db
+                .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
+                .unwrap();
 
             println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
-            let result = solver_choice.solve_root_goal(&env, &peeled_goal);
+            let result = db.solve(&peeled_goal);
             assert_result(&result, expected);
         });
     }
@@ -2453,55 +2458,6 @@ fn recursive_where_clause_on_type() {
 
         goal {
             WellFormed(S)
-        } yields {
-            "No possible solution"
-        }
-    }
-}
-
-#[test]
-fn deref_goal() {
-    test! {
-        program {
-            #[lang_deref]
-            trait Deref { type Target; }
-            struct Foo { }
-            struct Bar { }
-            struct Baz { }
-            impl Deref for Foo { type Target = Bar; }
-        }
-
-        goal {
-            Derefs(Foo, Bar)
-        } yields {
-            "Unique"
-        }
-
-        goal {
-            Derefs(Foo, Baz)
-        } yields {
-            "No possible solution"
-        }
-    }
-
-    test! {
-        program {
-            #[lang_deref]
-            trait Deref { type Target; }
-            struct Arc<T> { }
-            struct i32 { }
-            struct u64 { }
-            impl<T> Deref for Arc<T> { type Target = T; }
-        }
-
-        goal {
-            Derefs(Arc<i32>, i32)
-        } yields {
-            "Unique"
-        }
-
-        goal {
-            Derefs(Arc<i32>, u64)
         } yields {
             "No possible solution"
         }

@@ -5,9 +5,8 @@ use self::test::Bencher;
 
 use crate::db::ChalkDatabase;
 use crate::query::{ProgramSolverChoice, ProgramText};
-use chalk_solve::solve::SolverChoice;
+use chalk_solve::SolverChoice;
 use ir;
-use ir::solve::SolverChoice;
 use std::sync::Arc;
 
 use super::{assert_result, parse_and_lower_goal, parse_and_lower_program};

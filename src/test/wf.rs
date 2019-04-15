@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::test_util::*;
+use crate::query::LoweringDatabase;
 
 #[test]
 fn well_formed_trait_decl() {

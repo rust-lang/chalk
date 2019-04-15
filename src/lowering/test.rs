@@ -1,8 +1,8 @@
 #![cfg(test)]
 
-use crate::test_util::*;
-use chalk_ir::tls;
-use chalk_solve::solve::SolverChoice;
+use crate::db::ChalkDatabase;
+use crate::query::LoweringDatabase;
+use chalk_solve::SolverChoice;
 
 #[test]
 fn lower_success() {
@@ -157,10 +157,11 @@ fn assoc_tys() {
 
 #[test]
 fn goal_quantifiers() {
-    let program = parse_and_lower_program("trait Foo<A, B> { }", SolverChoice::default()).unwrap();
-    let goal =
-        parse_and_lower_goal(&program, "forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}").unwrap();
-    tls::set_current_program(&program, || {
+    let db = ChalkDatabase::with("trait Foo<A, B> { }", SolverChoice::default());
+    let goal = db
+        .parse_and_lower_goal("forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}")
+        .unwrap();
+    db.with_program(|_| {
         assert_eq!(
             format!("{:?}", goal),
             "ForAll<type> { Exists<type> { ForAll<type> { Implemented(^0: Foo<^1, ^2>) } } }"
@@ -170,7 +171,7 @@ fn goal_quantifiers() {
 
 #[test]
 fn atc_accounting() {
-    let program = parse_and_lower_program(
+    let db = ChalkDatabase::with(
         "
             struct Vec<T> { }
 
@@ -185,9 +186,8 @@ fn atc_accounting() {
             struct Iter<'a, T> { }
             ",
         SolverChoice::default(),
-    )
-    .unwrap();
-    tls::set_current_program(&program, || {
+    );
+    db.with_program(|program| {
         let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
         println!("{}", impl_text);
         assert_eq!(
@@ -200,23 +200,23 @@ fn atc_accounting() {
         where_clauses: [],
         associated_ty_values: [
             AssociatedTyValue {
+                impl_id: ImplId(2),
                 associated_ty_id: (Iterable::Iter),
                 value: for<lifetime> AssociatedTyValueBound {
                     ty: Iter<'^0, ^1>
                 }
             }
         ],
-        specialization_priority: 0,
         impl_type: Local
     }
 }"#
         );
-        let goal = parse_and_lower_goal(
-            &program,
-            "forall<X> { forall<'a> { forall<Y> { \
-             X: Iterable<Iter<'a> = Y> } } }",
-        )
-        .unwrap();
+        let goal = db
+            .parse_and_lower_goal(
+                "forall<X> { forall<'a> { forall<Y> { \
+                 X: Iterable<Iter<'a> = Y> } } }",
+            )
+            .unwrap();
         let goal_text = format!("{:?}", goal);
         println!("{}", goal_text);
         assert_eq!(
@@ -417,24 +417,6 @@ fn upstream_items() {
         program {
             #[upstream] trait Send { }
             #[upstream] struct Vec<T> { }
-        }
-    }
-}
-
-#[test]
-fn deref_trait() {
-    lowering_success! {
-        program {
-            #[lang_deref] trait Deref { type Target; }
-        }
-    }
-
-    lowering_error! {
-        program {
-            #[lang_deref] trait Deref { }
-            #[lang_deref] trait DerefDupe { }
-        } error_msg {
-            "duplicate lang item `DerefTrait`"
         }
     }
 }

@@ -6,23 +6,32 @@ use crate::table::{Answer, AnswerIndex};
 use crate::tables::Tables;
 use crate::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
 
-pub struct Forest<C: Context, CO: ContextOps<C>> {
-    #[allow(dead_code)]
-    pub(crate) context: CO,
+pub struct Forest<C: Context> {
+    context: C,
     pub(crate) tables: Tables<C>,
     pub(crate) stack: Stack,
 
     dfn: DepthFirstNumber,
 }
 
-impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
-    pub fn new(context: CO) -> Self {
+impl<C: Context> Forest<C> {
+    pub fn new(context: C) -> Self {
         Forest {
             context,
             tables: Tables::new(),
             stack: Stack::default(),
             dfn: DepthFirstNumber::MIN,
         }
+    }
+
+    /// Gives access to `self.context`. In fact, the SLG solver
+    /// doesn't ever use `self.context` for anything, and only cares
+    /// about the associated types and methods defined on it.  But the
+    /// creator of the forest can use the context field to store
+    /// configuration info (e.g., in chalk, we store the max size of a
+    /// term in here).
+    pub fn context(&self) -> &C {
+        &self.context
     }
 
     // Gets the next depth-first number. This number never decreases.
@@ -37,15 +46,16 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// terminate.
     pub fn force_answers(
         &mut self,
+        context: &impl ContextOps<C>,
         goal: C::UCanonicalGoalInEnvironment,
         num_answers: usize,
     ) -> Vec<Answer<C>> {
-        let table = self.get_or_create_table_for_ucanonical_goal(goal);
+        let table = self.get_or_create_table_for_ucanonical_goal(context, goal);
         let mut answers = Vec::with_capacity(num_answers);
         for i in 0..num_answers {
             let i = AnswerIndex::from(i);
             loop {
-                match self.ensure_root_answer(table, i) {
+                match self.ensure_root_answer(context, table, i) {
                     Ok(()) => break,
                     Err(RootSearchFail::QuantumExceeded) => continue,
                     Err(RootSearchFail::NoMoreSolutions) => return answers,
@@ -64,12 +74,14 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// invocations. Invoking `next` fewer times is preferable =)
     fn iter_answers<'f>(
         &'f mut self,
+        context: &'f impl ContextOps<C>,
         goal: &C::UCanonicalGoalInEnvironment,
     ) -> impl AnswerStream<C> + 'f {
-        let table = self.get_or_create_table_for_ucanonical_goal(goal.clone());
+        let table = self.get_or_create_table_for_ucanonical_goal(context, goal.clone());
         let answer = AnswerIndex::ZERO;
         ForestSolver {
             forest: self,
+            context,
             table,
             answer,
         }
@@ -78,10 +90,12 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     /// Solves a given goal, producing the solution. This will do only
     /// as much work towards `goal` as it has to (and that works is
     /// cached for future attempts).
-    pub fn solve(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> Option<C::Solution> {
-        self.context
-            .clone()
-            .make_solution(CO::canonical(&goal), self.iter_answers(goal))
+    pub fn solve(
+        &mut self,
+        context: &impl ContextOps<C>,
+        goal: &C::UCanonicalGoalInEnvironment,
+    ) -> Option<C::Solution> {
+        context.make_solution(C::canonical(&goal), self.iter_answers(context, goal))
     }
 
     /// True if all the tables on the stack starting from `depth` and
@@ -118,25 +132,34 @@ impl<C: Context, CO: ContextOps<C>> Forest<C, CO> {
     }
 
     /// Useful for testing.
-    pub fn num_cached_answers_for_goal(&mut self, goal: &C::UCanonicalGoalInEnvironment) -> usize {
-        let table = self.get_or_create_table_for_ucanonical_goal(goal.clone());
+    pub fn num_cached_answers_for_goal(
+        &mut self,
+        context: &impl ContextOps<C>,
+        goal: &C::UCanonicalGoalInEnvironment,
+    ) -> usize {
+        let table = self.get_or_create_table_for_ucanonical_goal(context, goal.clone());
         self.tables[table].num_cached_answers()
     }
 }
 
-struct ForestSolver<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> {
-    forest: &'forest mut Forest<C, CO>,
+struct ForestSolver<'me, C: Context + 'me, CO: ContextOps<C> + 'me> {
+    forest: &'me mut Forest<C>,
+    context: &'me CO,
     table: TableIndex,
     answer: AnswerIndex,
 }
 
-impl<'forest, C, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'forest, C, CO>
+impl<'me, C, CO> AnswerStream<C> for ForestSolver<'me, C, CO>
 where
     C: Context,
+    CO: ContextOps<C>,
 {
     fn peek_answer(&mut self) -> Option<SimplifiedAnswer<C>> {
         loop {
-            match self.forest.ensure_root_answer(self.table, self.answer) {
+            match self
+                .forest
+                .ensure_root_answer(self.context, self.table, self.answer)
+            {
                 Ok(()) => {
                     let answer = self.forest.answer(self.table, self.answer);
 

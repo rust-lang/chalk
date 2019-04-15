@@ -1,16 +1,13 @@
-use std::sync::Arc;
-
-use crate::rust_ir::*;
+use crate::ChalkRulesDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::*;
 use chalk_ir::*;
+use chalk_rust_ir::*;
 use chalk_solve::ext::*;
-use chalk_solve::solve::SolverChoice;
-use failure::{Fail, Fallible};
+use derive_new::new;
+use failure::Fail;
 use itertools::Itertools;
-
-mod test;
 
 #[derive(Fail, Debug)]
 pub enum WfError {
@@ -26,57 +23,9 @@ pub enum WfError {
     IllFormedTraitImpl(chalk_ir::Identifier),
 }
 
-struct WfSolver<'me> {
-    program: &'me Program,
-    env: Arc<ProgramEnvironment>,
-    solver_choice: SolverChoice,
-}
-
-pub fn verify_well_formedness(
-    program: Arc<Program>,
-    env: Arc<ProgramEnvironment>,
-    solver_choice: SolverChoice,
-) -> Fallible<()> {
-    tls::set_current_program(&program, || {
-        solve_wf_requirements(program.clone(), env, solver_choice)
-    })
-}
-
-fn solve_wf_requirements(
-    program: Arc<Program>,
-    env: Arc<ProgramEnvironment>,
-    solver_choice: SolverChoice,
-) -> Fallible<()> {
-    let solver = WfSolver {
-        program: &program,
-        env,
-        solver_choice,
-    };
-
-    for (id, struct_datum) in &program.struct_data {
-        if !solver.verify_struct_decl(struct_datum) {
-            let name = program
-                .type_kinds
-                .get(&TypeKindId::StructId(*id))
-                .unwrap()
-                .name;
-            Err(WfError::IllFormedTypeDecl(name))?;
-        }
-    }
-
-    for impl_datum in program.impl_data.values() {
-        if !solver.verify_trait_impl(impl_datum) {
-            let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
-            let name = program
-                .type_kinds
-                .get(&trait_ref.trait_id.into())
-                .unwrap()
-                .name;
-            Err(WfError::IllFormedTraitImpl(name))?;
-        }
-    }
-
-    Ok(())
+#[derive(new)]
+pub struct WfSolver<'db, DB: ChalkRulesDatabase> {
+    db: &'db DB,
 }
 
 /// A trait for retrieving all types appearing in some Chalk construction.
@@ -161,8 +110,13 @@ impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
     }
 }
 
-impl<'me> WfSolver<'me> {
-    fn verify_struct_decl(&self, struct_datum: &StructDatum) -> bool {
+impl<'db, DB> WfSolver<'db, DB>
+where
+    DB: ChalkRulesDatabase,
+{
+    pub fn verify_struct_decl(&self, struct_id: StructId) -> Result<(), WfError> {
+        let struct_datum = self.db.struct_datum(struct_id);
+
         // We retrieve all the input types of the struct fields.
         let mut input_types = Vec::new();
         struct_datum.binders.value.fields.fold(&mut input_types);
@@ -173,7 +127,7 @@ impl<'me> WfSolver<'me> {
             .fold(&mut input_types);
 
         if input_types.is_empty() {
-            return true;
+            return Ok(());
         }
 
         let goals = input_types
@@ -199,20 +153,25 @@ impl<'me> WfSolver<'me> {
         let goal = Goal::Implies(hypotheses, Box::new(goal))
             .quantify(QuantifierKind::ForAll, struct_datum.binders.binders.clone());
 
-        match self
-            .solver_choice
-            .solve_root_goal(&self.env, &goal.into_closed_goal())
-            .unwrap()
-        {
+        let is_legal = match self.db.solve(&goal.into_closed_goal()) {
             Some(sol) => sol.is_unique(),
             None => false,
+        };
+
+        if !is_legal {
+            let name = self.db.type_name(struct_id.into());
+            Err(WfError::IllFormedTypeDecl(name))
+        } else {
+            Ok(())
         }
     }
 
-    fn verify_trait_impl(&self, impl_datum: &ImplDatum) -> bool {
+    pub fn verify_trait_impl(&self, impl_id: ImplId) -> Result<(), WfError> {
+        let impl_datum = self.db.impl_datum(impl_id);
+
         let trait_ref = match impl_datum.binders.value.trait_ref {
             PolarizedTraitRef::Positive(ref trait_ref) => trait_ref,
-            _ => return true,
+            _ => return Ok(()),
         };
 
         // We retrieve all the input types of the where clauses appearing on the trait impl,
@@ -259,7 +218,7 @@ impl<'me> WfSolver<'me> {
         // ```
         // we would issue the following subgoal: `forall<'a> { WellFormed(Box<&'a T>) }`.
         let compute_assoc_ty_goal = |assoc_ty: &AssociatedTyValue| {
-            let assoc_ty_datum = &self.program.associated_ty_data[&assoc_ty.associated_ty_id];
+            let assoc_ty_datum = self.db.associated_ty_data(assoc_ty.associated_ty_id);
             let bounds = &assoc_ty_datum.bounds;
 
             let mut input_types = Vec::new();
@@ -355,13 +314,17 @@ impl<'me> WfSolver<'me> {
 
         debug!("WF trait goal: {:?}", goal);
 
-        match self
-            .solver_choice
-            .solve_root_goal(&self.env, &goal.into_closed_goal())
-            .unwrap()
-        {
+        let is_legal = match self.db.solve(&goal.into_closed_goal()) {
             Some(sol) => sol.is_unique(),
             None => false,
+        };
+
+        if is_legal {
+            Ok(())
+        } else {
+            let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
+            let name = self.db.type_name(trait_ref.trait_id.into());
+            Err(WfError::IllFormedTraitImpl(name))
         }
     }
 }

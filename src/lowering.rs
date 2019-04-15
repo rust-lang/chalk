@@ -1,13 +1,14 @@
-use std::collections::BTreeMap;
-
-use chalk_parse::ast::*;
-use lalrpop_intern::intern;
-
-use crate::rust_ir::{self, Anonymize, ToParameter};
+use crate::program::Program as LoweredProgram;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
+use chalk_parse::ast::*;
+use chalk_rust_ir as rust_ir;
+use chalk_rust_ir::{Anonymize, ToParameter};
 use failure::{Fail, Fallible};
 use itertools::Itertools;
+use lalrpop_intern::intern;
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
 mod test;
 
@@ -137,11 +138,11 @@ impl<'k> Env<'k> {
 
 pub(crate) trait LowerProgram {
     /// Lowers from a Program AST to the internal IR for a program.
-    fn lower(&self) -> Fallible<rust_ir::Program>;
+    fn lower(&self) -> Fallible<LoweredProgram>;
 }
 
 impl LowerProgram for Program {
-    fn lower(&self) -> Fallible<rust_ir::Program> {
+    fn lower(&self) -> Fallible<LoweredProgram> {
         let mut index = 0;
         let mut next_item_id = || -> chalk_ir::RawId {
             let i = index;
@@ -189,7 +190,6 @@ impl LowerProgram for Program {
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut custom_clauses = Vec::new();
-        let mut lang_items = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
                 type_ids: &type_ids,
@@ -201,11 +201,11 @@ impl LowerProgram for Program {
             match *item {
                 Item::StructDefn(ref d) => {
                     let struct_id = StructId(raw_id);
-                    struct_data.insert(struct_id, d.lower_struct(struct_id, &empty_env)?);
+                    struct_data.insert(struct_id, Arc::new(d.lower_struct(struct_id, &empty_env)?));
                 }
                 Item::TraitDefn(ref d) => {
                     let trait_id = TraitId(raw_id);
-                    trait_data.insert(trait_id, d.lower_trait(trait_id, &empty_env)?);
+                    trait_data.insert(trait_id, Arc::new(d.lower_trait(trait_id, &empty_env)?));
 
                     for defn in &d.assoc_ty_defns {
                         let info = &associated_ty_infos[&(trait_id, defn.name.str)];
@@ -216,31 +216,20 @@ impl LowerProgram for Program {
 
                         associated_ty_data.insert(
                             info.id,
-                            rust_ir::AssociatedTyDatum {
+                            Arc::new(rust_ir::AssociatedTyDatum {
                                 trait_id: TraitId(raw_id),
                                 id: info.id,
                                 name: defn.name.str,
                                 parameter_kinds: parameter_kinds,
                                 bounds: defn.bounds.lower(&env)?,
                                 where_clauses: defn.where_clauses.lower(&env)?,
-                            },
+                            }),
                         );
-                    }
-
-                    if d.flags.deref {
-                        use std::collections::btree_map::Entry::*;
-                        match lang_items.entry(rust_ir::LangItem::DerefTrait) {
-                            Vacant(entry) => {
-                                entry.insert(TraitId(raw_id));
-                            }
-                            Occupied(_) => Err(RustIrError::DuplicateLangItem(
-                                rust_ir::LangItem::DerefTrait,
-                            ))?,
-                        }
                     }
                 }
                 Item::Impl(ref d) => {
-                    impl_data.insert(ImplId(raw_id), d.lower_impl(&empty_env)?);
+                    let impl_id = ImplId(raw_id);
+                    impl_data.insert(impl_id, Arc::new(d.lower_impl(&empty_env, impl_id)?));
                 }
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
@@ -248,7 +237,7 @@ impl LowerProgram for Program {
             }
         }
 
-        let mut program = rust_ir::Program {
+        let program = LoweredProgram {
             type_ids,
             type_kinds,
             struct_data,
@@ -256,11 +245,8 @@ impl LowerProgram for Program {
             impl_data,
             associated_ty_data,
             custom_clauses,
-            lang_items,
-            default_impl_data: Vec::new(),
         };
 
-        program.add_default_impls();
         Ok(program)
     }
 }
@@ -525,12 +511,6 @@ impl LowerDomainGoal for DomainGoal {
                 }
 
                 vec![chalk_ir::DomainGoal::InScope(id.into())]
-            }
-            DomainGoal::Derefs { source, target } => {
-                vec![chalk_ir::DomainGoal::Derefs(chalk_ir::Derefs {
-                    source: source.lower(env)?,
-                    target: target.lower(env)?,
-                })]
             }
             DomainGoal::IsLocal { ty } => vec![chalk_ir::DomainGoal::IsLocal(ty.lower(env)?)],
             DomainGoal::IsUpstream { ty } => vec![chalk_ir::DomainGoal::IsUpstream(ty.lower(env)?)],
@@ -981,11 +961,11 @@ impl LowerLifetime for Lifetime {
 }
 
 trait LowerImpl {
-    fn lower_impl(&self, empty_env: &Env) -> Fallible<rust_ir::ImplDatum>;
+    fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, empty_env: &Env) -> Fallible<rust_ir::ImplDatum> {
+    fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum> {
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
 
@@ -1000,13 +980,12 @@ impl LowerImpl for Impl {
             let associated_ty_values = self
                 .assoc_ty_values
                 .iter()
-                .map(|v| v.lower(trait_id.into(), env))
+                .map(|v| v.lower(trait_id.into(), impl_id, env))
                 .collect::<Fallible<_>>()?;
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
                 where_clauses,
                 associated_ty_values,
-                specialization_priority: 0,
                 impl_type: match self.impl_type {
                     ImplType::Local => rust_ir::ImplType::Local,
                     ImplType::External => rust_ir::ImplType::External,
@@ -1065,14 +1044,19 @@ impl LowerClause for Clause {
 }
 
 trait LowerAssocTyValue {
-    fn lower(&self, trait_id: chalk_ir::TraitId, env: &Env)
-        -> Fallible<rust_ir::AssociatedTyValue>;
+    fn lower(
+        &self,
+        trait_id: chalk_ir::TraitId,
+        impl_id: chalk_ir::ImplId,
+        env: &Env,
+    ) -> Fallible<rust_ir::AssociatedTyValue>;
 }
 
 impl LowerAssocTyValue for AssocTyValue {
     fn lower(
         &self,
         trait_id: chalk_ir::TraitId,
+        impl_id: chalk_ir::ImplId,
         env: &Env,
     ) -> Fallible<rust_ir::AssociatedTyValue> {
         let info = &env.associated_ty_infos[&(trait_id, self.name.str)];
@@ -1082,6 +1066,7 @@ impl LowerAssocTyValue for AssocTyValue {
             })
         })?;
         Ok(rust_ir::AssociatedTyValue {
+            impl_id,
             associated_ty_id: info.id,
             value: value,
         })
@@ -1117,7 +1102,6 @@ impl LowerTrait for TraitDefn {
                     marker: self.flags.marker,
                     upstream: self.flags.upstream,
                     fundamental: self.flags.fundamental,
-                    deref: self.flags.deref,
                 },
             })
         })?;
@@ -1130,8 +1114,8 @@ pub trait LowerGoal<A> {
     fn lower(&self, arg: &A) -> Fallible<Box<chalk_ir::Goal>>;
 }
 
-impl LowerGoal<rust_ir::Program> for Goal {
-    fn lower(&self, program: &rust_ir::Program) -> Fallible<Box<chalk_ir::Goal>> {
+impl LowerGoal<LoweredProgram> for Goal {
+    fn lower(&self, program: &LoweredProgram) -> Fallible<Box<chalk_ir::Goal>> {
         let associated_ty_infos: BTreeMap<_, _> = program
             .associated_ty_data
             .iter()

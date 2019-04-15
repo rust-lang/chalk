@@ -1,79 +1,55 @@
-use std::sync::Arc;
-
-use super::CoherenceError;
-use crate::rust_ir::*;
+use crate::coherence::{CoherenceError, CoherenceSolver};
+use crate::ChalkRulesDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
+use chalk_rust_ir::*;
 use chalk_solve::ext::*;
-use chalk_solve::solve::{Solution, SolverChoice};
+use chalk_solve::Solution;
 use failure::Fallible;
 use itertools::Itertools;
 
-struct DisjointSolver {
-    env: Arc<ProgramEnvironment>,
-    solver_choice: SolverChoice,
-}
-
-impl Program {
-    pub(super) fn visit_specializations<F>(
+impl<'db, DB> CoherenceSolver<'db, DB>
+where
+    DB: ChalkRulesDatabase,
+{
+    pub(super) fn visit_specializations_of_trait(
         &self,
-        env: Arc<ProgramEnvironment>,
-        solver_choice: SolverChoice,
-        mut record_specialization: F,
-    ) -> Fallible<()>
-    where
-        F: FnMut(ImplId, ImplId),
-    {
-        let mut solver = DisjointSolver { env, solver_choice };
-
-        // Create a vector of references to impl datums, sorted by trait ref.
-        let impl_data = self
-            .impl_data
-            .iter()
-            .filter(|&(_, impl_datum)| {
-                // Ignore impls for marker traits as they are allowed to overlap.
-                let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
-                let trait_datum = &self.trait_data[&trait_id];
-                !trait_datum.binders.value.flags.marker
-            })
-            .sorted_by(|&(_, lhs), &(_, rhs)| {
-                lhs.binders
-                    .value
-                    .trait_ref
-                    .trait_ref()
-                    .trait_id
-                    .cmp(&rhs.binders.value.trait_ref.trait_ref().trait_id)
-            });
-
-        // Group impls by trait.
-        let impl_groupings = impl_data
-            .into_iter()
-            .group_by(|&(_, impl_datum)| impl_datum.binders.value.trait_ref.trait_ref().trait_id);
+        mut record_specialization: impl FnMut(ImplId, ImplId),
+    ) -> Fallible<()> {
+        // Ignore impls for marker traits as they are allowed to overlap.
+        let trait_datum = self.db.trait_datum(self.trait_id);
+        if trait_datum.binders.value.flags.marker {
+            return Ok(());
+        }
 
         // Iterate over every pair of impls for the same trait.
-        for (trait_id, impls) in &impl_groupings {
-            let impls: Vec<(&ImplId, &ImplDatum)> = impls.collect();
+        //
+        // FIXME -- Ideally, we would only need to do this iteration
+        // for the impls **added by the current crate**. I'm not sure
+        // how to structure this though in terms of queries.
+        let impls = self.db.impls_for_trait(self.trait_id);
+        for (l_id, r_id) in impls.into_iter().tuple_combinations() {
+            let lhs = &self.db.impl_datum(l_id);
+            let rhs = &self.db.impl_datum(r_id);
 
-            for ((&l_id, lhs), (&r_id, rhs)) in impls.into_iter().tuple_combinations() {
-                // Two negative impls never overlap.
-                if !lhs.binders.value.trait_ref.is_positive()
-                    && !rhs.binders.value.trait_ref.is_positive()
-                {
-                    continue;
-                }
+            // Two negative impls never overlap.
+            if !lhs.binders.value.trait_ref.is_positive()
+                && !rhs.binders.value.trait_ref.is_positive()
+            {
+                continue;
+            }
 
-                // Check if the impls overlap, then if they do, check if one specializes
-                // the other. Note that specialization can only run one way - if both
-                // specialization checks return *either* true or false, that's an error.
-                if !solver.disjoint(lhs, rhs) {
-                    match (solver.specializes(lhs, rhs), solver.specializes(rhs, lhs)) {
-                        (true, false) => record_specialization(l_id, r_id),
-                        (false, true) => record_specialization(r_id, l_id),
-                        (_, _) => {
-                            let trait_id = self.type_kinds.get(&trait_id.into()).unwrap().name;
-                            Err(CoherenceError::OverlappingImpls(trait_id))?;
-                        }
+            // Check if the impls overlap, then if they do, check if one specializes
+            // the other. Note that specialization can only run one way - if both
+            // specialization checks return *either* true or false, that's an error.
+            if !self.disjoint(lhs, rhs) {
+                match (self.specializes(lhs, rhs), self.specializes(rhs, lhs)) {
+                    (true, false) => record_specialization(l_id, r_id),
+                    (false, true) => record_specialization(r_id, l_id),
+                    (_, _) => {
+                        let trait_name = self.db.type_name(self.trait_id.into());
+                        Err(CoherenceError::OverlappingImpls(trait_name))?;
                     }
                 }
             }
@@ -81,9 +57,7 @@ impl Program {
 
         Ok(())
     }
-}
 
-impl DisjointSolver {
     // Test if the set of types that these two impls apply to overlap. If the test succeeds, these
     // two impls are disjoint.
     //
@@ -161,10 +135,7 @@ impl DisjointSolver {
             .negate();
 
         let canonical_goal = &goal.into_closed_goal();
-        let solution = self
-            .solver_choice
-            .solve_root_goal(&self.env, canonical_goal)
-            .unwrap(); // internal errors in the solver are fatal
+        let solution = self.db.solve(canonical_goal);
         let result = match solution {
             // Goal was proven with a unique solution, so no impl was found that causes these two
             // to overlap
@@ -194,7 +165,7 @@ impl DisjointSolver {
     //    }
     //  }
     // }
-    fn specializes(&mut self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
+    fn specializes(&self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
         debug_heading!(
             "specializes(less_special={:#?}, more_special={:#?})",
             less_special,
@@ -243,11 +214,7 @@ impl DisjointSolver {
             .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
         let canonical_goal = &goal.into_closed_goal();
-        let result = match self
-            .solver_choice
-            .solve_root_goal(&self.env, canonical_goal)
-            .unwrap()
-        {
+        let result = match self.db.solve(canonical_goal) {
             Some(sol) => sol.is_unique(),
             None => false,
         };

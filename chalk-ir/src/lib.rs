@@ -15,7 +15,7 @@ macro_rules! impl_debugs {
         $(
             impl std::fmt::Debug for $id {
                 fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-                    write!(fmt, "{:?}", self.0)
+                    write!(fmt, "{}({:?})", stringify!($id), self.0.index)
                 }
             }
         )*
@@ -52,16 +52,6 @@ pub mod debug;
 pub mod tls;
 
 pub type Identifier = InternedString;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ProgramEnvironment {
-    /// Indicates whether a given trait has coinductive semantics --
-    /// at present, this is true only for auto traits.
-    pub coinductive_traits: BTreeSet<TraitId>,
-
-    /// Compiled forms of the above:
-    pub program_clauses: Vec<ProgramClause>,
-}
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// The set of assumptions we've made so far, and the current number of
@@ -558,12 +548,6 @@ pub enum WhereClause {
     ProjectionEq(ProjectionEq),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
-pub struct Derefs {
-    pub source: Ty,
-    pub target: Ty,
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum WellFormed {
     /// A predicate which is true is some trait ref is well-formed.
@@ -636,13 +620,6 @@ pub enum DomainGoal {
     UnselectedNormalize(UnselectedNormalize),
 
     InScope(TypeKindId),
-
-    /// Whether a type can deref into another. Right now this is just:
-    /// ```notrust
-    /// Derefs(T, U) :- Implemented(T: Deref<Target = U>)
-    /// ```
-    /// In Rust there are also raw pointers which can be deref'd but do not implement Deref.
-    Derefs(Derefs),
 
     /// True if a type is considered to have been "defined" by the current crate. This is true for
     /// a `struct Foo { }` but false for a `#[upstream] struct Foo { }`. However, for fundamental types
@@ -940,16 +917,6 @@ impl<T> UCanonical<T> {
     }
 }
 
-impl UCanonical<InEnvironment<Goal>> {
-    /// A goal has coinductive semantics if it is of the form `T: AutoTrait`, or if it is of the
-    /// form `WellFormed(T: Trait)` where `Trait` is any trait. The latter is needed for dealing
-    /// with WF requirements and cyclic traits, which generates cycles in the proof tree which must
-    /// not be rejected but instead must be treated as a success.
-    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
-        self.canonical.value.goal.is_coinductive(program)
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum Goal {
@@ -1013,18 +980,6 @@ impl Goal {
 
     pub fn implied_by(self, predicates: Vec<ProgramClause>) -> Goal {
         Goal::Implies(predicates, Box::new(self))
-    }
-
-    pub fn is_coinductive(&self, program: &ProgramEnvironment) -> bool {
-        match self {
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => match wca {
-                WhereClause::Implemented(tr) => program.coinductive_traits.contains(&tr.trait_id),
-                WhereClause::ProjectionEq(..) => false,
-            },
-            Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..)))) => true,
-            Goal::Quantified(QuantifierKind::ForAll, goal) => goal.value.is_coinductive(program),
-            _ => false,
-        }
     }
 }
 
@@ -1103,6 +1058,11 @@ impl<'a> FreeVarFolder for &'a Substitution {
 
 impl<'a> DefaultPlaceholderFolder for &'a Substitution {}
 
+/// Combines a substitution (`subst`) with a set of region constraints
+/// (`constraints`). This represents the result of a query; the
+/// substitution stores the values for the query's unknown variables,
+/// and the constraints represents any region constriants that must
+/// additionally be solved.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {
     pub subst: Substitution,

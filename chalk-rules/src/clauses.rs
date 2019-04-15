@@ -1,111 +1,19 @@
-use crate::rust_ir::*;
+use crate::RustIrSource;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Subst;
 use chalk_ir::*;
+use chalk_rust_ir::*;
 use std::iter;
 
-mod default;
-pub(crate) mod wf;
-
-impl Program {
-    pub fn environment(&self) -> ProgramEnvironment {
-        // Construct the set of *clauses*; these are sort of a compiled form
-        // of the data above that always has the form:
-        //
-        //       forall P0...Pn. Something :- Conditions
-        let mut program_clauses = self
-            .custom_clauses
-            .iter()
-            .cloned()
-            .chain(
-                self.struct_data
-                    .values()
-                    .flat_map(|d| d.to_program_clauses()),
-            )
-            .chain(
-                self.trait_data
-                    .values()
-                    .flat_map(|d| d.to_program_clauses()),
-            )
-            .chain(
-                self.associated_ty_data
-                    .values()
-                    .flat_map(|d| d.to_program_clauses(self)),
-            )
-            .chain(self.default_impl_data.iter().map(|d| d.to_program_clause()))
-            .collect::<Vec<_>>();
-
-        // Adds clause that defines the Derefs domain goal:
-        // forall<T, U> { Derefs(T, U) :- ProjectionEq(<T as Deref>::Target = U>) }
-        if let Some(trait_id) = self.lang_items.get(&LangItem::DerefTrait) {
-            // Find `Deref::Target`.
-            let associated_ty_id = self
-                .associated_ty_data
-                .values()
-                .find(|d| d.trait_id == *trait_id)
-                .expect("Deref has no assoc item")
-                .id;
-            let t = || Ty::BoundVar(0);
-            let u = || Ty::BoundVar(1);
-            program_clauses.push(
-                Binders {
-                    binders: vec![ParameterKind::Ty(()), ParameterKind::Ty(())],
-                    value: ProgramClauseImplication {
-                        consequence: DomainGoal::Derefs(Derefs {
-                            source: t(),
-                            target: u(),
-                        }),
-                        conditions: vec![ProjectionEq {
-                            projection: ProjectionTy {
-                                associated_ty_id,
-                                parameters: vec![t().cast()],
-                            },
-                            ty: u(),
-                        }
-                        .cast()],
-                    },
-                }
-                .cast(),
-            );
-        }
-
-        for datum in self.impl_data.values() {
-            // If we encounter a negative impl, do not generate any rule. Negative impls
-            // are currently just there to deactivate default impls for auto traits.
-            if datum.binders.value.trait_ref.is_positive() {
-                program_clauses.push(datum.to_program_clause());
-                program_clauses.extend(
-                    datum
-                        .binders
-                        .value
-                        .associated_ty_values
-                        .iter()
-                        .flat_map(|atv| atv.to_program_clauses(self, datum)),
-                );
-            }
-        }
-
-        let coinductive_traits = self
-            .trait_data
-            .iter()
-            .filter_map(|(&trait_id, trait_datum)| {
-                if trait_datum.binders.value.flags.auto {
-                    Some(trait_id)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        ProgramEnvironment {
-            coinductive_traits,
-            program_clauses,
-        }
-    }
+/// Trait for lowering a given piece of rust-ir source (e.g., an impl
+/// or struct definition) into its associated "program clauses" --
+/// that is, into the lowered, logical rules that it defines.
+pub trait ToProgramClauses {
+    fn to_program_clauses(&self, program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>);
 }
 
-impl ImplDatum {
+impl ToProgramClauses for ImplDatum {
     /// Given `impl<T: Clone> Clone for Vec<T> { ... }`, generate:
     ///
     /// ```notrust
@@ -114,58 +22,102 @@ impl ImplDatum {
     ///     Implemented(Vec<T>: Clone) :- Implemented(T: Clone).
     /// }
     /// ```
-    fn to_program_clause(&self) -> ProgramClause {
-        self.binders
-            .map_ref(|bound| ProgramClauseImplication {
-                consequence: bound.trait_ref.trait_ref().clone().cast(),
-                conditions: bound.where_clauses.iter().cloned().casted().collect(),
-            })
-            .cast()
+    fn to_program_clauses(&self, _program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
+        clauses.push(
+            self.binders
+                .map_ref(|bound| ProgramClauseImplication {
+                    consequence: bound.trait_ref.trait_ref().clone().cast(),
+                    conditions: bound.where_clauses.iter().cloned().casted().collect(),
+                })
+                .cast(),
+        );
     }
 }
 
-impl DefaultImplDatum {
-    /// For each accessible type `T` in a struct which needs a default implementation for the auto
-    /// trait `Foo` (accessible types are the struct fields types), we add a bound `T: Foo` (which
-    /// is then expanded with `WF(T: Foo)`). For example, given:
-    ///
-    /// ```notrust
-    /// #[auto] trait Send { }
-    ///
-    /// struct MyList<T> {
-    ///     data: T,
-    ///     next: Box<Option<MyList<T>>>,
-    /// }
-    ///
-    /// ```
-    ///
-    /// generate:
-    ///
-    /// ```notrust
-    /// forall<T> {
-    ///     Implemented(MyList<T>: Send) :-
-    ///         Implemented(T: Send),
-    ///         Implemented(Box<Option<MyList<T>>>: Send).
-    /// }
-    /// ```
-    fn to_program_clause(&self) -> ProgramClause {
-        self.binders
-            .map_ref(|bound| ProgramClauseImplication {
-                consequence: bound.trait_ref.clone().cast(),
-                conditions: {
-                    let wc = bound.accessible_tys.iter().cloned().map(|ty| TraitRef {
-                        trait_id: bound.trait_ref.trait_id,
-                        parameters: vec![ty.cast()],
-                    });
+/// For auto-traits, we generate a default rule for every struct,
+/// unless there is a manual impl for that struct given explicitly.
+///
+/// So, if you have `impl Send for MyList<Foo>`, then we would
+/// generate no rule for `MyList` at all -- similarly if you have
+/// `impl !Send for MyList<Foo>`, or `impl<T> Send for MyList<T>`.
+///
+/// But if you have no rules at all for `Send` / `MyList`, then we
+/// generate an impl based on the field types of `MyList`. For example
+/// given the following program:
+///
+/// ```notrust
+/// #[auto] trait Send { }
+///
+/// struct MyList<T> {
+///     data: T,
+///     next: Box<Option<MyList<T>>>,
+/// }
+///
+/// ```
+///
+/// we generate:
+///
+/// ```notrust
+/// forall<T> {
+///     Implemented(MyList<T>: Send) :-
+///         Implemented(T: Send),
+///         Implemented(Box<Option<MyList<T>>>: Send).
+/// }
+/// ```
+pub fn push_auto_trait_impls(
+    auto_trait_id: TraitId,
+    auto_trait: &TraitDatum,
+    struct_id: StructId,
+    struct_datum: &StructDatum,
+    program: &dyn RustIrSource,
+    vec: &mut Vec<ProgramClause>,
+) {
+    // Must be an auto trait.
+    assert!(auto_trait.binders.value.flags.auto);
 
-                    wc.casted().collect()
-                },
+    // Auto traits never have generic parameters of their own (apart from `Self`).
+    assert_eq!(auto_trait.binders.binders.len(), 1);
+
+    // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
+    // for Foo<..>`, where `Foo` is the struct we're looking at, then
+    // we don't generate our own rules.
+    if program.impl_provided_for(auto_trait_id, struct_id) {
+        return;
+    }
+
+    vec.push({
+        // trait_ref = `MyStruct<...>: MyAutoTrait`
+        let auto_trait_ref = TraitRef {
+            trait_id: auto_trait.binders.value.trait_ref.trait_id,
+            parameters: vec![Ty::Apply(struct_datum.binders.value.self_ty.clone()).cast()],
+        };
+
+        // forall<P0..Pn> { // generic parameters from struct
+        //   MyStruct<...>: MyAutoTrait :-
+        //      Field0: MyAutoTrait,
+        //      ...
+        //      FieldN: MyAutoTrait
+        // }
+        struct_datum
+            .binders
+            .map_ref(|struct_contents| ProgramClauseImplication {
+                consequence: auto_trait_ref.clone().cast(),
+                conditions: struct_contents
+                    .fields
+                    .iter()
+                    .cloned()
+                    .map(|field_ty| TraitRef {
+                        trait_id: auto_trait_id,
+                        parameters: vec![field_ty.cast()],
+                    })
+                    .casted()
+                    .collect(),
             })
             .cast()
-    }
+    });
 }
 
-impl AssociatedTyValue {
+impl ToProgramClauses for AssociatedTyValue {
     /// Given the following trait:
     ///
     /// ```notrust
@@ -201,8 +153,9 @@ impl AssociatedTyValue {
     ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, program: &Program, impl_datum: &ImplDatum) -> Vec<ProgramClause> {
-        let associated_ty = &program.associated_ty_data[&self.associated_ty_id];
+    fn to_program_clauses(&self, program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
+        let impl_datum = program.impl_datum(self.impl_id);
+        let associated_ty = program.associated_ty_data(self.associated_ty_id);
 
         // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
         let all_binders: Vec<_> = self
@@ -302,11 +255,12 @@ impl AssociatedTyValue {
         }
         .cast();
 
-        vec![normalization, unselected_normalization]
+        clauses.push(normalization);
+        clauses.push(unselected_normalization);
     }
 }
 
-impl StructDatum {
+impl ToProgramClauses for StructDatum {
     /// Given the following type definition: `struct Foo<T: Eq> { }`, generate:
     ///
     /// ```notrust
@@ -355,7 +309,7 @@ impl StructDatum {
     /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
     /// ```
     ///
-    fn to_program_clauses(&self) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, _program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
         let wf = self
             .binders
             .map_ref(|bound_datum| ProgramClauseImplication {
@@ -383,7 +337,8 @@ impl StructDatum {
             })
             .cast();
 
-        let mut clauses = vec![wf, is_fully_visible];
+        clauses.push(wf);
+        clauses.push(is_fully_visible);
 
         // Fundamental types often have rules in the form of:
         //     Goal(FundamentalType<T>) :- Goal(T)
@@ -480,12 +435,10 @@ impl StructDatum {
                 .cast(),
             );
         }
-
-        clauses
     }
 }
 
-impl TraitDatum {
+impl ToProgramClauses for TraitDatum {
     /// Given the following trait declaration: `trait Ord<T> where Self: Eq<T> { ... }`, generate:
     ///
     /// ```notrust
@@ -599,7 +552,7 @@ impl TraitDatum {
     /// To implement fundamental traits, we simply just do not add the rule above that allows
     /// upstream types to implement upstream traits. Fundamental traits are not allowed to
     /// compatibly do that.
-    fn to_program_clauses(&self) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, _program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
         let trait_ref = self.binders.value.trait_ref.clone();
 
         let trait_ref_impl = WhereClause::Implemented(self.binders.value.trait_ref.clone());
@@ -622,7 +575,7 @@ impl TraitDatum {
             })
             .cast();
 
-        let mut clauses = vec![wf];
+        clauses.push(wf);
 
         // The number of parameters will always be at least 1 because of the Self parameter
         // that is automatically added to every trait. This is important because otherwise
@@ -752,12 +705,10 @@ impl TraitDatum {
                 })
                 .cast(),
         );
-
-        clauses
     }
 }
 
-impl AssociatedTyDatum {
+impl ToProgramClauses for AssociatedTyDatum {
     /// For each associated type, we define the "projection
     /// equality" rules. There are always two; one for a successful normalization,
     /// and one for the "fallback" notion of equality.
@@ -826,7 +777,7 @@ impl AssociatedTyDatum {
     ///     FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self, 'a,T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, program: &Program) -> Vec<ProgramClause> {
+    fn to_program_clauses(&self, program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
         let binders: Vec<_> = self
             .parameter_kinds
             .iter()
@@ -859,8 +810,6 @@ impl AssociatedTyDatum {
             projection: projection.clone(),
             ty: app_ty.clone(),
         };
-
-        let mut clauses = vec![];
 
         // Fallback rule. The solver uses this to move between the projection
         // and placeholder type.
@@ -1001,7 +950,5 @@ impl AssociatedTyDatum {
             }
             .cast(),
         );
-
-        clauses
     }
 }

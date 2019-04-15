@@ -194,7 +194,6 @@ struct_zip!(ProgramClauseImplication {
     consequence,
     conditions
 });
-struct_zip!(Derefs { source, target });
 
 impl Zip for Environment {
     fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
@@ -240,7 +239,6 @@ enum_zip!(DomainGoal {
     Normalize,
     UnselectedNormalize,
     InScope,
-    Derefs,
     IsLocal,
     IsUpstream,
     IsFullyVisible,

@@ -9,7 +9,7 @@ impl InferenceTable {
     /// inference variable. This substitution can then be applied to
     /// C, which would be equivalent to
     /// `self.instantiate_canonical(v)`.
-    pub fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
+    pub(crate) fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
         Substitution {
             parameters: binders
                 .iter()
@@ -22,7 +22,7 @@ impl InferenceTable {
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.
-    pub fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
+    pub(crate) fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
     where
         T: Fold + Debug,
     {
@@ -35,7 +35,7 @@ impl InferenceTable {
     /// `binders`. This is used to apply a universally quantified
     /// clause like `forall X, 'Y. P => Q`. Here the `binders`
     /// argument is referring to `X, 'Y`.
-    pub fn instantiate_in<U, T>(
+    pub(crate) fn instantiate_in<U, T>(
         &mut self,
         universe: UniverseIndex,
         binders: U,
@@ -55,7 +55,7 @@ impl InferenceTable {
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
     #[allow(non_camel_case_types)]
-    pub fn instantiate_binders_existentially<T>(
+    pub(crate) fn instantiate_binders_existentially<T>(
         &mut self,
         arg: &impl BindersAndValue<Output = T>,
     ) -> T::Result
@@ -68,7 +68,7 @@ impl InferenceTable {
     }
 
     #[allow(non_camel_case_types)]
-    pub fn instantiate_binders_universally<T>(
+    pub(crate) fn instantiate_binders_universally<T>(
         &mut self,
         arg: &impl BindersAndValue<Output = T>,
     ) -> T::Result
@@ -95,7 +95,7 @@ impl InferenceTable {
     }
 }
 
-pub trait BindersAndValue {
+pub(crate) trait BindersAndValue {
     type Output;
 
     fn split(&self) -> (&[ParameterKind<()>], &Self::Output);

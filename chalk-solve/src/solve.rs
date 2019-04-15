@@ -1,18 +1,14 @@
-use crate::solve::slg::implementation::SlgContext;
-use chalk_engine::context::Context;
-use chalk_engine::context::ContextOps;
-use chalk_engine::fallible::*;
+use crate::solve::slg::SlgContext;
+use crate::ChalkSolveDatabase;
 use chalk_engine::forest::Forest;
 use chalk_ir::*;
 use std::fmt;
-use std::sync::Arc;
 
-pub mod slg;
+mod slg;
 mod truncate;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-/// A (possible) solution for a proposed goal. Usually packaged in a `Result`,
-/// where `Err` represents definite *failure* to prove a goal.
+/// A (possible) solution for a proposed goal.
 pub enum Solution {
     /// The goal indeed holds, and there is a unique value for all existential
     /// variables. In this case, we also record a set of lifetime constraints
@@ -75,33 +71,17 @@ pub enum SolverChoice {
 }
 
 impl SolverChoice {
-    /// Attempts to solve the given root goal, which must be in
-    /// canonical form. The solution is searching for unique answers
-    /// to any free existential variables in this goal.
-    ///
-    /// # Returns
-    ///
-    /// - `Ok(None)` is the goal cannot be proven.
-    /// - `Ok(Some(solution))` if we succeeded in finding *some* answers,
-    ///   although `solution` may reflect ambiguity and unknowns.
-    /// - `Err` if there was an internal error solving the goal, which does not
-    ///   reflect success nor failure.
-    pub fn solve_root_goal(
-        self,
-        env: &Arc<ProgramEnvironment>,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
-    ) -> Fallible<Option<Solution>> {
-        Ok(self.create_solver(env).solve(canonical_goal))
-    }
-
     /// Returns the default SLG parameters.
     fn slg() -> Self {
         SolverChoice::SLG { max_size: 10 }
     }
 
-    pub fn create_solver(self, env: &Arc<ProgramEnvironment>) -> Box<Solver> {
+    /// Creates a solver state.
+    pub fn into_solver(self) -> Solver {
         match self {
-            SolverChoice::SLG { max_size } => Box::new(Forest::new(SlgContext::new(env, max_size))),
+            SolverChoice::SLG { max_size } => Solver {
+                forest: Forest::new(SlgContext::new(max_size)),
+            },
         }
     }
 }
@@ -112,19 +92,95 @@ impl Default for SolverChoice {
     }
 }
 
-pub trait Solver {
-    /// Solves a given goal, producing the solution. This will do only
-    /// as much work towards `goal` as it has to (and that works is
-    /// cached for future attempts).
-    fn solve(&mut self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution>;
+/// Finds the solution to "goals", or trait queries -- i.e., figures
+/// out what sets of types implement which traits. Also, between
+/// queries, this struct stores the cached state from previous solver
+/// attempts, which can then be re-used later.
+pub struct Solver {
+    forest: Forest<SlgContext>,
 }
 
-impl<C, CO> Solver for Forest<C, CO>
-where
-    C: Context<UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal>>, Solution = Solution>,
-    CO: ContextOps<C>,
-{
-    fn solve(&mut self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
-        self.solve(goal)
+impl Solver {
+    /// Attempts to solve the given goal, which must be in canonical
+    /// form. Returns a unique solution (if one exists).  This will do
+    /// only as much work towards `goal` as it has to (and that work
+    /// is cached for future attempts).
+    ///
+    /// # Parameters
+    ///
+    /// - `program` -- defines the program clauses in scope.
+    ///   - **Important:** You must supply the same set of program clauses
+    ///     each time you invoke `solve`, as otherwise the cached data may be
+    ///     invalid.
+    /// - `goal` the goal to solve
+    ///
+    /// # Returns
+    ///
+    /// - `None` is the goal cannot be proven.
+    /// - `Some(solution)` if we succeeded in finding *some* answers,
+    ///   although `solution` may reflect ambiguity and unknowns.
+    pub fn solve(
+        &mut self,
+        program: &dyn ChalkSolveDatabase,
+        goal: &UCanonical<InEnvironment<Goal>>,
+    ) -> Option<Solution> {
+        let ops = self.forest.context().ops(program);
+        self.forest.solve(&ops, goal)
+    }
+
+    pub fn into_test(self) -> TestSolver {
+        TestSolver { state: self }
+    }
+}
+
+impl std::fmt::Debug for Solver {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "Solver {{ .. }}")
+    }
+}
+
+/// Wrapper around a `Solver` that exposes
+/// additional methods meant only for testing.
+pub struct TestSolver {
+    state: Solver,
+}
+
+impl std::ops::Deref for TestSolver {
+    type Target = Solver;
+
+    fn deref(&self) -> &Solver {
+        &self.state
+    }
+}
+
+impl std::ops::DerefMut for TestSolver {
+    fn deref_mut(&mut self) -> &mut Solver {
+        &mut self.state
+    }
+}
+
+impl TestSolver {
+    /// Force the first `num_answers` answers. Meant only for testing,
+    /// and hence the precise return type is obscured (but you can get
+    /// its debug representation).
+    pub fn force_answers(
+        &mut self,
+        program: &dyn ChalkSolveDatabase,
+        goal: &UCanonical<InEnvironment<Goal>>,
+        num_answers: usize,
+    ) -> Box<std::fmt::Debug> {
+        let ops = self.forest.context().ops(program);
+        Box::new(self.forest.force_answers(&ops, goal.clone(), num_answers))
+    }
+
+    /// Returns then number of cached answers for `goal`. Used only in
+    /// testing.
+    pub fn num_cached_answers_for_goal(
+        &mut self,
+        program: &dyn ChalkSolveDatabase,
+        goal: &UCanonical<InEnvironment<Goal>>,
+    ) -> usize {
+        let ops = self.forest.context().ops(program);
+        self.forest.num_cached_answers_for_goal(&ops, goal)
     }
 }
