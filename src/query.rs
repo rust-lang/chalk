@@ -167,22 +167,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         }
     }
 
-    let coinductive_traits = program
-        .trait_data
-        .iter()
-        .filter_map(|(&trait_id, trait_datum)| {
-            if trait_datum.binders.value.flags.auto {
-                Some(trait_id)
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    Ok(Arc::new(ProgramEnvironment::new(
-        coinductive_traits,
-        program_clauses,
-    )))
+    Ok(Arc::new(ProgramEnvironment::new(program_clauses)))
 }
 
 fn solver(db: &impl LoweringDatabase) -> Arc<Mutex<Solver>> {
