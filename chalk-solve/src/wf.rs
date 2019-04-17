@@ -1,5 +1,5 @@
 use crate::ext::*;
-use crate::ChalkRulesDatabase;
+use crate::ChalkSolveDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::*;
@@ -24,7 +24,7 @@ pub enum WfError {
 }
 
 #[derive(new)]
-pub struct WfSolver<'db, DB: ChalkRulesDatabase> {
+pub struct WfSolver<'db, DB: ChalkSolveDatabase> {
     db: &'db DB,
 }
 
@@ -112,7 +112,7 @@ impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
 
 impl<'db, DB> WfSolver<'db, DB>
 where
-    DB: ChalkRulesDatabase,
+    DB: ChalkSolveDatabase,
 {
     pub fn verify_struct_decl(&self, struct_id: StructId) -> Result<(), WfError> {
         let struct_datum = self.db.struct_datum(struct_id);

@@ -16,8 +16,6 @@ mod infer;
 mod solve;
 pub mod wf;
 
-pub trait ChalkRulesDatabase: GoalSolver + RustIrDatabase {}
-
 pub trait GoalSolver {
     fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution>;
 }
@@ -69,7 +67,7 @@ pub trait RustIrDatabase {
 
 /// The trait for defining the program clauses that are in scope when
 /// solving a goal.
-pub trait ChalkSolveDatabase: Debug {
+pub trait ChalkSolveDatabase: GoalSolver + RustIrDatabase + Debug {
     /// Returns a set of program clauses that could possibly match
     /// `goal`. This can be any superset of the correct set, but the
     /// more precise you can make it, the more efficient solving will

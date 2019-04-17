@@ -23,7 +23,6 @@ use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
-use chalk_solve::ChalkRulesDatabase;
 use chalk_solve::ChalkSolveDatabase;
 use chalk_solve::GoalSolver;
 use chalk_solve::RustIrDatabase;
@@ -159,5 +158,3 @@ impl GoalSolver for ChalkDatabase {
         solution
     }
 }
-
-impl ChalkRulesDatabase for ChalkDatabase {}
