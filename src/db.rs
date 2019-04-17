@@ -21,7 +21,7 @@ use chalk_ir::TypeName;
 use chalk_ir::UCanonical;
 use chalk_rules::ChalkRulesDatabase;
 use chalk_rules::GoalSolver;
-use chalk_rules::RustIrSource;
+use chalk_rules::RustIrDatabase;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
@@ -85,7 +85,7 @@ impl ChalkSolveDatabase for ChalkDatabase {
     }
 }
 
-impl RustIrSource for ChalkDatabase {
+impl RustIrDatabase for ChalkDatabase {
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
         self.program_ir().unwrap().associated_ty_data[&ty].clone()
     }

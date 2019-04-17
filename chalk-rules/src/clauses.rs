@@ -1,4 +1,4 @@
-use crate::RustIrSource;
+use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Subst;
@@ -10,7 +10,7 @@ use std::iter;
 /// or struct definition) into its associated "program clauses" --
 /// that is, into the lowered, logical rules that it defines.
 pub trait ToProgramClauses {
-    fn to_program_clauses(&self, program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>);
+    fn to_program_clauses(&self, program: &dyn RustIrDatabase, clauses: &mut Vec<ProgramClause>);
 }
 
 impl ToProgramClauses for ImplDatum {
@@ -22,7 +22,7 @@ impl ToProgramClauses for ImplDatum {
     ///     Implemented(Vec<T>: Clone) :- Implemented(T: Clone).
     /// }
     /// ```
-    fn to_program_clauses(&self, _program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
+    fn to_program_clauses(&self, _program: &dyn RustIrDatabase, clauses: &mut Vec<ProgramClause>) {
         clauses.push(
             self.binders
                 .map_ref(|bound| ProgramClauseImplication {
@@ -69,7 +69,7 @@ pub fn push_auto_trait_impls(
     auto_trait: &TraitDatum,
     struct_id: StructId,
     struct_datum: &StructDatum,
-    program: &dyn RustIrSource,
+    program: &dyn RustIrDatabase,
     vec: &mut Vec<ProgramClause>,
 ) {
     // Must be an auto trait.
@@ -153,7 +153,7 @@ impl ToProgramClauses for AssociatedTyValue {
     ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
+    fn to_program_clauses(&self, program: &dyn RustIrDatabase, clauses: &mut Vec<ProgramClause>) {
         let impl_datum = program.impl_datum(self.impl_id);
         let associated_ty = program.associated_ty_data(self.associated_ty_id);
 
@@ -309,7 +309,7 @@ impl ToProgramClauses for StructDatum {
     /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
     /// ```
     ///
-    fn to_program_clauses(&self, _program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
+    fn to_program_clauses(&self, _program: &dyn RustIrDatabase, clauses: &mut Vec<ProgramClause>) {
         let wf = self
             .binders
             .map_ref(|bound_datum| ProgramClauseImplication {
@@ -552,7 +552,7 @@ impl ToProgramClauses for TraitDatum {
     /// To implement fundamental traits, we simply just do not add the rule above that allows
     /// upstream types to implement upstream traits. Fundamental traits are not allowed to
     /// compatibly do that.
-    fn to_program_clauses(&self, _program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
+    fn to_program_clauses(&self, _program: &dyn RustIrDatabase, clauses: &mut Vec<ProgramClause>) {
         let trait_ref = self.binders.value.trait_ref.clone();
 
         let trait_ref_impl = WhereClause::Implemented(self.binders.value.trait_ref.clone());
@@ -777,7 +777,7 @@ impl ToProgramClauses for AssociatedTyDatum {
     ///     FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self, 'a,T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, program: &dyn RustIrSource, clauses: &mut Vec<ProgramClause>) {
+    fn to_program_clauses(&self, program: &dyn RustIrDatabase, clauses: &mut Vec<ProgramClause>) {
         let binders: Vec<_> = self
             .parameter_kinds
             .iter()

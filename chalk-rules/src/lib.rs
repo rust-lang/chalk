@@ -12,13 +12,13 @@ pub mod clauses;
 pub mod coherence;
 pub mod wf;
 
-pub trait ChalkRulesDatabase: GoalSolver + RustIrSource {}
+pub trait ChalkRulesDatabase: GoalSolver + RustIrDatabase {}
 
 pub trait GoalSolver {
     fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution>;
 }
 
-pub trait RustIrSource {
+pub trait RustIrDatabase {
     /// Returns the datum for the associated type with the given id.
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
 
