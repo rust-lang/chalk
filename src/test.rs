@@ -3,8 +3,8 @@
 use crate::db::ChalkDatabase;
 use crate::query::LoweringDatabase;
 use chalk_ir;
-use chalk_rules::GoalSolver;
 use chalk_solve::ext::*;
+use chalk_solve::GoalSolver;
 use chalk_solve::{Solution, SolverChoice};
 
 #[cfg(feature = "bench")]

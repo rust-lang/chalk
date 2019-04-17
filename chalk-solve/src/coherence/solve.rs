@@ -1,11 +1,11 @@
 use crate::coherence::{CoherenceError, CoherenceSolver};
+use crate::ext::*;
 use crate::ChalkRulesDatabase;
+use crate::Solution;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use chalk_rust_ir::*;
-use chalk_solve::ext::*;
-use chalk_solve::Solution;
 use failure::Fallible;
 use itertools::Itertools;
 

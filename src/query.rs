@@ -7,13 +7,13 @@ use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use chalk_ir::tls;
 use chalk_ir::TraitId;
-use chalk_rules::clauses::ToProgramClauses;
-use chalk_rules::coherence::orphan;
-use chalk_rules::coherence::{CoherenceSolver, SpecializationPriorities};
-use chalk_rules::wf;
-use chalk_rules::ChalkRulesDatabase;
-use chalk_rules::RustIrDatabase;
+use chalk_solve::clauses::ToProgramClauses;
+use chalk_solve::coherence::orphan;
+use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
+use chalk_solve::wf;
+use chalk_solve::ChalkRulesDatabase;
 use chalk_solve::ChalkSolveDatabase;
+use chalk_solve::RustIrDatabase;
 use chalk_solve::Solver;
 use chalk_solve::SolverChoice;
 use std::collections::BTreeMap;
@@ -142,7 +142,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         .filter(|(_, auto_trait)| auto_trait.binders.value.flags.auto)
     {
         for (&struct_id, struct_datum) in program.struct_data.iter() {
-            chalk_rules::clauses::push_auto_trait_impls(
+            chalk_solve::clauses::push_auto_trait_impls(
                 auto_trait_id,
                 auto_trait,
                 struct_id,

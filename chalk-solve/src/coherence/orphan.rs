@@ -1,8 +1,8 @@
 use crate::coherence::CoherenceError;
+use crate::ext::GoalExt;
 use crate::ChalkRulesDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::*;
-use chalk_solve::ext::*;
 use failure::Fallible;
 
 // Test if a local impl violates the orphan rules.

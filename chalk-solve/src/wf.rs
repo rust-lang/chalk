@@ -1,10 +1,10 @@
+use crate::ext::*;
 use crate::ChalkRulesDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::*;
 use chalk_ir::*;
 use chalk_rust_ir::*;
-use chalk_solve::ext::*;
 use derive_new::new;
 use failure::Fail;
 use itertools::Itertools;

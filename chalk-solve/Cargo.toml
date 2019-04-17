@@ -10,7 +10,11 @@ keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
 [dependencies]
+derive-new = "0.5.6"
 ena = "0.10.1"
+failure = "0.1"
+itertools = "0.7.8"
+petgraph = "0.4.13"
 
 [dependencies.chalk-macros]
 version = "0.1.0"
@@ -23,3 +27,7 @@ path = "../chalk-engine"
 [dependencies.chalk-ir]
 version = "0.1.0"
 path = "../chalk-ir"
+
+[dependencies.chalk-rust-ir]
+version = "0.1.0"
+path = "../chalk-rust-ir"
