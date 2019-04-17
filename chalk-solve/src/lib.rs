@@ -73,8 +73,6 @@ pub trait ChalkSolveDatabase: GoalSolver + RustIrDatabase + Debug {
     /// more precise you can make it, the more efficient solving will
     /// be.
     fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>);
-
-    fn is_coinductive_trait(&self, trait_id: TraitId) -> bool;
 }
 
 pub use solve::Solution;

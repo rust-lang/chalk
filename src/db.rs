@@ -73,15 +73,6 @@ impl ChalkSolveDatabase for ChalkDatabase {
             );
         }
     }
-
-    fn is_coinductive_trait(&self, trait_id: TraitId) -> bool {
-        if let Ok(program) = self.program_ir() {
-            // Currently, only auto traits are coinductive
-            program.trait_data[&trait_id].binders.value.flags.auto
-        } else {
-            false
-        }
-    }
 }
 
 impl RustIrDatabase for ChalkDatabase {
