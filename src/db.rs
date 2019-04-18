@@ -24,7 +24,6 @@ use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_solve::ChalkSolveDatabase;
-use chalk_solve::GoalSolver;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::Solution;
 use chalk_solve::SolverChoice;
@@ -59,6 +58,12 @@ impl ChalkDatabase {
     pub fn parse_and_lower_goal(&self, text: &str) -> Result<Box<Goal>, ChalkError> {
         let program = self.checked_program()?;
         Ok(chalk_parse::parse_goal(text)?.lower(&*program)?)
+    }
+
+    pub fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
+        let solver = self.solver();
+        let solution = solver.lock().unwrap().solve(self, goal);
+        solution
     }
 }
 
@@ -139,13 +144,5 @@ impl RustIrDatabase for ChalkDatabase {
         projection: &'p ProjectionTy,
     ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]) {
         self.program_ir().unwrap().split_projection(projection)
-    }
-}
-
-impl GoalSolver for ChalkDatabase {
-    fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
-        let solver = self.solver();
-        let solution = solver.lock().unwrap().solve(self, goal);
-        solution
     }
 }

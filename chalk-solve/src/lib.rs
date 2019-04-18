@@ -16,10 +16,6 @@ mod infer;
 mod solve;
 pub mod wf;
 
-pub trait GoalSolver {
-    fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution>;
-}
-
 pub trait RustIrDatabase {
     /// Returns the datum for the associated type with the given id.
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
@@ -67,7 +63,7 @@ pub trait RustIrDatabase {
 
 /// The trait for defining the program clauses that are in scope when
 /// solving a goal.
-pub trait ChalkSolveDatabase: GoalSolver + RustIrDatabase + Debug {
+pub trait ChalkSolveDatabase: RustIrDatabase + Debug {
     /// Returns a set of program clauses that could possibly match
     /// `goal`. This can be any superset of the correct set, but the
     /// more precise you can make it, the more efficient solving will

@@ -1,4 +1,5 @@
 use crate::ext::*;
+use crate::solve::SolverChoice;
 use crate::ChalkSolveDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
@@ -26,6 +27,7 @@ pub enum WfError {
 #[derive(new)]
 pub struct WfSolver<'db, DB: ChalkSolveDatabase> {
     db: &'db DB,
+    solver_choice: SolverChoice,
 }
 
 /// A trait for retrieving all types appearing in some Chalk construction.
@@ -153,7 +155,11 @@ where
         let goal = Goal::Implies(hypotheses, Box::new(goal))
             .quantify(QuantifierKind::ForAll, struct_datum.binders.binders.clone());
 
-        let is_legal = match self.db.solve(&goal.into_closed_goal()) {
+        let is_legal = match self
+            .solver_choice
+            .into_solver()
+            .solve(self.db, &goal.into_closed_goal())
+        {
             Some(sol) => sol.is_unique(),
             None => false,
         };
@@ -314,7 +320,11 @@ where
 
         debug!("WF trait goal: {:?}", goal);
 
-        let is_legal = match self.db.solve(&goal.into_closed_goal()) {
+        let is_legal = match self
+            .solver_choice
+            .into_solver()
+            .solve(self.db, &goal.into_closed_goal())
+        {
             Some(sol) => sol.is_unique(),
             None => false,
         };

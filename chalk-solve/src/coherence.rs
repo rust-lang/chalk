@@ -1,5 +1,6 @@
 use petgraph::prelude::*;
 
+use crate::solve::SolverChoice;
 use crate::ChalkSolveDatabase;
 use chalk_ir::{self, Identifier, ImplId, TraitId};
 use derive_new::new;
@@ -16,6 +17,7 @@ where
     DB: ChalkSolveDatabase,
 {
     db: &'db DB,
+    solver_choice: SolverChoice,
     trait_id: TraitId,
 }
 

@@ -62,7 +62,7 @@ fn orphan_check(db: &impl LoweringDatabase) -> Result<(), ChalkError> {
     tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let local_impls = program.local_impl_ids();
         for impl_id in local_impls {
-            orphan::perform_orphan_check(db, impl_id)?;
+            orphan::perform_orphan_check(db, db.solver_choice(), impl_id)?;
         }
         Ok(())
     })
@@ -77,7 +77,7 @@ fn coherence(
         .trait_data
         .keys()
         .map(|&trait_id| {
-            let solver = CoherenceSolver::new(db, trait_id);
+            let solver = CoherenceSolver::new(db, db.solver_choice(), trait_id);
             let priorities = solver.specialization_priorities()?;
             Ok((trait_id, priorities))
         })
@@ -95,7 +95,7 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
     db.coherence()?;
 
     let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
-        let solver = wf::WfSolver::new(db);
+        let solver = wf::WfSolver::new(db, db.solver_choice());
 
         for &id in program.struct_data.keys() {
             solver.verify_struct_decl(id)?;

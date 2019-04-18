@@ -135,7 +135,10 @@ where
             .negate();
 
         let canonical_goal = &goal.into_closed_goal();
-        let solution = self.db.solve(canonical_goal);
+        let solution = self
+            .solver_choice
+            .into_solver()
+            .solve(self.db, canonical_goal);
         let result = match solution {
             // Goal was proven with a unique solution, so no impl was found that causes these two
             // to overlap
@@ -214,7 +217,11 @@ where
             .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
         let canonical_goal = &goal.into_closed_goal();
-        let result = match self.db.solve(canonical_goal) {
+        let result = match self
+            .solver_choice
+            .into_solver()
+            .solve(self.db, canonical_goal)
+        {
             Some(sol) => sol.is_unique(),
             None => false,
         };
