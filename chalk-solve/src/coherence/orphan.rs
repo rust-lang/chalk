@@ -14,7 +14,7 @@ use failure::Fallible;
 //
 // This must be provable in order to pass the orphan check.
 pub fn perform_orphan_check(
-    db: &ChalkSolveDatabase,
+    db: &dyn ChalkSolveDatabase,
     solver_choice: SolverChoice,
     impl_id: ImplId,
 ) -> Fallible<()> {
