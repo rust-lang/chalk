@@ -13,14 +13,11 @@ use failure::Fallible;
 //     forall<T> { LocalImplAllowed(MyType<T>: Trait) }
 //
 // This must be provable in order to pass the orphan check.
-pub fn perform_orphan_check<DB>(
-    db: &DB,
+pub fn perform_orphan_check(
+    db: &ChalkSolveDatabase,
     solver_choice: SolverChoice,
     impl_id: ImplId,
-) -> Fallible<()>
-where
-    DB: ChalkSolveDatabase,
-{
+) -> Fallible<()> {
     debug_heading!("orphan_check(impl={:#?})", impl_id);
 
     let impl_datum = db.impl_datum(impl_id);
