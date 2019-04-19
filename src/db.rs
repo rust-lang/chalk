@@ -19,14 +19,12 @@ use chalk_ir::TypeId;
 use chalk_ir::TypeKindId;
 use chalk_ir::TypeName;
 use chalk_ir::UCanonical;
-use chalk_rules::ChalkRulesDatabase;
-use chalk_rules::GoalSolver;
-use chalk_rules::RustIrSource;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_solve::ChalkSolveDatabase;
+use chalk_solve::RustIrDatabase;
 use chalk_solve::Solution;
 use chalk_solve::SolverChoice;
 use salsa::Database;
@@ -61,6 +59,12 @@ impl ChalkDatabase {
         let program = self.checked_program()?;
         Ok(chalk_parse::parse_goal(text)?.lower(&*program)?)
     }
+
+    pub fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
+        let solver = self.solver();
+        let solution = solver.lock().unwrap().solve(self, goal);
+        solution
+    }
 }
 
 impl ChalkSolveDatabase for ChalkDatabase {
@@ -74,18 +78,9 @@ impl ChalkSolveDatabase for ChalkDatabase {
             );
         }
     }
-
-    fn is_coinductive_trait(&self, trait_id: TraitId) -> bool {
-        if let Ok(program) = self.program_ir() {
-            // Currently, only auto traits are coinductive
-            program.trait_data[&trait_id].binders.value.flags.auto
-        } else {
-            false
-        }
-    }
 }
 
-impl RustIrSource for ChalkDatabase {
+impl RustIrDatabase for ChalkDatabase {
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
         self.program_ir().unwrap().associated_ty_data[&ty].clone()
     }
@@ -151,13 +146,3 @@ impl RustIrSource for ChalkDatabase {
         self.program_ir().unwrap().split_projection(projection)
     }
 }
-
-impl GoalSolver for ChalkDatabase {
-    fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
-        let solver = self.solver();
-        let solution = solver.lock().unwrap().solve(self, goal);
-        solution
-    }
-}
-
-impl ChalkRulesDatabase for ChalkDatabase {}

@@ -1,8 +1,9 @@
 use crate::coherence::CoherenceError;
-use crate::ChalkRulesDatabase;
+use crate::ext::GoalExt;
+use crate::solve::SolverChoice;
+use crate::ChalkSolveDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::*;
-use chalk_solve::ext::*;
 use failure::Fallible;
 
 // Test if a local impl violates the orphan rules.
@@ -12,10 +13,11 @@ use failure::Fallible;
 //     forall<T> { LocalImplAllowed(MyType<T>: Trait) }
 //
 // This must be provable in order to pass the orphan check.
-pub fn perform_orphan_check<DB>(db: &DB, impl_id: ImplId) -> Fallible<()>
-where
-    DB: ChalkRulesDatabase,
-{
+pub fn perform_orphan_check(
+    db: &dyn ChalkSolveDatabase,
+    solver_choice: SolverChoice,
+    impl_id: ImplId,
+) -> Fallible<()> {
     debug_heading!("orphan_check(impl={:#?})", impl_id);
 
     let impl_datum = db.impl_datum(impl_id);
@@ -30,7 +32,10 @@ where
         .cast();
 
     let canonical_goal = &impl_allowed.into_closed_goal();
-    let is_allowed = db.solve(canonical_goal).is_some();
+    let is_allowed = solver_choice
+        .into_solver()
+        .solve(db, canonical_goal)
+        .is_some();
     debug!("overlaps = {:?}", is_allowed);
 
     if !is_allowed {

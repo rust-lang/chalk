@@ -7,13 +7,12 @@ use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use chalk_ir::tls;
 use chalk_ir::TraitId;
-use chalk_rules::clauses::ToProgramClauses;
-use chalk_rules::coherence::orphan;
-use chalk_rules::coherence::{CoherenceSolver, SpecializationPriorities};
-use chalk_rules::wf;
-use chalk_rules::ChalkRulesDatabase;
-use chalk_rules::RustIrSource;
+use chalk_solve::clauses::ToProgramClauses;
+use chalk_solve::coherence::orphan;
+use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
+use chalk_solve::wf;
 use chalk_solve::ChalkSolveDatabase;
+use chalk_solve::RustIrDatabase;
 use chalk_solve::Solver;
 use chalk_solve::SolverChoice;
 use std::collections::BTreeMap;
@@ -21,7 +20,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 #[salsa::query_group(Lowering)]
-pub trait LoweringDatabase: ChalkRulesDatabase + ChalkSolveDatabase + RustIrSource {
+pub trait LoweringDatabase: ChalkSolveDatabase + RustIrDatabase {
     #[salsa::input]
     fn program_text(&self) -> Arc<String>;
 
@@ -63,7 +62,7 @@ fn orphan_check(db: &impl LoweringDatabase) -> Result<(), ChalkError> {
     tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let local_impls = program.local_impl_ids();
         for impl_id in local_impls {
-            orphan::perform_orphan_check(db, impl_id)?;
+            orphan::perform_orphan_check(db, db.solver_choice(), impl_id)?;
         }
         Ok(())
     })
@@ -78,7 +77,7 @@ fn coherence(
         .trait_data
         .keys()
         .map(|&trait_id| {
-            let solver = CoherenceSolver::new(db, trait_id);
+            let solver = CoherenceSolver::new(db, db.solver_choice(), trait_id);
             let priorities = solver.specialization_priorities()?;
             Ok((trait_id, priorities))
         })
@@ -96,7 +95,7 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
     db.coherence()?;
 
     let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
-        let solver = wf::WfSolver::new(db);
+        let solver = wf::WfSolver::new(db, db.solver_choice());
 
         for &id in program.struct_data.keys() {
             solver.verify_struct_decl(id)?;
@@ -142,7 +141,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         .filter(|(_, auto_trait)| auto_trait.binders.value.flags.auto)
     {
         for (&struct_id, struct_datum) in program.struct_data.iter() {
-            chalk_rules::clauses::push_auto_trait_impls(
+            chalk_solve::clauses::push_auto_trait_impls(
                 auto_trait_id,
                 auto_trait,
                 struct_id,

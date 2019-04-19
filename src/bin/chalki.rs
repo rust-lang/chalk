@@ -11,7 +11,6 @@ use std::process::exit;
 use chalk::db::ChalkDatabase;
 use chalk::lowering::*;
 use chalk::query::LoweringDatabase;
-use chalk_rules::GoalSolver;
 use chalk_solve::ext::*;
 use chalk_solve::SolverChoice;
 use docopt::Docopt;

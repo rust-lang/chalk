@@ -23,7 +23,7 @@ Chalk contains three levels of IR:
 
 There are several re-usable bits of functionality. Each of these
 re-usable bits of code comes associated with a set of traits that
-connect it to the broader whole. 
+connect it to the broader whole.
 
 ### The "integration" crate (`chalk`)
 
@@ -109,7 +109,7 @@ two sub-traits:
 - The `GoalSolver` trait, which exposes a `solve` method for solving
   goals.  This solving is ultimately done by the code in the
   `chalk-solve` crate.
-- The `RustIrSource` trait, which offers a number of accessors to
+- The `RustIrDatabase` trait, which offers a number of accessors to
   fetch rust-ir. For example, the `trait_datum` method returns the
   `TraitDatum` for a given `TraitId`.
   - Note that -- by design -- this trait does not include any
