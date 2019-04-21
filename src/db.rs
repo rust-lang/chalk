@@ -96,10 +96,12 @@ impl ChalkSolveDatabase for ChalkDatabase {
             DomainGoal::Normalize(_projection_predicate) => {
                 // TODO assemble_clauses_from_assoc_ty_values
             }
-            _ => unimplemented!(), // TODO rustc has just 4 enum variants, what about other Chalk DomainGoal variants?
+            _ => (), // TODO rustc has just 4 enum variants, what about other Chalk DomainGoal variants?
         };
 
-        // TODO add clauses from environment
+        if let Ok(env) = self.environment() {
+            env.program_clauses_for_env(self, &mut clauses);
+        }
 
         vec.extend(
             clauses
