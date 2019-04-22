@@ -93,8 +93,9 @@ impl ChalkSolveDatabase for ChalkDatabase {
             }
             DomainGoal::WellFormed(WellFormed::Ty(ty)) => match_ty(self, goal, ty, &mut clauses),
             DomainGoal::FromEnv(_) => (), // Computed in the environment
-            DomainGoal::Normalize(_projection_predicate) => {
-                // TODO assemble_clauses_from_assoc_ty_values
+            DomainGoal::Normalize(projection_predicate) => {
+                self.associated_ty_data(projection_predicate.projection.associated_ty_id)
+                    .to_program_clauses(self, &mut clauses);
             }
             _ => (), // TODO rustc has just 4 enum variants, what about other Chalk DomainGoal variants?
         };
