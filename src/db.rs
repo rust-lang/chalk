@@ -2,16 +2,12 @@ use crate::error::ChalkError;
 use crate::lowering::LowerGoal;
 use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
-use chalk_ir::could_match::CouldMatch;
 use chalk_ir::tls;
-use chalk_ir::DomainGoal;
 use chalk_ir::Goal;
 use chalk_ir::Identifier;
 use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
 use chalk_ir::Parameter;
-use chalk_ir::ProgramClause;
-use chalk_ir::ProgramClauseImplication;
 use chalk_ir::ProjectionTy;
 use chalk_ir::StructId;
 use chalk_ir::TraitId;
@@ -20,14 +16,10 @@ use chalk_ir::TypeId;
 use chalk_ir::TypeKindId;
 use chalk_ir::TypeName;
 use chalk_ir::UCanonical;
-use chalk_ir::WellFormed;
-use chalk_ir::WhereClause;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
-use chalk_solve::clauses::ToProgramClauses;
-use chalk_solve::ChalkSolveDatabase;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::Solution;
 use chalk_solve::SolverChoice;
@@ -68,48 +60,6 @@ impl ChalkDatabase {
         let solver = self.solver();
         let solution = solver.lock().unwrap().solve(self, goal);
         solution
-    }
-}
-
-impl ChalkSolveDatabase for ChalkDatabase {
-    fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>) {
-        let mut clauses = vec![];
-        match goal {
-            DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
-                self.trait_datum(trait_ref.trait_id)
-                    .to_program_clauses(self, &mut clauses);
-
-                // TODO sized, unsize_trait, builtin impls?
-            }
-            DomainGoal::Holds(WhereClause::ProjectionEq(projection_predicate)) => {
-                self.associated_ty_data(projection_predicate.projection.associated_ty_id)
-                    .to_program_clauses(self, &mut clauses);
-
-                // TODO filter out some clauses?
-            }
-            DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
-                self.trait_datum(trait_predicate.trait_id)
-                    .to_program_clauses(self, &mut clauses);
-            }
-            DomainGoal::WellFormed(WellFormed::Ty(ty)) => match_ty(self, goal, ty, &mut clauses),
-            DomainGoal::FromEnv(_) => (), // Computed in the environment
-            DomainGoal::Normalize(projection_predicate) => {
-                self.associated_ty_data(projection_predicate.projection.associated_ty_id)
-                    .to_program_clauses(self, &mut clauses);
-            }
-            _ => (), // TODO rustc has just 4 enum variants, what about other Chalk DomainGoal variants?
-        };
-
-        if let Ok(env) = self.environment() {
-            env.program_clauses_for_env(self, &mut clauses);
-        }
-
-        vec.extend(
-            clauses
-                .into_iter()
-                .filter(|clause| clause.could_match(goal)) // TODO is this still needed?
-                .collect::<Vec<_>>(),
-        );
     }
 }
 
@@ -177,46 +127,5 @@ impl RustIrDatabase for ChalkDatabase {
         projection: &'p ProjectionTy,
     ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]) {
         self.program_ir().unwrap().split_projection(projection)
-    }
-}
-
-fn match_ty(
-    program: &dyn RustIrDatabase,
-    goal: &DomainGoal,
-    ty: &Ty,
-    clauses: &mut Vec<ProgramClause>,
-) {
-    match ty {
-        Ty::Apply(application_ty) => match application_ty.name {
-            TypeName::TypeKindId(type_kind_id) => {
-                match type_kind_id {
-                    TypeKindId::TypeId(type_id) => program
-                        .associated_ty_data(type_id)
-                        .to_program_clauses(program, clauses),
-                    TypeKindId::TraitId(trait_id) => program
-                        .trait_datum(trait_id)
-                        .to_program_clauses(program, clauses),
-                    TypeKindId::StructId(struct_id) => program
-                        .struct_datum(struct_id)
-                        .to_program_clauses(program, clauses),
-                };
-            }
-            TypeName::Placeholder(_) => {
-                let implication = ProgramClauseImplication {
-                    consequence: goal.clone(),
-                    conditions: vec![],
-                };
-                clauses.push(ProgramClause::Implies(implication));
-            }
-            TypeName::AssociatedType(type_id) => program
-                .associated_ty_data(type_id)
-                .to_program_clauses(program, clauses),
-        },
-        Ty::Projection(projection_ty) => program
-            .associated_ty_data(projection_ty.associated_ty_id)
-            .to_program_clauses(program, clauses),
-        Ty::UnselectedProjection(_) => (), //TODO what to do with the type_name?
-        Ty::ForAll(quantified_ty) => match_ty(program, goal, &quantified_ty.ty, clauses), //TODO is recursion actually needed?
-        Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
     }
 }

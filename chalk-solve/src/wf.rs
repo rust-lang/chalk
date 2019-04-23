@@ -1,6 +1,6 @@
 use crate::ext::*;
 use crate::solve::SolverChoice;
-use crate::ChalkSolveDatabase;
+use crate::RustIrDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::*;
@@ -25,7 +25,7 @@ pub enum WfError {
 }
 
 #[derive(new)]
-pub struct WfSolver<'db, DB: ChalkSolveDatabase> {
+pub struct WfSolver<'db, DB: RustIrDatabase> {
     db: &'db DB,
     solver_choice: SolverChoice,
 }
@@ -114,7 +114,7 @@ impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
 
 impl<'db, DB> WfSolver<'db, DB>
 where
-    DB: ChalkSolveDatabase,
+    DB: RustIrDatabase,
 {
     pub fn verify_struct_decl(&self, struct_id: StructId) -> Result<(), WfError> {
         let struct_datum = self.db.struct_datum(struct_id);

@@ -16,7 +16,7 @@ mod infer;
 mod solve;
 pub mod wf;
 
-pub trait RustIrDatabase {
+pub trait RustIrDatabase: Debug {
     /// Returns the datum for the associated type with the given id.
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
 
@@ -59,16 +59,6 @@ pub trait RustIrDatabase {
         &self,
         projection: &'p ProjectionTy,
     ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]);
-}
-
-/// The trait for defining the program clauses that are in scope when
-/// solving a goal.
-pub trait ChalkSolveDatabase: RustIrDatabase + Debug {
-    /// Returns a set of program clauses that could possibly match
-    /// `goal`. This can be any superset of the correct set, but the
-    /// more precise you can make it, the more efficient solving will
-    /// be.
-    fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>);
 }
 
 pub use solve::Solution;

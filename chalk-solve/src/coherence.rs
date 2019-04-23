@@ -1,7 +1,7 @@
 use petgraph::prelude::*;
 
 use crate::solve::SolverChoice;
-use crate::ChalkSolveDatabase;
+use crate::RustIrDatabase;
 use chalk_ir::{self, Identifier, ImplId, TraitId};
 use derive_new::new;
 use failure::Fallible;
@@ -14,7 +14,7 @@ mod solve;
 #[derive(new)]
 pub struct CoherenceSolver<'db, DB>
 where
-    DB: ChalkSolveDatabase,
+    DB: RustIrDatabase,
 {
     db: &'db DB,
     solver_choice: SolverChoice,
@@ -58,7 +58,7 @@ pub struct SpecializationPriority(usize);
 
 impl<'db, DB> CoherenceSolver<'db, DB>
 where
-    DB: ChalkSolveDatabase,
+    DB: RustIrDatabase,
 {
     pub fn specialization_priorities(&self) -> Fallible<Arc<SpecializationPriorities>> {
         let mut result = SpecializationPriorities::default();

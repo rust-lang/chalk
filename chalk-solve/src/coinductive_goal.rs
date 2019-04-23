@@ -1,4 +1,4 @@
-use crate::ChalkSolveDatabase;
+use crate::RustIrDatabase;
 use chalk_ir::*;
 
 pub trait IsCoinductive {
@@ -10,11 +10,11 @@ pub trait IsCoinductive {
     /// requirements and cyclic traits, which generates cycles in the
     /// proof tree which must not be rejected but instead must be
     /// treated as a success.
-    fn is_coinductive(&self, db: &dyn ChalkSolveDatabase) -> bool;
+    fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool;
 }
 
 impl IsCoinductive for Goal {
-    fn is_coinductive(&self, db: &dyn ChalkSolveDatabase) -> bool {
+    fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool {
         match self {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => match wca {
                 WhereClause::Implemented(tr) => {
@@ -30,7 +30,7 @@ impl IsCoinductive for Goal {
 }
 
 impl IsCoinductive for UCanonical<InEnvironment<Goal>> {
-    fn is_coinductive(&self, db: &dyn ChalkSolveDatabase) -> bool {
+    fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool {
         self.canonical.value.goal.is_coinductive(db)
     }
 }

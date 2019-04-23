@@ -1,6 +1,6 @@
 use crate::coherence::{CoherenceError, CoherenceSolver};
 use crate::ext::*;
-use crate::ChalkSolveDatabase;
+use crate::RustIrDatabase;
 use crate::Solution;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
@@ -11,7 +11,7 @@ use itertools::Itertools;
 
 impl<'db, DB> CoherenceSolver<'db, DB>
 where
-    DB: ChalkSolveDatabase,
+    DB: RustIrDatabase,
 {
     pub(super) fn visit_specializations_of_trait(
         &self,

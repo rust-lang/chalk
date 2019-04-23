@@ -1,14 +1,17 @@
+use crate::clauses::ToProgramClauses;
 use crate::coinductive_goal::IsCoinductive;
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
+use crate::solve::slg::clause_visitor::ClauseVisitor;
 use crate::solve::truncate::{self, Truncated};
 use crate::solve::Solution;
-use crate::ChalkSolveDatabase;
+use crate::RustIrDatabase;
 use chalk_engine::fallible::Fallible;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::*;
+use rustc_hash::FxHashSet;
 
 use chalk_engine::context;
 use chalk_engine::hh::HhGoal;
@@ -18,6 +21,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 mod aggregate;
+mod clause_visitor;
 mod resolvent;
 
 #[derive(Clone, Debug)]
@@ -30,7 +34,7 @@ impl SlgContext {
         SlgContext { max_size }
     }
 
-    pub(crate) fn ops<'p>(&self, program: &'p dyn ChalkSolveDatabase) -> SlgContextOps<'p> {
+    pub(crate) fn ops<'p>(&self, program: &'p dyn RustIrDatabase) -> SlgContextOps<'p> {
         SlgContextOps {
             program,
             max_size: self.max_size,
@@ -40,12 +44,12 @@ impl SlgContext {
 
 #[derive(Clone, Debug)]
 pub(crate) struct SlgContextOps<'me> {
-    program: &'me dyn ChalkSolveDatabase,
+    program: &'me dyn RustIrDatabase,
     max_size: usize,
 }
 
 pub(super) struct TruncatingInferenceTable<'me> {
-    program: &'me dyn ChalkSolveDatabase,
+    program: &'me dyn RustIrDatabase,
     max_size: usize,
     infer: InferenceTable,
 }
@@ -149,7 +153,7 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
 }
 
 impl<'me> TruncatingInferenceTable<'me> {
-    fn new(program: &'me dyn ChalkSolveDatabase, max_size: usize, infer: InferenceTable) -> Self {
+    fn new(program: &'me dyn RustIrDatabase, max_size: usize, infer: InferenceTable) -> Self {
         Self {
             program,
             max_size,
@@ -225,8 +229,9 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
             .cloned()
             .collect();
 
-        self.program
-            .program_clauses_that_could_match(goal, &mut clauses);
+        program_clauses_that_could_match(self.program, goal, &mut clauses);
+
+        program_clauses_for_env(environment, self.program, &mut clauses);
 
         clauses
     }
@@ -315,6 +320,125 @@ fn into_ex_clause(result: UnificationResult, ex_clause: &mut ExClause<SlgContext
         .subgoals
         .extend(result.goals.into_iter().casted().map(Literal::Positive));
     ex_clause.constraints.extend(result.constraints);
+}
+
+/// Returns a set of program clauses that could possibly match
+/// `goal`. This can be any superset of the correct set, but the
+/// more precise you can make it, the more efficient solving will
+/// be.
+fn program_clauses_that_could_match(
+    program: &dyn RustIrDatabase,
+    goal: &DomainGoal,
+    vec: &mut Vec<ProgramClause>,
+) {
+    let mut clauses = vec![];
+    match goal {
+        DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
+            program
+                .trait_datum(trait_ref.trait_id)
+                .to_program_clauses(program, &mut clauses);
+
+            // TODO sized, unsize_trait, builtin impls?
+        }
+        DomainGoal::Holds(WhereClause::ProjectionEq(projection_predicate)) => {
+            program
+                .associated_ty_data(projection_predicate.projection.associated_ty_id)
+                .to_program_clauses(program, &mut clauses);
+
+            // TODO filter out some clauses?
+        }
+        DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
+            program
+                .trait_datum(trait_predicate.trait_id)
+                .to_program_clauses(program, &mut clauses);
+        }
+        DomainGoal::WellFormed(WellFormed::Ty(ty)) => match_ty(program, goal, ty, &mut clauses),
+        DomainGoal::FromEnv(_) => (), // Computed in the environment
+        DomainGoal::Normalize(projection_predicate) => {
+            program
+                .associated_ty_data(projection_predicate.projection.associated_ty_id)
+                .to_program_clauses(program, &mut clauses);
+        }
+        _ => (), // TODO rustc has just 4 enum variants, what about other Chalk DomainGoal variants?
+    };
+
+    vec.extend(
+        clauses
+            .into_iter()
+            .filter(|clause| clause.could_match(goal))
+            .collect::<Vec<_>>(),
+    );
+}
+
+fn match_ty(
+    program: &dyn RustIrDatabase,
+    goal: &DomainGoal,
+    ty: &Ty,
+    clauses: &mut Vec<ProgramClause>,
+) {
+    match ty {
+        Ty::Apply(application_ty) => match application_ty.name {
+            TypeName::TypeKindId(type_kind_id) => {
+                match type_kind_id {
+                    TypeKindId::TypeId(type_id) => program
+                        .associated_ty_data(type_id)
+                        .to_program_clauses(program, clauses),
+                    TypeKindId::TraitId(trait_id) => program
+                        .trait_datum(trait_id)
+                        .to_program_clauses(program, clauses),
+                    TypeKindId::StructId(struct_id) => program
+                        .struct_datum(struct_id)
+                        .to_program_clauses(program, clauses),
+                };
+            }
+            TypeName::Placeholder(_) => {
+                let implication = ProgramClauseImplication {
+                    consequence: goal.clone(),
+                    conditions: vec![],
+                };
+                clauses.push(ProgramClause::Implies(implication));
+            }
+            TypeName::AssociatedType(type_id) => program
+                .associated_ty_data(type_id)
+                .to_program_clauses(program, clauses),
+        },
+        Ty::Projection(projection_ty) => program
+            .associated_ty_data(projection_ty.associated_ty_id)
+            .to_program_clauses(program, clauses),
+        Ty::UnselectedProjection(_) => (), //TODO what to do with the type_name?
+        Ty::ForAll(quantified_ty) => match_ty(program, goal, &quantified_ty.ty, clauses), //TODO is recursion actually needed?
+        Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
+    }
+}
+
+fn program_clauses_for_env<'db>(
+    environment: &Arc<Environment>,
+    program: &'db dyn RustIrDatabase,
+    clauses: &mut Vec<ProgramClause>,
+) {
+    let mut last_round = FxHashSet::default();
+    {
+        let mut visitor = ClauseVisitor::new(program, &mut last_round);
+        for clause in &environment.clauses {
+            visitor.visit_program_clause(clause.clone()); // TODO make ProgramClause copy or avoid clones
+        }
+    }
+
+    let mut closure = last_round.clone();
+    let mut next_round = FxHashSet::default();
+    while !last_round.is_empty() {
+        let mut visitor = ClauseVisitor::new(program, &mut next_round);
+        for clause in last_round.drain() {
+            visitor.visit_program_clause(clause);
+        }
+        last_round.extend(
+            next_round
+                .drain()
+                .filter(|clause| closure.insert(clause.clone())),
+        );
+    }
+
+    clauses.extend(closure.drain())
 }
 
 trait SubstitutionExt {
