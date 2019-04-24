@@ -352,14 +352,25 @@ fn program_clauses_that_could_match(
                 .trait_datum(trait_predicate.trait_id)
                 .to_program_clauses(program, &mut clauses);
         }
-        DomainGoal::WellFormed(WellFormed::Ty(ty)) => match_ty(program, goal, ty, &mut clauses),
+        DomainGoal::WellFormed(WellFormed::Ty(ty))
+        | DomainGoal::IsLocal(ty)
+        | DomainGoal::IsUpstream(ty)
+        | DomainGoal::IsFullyVisible(ty)
+        | DomainGoal::DownstreamType(ty) => match_ty(program, goal, ty, &mut clauses),
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(projection_predicate) => {
             program
                 .associated_ty_data(projection_predicate.projection.associated_ty_id)
                 .to_program_clauses(program, &mut clauses);
         }
-        _ => (), // TODO rustc has just 4 enum variants, what about other Chalk DomainGoal variants?
+        DomainGoal::UnselectedNormalize(normalize) => {
+            match_ty(program, goal, &normalize.ty, &mut clauses)
+        }
+        DomainGoal::InScope(type_kind_id) => match_type_kind(program, *type_kind_id, &mut clauses),
+        DomainGoal::LocalImplAllowed(trait_ref) => program
+            .trait_datum(trait_ref.trait_id)
+            .to_program_clauses(program, &mut clauses),
+        DomainGoal::Compatible(()) => (),
     };
 
     vec.extend(
@@ -378,19 +389,7 @@ fn match_ty(
 ) {
     match ty {
         Ty::Apply(application_ty) => match application_ty.name {
-            TypeName::TypeKindId(type_kind_id) => {
-                match type_kind_id {
-                    TypeKindId::TypeId(type_id) => program
-                        .associated_ty_data(type_id)
-                        .to_program_clauses(program, clauses),
-                    TypeKindId::TraitId(trait_id) => program
-                        .trait_datum(trait_id)
-                        .to_program_clauses(program, clauses),
-                    TypeKindId::StructId(struct_id) => program
-                        .struct_datum(struct_id)
-                        .to_program_clauses(program, clauses),
-                };
-            }
+            TypeName::TypeKindId(type_kind_id) => match_type_kind(program, type_kind_id, clauses),
             TypeName::Placeholder(_) => {
                 let implication = ProgramClauseImplication {
                     consequence: goal.clone(),
@@ -408,6 +407,24 @@ fn match_ty(
         Ty::UnselectedProjection(_) => (), //TODO what to do with the type_name?
         Ty::ForAll(quantified_ty) => match_ty(program, goal, &quantified_ty.ty, clauses), //TODO is recursion actually needed?
         Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
+    }
+}
+
+fn match_type_kind(
+    program: &dyn RustIrDatabase,
+    type_kind_id: TypeKindId,
+    clauses: &mut Vec<ProgramClause>,
+) {
+    match type_kind_id {
+        TypeKindId::TypeId(type_id) => program
+            .associated_ty_data(type_id)
+            .to_program_clauses(program, clauses),
+        TypeKindId::TraitId(trait_id) => program
+            .trait_datum(trait_id)
+            .to_program_clauses(program, clauses),
+        TypeKindId::StructId(struct_id) => program
+            .struct_datum(struct_id)
+            .to_program_clauses(program, clauses),
     }
 }
 

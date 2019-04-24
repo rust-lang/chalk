@@ -1,9 +1,11 @@
 use crate::clauses::ToProgramClauses;
+use crate::solve::slg::match_type_kind;
 use crate::DomainGoal;
 use crate::FromEnv;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
+use chalk_ir::TypeName;
 use rustc_hash::FxHashSet;
 
 pub struct ClauseVisitor<'db, 'set> {
@@ -20,16 +22,29 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
     }
 
     fn visit_ty(&mut self, ty: Ty) {
+        let mut clauses = vec![];
         match ty {
+            Ty::Apply(application_ty) => match application_ty.name {
+                TypeName::TypeKindId(type_kind_id) => {
+                    match_type_kind(self.program, type_kind_id, &mut clauses)
+                }
+                TypeName::Placeholder(_) => (),
+                TypeName::AssociatedType(type_id) => {
+                    self.program
+                        .associated_ty_data(type_id)
+                        .to_program_clauses(self.program, &mut clauses);
+                }
+            },
             Ty::Projection(projection_ty) => {
-                let mut clauses = vec![];
                 self.program
                     .associated_ty_data(projection_ty.associated_ty_id)
                     .to_program_clauses(self.program, &mut clauses);
-                self.round.extend(clauses);
             }
-            _ => (), // TODO implement
+            Ty::UnselectedProjection(_) | Ty::ForAll(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => {
+                ()
+            }
         }
+        self.round.extend(clauses);
     }
 
     fn visit_from_env(&mut self, from_env: FromEnv) {
