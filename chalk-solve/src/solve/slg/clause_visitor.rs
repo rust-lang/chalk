@@ -21,7 +21,7 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
         ClauseVisitor { program, round }
     }
 
-    fn visit_ty(&mut self, ty: Ty) {
+    fn visit_ty(&mut self, ty: &Ty) {
         let mut clauses = vec![];
         match ty {
             Ty::Apply(application_ty) => match application_ty.name {
@@ -47,7 +47,7 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
         self.round.extend(clauses);
     }
 
-    fn visit_from_env(&mut self, from_env: FromEnv) {
+    fn visit_from_env(&mut self, from_env: &FromEnv) {
         match from_env {
             FromEnv::Trait(trait_ref) => {
                 let mut clauses = vec![];
@@ -60,16 +60,16 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
         }
     }
 
-    fn visit_domain_goal(&mut self, domain_goal: DomainGoal) {
+    fn visit_domain_goal(&mut self, domain_goal: &DomainGoal) {
         if let DomainGoal::FromEnv(from_env) = domain_goal {
             self.visit_from_env(from_env);
         }
     }
 
-    pub fn visit_program_clause(&mut self, clause: ProgramClause) {
+    pub fn visit_program_clause(&mut self, clause: &ProgramClause) {
         match clause {
-            ProgramClause::Implies(clause) => self.visit_domain_goal(clause.consequence),
-            ProgramClause::ForAll(clause) => self.visit_domain_goal(clause.value.consequence),
+            ProgramClause::Implies(clause) => self.visit_domain_goal(&clause.consequence),
+            ProgramClause::ForAll(clause) => self.visit_domain_goal(&clause.value.consequence),
         }
     }
 }

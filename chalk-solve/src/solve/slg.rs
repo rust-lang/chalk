@@ -437,7 +437,7 @@ fn program_clauses_for_env<'db>(
     {
         let mut visitor = ClauseVisitor::new(program, &mut last_round);
         for clause in &environment.clauses {
-            visitor.visit_program_clause(clause.clone()); // TODO make ProgramClause copy or avoid clones
+            visitor.visit_program_clause(&clause);
         }
     }
 
@@ -446,7 +446,7 @@ fn program_clauses_for_env<'db>(
     while !last_round.is_empty() {
         let mut visitor = ClauseVisitor::new(program, &mut next_round);
         for clause in last_round.drain() {
-            visitor.visit_program_clause(clause);
+            visitor.visit_program_clause(&clause);
         }
         last_round.extend(
             next_round
