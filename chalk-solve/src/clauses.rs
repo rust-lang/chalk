@@ -118,52 +118,42 @@ pub fn program_clauses_for_goal<'db>(
 fn program_clauses_that_could_match(
     db: &dyn RustIrDatabase,
     goal: &DomainGoal,
-    vec: &mut Vec<ProgramClause>,
+    clauses: &mut Vec<ProgramClause>,
 ) {
-    let mut clauses = vec![];
     match goal {
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
             db.trait_datum(trait_ref.trait_id)
-                .to_program_clauses(db, &mut clauses);
+                .to_program_clauses(db, clauses);
 
             // TODO sized, unsize_trait, builtin impls?
         }
         DomainGoal::Holds(WhereClause::ProjectionEq(projection_predicate)) => {
             db.associated_ty_data(projection_predicate.projection.associated_ty_id)
-                .to_program_clauses(db, &mut clauses);
+                .to_program_clauses(db, clauses);
 
             // TODO filter out some clauses?
         }
         DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
             db.trait_datum(trait_predicate.trait_id)
-                .to_program_clauses(db, &mut clauses);
+                .to_program_clauses(db, clauses);
         }
         DomainGoal::WellFormed(WellFormed::Ty(ty))
         | DomainGoal::IsLocal(ty)
         | DomainGoal::IsUpstream(ty)
         | DomainGoal::IsFullyVisible(ty)
-        | DomainGoal::DownstreamType(ty) => match_ty(db, goal, ty, &mut clauses),
+        | DomainGoal::DownstreamType(ty) => match_ty(db, goal, ty, clauses),
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(projection_predicate) => {
             db.associated_ty_data(projection_predicate.projection.associated_ty_id)
-                .to_program_clauses(db, &mut clauses);
+                .to_program_clauses(db, clauses);
         }
-        DomainGoal::UnselectedNormalize(normalize) => {
-            match_ty(db, goal, &normalize.ty, &mut clauses)
-        }
-        DomainGoal::InScope(type_kind_id) => match_type_kind(db, *type_kind_id, &mut clauses),
+        DomainGoal::UnselectedNormalize(normalize) => match_ty(db, goal, &normalize.ty, clauses),
+        DomainGoal::InScope(type_kind_id) => match_type_kind(db, *type_kind_id, clauses),
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)
-            .to_program_clauses(db, &mut clauses),
+            .to_program_clauses(db, clauses),
         DomainGoal::Compatible(()) => (),
     };
-
-    vec.extend(
-        clauses
-            .into_iter()
-            .filter(|clause| clause.could_match(goal))
-            .collect::<Vec<_>>(),
-    );
 }
 
 fn match_ty(db: &dyn RustIrDatabase, goal: &DomainGoal, ty: &Ty, clauses: &mut Vec<ProgramClause>) {
