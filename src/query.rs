@@ -7,7 +7,7 @@ use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use chalk_ir::tls;
 use chalk_ir::TraitId;
-use chalk_solve::clauses::ToProgramClauses;
+use chalk_solve::clauses::program_clauses::ToProgramClauses;
 use chalk_solve::coherence::orphan;
 use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
 use chalk_solve::wf;

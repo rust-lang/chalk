@@ -1,5 +1,5 @@
+use super::program_clauses::ToProgramClauses;
 use crate::clauses::match_type_kind;
-use crate::clauses::ToProgramClauses;
 use crate::DomainGoal;
 use crate::FromEnv;
 use crate::ProgramClause;

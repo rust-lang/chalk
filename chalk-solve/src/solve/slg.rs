@@ -1,17 +1,16 @@
-use crate::clauses::program_clauses_that_could_match;
+use crate::clauses::{program_clauses_for_env, program_clauses_that_could_match};
 use crate::coinductive_goal::IsCoinductive;
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
-use crate::solve::slg::clause_visitor::ClauseVisitor;
 use crate::solve::truncate::{self, Truncated};
 use crate::solve::Solution;
 use crate::RustIrDatabase;
 use chalk_engine::fallible::Fallible;
-use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::cast::Cast;
+use chalk_ir::cast::Caster;
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::*;
-use rustc_hash::FxHashSet;
 
 use chalk_engine::context;
 use chalk_engine::hh::HhGoal;
@@ -21,7 +20,6 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 mod aggregate;
-mod clause_visitor;
 mod resolvent;
 
 #[derive(Clone, Debug)]
@@ -320,36 +318,6 @@ fn into_ex_clause(result: UnificationResult, ex_clause: &mut ExClause<SlgContext
         .subgoals
         .extend(result.goals.into_iter().casted().map(Literal::Positive));
     ex_clause.constraints.extend(result.constraints);
-}
-
-fn program_clauses_for_env<'db>(
-    environment: &Arc<Environment>,
-    program: &'db dyn RustIrDatabase,
-    clauses: &mut Vec<ProgramClause>,
-) {
-    let mut last_round = FxHashSet::default();
-    {
-        let mut visitor = ClauseVisitor::new(program, &mut last_round);
-        for clause in &environment.clauses {
-            visitor.visit_program_clause(&clause);
-        }
-    }
-
-    let mut closure = last_round.clone();
-    let mut next_round = FxHashSet::default();
-    while !last_round.is_empty() {
-        let mut visitor = ClauseVisitor::new(program, &mut next_round);
-        for clause in last_round.drain() {
-            visitor.visit_program_clause(&clause);
-        }
-        last_round.extend(
-            next_round
-                .drain()
-                .filter(|clause| closure.insert(clause.clone())),
-        );
-    }
-
-    clauses.extend(closure.drain())
 }
 
 trait SubstitutionExt {
