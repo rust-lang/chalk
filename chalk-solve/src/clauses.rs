@@ -1,5 +1,6 @@
 use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::could_match::CouldMatch;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Subst;
 use chalk_ir::*;
@@ -950,5 +951,111 @@ impl ToProgramClauses for AssociatedTyDatum {
             }
             .cast(),
         );
+    }
+}
+
+/// Returns a set of program clauses that could possibly match
+/// `goal`. This can be any superset of the correct set, but the
+/// more precise you can make it, the more efficient solving will
+/// be.
+pub fn program_clauses_that_could_match(
+    program: &dyn RustIrDatabase,
+    goal: &DomainGoal,
+    vec: &mut Vec<ProgramClause>,
+) {
+    let mut clauses = vec![];
+    match goal {
+        DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
+            program
+                .trait_datum(trait_ref.trait_id)
+                .to_program_clauses(program, &mut clauses);
+
+            // TODO sized, unsize_trait, builtin impls?
+        }
+        DomainGoal::Holds(WhereClause::ProjectionEq(projection_predicate)) => {
+            program
+                .associated_ty_data(projection_predicate.projection.associated_ty_id)
+                .to_program_clauses(program, &mut clauses);
+
+            // TODO filter out some clauses?
+        }
+        DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
+            program
+                .trait_datum(trait_predicate.trait_id)
+                .to_program_clauses(program, &mut clauses);
+        }
+        DomainGoal::WellFormed(WellFormed::Ty(ty))
+        | DomainGoal::IsLocal(ty)
+        | DomainGoal::IsUpstream(ty)
+        | DomainGoal::IsFullyVisible(ty)
+        | DomainGoal::DownstreamType(ty) => match_ty(program, goal, ty, &mut clauses),
+        DomainGoal::FromEnv(_) => (), // Computed in the environment
+        DomainGoal::Normalize(projection_predicate) => {
+            program
+                .associated_ty_data(projection_predicate.projection.associated_ty_id)
+                .to_program_clauses(program, &mut clauses);
+        }
+        DomainGoal::UnselectedNormalize(normalize) => {
+            match_ty(program, goal, &normalize.ty, &mut clauses)
+        }
+        DomainGoal::InScope(type_kind_id) => match_type_kind(program, *type_kind_id, &mut clauses),
+        DomainGoal::LocalImplAllowed(trait_ref) => program
+            .trait_datum(trait_ref.trait_id)
+            .to_program_clauses(program, &mut clauses),
+        DomainGoal::Compatible(()) => (),
+    };
+
+    vec.extend(
+        clauses
+            .into_iter()
+            .filter(|clause| clause.could_match(goal))
+            .collect::<Vec<_>>(),
+    );
+}
+
+fn match_ty(
+    program: &dyn RustIrDatabase,
+    goal: &DomainGoal,
+    ty: &Ty,
+    clauses: &mut Vec<ProgramClause>,
+) {
+    match ty {
+        Ty::Apply(application_ty) => match application_ty.name {
+            TypeName::TypeKindId(type_kind_id) => match_type_kind(program, type_kind_id, clauses),
+            TypeName::Placeholder(_) => {
+                let implication = ProgramClauseImplication {
+                    consequence: goal.clone(),
+                    conditions: vec![],
+                };
+                clauses.push(ProgramClause::Implies(implication));
+            }
+            TypeName::AssociatedType(type_id) => program
+                .associated_ty_data(type_id)
+                .to_program_clauses(program, clauses),
+        },
+        Ty::Projection(projection_ty) => program
+            .associated_ty_data(projection_ty.associated_ty_id)
+            .to_program_clauses(program, clauses),
+        Ty::UnselectedProjection(_) => (), //TODO what to do with the type_name?
+        Ty::ForAll(quantified_ty) => match_ty(program, goal, &quantified_ty.ty, clauses), //TODO is recursion actually needed?
+        Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
+    }
+}
+
+pub fn match_type_kind(
+    program: &dyn RustIrDatabase,
+    type_kind_id: TypeKindId,
+    clauses: &mut Vec<ProgramClause>,
+) {
+    match type_kind_id {
+        TypeKindId::TypeId(type_id) => program
+            .associated_ty_data(type_id)
+            .to_program_clauses(program, clauses),
+        TypeKindId::TraitId(trait_id) => program
+            .trait_datum(trait_id)
+            .to_program_clauses(program, clauses),
+        TypeKindId::StructId(struct_id) => program
+            .struct_datum(struct_id)
+            .to_program_clauses(program, clauses),
     }
 }
