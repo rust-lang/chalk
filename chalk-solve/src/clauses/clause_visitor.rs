@@ -9,16 +9,13 @@ use chalk_ir::TypeName;
 use rustc_hash::FxHashSet;
 
 pub struct ClauseVisitor<'db, 'set> {
-    program: &'db dyn RustIrDatabase,
+    db: &'db dyn RustIrDatabase,
     round: &'set mut FxHashSet<ProgramClause>,
 }
 
 impl<'db, 'set> ClauseVisitor<'db, 'set> {
-    pub fn new(
-        program: &'db dyn RustIrDatabase,
-        round: &'set mut FxHashSet<ProgramClause>,
-    ) -> Self {
-        ClauseVisitor { program, round }
+    pub fn new(db: &'db dyn RustIrDatabase, round: &'set mut FxHashSet<ProgramClause>) -> Self {
+        ClauseVisitor { db, round }
     }
 
     fn visit_ty(&mut self, ty: &Ty) {
@@ -26,19 +23,19 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
         match ty {
             Ty::Apply(application_ty) => match application_ty.name {
                 TypeName::TypeKindId(type_kind_id) => {
-                    match_type_kind(self.program, type_kind_id, &mut clauses)
+                    match_type_kind(self.db, type_kind_id, &mut clauses)
                 }
                 TypeName::Placeholder(_) => (),
                 TypeName::AssociatedType(type_id) => {
-                    self.program
+                    self.db
                         .associated_ty_data(type_id)
-                        .to_program_clauses(self.program, &mut clauses);
+                        .to_program_clauses(self.db, &mut clauses);
                 }
             },
             Ty::Projection(projection_ty) => {
-                self.program
+                self.db
                     .associated_ty_data(projection_ty.associated_ty_id)
-                    .to_program_clauses(self.program, &mut clauses);
+                    .to_program_clauses(self.db, &mut clauses);
             }
             Ty::UnselectedProjection(_) | Ty::ForAll(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => {
                 ()
@@ -51,9 +48,9 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
         match from_env {
             FromEnv::Trait(trait_ref) => {
                 let mut clauses = vec![];
-                self.program
+                self.db
                     .trait_datum(trait_ref.trait_id)
-                    .to_program_clauses(self.program, &mut clauses);
+                    .to_program_clauses(self.db, &mut clauses);
                 self.round.extend(clauses);
             }
             FromEnv::Ty(ty) => self.visit_ty(ty),

@@ -1,4 +1,4 @@
-use crate::clauses::{program_clauses_for_env, program_clauses_that_could_match};
+use crate::clauses::program_clauses_for_goal;
 use crate::coinductive_goal::IsCoinductive;
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
@@ -227,10 +227,7 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
             .cloned()
             .collect();
 
-        program_clauses_that_could_match(self.program, goal, &mut clauses);
-
-        program_clauses_for_env(environment, self.program, &mut clauses);
-
+        clauses.extend(program_clauses_for_goal(self.program, environment, goal));
         clauses
     }
 
