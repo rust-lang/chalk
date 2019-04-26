@@ -8,13 +8,30 @@ use crate::Ty;
 use chalk_ir::TypeName;
 use rustc_hash::FxHashSet;
 
-pub struct ClauseVisitor<'db, 'set> {
+/// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
+/// found in the environment.
+///
+/// For example, when `T: Clone` is in the environment, we can prove
+/// `T: Copy` by adding the clauses from `trait Clone`, which includes
+/// the rule `FromEnv(T: Copy) :- FromEnv(T: Clone)
+pub(super) fn elaborate_env_clauses(
+    db: &dyn RustIrDatabase,
+    in_clauses: &Vec<ProgramClause>,
+    out: &mut FxHashSet<ProgramClause>,
+) {
+    let mut visitor = ClauseVisitor::new(db, out);
+    for clause in in_clauses {
+        visitor.visit_program_clause(&clause);
+    }
+}
+
+struct ClauseVisitor<'db, 'set> {
     db: &'db dyn RustIrDatabase,
     round: &'set mut FxHashSet<ProgramClause>,
 }
 
 impl<'db, 'set> ClauseVisitor<'db, 'set> {
-    pub fn new(db: &'db dyn RustIrDatabase, round: &'set mut FxHashSet<ProgramClause>) -> Self {
+    fn new(db: &'db dyn RustIrDatabase, round: &'set mut FxHashSet<ProgramClause>) -> Self {
         ClauseVisitor { db, round }
     }
 
@@ -63,7 +80,7 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
         }
     }
 
-    pub fn visit_program_clause(&mut self, clause: &ProgramClause) {
+    fn visit_program_clause(&mut self, clause: &ProgramClause) {
         match clause {
             ProgramClause::Implies(clause) => self.visit_domain_goal(&clause.consequence),
             ProgramClause::ForAll(clause) => self.visit_domain_goal(&clause.value.consequence),
