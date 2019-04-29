@@ -30,7 +30,19 @@ pub trait RustIrDatabase: Debug {
     fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum>;
 
     /// Returns all the impls for a given trait.
+    ///
+    /// FIXME: We should really be using some kind of "simplified self
+    /// type" to help the impl use a hashing strategy and avoid
+    /// returning a ton of entries here.
     fn impls_for_trait(&self, trait_id: TraitId) -> Vec<ImplId>;
+
+    /// Returns the id of every struct in the program.
+    ///
+    /// FIXME(rust-lang/chalk#217): We currently use this to derive
+    /// the program clauses for a case like `?T: Send` (which could be
+    /// any struct). But really we should be using a "non-enumerable
+    /// goal" strategy here.
+    fn all_structs(&self) -> Vec<StructId>;
 
     /// Returns true if there is an explicit impl of the auto trait
     /// `auto_trait_id` for the struct `struct_id`. This is part of

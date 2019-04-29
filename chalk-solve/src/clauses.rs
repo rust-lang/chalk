@@ -144,10 +144,18 @@ fn program_clauses_that_could_match(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                if let Ty::Apply(apply) = trait_ref.parameters[0].assert_ty_ref() {
-                    if let TypeName::TypeKindId(TypeKindId::StructId(struct_id)) = apply.name {
-                        push_auto_trait_impls(trait_id, struct_id, db, clauses);
+                match trait_ref.parameters[0].assert_ty_ref() {
+                    Ty::Apply(apply) => {
+                        if let TypeName::TypeKindId(TypeKindId::StructId(struct_id)) = apply.name {
+                            push_auto_trait_impls(trait_id, struct_id, db, clauses);
+                        }
                     }
+                    Ty::InferenceVar(_) => {
+                        for struct_id in db.all_structs() {
+                            push_auto_trait_impls(trait_id, struct_id, db, clauses);
+                        }
+                    }
+                    _ => {}
                 }
             }
 
