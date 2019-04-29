@@ -2042,7 +2042,7 @@ fn inscope() {
 }
 
 #[test]
-fn unselected_projection() {
+fn unselected_projection_a() {
     test! {
         program {
             trait Iterator {

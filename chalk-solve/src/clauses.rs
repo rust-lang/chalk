@@ -114,7 +114,7 @@ pub fn program_clauses_for_goal<'db>(
     debug_heading!("program_clauses_for_goal(goal={:?})", goal);
 
     let mut vec = vec![];
-    program_clauses_that_could_match(db, goal, &mut vec);
+    program_clauses_that_could_match(db, environment, goal, &mut vec);
     program_clauses_for_env(db, environment, &mut vec);
     vec.retain(|c| c.could_match(goal));
 
@@ -129,6 +129,7 @@ pub fn program_clauses_for_goal<'db>(
 /// be.
 fn program_clauses_that_could_match(
     db: &dyn RustIrDatabase,
+    environment: &Arc<Environment>,
     goal: &DomainGoal,
     clauses: &mut Vec<ProgramClause>,
 ) {
@@ -188,24 +189,52 @@ fn program_clauses_that_could_match(
             // ```
             let associated_ty_datum = db.associated_ty_data(projection.associated_ty_id);
             let trait_id = associated_ty_datum.trait_id;
-            for impl_id in db.impls_for_trait(trait_id) {
-                let impl_datum = db.impl_datum(impl_id);
-                if !impl_datum.is_positive() {
-                    continue;
-                }
-
-                for atv in &impl_datum.binders.value.associated_ty_values {
-                    atv.to_program_clauses(db, clauses);
-                }
+            push_program_clauses_for_associated_type_values_in_impls_of(db, trait_id, clauses);
+        }
+        DomainGoal::UnselectedNormalize(_) => {
+            // An "unselected normalize" is one where the trait is not
+            // known. It could be any "in-scope" trait.
+            for trait_id in environment.in_scope_trait_ids() {
+                push_program_clauses_for_associated_type_values_in_impls_of(db, trait_id, clauses);
             }
         }
-        DomainGoal::UnselectedNormalize(normalize) => match_ty(db, &normalize.ty, clauses),
         DomainGoal::InScope(type_kind_id) => match_type_kind(db, *type_kind_id, clauses),
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)
             .to_program_clauses(db, clauses),
         DomainGoal::Compatible(()) => (),
     };
+}
+
+/// Generate program clauses from the associated-type values
+/// found in impls of the given trait. i.e., if `trait_id` = Iterator,
+/// then we would generate program clauses from each `type Item = ...`
+/// found in any impls of `Iterator`:
+/// which are found in impls. That is, if we are
+/// normalizing (e.g.) `<T as Iterator>::Item>`, then
+/// search for impls of iterator and, within those impls,
+/// for associated type values:
+///
+/// ```
+/// impl Iterator for Foo {
+///     type Item = Bar; // <-- associated type value
+/// }
+/// ```
+fn push_program_clauses_for_associated_type_values_in_impls_of(
+    db: &dyn RustIrDatabase,
+    trait_id: TraitId,
+    clauses: &mut Vec<ProgramClause>,
+) {
+    for impl_id in db.impls_for_trait(trait_id) {
+        let impl_datum = db.impl_datum(impl_id);
+        if !impl_datum.is_positive() {
+            continue;
+        }
+
+        for atv in &impl_datum.binders.value.associated_ty_values {
+            atv.to_program_clauses(db, clauses);
+        }
+    }
 }
 
 /// Given the "self-type" of a domain goal, push potentially relevant program
