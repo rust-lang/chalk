@@ -261,7 +261,14 @@ fn match_ty(db: &dyn RustIrDatabase, ty: &Ty, clauses: &mut Vec<ProgramClause>) 
             .associated_ty_data(projection_ty.associated_ty_id)
             .to_program_clauses(db, clauses),
         Ty::ForAll(quantified_ty) => match_ty(db, &quantified_ty.ty, clauses),
-        Ty::UnselectedProjection(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
+        Ty::UnselectedProjection(_) | Ty::BoundVar(_) => {}
+        Ty::InferenceVar(_) => {
+            // If the type is an (unbound) inference variable, it
+            // could be any of these things:
+            for struct_id in db.all_structs() {
+                db.struct_datum(struct_id).to_program_clauses(db, clauses);
+            }
+        }
     }
 }
 
