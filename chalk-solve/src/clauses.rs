@@ -111,7 +111,11 @@ pub fn program_clauses_for_goal<'db>(
     environment: &Arc<Environment>,
     goal: &DomainGoal,
 ) -> Vec<ProgramClause> {
-    debug_heading!("program_clauses_for_goal(goal={:?})", goal);
+    debug_heading!(
+        "program_clauses_for_goal(goal={:?}, environment={:?})",
+        goal,
+        environment
+    );
 
     let mut vec = vec![];
     vec.extend(db.custom_clauses());
