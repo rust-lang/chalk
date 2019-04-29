@@ -4,7 +4,6 @@ use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::*;
-use chalk_rust_ir::*;
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
 
@@ -43,14 +42,15 @@ pub mod program_clauses;
 /// ```
 pub fn push_auto_trait_impls(
     auto_trait_id: TraitId,
-    auto_trait: &TraitDatum,
     struct_id: StructId,
-    struct_datum: &StructDatum,
     program: &dyn RustIrDatabase,
     vec: &mut Vec<ProgramClause>,
 ) {
+    let auto_trait = &program.trait_datum(auto_trait_id);
+    let struct_datum = &program.struct_datum(struct_id);
+
     // Must be an auto trait.
-    assert!(auto_trait.binders.value.flags.auto);
+    assert!(auto_trait.is_auto_trait());
 
     // Auto traits never have generic parameters of their own (apart from `Self`).
     assert_eq!(auto_trait.binders.binders.len(), 1);
@@ -122,8 +122,21 @@ fn program_clauses_that_could_match(
 ) {
     match goal {
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
-            for impl_id in db.impls_for_trait(trait_ref.trait_id) {
+            let trait_id = trait_ref.trait_id;
+
+            for impl_id in db.impls_for_trait(trait_id) {
                 db.impl_datum(impl_id).to_program_clauses(db, clauses);
+            }
+
+            // If this is a `Foo: Send` (or any auto-trait), then add
+            // the automatic impls for `Foo`.
+            let trait_datum = db.trait_datum(trait_id);
+            if trait_datum.is_auto_trait() {
+                if let Ty::Apply(apply) = trait_ref.parameters[0].assert_ty_ref() {
+                    if let TypeName::TypeKindId(TypeKindId::StructId(struct_id)) = apply.name {
+                        push_auto_trait_impls(trait_id, struct_id, db, clauses);
+                    }
+                }
             }
 
             // TODO sized, unsize_trait, builtin impls?

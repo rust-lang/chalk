@@ -134,17 +134,15 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         .values()
         .for_each(|d| d.to_program_clauses(db, &mut program_clauses));
 
-    for (&auto_trait_id, auto_trait) in program
+    for (&auto_trait_id, _) in program
         .trait_data
         .iter()
         .filter(|(_, auto_trait)| auto_trait.binders.value.flags.auto)
     {
-        for (&struct_id, struct_datum) in program.struct_data.iter() {
+        for &struct_id in program.struct_data.keys() {
             chalk_solve::clauses::push_auto_trait_impls(
                 auto_trait_id,
-                auto_trait,
                 struct_id,
-                struct_datum,
                 db,
                 &mut program_clauses,
             );

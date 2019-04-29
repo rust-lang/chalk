@@ -70,6 +70,12 @@ pub struct TraitDatum {
     pub binders: Binders<TraitDatumBound>,
 }
 
+impl TraitDatum {
+    pub fn is_auto_trait(&self) -> bool {
+        self.binders.value.flags.auto
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
     pub trait_ref: TraitRef,
