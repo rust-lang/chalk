@@ -17,6 +17,10 @@ mod solve;
 pub mod wf;
 
 pub trait RustIrDatabase: Debug {
+    /// Returns any "custom program clauses" that do not derive from
+    /// Rust IR. Used only in testing the underlying solver.
+    fn custom_clauses(&self) -> Vec<ProgramClause>;
+
     /// Returns the datum for the associated type with the given id.
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
 

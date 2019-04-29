@@ -8,6 +8,7 @@ use chalk_ir::Identifier;
 use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
 use chalk_ir::Parameter;
+use chalk_ir::ProgramClause;
 use chalk_ir::ProjectionTy;
 use chalk_ir::StructId;
 use chalk_ir::TraitId;
@@ -64,6 +65,10 @@ impl ChalkDatabase {
 }
 
 impl RustIrDatabase for ChalkDatabase {
+    fn custom_clauses(&self) -> Vec<ProgramClause> {
+        self.program_ir().unwrap().custom_clauses.clone()
+    }
+
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
         self.program_ir().unwrap().associated_ty_data[&ty].clone()
     }

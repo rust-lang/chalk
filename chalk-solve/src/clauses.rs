@@ -114,6 +114,7 @@ pub fn program_clauses_for_goal<'db>(
     debug_heading!("program_clauses_for_goal(goal={:?})", goal);
 
     let mut vec = vec![];
+    vec.extend(db.custom_clauses());
     program_clauses_that_could_match(db, environment, goal, &mut vec);
     program_clauses_for_env(db, environment, &mut vec);
     vec.retain(|c| c.could_match(goal));
