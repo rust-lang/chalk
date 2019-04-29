@@ -138,6 +138,10 @@ fn program_clauses_that_could_match(
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
             let trait_id = trait_ref.trait_id;
 
+            // This is needed for the coherence related impls, as well
+            // as for the `Implemented(Foo) :- FromEnv(Foo)` rule.
+            db.trait_datum(trait_id).to_program_clauses(db, clauses);
+
             for impl_id in db.impls_for_trait(trait_id) {
                 db.impl_datum(impl_id).to_program_clauses(db, clauses);
             }
