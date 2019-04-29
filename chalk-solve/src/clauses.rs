@@ -165,19 +165,13 @@ fn program_clauses_that_could_match(
         }
         DomainGoal::WellFormed(WellFormed::Ty(ty))
         | DomainGoal::IsUpstream(ty)
-        | DomainGoal::DownstreamType(ty) => match_ty(db, goal, ty, clauses),
-        DomainGoal::IsFullyVisible(ty) | DomainGoal::IsLocal(ty) => match ty {
-            Ty::Apply(ApplicationTy {
-                name: TypeName::Placeholder(_),
-                ..
-            }) => (),
-            _ => match_ty(db, goal, ty, clauses),
-        },
+        | DomainGoal::DownstreamType(ty) => match_ty(db, ty, clauses),
+        DomainGoal::IsFullyVisible(ty) | DomainGoal::IsLocal(ty) => match_ty(db, ty, clauses),
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(projection_predicate) => db
             .associated_ty_data(projection_predicate.projection.associated_ty_id)
             .to_program_clauses(db, clauses),
-        DomainGoal::UnselectedNormalize(normalize) => match_ty(db, goal, &normalize.ty, clauses),
+        DomainGoal::UnselectedNormalize(normalize) => match_ty(db, &normalize.ty, clauses),
         DomainGoal::InScope(type_kind_id) => match_type_kind(db, *type_kind_id, clauses),
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)
@@ -186,17 +180,11 @@ fn program_clauses_that_could_match(
     };
 }
 
-fn match_ty(db: &dyn RustIrDatabase, goal: &DomainGoal, ty: &Ty, clauses: &mut Vec<ProgramClause>) {
+fn match_ty(db: &dyn RustIrDatabase, ty: &Ty, clauses: &mut Vec<ProgramClause>) {
     match ty {
         Ty::Apply(application_ty) => match application_ty.name {
             TypeName::TypeKindId(type_kind_id) => match_type_kind(db, type_kind_id, clauses),
-            TypeName::Placeholder(_) => {
-                let implication = ProgramClauseImplication {
-                    consequence: goal.clone(),
-                    conditions: vec![],
-                };
-                clauses.push(ProgramClause::Implies(implication));
-            }
+            TypeName::Placeholder(_) => {}
             TypeName::AssociatedType(type_id) => db
                 .associated_ty_data(type_id)
                 .to_program_clauses(db, clauses),
@@ -204,7 +192,7 @@ fn match_ty(db: &dyn RustIrDatabase, goal: &DomainGoal, ty: &Ty, clauses: &mut V
         Ty::Projection(projection_ty) => db
             .associated_ty_data(projection_ty.associated_ty_id)
             .to_program_clauses(db, clauses),
-        Ty::ForAll(quantified_ty) => match_ty(db, goal, &quantified_ty.ty, clauses),
+        Ty::ForAll(quantified_ty) => match_ty(db, &quantified_ty.ty, clauses),
         Ty::UnselectedProjection(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
     }
 }
