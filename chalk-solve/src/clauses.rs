@@ -166,9 +166,31 @@ fn program_clauses_that_could_match(
         | DomainGoal::DownstreamType(ty) => match_ty(db, ty, clauses),
         DomainGoal::IsFullyVisible(ty) | DomainGoal::IsLocal(ty) => match_ty(db, ty, clauses),
         DomainGoal::FromEnv(_) => (), // Computed in the environment
-        DomainGoal::Normalize(projection_predicate) => db
-            .associated_ty_data(projection_predicate.projection.associated_ty_id)
-            .to_program_clauses(db, clauses),
+        DomainGoal::Normalize(Normalize { projection, ty: _ }) => {
+            // Normalize goals derive from `AssociatedTyValue` datums,
+            // which are found in impls. That is, if we are
+            // normalizing (e.g.) `<T as Iterator>::Item>`, then
+            // search for impls of iterator and, within those impls,
+            // for associated type values:
+            //
+            // ```
+            // impl Iterator for Foo {
+            //     type Item = Bar; // <-- associated type value
+            // }
+            // ```
+            let associated_ty_datum = db.associated_ty_data(projection.associated_ty_id);
+            let trait_id = associated_ty_datum.trait_id;
+            for impl_id in db.impls_for_trait(trait_id) {
+                let impl_datum = db.impl_datum(impl_id);
+                if !impl_datum.is_positive() {
+                    continue;
+                }
+
+                for atv in &impl_datum.binders.value.associated_ty_values {
+                    atv.to_program_clauses(db, clauses);
+                }
+            }
+        }
         DomainGoal::UnselectedNormalize(normalize) => match_ty(db, &normalize.ty, clauses),
         DomainGoal::InScope(type_kind_id) => match_type_kind(db, *type_kind_id, clauses),
         DomainGoal::LocalImplAllowed(trait_ref) => db
