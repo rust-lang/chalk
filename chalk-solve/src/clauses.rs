@@ -200,6 +200,8 @@ fn program_clauses_that_could_match(
     };
 }
 
+/// Given the "self-type" of a domain goal, push potentially relevant program
+/// clauses.
 fn match_ty(db: &dyn RustIrDatabase, ty: &Ty, clauses: &mut Vec<ProgramClause>) {
     match ty {
         Ty::Apply(application_ty) => match application_ty.name {
