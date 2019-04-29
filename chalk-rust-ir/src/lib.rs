@@ -21,6 +21,15 @@ pub struct ImplDatum {
     pub binders: Binders<ImplDatumBound>,
 }
 
+impl ImplDatum {
+    pub fn is_positive(&self) -> bool {
+        match self.binders.value.trait_ref {
+            PolarizedTraitRef::Positive(_) => true,
+            PolarizedTraitRef::Negative(_) => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
     pub trait_ref: PolarizedTraitRef,

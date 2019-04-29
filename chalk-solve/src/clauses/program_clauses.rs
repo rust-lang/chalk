@@ -22,15 +22,22 @@ impl ToProgramClauses for ImplDatum {
     ///     Implemented(Vec<T>: Clone) :- Implemented(T: Clone).
     /// }
     /// ```
+    ///
+    /// For a negative impl like `impl... !Clone for ...`, however, we
+    /// generate nothing -- this is just a way to *opt out* from the
+    /// default auto trait impls, it doesn't have any positive effect
+    /// on its own.
     fn to_program_clauses(&self, _db: &dyn RustIrDatabase, clauses: &mut Vec<ProgramClause>) {
-        clauses.push(
-            self.binders
-                .map_ref(|bound| ProgramClauseImplication {
-                    consequence: bound.trait_ref.trait_ref().clone().cast(),
-                    conditions: bound.where_clauses.iter().cloned().casted().collect(),
-                })
-                .cast(),
-        );
+        if self.is_positive() {
+            clauses.push(
+                self.binders
+                    .map_ref(|bound| ProgramClauseImplication {
+                        consequence: bound.trait_ref.trait_ref().clone().cast(),
+                        conditions: bound.where_clauses.iter().cloned().casted().collect(),
+                    })
+                    .cast(),
+            );
+        }
     }
 }
 

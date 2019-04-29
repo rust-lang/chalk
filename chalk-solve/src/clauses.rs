@@ -46,6 +46,12 @@ pub fn push_auto_trait_impls(
     program: &dyn RustIrDatabase,
     vec: &mut Vec<ProgramClause>,
 ) {
+    debug_heading!(
+        "push_auto_trait_impls({:?}, {:?})",
+        auto_trait_id,
+        struct_id
+    );
+
     let auto_trait = &program.trait_datum(auto_trait_id);
     let struct_datum = &program.struct_datum(struct_id);
 
@@ -59,6 +65,7 @@ pub fn push_auto_trait_impls(
     // for Foo<..>`, where `Foo` is the struct we're looking at, then
     // we don't generate our own rules.
     if program.impl_provided_for(auto_trait_id, struct_id) {
+        debug!("impl provided");
         return;
     }
 
@@ -104,10 +111,15 @@ pub fn program_clauses_for_goal<'db>(
     environment: &Arc<Environment>,
     goal: &DomainGoal,
 ) -> Vec<ProgramClause> {
+    debug_heading!("program_clauses_for_goal(goal={:?})", goal);
+
     let mut vec = vec![];
     program_clauses_that_could_match(db, goal, &mut vec);
     program_clauses_for_env(db, environment, &mut vec);
     vec.retain(|c| c.could_match(goal));
+
+    debug!("vec = {:#?}", vec);
+
     vec
 }
 
