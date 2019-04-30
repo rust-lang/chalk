@@ -181,8 +181,10 @@ fn program_clauses_that_could_match(
         }
         DomainGoal::WellFormed(WellFormed::Ty(ty))
         | DomainGoal::IsUpstream(ty)
-        | DomainGoal::DownstreamType(ty) => match_ty(db, ty, clauses),
-        DomainGoal::IsFullyVisible(ty) | DomainGoal::IsLocal(ty) => match_ty(db, ty, clauses),
+        | DomainGoal::DownstreamType(ty) => match_ty(db, environment, ty, clauses),
+        DomainGoal::IsFullyVisible(ty) | DomainGoal::IsLocal(ty) => {
+            match_ty(db, environment, ty, clauses)
+        }
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(Normalize { projection, ty: _ }) => {
             // Normalize goals derive from `AssociatedTyValue` datums,
@@ -204,6 +206,7 @@ fn program_clauses_that_could_match(
             // An "unselected normalize" is one where the trait is not
             // known. It could be any "in-scope" trait.
             for trait_id in environment.in_scope_trait_ids() {
+                debug!("in-scope trait: {:?}", trait_id);
                 push_program_clauses_for_associated_type_values_in_impls_of(db, trait_id, clauses);
             }
         }
@@ -248,7 +251,12 @@ fn push_program_clauses_for_associated_type_values_in_impls_of(
 
 /// Given the "self-type" of a domain goal, push potentially relevant program
 /// clauses.
-fn match_ty(db: &dyn RustIrDatabase, ty: &Ty, clauses: &mut Vec<ProgramClause>) {
+fn match_ty(
+    db: &dyn RustIrDatabase,
+    environment: &Arc<Environment>,
+    ty: &Ty,
+    clauses: &mut Vec<ProgramClause>,
+) {
     match ty {
         Ty::Apply(application_ty) => match application_ty.name {
             TypeName::TypeKindId(type_kind_id) => match_type_kind(db, type_kind_id, clauses),
@@ -260,8 +268,20 @@ fn match_ty(db: &dyn RustIrDatabase, ty: &Ty, clauses: &mut Vec<ProgramClause>) 
         Ty::Projection(projection_ty) => db
             .associated_ty_data(projection_ty.associated_ty_id)
             .to_program_clauses(db, clauses),
-        Ty::ForAll(quantified_ty) => match_ty(db, &quantified_ty.ty, clauses),
-        Ty::UnselectedProjection(_) | Ty::BoundVar(_) => {}
+        Ty::ForAll(quantified_ty) => match_ty(db, environment, &quantified_ty.ty, clauses),
+        Ty::UnselectedProjection(_) => {
+            // FIXME: This unselected projection could normalize to
+            // any type, so we need the rules from all
+            // structs. Arguably though they should have some kind of
+            // well-formedness rules of their own? Or else we should
+            // create a custom rule that first "unselected-normalizes"
+            // the result and then checks for WF on the
+            // result. Something like that.
+            for struct_id in db.all_structs() {
+                db.struct_datum(struct_id).to_program_clauses(db, clauses);
+            }
+        }
+        Ty::BoundVar(_) => {}
         Ty::InferenceVar(_) => {
             // If the type is an (unbound) inference variable, it
             // could be any of these things:
