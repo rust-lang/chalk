@@ -5,7 +5,10 @@ use crate::FromEnv;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
+use chalk_ir::ProjectionEq;
+use chalk_ir::ProjectionTy;
 use chalk_ir::TypeName;
+use chalk_ir::WhereClause;
 use rustc_hash::FxHashSet;
 
 /// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
@@ -35,6 +38,14 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
         ClauseVisitor { db, round }
     }
 
+    fn visit_projection_ty(&mut self, projection_ty: &ProjectionTy) {
+        let mut clauses = vec![];
+        self.db
+            .associated_ty_data(projection_ty.associated_ty_id)
+            .to_program_clauses(self.db, &mut clauses);
+        self.round.extend(clauses);
+    }
+
     fn visit_ty(&mut self, ty: &Ty) {
         let mut clauses = vec![];
         match ty {
@@ -50,9 +61,7 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
                 }
             },
             Ty::Projection(projection_ty) => {
-                self.db
-                    .associated_ty_data(projection_ty.associated_ty_id)
-                    .to_program_clauses(self.db, &mut clauses);
+                self.visit_projection_ty(projection_ty);
             }
             Ty::UnselectedProjection(_) | Ty::ForAll(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => {
                 ()
@@ -75,8 +84,12 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
     }
 
     fn visit_domain_goal(&mut self, domain_goal: &DomainGoal) {
-        if let DomainGoal::FromEnv(from_env) = domain_goal {
-            self.visit_from_env(from_env);
+        match domain_goal {
+            DomainGoal::FromEnv(from_env) => self.visit_from_env(from_env),
+            DomainGoal::Holds(WhereClause::ProjectionEq(ProjectionEq { projection, ty: _ })) => {
+                self.visit_projection_ty(projection)
+            }
+            _ => {}
         }
     }
 
