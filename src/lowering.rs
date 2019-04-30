@@ -1094,6 +1094,12 @@ impl LowerTrait for TraitDefn {
                 }
             }
 
+            let associated_ty_ids: Vec<_> = self
+                .assoc_ty_defns
+                .iter()
+                .map(|defn| env.associated_ty_infos[&(trait_id, defn.name.str)].id)
+                .collect();
+
             Ok(rust_ir::TraitDatumBound {
                 trait_ref: trait_ref,
                 where_clauses: self.lower_where_clauses(env)?,
@@ -1103,6 +1109,7 @@ impl LowerTrait for TraitDefn {
                     upstream: self.flags.upstream,
                     fundamental: self.flags.fundamental,
                 },
+                associated_ty_ids,
             })
         })?;
 

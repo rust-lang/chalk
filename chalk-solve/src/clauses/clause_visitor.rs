@@ -74,9 +74,19 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
         match from_env {
             FromEnv::Trait(trait_ref) => {
                 let mut clauses = vec![];
-                self.db
-                    .trait_datum(trait_ref.trait_id)
-                    .to_program_clauses(self.db, &mut clauses);
+                let trait_datum = self.db.trait_datum(trait_ref.trait_id);
+
+                trait_datum.to_program_clauses(self.db, &mut clauses);
+
+                // If we know that `T: Iterator`, then we also know
+                // things about `<T as Iterator>::Item`, so push those
+                // implied bounds too:
+                for &associated_ty_id in &trait_datum.binders.value.associated_ty_ids {
+                    self.db
+                        .associated_ty_data(associated_ty_id)
+                        .to_program_clauses(self.db, &mut clauses);
+                }
+
                 self.round.extend(clauses);
             }
             FromEnv::Ty(ty) => self.visit_ty(ty),

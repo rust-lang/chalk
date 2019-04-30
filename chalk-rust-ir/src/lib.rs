@@ -110,6 +110,9 @@ pub struct TraitDatumBound {
     /// In Rust syntax these are represented in different ways, but in
     /// chalk we add annotations like `#[auto]`.
     pub flags: TraitFlags,
+
+    /// The id of each associated type defined in the trait.
+    pub associated_ty_ids: Vec<TypeId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
