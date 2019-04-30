@@ -193,7 +193,7 @@ fn program_clauses_that_could_match(
             // search for impls of iterator and, within those impls,
             // for associated type values:
             //
-            // ```
+            // ```ignore
             // impl Iterator for Foo {
             //     type Item = Bar; // <-- associated type value
             // }
@@ -227,7 +227,7 @@ fn program_clauses_that_could_match(
 /// search for impls of iterator and, within those impls,
 /// for associated type values:
 ///
-/// ```
+/// ```ignore
 /// impl Iterator for Foo {
 ///     type Item = Bar; // <-- associated type value
 /// }
