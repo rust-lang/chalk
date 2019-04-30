@@ -87,8 +87,28 @@ impl TraitDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
+    /// A "reference" to the trait, with all generic parameters
+    /// represented as bound values. So e.g. for
+    ///
+    /// ```ignore
+    /// trait Foo<T> {}
+    /// ```
+    ///
+    /// this would be `^0: Foo<^1>`, where `^0` represents the
+    /// debruijn index for `Self` and so forth.
     pub trait_ref: TraitRef,
+
+    /// Where clauses defined on the trait:
+    ///
+    /// ```ignore
+    /// trait Foo<T> where T: Debug { }
+    ///              ^^^^^^^^^^^^^^
+    /// ```
     pub where_clauses: Vec<QuantifiedWhereClause>,
+
+    /// "Flags" indicate special kinds of traits, like auto traits.
+    /// In Rust syntax these are represented in different ways, but in
+    /// chalk we add annotations like `#[auto]`.
     pub flags: TraitFlags,
 }
 
