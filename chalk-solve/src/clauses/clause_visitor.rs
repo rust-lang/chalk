@@ -5,10 +5,9 @@ use crate::FromEnv;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
-use chalk_ir::ProjectionEq;
 use chalk_ir::ProjectionTy;
 use chalk_ir::TypeName;
-use chalk_ir::WhereClause;
+
 use rustc_hash::FxHashSet;
 
 /// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
