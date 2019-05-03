@@ -96,9 +96,6 @@ impl<'db, 'set> ClauseVisitor<'db, 'set> {
     fn visit_domain_goal(&mut self, domain_goal: &DomainGoal) {
         match domain_goal {
             DomainGoal::FromEnv(from_env) => self.visit_from_env(from_env),
-            DomainGoal::Holds(WhereClause::ProjectionEq(ProjectionEq { projection, ty: _ })) => {
-                self.visit_projection_ty(projection)
-            }
             _ => {}
         }
     }
