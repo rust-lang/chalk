@@ -7,7 +7,6 @@ use crate::RustIrDatabase;
 use crate::Ty;
 use chalk_ir::ProjectionTy;
 use chalk_ir::TypeName;
-
 use rustc_hash::FxHashSet;
 
 /// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
@@ -21,20 +20,20 @@ pub(super) fn elaborate_env_clauses(
     in_clauses: &Vec<ProgramClause>,
     out: &mut FxHashSet<ProgramClause>,
 ) {
-    let mut visitor = ClauseVisitor::new(db, out);
+    let mut visitor = EnvElaborator::new(db, out);
     for clause in in_clauses {
         visitor.visit_program_clause(&clause);
     }
 }
 
-struct ClauseVisitor<'db, 'set> {
+struct EnvElaborator<'db, 'set> {
     db: &'db dyn RustIrDatabase,
     round: &'set mut FxHashSet<ProgramClause>,
 }
 
-impl<'db, 'set> ClauseVisitor<'db, 'set> {
+impl<'db, 'set> EnvElaborator<'db, 'set> {
     fn new(db: &'db dyn RustIrDatabase, round: &'set mut FxHashSet<ProgramClause>) -> Self {
-        ClauseVisitor { db, round }
+        EnvElaborator { db, round }
     }
 
     fn visit_projection_ty(&mut self, projection_ty: &ProjectionTy) {

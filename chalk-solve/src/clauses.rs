@@ -1,4 +1,4 @@
-use self::clause_visitor::elaborate_env_clauses;
+use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
 use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
@@ -7,7 +7,7 @@ use chalk_ir::*;
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
 
-mod clause_visitor;
+mod env_elaborator;
 pub mod program_clauses;
 
 /// For auto-traits, we generate a default rule for every struct,
