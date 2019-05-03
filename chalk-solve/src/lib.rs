@@ -16,7 +16,11 @@ mod infer;
 mod solve;
 pub mod wf;
 
-pub trait RustIrDatabase {
+pub trait RustIrDatabase: Debug {
+    /// Returns any "custom program clauses" that do not derive from
+    /// Rust IR. Used only in testing the underlying solver.
+    fn custom_clauses(&self) -> Vec<ProgramClause>;
+
     /// Returns the datum for the associated type with the given id.
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
 
@@ -30,7 +34,19 @@ pub trait RustIrDatabase {
     fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum>;
 
     /// Returns all the impls for a given trait.
+    ///
+    /// FIXME: We should really be using some kind of "simplified self
+    /// type" to help the impl use a hashing strategy and avoid
+    /// returning a ton of entries here.
     fn impls_for_trait(&self, trait_id: TraitId) -> Vec<ImplId>;
+
+    /// Returns the id of every struct in the program.
+    ///
+    /// FIXME(rust-lang/chalk#217): We currently use this to derive
+    /// the program clauses for a case like `?T: Send` (which could be
+    /// any struct). But really we should be using a "non-enumerable
+    /// goal" strategy here.
+    fn all_structs(&self) -> Vec<StructId>;
 
     /// Returns true if there is an explicit impl of the auto trait
     /// `auto_trait_id` for the struct `struct_id`. This is part of
@@ -61,16 +77,7 @@ pub trait RustIrDatabase {
     ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]);
 }
 
-/// The trait for defining the program clauses that are in scope when
-/// solving a goal.
-pub trait ChalkSolveDatabase: RustIrDatabase + Debug {
-    /// Returns a set of program clauses that could possibly match
-    /// `goal`. This can be any superset of the correct set, but the
-    /// more precise you can make it, the more efficient solving will
-    /// be.
-    fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>);
-}
-
+pub use solve::Guidance;
 pub use solve::Solution;
 pub use solve::Solver;
 pub use solve::SolverChoice;

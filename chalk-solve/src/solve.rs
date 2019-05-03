@@ -1,5 +1,5 @@
 use crate::solve::slg::SlgContext;
-use crate::ChalkSolveDatabase;
+use crate::RustIrDatabase;
 use chalk_engine::forest::Forest;
 use chalk_ir::*;
 use std::fmt;
@@ -121,7 +121,7 @@ impl Solver {
     ///   although `solution` may reflect ambiguity and unknowns.
     pub fn solve(
         &mut self,
-        program: &dyn ChalkSolveDatabase,
+        program: &dyn RustIrDatabase,
         goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Option<Solution> {
         let ops = self.forest.context().ops(program);
@@ -165,7 +165,7 @@ impl TestSolver {
     /// its debug representation).
     pub fn force_answers(
         &mut self,
-        program: &dyn ChalkSolveDatabase,
+        program: &dyn RustIrDatabase,
         goal: &UCanonical<InEnvironment<Goal>>,
         num_answers: usize,
     ) -> Box<std::fmt::Debug> {
@@ -177,7 +177,7 @@ impl TestSolver {
     /// testing.
     pub fn num_cached_answers_for_goal(
         &mut self,
-        program: &dyn ChalkSolveDatabase,
+        program: &dyn RustIrDatabase,
         goal: &UCanonical<InEnvironment<Goal>>,
     ) -> usize {
         let ops = self.forest.context().ops(program);

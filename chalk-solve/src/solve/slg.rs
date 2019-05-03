@@ -1,12 +1,14 @@
+use crate::clauses::program_clauses_for_goal;
 use crate::coinductive_goal::IsCoinductive;
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
 use crate::solve::truncate::{self, Truncated};
 use crate::solve::Solution;
-use crate::ChalkSolveDatabase;
+use crate::RustIrDatabase;
 use chalk_engine::fallible::Fallible;
-use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::cast::Cast;
+use chalk_ir::cast::Caster;
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::*;
 
@@ -30,7 +32,7 @@ impl SlgContext {
         SlgContext { max_size }
     }
 
-    pub(crate) fn ops<'p>(&self, program: &'p dyn ChalkSolveDatabase) -> SlgContextOps<'p> {
+    pub(crate) fn ops<'p>(&self, program: &'p dyn RustIrDatabase) -> SlgContextOps<'p> {
         SlgContextOps {
             program,
             max_size: self.max_size,
@@ -40,12 +42,12 @@ impl SlgContext {
 
 #[derive(Clone, Debug)]
 pub(crate) struct SlgContextOps<'me> {
-    program: &'me dyn ChalkSolveDatabase,
+    program: &'me dyn RustIrDatabase,
     max_size: usize,
 }
 
 pub(super) struct TruncatingInferenceTable<'me> {
-    program: &'me dyn ChalkSolveDatabase,
+    program: &'me dyn RustIrDatabase,
     max_size: usize,
     infer: InferenceTable,
 }
@@ -149,7 +151,7 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
 }
 
 impl<'me> TruncatingInferenceTable<'me> {
-    fn new(program: &'me dyn ChalkSolveDatabase, max_size: usize, infer: InferenceTable) -> Self {
+    fn new(program: &'me dyn RustIrDatabase, max_size: usize, infer: InferenceTable) -> Self {
         Self {
             program,
             max_size,
@@ -237,9 +239,7 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
             .cloned()
             .collect();
 
-        self.program
-            .program_clauses_that_could_match(goal, &mut clauses);
-
+        clauses.extend(program_clauses_for_goal(self.program, environment, goal));
         clauses
     }
 

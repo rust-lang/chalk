@@ -2,9 +2,7 @@ use crate::error::ChalkError;
 use crate::lowering::LowerGoal;
 use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
-use chalk_ir::could_match::CouldMatch;
 use chalk_ir::tls;
-use chalk_ir::DomainGoal;
 use chalk_ir::Goal;
 use chalk_ir::Identifier;
 use chalk_ir::ImplId;
@@ -23,7 +21,6 @@ use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
-use chalk_solve::ChalkSolveDatabase;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::Solution;
 use chalk_solve::SolverChoice;
@@ -67,20 +64,11 @@ impl ChalkDatabase {
     }
 }
 
-impl ChalkSolveDatabase for ChalkDatabase {
-    fn program_clauses_that_could_match(&self, goal: &DomainGoal, vec: &mut Vec<ProgramClause>) {
-        if let Ok(env) = self.environment() {
-            vec.extend(
-                env.program_clauses
-                    .iter()
-                    .filter(|&clause| clause.could_match(goal))
-                    .cloned(),
-            );
-        }
-    }
-}
-
 impl RustIrDatabase for ChalkDatabase {
+    fn custom_clauses(&self) -> Vec<ProgramClause> {
+        self.program_ir().unwrap().custom_clauses.clone()
+    }
+
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
         self.program_ir().unwrap().associated_ty_data[&ty].clone()
     }
@@ -107,6 +95,15 @@ impl RustIrDatabase for ChalkDatabase {
                 impl_trait_id == trait_id
             })
             .map(|(&impl_id, _)| impl_id)
+            .collect()
+    }
+
+    fn all_structs(&self) -> Vec<StructId> {
+        self.program_ir()
+            .unwrap()
+            .struct_data
+            .keys()
+            .cloned()
             .collect()
     }
 

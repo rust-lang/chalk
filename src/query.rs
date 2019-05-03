@@ -7,11 +7,10 @@ use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use chalk_ir::tls;
 use chalk_ir::TraitId;
-use chalk_solve::clauses::ToProgramClauses;
+use chalk_solve::clauses::program_clauses::ToProgramClauses;
 use chalk_solve::coherence::orphan;
 use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
 use chalk_solve::wf;
-use chalk_solve::ChalkSolveDatabase;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::Solver;
 use chalk_solve::SolverChoice;
@@ -20,7 +19,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 #[salsa::query_group(Lowering)]
-pub trait LoweringDatabase: ChalkSolveDatabase + RustIrDatabase {
+pub trait LoweringDatabase: RustIrDatabase {
     #[salsa::input]
     fn program_text(&self) -> Arc<String>;
 
@@ -135,17 +134,15 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         .values()
         .for_each(|d| d.to_program_clauses(db, &mut program_clauses));
 
-    for (&auto_trait_id, auto_trait) in program
+    for (&auto_trait_id, _) in program
         .trait_data
         .iter()
-        .filter(|(_, auto_trait)| auto_trait.binders.value.flags.auto)
+        .filter(|(_, auto_trait)| auto_trait.is_auto_trait())
     {
-        for (&struct_id, struct_datum) in program.struct_data.iter() {
+        for &struct_id in program.struct_data.keys() {
             chalk_solve::clauses::push_auto_trait_impls(
                 auto_trait_id,
-                auto_trait,
                 struct_id,
-                struct_datum,
                 db,
                 &mut program_clauses,
             );

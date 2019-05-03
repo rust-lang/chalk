@@ -21,6 +21,15 @@ pub struct ImplDatum {
     pub binders: Binders<ImplDatumBound>,
 }
 
+impl ImplDatum {
+    pub fn is_positive(&self) -> bool {
+        match self.binders.value.trait_ref {
+            PolarizedTraitRef::Positive(_) => true,
+            PolarizedTraitRef::Negative(_) => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
     pub trait_ref: PolarizedTraitRef,
@@ -70,11 +79,40 @@ pub struct TraitDatum {
     pub binders: Binders<TraitDatumBound>,
 }
 
+impl TraitDatum {
+    pub fn is_auto_trait(&self) -> bool {
+        self.binders.value.flags.auto
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
+    /// A "reference" to the trait, with all generic parameters
+    /// represented as bound values. So e.g. for
+    ///
+    /// ```ignore
+    /// trait Foo<T> {}
+    /// ```
+    ///
+    /// this would be `^0: Foo<^1>`, where `^0` represents the
+    /// debruijn index for `Self` and so forth.
     pub trait_ref: TraitRef,
+
+    /// Where clauses defined on the trait:
+    ///
+    /// ```ignore
+    /// trait Foo<T> where T: Debug { }
+    ///              ^^^^^^^^^^^^^^
+    /// ```
     pub where_clauses: Vec<QuantifiedWhereClause>,
+
+    /// "Flags" indicate special kinds of traits, like auto traits.
+    /// In Rust syntax these are represented in different ways, but in
+    /// chalk we add annotations like `#[auto]`.
     pub flags: TraitFlags,
+
+    /// The id of each associated type defined in the trait.
+    pub associated_ty_ids: Vec<TypeId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

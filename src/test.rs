@@ -2042,7 +2042,7 @@ fn inscope() {
 }
 
 #[test]
-fn unselected_projection() {
+fn unselected_projection_a() {
     test! {
         program {
             trait Iterator {
@@ -2192,7 +2192,7 @@ fn overflow_universe() {
 }
 
 #[test]
-fn projection_from_env() {
+fn projection_from_env_a() {
     test! {
         program {
             trait Sized { }

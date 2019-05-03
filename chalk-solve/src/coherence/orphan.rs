@@ -1,7 +1,7 @@
 use crate::coherence::CoherenceError;
 use crate::ext::GoalExt;
 use crate::solve::SolverChoice;
-use crate::ChalkSolveDatabase;
+use crate::RustIrDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::*;
 use failure::Fallible;
@@ -14,7 +14,7 @@ use failure::Fallible;
 //
 // This must be provable in order to pass the orphan check.
 pub fn perform_orphan_check(
-    db: &dyn ChalkSolveDatabase,
+    db: &dyn RustIrDatabase,
     solver_choice: SolverChoice,
     impl_id: ImplId,
 ) -> Fallible<()> {
