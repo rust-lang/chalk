@@ -151,10 +151,11 @@ ParameterKind: ParameterKind = {
 };
 
 AssocTyValue: AssocTyValue = {
-    "type" <n:Id> <a:Angle<ParameterKind>> "=" <v:Ty> ";" => AssocTyValue {
+    <default:"default"?> "type" <n:Id> <a:Angle<ParameterKind>> "=" <v:Ty> ";" => AssocTyValue {
         name: n,
         parameter_kinds: a,
         value: v,
+        default: default.is_some(),
     },
 };
 
