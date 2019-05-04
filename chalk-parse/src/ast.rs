@@ -144,6 +144,7 @@ pub struct AssocTyValue {
     pub name: Identifier,
     pub parameter_kinds: Vec<ParameterKind>,
     pub value: Ty,
+    pub default: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
