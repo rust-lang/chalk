@@ -41,6 +41,9 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
                 "{:#?}",
                 slg_solver.force_answers(&db, &peeled_goal, num_answers)
             );
+            // Strip trailing commas to handle both nightly and stable debug formatting
+            let result = result.replace(",\n", "\n");
+            let expected = expected.replace(",\n", "\n");
             assert_test_result_eq(&expected, &result);
         }
     });
@@ -66,6 +69,10 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
             let peeled_goal = goal.into_peeled_goal();
             let mut solver = SolverChoice::SLG { max_size }.into_solver().into_test();
             let result = format!("{:?}", solver.solve(&db, &peeled_goal));
+
+            // Strip trailing commas to handle both nightly and stable debug formatting
+            let result = result.replace(",\n", "\n");
+            let expected = expected.replace(",\n", "\n");
             assert_test_result_eq(&expected, &result);
 
             let num_cached_answers_for_goal = solver.num_cached_answers_for_goal(&db, &peeled_goal);
