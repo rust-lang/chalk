@@ -24,7 +24,7 @@ impl Debug for TypeId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         tls::with_current_program(|p| match p {
             Some(prog) => prog.debug_type_kind_id(TypeKindId::TypeId(*self), fmt),
-            None => write!(fmt, "{:?}", self.0),
+            None => write!(fmt, "TypeId({:?})", self.0.index),
         })
     }
 }
@@ -33,7 +33,7 @@ impl Debug for TraitId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         tls::with_current_program(|p| match p {
             Some(prog) => prog.debug_type_kind_id(TypeKindId::TraitId(*self), fmt),
-            None => write!(fmt, "{:?}", self.0),
+            None => write!(fmt, "TraitId({:?})", self.0.index),
         })
     }
 }
@@ -42,7 +42,7 @@ impl Debug for StructId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         tls::with_current_program(|p| match p {
             Some(prog) => prog.debug_type_kind_id(TypeKindId::StructId(*self), fmt),
-            None => write!(fmt, "{:?}", self.0),
+            None => write!(fmt, "StructId({:?})", self.0.index),
         })
     }
 }
