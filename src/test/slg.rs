@@ -41,6 +41,9 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
                 "{:#?}",
                 slg_solver.force_answers(&db, &peeled_goal, num_answers)
             );
+            // Strip trailing commas to handle both nightly and stable debug formatting
+            let result = result.replace(",\n", "\n");
+            let expected = expected.replace(",\n", "\n");
             assert_test_result_eq(&expected, &result);
         }
     });
@@ -66,6 +69,10 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
             let peeled_goal = goal.into_peeled_goal();
             let mut solver = SolverChoice::SLG { max_size }.into_solver().into_test();
             let result = format!("{:?}", solver.solve(&db, &peeled_goal));
+
+            // Strip trailing commas to handle both nightly and stable debug formatting
+            let result = result.replace(",\n", "\n");
+            let expected = expected.replace(",\n", "\n");
             assert_test_result_eq(&expected, &result);
 
             let num_cached_answers_for_goal = solver.num_cached_answers_for_goal(&db, &peeled_goal);
@@ -100,9 +107,7 @@ fn basic() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -137,9 +142,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -149,9 +152,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -161,9 +162,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -173,9 +172,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -185,9 +182,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -264,12 +259,10 @@ fn flounder() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {
-                            CannotProve(
-                                ()
-                            )
-                        }
+                    delayed_literals: {
+                        CannotProve(
+                            ()
+                        )
                     }
                 }
             ]"
@@ -354,12 +347,10 @@ fn negative_loop() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {
-                            Negative(
-                                TableIndex(1)
-                            )
-                        }
+                    delayed_literals: {
+                        Negative(
+                            TableIndex(1)
+                        )
                     }
                 }
             ]"
@@ -399,9 +390,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -419,9 +408,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -440,12 +427,10 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {
-                            CannotProve(
-                                ()
-                            )
-                        }
+                    delayed_literals: {
+                        CannotProve(
+                            ()
+                        )
                     }
                 }
             ]"
@@ -464,9 +449,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -484,9 +467,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -517,9 +498,7 @@ fn subgoal_cycle_inhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -553,9 +532,7 @@ fn basic_region_constraint_from_positive_impl() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -592,9 +569,7 @@ fn example_2_1_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -604,9 +579,7 @@ fn example_2_1_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -616,9 +589,7 @@ fn example_2_1_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -657,9 +628,7 @@ fn example_2_2_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -698,9 +667,7 @@ fn example_2_3_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -737,15 +704,13 @@ fn example_3_3_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {
-                            Negative(
-                                TableIndex(1)
-                            ),
-                            Negative(
-                                TableIndex(6)
-                            )
-                        }
+                    delayed_literals: {
+                        Negative(
+                            TableIndex(1)
+                        ),
+                        Negative(
+                            TableIndex(6)
+                        )
                     }
                 }
             ]"
@@ -777,12 +742,10 @@ fn contradiction() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {
-                            Negative(
-                                TableIndex(0)
-                            )
-                        }
+                    delayed_literals: {
+                        Negative(
+                            TableIndex(0)
+                        )
                     }
                 }
             ]"
@@ -828,9 +791,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -840,9 +801,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -852,9 +811,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -864,9 +821,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -878,12 +833,10 @@ fn cached_answers_1() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {
-                            CannotProve(
-                                ()
-                            )
-                        }
+                    delayed_literals: {
+                        CannotProve(
+                            ()
+                        )
                     }
                 }
             ]"
@@ -918,9 +871,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -930,9 +881,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -942,9 +891,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -954,9 +901,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -968,12 +913,10 @@ fn cached_answers_2() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {
-                            CannotProve(
-                                ()
-                            )
-                        }
+                    delayed_literals: {
+                        CannotProve(
+                            ()
+                        )
                     }
                 }
             ]"
@@ -1008,9 +951,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -1020,9 +961,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -1032,9 +971,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 },
                 Answer {
                     subst: Canonical {
@@ -1046,12 +983,10 @@ fn cached_answers_3() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {
-                            CannotProve(
-                                ()
-                            )
-                        }
+                    delayed_literals: {
+                        CannotProve(
+                            ()
+                        )
                     }
                 },
                 Answer {
@@ -1062,9 +997,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {}
-                    }
+                    delayed_literals: {}
                 }
             ]"
         }
@@ -1098,12 +1031,10 @@ fn negative_answer_delayed_literal() {
                         },
                         binders: []
                     },
-                    delayed_literals: DelayedLiteralSet {
-                        delayed_literals: {
-                            Negative(
-                                TableIndex(1)
-                            )
-                        }
+                    delayed_literals: {
+                        Negative(
+                            TableIndex(1)
+                        )
                     }
                 }
             ]"

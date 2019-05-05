@@ -64,6 +64,7 @@ extern crate rustc_hash;
 use crate::context::Context;
 use rustc_hash::FxHashSet;
 use std::cmp::min;
+use std::fmt::{self, Debug};
 use std::usize;
 
 pub mod context;
@@ -164,9 +165,18 @@ enum InnerDelayedLiteralSets<C: Context> {
 /// we get back an approximated answer with `Goal::CannotProve` as a
 /// delayed literal, which in turn forces its subgoal to be delayed,
 /// and so forth. Therefore, we store canonicalized goals.)
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 struct DelayedLiteralSet<C: Context> {
     delayed_literals: FxHashSet<DelayedLiteral<C>>,
+}
+
+impl<T: Context + Debug> Debug for DelayedLiteralSet<T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        // Workaround to keep ordering consistent between nightly and stable
+        let mut literals = self.delayed_literals.iter().collect::<Vec<_>>();
+        literals.sort_by_key(|l| format!("{:?}", l));
+        fmt.debug_set().entries(literals.iter()).finish()
+    }
 }
 
 #[derive(Clone, Debug)]

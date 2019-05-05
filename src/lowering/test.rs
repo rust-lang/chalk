@@ -191,8 +191,8 @@ fn atc_accounting() {
         let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
         println!("{}", impl_text);
         assert_eq!(
-            &impl_text[..],
-            r#"ImplDatum {
+            &impl_text[..].replace(",\n", "\n"),
+            &r#"ImplDatum {
     binders: for<type> ImplDatumBound {
         trait_ref: Positive(
             Vec<^0> as Iterable
@@ -210,6 +210,7 @@ fn atc_accounting() {
         impl_type: Local
     }
 }"#
+            .replace(",\n", "\n")
         );
         let goal = db
             .parse_and_lower_goal(
