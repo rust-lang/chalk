@@ -1,0 +1,48 @@
+[package]
+name = "chalk-tests"
+version = "0.1.0"
+license = "Apache-2.0/MIT"
+description = "Tests for the Chalk project"
+authors = ["Rust Compiler Team", "Chalk developers"]
+repository = "https://github.com/rust-lang/chalk"
+readme = "README.md"
+keywords = ["compiler", "traits", "prolog"]
+edition = "2018"
+
+[features]
+bench = []
+
+[dependencies]
+derive-new = "0.5.6"
+diff = "0.1.11"
+failure = "0.1"
+itertools = "0.7.8"
+lalrpop-intern = "0.15.1"
+salsa = "0.10.0"
+serde = "1.0"
+serde_derive = "1.0"
+stacker = "0.1.5"
+
+[dependencies.chalk-parse]
+version = "0.1.0"
+path = "../chalk-parse"
+
+[dependencies.chalk-ir]
+version = "0.1.0"
+path = "../chalk-ir"
+
+[dependencies.chalk-solve]
+version = "0.1.0"
+path = "../chalk-solve"
+
+[dependencies.chalk-macros]
+version = "0.1.0"
+path = "../chalk-macros"
+
+[dependencies.chalk-engine]
+version = "0.9.0"
+path = "../chalk-engine"
+
+[dependencies.chalk-rust-ir]
+version = "0.1.0"
+path = "../chalk-rust-ir"
