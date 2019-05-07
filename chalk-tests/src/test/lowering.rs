@@ -1,8 +1,8 @@
 #![cfg(test)]
 
-use crate::db::ChalkDatabase;
-use crate::query::LoweringDatabase;
-use chalk_solve::SolverChoice;
+use chalk::SolverChoice;
+use chalk_integration::db::ChalkDatabase;
+use chalk_integration::query::LoweringDatabase;
 
 #[test]
 fn lower_success() {

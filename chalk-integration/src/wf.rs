@@ -1,6 +1,6 @@
-use crate::ext::*;
-use crate::solve::SolverChoice;
-use crate::RustIrDatabase;
+use chalk::ext::*;
+use chalk::solve::SolverChoice;
+use chalk::RustIrDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::*;

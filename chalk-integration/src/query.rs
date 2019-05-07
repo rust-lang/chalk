@@ -5,15 +5,15 @@ use crate::error::ChalkError;
 use crate::lowering::LowerProgram;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
+use crate::wf;
+use chalk::clauses::program_clauses::ToProgramClauses;
+use chalk::coherence::orphan;
+use chalk::coherence::{CoherenceSolver, SpecializationPriorities};
+use chalk::RustIrDatabase;
+use chalk::Solver;
+use chalk::SolverChoice;
 use chalk_ir::tls;
 use chalk_ir::TraitId;
-use chalk_solve::clauses::program_clauses::ToProgramClauses;
-use chalk_solve::coherence::orphan;
-use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
-use chalk_solve::wf;
-use chalk_solve::RustIrDatabase;
-use chalk_solve::Solver;
-use chalk_solve::SolverChoice;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -140,7 +140,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         .filter(|(_, auto_trait)| auto_trait.is_auto_trait())
     {
         for &struct_id in program.struct_data.keys() {
-            chalk_solve::clauses::push_auto_trait_impls(
+            chalk::clauses::push_auto_trait_impls(
                 auto_trait_id,
                 struct_id,
                 db,

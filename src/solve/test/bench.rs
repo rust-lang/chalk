@@ -5,7 +5,7 @@ use self::test::Bencher;
 
 use crate::db::ChalkDatabase;
 use crate::query::{ProgramSolverChoice, ProgramText};
-use chalk_solve::SolverChoice;
+use chalk::SolverChoice;
 use ir;
 use std::sync::Arc;
 

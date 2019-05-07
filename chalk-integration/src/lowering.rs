@@ -10,8 +10,6 @@ use lalrpop_intern::intern;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-mod test;
-
 type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeKindId>;
 type TypeKinds = BTreeMap<chalk_ir::TypeKindId, rust_ir::TypeKind>;
 type AssociatedTyInfos = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyInfo>;

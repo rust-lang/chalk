@@ -13,7 +13,6 @@ edition = "2018"
 bench = []
 
 [dependencies]
-derive-new = "0.5.6"
 diff = "0.1.11"
 failure = "0.1"
 itertools = "0.7.8"
@@ -23,6 +22,10 @@ serde = "1.0"
 serde_derive = "1.0"
 stacker = "0.1.5"
 
+[dependencies.chalk]
+version = "0.1.0"
+path = ".."
+
 [dependencies.chalk-parse]
 version = "0.1.0"
 path = "../chalk-parse"
@@ -30,10 +33,6 @@ path = "../chalk-parse"
 [dependencies.chalk-ir]
 version = "0.1.0"
 path = "../chalk-ir"
-
-[dependencies.chalk-solve]
-version = "0.1.0"
-path = "../chalk-solve"
 
 [dependencies.chalk-macros]
 version = "0.1.0"
@@ -46,3 +45,7 @@ path = "../chalk-engine"
 [dependencies.chalk-rust-ir]
 version = "0.1.0"
 path = "../chalk-rust-ir"
+
+[dependencies.chalk-integration]
+version = "0.1.0"
+path = "../chalk-integration"

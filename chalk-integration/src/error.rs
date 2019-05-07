@@ -1,4 +1,4 @@
-use chalk_solve::wf::WfError;
+use crate::wf::WfError;
 use failure::Error;
 
 /// Wrapper type for the various errors that can occur during chalk

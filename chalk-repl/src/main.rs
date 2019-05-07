@@ -8,13 +8,14 @@ use std::fs::File;
 use std::io::Read;
 use std::process::exit;
 
-use chalk_solve::ext::*;
-use chalk_solve::SolverChoice;
-use chalk_tests::db::ChalkDatabase;
-use chalk_tests::lowering::*;
-use chalk_tests::query::LoweringDatabase;
+use chalk::ext::*;
+use chalk::SolverChoice;
+use chalk_integration::db::ChalkDatabase;
+use chalk_integration::lowering::*;
+use chalk_integration::query::LoweringDatabase;
 use docopt::Docopt;
 use failure::Fallible;
+
 use rustyline::error::ReadlineError;
 
 const USAGE: &'static str = "

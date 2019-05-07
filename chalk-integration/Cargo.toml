@@ -1,8 +1,8 @@
 [package]
-name = "chalk-solve"
+name = "chalk-integration"
 version = "0.1.0"
 license = "Apache-2.0/MIT"
-description = "Combines the chalk-engine with chalk-ir"
+description = "Sample solver setup for Chalk"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
 readme = "README.md"
@@ -11,19 +11,18 @@ edition = "2018"
 
 [dependencies]
 derive-new = "0.5.6"
-ena = "0.10.1"
-failure = "0.1"
 itertools = "0.7.8"
-petgraph = "0.4.13"
-rustc-hash = { version = "1.0.0" }
+failure = "0.1"
+lalrpop-intern = "0.15.1"
+salsa = "0.10.0"
 
-[dependencies.chalk-macros]
+[dependencies.chalk]
 version = "0.1.0"
-path = "../chalk-macros"
+path = ".."
 
-[dependencies.chalk-engine]
-version = "0.9.0"
-path = "../chalk-engine"
+[dependencies.chalk-parse]
+version = "0.1.0"
+path = "../chalk-parse"
 
 [dependencies.chalk-ir]
 version = "0.1.0"
@@ -32,3 +31,7 @@ path = "../chalk-ir"
 [dependencies.chalk-rust-ir]
 version = "0.1.0"
 path = "../chalk-rust-ir"
+
+[dependencies.chalk-macros]
+version = "0.1.0"
+path = "../chalk-macros"

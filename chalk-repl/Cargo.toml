@@ -1,8 +1,8 @@
 [package]
 name = "chalk-repl"
 version = "0.1.0"
-description = "Chalki, a repl for Chalk"
 license = "Apache-2.0/MIT"
+description = "Chalki - the Chalk repl"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
 readme = "README.md"
@@ -20,14 +20,14 @@ rustyline = "1.0"
 serde = "1.0"
 serde_derive = "1.0"
 
+[dependencies.chalk-integration]
+version = "0.1.0"
+path = "../chalk-integration"
+
+[dependencies.chalk]
+version = "0.1.0"
+path = ".."
+
 [dependencies.chalk-parse]
 version = "0.1.0"
 path = "../chalk-parse"
-
-[dependencies.chalk-solve]
-version = "0.1.0"
-path = "../chalk-solve"
-
-[dependencies.chalk-tests]
-version = "0.1.0"
-path = "../chalk-tests"
