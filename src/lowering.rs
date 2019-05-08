@@ -64,6 +64,7 @@ enum LifetimeLookup {
 }
 
 const SELF: &str = "Self";
+const FIXME_SELF: &str = "__FIXME_SELF__";
 
 impl<'k> Env<'k> {
     fn lookup(&self, name: Identifier) -> Fallible<NameLookup> {
@@ -856,6 +857,28 @@ impl LowerTy for Ty {
                 }
                 NameLookup::Parameter(d) => Ok(chalk_ir::Ty::BoundVar(d)),
             },
+
+            Ty::Dyn { bounds } => Ok(chalk_ir::Ty::Dyn(env.in_binders(
+                // FIXME: Figure out a proper name for this type parameter
+                Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
+                |env| {
+                    bounds
+                        .lower()?
+                        .flat_map(|qil| qil.into_where_clauses(chalk_ir::Ty::BoundVar(0)))
+                        .collect()
+                },
+            ))),
+
+            Ty::Opaque { bounds } => Ok(chalk_ir::Ty::Opaque(env.in_binders(
+                // FIXME: Figure out a proper name for this type parameter
+                Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
+                |env| {
+                    bounds
+                        .lower()?
+                        .flat_map(|qil| qil.into_where_clauses(chalk_ir::Ty::BoundVar(0)))
+                        .collect()
+                },
+            ))),
 
             Ty::Apply { name, ref args } => {
                 let id = match env.lookup(name)? {

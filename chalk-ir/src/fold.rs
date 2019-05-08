@@ -341,6 +341,8 @@ pub fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fallib
                 Ok(Ty::BoundVar(depth))
             }
         }
+        Ty::Dyn(ref clauses) => Ok(Ty::Dyn(clauses.fold_with(folder, binders)?)),
+        Ty::Opaque(ref clauses) => Ok(Ty::Opaque(clauses.fold_with(folder, binders)?)),
         Ty::InferenceVar(var) => folder.fold_inference_ty(var, binders),
         Ty::Apply(ref apply) => {
             let ApplicationTy {

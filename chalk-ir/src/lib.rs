@@ -235,6 +235,19 @@ pub enum Ty {
     /// an empty list).
     Apply(ApplicationTy),
 
+    /// A "dyn" type is a trait object type created via the "dyn Trait" syntax.
+    /// In the chalk parser, the traits that the object represents is parsed as
+    /// a QuantifiedInlineBound, and is then changed to a list of where clauses
+    /// during lowering.
+    Dyn(Binders<Vec<QuantifiedWhereClause>>),
+
+    /// An "opaque" type is one that is created via the "impl Trait" syntax.
+    /// They are named so because the concrete type implementing the trait
+    /// is unknown, and hence the type is opaque to us. The only information
+    /// that we know of is that this type implements the traits listed by the
+    /// user.
+    Opaque(Binders<Vec<QuantifiedWhereClause>>),
+
     /// A "projection" type corresponds to an (unnormalized)
     /// projection like `<P0 as Trait<P1..Pn>>::Foo`. Note that the
     /// trait and all its parameters are fully known.
