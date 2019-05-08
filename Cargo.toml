@@ -12,6 +12,10 @@ edition = "2018"
 [features]
 bench = []
 
+[[bin]]
+name = "chalki"
+path = "chalk-repl"
+
 [dependencies]
 derive-new = "0.5.6"
 ena = "0.10.1"
@@ -38,6 +42,10 @@ path = "chalk-rust-ir"
 
 [workspace]
 members = [
+    "chalk-repl",
+    "chalk-tests",
+]
+default-members = [
     "chalk-repl",
     "chalk-tests",
 ]
