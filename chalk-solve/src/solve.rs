@@ -113,6 +113,35 @@ impl Solver {
     ///     each time you invoke `solve`, as otherwise the cached data may be
     ///     invalid.
     /// - `goal` the goal to solve
+    /// - `fuel` if `Some`, this limits how much time the solver spends before giving up.
+    ///
+    /// # Returns
+    ///
+    /// - `None` is the goal cannot be proven.
+    /// - `Some(solution)` if we succeeded in finding *some* answers,
+    ///   although `solution` may reflect ambiguity and unknowns.
+    pub fn solve_with_fuel(
+        &mut self,
+        program: &dyn RustIrDatabase,
+        goal: &UCanonical<InEnvironment<Goal>>,
+        fuel: Option<usize>,
+    ) -> Option<Solution> {
+        let ops = self.forest.context().ops(program);
+        self.forest.solve(&ops, goal, fuel)
+    }
+
+    /// Attempts to solve the given goal, which must be in canonical
+    /// form. Returns a unique solution (if one exists).  This will do
+    /// only as much work towards `goal` as it has to (and that work
+    /// is cached for future attempts).
+    ///
+    /// # Parameters
+    ///
+    /// - `program` -- defines the program clauses in scope.
+    ///   - **Important:** You must supply the same set of program clauses
+    ///     each time you invoke `solve`, as otherwise the cached data may be
+    ///     invalid.
+    /// - `goal` the goal to solve
     ///
     /// # Returns
     ///
@@ -124,8 +153,7 @@ impl Solver {
         program: &dyn RustIrDatabase,
         goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Option<Solution> {
-        let ops = self.forest.context().ops(program);
-        self.forest.solve(&ops, goal)
+        self.solve_with_fuel(program, goal, None)
     }
 
     pub fn into_test(self) -> TestSolver {
