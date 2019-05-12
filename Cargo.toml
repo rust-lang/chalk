@@ -14,7 +14,7 @@ bench = []
 
 [[bin]]
 name = "chalki"
-path = "chalk-repl"
+path = "chalk-repl/src/main.rs"
 
 [dependencies]
 derive-new = "0.5.6"
