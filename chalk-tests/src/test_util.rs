@@ -11,7 +11,7 @@ macro_rules! lowering_success {
         assert!(program_text.ends_with("}"));
         let result = chalk_integration::db::ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
-            chalk::SolverChoice::default(),
+            chalk_solve::SolverChoice::default(),
         )
         .checked_program();
         if let Err(ref e) = result {
@@ -28,7 +28,7 @@ macro_rules! lowering_error {
         assert!(program_text.ends_with("}"));
         let error = chalk_integration::db::ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
-            chalk::SolverChoice::default(),
+            chalk_solve::SolverChoice::default(),
         )
         .checked_program()
         .unwrap_err();

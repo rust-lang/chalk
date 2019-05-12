@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use chalk::SolverChoice;
+use chalk_solve::SolverChoice;
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::query::LoweringDatabase;
 

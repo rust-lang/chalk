@@ -16,7 +16,7 @@ failure = "0.1"
 lalrpop-intern = "0.15.1"
 salsa = "0.10.0"
 
-[dependencies.chalk]
+[dependencies.chalk-solve]
 version = "0.1.0"
 path = ".."
 

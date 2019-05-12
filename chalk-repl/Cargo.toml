@@ -24,7 +24,7 @@ serde_derive = "1.0"
 version = "0.1.0"
 path = "../chalk-integration"
 
-[dependencies.chalk]
+[dependencies.chalk-solve]
 version = "0.1.0"
 path = ".."
 
