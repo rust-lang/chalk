@@ -1,9 +1,9 @@
 #![cfg(test)]
 
 use crate::test_util::*;
+use chalk_integration::db::ChalkDatabase;
 use chalk_solve::ext::*;
 use chalk_solve::SolverChoice;
-use chalk_integration::db::ChalkDatabase;
 
 macro_rules! test {
     (program $program:tt $(goal $goal:tt first $n:tt with max $depth:tt { $expected:expr })*) => {

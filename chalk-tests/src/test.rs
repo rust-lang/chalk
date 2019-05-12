@@ -1,10 +1,10 @@
 #![cfg(test)]
 
-use chalk_solve::ext::*;
-use chalk_solve::{Solution, SolverChoice};
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::query::LoweringDatabase;
 use chalk_ir;
+use chalk_solve::ext::*;
+use chalk_solve::{Solution, SolverChoice};
 
 #[cfg(feature = "bench")]
 mod bench;
