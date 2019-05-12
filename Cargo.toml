@@ -12,10 +12,6 @@ edition = "2018"
 [features]
 bench = []
 
-[[bin]]
-name = "chalki"
-path = "chalk-repl/src/main.rs"
-
 [dependencies]
 derive-new = "0.5.6"
 ena = "0.10.1"

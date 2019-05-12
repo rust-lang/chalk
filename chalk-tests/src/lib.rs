@@ -1,3 +1,4 @@
+#![cfg(test)]
 #![recursion_limit = "1024"]
 
 #[macro_use]
