@@ -10,7 +10,6 @@ keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
 [dependencies]
-itertools = "0.7.8"
 lalrpop-intern = "0.15.1"
 
 [dependencies.chalk-macros]

@@ -12,40 +12,18 @@ edition = "2018"
 [features]
 bench = []
 
-[dependencies]
+[dev-dependencies]
 diff = "0.1.11"
-failure = "0.1"
 itertools = "0.7.8"
-lalrpop-intern = "0.15.1"
-salsa = "0.10.0"
-serde = "1.0"
-serde_derive = "1.0"
-stacker = "0.1.5"
 
-[dependencies.chalk-solve]
+[dev-dependencies.chalk-solve]
 version = "0.1.0"
 path = ".."
 
-[dependencies.chalk-parse]
-version = "0.1.0"
-path = "../chalk-parse"
-
-[dependencies.chalk-ir]
+[dev-dependencies.chalk-ir]
 version = "0.1.0"
 path = "../chalk-ir"
 
-[dependencies.chalk-macros]
-version = "0.1.0"
-path = "../chalk-macros"
-
-[dependencies.chalk-engine]
-version = "0.9.0"
-path = "../chalk-engine"
-
-[dependencies.chalk-rust-ir]
-version = "0.1.0"
-path = "../chalk-rust-ir"
-
-[dependencies.chalk-integration]
+[dev-dependencies.chalk-integration]
 version = "0.1.0"
 path = "../chalk-integration"

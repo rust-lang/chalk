@@ -5,7 +5,6 @@ license = "Apache-2.0/MIT"
 description = "Sample solver setup for Chalk"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
-readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
