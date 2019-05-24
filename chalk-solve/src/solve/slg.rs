@@ -231,7 +231,7 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         &self,
         environment: &Arc<Environment>,
         goal: &DomainGoal,
-    ) -> Vec<ProgramClause> {
+    ) -> Option<Vec<ProgramClause>> {
         let mut clauses: Vec<_> = environment
             .clauses
             .iter()
@@ -240,7 +240,7 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
             .collect();
 
         clauses.extend(program_clauses_for_goal(self.program, environment, goal));
-        clauses
+        Some(clauses)
     }
 
     fn instantiate_binders_universally(&mut self, arg: &Binders<Box<Goal>>) -> Goal {

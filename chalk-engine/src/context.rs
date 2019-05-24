@@ -272,11 +272,16 @@ pub trait InferenceTable<C: Context, I: Context>:
 pub trait UnificationOps<C: Context, I: Context> {
     /// Returns the set of program clauses that might apply to
     /// `goal`. (This set can be over-approximated, naturally.)
+    ///
+    /// If this callback returns `None`, that indicates that the set
+    /// of program clauses cannot be enumerated because there are
+    /// unresolved type variables that would have to be resolved
+    /// first; the goal will be considered floundered.
     fn program_clauses(
         &self,
         environment: &I::Environment,
         goal: &I::DomainGoal,
-    ) -> Vec<I::ProgramClause>;
+    ) -> Option<Vec<I::ProgramClause>>;
 
     // Used by: simplify
     fn instantiate_binders_universally(&mut self, arg: &I::BindersGoal) -> I::Goal;

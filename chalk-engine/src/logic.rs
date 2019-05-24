@@ -548,16 +548,10 @@ impl<C: Context> Forest<C> {
 
                 None => {
                     // If we failed to create a table for the subgoal,
-                    // then the execution has "floundered" (cannot yield
-                    // a complete result). We choose to handle this by
-                    // removing the subgoal and inserting a
-                    // `CannotProve` result. This can only happen with
-                    // ill-formed negative literals or with overflow.
-                    strand.ex_clause.subgoals.remove(subgoal_index);
-                    strand
-                        .ex_clause
-                        .delayed_literals
-                        .push(DelayedLiteral::CannotProve(()));
+                    // that is because we have a floundered negative
+                    // literal.
+                    self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
+                    continue;
                 }
             }
         }
@@ -828,18 +822,22 @@ impl<C: Context> Forest<C> {
         let table_ref = &mut self.tables[table];
         match infer.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
-                let clauses = infer.program_clauses(&environment, &domain_goal);
-                for clause in clauses {
-                    debug!("program clause = {:#?}", clause);
-                    if let Ok(resolvent) =
-                        infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
-                    {
-                        info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
-                        table_ref.push_strand(CanonicalStrand {
-                            canonical_ex_clause: resolvent,
-                            selected_subgoal: None,
-                        });
+                if let Some(clauses) = infer.program_clauses(&environment, &domain_goal) {
+                    for clause in clauses {
+                        debug!("program clause = {:#?}", clause);
+                        if let Ok(resolvent) =
+                            infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
+                        {
+                            info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
+                            table_ref.push_strand(CanonicalStrand {
+                                canonical_ex_clause: resolvent,
+                                selected_subgoal: None,
+                            });
+                        }
                     }
+                } else {
+                    debug!("floundered");
+                    table_ref.mark_floundered();
                 }
             }
 
@@ -1088,13 +1086,9 @@ impl<C: Context> Forest<C> {
                 // floundered. We'll try to solve some other subgoals
                 // and maybe come back to it.
                 info!("pursue_positive_subgoal: floundered");
-                let floundered_time = strand.ex_clause.current_time;
-                let floundered_literal = strand.ex_clause.subgoals.remove(subgoal_index);
-                strand.ex_clause.floundered_subgoals.push(FlounderedSubgoal {
-                    floundered_literal,
-                    floundered_time,
-                });
+                self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
                 strand.selected_subgoal = None;
+                self.tables[table].push_strand(Self::canonicalize_strand(strand));
                 return Err(StrandFail::QuantumExceeded);
             }
             Err(RecursiveSearchFail::QuantumExceeded) => {
@@ -1180,6 +1174,18 @@ impl<C: Context> Forest<C> {
                 Err(StrandFail::NoSolution)
             }
         }
+    }
+
+    /// Removes the subgoal at `subgoal_index` from the strand's
+    /// subgoal list and adds it to the strand's floundered subgoal
+    /// list.
+    fn flounder_subgoal(&self, ex_clause: &mut ExClause<impl Context>, subgoal_index: usize) {
+        let floundered_time = ex_clause.current_time;
+        let floundered_literal = ex_clause.subgoals.remove(subgoal_index);
+        ex_clause.floundered_subgoals.push(FlounderedSubgoal {
+            floundered_literal,
+            floundered_time,
+        });
     }
 
     /// Used whenever we process an answer (whether new or cached) on

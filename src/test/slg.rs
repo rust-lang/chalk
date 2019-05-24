@@ -243,29 +243,9 @@ fn flounder() {
         }
 
         goal {
-            // This goal "flounders" because it has a free existential
-            // variable. We choose to replace it with a `CannotProve`
-            // result.
             exists<T> { not { T: A } }
         } first 5 with max 10 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [?0 := ^0],
-                            constraints: []
-                        },
-                        binders: [
-                            Ty(U0)
-                        ]
-                    },
-                    delayed_literals: {
-                        CannotProve(
-                            ()
-                        )
-                    }
-                }
-            ]"
+            "Floundered"
         }
     }
 }
@@ -418,22 +398,7 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
         } first 10 with max 3 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [?0 := Vec<u32>],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    delayed_literals: {
-                        CannotProve(
-                            ()
-                        )
-                    }
-                }
-            ]"
+            "Floundered"
         }
 
         // Same query with larger threshold works fine, though.
