@@ -130,6 +130,11 @@ pub struct ExClause<C: Context> {
     /// changed since then.
     pub current_time: TimeStamp,
 
+    /// List of subgoals that have floundered. See `FlounderedSubgoal`
+    /// for more information.
+    pub floundered_subgoals: Vec<FlounderedSubgoal<C>>,
+}
+
 /// The "time stamp" is a simple clock that gets incremented each time
 /// we encounter a positive answer in processing a particular
 /// strand. This is used as an optimization to help us figure out when
@@ -144,6 +149,45 @@ impl TimeStamp {
         self.clock += 1;
     }
 }
+
+/// A "floundered" subgoal is one that contains unbound existential
+/// variables for which it cannot produce a value. The classic example
+/// of flounding is a negative subgoal:
+///
+/// ```
+/// not { Implemented(?T: Foo) }
+/// ```
+///
+/// The way the prolog solver works, it basically enumerates all the
+/// ways that a given goal can be *true*. But we can't use this
+/// technique to find all the ways that `?T: Foo` can be *false* -- so
+/// we call it floundered. In other words, we can evaluate a negative
+/// goal, but only if we know what `?T` is -- we can't use the
+/// negative goal to help us figuring out `?T`.
+///
+/// In addition to negative goals, we use floundering to prevent the
+/// trait solver from trying to enumerate very large goals with tons
+/// of answers. For example, we consider a goal like `?T: Sized` to
+/// "flounder", since we can't hope to enumerate all types that are
+/// `Sized`. The same is true for other special traits like `Clone`.
+///
+/// Floundering can also occur indirectly. For example:
+///
+/// ```rust
+/// trait Foo { }
+/// impl<T> Foo for T { }
+/// ```
+///
+/// trying to solve `?T: Foo` would immediately require solving `?T:
+/// Sized`, and hence would flounder.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FlounderedSubgoal<C: Context> {
+    /// Literal that floundered.
+    pub literal: Literal<C>,
+
+    /// Current value of the strand's clock at the time of
+    /// floundering.
+    pub floundered_time: TimeStamp,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

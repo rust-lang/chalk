@@ -20,6 +20,7 @@ impl<C: Context> Forest<C> {
             constraints: vec![],
             subgoals: vec![],
             current_time: TimeStamp::default(),
+            floundered_subgoals: vec![],
         };
 
         // A stack of higher-level goals to process.

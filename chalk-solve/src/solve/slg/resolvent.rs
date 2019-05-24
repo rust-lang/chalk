@@ -103,6 +103,7 @@ impl<'me> context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceT
             constraints: vec![],
             subgoals: vec![],
             current_time: TimeStamp::default(),
+            floundered_subgoals: vec![],
         };
 
         // Add the subgoals/region-constraints that unification gave us.

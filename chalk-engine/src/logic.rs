@@ -566,10 +566,12 @@ impl<C: Context> Forest<C> {
                     delayed_literals,
                     subgoals,
                     current_time: _,
+                    floundered_subgoals,
                 },
             selected_subgoal: _,
         } = strand;
         assert!(subgoals.is_empty());
+        assert!(floundered_subgoals.is_empty());
 
         let answer_subst = infer.canonicalize_constrained_subst(subst, constraints);
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
@@ -1181,6 +1183,7 @@ impl<C: Context> Forest<C> {
                     constraints: vec![],
                     subgoals: vec![],
                     current_time: TimeStamp::default(),
+                    floundered_subgoals: vec![],
                 }
             }
         }
