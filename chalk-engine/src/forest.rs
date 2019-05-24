@@ -183,7 +183,11 @@ where
                 }
 
                 Err(RootSearchFail::Floundered) => {
-                    panic!("gotta gin up an answer here")
+                    let table_goal = &self.forest.tables[self.table].table_goal;
+                    return Some(SimplifiedAnswer {
+                        subst: self.context.identity_constrained_subst(table_goal),
+                        ambiguous: true,
+                    });
                 }
 
                 Err(RootSearchFail::NoMoreSolutions) => {

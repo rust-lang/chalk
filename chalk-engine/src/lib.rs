@@ -154,7 +154,7 @@ impl TimeStamp {
 /// variables for which it cannot produce a value. The classic example
 /// of flounding is a negative subgoal:
 ///
-/// ```
+/// ```ignore
 /// not { Implemented(?T: Foo) }
 /// ```
 ///
@@ -173,7 +173,7 @@ impl TimeStamp {
 ///
 /// Floundering can also occur indirectly. For example:
 ///
-/// ```rust
+/// ```rust,ignore
 /// trait Foo { }
 /// impl<T> Foo for T { }
 /// ```

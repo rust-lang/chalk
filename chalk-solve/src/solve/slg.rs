@@ -126,6 +126,17 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
         goal.is_coinductive(self.program)
     }
 
+    fn identity_constrained_subst(
+        &self,
+        goal: &UCanonical<InEnvironment<Goal>>,
+    ) -> Canonical<ConstrainedSubst> {
+        let (mut infer, subst, _) =
+            InferenceTable::from_canonical(goal.universes, &goal.canonical);
+        infer
+            .canonicalize(&ConstrainedSubst { subst, constraints: vec![] })
+            .quantified
+    }
+
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &UCanonical<InEnvironment<Goal>>,

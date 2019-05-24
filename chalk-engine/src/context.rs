@@ -170,6 +170,12 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
     fn is_coinductive(&self, goal: &C::UCanonicalGoalInEnvironment) -> bool;
 
+    /// Returns a identity substitution.
+    fn identity_constrained_subst(
+        &self,
+        goal: &C::UCanonicalGoalInEnvironment,
+    ) -> C::CanonicalConstrainedSubst;
+
     /// Create an inference table for processing a new goal and instantiate that goal
     /// in that context, returning "all the pieces".
     ///
