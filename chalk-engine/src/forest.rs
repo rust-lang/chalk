@@ -40,7 +40,7 @@ impl<C: Context> Forest<C> {
     }
 
     /// Finds the first N answers, looping as much as needed to get
-    /// them.
+    /// them. Returns `None` if the result flounders.
     ///
     /// Thanks to subgoal abstraction and so forth, this should always
     /// terminate.
@@ -49,7 +49,7 @@ impl<C: Context> Forest<C> {
         context: &impl ContextOps<C>,
         goal: C::UCanonicalGoalInEnvironment,
         num_answers: usize,
-    ) -> Vec<Answer<C>> {
+    ) -> Option<Vec<Answer<C>>> {
         let table = self.get_or_create_table_for_ucanonical_goal(context, goal);
         let mut answers = Vec::with_capacity(num_answers);
         for i in 0..num_answers {
@@ -57,15 +57,16 @@ impl<C: Context> Forest<C> {
             loop {
                 match self.ensure_root_answer(context, table, i) {
                     Ok(()) => break,
+                    Err(RootSearchFail::Floundered) => return None,
                     Err(RootSearchFail::QuantumExceeded) => continue,
-                    Err(RootSearchFail::NoMoreSolutions) => return answers,
+                    Err(RootSearchFail::NoMoreSolutions) => return Some(answers),
                 }
             }
 
             answers.push(self.answer(table, i).clone());
         }
 
-        answers
+        Some(answers)
     }
 
     /// Returns a "solver" for a given goal in the form of an
@@ -179,6 +180,10 @@ where
                     };
 
                     return Some(simplified_answer);
+                }
+
+                Err(RootSearchFail::Floundered) => {
+                    panic!("gotta gin up an answer here")
                 }
 
                 Err(RootSearchFail::NoMoreSolutions) => {

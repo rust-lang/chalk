@@ -736,11 +736,11 @@ where
 
     fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
         let FlounderedSubgoal {
-            literal,
+            floundered_literal,
             floundered_time,
         } = self;
         Ok(FlounderedSubgoal {
-            literal: literal.fold_with(folder, binders)?,
+            floundered_literal: floundered_literal.fold_with(folder, binders)?,
             floundered_time: floundered_time.fold_with(folder, binders)?,
         })
     }

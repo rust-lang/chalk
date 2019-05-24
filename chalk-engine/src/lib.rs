@@ -139,7 +139,7 @@ pub struct ExClause<C: Context> {
 /// we encounter a positive answer in processing a particular
 /// strand. This is used as an optimization to help us figure out when
 /// we *may* have changed inference variables.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TimeStamp {
     clock: u64
 }
@@ -183,7 +183,7 @@ impl TimeStamp {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FlounderedSubgoal<C: Context> {
     /// Literal that floundered.
-    pub literal: Literal<C>,
+    pub floundered_literal: Literal<C>,
 
     /// Current value of the strand's clock at the time of
     /// floundering.
@@ -225,7 +225,7 @@ enum InnerDelayedLiteralSets<C: Context> {
 /// A set of delayed literals.
 ///
 /// (One might expect delayed literals to always be ground, since
-/// non-ground negative literals result in flounded
+/// non-ground negative literals result in floundered
 /// executions. However, due to the approximations introduced via RR
 /// to ensure termination, it *is* in fact possible for delayed goals
 /// to contain free variables. For example, what could happen is that
