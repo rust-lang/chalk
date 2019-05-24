@@ -121,6 +121,29 @@ pub struct ExClause<C: Context> {
 
     /// Subgoals: literals that must be proven
     pub subgoals: Vec<Literal<C>>,
+
+    /// Time stamp that is incremented each time we find an answer to
+    /// some subgoal. This is used to figure out whether any of the
+    /// floundered subgoals may no longer be floundered: we record the
+    /// current time when we add something to the list of floundered
+    /// subgoals, and then we can compare whether its value has
+    /// changed since then.
+    pub current_time: TimeStamp,
+
+/// The "time stamp" is a simple clock that gets incremented each time
+/// we encounter a positive answer in processing a particular
+/// strand. This is used as an optimization to help us figure out when
+/// we *may* have changed inference variables.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct TimeStamp {
+    clock: u64
+}
+
+impl TimeStamp {
+    fn increment(&mut self) {
+        self.clock += 1;
+    }
+}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

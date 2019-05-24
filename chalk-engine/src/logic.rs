@@ -7,6 +7,7 @@ use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{Answer, AnswerIndex};
 use crate::{
     DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal, Minimums, TableIndex,
+    TimeStamp,
 };
 use rustc_hash::FxHashSet;
 use std::mem;
@@ -564,6 +565,7 @@ impl<C: Context> Forest<C> {
                     constraints,
                     delayed_literals,
                     subgoals,
+                    current_time: _,
                 },
             selected_subgoal: _,
         } = strand;
@@ -1091,6 +1093,9 @@ impl<C: Context> Forest<C> {
                     }
                 }
 
+                // Increment time counter because we received a new answer.
+                ex_clause.current_time.increment();
+
                 // Apply answer abstraction.
                 let ex_clause = self.truncate_returned(ex_clause, &mut *infer);
 
@@ -1175,6 +1180,7 @@ impl<C: Context> Forest<C> {
                     delayed_literals: vec![DelayedLiteral::CannotProve(())],
                     constraints: vec![],
                     subgoals: vec![],
+                    current_time: TimeStamp::default(),
                 }
             }
         }

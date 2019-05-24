@@ -490,6 +490,7 @@ copy_fold!(TypeKindId);
 copy_fold!(usize);
 copy_fold!(QuantifierKind);
 copy_fold!(chalk_engine::TableIndex);
+copy_fold!(chalk_engine::TimeStamp);
 // copy_fold!(TypeName); -- intentionally omitted! This is folded via `fold_ap`
 copy_fold!(());
 
@@ -709,12 +710,14 @@ where
             delayed_literals,
             constraints,
             subgoals,
+            current_time,
         } = self;
         Ok(ExClause {
             subst: subst.fold_with(folder, binders)?,
             delayed_literals: delayed_literals.fold_with(folder, binders)?,
             constraints: constraints.fold_with(folder, binders)?,
             subgoals: subgoals.fold_with(folder, binders)?,
+            current_time: current_time.fold_with(folder, binders)?,
         })
     }
 }
