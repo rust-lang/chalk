@@ -251,6 +251,7 @@ impl<C: Context> Forest<C> {
                         }
 
                         Err(StrandFail::Floundered) => {
+                            debug!("Marking table {:?} as floundered!", table);
                             self.tables[table].mark_floundered();
                             return Err(RecursiveSearchFail::Floundered);
                         }
@@ -519,7 +520,7 @@ impl<C: Context> Forest<C> {
                     return self.pursue_answer(depth, strand);
                 }
 
-                self.reconsider_floundered_subgoals(&mut strand);
+                self.reconsider_floundered_subgoals(&mut strand.ex_clause);
 
                 if strand.ex_clause.subgoals.is_empty() {
                     assert!(!strand.ex_clause.floundered_subgoals.is_empty());
@@ -693,12 +694,15 @@ impl<C: Context> Forest<C> {
 
     fn reconsider_floundered_subgoals(
         &mut self,
-        strand: &mut Strand<'_, C, impl Context>,
+        ex_clause: &mut ExClause<impl Context>,
     ) {
-        let current_time = strand.ex_clause.current_time;
-        let ExClause { subgoals, floundered_subgoals, .. } = &mut strand.ex_clause;
+        info!(
+            "reconsider_floundered_subgoals(ex_clause={:#?})",
+            ex_clause,
+        );
+        let ExClause { current_time, subgoals, floundered_subgoals, .. } = ex_clause;
         for i in (0..floundered_subgoals.len()).rev() {
-            if floundered_subgoals[i].floundered_time < current_time {
+            if floundered_subgoals[i].floundered_time < *current_time {
                 let floundered_subgoal = floundered_subgoals.swap_remove(i);
                 subgoals.push(floundered_subgoal.floundered_literal);
             }
@@ -836,7 +840,7 @@ impl<C: Context> Forest<C> {
                         }
                     }
                 } else {
-                    debug!("floundered");
+                    debug!("Marking table {:?} as floundered!", table);
                     table_ref.mark_floundered();
                 }
             }
@@ -1180,12 +1184,18 @@ impl<C: Context> Forest<C> {
     /// subgoal list and adds it to the strand's floundered subgoal
     /// list.
     fn flounder_subgoal(&self, ex_clause: &mut ExClause<impl Context>, subgoal_index: usize) {
+        info_heading!(
+            "flounder_subgoal(current_time={:?}, subgoal={:?})",
+            ex_clause.current_time,
+            ex_clause.subgoals[subgoal_index],
+        );
         let floundered_time = ex_clause.current_time;
         let floundered_literal = ex_clause.subgoals.remove(subgoal_index);
         ex_clause.floundered_subgoals.push(FlounderedSubgoal {
             floundered_literal,
             floundered_time,
         });
+        debug!("flounder_subgoal: ex_clause={:#?}", ex_clause);
     }
 
     /// Used whenever we process an answer (whether new or cached) on

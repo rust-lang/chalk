@@ -1006,3 +1006,256 @@ fn negative_answer_delayed_literal() {
         }
     }
 }
+
+#[test]
+fn non_enumerable_traits_direct() {
+    test! {
+        program {
+            struct Foo { }
+            struct Bar { }
+
+            #[non_enumerable]
+            trait NonEnumerable { }
+            impl NonEnumerable for Foo { }
+            impl NonEnumerable for Bar { }
+
+            trait Enumerable { }
+            impl Enumerable for Foo { }
+            impl Enumerable for Bar { }
+        }
+
+        goal {
+            exists<A> { A: NonEnumerable }
+        } first 10 with max 3 {
+            r"Floundered"
+        }
+
+        goal {
+            exists<A> { A: Enumerable }
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Foo]
+                            constraints: []
+                        }
+                        binders: []
+                    }
+                    delayed_literals: {}
+                },
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Bar]
+                            constraints: []
+                        }
+                        binders: []
+                    }
+                    delayed_literals: {}
+                }
+            ]"
+        }
+
+        goal {
+            Foo: NonEnumerable
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: []
+                            constraints: []
+                        }
+                        binders: []
+                    }
+                    delayed_literals: {}
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+fn non_enumerable_traits_indirect() {
+    test! {
+        program {
+            struct Foo { }
+            struct Bar { }
+
+            #[non_enumerable]
+            trait NonEnumerable { }
+            impl NonEnumerable for Foo { }
+            impl NonEnumerable for Bar { }
+
+            trait Debug { }
+            impl<T> Debug for T where T: NonEnumerable { }
+        }
+
+        goal {
+            exists<A> { A: Debug }
+        } first 10 with max 3 {
+            r"Floundered"
+        }
+    }
+}
+
+#[test]
+fn non_enumerable_traits_double() {
+    test! {
+        program {
+            struct Foo { }
+            struct Bar { }
+
+            #[non_enumerable]
+            trait NonEnumerable1 { }
+            impl NonEnumerable1 for Foo { }
+            impl NonEnumerable1 for Bar { }
+
+            #[non_enumerable]
+            trait NonEnumerable2 { }
+            impl NonEnumerable2 for Foo { }
+            impl NonEnumerable2 for Bar { }
+
+            trait Debug { }
+            impl<T> Debug for T where T: NonEnumerable1, T: NonEnumerable2  { }
+        }
+
+        goal {
+            exists<A> { A: Debug }
+        } first 10 with max 3 {
+            r"Floundered"
+        }
+    }
+}
+
+#[test]
+fn non_enumerable_traits_reorder() {
+    test! {
+        program {
+            struct Foo { }
+            struct Bar { }
+
+            #[non_enumerable]
+            trait NonEnumerable { }
+            impl NonEnumerable for Foo { }
+            impl NonEnumerable for Bar { }
+
+            trait Enumerable { }
+            impl Enumerable for Foo { }
+
+            // In this test, we first try to solve to solve `T:
+            // NonEnumerable` but then we discover it's
+            // non-enumerable, and so we push it off for later. Then
+            // we try to solve the `T: Enumerable` trait.
+
+            trait Debug1 { }
+            impl<T> Debug1 for T where T: Enumerable, T: NonEnumerable { }
+
+            trait Debug2 { }
+            impl<T> Debug2 for T where T: NonEnumerable, T: Enumerable { }
+        }
+
+        goal {
+            exists<A> { A: Debug1 }
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Foo]
+                            constraints: []
+                        }
+                        binders: []
+                    }
+                    delayed_literals: {}
+                }
+            ]"
+        }
+
+
+        goal {
+            exists<A> { A: Debug2 }
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Foo]
+                            constraints: []
+                        }
+                        binders: []
+                    }
+                    delayed_literals: {}
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+fn negative_reorder() {
+    test! {
+        program {
+            struct Foo { }
+            struct Bar { }
+
+            trait IsFoo { }
+            impl IsFoo for Foo { }
+
+            trait Enumerable { }
+            impl Enumerable for Foo { }
+            impl Enumerable for Bar { }
+
+            // In this test, we first try to solve to solve `not { T:
+            //  IsFoo }` but then we discover it's
+            // non-enumerable, and so we push it off for later. Then
+            // we try to solve the `T: Enumerable` trait.
+
+            trait Debug1 { }
+            forall<T> {
+                T: Debug1 if T: Enumerable, not { T: IsFoo }
+            }
+
+            trait Debug2 { }
+            forall<T> {
+                T: Debug2 if not { T: IsFoo }, T: Enumerable
+            }
+        }
+
+        goal {
+            exists<A> { A: Debug1 }
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Bar]
+                            constraints: []
+                        }
+                        binders: []
+                    }
+                    delayed_literals: {}
+                }
+            ]"
+        }
+
+
+        goal {
+            exists<A> { A: Debug2 }
+        } first 10 with max 3 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [?0 := Bar]
+                            constraints: []
+                        }
+                        binders: []
+                    }
+                    delayed_literals: {}
+                }
+            ]"
+        }
+    }
+}

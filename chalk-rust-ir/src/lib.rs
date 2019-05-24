@@ -83,6 +83,10 @@ impl TraitDatum {
     pub fn is_auto_trait(&self) -> bool {
         self.binders.value.flags.auto
     }
+
+    pub fn is_non_enumerable_trait(&self) -> bool {
+        self.binders.value.flags.non_enumerable
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -121,6 +125,7 @@ pub struct TraitFlags {
     pub marker: bool,
     pub upstream: bool,
     pub fundamental: bool,
+    pub non_enumerable: bool,
 }
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.

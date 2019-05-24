@@ -239,10 +239,22 @@ impl<'me> context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenc
 
 impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
     fn program_clauses(
-        &self,
+        &mut self,
         environment: &Arc<Environment>,
         goal: &DomainGoal,
     ) -> Option<Vec<ProgramClause>> {
+        // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
+        if let DomainGoal::Holds(WhereClause::Implemented(trait_ref))= goal {
+            if self.program.trait_datum(trait_ref.trait_id).is_non_enumerable_trait() {
+                let self_ty = trait_ref.self_type_parameter().unwrap();
+                if let Some(v) = self_ty.inference_var() {
+                    if !self.infer.var_is_bound(v) {
+                        return None;
+                    }
+                }
+            }
+        }
+
         let mut clauses: Vec<_> = environment
             .clauses
             .iter()

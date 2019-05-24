@@ -284,7 +284,7 @@ pub trait UnificationOps<C: Context, I: Context> {
     /// unresolved type variables that would have to be resolved
     /// first; the goal will be considered floundered.
     fn program_clauses(
-        &self,
+        &mut self,
         environment: &I::Environment,
         goal: &I::DomainGoal,
     ) -> Option<Vec<I::ProgramClause>>;
