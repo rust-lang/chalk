@@ -13,7 +13,7 @@ edition = "2018"
 derive-new = "0.5.6"
 ena = "0.10.1"
 failure = "0.1"
-itertools = "0.7.8"
+itertools = "0.8.0"
 petgraph = "0.4.13"
 rustc-hash = { version = "1.0.0" }
 
