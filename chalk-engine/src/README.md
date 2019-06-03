@@ -1,7 +1,5 @@
 # The on-demand SLG solver
 
-## Description of how it works
-
 The basis of the solver is the `Forest` type. A *forest* stores a
 collection of *tables* as well as a *stack*. Each *table* represents
 the stored results of a particular query that is being performed, as
@@ -9,7 +7,7 @@ well as the various *strands*, which are basically suspended
 computations that may be used to find more answers. Tables are
 interdependent: solving one query may require solving others.
 
-### Walkthrough
+## Walkthrough
 
 Perhaps the easiest way to explain how the solver works is to walk
 through an example. Let's imagine that we have the following program:
@@ -41,19 +39,23 @@ look for a table with this as the key: since the forest is empty, this
 lookup will fail, and we will create a new table T0, corresponding to
 the u-canonical goal Q.
 
-**Ignoring negative reasoning and regions.** To start, we'll ignore
-the possibility of negative goals like `not { Foo }`. We'll phase them
-in later, as they bring several complications.
+### Ignoring negative reasoning and regions
 
-**Creating a table.** When we first create a table, we also initialize
-it with a set of *initial strands*. A "strand" is kind of like a
-"thread" for the solver: it contains a particular way to produce an
-answer. The initial set of strands for a goal like `Rc<?0>: Debug`
-(i.e., a "domain goal") is determined by looking for *clauses* in the
-environment. In Rust, these clauses derive from impls, but also from
-where-clauses that are in scope. In the case of our example, there
-would be three clauses, each coming from the program. Using a
-Prolog-like notation, these look like:
+To start, we'll ignore the possibility of negative goals like `not {
+Foo }`. We'll phase them in later, as they bring several
+complications.
+
+### Creating a table
+
+When we first create a table, we also initialize it with a set of
+*initial strands*. A "strand" is kind of like a "thread" for the
+solver: it contains a particular way to produce an answer. The initial
+set of strands for a goal like `Rc<?0>: Debug` (i.e., a "domain goal")
+is determined by looking for *clauses* in the environment. In Rust,
+these clauses derive from impls, but also from where-clauses that are
+in scope. In the case of our example, there would be three clauses,
+each coming from the program. Using a Prolog-like notation, these look
+like:
 
 ```
 (u32: Debug).
@@ -66,13 +68,16 @@ these clauses to our goal of `Rc<?0>: Debug`. The first and third
 clauses are inapplicable because `u32` and `Vec<?0>` cannot be unified
 with `Rc<?0>`. The second clause, however, will work.
 
-**What is a strand?** Let's talk a bit more about what a strand *is*. In the code, a strand
+### What is a strand?
+
+Let's talk a bit more about what a strand *is*. In the code, a strand
 is the combination of an inference table, an X-clause, and (possibly)
 a selected subgoal from that X-clause. But what is an X-clause
 (`ExClause`, in the code)? An X-clause pulls together a few things:
 
 - The current state of the goal we are trying to prove;
 - A set of subgoals that have yet to be proven;
+- A set of floundered subgoals (see the section on floundering below);
 - There are also a few things we're ignoring for now:
   - delayed literals, region constraints
 
@@ -103,11 +108,12 @@ is the subgoal after the turnstile (`:-`) that we are currently trying
 to prove in this strand. Initally, when a strand is first created,
 there is no selected subgoal.
 
-**Activating a strand.** Now that we have created the table T0 and
-initialized it with strands, we have to actually try and produce an
-answer. We do this by invoking the `ensure_answer` operation on the
-table: specifically, we say `ensure_answer(T0, A0)`, meaning "ensure
-that there is a 0th answer".
+### Activating a strand
+
+Now that we have created the table T0 and initialized it with strands,
+we have to actually try and produce an answer. We do this by invoking
+the `ensure_answer` operation on the table: specifically, we say
+`ensure_answer(T0, A0)`, meaning "ensure that there is a 0th answer".
 
 Remember that tables store not only strands, but also a vector of
 cached answers. The first thing that `ensure_answer` does is to check
@@ -134,14 +140,15 @@ Here, we write `selected(L, An)` to indicate that (a) the literal `L`
 is the selected subgoal and (b) which answer `An` we are looking for. We
 start out looking for `A0`.
 
-**Processing the selected subgoal.** Next, we have to try and find an
-answer to this selected goal. To do that, we will u-canonicalize it
-and try to find an associated table. In this case, the u-canonical
-form of the subgoal is `?0: Debug`: we don't have a table yet for
-that, so we can create a new one, T1. As before, we'll initialize T1
-with strands. In this case, there will be three strands, because all
-the program clauses are potentially applicable. Those three strands
-will be:
+### Processing the selected subgoal
+
+Next, we have to try and find an answer to this selected goal. To do
+that, we will u-canonicalize it and try to find an associated
+table. In this case, the u-canonical form of the subgoal is `?0:
+Debug`: we don't have a table yet for that, so we can create a new
+one, T1. As before, we'll initialize T1 with strands. In this case,
+there will be three strands, because all the program clauses are
+potentially applicable. Those three strands will be:
 
 - `(u32: Debug) :-`, derived from the program clause `(u32: Debug).`.
   - Note: This strand has no subgoals.
@@ -163,12 +170,14 @@ Table T1 [?0: Debug]
     (Rc<?V>: Debug) :- (?V: Debug)
 ```
     
-**Delegation between tables.** Now that the active strand from T0 has
-created the table T1, it can try to extract an answer. It does this
-via that same `ensure_answer` operation we saw before. In this case,
-the strand would invoke `ensure_answer(T1, A0)`, since we will start
-with the first answer. This will cause T1 to activate its first
-strand, `u32: Debug :-`.
+### Delegation between tables
+
+Now that the active strand from T0 has created the table T1, it can
+try to extract an answer. It does this via that same `ensure_answer`
+operation we saw before. In this case, the strand would invoke
+`ensure_answer(T1, A0)`, since we will start with the first
+answer. This will cause T1 to activate its first strand, `u32: Debug
+:-`.
 
 This strand is somewhat special: it has no subgoals at all. This means
 that the goal is proven. We can therefore add `u32: Debug` to the set
@@ -230,6 +239,122 @@ Table T1 [?0: Debug]
 Here you can see how the forest captures both the answers we have
 created thus far *and* the strands that will let us try to produce
 more answers later on.
+
+### Floundering
+
+The first thing we do when we create a table is to initialize it with
+a set of strands. These strands represent all the ways that one can
+solve the table's associated goal. For an ordinary trait, we would
+effectively create one strand per "relevant impl". But sometimes the
+goals are vague for this to be possible; other times, it may be possible
+but just really inefficient, since all of those strands must be explored.
+
+As an example of when it may not be possible, consider a goal like
+`?T: Sized`. This goal can in principle enumerate **every sized type**
+that exists -- that includes not only struct/enum types, but also
+closure types, fn types with arbitrary arity, tuple types with
+arbitrary arity, and so forth. In other words, there are not only an
+infinite set of **answers** but actually an infinite set of
+**strands**. The same applies to auto traits like `Send` as well as
+"hybrid" traits like `Clone`, which contain *some* auto-generated sets
+of impls.
+
+Another example of floundering comes from negative logic. In general,
+we cannot process negative subgoals if they have unbound existential
+variables, such as `not { Vec<?T>: Foo }`. This is because we can only
+enumerate things that *do* match a given trait (or which *are*
+provable, more generally). We cannot enumerate out possible types `?T`
+that *are not* provable (there is an infinite set, to be sure).
+
+To handle this, we allow tables to enter a **floundered** state. This
+state begins when we try to create the program clauses for a table --
+if that is not possible (e.g., in one of the cases above) then the
+table enters a floundered state. Attempts to get an answer from a
+floundered table result in an error (e.g.,
+`RecursiveSearchFail::Floundered`).
+
+Whenever a goal results in a floundered result, that goal is placed
+into a distinct list (the "floundered subgoals"). We then go on and
+process the rest of the subgoals. Once all the normal subgoals have
+completed, floundered subgoals are removed from the floundered list
+and re-attempted: the idea is that we may have accumulated more type
+information in the meantime.  If they continue to flounder, then we
+stop.
+
+Let's look at an example. Imagine that we have:
+
+```rust
+trait Foo { }
+trait Bar { }
+
+impl<T: Send + Bar> Foo for T { }
+
+impl Bar for u32 { }
+impl Bar for i32 { }
+```
+
+Now imagine we are trying to prove `?T: Foo`. There is only one impl,
+so we will create a state like:
+
+```
+(?T: Foo) :- (?T: Send), (?T: Bar)
+```
+
+When we attempt to solve `?T: Send`, however, that subgoal will
+flounder, because `Send` is an auto-trait. So it will be put into a
+floundered list:
+
+```
+(?T: Foo) :- (?T: Bar) [ floundered: (?T: Send) ]
+```
+
+and we will go on to solve `?T: Bar`. `Bar` is an ordinary trait -- so
+we can enumerate two strands (one for `u32` and one for `i32`). When
+we process the first answer, we wind up with:
+
+```
+(u32: Foo) :- [ floundered: (u32: Send) ]
+```
+
+At this point we can move the floundered subgoal back into the main
+list and process:
+
+```
+(u32: Foo) :- (u32: Send)
+```
+
+This time, the goal does not flounder.
+
+But how do we detect when it makes sense to move a floundered subgoal
+into the main list?  To handle this, we use a timestamp scheme. We
+keep a counter as part of the strand -- each time we succeed in
+solving some subgoal, we increment the counter, as that *may* have
+provided more information about some type variables. When we move a
+goal to the floundered list, we also track the current value of the
+timestamp. Then, when it comes time to move things *from* the
+floundered list, we can compare if the timestamp has been changed
+since the goal was marked as floundering. If not, then no new
+information can have been attempted, and we can mark the current table
+as being floundered itself.
+
+This mechanism allows floundered to propagate up many levels, e.g.
+in an example like this:
+
+```rust
+trait Foo { }
+trait Bar { }
+trait Baz { }
+
+impl<T: Baz + Bar> Foo for T { }
+
+impl Bar for u32 { }
+impl Bar for i32 { }
+
+impl<T: Sized> Baz for T { }
+```
+
+Here, solving `?T: Baz` will in turn invoke `?T: Sized` -- this
+floundering state will be propagated up to the `?T: Foo` table.
 
 ## Heritage and acroynms
 
