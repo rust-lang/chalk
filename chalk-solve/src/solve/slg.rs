@@ -245,7 +245,8 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
     ) -> Option<Vec<ProgramClause>> {
         // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
         if let DomainGoal::Holds(WhereClause::Implemented(trait_ref))= goal {
-            if self.program.trait_datum(trait_ref.trait_id).is_non_enumerable_trait() {
+            let trait_datum = self.program.trait_datum(trait_ref.trait_id);
+            if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
                 let self_ty = trait_ref.self_type_parameter().unwrap();
                 if let Some(v) = self_ty.inference_var() {
                     if !self.infer.var_is_bound(v) {

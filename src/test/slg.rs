@@ -1194,6 +1194,25 @@ fn non_enumerable_traits_reorder() {
 }
 
 #[test]
+fn auto_traits_flounder() {
+    test! {
+        program {
+            struct Foo { }
+            struct Bar { }
+
+            #[auto]
+            trait Send { }
+        }
+
+        goal {
+            exists<A> { A: Send }
+        } first 10 with max 3 {
+            r"Floundered"
+        }
+    }
+}
+
+#[test]
 fn negative_reorder() {
     test! {
         program {

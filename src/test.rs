@@ -1915,24 +1915,22 @@ fn mixed_semantics() {
             #[auto] trait Send { }
             trait Foo { }
 
-            impl<T> Send for T where T: Foo { }
-            impl<T> Foo for T where T: Send { }
+            struct Bar { }
+
+            impl Send for Bar where Bar: Foo { }
+            impl Foo for Bar where Bar: Send { }
         }
 
         // We have a cycle `(T: Send) :- (T: Foo) :- (T: Send)` with a non-coinductive
         // inner component `T: Foo` so we reject it.
         goal {
-            exists<T> {
-                T: Send
-            }
+            Bar: Send
         } yields {
             "No possible solution"
         }
 
         goal {
-            exists<T> {
-                T: Foo
-            }
+            Bar: Foo
         } yields {
             "No possible solution"
         }
