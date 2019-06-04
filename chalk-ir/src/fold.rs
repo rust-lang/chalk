@@ -3,7 +3,7 @@
 use crate::cast::Cast;
 use crate::*;
 use chalk_engine::context::Context;
-use chalk_engine::{DelayedLiteral, ExClause, Literal, FlounderedSubgoal};
+use chalk_engine::{DelayedLiteral, ExClause, FlounderedSubgoal, Literal};
 use std::fmt::Debug;
 use std::sync::Arc;
 

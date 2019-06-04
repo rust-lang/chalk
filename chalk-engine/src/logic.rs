@@ -1,4 +1,6 @@
-use crate::context::{prelude::*, Floundered, WithInstantiatedExClause, WithInstantiatedUCanonicalGoal};
+use crate::context::{
+    prelude::*, Floundered, WithInstantiatedExClause, WithInstantiatedUCanonicalGoal,
+};
 use crate::fallible::NoSolution;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
@@ -6,8 +8,8 @@ use crate::stack::StackIndex;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{Answer, AnswerIndex};
 use crate::{
-    DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex,
-    TimeStamp,
+    DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, FlounderedSubgoal, Literal,
+    Minimums, TableIndex, TimeStamp,
 };
 use rustc_hash::FxHashSet;
 use std::mem;
@@ -692,15 +694,14 @@ impl<C: Context> Forest<C> {
         }
     }
 
-    fn reconsider_floundered_subgoals(
-        &mut self,
-        ex_clause: &mut ExClause<impl Context>,
-    ) {
-        info!(
-            "reconsider_floundered_subgoals(ex_clause={:#?})",
-            ex_clause,
-        );
-        let ExClause { current_time, subgoals, floundered_subgoals, .. } = ex_clause;
+    fn reconsider_floundered_subgoals(&mut self, ex_clause: &mut ExClause<impl Context>) {
+        info!("reconsider_floundered_subgoals(ex_clause={:#?})", ex_clause,);
+        let ExClause {
+            current_time,
+            subgoals,
+            floundered_subgoals,
+            ..
+        } = ex_clause;
         for i in (0..floundered_subgoals.len()).rev() {
             if floundered_subgoals[i].floundered_time < *current_time {
                 let floundered_subgoal = floundered_subgoals.swap_remove(i);

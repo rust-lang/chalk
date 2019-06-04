@@ -141,7 +141,7 @@ pub struct ExClause<C: Context> {
 /// we *may* have changed inference variables.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TimeStamp {
-    clock: u64
+    clock: u64,
 }
 
 impl TimeStamp {

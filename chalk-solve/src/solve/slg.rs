@@ -131,10 +131,12 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
         &self,
         goal: &UCanonical<InEnvironment<Goal>>,
     ) -> Canonical<ConstrainedSubst> {
-        let (mut infer, subst, _) =
-            InferenceTable::from_canonical(goal.universes, &goal.canonical);
+        let (mut infer, subst, _) = InferenceTable::from_canonical(goal.universes, &goal.canonical);
         infer
-            .canonicalize(&ConstrainedSubst { subst, constraints: vec![] })
+            .canonicalize(&ConstrainedSubst {
+                subst,
+                constraints: vec![],
+            })
             .quantified
     }
 
@@ -245,7 +247,7 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         goal: &DomainGoal,
     ) -> Result<Vec<ProgramClause>, Floundered> {
         // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
-        if let DomainGoal::Holds(WhereClause::Implemented(trait_ref))= goal {
+        if let DomainGoal::Holds(WhereClause::Implemented(trait_ref)) = goal {
             let trait_datum = self.program.trait_datum(trait_ref.trait_id);
             if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
                 let self_ty = trait_ref.self_type_parameter().unwrap();
