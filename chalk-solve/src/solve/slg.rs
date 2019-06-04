@@ -6,6 +6,7 @@ use crate::infer::InferenceTable;
 use crate::solve::truncate::{self, Truncated};
 use crate::solve::Solution;
 use crate::RustIrDatabase;
+use chalk_engine::context::Floundered;
 use chalk_engine::fallible::Fallible;
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
@@ -242,7 +243,7 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         &mut self,
         environment: &Arc<Environment>,
         goal: &DomainGoal,
-    ) -> Option<Vec<ProgramClause>> {
+    ) -> Result<Vec<ProgramClause>, Floundered> {
         // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
         if let DomainGoal::Holds(WhereClause::Implemented(trait_ref))= goal {
             let trait_datum = self.program.trait_datum(trait_ref.trait_id);
@@ -250,21 +251,23 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
                 let self_ty = trait_ref.self_type_parameter().unwrap();
                 if let Some(v) = self_ty.inference_var() {
                     if !self.infer.var_is_bound(v) {
-                        return None;
+                        return Err(Floundered);
                     }
                 }
             }
         }
 
-        let mut clauses: Vec<_> = environment
-            .clauses
-            .iter()
-            .filter(|&env_clause| env_clause.could_match(goal))
-            .cloned()
-            .collect();
+        let mut clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal);
 
-        clauses.extend(program_clauses_for_goal(self.program, environment, goal));
-        Some(clauses)
+        clauses.extend(
+            environment
+                .clauses
+                .iter()
+                .filter(|&env_clause| env_clause.could_match(goal))
+                .cloned(),
+        );
+
+        Ok(clauses)
     }
 
     fn instantiate_binders_universally(&mut self, arg: &Binders<Box<Goal>>) -> Goal {

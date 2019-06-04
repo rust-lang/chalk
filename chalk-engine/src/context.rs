@@ -274,6 +274,11 @@ pub trait InferenceTable<C: Context, I: Context>:
     fn next_subgoal_index(&mut self, ex_clause: &ExClause<I>) -> usize;
 }
 
+/// Error type for the `UnificationOps::program_clauses` method --
+/// indicates that the complete set of program clauses for this goal
+/// cannot be enumerated.
+pub struct Floundered;
+
 /// Methods for unifying and manipulating terms and binders.
 pub trait UnificationOps<C: Context, I: Context> {
     /// Returns the set of program clauses that might apply to
@@ -287,7 +292,7 @@ pub trait UnificationOps<C: Context, I: Context> {
         &mut self,
         environment: &I::Environment,
         goal: &I::DomainGoal,
-    ) -> Option<Vec<I::ProgramClause>>;
+    ) -> Result<Vec<I::ProgramClause>, Floundered>;
 
     // Used by: simplify
     fn instantiate_binders_universally(&mut self, arg: &I::BindersGoal) -> I::Goal;

@@ -1,4 +1,4 @@
-use crate::context::{prelude::*, WithInstantiatedExClause, WithInstantiatedUCanonicalGoal};
+use crate::context::{prelude::*, Floundered, WithInstantiatedExClause, WithInstantiatedUCanonicalGoal};
 use crate::fallible::NoSolution;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
@@ -826,22 +826,25 @@ impl<C: Context> Forest<C> {
         let table_ref = &mut self.tables[table];
         match infer.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
-                if let Some(clauses) = infer.program_clauses(&environment, &domain_goal) {
-                    for clause in clauses {
-                        debug!("program clause = {:#?}", clause);
-                        if let Ok(resolvent) =
-                            infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
-                        {
-                            info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
-                            table_ref.push_strand(CanonicalStrand {
-                                canonical_ex_clause: resolvent,
-                                selected_subgoal: None,
-                            });
+                match infer.program_clauses(&environment, &domain_goal) {
+                    Ok(clauses) => {
+                        for clause in clauses {
+                            debug!("program clause = {:#?}", clause);
+                            if let Ok(resolvent) =
+                                infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
+                            {
+                                info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
+                                table_ref.push_strand(CanonicalStrand {
+                                    canonical_ex_clause: resolvent,
+                                    selected_subgoal: None,
+                                });
+                            }
                         }
                     }
-                } else {
-                    debug!("Marking table {:?} as floundered!", table);
-                    table_ref.mark_floundered();
+                    Err(Floundered) => {
+                        debug!("Marking table {:?} as floundered!", table);
+                        table_ref.mark_floundered();
+                    }
                 }
             }
 
