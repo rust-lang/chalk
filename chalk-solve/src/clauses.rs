@@ -212,7 +212,11 @@ fn program_clauses_that_could_match(
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)
             .to_program_clauses(db, clauses),
-        DomainGoal::Compatible(()) => (),
+        DomainGoal::Compatible(()) | DomainGoal::RevealMode(()) => (),
+        DomainGoal::Overrides(ov) => {
+            //TODO(sunjay)
+            unimplemented!()
+        }
     };
 }
 

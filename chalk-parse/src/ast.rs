@@ -242,6 +242,8 @@ pub enum DomainGoal {
     LocalImplAllowed { trait_ref: TraitRef },
     Compatible,
     DownstreamType { ty: Ty },
+    RevealMode,
+    Overrides { assoc_ty: Identifier, trait_ref: TraitRef },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -282,6 +284,9 @@ pub enum Goal {
 
     /// The `compatible { G }` syntax
     Compatible(Box<Goal>),
+
+    /// The `reveal { G }` syntax
+    Reveal(Box<Goal>),
 
     // Additional kinds of goals:
     Leaf(LeafGoal),

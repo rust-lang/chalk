@@ -540,7 +540,8 @@ enum_fold!(WellFormed[] { Trait(a), Ty(a) });
 enum_fold!(FromEnv[] { Trait(a), Ty(a) });
 enum_fold!(DomainGoal[] { Holds(a), WellFormed(a), FromEnv(a), Normalize(a), UnselectedNormalize(a),
                           InScope(a), IsLocal(a), IsUpstream(a), IsFullyVisible(a),
-                          LocalImplAllowed(a), Compatible(a), DownstreamType(a) });
+                          LocalImplAllowed(a), Compatible(a), DownstreamType(a), RevealMode(a),
+                          Overrides(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
 enum_fold!(Constraint[] { LifetimeEq(a, b) });
 enum_fold!(Goal[] { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
@@ -679,6 +680,7 @@ struct_fold!(TraitRef {
 struct_fold!(Normalize { projection, ty });
 struct_fold!(ProjectionEq { projection, ty });
 struct_fold!(UnselectedNormalize { projection, ty });
+struct_fold!(Overrides { assoc_ty_id, trait_ref });
 struct_fold!(Environment { clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold<Result = F>);
 struct_fold!(EqGoal { a, b });

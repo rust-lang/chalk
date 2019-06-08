@@ -689,6 +689,17 @@ pub enum DomainGoal {
     ///
     /// This makes a new type `T` available and makes `DownstreamType(T)` provable for that type.
     DownstreamType(Ty),
+
+    /// Used to activate the "reveal modality" rules. These are rules that introduce predicates
+    /// that allow us to account for the effects of specialization. These should depend on this
+    /// clause so that they only apply if this is present.
+    ///
+    /// (HACK: Having `()` makes some of our macros work better.)
+    RevealMode(()),
+
+    /// Used to dictate when trait impls override another impl according to the specialization
+    /// rules.
+    Overrides(Overrides),
 }
 
 pub type QuantifiedWhereClause = Binders<WhereClause>;
@@ -778,6 +789,14 @@ pub struct ProjectionEq {
 pub struct UnselectedNormalize {
     pub projection: UnselectedProjectionTy,
     pub ty: Ty,
+}
+
+/// Indicates that the trait ref overrides the given associated type according to the
+/// specialization rules.
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Overrides {
+    pub assoc_ty_id: TypeId,
+    pub trait_ref: TraitRef,
 }
 
 /// Indicates that the `value` is universally quantified over `N`
@@ -1013,6 +1032,13 @@ impl Goal {
                 ))
             }),
         )
+    }
+
+    /// Takes a goal `G` and turns it into `reveal { G }`
+    pub fn reveal(self) -> Self {
+        // reveal { G } desugars into: if RevealMode { G }
+        // This activates the reveal modality rules
+        Goal::Implies(vec![DomainGoal::RevealMode(()).cast()], Box::new(self))
     }
 
     pub fn implied_by(self, predicates: Vec<ProgramClause>) -> Goal {

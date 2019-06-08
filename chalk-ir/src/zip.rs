@@ -189,6 +189,7 @@ struct_zip!(UnselectedProjectionTy {
 struct_zip!(Normalize { projection, ty });
 struct_zip!(ProjectionEq { projection, ty });
 struct_zip!(UnselectedNormalize { projection, ty });
+struct_zip!(Overrides { assoc_ty_id, trait_ref });
 struct_zip!(EqGoal { a, b });
 struct_zip!(ProgramClauseImplication {
     consequence,
@@ -244,7 +245,9 @@ enum_zip!(DomainGoal {
     IsFullyVisible,
     LocalImplAllowed,
     Compatible,
-    DownstreamType
+    DownstreamType,
+    RevealMode,
+    Overrides
 });
 enum_zip!(LeafGoal { DomainGoal, EqGoal });
 enum_zip!(ProgramClause { Implies, ForAll });

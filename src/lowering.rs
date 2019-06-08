@@ -526,6 +526,23 @@ impl LowerDomainGoal for DomainGoal {
             DomainGoal::DownstreamType { ty } => {
                 vec![chalk_ir::DomainGoal::DownstreamType(ty.lower(env)?)]
             }
+            DomainGoal::RevealMode => vec![chalk_ir::DomainGoal::RevealMode(())],
+            DomainGoal::Overrides { assoc_ty, trait_ref } => {
+                let trait_ref = trait_ref.lower(env)?;
+
+                let assoc_ty_id = match env.associated_ty_infos.get(&(trait_ref.trait_id, assoc_ty.str)) {
+                    Some(info) => info.id,
+                    None => return Err(format_err!(
+                        "no associated type `{}` defined in trait",
+                        assoc_ty,
+                    )),
+                };
+
+                vec![chalk_ir::DomainGoal::Overrides(chalk_ir::Overrides {
+                    assoc_ty_id,
+                    trait_ref,
+                })]
+            }
         };
         Ok(goals)
     }
@@ -1177,6 +1194,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
             ))),
             Goal::Not(g) => Ok(Box::new(chalk_ir::Goal::Not(g.lower(env)?))),
             Goal::Compatible(g) => Ok(Box::new(g.lower(env)?.compatible())),
+            Goal::Reveal(g) => Ok(Box::new(g.lower(env)?.reveal())),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
                 let leaves = leaf.lower(env)?.into_iter().map(chalk_ir::Goal::Leaf);

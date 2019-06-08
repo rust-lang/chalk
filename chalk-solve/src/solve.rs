@@ -168,7 +168,7 @@ impl TestSolver {
         program: &dyn RustIrDatabase,
         goal: &UCanonical<InEnvironment<Goal>>,
         num_answers: usize,
-    ) -> Box<dyn std::fmt::Debug> {
+    ) -> Box<dyn fmt::Debug> {
         let ops = self.forest.context().ops(program);
         match self.forest.force_answers(&ops, goal.clone(), num_answers) {
             Some(v) => Box::new(v),

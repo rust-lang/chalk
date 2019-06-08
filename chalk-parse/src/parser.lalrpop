@@ -32,6 +32,7 @@ Goal1: Box<Goal> = {
     "if" "(" <h:SemiColon<InlineClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(h, g)),
     "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
     "compatible" "{" <g:Goal> "}" => Box::new(Goal::Compatible(g)),
+    "reveal" "{" <g:Goal> "}" => Box::new(Goal::Reveal(g)),
     <leaf:LeafGoal> => Box::new(Goal::Leaf(leaf)),
     "(" <Goal> ")",
 };
@@ -308,6 +309,9 @@ DomainGoal: DomainGoal = {
 
     "Compatible" => DomainGoal::Compatible,
     "DownstreamType" "(" <ty:Ty> ")" => DomainGoal::DownstreamType { ty },
+
+    "RevealMode" => DomainGoal::RevealMode,
+    "Overrides" "[" <assoc_ty:Id> "]" "(" <trait_ref:TraitRef<":">> ")" => DomainGoal::Overrides { assoc_ty, trait_ref },
 };
 
 LeafGoal: LeafGoal = {

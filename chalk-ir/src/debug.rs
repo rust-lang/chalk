@@ -211,6 +211,20 @@ impl Debug for UnselectedNormalize {
     }
 }
 
+impl Debug for Overrides {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let Overrides {assoc_ty_id, trait_ref} = self;
+        write!(
+            fmt,
+            "Overrides[{:?}]({:?}: {:?}{:?})",
+            assoc_ty_id,
+            trait_ref.parameters[0],
+            trait_ref.trait_id,
+            Angle(&trait_ref.parameters[1..])
+        )
+    }
+}
+
 impl Debug for WhereClause {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
@@ -263,8 +277,10 @@ impl Debug for DomainGoal {
                 tr.trait_id,
                 Angle(&tr.parameters[1..])
             ),
-            DomainGoal::Compatible(_) => write!(fmt, "Compatible"),
+            DomainGoal::Compatible(()) => write!(fmt, "Compatible"),
             DomainGoal::DownstreamType(n) => write!(fmt, "DownstreamType({:?})", n),
+            DomainGoal::RevealMode(()) => write!(fmt, "RevealMode"),
+            DomainGoal::Overrides(ov) => write!(fmt, "{:?}", ov),
         }
     }
 }
