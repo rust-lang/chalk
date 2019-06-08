@@ -213,7 +213,10 @@ impl Debug for UnselectedNormalize {
 
 impl Debug for Overrides {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let Overrides {assoc_ty_id, trait_ref} = self;
+        let Overrides {
+            assoc_ty_id,
+            trait_ref,
+        } = self;
         write!(
             fmt,
             "Overrides[{:?}]({:?}: {:?}{:?})",

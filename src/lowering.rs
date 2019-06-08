@@ -527,15 +527,23 @@ impl LowerDomainGoal for DomainGoal {
                 vec![chalk_ir::DomainGoal::DownstreamType(ty.lower(env)?)]
             }
             DomainGoal::RevealMode => vec![chalk_ir::DomainGoal::RevealMode(())],
-            DomainGoal::Overrides { assoc_ty, trait_ref } => {
+            DomainGoal::Overrides {
+                assoc_ty,
+                trait_ref,
+            } => {
                 let trait_ref = trait_ref.lower(env)?;
 
-                let assoc_ty_id = match env.associated_ty_infos.get(&(trait_ref.trait_id, assoc_ty.str)) {
+                let assoc_ty_id = match env
+                    .associated_ty_infos
+                    .get(&(trait_ref.trait_id, assoc_ty.str))
+                {
                     Some(info) => info.id,
-                    None => return Err(format_err!(
-                        "no associated type `{}` defined in trait",
-                        assoc_ty,
-                    )),
+                    None => {
+                        return Err(format_err!(
+                            "no associated type `{}` defined in trait",
+                            assoc_ty,
+                        ))
+                    }
                 };
 
                 vec![chalk_ir::DomainGoal::Overrides(chalk_ir::Overrides {

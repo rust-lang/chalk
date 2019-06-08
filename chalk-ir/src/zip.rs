@@ -189,7 +189,10 @@ struct_zip!(UnselectedProjectionTy {
 struct_zip!(Normalize { projection, ty });
 struct_zip!(ProjectionEq { projection, ty });
 struct_zip!(UnselectedNormalize { projection, ty });
-struct_zip!(Overrides { assoc_ty_id, trait_ref });
+struct_zip!(Overrides {
+    assoc_ty_id,
+    trait_ref
+});
 struct_zip!(EqGoal { a, b });
 struct_zip!(ProgramClauseImplication {
     consequence,

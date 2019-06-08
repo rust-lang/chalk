@@ -229,21 +229,49 @@ pub enum WhereClause {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DomainGoal {
-    Holds { where_clause: WhereClause },
-    Normalize { projection: ProjectionTy, ty: Ty },
-    TraitRefWellFormed { trait_ref: TraitRef },
-    TyWellFormed { ty: Ty },
-    TyFromEnv { ty: Ty },
-    TraitRefFromEnv { trait_ref: TraitRef },
-    TraitInScope { trait_name: Identifier },
-    IsLocal { ty: Ty },
-    IsUpstream { ty: Ty },
-    IsFullyVisible { ty: Ty },
-    LocalImplAllowed { trait_ref: TraitRef },
+    Holds {
+        where_clause: WhereClause,
+    },
+    Normalize {
+        projection: ProjectionTy,
+        ty: Ty,
+    },
+    TraitRefWellFormed {
+        trait_ref: TraitRef,
+    },
+    TyWellFormed {
+        ty: Ty,
+    },
+    TyFromEnv {
+        ty: Ty,
+    },
+    TraitRefFromEnv {
+        trait_ref: TraitRef,
+    },
+    TraitInScope {
+        trait_name: Identifier,
+    },
+    IsLocal {
+        ty: Ty,
+    },
+    IsUpstream {
+        ty: Ty,
+    },
+    IsFullyVisible {
+        ty: Ty,
+    },
+    LocalImplAllowed {
+        trait_ref: TraitRef,
+    },
     Compatible,
-    DownstreamType { ty: Ty },
+    DownstreamType {
+        ty: Ty,
+    },
     RevealMode,
-    Overrides { assoc_ty: Identifier, trait_ref: TraitRef },
+    Overrides {
+        assoc_ty: Identifier,
+        trait_ref: TraitRef,
+    },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

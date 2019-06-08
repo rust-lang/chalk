@@ -680,7 +680,10 @@ struct_fold!(TraitRef {
 struct_fold!(Normalize { projection, ty });
 struct_fold!(ProjectionEq { projection, ty });
 struct_fold!(UnselectedNormalize { projection, ty });
-struct_fold!(Overrides { assoc_ty_id, trait_ref });
+struct_fold!(Overrides {
+    assoc_ty_id,
+    trait_ref
+});
 struct_fold!(Environment { clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold<Result = F>);
 struct_fold!(EqGoal { a, b });
