@@ -246,7 +246,7 @@ The first thing we do when we create a table is to initialize it with
 a set of strands. These strands represent all the ways that one can
 solve the table's associated goal. For an ordinary trait, we would
 effectively create one strand per "relevant impl". But sometimes the
-goals are vague for this to be possible; other times, it may be possible
+goals are too vague for this to be possible; other times, it may be possible
 but just really inefficient, since all of those strands must be explored.
 
 As an example of when it may not be possible, consider a goal like
