@@ -7,7 +7,7 @@ use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::*;
 
 use chalk_engine::context;
-use chalk_engine::{ExClause, Literal};
+use chalk_engine::{ExClause, Literal, TimeStamp};
 use std::sync::Arc;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -102,6 +102,8 @@ impl<'me> context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceT
             delayed_literals: vec![],
             constraints: vec![],
             subgoals: vec![],
+            current_time: TimeStamp::default(),
+            floundered_subgoals: vec![],
         };
 
         // Add the subgoals/region-constraints that unification gave us.

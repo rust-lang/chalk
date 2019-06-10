@@ -1,4 +1,6 @@
-use crate::context::{prelude::*, WithInstantiatedExClause, WithInstantiatedUCanonicalGoal};
+use crate::context::{
+    prelude::*, Floundered, WithInstantiatedExClause, WithInstantiatedUCanonicalGoal,
+};
 use crate::fallible::NoSolution;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
@@ -6,7 +8,8 @@ use crate::stack::StackIndex;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{Answer, AnswerIndex};
 use crate::{
-    DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, Literal, Minimums, TableIndex,
+    DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, FlounderedSubgoal, Literal,
+    Minimums, TableIndex, TimeStamp,
 };
 use rustc_hash::FxHashSet;
 use std::mem;
@@ -23,6 +26,9 @@ type RootSearchResult<T> = Result<T, RootSearchFail>;
 pub(super) enum RootSearchFail {
     /// The subgoal we were trying to solve cannot succeed.
     NoMoreSolutions,
+
+    /// The subgoal cannot be solved without more type information.
+    Floundered,
 
     /// We did not find a solution, but we still have things to try.
     /// Repeat the request, and we'll give one of those a spin.
@@ -41,6 +47,9 @@ type RecursiveSearchResult<T> = Result<T, RecursiveSearchFail>;
 enum RecursiveSearchFail {
     /// The subgoal we were trying to solve cannot succeed.
     NoMoreSolutions,
+
+    /// The subgoal cannot be solved without more type information.
+    Floundered,
 
     /// **All** avenues to solve the subgoal we were trying solve
     /// encountered a cyclic dependency on something higher up in the
@@ -64,6 +73,9 @@ type StrandResult<C: Context, T> = Result<T, StrandFail<C>>;
 pub(super) enum StrandFail<C: Context> {
     /// The strand has no solution.
     NoSolution,
+
+    /// The strand got stuck and the table requires more type information.
+    Floundered,
 
     /// We did not yet figure out a solution; the strand will have
     /// been rescheduled for later.
@@ -95,6 +107,7 @@ impl<C: Context> Forest<C> {
 
         match self.ensure_answer_recursively(context, table, answer) {
             Ok(EnsureSuccess::AnswerAvailable) => Ok(()),
+            Err(RecursiveSearchFail::Floundered) => Err(RootSearchFail::Floundered),
             Err(RecursiveSearchFail::NoMoreSolutions) => Err(RootSearchFail::NoMoreSolutions),
             Err(RecursiveSearchFail::QuantumExceeded) => Err(RootSearchFail::QuantumExceeded),
 
@@ -155,7 +168,12 @@ impl<C: Context> Forest<C> {
         );
         info!("table goal = {:#?}", self.tables[table].table_goal);
 
-        // First, check for a tabled answer.
+        // First, check if this table has floundered.
+        if self.tables[table].is_floundered() {
+            return Err(RecursiveSearchFail::Floundered);
+        }
+
+        // Next, check for a tabled answer.
         if self.tables[table].answer(answer).is_some() {
             info!("answer cached = {:?}", self.tables[table].answer(answer));
             return Ok(EnsureSuccess::AnswerAvailable);
@@ -232,6 +250,12 @@ impl<C: Context> Forest<C> {
                             // cyclic strands need to be retried.
                             self.tables[table].extend_strands(cyclic_strands);
                             return Ok(answer);
+                        }
+
+                        Err(StrandFail::Floundered) => {
+                            debug!("Marking table {:?} as floundered!", table);
+                            self.tables[table].mark_floundered();
+                            return Err(RecursiveSearchFail::Floundered);
                         }
 
                         Err(StrandFail::NoSolution) | Err(StrandFail::QuantumExceeded) => {
@@ -494,7 +518,18 @@ impl<C: Context> Forest<C> {
         // If no subgoal has yet been selected, select one.
         while strand.selected_subgoal.is_none() {
             if strand.ex_clause.subgoals.len() == 0 {
-                return self.pursue_answer(depth, strand);
+                if strand.ex_clause.floundered_subgoals.is_empty() {
+                    return self.pursue_answer(depth, strand);
+                }
+
+                self.reconsider_floundered_subgoals(&mut strand.ex_clause);
+
+                if strand.ex_clause.subgoals.is_empty() {
+                    assert!(!strand.ex_clause.floundered_subgoals.is_empty());
+                    return Err(StrandFail::Floundered);
+                }
+
+                continue;
             }
 
             let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
@@ -516,16 +551,10 @@ impl<C: Context> Forest<C> {
 
                 None => {
                     // If we failed to create a table for the subgoal,
-                    // then the execution has "floundered" (cannot yield
-                    // a complete result). We choose to handle this by
-                    // removing the subgoal and inserting a
-                    // `CannotProve` result. This can only happen with
-                    // ill-formed negative literals or with overflow.
-                    strand.ex_clause.subgoals.remove(subgoal_index);
-                    strand
-                        .ex_clause
-                        .delayed_literals
-                        .push(DelayedLiteral::CannotProve(()));
+                    // that is because we have a floundered negative
+                    // literal.
+                    self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
+                    continue;
                 }
             }
         }
@@ -564,10 +593,13 @@ impl<C: Context> Forest<C> {
                     constraints,
                     delayed_literals,
                     subgoals,
+                    current_time: _,
+                    floundered_subgoals,
                 },
             selected_subgoal: _,
         } = strand;
         assert!(subgoals.is_empty());
+        assert!(floundered_subgoals.is_empty());
 
         let answer_subst = infer.canonicalize_constrained_subst(subst, constraints);
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
@@ -659,6 +691,22 @@ impl<C: Context> Forest<C> {
         } else {
             info!("answer: not a new answer, returning StrandFail::NoSolution");
             Err(StrandFail::NoSolution)
+        }
+    }
+
+    fn reconsider_floundered_subgoals(&mut self, ex_clause: &mut ExClause<impl Context>) {
+        info!("reconsider_floundered_subgoals(ex_clause={:#?})", ex_clause,);
+        let ExClause {
+            current_time,
+            subgoals,
+            floundered_subgoals,
+            ..
+        } = ex_clause;
+        for i in (0..floundered_subgoals.len()).rev() {
+            if floundered_subgoals[i].floundered_time < *current_time {
+                let floundered_subgoal = floundered_subgoals.swap_remove(i);
+                subgoals.push(floundered_subgoal.floundered_literal);
+            }
         }
     }
 
@@ -779,17 +827,24 @@ impl<C: Context> Forest<C> {
         let table_ref = &mut self.tables[table];
         match infer.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
-                let clauses = infer.program_clauses(&environment, &domain_goal);
-                for clause in clauses {
-                    debug!("program clause = {:#?}", clause);
-                    if let Ok(resolvent) =
-                        infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
-                    {
-                        info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
-                        table_ref.push_strand(CanonicalStrand {
-                            canonical_ex_clause: resolvent,
-                            selected_subgoal: None,
-                        });
+                match infer.program_clauses(&environment, &domain_goal) {
+                    Ok(clauses) => {
+                        for clause in clauses {
+                            debug!("program clause = {:#?}", clause);
+                            if let Ok(resolvent) =
+                                infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
+                            {
+                                info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
+                                table_ref.push_strand(CanonicalStrand {
+                                    canonical_ex_clause: resolvent,
+                                    selected_subgoal: None,
+                                });
+                            }
+                        }
+                    }
+                    Err(Floundered) => {
+                        debug!("Marking table {:?} as floundered!", table);
+                        table_ref.mark_floundered();
                     }
                 }
             }
@@ -1033,6 +1088,17 @@ impl<C: Context> Forest<C> {
                 info!("pursue_positive_subgoal: no more solutions");
                 return Err(StrandFail::NoSolution);
             }
+            Err(RecursiveSearchFail::Floundered) => {
+                // If this subgoal floundered, push it onto the
+                // floundered list, along with the time that it
+                // floundered. We'll try to solve some other subgoals
+                // and maybe come back to it.
+                info!("pursue_positive_subgoal: floundered");
+                self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
+                strand.selected_subgoal = None;
+                self.tables[table].push_strand(Self::canonicalize_strand(strand));
+                return Err(StrandFail::QuantumExceeded);
+            }
             Err(RecursiveSearchFail::QuantumExceeded) => {
                 // We'll have to revisit this strand later
                 info!("pursue_positive_subgoal: quantum exceeded");
@@ -1091,6 +1157,9 @@ impl<C: Context> Forest<C> {
                     }
                 }
 
+                // Increment time counter because we received a new answer.
+                ex_clause.current_time.increment();
+
                 // Apply answer abstraction.
                 let ex_clause = self.truncate_returned(ex_clause, &mut *infer);
 
@@ -1113,6 +1182,24 @@ impl<C: Context> Forest<C> {
                 Err(StrandFail::NoSolution)
             }
         }
+    }
+
+    /// Removes the subgoal at `subgoal_index` from the strand's
+    /// subgoal list and adds it to the strand's floundered subgoal
+    /// list.
+    fn flounder_subgoal(&self, ex_clause: &mut ExClause<impl Context>, subgoal_index: usize) {
+        info_heading!(
+            "flounder_subgoal(current_time={:?}, subgoal={:?})",
+            ex_clause.current_time,
+            ex_clause.subgoals[subgoal_index],
+        );
+        let floundered_time = ex_clause.current_time;
+        let floundered_literal = ex_clause.subgoals.remove(subgoal_index);
+        ex_clause.floundered_subgoals.push(FlounderedSubgoal {
+            floundered_literal,
+            floundered_time,
+        });
+        debug!("flounder_subgoal: ex_clause={:#?}", ex_clause);
     }
 
     /// Used whenever we process an answer (whether new or cached) on
@@ -1175,6 +1262,8 @@ impl<C: Context> Forest<C> {
                     delayed_literals: vec![DelayedLiteral::CannotProve(())],
                     constraints: vec![],
                     subgoals: vec![],
+                    current_time: TimeStamp::default(),
+                    floundered_subgoals: vec![],
                 }
             }
         }
@@ -1270,6 +1359,25 @@ impl<C: Context> Forest<C> {
                 // our negative goal fails.
                 info!("pursue_negative_subgoal: found coinductive answer to neg literal -> NoSolution");
                 return Err(StrandFail::NoSolution);
+            }
+
+            Err(RecursiveSearchFail::Floundered) => {
+                // Floundering on a negative literal isn't like a
+                // positive search: we only pursue negative literals
+                // when we already know precisely the type we are
+                // looking for. So there's no point waiting for other
+                // subgoals, we'll never recover more information.
+                //
+                // In fact, floundering on negative searches shouldn't
+                // normally happen, since there are no uninferred
+                // variables in the goal, but it can with forall
+                // goals:
+                //
+                //     forall<T> { not { T: Debug } }
+                //
+                // Here, the table we will be searching for answers is
+                // `?T: Debug`, so it could well flounder.
+                return Err(StrandFail::Floundered);
             }
 
             Err(RecursiveSearchFail::Cycle(minimums)) => {

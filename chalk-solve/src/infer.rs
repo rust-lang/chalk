@@ -146,6 +146,14 @@ impl InferenceTable {
         Some(v1)
     }
 
+    /// Returns true if `var` has been bound.
+    pub(crate) fn var_is_bound(&mut self, var: InferenceVar) -> bool {
+        match self.unify.probe_value(EnaVariable::from(var)) {
+            InferenceValue::Unbound(_) => false,
+            InferenceValue::Bound(_) => true,
+        }
+    }
+
     /// Finds the type to which `var` is bound, returning `None` if it is not yet
     /// bound.
     ///

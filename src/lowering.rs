@@ -1108,6 +1108,7 @@ impl LowerTrait for TraitDefn {
                     marker: self.flags.marker,
                     upstream: self.flags.upstream,
                     fundamental: self.flags.fundamental,
+                    non_enumerable: self.flags.non_enumerable,
                 },
                 associated_ty_ids,
             })

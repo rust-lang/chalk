@@ -3,7 +3,7 @@
 use crate::cast::Cast;
 use crate::*;
 use chalk_engine::context::Context;
-use chalk_engine::{DelayedLiteral, ExClause, Literal};
+use chalk_engine::{DelayedLiteral, ExClause, FlounderedSubgoal, Literal};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -490,6 +490,7 @@ copy_fold!(TypeKindId);
 copy_fold!(usize);
 copy_fold!(QuantifierKind);
 copy_fold!(chalk_engine::TableIndex);
+copy_fold!(chalk_engine::TimeStamp);
 // copy_fold!(TypeName); -- intentionally omitted! This is folded via `fold_ap`
 copy_fold!(());
 
@@ -709,12 +710,38 @@ where
             delayed_literals,
             constraints,
             subgoals,
+            current_time,
+            floundered_subgoals,
         } = self;
         Ok(ExClause {
             subst: subst.fold_with(folder, binders)?,
             delayed_literals: delayed_literals.fold_with(folder, binders)?,
             constraints: constraints.fold_with(folder, binders)?,
             subgoals: subgoals.fold_with(folder, binders)?,
+            current_time: current_time.fold_with(folder, binders)?,
+            floundered_subgoals: floundered_subgoals.fold_with(folder, binders)?,
+        })
+    }
+}
+
+impl<C: Context> Fold for FlounderedSubgoal<C>
+where
+    C: Context,
+    C::Substitution: Fold<Result = C::Substitution>,
+    C::RegionConstraint: Fold<Result = C::RegionConstraint>,
+    C::CanonicalConstrainedSubst: Fold<Result = C::CanonicalConstrainedSubst>,
+    C::GoalInEnvironment: Fold<Result = C::GoalInEnvironment>,
+{
+    type Result = FlounderedSubgoal<C>;
+
+    fn fold_with(&self, folder: &mut dyn Folder, binders: usize) -> Fallible<Self::Result> {
+        let FlounderedSubgoal {
+            floundered_literal,
+            floundered_time,
+        } = self;
+        Ok(FlounderedSubgoal {
+            floundered_literal: floundered_literal.fold_with(folder, binders)?,
+            floundered_time: floundered_time.fold_with(folder, binders)?,
         })
     }
 }

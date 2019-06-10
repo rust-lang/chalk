@@ -552,6 +552,10 @@ impl TraitRef {
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty> + 'a {
         self.parameters.iter().cloned().filter_map(|p| p.ty())
     }
+
+    pub fn self_type_parameter(&self) -> Option<Ty> {
+        self.type_parameters().next()
+    }
 }
 
 /// Where clauses that can be written by a Rust programmer.

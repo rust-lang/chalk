@@ -168,9 +168,16 @@ impl TestSolver {
         program: &dyn RustIrDatabase,
         goal: &UCanonical<InEnvironment<Goal>>,
         num_answers: usize,
-    ) -> Box<std::fmt::Debug> {
+    ) -> Box<dyn std::fmt::Debug> {
         let ops = self.forest.context().ops(program);
-        Box::new(self.forest.force_answers(&ops, goal.clone(), num_answers))
+        match self.forest.force_answers(&ops, goal.clone(), num_answers) {
+            Some(v) => Box::new(v),
+            None => {
+                #[derive(Debug)]
+                struct Floundered;
+                Box::new(Floundered)
+            }
+        }
     }
 
     /// Returns then number of cached answers for `goal`. Used only in

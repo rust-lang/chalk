@@ -6,6 +6,7 @@ use crate::infer::InferenceTable;
 use crate::solve::truncate::{self, Truncated};
 use crate::solve::Solution;
 use crate::RustIrDatabase;
+use chalk_engine::context::Floundered;
 use chalk_engine::fallible::Fallible;
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
@@ -126,6 +127,19 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
         goal.is_coinductive(self.program)
     }
 
+    fn identity_constrained_subst(
+        &self,
+        goal: &UCanonical<InEnvironment<Goal>>,
+    ) -> Canonical<ConstrainedSubst> {
+        let (mut infer, subst, _) = InferenceTable::from_canonical(goal.universes, &goal.canonical);
+        infer
+            .canonicalize(&ConstrainedSubst {
+                subst,
+                constraints: vec![],
+            })
+            .quantified
+    }
+
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &UCanonical<InEnvironment<Goal>>,
@@ -228,19 +242,34 @@ impl<'me> context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenc
 
 impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
     fn program_clauses(
-        &self,
+        &mut self,
         environment: &Arc<Environment>,
         goal: &DomainGoal,
-    ) -> Vec<ProgramClause> {
-        let mut clauses: Vec<_> = environment
-            .clauses
-            .iter()
-            .filter(|&env_clause| env_clause.could_match(goal))
-            .cloned()
-            .collect();
+    ) -> Result<Vec<ProgramClause>, Floundered> {
+        // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
+        if let DomainGoal::Holds(WhereClause::Implemented(trait_ref)) = goal {
+            let trait_datum = self.program.trait_datum(trait_ref.trait_id);
+            if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
+                let self_ty = trait_ref.self_type_parameter().unwrap();
+                if let Some(v) = self_ty.inference_var() {
+                    if !self.infer.var_is_bound(v) {
+                        return Err(Floundered);
+                    }
+                }
+            }
+        }
 
-        clauses.extend(program_clauses_for_goal(self.program, environment, goal));
-        clauses
+        let mut clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal);
+
+        clauses.extend(
+            environment
+                .clauses
+                .iter()
+                .filter(|&env_clause| env_clause.could_match(goal))
+                .cloned(),
+        );
+
+        Ok(clauses)
     }
 
     fn instantiate_binders_universally(&mut self, arg: &Binders<Box<Goal>>) -> Goal {

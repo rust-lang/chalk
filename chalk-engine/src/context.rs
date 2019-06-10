@@ -170,6 +170,12 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
     fn is_coinductive(&self, goal: &C::UCanonicalGoalInEnvironment) -> bool;
 
+    /// Returns a identity substitution.
+    fn identity_constrained_subst(
+        &self,
+        goal: &C::UCanonicalGoalInEnvironment,
+    ) -> C::CanonicalConstrainedSubst;
+
     /// Create an inference table for processing a new goal and instantiate that goal
     /// in that context, returning "all the pieces".
     ///
@@ -268,15 +274,25 @@ pub trait InferenceTable<C: Context, I: Context>:
     fn next_subgoal_index(&mut self, ex_clause: &ExClause<I>) -> usize;
 }
 
+/// Error type for the `UnificationOps::program_clauses` method --
+/// indicates that the complete set of program clauses for this goal
+/// cannot be enumerated.
+pub struct Floundered;
+
 /// Methods for unifying and manipulating terms and binders.
 pub trait UnificationOps<C: Context, I: Context> {
     /// Returns the set of program clauses that might apply to
     /// `goal`. (This set can be over-approximated, naturally.)
+    ///
+    /// If this callback returns `None`, that indicates that the set
+    /// of program clauses cannot be enumerated because there are
+    /// unresolved type variables that would have to be resolved
+    /// first; the goal will be considered floundered.
     fn program_clauses(
-        &self,
+        &mut self,
         environment: &I::Environment,
         goal: &I::DomainGoal,
-    ) -> Vec<I::ProgramClause>;
+    ) -> Result<Vec<I::ProgramClause>, Floundered>;
 
     // Used by: simplify
     fn instantiate_binders_universally(&mut self, arg: &I::BindersGoal) -> I::Goal;

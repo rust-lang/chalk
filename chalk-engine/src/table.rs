@@ -15,6 +15,10 @@ pub(crate) struct Table<C: Context> {
     /// or less. This is true for auto traits.
     pub(crate) coinductive_goal: bool,
 
+    /// True if this table is floundered, meaning that it doesn't have
+    /// enough types specified for us to solve.
+    floundered: bool,
+
     /// Stores the answers that we have found thus far. When we get a request
     /// for an answer N, we will first check this vector.
     answers: Vec<Answer<C>>,
@@ -55,6 +59,7 @@ impl<C: Context> Table<C> {
             table_goal,
             coinductive_goal,
             answers: Vec::new(),
+            floundered: false,
             answers_hash: FxHashMap::default(),
             strands: VecDeque::new(),
         }
@@ -80,6 +85,19 @@ impl<C: Context> Table<C> {
         self.strands.pop_front()
     }
 
+    /// Mark the table as floundered -- this also discards all pre-existing answers,
+    /// as they are no longer relevant.
+    pub(crate) fn mark_floundered(&mut self) {
+        self.floundered = true;
+        self.strands = Default::default();
+        self.answers = Default::default();
+    }
+
+    /// Returns true if the table is floundered.
+    pub(crate) fn is_floundered(&self) -> bool {
+        self.floundered
+    }
+
     /// Adds `answer` to our list of answers, unless it (or some
     /// better answer) is already present. An answer A is better than
     /// an answer B if their substitutions are the same, but A has a subset
@@ -87,6 +105,8 @@ impl<C: Context> Table<C> {
     ///
     /// Returns true if `answer` was added.
     pub(super) fn push_answer(&mut self, answer: Answer<C>) -> bool {
+        assert!(!self.floundered);
+
         debug_heading!("push_answer(answer={:?})", answer);
         debug!(
             "pre-existing entry: {:?}",

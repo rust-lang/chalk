@@ -161,9 +161,7 @@ fn program_clauses_that_could_match(
                         }
                     }
                     Ty::InferenceVar(_) => {
-                        for struct_id in db.all_structs() {
-                            push_auto_trait_impls(trait_id, struct_id, db, clauses);
-                        }
+                        panic!("auto-traits should flounder if nothing is known")
                     }
                     _ => {}
                 }

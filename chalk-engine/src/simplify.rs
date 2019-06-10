@@ -2,7 +2,7 @@ use crate::context::prelude::*;
 use crate::fallible::Fallible;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
-use crate::{ExClause, Literal};
+use crate::{ExClause, Literal, TimeStamp};
 
 impl<C: Context> Forest<C> {
     /// Simplifies an HH goal into a series of positive domain goals
@@ -19,6 +19,8 @@ impl<C: Context> Forest<C> {
             delayed_literals: vec![],
             constraints: vec![],
             subgoals: vec![],
+            current_time: TimeStamp::default(),
+            floundered_subgoals: vec![],
         };
 
         // A stack of higher-level goals to process.
