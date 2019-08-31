@@ -1,4 +1,5 @@
 use chalk_solve::wf::WfError;
+use chalk_solve::coherence::CoherenceError;
 use failure::Error;
 
 /// Wrapper type for the various errors that can occur during chalk
@@ -28,6 +29,14 @@ impl From<Box<dyn std::error::Error>> for ChalkError {
 
 impl From<WfError> for ChalkError {
     fn from(value: WfError) -> Self {
+        ChalkError {
+            error_text: value.to_string(),
+        }
+    }
+}
+
+impl From<CoherenceError> for ChalkError {
+    fn from(value: CoherenceError) -> Self {
         ChalkError {
             error_text: value.to_string(),
         }

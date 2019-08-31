@@ -6,7 +6,6 @@ use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use chalk_rust_ir::*;
-use failure::Fallible;
 use itertools::Itertools;
 
 impl<'db, DB> CoherenceSolver<'db, DB>
@@ -16,7 +15,7 @@ where
     pub(super) fn visit_specializations_of_trait(
         &self,
         mut record_specialization: impl FnMut(ImplId, ImplId),
-    ) -> Fallible<()> {
+    ) -> Result<(), CoherenceError> {
         // Ignore impls for marker traits as they are allowed to overlap.
         let trait_datum = self.db.trait_datum(self.trait_id);
         if trait_datum.binders.value.flags.marker {

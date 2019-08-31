@@ -5,8 +5,6 @@ use std::sync::Arc;
 
 #[macro_use]
 extern crate chalk_macros;
-#[macro_use]
-extern crate failure;
 
 pub mod clauses;
 pub mod coherence;
