@@ -550,6 +550,62 @@ fn normalize_basic() {
 }
 
 #[test]
+fn normalize_into_iterator() {
+    test! {
+        program {
+            trait IntoIterator { type Item; }
+            trait Iterator { type Item; }
+            struct Vec<T> { }
+            struct u32 { }
+            impl<T> IntoIterator for Vec<T> {
+                type Item = T;
+            }
+            impl<T> IntoIterator for T where T: Iterator {
+                type Item = <T as Iterator>::Item;
+            }
+        }
+
+        goal {
+            forall<T> {
+                exists<U> {
+                    Normalize(<Vec<T> as IntoIterator>::Item -> U)
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[ignore] // currently failing
+#[test]
+fn projection_equality() {
+    test! {
+        program {
+            trait Trait1 {
+                type Type;
+            }
+            trait Trait2<T> { }
+            impl<T, U> Trait2<T> for U where U: Trait1<Type = T> {}
+
+            struct u32 {}
+            struct S {}
+            impl Trait1 for S {
+                type Type = u32;
+            }
+        }
+
+        goal {
+            exists<U> {
+                S: Trait2<U>
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
 fn normalize_gat1() {
     test! {
         program {
