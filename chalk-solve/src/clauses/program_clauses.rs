@@ -52,7 +52,7 @@ impl ToProgramClauses for AssociatedTyValue {
     ///
     /// Then for the following impl:
     /// ```notrust
-    /// impl<T> Iterable for Vec<T> {
+    /// impl<T> Iterable for Vec<T> where T: Clone {
     ///     type IntoIter<'a> = Iter<'a, T>;
     /// }
     /// ```
@@ -63,7 +63,7 @@ impl ToProgramClauses for AssociatedTyValue {
     /// -- Rule Normalize-From-Impl
     /// forall<'a, T> {
     ///     Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>>) :-
-    ///         Implemented(Vec<T>: Iterable),  // (1)
+    ///         Implemented(T: Clone),  // (1)
     ///         Implemented(Iter<'a, T>: 'a).   // (2)
     /// }
     /// ```
@@ -109,18 +109,24 @@ impl ToProgramClauses for AssociatedTyValue {
         // Assemble the full list of conditions for projection to be valid.
         // This comes in two parts, marked as (1) and (2) in doc above:
         //
-        // 1. require that the trait is implemented
+        // 1. require that the where clauses from the impl apply
         // 2. any where-clauses from the `type` declaration in the trait: the
         //    parameters must be substituted with those of the impl
-        let where_clauses = associated_ty
+        let assoc_ty_where_clauses = associated_ty
             .where_clauses
             .iter()
             .map(|wc| Subst::apply(&all_parameters, wc))
             .casted();
 
-        let conditions: Vec<Goal> = where_clauses
-            .chain(Some(impl_trait_ref.clone().cast()))
-            .collect();
+        let impl_where_clauses = impl_datum
+            .binders
+            .value
+            .where_clauses
+            .iter()
+            .map(|wc| wc.shifted_in(self.value.len()))
+            .casted();
+
+        let conditions: Vec<Goal> = assoc_ty_where_clauses.chain(impl_where_clauses).collect();
 
         // Bound parameters + `Self` type of the trait-ref
         let parameters: Vec<_> = {
