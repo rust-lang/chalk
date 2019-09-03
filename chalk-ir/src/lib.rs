@@ -239,6 +239,9 @@ pub enum Ty {
     /// In the chalk parser, the traits that the object represents is parsed as
     /// a QuantifiedInlineBound, and is then changed to a list of where clauses
     /// during lowering.
+    ///
+    /// See the `Opaque` variant for a discussion about the use of
+    /// binders here.
     Dyn(Binders<Vec<QuantifiedWhereClause>>),
 
     /// An "opaque" type is one that is created via the "impl Trait" syntax.
@@ -246,6 +249,25 @@ pub enum Ty {
     /// is unknown, and hence the type is opaque to us. The only information
     /// that we know of is that this type implements the traits listed by the
     /// user.
+    ///
+    /// The "binder" here represents the unknown self type. So, a type like
+    /// `impl for<'a> Fn(&'a u32)` would be represented with two-levels of
+    /// binder, as "depicted" here:
+    ///
+    /// ```
+    /// exists<type> {
+    ///    vec![
+    ///        // A QuantifiedWhereClause:
+    ///        forall<region> { ^1: Fn(&^2 u32) }
+    ///    ]
+    /// }
+    /// ```
+    ///
+    /// The outer `exists<type>` binder indicates that there exists
+    /// some type that meets the criteria within, but that type is not
+    /// known. It is referenced within the type using `^1`, indicating
+    /// a bound type with debruijn index 1 (i.e., skipping through one
+    /// level of binder).
     Opaque(Binders<Vec<QuantifiedWhereClause>>),
 
     /// A "projection" type corresponds to an (unnormalized)
