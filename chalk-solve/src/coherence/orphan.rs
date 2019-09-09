@@ -4,7 +4,6 @@ use crate::solve::SolverChoice;
 use crate::RustIrDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::*;
-use failure::Fallible;
 
 // Test if a local impl violates the orphan rules.
 //
@@ -17,7 +16,7 @@ pub fn perform_orphan_check(
     db: &dyn RustIrDatabase,
     solver_choice: SolverChoice,
     impl_id: ImplId,
-) -> Fallible<()> {
+) -> Result<(), CoherenceError> {
     debug_heading!("orphan_check(impl={:#?})", impl_id);
 
     let impl_datum = db.impl_datum(impl_id);

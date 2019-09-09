@@ -1,9 +1,6 @@
 #[macro_use]
 extern crate serde_derive;
 
-#[macro_use]
-extern crate failure;
-
 use std::fs::File;
 use std::io::Read;
 use std::process::exit;
@@ -14,8 +11,9 @@ use chalk::query::LoweringDatabase;
 use chalk_solve::ext::*;
 use chalk_solve::SolverChoice;
 use docopt::Docopt;
-use failure::Fallible;
 use rustyline::error::ReadlineError;
+
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 const USAGE: &'static str = "
 chalk repl
@@ -52,13 +50,13 @@ impl LoadedProgram {
     /// a [`SolverChoice`].
     ///
     /// [`SolverChoice`]: struct.solve.SolverChoice.html
-    fn new(text: String, solver_choice: SolverChoice) -> Fallible<LoadedProgram> {
+    fn new(text: String, solver_choice: SolverChoice) -> Result<LoadedProgram> {
         let db = ChalkDatabase::with(&text, solver_choice);
         Ok(LoadedProgram { text, db })
     }
 
     /// Parse a goal and attempt to solve it, using the specified solver.
-    fn goal(&self, text: &str) -> Fallible<()> {
+    fn goal(&self, text: &str) -> Result<()> {
         let program = self.db.checked_program()?;
         let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
         let peeled_goal = goal.into_peeled_goal();
@@ -70,7 +68,7 @@ impl LoadedProgram {
     }
 }
 
-fn run() -> Fallible<()> {
+fn run() -> Result<()> {
     // Parse the command line arguments.
     let args: &Args = &Docopt::new(USAGE)
         .and_then(|d| d.deserialize())
@@ -105,13 +103,13 @@ fn run() -> Fallible<()> {
         // Check that a program was provided.
         // TODO: It's customary to print Usage info when an error like this
         // happens.
-        let prog = prog.ok_or(format_err!(
+        let prog = prog.ok_or(format!(
             "error: cannot eval without a program; use `--program` to specify one."
         ))?;
 
         // Evaluate the goal(s). If any goal returns an error, print the error
         // and exit.
-        prog.db.with_program(|_| -> Fallible<()> {
+        prog.db.with_program(|_| -> Result<()> {
             for g in &args.flag_goal {
                 if let Err(e) = prog.goal(g) {
                     eprintln!("error: {}", e);
@@ -130,7 +128,7 @@ fn run() -> Fallible<()> {
 ///
 /// The loop terminates (and the program ends) when EOF is reached or if an error
 /// occurs while reading the next line.
-fn readline_loop<F>(rl: &mut rustyline::Editor<()>, prompt: &str, mut f: F) -> Fallible<()>
+fn readline_loop<F>(rl: &mut rustyline::Editor<()>, prompt: &str, mut f: F) -> Result<()>
 where
     F: FnMut(&mut rustyline::Editor<()>, &str),
 {
@@ -164,7 +162,7 @@ fn process(
     command: &str,
     rl: &mut rustyline::Editor<()>,
     prog: &mut Option<LoadedProgram>,
-) -> Fallible<()> {
+) -> Result<()> {
     if command == "help" || command == "h" {
         // Print out interpreter commands.
         // TODO: Implement "help <command>" for more specific help.
@@ -185,12 +183,12 @@ fn process(
         // The command is either "print", "lowered", or a goal.
 
         // Check that a program has been loaded.
-        let prog = prog.as_ref().ok_or(format_err!(
+        let prog = prog.as_ref().ok_or(format!(
             "no program currently loaded; type 'help' to see available commands"
         ))?;
 
         // Attempt to parse the program.
-        prog.db.with_program(|_| -> Fallible<()> {
+        prog.db.with_program(|_| -> Result<()> {
             match command {
                 // Print out the loaded program.
                 "print" => println!("{}", prog.text),
@@ -213,7 +211,7 @@ fn process(
 /// Load the file into a string, and parse it.
 // TODO: Could we pass in an Options struct or something? The Args struct
 // still has Strings where it should have Enums... (e.g. solver_choice)
-fn load_program(args: &Args, filename: &str) -> Fallible<LoadedProgram> {
+fn load_program(args: &Args, filename: &str) -> Result<LoadedProgram> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
     Ok(LoadedProgram::new(text, args.solver_choice())?)
@@ -234,7 +232,7 @@ fn help() {
 
 /// Read a program from the command-line. Stop reading when EOF is read. If
 /// an error occurs while reading, a `Err` is returned.
-fn read_program(rl: &mut rustyline::Editor<()>) -> Fallible<String> {
+fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
     println!("Enter a program; press Ctrl-D when finished");
     let mut text = String::new();
     readline_loop(rl, "| ", |_, line| {

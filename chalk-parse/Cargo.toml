@@ -18,6 +18,5 @@ version = "0.16"
 version = "0.16"
 
 [dependencies]
-failure = "0.1"
 lalrpop-intern = "0.15.1"
 regex = "1.0.5"

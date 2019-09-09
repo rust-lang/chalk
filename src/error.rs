@@ -1,3 +1,4 @@
+use chalk_solve::coherence::CoherenceError;
 use chalk_solve::wf::WfError;
 use failure::Error;
 
@@ -18,8 +19,24 @@ impl From<Error> for ChalkError {
     }
 }
 
+impl From<Box<dyn std::error::Error>> for ChalkError {
+    fn from(value: Box<dyn std::error::Error>) -> Self {
+        ChalkError {
+            error_text: value.to_string(),
+        }
+    }
+}
+
 impl From<WfError> for ChalkError {
     fn from(value: WfError) -> Self {
+        ChalkError {
+            error_text: value.to_string(),
+        }
+    }
+}
+
+impl From<CoherenceError> for ChalkError {
+    fn from(value: CoherenceError) -> Self {
         ChalkError {
             error_text: value.to_string(),
         }

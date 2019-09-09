@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::ext::*;
 use crate::solve::SolverChoice;
 use crate::RustIrDatabase;
@@ -7,22 +9,32 @@ use chalk_ir::fold::*;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use derive_new::new;
-use failure::Fail;
 use itertools::Itertools;
 
-#[derive(Fail, Debug)]
+#[derive(Debug)]
 pub enum WfError {
-    #[fail(
-        display = "type declaration {:?} does not meet well-formedness requirements",
-        _0
-    )]
     IllFormedTypeDecl(chalk_ir::Identifier),
-    #[fail(
-        display = "trait impl for {:?} does not meet well-formedness requirements",
-        _0
-    )]
     IllFormedTraitImpl(chalk_ir::Identifier),
 }
+
+impl fmt::Display for WfError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WfError::IllFormedTypeDecl(id) => write!(
+                f,
+                "type declaration {:?} does not meet well-formedness requirements",
+                id
+            ),
+            WfError::IllFormedTraitImpl(id) => write!(
+                f,
+                "trait impl for {:?} does not meet well-formedness requirements",
+                id
+            ),
+        }
+    }
+}
+
+impl std::error::Error for WfError {}
 
 #[derive(new)]
 pub struct WfSolver<'db, DB: RustIrDatabase> {

@@ -4,8 +4,8 @@ use crate::solve::SolverChoice;
 use crate::RustIrDatabase;
 use chalk_ir::{self, Identifier, ImplId, TraitId};
 use derive_new::new;
-use failure::Fallible;
 use std::collections::BTreeMap;
+use std::fmt;
 use std::sync::Arc;
 
 pub mod orphan;
@@ -21,13 +21,26 @@ where
     trait_id: TraitId,
 }
 
-#[derive(Fail, Debug)]
+#[derive(Debug)]
 pub enum CoherenceError {
-    #[fail(display = "overlapping impls of trait {:?}", _0)]
     OverlappingImpls(Identifier),
-    #[fail(display = "impl for trait {:?} violates the orphan rules", _0)]
     FailedOrphanCheck(Identifier),
 }
+
+impl fmt::Display for CoherenceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CoherenceError::OverlappingImpls(id) => {
+                write!(f, "overlapping impls of trait {:?}", id)
+            }
+            CoherenceError::FailedOrphanCheck(id) => {
+                write!(f, "impl for trait {:?} violates the orphan rules", id)
+            }
+        }
+    }
+}
+
+impl std::error::Error for CoherenceError {}
 
 /// Stores the specialization priorities for a set of impls.
 /// This basically encodes which impls specialize one another.
@@ -60,7 +73,9 @@ impl<'db, DB> CoherenceSolver<'db, DB>
 where
     DB: RustIrDatabase,
 {
-    pub fn specialization_priorities(&self) -> Fallible<Arc<SpecializationPriorities>> {
+    pub fn specialization_priorities(
+        &self,
+    ) -> Result<Arc<SpecializationPriorities>, CoherenceError> {
         let mut result = SpecializationPriorities::default();
 
         let forest = self.build_specialization_forest()?;
@@ -75,7 +90,7 @@ where
     }
 
     // Build the forest of specialization relationships.
-    fn build_specialization_forest(&self) -> Fallible<Graph<ImplId, ()>> {
+    fn build_specialization_forest(&self) -> Result<Graph<ImplId, ()>, CoherenceError> {
         // The forest is returned as a graph but built as a GraphMap; this is
         // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraphMap::new();
