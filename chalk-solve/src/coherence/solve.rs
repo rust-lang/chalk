@@ -23,11 +23,7 @@ where
         }
 
         // Iterate over every pair of impls for the same trait.
-        //
-        // FIXME -- Ideally, we would only need to do this iteration
-        // for the impls **added by the current crate**. I'm not sure
-        // how to structure this though in terms of queries.
-        let impls = self.db.impls_for_trait(self.trait_id);
+        let impls = self.db.local_impls_to_coherence_check(self.trait_id);
         for (l_id, r_id) in impls.into_iter().tuple_combinations() {
             let lhs = &self.db.impl_datum(l_id);
             let rhs = &self.db.impl_datum(r_id);
