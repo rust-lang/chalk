@@ -1,23 +1,26 @@
 language: rust
+cache: cargo
+
 rust:
   - stable
   - nightly
-cache: cargo
+
 script:
-  - rustup component add rustfmt
   - cd chalk-engine && cargo build --no-default-features && cd ..
   - cd chalk-engine && cargo build --all-features && cd ..
-  - cargo fmt --all -- --check
   - cargo test --all
   - cargo doc --all --document-private-items
+
+matrix:
+  include:
+    - rust: stable
+      script:
+        - rustup component add rustfmt
+        - cargo fmt --all -- --check
+
 deploy:
-  - provider: script
-    script: mkdir -p target/gh-pages && mv target/doc target/gh-pages/
-    skip-cleanup: true
-    on:
-      branch: master
   - provider: pages
-    local-dir: ./target/gh-pages
+    local-dir: ./target/doc
     skip-cleanup: true
     github-token: $GITHUB_TOKEN
     on:
