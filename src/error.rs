@@ -1,5 +1,5 @@
-use chalk_solve::wf::WfError;
 use chalk_solve::coherence::CoherenceError;
+use chalk_solve::wf::WfError;
 use failure::Error;
 
 /// Wrapper type for the various errors that can occur during chalk

@@ -73,7 +73,9 @@ impl<'db, DB> CoherenceSolver<'db, DB>
 where
     DB: RustIrDatabase,
 {
-    pub fn specialization_priorities(&self) -> Result<Arc<SpecializationPriorities>, CoherenceError> {
+    pub fn specialization_priorities(
+        &self,
+    ) -> Result<Arc<SpecializationPriorities>, CoherenceError> {
         let mut result = SpecializationPriorities::default();
 
         let forest = self.build_specialization_forest()?;
