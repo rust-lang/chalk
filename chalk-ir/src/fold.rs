@@ -365,9 +365,6 @@ pub fn super_fold_ty(folder: &mut dyn Folder, ty: &Ty, binders: usize) -> Fallib
             }
         }
         Ty::Projection(ref proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?)),
-        Ty::UnselectedProjection(ref proj) => {
-            Ok(Ty::UnselectedProjection(proj.fold_with(folder, binders)?))
-        }
         Ty::ForAll(ref quantified_ty) => Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?)),
     }
 }
@@ -538,7 +535,7 @@ enum_fold!(ParameterKind[T,L] { Ty(a), Lifetime(a) } where T: Fold, L: Fold);
 enum_fold!(WhereClause[] { Implemented(a), ProjectionEq(a) });
 enum_fold!(WellFormed[] { Trait(a), Ty(a) });
 enum_fold!(FromEnv[] { Trait(a), Ty(a) });
-enum_fold!(DomainGoal[] { Holds(a), WellFormed(a), FromEnv(a), Normalize(a), UnselectedNormalize(a),
+enum_fold!(DomainGoal[] { Holds(a), WellFormed(a), FromEnv(a), Normalize(a),
                           InScope(a), IsLocal(a), IsUpstream(a), IsFullyVisible(a),
                           LocalImplAllowed(a), Compatible(a), DownstreamType(a) });
 enum_fold!(LeafGoal[] { EqGoal(a), DomainGoal(a) });
@@ -668,17 +665,12 @@ struct_fold!(ProjectionTy {
     associated_ty_id,
     parameters,
 });
-struct_fold!(UnselectedProjectionTy {
-    type_name,
-    parameters,
-});
 struct_fold!(TraitRef {
     trait_id,
     parameters,
 });
 struct_fold!(Normalize { projection, ty });
 struct_fold!(ProjectionEq { projection, ty });
-struct_fold!(UnselectedNormalize { projection, ty });
 struct_fold!(Environment { clauses });
 struct_fold!(InEnvironment[F] { environment, goal } where F: Fold<Result = F>);
 struct_fold!(EqGoal { a, b });

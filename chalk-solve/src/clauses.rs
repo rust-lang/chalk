@@ -200,14 +200,6 @@ fn program_clauses_that_could_match(
             let trait_id = associated_ty_datum.trait_id;
             push_program_clauses_for_associated_type_values_in_impls_of(db, trait_id, clauses);
         }
-        DomainGoal::UnselectedNormalize(_) => {
-            // An "unselected normalize" is one where the trait is not
-            // known. It could be any "in-scope" trait.
-            for trait_id in environment.in_scope_trait_ids() {
-                debug!("in-scope trait: {:?}", trait_id);
-                push_program_clauses_for_associated_type_values_in_impls_of(db, trait_id, clauses);
-            }
-        }
         DomainGoal::InScope(type_kind_id) => match_type_kind(db, *type_kind_id, clauses),
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)
@@ -267,18 +259,6 @@ fn match_ty(
             .associated_ty_data(projection_ty.associated_ty_id)
             .to_program_clauses(db, clauses),
         Ty::ForAll(quantified_ty) => match_ty(db, environment, &quantified_ty.ty, clauses),
-        Ty::UnselectedProjection(_) => {
-            // FIXME: This unselected projection could normalize to
-            // any type, so we need the rules from all
-            // structs. Arguably though they should have some kind of
-            // well-formedness rules of their own? Or else we should
-            // create a custom rule that first "unselected-normalizes"
-            // the result and then checks for WF on the
-            // result. Something like that.
-            for struct_id in db.all_structs() {
-                db.struct_datum(struct_id).to_program_clauses(db, clauses);
-            }
-        }
         Ty::BoundVar(_) => {}
         Ty::InferenceVar(_) => {
             // If the type is an (unbound) inference variable, it

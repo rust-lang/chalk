@@ -138,11 +138,6 @@ impl<'t> Unifier<'t> {
                 Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
             }
 
-            (proj1 @ &Ty::Projection(_), proj2 @ &Ty::UnselectedProjection(_))
-            | (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::Projection(_))
-            | (proj1 @ &Ty::UnselectedProjection(_), proj2 @ &Ty::UnselectedProjection(_)) => self
-                .unify_projection_tys(proj1.as_projection_ty_enum(), proj2.as_projection_ty_enum()),
-
             (ty @ &Ty::Apply(_), &Ty::Projection(ref proj))
             | (ty @ &Ty::ForAll(_), &Ty::Projection(ref proj))
             | (ty @ &Ty::InferenceVar(_), &Ty::Projection(ref proj))
@@ -151,15 +146,6 @@ impl<'t> Unifier<'t> {
             | (&Ty::Projection(ref proj), ty @ &Ty::ForAll(_))
             | (&Ty::Projection(ref proj), ty @ &Ty::InferenceVar(_)) => {
                 self.unify_projection_ty(proj, ty)
-            }
-
-            (ty @ &Ty::Apply(_), &Ty::UnselectedProjection(ref proj))
-            | (ty @ &Ty::ForAll(_), &Ty::UnselectedProjection(ref proj))
-            | (ty @ &Ty::InferenceVar(_), &Ty::UnselectedProjection(ref proj))
-            | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::Apply(_))
-            | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::ForAll(_))
-            | (&Ty::UnselectedProjection(ref proj), ty @ &Ty::InferenceVar(_)) => {
-                self.unify_unselected_projection_ty(proj, ty)
             }
 
             (Ty::BoundVar(_), _) | (_, Ty::BoundVar(_)) => panic!(
@@ -200,44 +186,10 @@ impl<'t> Unifier<'t> {
         self.sub_unify(ty1, ty2)
     }
 
-    fn unify_projection_tys(
-        &mut self,
-        proj1: ProjectionTyRefEnum,
-        proj2: ProjectionTyRefEnum,
-    ) -> Fallible<()> {
-        let max_universe = self.table.max_universe;
-        let var = self.table.new_variable(max_universe).to_ty();
-        self.unify_projection_ty_enum(proj1, &var)?;
-        self.unify_projection_ty_enum(proj2, &var)?;
-        Ok(())
-    }
-
-    fn unify_projection_ty_enum(&mut self, proj: ProjectionTyRefEnum, ty: &Ty) -> Fallible<()> {
-        match proj {
-            ProjectionTyEnum::Selected(proj) => self.unify_projection_ty(proj, ty),
-            ProjectionTyEnum::Unselected(proj) => self.unify_unselected_projection_ty(proj, ty),
-        }
-    }
-
     fn unify_projection_ty(&mut self, proj: &ProjectionTy, ty: &Ty) -> Fallible<()> {
         Ok(self.goals.push(InEnvironment::new(
             self.environment,
             ProjectionEq {
-                projection: proj.clone(),
-                ty: ty.clone(),
-            }
-            .cast(),
-        )))
-    }
-
-    fn unify_unselected_projection_ty(
-        &mut self,
-        proj: &UnselectedProjectionTy,
-        ty: &Ty,
-    ) -> Fallible<()> {
-        Ok(self.goals.push(InEnvironment::new(
-            self.environment,
-            UnselectedNormalize {
                 projection: proj.clone(),
                 ty: ty.clone(),
             }

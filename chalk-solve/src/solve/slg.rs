@@ -432,15 +432,8 @@ impl MayInvalidate {
                 self.aggregate_projection_tys(apply1, apply2)
             }
 
-            (Ty::UnselectedProjection(apply1), Ty::UnselectedProjection(apply2)) => {
-                self.aggregate_unselected_projection_tys(apply1, apply2)
-            }
-
             // For everything else, be conservative here and just say we may invalidate.
-            (Ty::ForAll(_), _)
-            | (Ty::Apply(_), _)
-            | (Ty::Projection(_), _)
-            | (Ty::UnselectedProjection(_), _) => true,
+            (Ty::ForAll(_), _) | (Ty::Apply(_), _) | (Ty::Projection(_), _) => true,
         }
     }
 
@@ -468,23 +461,6 @@ impl MayInvalidate {
         } = new;
         let ProjectionTy {
             associated_ty_id: current_name,
-            parameters: current_parameters,
-        } = current;
-
-        self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
-    }
-
-    fn aggregate_unselected_projection_tys(
-        &mut self,
-        new: &UnselectedProjectionTy,
-        current: &UnselectedProjectionTy,
-    ) -> bool {
-        let UnselectedProjectionTy {
-            type_name: new_name,
-            parameters: new_parameters,
-        } = new;
-        let UnselectedProjectionTy {
-            type_name: current_name,
             parameters: current_parameters,
         } = current;
 

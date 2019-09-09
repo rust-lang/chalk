@@ -88,7 +88,6 @@ impl Debug for Ty {
             Ty::InferenceVar(var) => write!(fmt, "{:?}", var),
             Ty::Apply(apply) => write!(fmt, "{:?}", apply),
             Ty::Projection(proj) => write!(fmt, "{:?}", proj),
-            Ty::UnselectedProjection(proj) => write!(fmt, "{:?}", proj),
             Ty::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
         }
     }
@@ -157,19 +156,6 @@ impl Debug for ProjectionTy {
     }
 }
 
-impl Debug for UnselectedProjectionTy {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        let len = self.parameters.len();
-        write!(
-            fmt,
-            "{:?}::{}{:?}",
-            self.parameters[len - 1],
-            self.type_name,
-            Angle(&self.parameters[0..(len - 1)])
-        )
-    }
-}
-
 pub struct Angle<'a, T: 'a>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
@@ -198,16 +184,6 @@ impl Debug for Normalize {
 impl Debug for ProjectionEq {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "ProjectionEq({:?} = {:?})", self.projection, self.ty)
-    }
-}
-
-impl Debug for UnselectedNormalize {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(
-            fmt,
-            "UnselectedNormalize({:?} -> {:?})",
-            self.projection, self.ty
-        )
     }
 }
 
@@ -251,7 +227,6 @@ impl Debug for DomainGoal {
             DomainGoal::WellFormed(n) => write!(fmt, "{:?}", n),
             DomainGoal::FromEnv(n) => write!(fmt, "{:?}", n),
             DomainGoal::Normalize(n) => write!(fmt, "{:?}", n),
-            DomainGoal::UnselectedNormalize(n) => write!(fmt, "{:?}", n),
             DomainGoal::InScope(n) => write!(fmt, "InScope({:?})", n),
             DomainGoal::IsLocal(n) => write!(fmt, "IsLocal({:?})", n),
             DomainGoal::IsUpstream(n) => write!(fmt, "IsUpstream({:?})", n),

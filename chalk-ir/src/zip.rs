@@ -182,13 +182,8 @@ struct_zip!(ProjectionTy {
     associated_ty_id,
     parameters,
 });
-struct_zip!(UnselectedProjectionTy {
-    type_name,
-    parameters,
-});
 struct_zip!(Normalize { projection, ty });
 struct_zip!(ProjectionEq { projection, ty });
-struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
 struct_zip!(ProgramClauseImplication {
     consequence,
@@ -237,7 +232,6 @@ enum_zip!(DomainGoal {
     WellFormed,
     FromEnv,
     Normalize,
-    UnselectedNormalize,
     InScope,
     IsLocal,
     IsUpstream,

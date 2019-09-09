@@ -173,7 +173,6 @@ TyWithoutFor: Ty = {
     <n:Id> => Ty::Id { name: n},
     <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
     <p:ProjectionTy> => Ty::Projection { proj: p },
-    <proj:UnselectedProjectionTy> => Ty::UnselectedProjection { <> },
     "(" <Ty> ")",
 };
 
@@ -189,17 +188,6 @@ Parameter: Parameter = {
 ProjectionTy: ProjectionTy = {
     "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => ProjectionTy {
         trait_ref: t, name: n, args: a
-    },
-};
-
-UnselectedProjectionTy: UnselectedProjectionTy = {
-    <ty:TyWithoutFor> "::" <name:Id> <a:Angle<Parameter>> => {
-        let mut args = a;
-        args.push(Parameter::Ty(ty));
-        UnselectedProjectionTy {
-            name: name,
-            args: args,
-        }
     },
 };
 

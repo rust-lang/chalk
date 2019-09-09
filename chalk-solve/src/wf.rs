@@ -74,10 +74,6 @@ impl FoldInputTypes for Ty {
                 accumulator.push(self.clone());
                 proj.parameters.fold(accumulator);
             }
-            Ty::UnselectedProjection(proj) => {
-                accumulator.push(self.clone());
-                proj.parameters.fold(accumulator);
-            }
 
             // Type parameters do not carry any input types (so we can sort of assume they are
             // always WF).
