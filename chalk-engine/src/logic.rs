@@ -830,7 +830,7 @@ impl<C: Context> Forest<C> {
                 match infer.program_clauses(&environment, &domain_goal) {
                     Ok(clauses) => {
                         for clause in clauses {
-                            debug!("program clause = {:#?}", clause);
+                            info!("program clause = {:#?}", clause);
                             if let Ok(resolvent) =
                                 infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
                             {
