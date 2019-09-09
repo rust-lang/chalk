@@ -106,7 +106,7 @@ pub fn push_auto_trait_impls(
 /// to this goal from the Rust program. So for example if the goal
 /// is `Implemented(T: Clone)`, then this function might return clauses
 /// derived from the trait `Clone` and its impls.
-pub fn program_clauses_for_goal<'db>(
+pub(crate) fn program_clauses_for_goal<'db>(
     db: &'db dyn RustIrDatabase,
     environment: &Arc<Environment>,
     goal: &DomainGoal,
