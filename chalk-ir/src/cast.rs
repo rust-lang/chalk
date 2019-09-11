@@ -97,12 +97,6 @@ impl Cast<DomainGoal> for Normalize {
     }
 }
 
-impl Cast<DomainGoal> for UnselectedNormalize {
-    fn cast(self) -> DomainGoal {
-        DomainGoal::UnselectedNormalize(self)
-    }
-}
-
 impl Cast<DomainGoal> for WellFormed {
     fn cast(self) -> DomainGoal {
         DomainGoal::WellFormed(self)

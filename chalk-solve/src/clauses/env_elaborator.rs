@@ -61,9 +61,7 @@ impl<'db, 'set> EnvElaborator<'db, 'set> {
             Ty::Projection(projection_ty) => {
                 self.visit_projection_ty(projection_ty);
             }
-            Ty::UnselectedProjection(_) | Ty::ForAll(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => {
-                ()
-            }
+            Ty::ForAll(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
         }
         self.round.extend(clauses);
     }

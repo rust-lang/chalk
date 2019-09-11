@@ -156,6 +156,7 @@ eq_zip!(TypeName);
 eq_zip!(Identifier);
 eq_zip!(QuantifierKind);
 
+/// Generates a Zip impl that zips each field of the struct in turn.
 macro_rules! struct_zip {
     ($t:ident$([$($param:tt)*])* { $($field:ident),* $(,)* } $($w:tt)*) => {
         impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
@@ -171,7 +172,6 @@ macro_rules! struct_zip {
     }
 }
 
-/// Generates a Zip impl that zips each field of the struct in turn.
 struct_zip!(TraitRef {
     trait_id,
     parameters,
@@ -182,13 +182,8 @@ struct_zip!(ProjectionTy {
     associated_ty_id,
     parameters,
 });
-struct_zip!(UnselectedProjectionTy {
-    type_name,
-    parameters,
-});
 struct_zip!(Normalize { projection, ty });
 struct_zip!(ProjectionEq { projection, ty });
-struct_zip!(UnselectedNormalize { projection, ty });
 struct_zip!(EqGoal { a, b });
 struct_zip!(ProgramClauseImplication {
     consequence,
@@ -203,6 +198,9 @@ impl Zip for Environment {
     }
 }
 
+/// Generates a Zip impl that requires the two enums be the same
+/// variant, then zips each field of the variant in turn. Only works
+/// if all variants have a single parenthesized value right now.
 macro_rules! enum_zip {
     ($t:ident$([$($param:tt)*])* { $( $variant:ident ),* $(,)* } $($w:tt)*) => {
         impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
@@ -223,9 +221,6 @@ macro_rules! enum_zip {
     }
 }
 
-/// Generates a Zip impl that requires the two enums be the same
-/// variant, then zips each field of the variant in turn. Only works
-/// if all variants have a single parenthesized value right now.
 enum_zip!(WhereClause {
     Implemented,
     ProjectionEq
@@ -237,7 +232,6 @@ enum_zip!(DomainGoal {
     WellFormed,
     FromEnv,
     Normalize,
-    UnselectedNormalize,
     InScope,
     IsLocal,
     IsUpstream,

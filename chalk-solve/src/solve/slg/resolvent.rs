@@ -350,10 +350,6 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
                 Zip::zip_with(self, answer, pending)
             }
 
-            (Ty::UnselectedProjection(answer), Ty::UnselectedProjection(pending)) => {
-                Zip::zip_with(self, answer, pending)
-            }
-
             (Ty::ForAll(answer), Ty::ForAll(pending)) => {
                 self.answer_binders += answer.num_binders;
                 self.pending_binders += pending.num_binders;
@@ -371,7 +367,6 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
             (Ty::BoundVar(_), _)
             | (Ty::Apply(_), _)
             | (Ty::Projection(_), _)
-            | (Ty::UnselectedProjection(_), _)
             | (Ty::ForAll(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,

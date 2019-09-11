@@ -192,17 +192,12 @@ impl<'infer> AntiUnifier<'infer> {
                 self.aggregate_projection_tys(apply1, apply2)
             }
 
-            (Ty::UnselectedProjection(apply1), Ty::UnselectedProjection(apply2)) => {
-                self.aggregate_unselected_projection_tys(apply1, apply2)
-            }
-
             // Mismatched base kinds.
             (Ty::InferenceVar(_), _)
             | (Ty::BoundVar(_), _)
             | (Ty::ForAll(_), _)
             | (Ty::Apply(_), _)
-            | (Ty::Projection(_), _)
-            | (Ty::UnselectedProjection(_), _) => self.new_variable(),
+            | (Ty::Projection(_), _) => self.new_variable(),
         }
     }
 
@@ -235,30 +230,6 @@ impl<'infer> AntiUnifier<'infer> {
             .map(|(&associated_ty_id, parameters)| {
                 Ty::Projection(ProjectionTy {
                     associated_ty_id,
-                    parameters,
-                })
-            })
-            .unwrap_or_else(|| self.new_variable())
-    }
-
-    fn aggregate_unselected_projection_tys(
-        &mut self,
-        proj1: &UnselectedProjectionTy,
-        proj2: &UnselectedProjectionTy,
-    ) -> Ty {
-        let UnselectedProjectionTy {
-            type_name: name1,
-            parameters: parameters1,
-        } = proj1;
-        let UnselectedProjectionTy {
-            type_name: name2,
-            parameters: parameters2,
-        } = proj2;
-
-        self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
-            .map(|(&type_name, parameters)| {
-                Ty::UnselectedProjection(UnselectedProjectionTy {
-                    type_name,
                     parameters,
                 })
             })

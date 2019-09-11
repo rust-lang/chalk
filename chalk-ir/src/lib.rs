@@ -240,13 +240,6 @@ pub enum Ty {
     /// trait and all its parameters are fully known.
     Projection(ProjectionTy),
 
-    /// This is a variant of a projection in which the trait is
-    /// **not** known.  It corresponds to a case where people write
-    /// `T::Item` without specifying the trait. We would then try to
-    /// figure out the trait by looking at all the traits that are in
-    /// scope.
-    UnselectedProjection(UnselectedProjectionTy),
-
     /// A "higher-ranked" type. In the Rust surface syntax, this can
     /// only be a funtion type (e.g., `for<'a> fn(&'a u32)`) or a dyn
     /// type (e.g., `dyn for<'a> SomeTrait<&'a u32>`). However, in
@@ -289,17 +282,9 @@ impl Ty {
         }
     }
 
-    pub fn as_projection_ty_enum(&self) -> ProjectionTyRefEnum {
-        match *self {
-            Ty::Projection(ref proj) => ProjectionTyEnum::Selected(proj),
-            Ty::UnselectedProjection(ref proj) => ProjectionTyEnum::Unselected(proj),
-            _ => panic!("{:?} is not a projection", self),
-        }
-    }
-
     pub fn is_projection(&self) -> bool {
         match *self {
-            Ty::Projection(..) | Ty::UnselectedProjection(..) => true,
+            Ty::Projection(..) => true,
             _ => false,
         }
     }
@@ -529,20 +514,6 @@ pub struct ProjectionTy {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct UnselectedProjectionTy {
-    pub type_name: Identifier,
-    pub parameters: Vec<Parameter>,
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum ProjectionTyEnum<S = ProjectionTy, U = UnselectedProjectionTy> {
-    Selected(S),
-    Unselected(U),
-}
-
-pub type ProjectionTyRefEnum<'a> = ProjectionTyEnum<&'a ProjectionTy, &'a UnselectedProjectionTy>;
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TraitRef {
     pub trait_id: TraitId,
     pub parameters: Vec<Parameter>,
@@ -634,7 +605,6 @@ pub enum DomainGoal {
     FromEnv(FromEnv),
 
     Normalize(Normalize),
-    UnselectedNormalize(UnselectedNormalize),
 
     InScope(TypeKindId),
 
@@ -754,29 +724,6 @@ pub struct Normalize {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ProjectionEq {
     pub projection: ProjectionTy,
-    pub ty: Ty,
-}
-
-/// Indicates that the trait where the associated type belongs to is
-/// not yet known, i.e. is unselected. For example, a normal
-/// `Normalize` would be of the form `<Vec<T> as Iterator>::Item ->
-/// T`. When `Iterator` is in scope, and it is the only trait in scope
-/// with an associated type `Item`, it suffices to write
-/// `Vec<T>::Item` instead of `<Vec<T> as Iterator>::Item`. The
-/// corresponding `UnselectedNormalize` is `Vec<T>::Item -> T`.
-///
-/// For each associated type we encounter in an `impl`, we generate
-/// rules to derive an `UnselectedNormalize` from a `Normalize`. For
-/// example, implementing `Iterator` for `Vec<T>` yields the rule:
-///
-/// ```text
-/// Vec<T>::Item -> T :-
-///     InScope(Iterator),
-///     <Vec<T> as Iterator>::Item -> T
-/// ```
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct UnselectedNormalize {
-    pub projection: UnselectedProjectionTy,
     pub ty: Ty,
 }
 

@@ -165,28 +165,7 @@ impl ToProgramClauses for AssociatedTyValue {
         }
         .cast();
 
-        let unselected_projection = UnselectedProjectionTy {
-            type_name: associated_ty.name.clone(),
-            parameters: parameters,
-        };
-
-        let unselected_normalization = Binders {
-            binders: all_binders,
-            value: ProgramClauseImplication {
-                consequence: DomainGoal::UnselectedNormalize(UnselectedNormalize {
-                    projection: unselected_projection,
-                    ty: self.value.value.ty.clone(),
-                }),
-                conditions: vec![
-                    normalize_goal.cast(),
-                    DomainGoal::InScope(impl_trait_ref.trait_id.into()).cast(),
-                ],
-            },
-        }
-        .cast();
-
         clauses.push(normalization);
-        clauses.push(unselected_normalization);
     }
 }
 

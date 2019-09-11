@@ -831,25 +831,6 @@ impl LowerProjectionTy for ProjectionTy {
     }
 }
 
-trait LowerUnselectedProjectionTy {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::UnselectedProjectionTy>;
-}
-
-impl LowerUnselectedProjectionTy for UnselectedProjectionTy {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::UnselectedProjectionTy> {
-        let parameters: Vec<_> = self
-            .args
-            .iter()
-            .map(|a| a.lower(env))
-            .collect::<Fallible<_>>()?;
-        let ret = chalk_ir::UnselectedProjectionTy {
-            type_name: self.name.str,
-            parameters: parameters,
-        };
-        Ok(ret)
-    }
-}
-
 trait LowerTy {
     fn lower(&self, env: &Env) -> Fallible<chalk_ir::Ty>;
 }
@@ -907,10 +888,6 @@ impl LowerTy for Ty {
             }
 
             Ty::Projection { ref proj } => Ok(chalk_ir::Ty::Projection(proj.lower(env)?)),
-
-            Ty::UnselectedProjection { ref proj } => {
-                Ok(chalk_ir::Ty::UnselectedProjection(proj.lower(env)?))
-            }
 
             Ty::ForAll {
                 ref lifetime_names,
