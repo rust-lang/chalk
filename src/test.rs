@@ -2522,7 +2522,7 @@ fn fundamental_types() {
 
         // With fundamental, Box can be local for certain types, so there is no unique solution
         // anymore for any of these
-        goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "No possible solution" }
+        goal { forall<T> { not { IsLocal(Box<T>) } } } yields { "Ambiguous" }
         goal { forall<T> { IsLocal(Box<T>) } } yields { "No possible solution" }
         goal { forall<T> { IsUpstream(Box<T>) } } yields { "No possible solution" }
 

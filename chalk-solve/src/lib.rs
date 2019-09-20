@@ -46,14 +46,6 @@ pub trait RustIrDatabase: Debug {
     ///   impls actually written by users need to be checked.
     fn local_impls_to_coherence_check(&self, trait_id: TraitId) -> Vec<ImplId>;
 
-    /// Returns the id of every struct in the program.
-    ///
-    /// FIXME(rust-lang/chalk#217): We currently use this to derive
-    /// the program clauses for a case like `?T: Send` (which could be
-    /// any struct). But really we should be using a "non-enumerable
-    /// goal" strategy here.
-    fn all_structs(&self) -> Vec<StructId>;
-
     /// Returns true if there is an explicit impl of the auto trait
     /// `auto_trait_id` for the struct `struct_id`. This is part of
     /// the auto trait handling -- if there is no explicit impl given

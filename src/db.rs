@@ -113,15 +113,6 @@ impl RustIrDatabase for ChalkDatabase {
             .collect()
     }
 
-    fn all_structs(&self) -> Vec<StructId> {
-        self.program_ir()
-            .unwrap()
-            .struct_data
-            .keys()
-            .cloned()
-            .collect()
-    }
-
     fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool {
         // Look for an impl like `impl Send for Foo` where `Foo` is
         // the struct.  See `push_auto_trait_impls` for more.
