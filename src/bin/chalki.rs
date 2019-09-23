@@ -145,7 +145,7 @@ where
             // EOF: We're done.
             Err(ReadlineError::Eof) => break,
 
-            // Some other error occured.
+            // Some other error occurred.
             Err(e) => Err(e)?,
         }
     }

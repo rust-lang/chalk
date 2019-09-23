@@ -47,7 +47,7 @@ pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
                     position_string(location, location + 1)
                 ))?,
                 ParseError::UnrecognizedToken {
-                    token: Some((start, _, end)),
+                    token: (start, _, end),
                     ..
                 } => Err(format!(
                     "parse error: {:?}\n{}",
