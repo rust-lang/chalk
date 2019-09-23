@@ -258,7 +258,7 @@ pub enum Ty {
     /// exists<type> {
     ///    vec![
     ///        // A QuantifiedWhereClause:
-    ///        forall<region> { ^1: Fn(&^2 u32) }
+    ///        forall<region> { ^1: Fn(&^0 u32) }
     ///    ]
     /// }
     /// ```
