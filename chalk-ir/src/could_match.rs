@@ -2,11 +2,11 @@ use crate::zip::{Zip, Zipper};
 use crate::*;
 
 /// A fast check to see whether two things could ever possibly match.
-pub trait CouldMatch<T> {
+pub trait CouldMatch<T: ?Sized> {
     fn could_match(&self, other: &T) -> bool;
 }
 
-impl<T: Zip> CouldMatch<T> for T {
+impl<T: Zip + ?Sized> CouldMatch<T> for T {
     fn could_match(&self, other: &T) -> bool {
         return Zip::zip_with(&mut MatchZipper, self, other).is_ok();
 
@@ -53,6 +53,7 @@ impl CouldMatch<DomainGoal> for ProgramClause {
     fn could_match(&self, other: &DomainGoal) -> bool {
         match self {
             ProgramClause::Implies(implication) => implication.consequence.could_match(other),
+
             ProgramClause::ForAll(clause) => clause.value.consequence.could_match(other),
         }
     }
