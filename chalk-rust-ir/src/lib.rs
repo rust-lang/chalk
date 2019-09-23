@@ -38,7 +38,7 @@ pub struct ImplDatumBound {
     pub impl_type: ImplType,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ImplType {
     Local,
     External,

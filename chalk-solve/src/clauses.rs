@@ -106,7 +106,7 @@ pub fn push_auto_trait_impls(
 /// to this goal from the Rust program. So for example if the goal
 /// is `Implemented(T: Clone)`, then this function might return clauses
 /// derived from the trait `Clone` and its impls.
-pub fn program_clauses_for_goal<'db>(
+pub(crate) fn program_clauses_for_goal<'db>(
     db: &'db dyn RustIrDatabase,
     environment: &Arc<Environment>,
     goal: &DomainGoal,
@@ -260,13 +260,7 @@ fn match_ty(
             .to_program_clauses(db, clauses),
         Ty::ForAll(quantified_ty) => match_ty(db, environment, &quantified_ty.ty, clauses),
         Ty::BoundVar(_) => {}
-        Ty::InferenceVar(_) => {
-            // If the type is an (unbound) inference variable, it
-            // could be any of these things:
-            for struct_id in db.all_structs() {
-                db.struct_datum(struct_id).to_program_clauses(db, clauses);
-            }
-        }
+        Ty::InferenceVar(_) => panic!("should have floundered"),
     }
 }
 

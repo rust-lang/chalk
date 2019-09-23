@@ -19,6 +19,7 @@ use chalk_ir::TypeName;
 use chalk_ir::UCanonical;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::ImplDatum;
+use chalk_rust_ir::ImplType;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_solve::RustIrDatabase;
@@ -98,12 +99,17 @@ impl RustIrDatabase for ChalkDatabase {
             .collect()
     }
 
-    fn all_structs(&self) -> Vec<StructId> {
+    fn local_impls_to_coherence_check(&self, trait_id: TraitId) -> Vec<ImplId> {
         self.program_ir()
             .unwrap()
-            .struct_data
-            .keys()
-            .cloned()
+            .impl_data
+            .iter()
+            .filter(|(_, impl_datum)| {
+                let impl_trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
+                let impl_type = impl_datum.binders.value.impl_type;
+                impl_trait_id == trait_id && impl_type == ImplType::Local
+            })
+            .map(|(&impl_id, _)| impl_id)
             .collect()
     }
 

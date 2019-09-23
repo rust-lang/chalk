@@ -246,17 +246,31 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         environment: &Arc<Environment>,
         goal: &DomainGoal,
     ) -> Result<Vec<ProgramClause>, Floundered> {
-        // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
-        if let DomainGoal::Holds(WhereClause::Implemented(trait_ref)) = goal {
-            let trait_datum = self.program.trait_datum(trait_ref.trait_id);
-            if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                let self_ty = trait_ref.self_type_parameter().unwrap();
-                if let Some(v) = self_ty.inference_var() {
-                    if !self.infer.var_is_bound(v) {
-                        return Err(Floundered);
+        // Look for flounding goals:
+        match goal {
+            // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
+            DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
+                let trait_datum = self.program.trait_datum(trait_ref.trait_id);
+                if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
+                    let self_ty = trait_ref.self_type_parameter().unwrap();
+                    if let Some(v) = self_ty.inference_var() {
+                        if !self.infer.var_is_bound(v) {
+                            return Err(Floundered);
+                        }
                     }
                 }
             }
+
+            DomainGoal::WellFormed(WellFormed::Ty(ty))
+            | DomainGoal::IsUpstream(ty)
+            | DomainGoal::DownstreamType(ty)
+            | DomainGoal::IsFullyVisible(ty)
+            | DomainGoal::IsLocal(ty) => match ty {
+                Ty::InferenceVar(_) => return Err(Floundered),
+                _ => {}
+            },
+
+            _ => {}
         }
 
         let mut clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal);
