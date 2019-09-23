@@ -2,6 +2,7 @@ use crate::error::ChalkError;
 use crate::lowering::LowerGoal;
 use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
+use chalk_ir::could_match::CouldMatch;
 use chalk_ir::tls;
 use chalk_ir::Goal;
 use chalk_ir::Identifier;
@@ -86,14 +87,17 @@ impl RustIrDatabase for ChalkDatabase {
         self.program_ir().unwrap().struct_data[&id].clone()
     }
 
-    fn impls_for_trait(&self, trait_id: TraitId) -> Vec<ImplId> {
+    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter]) -> Vec<ImplId> {
         self.program_ir()
             .unwrap()
             .impl_data
             .iter()
             .filter(|(_, impl_datum)| {
-                let impl_trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
-                impl_trait_id == trait_id
+                let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
+                trait_id == trait_ref.trait_id && {
+                    assert_eq!(trait_ref.parameters.len(), parameters.len());
+                    <[_] as CouldMatch<[_]>>::could_match(&parameters, &trait_ref.parameters)
+                }
             })
             .map(|(&impl_id, _)| impl_id)
             .collect()

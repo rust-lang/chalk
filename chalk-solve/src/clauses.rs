@@ -146,7 +146,7 @@ fn program_clauses_that_could_match(
             // as for the `Implemented(Foo) :- FromEnv(Foo)` rule.
             db.trait_datum(trait_id).to_program_clauses(db, clauses);
 
-            for impl_id in db.impls_for_trait(trait_id) {
+            for impl_id in db.impls_for_trait(trait_ref.trait_id, &trait_ref.parameters) {
                 db.impl_datum(impl_id).to_program_clauses(db, clauses);
             }
 
@@ -198,7 +198,13 @@ fn program_clauses_that_could_match(
             // ```
             let associated_ty_datum = db.associated_ty_data(projection.associated_ty_id);
             let trait_id = associated_ty_datum.trait_id;
-            push_program_clauses_for_associated_type_values_in_impls_of(db, trait_id, clauses);
+            let (_, trait_parameters, _) = db.split_projection(projection);
+            push_program_clauses_for_associated_type_values_in_impls_of(
+                db,
+                trait_id,
+                trait_parameters,
+                clauses,
+            );
         }
         DomainGoal::InScope(type_kind_id) => match_type_kind(db, *type_kind_id, clauses),
         DomainGoal::LocalImplAllowed(trait_ref) => db
@@ -225,9 +231,10 @@ fn program_clauses_that_could_match(
 fn push_program_clauses_for_associated_type_values_in_impls_of(
     db: &dyn RustIrDatabase,
     trait_id: TraitId,
+    trait_parameters: &[Parameter],
     clauses: &mut Vec<ProgramClause>,
 ) {
-    for impl_id in db.impls_for_trait(trait_id) {
+    for impl_id in db.impls_for_trait(trait_id, trait_parameters) {
         let impl_datum = db.impl_datum(impl_id);
         if !impl_datum.is_positive() {
             continue;

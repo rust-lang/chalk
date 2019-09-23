@@ -31,12 +31,16 @@ pub trait RustIrDatabase: Debug {
     /// Returns the datum for the impl with the given id.
     fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum>;
 
-    /// Returns all the impls for a given trait.
-    ///
-    /// FIXME: We should really be using some kind of "simplified self
-    /// type" to help the impl use a hashing strategy and avoid
-    /// returning a ton of entries here.
-    fn impls_for_trait(&self, trait_id: TraitId) -> Vec<ImplId>;
+    /// Returns a list of potentially relevant impls for a given
+    /// trait-id; we also supply the type parameters that we are
+    /// trying to match (if known: these parameters may contain
+    /// inference variables, for example). The implementor is
+    /// permitted to return any superset of the applicable impls;
+    /// chalk will narrow down the list to only those that truly
+    /// apply. The parameters are provided as a "hint" to help the
+    /// implementor do less work, but can be completely ignored if
+    /// desired.
+    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter]) -> Vec<ImplId>;
 
     /// Returns the impls that require coherence checking. This is not the
     /// full set of impls that exist:
