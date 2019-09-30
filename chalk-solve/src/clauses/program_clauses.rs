@@ -151,16 +151,16 @@ impl ToProgramClauses for AssociatedTyValue {
         };
 
         let normalize_goal = DomainGoal::Normalize(Normalize {
-            projection: projection.clone(),
+            projection,
             ty: self.value.value.ty.clone(),
         });
 
         // Determine the normalization
         let normalization = Binders {
-            binders: all_binders.clone(),
+            binders: all_binders,
             value: ProgramClauseImplication {
-                consequence: normalize_goal.clone(),
-                conditions: conditions,
+                consequence: normalize_goal,
+                conditions,
             },
         }
         .cast();
@@ -577,7 +577,7 @@ impl ToProgramClauses for TraitDatum {
             }
         }
 
-        let condition = DomainGoal::FromEnv(FromEnv::Trait(trait_ref.clone()));
+        let condition = DomainGoal::FromEnv(FromEnv::Trait(trait_ref));
 
         clauses.extend(
             self.binders
@@ -730,7 +730,7 @@ impl ToProgramClauses for AssociatedTyDatum {
             Binders {
                 binders: binders.clone(),
                 value: ProgramClauseImplication {
-                    consequence: projection_eq.clone().cast(),
+                    consequence: projection_eq.cast(),
                     conditions: vec![],
                 },
             }
@@ -838,10 +838,7 @@ impl ToProgramClauses for AssociatedTyDatum {
         };
 
         // `ProjectionEq(<T as Foo>::Assoc = U)`
-        let projection_eq = ProjectionEq {
-            projection: projection.clone(),
-            ty,
-        };
+        let projection_eq = ProjectionEq { projection, ty };
 
         // Projection equality rule from above.
         //
@@ -851,10 +848,10 @@ impl ToProgramClauses for AssociatedTyDatum {
         //    }
         clauses.push(
             Binders {
-                binders: binders.clone(),
+                binders,
                 value: ProgramClauseImplication {
-                    consequence: projection_eq.clone().cast(),
-                    conditions: vec![normalize.clone().cast()],
+                    consequence: projection_eq.cast(),
+                    conditions: vec![normalize.cast()],
                 },
             }
             .cast(),
