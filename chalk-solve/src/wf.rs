@@ -85,9 +85,7 @@ impl FoldInputTypes for Ty {
             // lazily, so no need to include them here.
             Ty::ForAll(..) => (),
 
-            Ty::InferenceVar(..) => {
-                panic!("unexpected inference variable in wf rules: {:?}", self,)
-            }
+            Ty::InferenceVar(..) => panic!("unexpected inference variable in wf rules: {:?}", self),
         }
     }
 }
