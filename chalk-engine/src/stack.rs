@@ -8,11 +8,11 @@ pub(crate) struct Stack {
     stack: Vec<StackEntry>,
 }
 
-/// The StackIndex identifies the position of a table's goal in the
-/// stack of goals that are actively being processed. Note that once a
-/// table is completely evaluated, it may be popped from the stack,
-/// and hence no longer have a stack index.
 index_struct! {
+    /// The StackIndex identifies the position of a table's goal in the
+    /// stack of goals that are actively being processed. Note that once a
+    /// table is completely evaluated, it may be popped from the stack,
+    /// and hence no longer have a stack index.
     pub(crate) struct StackIndex {
         value: usize,
     }
