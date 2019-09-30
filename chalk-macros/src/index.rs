@@ -1,9 +1,10 @@
 #[macro_export]
 macro_rules! index_struct {
-    ($v:vis struct $n:ident {
+    ($(#[$m:meta])* $v:vis struct $n:ident {
         $vf:vis value: usize,
     }) => {
         #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        $(#[$m])*
         $v struct $n {
             $vf value: usize,
         }
