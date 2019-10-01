@@ -193,10 +193,9 @@ fn atc_accounting() {
         assert_eq!(
             &impl_text[..].replace(",\n", "\n"),
             &r#"ImplDatum {
+    polarity: Positive,
     binders: for<type> ImplDatumBound {
-        trait_ref: Positive(
-            Vec<^0> as Iterable
-        ),
+        trait_ref: Vec<^0> as Iterable,
         where_clauses: [],
         associated_ty_values: [
             AssociatedTyValue {
@@ -207,8 +206,8 @@ fn atc_accounting() {
                 }
             }
         ],
-        impl_type: Local
-    }
+    },
+    impl_type: Local
 }"#
             .replace(",\n", "\n")
         );
