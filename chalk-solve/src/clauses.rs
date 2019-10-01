@@ -278,6 +278,7 @@ fn match_ty(
         Ty::ForAll(quantified_ty) => match_ty(db, environment, &quantified_ty.ty, clauses),
         Ty::BoundVar(_) => {}
         Ty::InferenceVar(_) => panic!("should have floundered"),
+        Ty::Dyn(_) | Ty::Opaque(_) => {}
     }
 }
 
