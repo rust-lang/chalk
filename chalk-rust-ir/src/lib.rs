@@ -79,15 +79,20 @@ pub struct StructFlags {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum {
     pub binders: Binders<TraitDatumBound>,
+
+    /// "Flags" indicate special kinds of traits, like auto traits.
+    /// In Rust syntax these are represented in different ways, but in
+    /// chalk we add annotations like `#[auto]`.
+    pub flags: TraitFlags,
 }
 
 impl TraitDatum {
     pub fn is_auto_trait(&self) -> bool {
-        self.binders.value.flags.auto
+        self.flags.auto
     }
 
     pub fn is_non_enumerable_trait(&self) -> bool {
-        self.binders.value.flags.non_enumerable
+        self.flags.non_enumerable
     }
 }
 
@@ -111,11 +116,6 @@ pub struct TraitDatumBound {
     ///              ^^^^^^^^^^^^^^
     /// ```
     pub where_clauses: Vec<QuantifiedWhereClause>,
-
-    /// "Flags" indicate special kinds of traits, like auto traits.
-    /// In Rust syntax these are represented in different ways, but in
-    /// chalk we add annotations like `#[auto]`.
-    pub flags: TraitFlags,
 
     /// The id of each associated type defined in the trait.
     pub associated_ty_ids: Vec<TypeId>,

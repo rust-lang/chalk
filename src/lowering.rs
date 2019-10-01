@@ -1080,18 +1080,20 @@ impl LowerTrait for TraitDefn {
             Ok(rust_ir::TraitDatumBound {
                 trait_ref: trait_ref,
                 where_clauses: self.lower_where_clauses(env)?,
-                flags: rust_ir::TraitFlags {
-                    auto: self.flags.auto,
-                    marker: self.flags.marker,
-                    upstream: self.flags.upstream,
-                    fundamental: self.flags.fundamental,
-                    non_enumerable: self.flags.non_enumerable,
-                },
                 associated_ty_ids,
             })
         })?;
 
-        Ok(rust_ir::TraitDatum { binders: binders })
+        Ok(rust_ir::TraitDatum {
+            binders: binders,
+            flags: rust_ir::TraitFlags {
+                auto: self.flags.auto,
+                marker: self.flags.marker,
+                upstream: self.flags.upstream,
+                fundamental: self.flags.fundamental,
+                non_enumerable: self.flags.non_enumerable,
+            },
+        })
     }
 }
 

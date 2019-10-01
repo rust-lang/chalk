@@ -18,7 +18,7 @@ where
     ) -> Result<(), CoherenceError> {
         // Ignore impls for marker traits as they are allowed to overlap.
         let trait_datum = self.db.trait_datum(self.trait_id);
-        if trait_datum.binders.value.flags.marker {
+        if trait_datum.flags.marker {
             return Ok(());
         }
 

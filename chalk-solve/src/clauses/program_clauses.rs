@@ -518,7 +518,7 @@ impl ToProgramClauses for TraitDatum {
             impl_may_exist
         }));
 
-        if !self.binders.value.flags.upstream {
+        if !self.flags.upstream {
             let impl_allowed = self
                 .binders
                 .map_ref(|bound_datum| ProgramClauseImplication {
@@ -548,7 +548,7 @@ impl ToProgramClauses for TraitDatum {
 
             // Fundamental traits can be reasoned about negatively without any ambiguity, so no
             // need for this rule if the trait is fundamental.
-            if !self.binders.value.flags.fundamental {
+            if !self.flags.fundamental {
                 let impl_may_exist = self
                     .binders
                     .map_ref(|bound_datum| ProgramClauseImplication {
