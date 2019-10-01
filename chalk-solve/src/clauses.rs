@@ -3,7 +3,6 @@ use self::program_clauses::ToProgramClauses;
 use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::could_match::CouldMatch;
-use chalk_ir::fold::Subst;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
@@ -172,7 +171,7 @@ fn program_clauses_that_could_match(
             match trait_ref.self_type_parameter() {
                 Some(Ty::Opaque(qwc)) | Some(Ty::Dyn(qwc)) => {
                     let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
-                    let wc = Subst::apply(&[self_ty.cast()], &qwc.value);
+                    let wc = qwc.substitute(&[self_ty.cast()]);
                     clauses.extend(wc.into_iter().casted());
                 }
                 _ => {}

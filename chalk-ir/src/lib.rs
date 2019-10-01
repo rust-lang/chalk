@@ -25,7 +25,7 @@ macro_rules! impl_debugs {
 use crate::cast::Cast;
 use crate::fold::shift::Shift;
 use crate::fold::{
-    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder,
+    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder, Subst,
 };
 use chalk_engine::fallible::*;
 use lalrpop_intern::InternedString;
@@ -820,6 +820,13 @@ impl<T> Binders<T> {
 
     pub fn len(&self) -> usize {
         self.binders.len()
+    }
+}
+
+impl<T> Binders<T> where T: Fold {
+    pub fn substitute(&self, parameters: &[Parameter]) -> T::Result {
+        assert_eq!(self.binders.len(), parameters.len());
+        Subst::apply(parameters, &self.value)
     }
 }
 
