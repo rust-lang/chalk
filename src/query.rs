@@ -152,7 +152,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
     for datum in program.impl_data.values() {
         // If we encounter a negative impl, do not generate any rule. Negative impls
         // are currently just there to deactivate default impls for auto traits.
-        if datum.binders.value.trait_ref.is_positive() {
+        if datum.is_positive() {
             datum.to_program_clauses(db, &mut program_clauses);
             datum
                 .binders

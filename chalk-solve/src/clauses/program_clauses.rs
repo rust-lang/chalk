@@ -32,7 +32,7 @@ impl ToProgramClauses for ImplDatum {
             clauses.push(
                 self.binders
                     .map_ref(|bound| ProgramClauseImplication {
-                        consequence: bound.trait_ref.trait_ref().clone().cast(),
+                        consequence: bound.trait_ref.clone().cast(),
                         conditions: bound.where_clauses.iter().cloned().casted().collect(),
                     })
                     .cast(),
@@ -94,7 +94,6 @@ impl ToProgramClauses for AssociatedTyValue {
             .binders
             .value
             .trait_ref
-            .trait_ref()
             .shifted_in(self.value.len());
 
         let all_parameters: Vec<_> = self

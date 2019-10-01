@@ -29,9 +29,7 @@ where
             let rhs = &self.db.impl_datum(r_id);
 
             // Two negative impls never overlap.
-            if !lhs.binders.value.trait_ref.is_positive()
-                && !rhs.binders.value.trait_ref.is_positive()
-            {
+            if !lhs.is_positive() && !rhs.is_positive() {
                 continue;
             }
 
@@ -171,9 +169,7 @@ where
         );
 
         // Negative impls cannot specialize.
-        if !less_special.binders.value.trait_ref.is_positive()
-            || !more_special.binders.value.trait_ref.is_positive()
-        {
+        if !less_special.is_positive() || !more_special.is_positive() {
             return false;
         }
 
@@ -228,5 +224,5 @@ where
 }
 
 fn params(impl_datum: &ImplDatum) -> &[Parameter] {
-    &impl_datum.binders.value.trait_ref.trait_ref().parameters
+    &impl_datum.binders.value.trait_ref.parameters
 }

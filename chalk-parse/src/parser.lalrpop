@@ -136,10 +136,11 @@ Impl: Impl = {
         args.extend(a);
         Impl {
             parameter_kinds: p,
-            trait_ref: PolarizedTraitRef::from_bool(mark.is_none(), TraitRef {
+            polarity: Polarity::from_bool(mark.is_none()),
+            trait_ref: TraitRef {
                 trait_name: t,
                 args: args,
-            }),
+            },
             where_clauses: w,
             assoc_ty_values: assoc,
             impl_type: external.map(|_| ImplType::External).unwrap_or(ImplType::Local),

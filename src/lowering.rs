@@ -767,20 +767,16 @@ impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
     }
 }
 
-trait LowerPolarizedTraitRef {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::PolarizedTraitRef>;
+trait LowerPolarity {
+    fn lower(&self) -> rust_ir::Polarity;
 }
 
-impl LowerPolarizedTraitRef for PolarizedTraitRef {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::PolarizedTraitRef> {
-        Ok(match *self {
-            PolarizedTraitRef::Positive(ref tr) => {
-                rust_ir::PolarizedTraitRef::Positive(tr.lower(env)?)
-            }
-            PolarizedTraitRef::Negative(ref tr) => {
-                rust_ir::PolarizedTraitRef::Negative(tr.lower(env)?)
-            }
-        })
+impl LowerPolarity for Polarity {
+    fn lower(&self) -> rust_ir::Polarity {
+        match *self {
+            Polarity::Positive => rust_ir::Polarity::Positive,
+            Polarity::Negative => rust_ir::Polarity::Negative,
+        }
     }
 }
 
@@ -943,16 +939,17 @@ trait LowerImpl {
 
 impl LowerImpl for Impl {
     fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum> {
+        let polarity = self.polarity.lower();
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
 
-            if !trait_ref.is_positive() && !self.assoc_ty_values.is_empty() {
+            if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
                 return Err(format_err!(
                     "negative impls cannot define associated values"
                 ));
             }
 
-            let trait_id = trait_ref.trait_ref().trait_id;
+            let trait_id = trait_ref.trait_id;
             let where_clauses = self.lower_where_clauses(&env)?;
             let associated_ty_values = self
                 .assoc_ty_values
@@ -970,7 +967,10 @@ impl LowerImpl for Impl {
             })
         })?;
 
-        Ok(rust_ir::ImplDatum { binders: binders })
+        Ok(rust_ir::ImplDatum {
+            polarity,
+            binders: binders,
+        })
     }
 }
 

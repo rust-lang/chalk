@@ -128,7 +128,8 @@ impl fmt::Display for Kind {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Impl {
     pub parameter_kinds: Vec<ParameterKind>,
-    pub trait_ref: PolarizedTraitRef,
+    pub trait_ref: TraitRef,
+    pub polarity: Polarity,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
     pub impl_type: ImplType,
@@ -185,17 +186,20 @@ pub struct TraitRef {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum PolarizedTraitRef {
-    Positive(TraitRef),
-    Negative(TraitRef),
+pub enum Polarity {
+    /// `impl Foo for Bar`
+    Positive,
+
+    /// `impl !Foo for Bar`
+    Negative,
 }
 
-impl PolarizedTraitRef {
-    pub fn from_bool(polarity: bool, trait_ref: TraitRef) -> PolarizedTraitRef {
+impl Polarity {
+    pub fn from_bool(polarity: bool) -> Polarity {
         if polarity {
-            PolarizedTraitRef::Positive(trait_ref)
+            Polarity::Positive
         } else {
-            PolarizedTraitRef::Negative(trait_ref)
+            Polarity::Negative
         }
     }
 }
