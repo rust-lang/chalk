@@ -109,8 +109,7 @@ impl RustIrDatabase for ChalkDatabase {
             .impl_data
             .iter()
             .filter(|(_, impl_datum)| {
-                let impl_type = impl_datum.binders.value.impl_type;
-                impl_datum.trait_id() == trait_id && impl_type == ImplType::Local
+                impl_datum.trait_id() == trait_id && impl_datum.impl_type == ImplType::Local
             })
             .map(|(&impl_id, _)| impl_id)
             .collect()

@@ -20,6 +20,7 @@ pub enum LangItem {}
 pub struct ImplDatum {
     pub polarity: Polarity,
     pub binders: Binders<ImplDatumBound>,
+    pub impl_type: ImplType,
 }
 
 impl ImplDatum {
@@ -37,7 +38,6 @@ pub struct ImplDatumBound {
     pub trait_ref: TraitRef,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
-    pub impl_type: ImplType,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

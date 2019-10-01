@@ -960,16 +960,16 @@ impl LowerImpl for Impl {
                 trait_ref,
                 where_clauses,
                 associated_ty_values,
-                impl_type: match self.impl_type {
-                    ImplType::Local => rust_ir::ImplType::Local,
-                    ImplType::External => rust_ir::ImplType::External,
-                },
             })
         })?;
 
         Ok(rust_ir::ImplDatum {
             polarity,
             binders: binders,
+            impl_type: match self.impl_type {
+                ImplType::Local => rust_ir::ImplType::Local,
+                ImplType::External => rust_ir::ImplType::External,
+            },
         })
     }
 }
