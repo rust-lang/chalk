@@ -97,7 +97,7 @@ where
 
 /// The methods for folding **free variables**. These are `BoundVar`
 /// instances where the binder is not something we folded over.  This
-/// is used when you are instanting previously bound things with some
+/// is used when you are instantiating previously bound things with some
 /// replacement.
 pub trait FreeVarFolder {
     /// Invoked for `Ty::BoundVar` instances that are not bound within the type being folded
@@ -145,7 +145,7 @@ impl<T: DefaultFreeVarFolder> FreeVarFolder for T {
 }
 
 pub trait PlaceholderFolder {
-    /// Invoked for each occurence of a placeholder type; these are
+    /// Invoked for each occurrence of a placeholder type; these are
     /// used when we instantiate binders universally. Returns a type
     /// to use instead, which should be suitably shifted to account
     /// for `binders`.
@@ -205,7 +205,7 @@ impl<T: DefaultPlaceholderFolder> PlaceholderFolder for T {
 }
 
 pub trait InferenceFolder {
-    /// Invoked for each occurence of a inference type; these are
+    /// Invoked for each occurrence of a inference type; these are
     /// used when we instantiate binders universally. Returns a type
     /// to use instead, which should be suitably shifted to account
     /// for `binders`.

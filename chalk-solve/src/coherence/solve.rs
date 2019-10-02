@@ -149,7 +149,7 @@ where
 
     // Test for specialization.
     //
-    // If this test suceeds, the second impl specializes the first.
+    // If this test succeeds, the second impl specializes the first.
     //
     // Example lowering:
     //

@@ -124,8 +124,8 @@ impl UniverseMap {
     /// We will then collect the universe vector `[Root, 1, 3]`.
     /// Hence we would remap the inner part to `!U1': Foo<?0, !U2'>`
     /// (I am using the convention of writing U1' and U2' to indicate
-    /// the target universes that we are mappin to, which are
-    /// logically distincte).  But what universe should we use for the
+    /// the target universes that we are mapping to, which are
+    /// logically distinct).  But what universe should we use for the
     /// `exists` binder? `U2` is not in the set of universes we
     /// collected initially.  The answer is that we will remap U2 to
     /// U1' in the final result, giving:
@@ -136,7 +136,7 @@ impl UniverseMap {
     ///
     /// More generally, we pick the highest numbered universe we did
     /// find that is still lower then the universe U we are
-    /// mapping. Effectivelly we "remapped" from U2 (in the original
+    /// mapping. Effectively we "remapped" from U2 (in the original
     /// multiverse) to U1; this is a sound approximation, because all
     /// names from U1 are visible to U2 (but not vice
     /// versa). Moreover, since there are no placeholders from U2 in
@@ -149,7 +149,7 @@ impl UniverseMap {
             // `index` is the location in the vector where universe
             // *would have* gone.  So, in our example from the comment
             // above, if we were looking up `U2` we would get back 2,
-            // since it would go betewen U1 (with index 1) and U3
+            // since it would go between U1 (with index 1) and U3
             // (with index 2). Therefore, we want to subtract one to
             // get the biggest universe that is still lower than
             // `universe`.

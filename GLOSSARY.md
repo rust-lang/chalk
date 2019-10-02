@@ -186,11 +186,11 @@ quantifiers to a statement without them. The resulting statement is in general
 not equivalent to the original statement but equisatisfiable.
 
 ## Validity
-An argument (*premisses* therefore *conclusion*) is valid iff there is no
-valuation which makes the premisses true and the conclusion false.
+An argument (*premise* therefore *conclusion*) is valid iff there is no
+valuation which makes the premise true and the conclusion false.
 
 Valid: `A && B therefore A || B`. Invalid: `A || B therefore A && B` because the
-valuation `A = true, B = false` makes the premiss true and the conclusion false.
+valuation `A = true, B = false` makes the premise true and the conclusion false.
 
 ## Valuation
 A valuation is an assignment of values to all variables inside a logical

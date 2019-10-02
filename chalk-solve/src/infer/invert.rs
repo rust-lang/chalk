@@ -64,7 +64,7 @@ impl InferenceTable {
     ///
     /// (One could imagine converting free existentials into
     /// universals, rather than forbidding them altogether. This would
-    /// be conveivable, but overly strict. For example, the goal
+    /// be conceivable, but overly strict. For example, the goal
     /// `exists<T> { not { ?T: Clone }, ?T = Vec<i32> }` would come
     /// back as false, when clearly this is true. This is because we
     /// would wind up proving that `?T: Clone` can *never* be

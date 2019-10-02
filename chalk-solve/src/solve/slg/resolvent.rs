@@ -169,7 +169,7 @@ impl<'me> context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceT
     //
     // What we do instead is to (a) instantiate the substitution, which
     // may have free variables in it (in this case, it would not, and the
-    // instantiation woudl have no effect) and then (b) zip
+    // instantiation would have no effect) and then (b) zip
     // `answer_table_goal` and `selected_goal` without having done any
     // substitution. After all, these ought to be basically the same,
     // since `answer_table_goal` was created by canonicalizing (and
@@ -218,7 +218,7 @@ impl<'me> context::ResolventOps<SlgContext, SlgContext> for TruncatingInferenceT
         debug!("answer_table_goal={:?}", answer_table_goal);
         debug!("canonical_answer_subst={:?}", canonical_answer_subst);
 
-        // C' is now `answer`. No variables in commmon with G.
+        // C' is now `answer`. No variables in common with G.
         let ConstrainedSubst {
             subst: answer_subst,
 
