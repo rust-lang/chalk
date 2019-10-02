@@ -32,7 +32,6 @@ impl<T> Sized for Box<T> { }
 
 // Meant to be [T]
 struct Slice<T> where T: Sized { }
-impl<T> Sized for Slice<T> { }
 impl<T> AsRef<Slice<T>> for Slice<T> where T: Sized { }
 
 struct Vec<T> where T: Sized { }
