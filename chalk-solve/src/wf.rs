@@ -8,7 +8,6 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::*;
 use chalk_ir::*;
 use chalk_rust_ir::*;
-use derive_new::new;
 use itertools::Itertools;
 
 #[derive(Debug)]
@@ -36,7 +35,6 @@ impl fmt::Display for WfError {
 
 impl std::error::Error for WfError {}
 
-#[derive(new)]
 pub struct WfSolver<'db, DB: RustIrDatabase> {
     db: &'db DB,
     solver_choice: SolverChoice,
@@ -122,6 +120,11 @@ impl<'db, DB> WfSolver<'db, DB>
 where
     DB: RustIrDatabase,
 {
+    /// Constructs a new `WfSolver`.
+    pub fn new(db: &'db DB, solver_choice: SolverChoice) -> Self {
+        Self { db, solver_choice }
+    }
+
     pub fn verify_struct_decl(&self, struct_id: StructId) -> Result<(), WfError> {
         let struct_datum = self.db.struct_datum(struct_id);
 
