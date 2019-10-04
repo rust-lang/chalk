@@ -375,7 +375,7 @@ fn subgoal_cycle_uninhabited() {
             ]"
         }
 
-        // Eqiuvalent to the previous.
+        // Equivalent to the previous.
         goal {
             forall<T> { not { T: Foo } }
         } first 10 with max 2 {

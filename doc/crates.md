@@ -8,7 +8,7 @@ chalk to be embedded in other programs in a piecemeal fashion.
 
 Chalk contains three levels of IR:
 
-- The **AST**, produced by . This is used purely for writing test cases
+- The **AST**. This is used purely for writing test cases
   with a Rust-like syntax. This is consumed by **lowering** code, which
   takes AST and products **Rust IR** (the next bullet point).
 - The **Rust IR**. This is a "HIR-like" notation that defines the
@@ -48,7 +48,7 @@ The role of the integration crate is as follows:
 | Depends on IR:  | chalk-ir but not rust-ir   |
 | Context required:  | `ChalkSolveDatabase` |
 
-The `chalk-solve` crate exposes a key typ called `Solver`.  This is a
+The `chalk-solve` crate exposes a key type called `Solver`.  This is a
 solver that, given a goal (expressed in chalk-ir) will solve the goal
 and yield up a `Solution`. The solver caches intermediate data between
 invocations, so solving the same goal twice in a row (or solving goals

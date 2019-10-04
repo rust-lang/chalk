@@ -41,7 +41,7 @@
 //! with hereditary harrop predicates and our version of unification
 //! (which produces subgoals). I believe those to be largely faithful
 //! extensions. However, there are some other places where I
-//! intentionally dieverged from the semantics as described in the
+//! intentionally diverged from the semantics as described in the
 //! papers -- e.g. by more aggressively approximating -- which I
 //! marked them with a comment DIVERGENCE. Those places may want to be
 //! evaluated in the future.
@@ -152,7 +152,7 @@ impl TimeStamp {
 
 /// A "floundered" subgoal is one that contains unbound existential
 /// variables for which it cannot produce a value. The classic example
-/// of flounding is a negative subgoal:
+/// of floundering is a negative subgoal:
 ///
 /// ```ignore
 /// not { Implemented(?T: Foo) }

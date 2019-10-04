@@ -1004,7 +1004,7 @@ impl<C: Context> Forest<C> {
         //
         // Truncation muddies the water, because the table may
         // generate answers that are not relevant to our original,
-        // untracted literal.  Suppose that we truncate the selected
+        // untruncated literal.  Suppose that we truncate the selected
         // goal to:
         //
         //     // Vec<Vec<T>: Sized

@@ -105,7 +105,7 @@ are both represented with an index.)
 
 For each strand, we also optionally store a *selected subgoal*. This
 is the subgoal after the turnstile (`:-`) that we are currently trying
-to prove in this strand. Initally, when a strand is first created,
+to prove in this strand. Initially, when a strand is first created,
 there is no selected subgoal.
 
 ### Activating a strand
@@ -204,7 +204,7 @@ Since we now have an answer, `ensure_answer(T1, A0)` will return `Ok`
 to the table T0, indicating that answer A0 is available. T0 now has
 the job of incorporating that result into its active strand. It does
 this in two ways. First, it creates a new strand that is looking for
-the next possible answer of T1. Next, it incorpoates the answer from
+the next possible answer of T1. Next, it incorporates the answer from
 A0 and removes the subgoal. The resulting state of table T0 is:
 
 ```
@@ -356,7 +356,7 @@ impl<T: Sized> Baz for T { }
 Here, solving `?T: Baz` will in turn invoke `?T: Sized` -- this
 floundering state will be propagated up to the `?T: Foo` table.
 
-## Heritage and acroynms
+## Heritage and acronyms
 
 This solver implements the SLG solving technique, though extended to
 accommodate hereditary harrop (HH) predicates, as well as the needs of

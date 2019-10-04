@@ -246,7 +246,7 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         environment: &Arc<Environment>,
         goal: &DomainGoal,
     ) -> Result<Vec<ProgramClause>, Floundered> {
-        // Look for flounding goals:
+        // Look for floundering goals:
         match goal {
             // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
             DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {

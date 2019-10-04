@@ -156,7 +156,7 @@ fn is_trivial(subst: &Canonical<Substitution>) -> bool {
 }
 
 /// [Anti-unification] is the act of taking two things that do not
-/// unify and finding a minimal generarlization of them. So for
+/// unify and finding a minimal generalization of them. So for
 /// example `Vec<u32>` anti-unified with `Vec<i32>` might be
 /// `Vec<?X>`. This is a **very simplistic** anti-unifier.
 ///

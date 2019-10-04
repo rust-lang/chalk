@@ -131,7 +131,7 @@ pub enum TypeName {
 /// An universe index is how a universally quantified parameter is
 /// represented when it's binder is moved into the environment.
 /// An example chain of transformations would be:
-/// `forall<T> { Goal(T) }` (syntatical representation)
+/// `forall<T> { Goal(T) }` (syntactical representation)
 /// `forall { Goal(?0) }` (used a DeBruijn index)
 /// `Goal(!U1)` (the quantifier was moved to the environment and replaced with a universe index)
 /// See https://rust-lang.github.io/rustc-guide/borrow_check/region_inference.html#placeholders-and-universes for more.
@@ -241,7 +241,7 @@ pub enum Ty {
     Projection(ProjectionTy),
 
     /// A "higher-ranked" type. In the Rust surface syntax, this can
-    /// only be a funtion type (e.g., `for<'a> fn(&'a u32)`) or a dyn
+    /// only be a function type (e.g., `for<'a> fn(&'a u32)`) or a dyn
     /// type (e.g., `dyn for<'a> SomeTrait<&'a u32>`). However, in
     /// Chalk's representation, we separate out the `for<'a>` part
     /// from the underlying type, so technically we can represent
@@ -250,7 +250,7 @@ pub enum Ty {
     ForAll(Box<QuantifiedTy>),
 
     /// References the binding at the given depth. The index is a [de
-    /// Bruijn index], so it counts back through the in-scope biners,
+    /// Bruijn index], so it counts back through the in-scope binders,
     /// with 0 being the innermost binder. This is used in impls and
     /// the like. For example, if we had a rule like `for<T> { (T:
     /// Clone) :- (T: Copy) }`, then `T` would be represented as a
@@ -1045,7 +1045,7 @@ impl<'a> DefaultPlaceholderFolder for &'a Substitution {}
 /// Combines a substitution (`subst`) with a set of region constraints
 /// (`constraints`). This represents the result of a query; the
 /// substitution stores the values for the query's unknown variables,
-/// and the constraints represents any region constriants that must
+/// and the constraints represents any region constraints that must
 /// additionally be solved.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstrainedSubst {

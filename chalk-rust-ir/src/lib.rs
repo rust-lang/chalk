@@ -361,7 +361,7 @@ pub struct AssociatedTyValue {
     pub associated_ty_id: TypeId,
 
     /// Additional binders declared on the associated type itself,
-    /// beyond thos from the impl. This would be empty for normal
+    /// beyond those from the impl. This would be empty for normal
     /// associated types, but non-empty for generic associated types.
     ///
     /// ```ignore

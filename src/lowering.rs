@@ -44,7 +44,7 @@ struct Env<'k> {
     type_kinds: &'k TypeKinds,
     associated_ty_infos: &'k AssociatedTyInfos,
     /// Parameter identifiers are used as keys, therefore
-    /// all indentifiers in an environment must be unique (no shadowing).
+    /// all identifiers in an environment must be unique (no shadowing).
     parameter_map: ParameterMap,
 }
 
