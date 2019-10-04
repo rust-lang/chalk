@@ -780,6 +780,35 @@ impl LowerPolarity for Polarity {
     }
 }
 
+trait LowerImplType {
+    fn lower(&self) -> rust_ir::ImplType;
+}
+
+impl LowerImplType for ImplType {
+    fn lower(&self) -> rust_ir::ImplType {
+        match self {
+            ImplType::Local => rust_ir::ImplType::Local,
+            ImplType::External => rust_ir::ImplType::External,
+        }
+    }
+}
+
+trait LowerTraitFlags {
+    fn lower(&self) -> rust_ir::TraitFlags;
+}
+
+impl LowerTraitFlags for TraitFlags {
+    fn lower(&self) -> rust_ir::TraitFlags {
+        rust_ir::TraitFlags {
+            auto: self.auto,
+            marker: self.marker,
+            upstream: self.upstream,
+            fundamental: self.fundamental,
+            non_enumerable: self.non_enumerable,
+        }
+    }
+}
+
 trait LowerProjectionTy {
     fn lower(&self, env: &Env) -> Fallible<chalk_ir::ProjectionTy>;
 }
@@ -966,10 +995,7 @@ impl LowerImpl for Impl {
         Ok(rust_ir::ImplDatum {
             polarity,
             binders: binders,
-            impl_type: match self.impl_type {
-                ImplType::Local => rust_ir::ImplType::Local,
-                ImplType::External => rust_ir::ImplType::External,
-            },
+            impl_type: self.impl_type.lower(),
         })
     }
 }
@@ -1086,13 +1112,7 @@ impl LowerTrait for TraitDefn {
 
         Ok(rust_ir::TraitDatum {
             binders: binders,
-            flags: rust_ir::TraitFlags {
-                auto: self.flags.auto,
-                marker: self.flags.marker,
-                upstream: self.flags.upstream,
-                fundamental: self.flags.fundamental,
-                non_enumerable: self.flags.non_enumerable,
-            },
+            flags: self.flags.lower(),
         })
     }
 }
