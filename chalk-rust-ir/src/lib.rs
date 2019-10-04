@@ -18,24 +18,26 @@ pub enum LangItem {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum {
+    pub polarity: Polarity,
     pub binders: Binders<ImplDatumBound>,
+    pub impl_type: ImplType,
 }
 
 impl ImplDatum {
     pub fn is_positive(&self) -> bool {
-        match self.binders.value.trait_ref {
-            PolarizedTraitRef::Positive(_) => true,
-            PolarizedTraitRef::Negative(_) => false,
-        }
+        self.polarity.is_positive()
+    }
+
+    pub fn trait_id(&self) -> TraitId {
+        self.binders.value.trait_ref.trait_id
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
-    pub trait_ref: PolarizedTraitRef,
+    pub trait_ref: TraitRef,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
-    pub impl_type: ImplType,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -77,15 +79,20 @@ pub struct StructFlags {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum {
     pub binders: Binders<TraitDatumBound>,
+
+    /// "Flags" indicate special kinds of traits, like auto traits.
+    /// In Rust syntax these are represented in different ways, but in
+    /// chalk we add annotations like `#[auto]`.
+    pub flags: TraitFlags,
 }
 
 impl TraitDatum {
     pub fn is_auto_trait(&self) -> bool {
-        self.binders.value.flags.auto
+        self.flags.auto
     }
 
     pub fn is_non_enumerable_trait(&self) -> bool {
-        self.binders.value.flags.non_enumerable
+        self.flags.non_enumerable
     }
 }
 
@@ -109,11 +116,6 @@ pub struct TraitDatumBound {
     ///              ^^^^^^^^^^^^^^
     /// ```
     pub where_clauses: Vec<QuantifiedWhereClause>,
-
-    /// "Flags" indicate special kinds of traits, like auto traits.
-    /// In Rust syntax these are represented in different ways, but in
-    /// chalk we add annotations like `#[auto]`.
-    pub flags: TraitFlags,
 
     /// The id of each associated type defined in the trait.
     pub associated_ty_ids: Vec<TypeId>,
@@ -400,25 +402,17 @@ pub enum TypeSort {
     Trait,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
-pub enum PolarizedTraitRef {
-    Positive(TraitRef),
-    Negative(TraitRef),
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub enum Polarity {
+    Positive,
+    Negative,
 }
 
-enum_fold!(PolarizedTraitRef[] { Positive(a), Negative(a) });
-
-impl PolarizedTraitRef {
+impl Polarity {
     pub fn is_positive(&self) -> bool {
         match *self {
-            PolarizedTraitRef::Positive(_) => true,
-            PolarizedTraitRef::Negative(_) => false,
-        }
-    }
-
-    pub fn trait_ref(&self) -> &TraitRef {
-        match *self {
-            PolarizedTraitRef::Positive(ref tr) | PolarizedTraitRef::Negative(ref tr) => tr,
+            Polarity::Positive => true,
+            Polarity::Negative => false,
         }
     }
 }

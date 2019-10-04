@@ -767,20 +767,45 @@ impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
     }
 }
 
-trait LowerPolarizedTraitRef {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::PolarizedTraitRef>;
+trait LowerPolarity {
+    fn lower(&self) -> rust_ir::Polarity;
 }
 
-impl LowerPolarizedTraitRef for PolarizedTraitRef {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::PolarizedTraitRef> {
-        Ok(match *self {
-            PolarizedTraitRef::Positive(ref tr) => {
-                rust_ir::PolarizedTraitRef::Positive(tr.lower(env)?)
-            }
-            PolarizedTraitRef::Negative(ref tr) => {
-                rust_ir::PolarizedTraitRef::Negative(tr.lower(env)?)
-            }
-        })
+impl LowerPolarity for Polarity {
+    fn lower(&self) -> rust_ir::Polarity {
+        match *self {
+            Polarity::Positive => rust_ir::Polarity::Positive,
+            Polarity::Negative => rust_ir::Polarity::Negative,
+        }
+    }
+}
+
+trait LowerImplType {
+    fn lower(&self) -> rust_ir::ImplType;
+}
+
+impl LowerImplType for ImplType {
+    fn lower(&self) -> rust_ir::ImplType {
+        match self {
+            ImplType::Local => rust_ir::ImplType::Local,
+            ImplType::External => rust_ir::ImplType::External,
+        }
+    }
+}
+
+trait LowerTraitFlags {
+    fn lower(&self) -> rust_ir::TraitFlags;
+}
+
+impl LowerTraitFlags for TraitFlags {
+    fn lower(&self) -> rust_ir::TraitFlags {
+        rust_ir::TraitFlags {
+            auto: self.auto,
+            marker: self.marker,
+            upstream: self.upstream,
+            fundamental: self.fundamental,
+            non_enumerable: self.non_enumerable,
+        }
     }
 }
 
@@ -943,16 +968,17 @@ trait LowerImpl {
 
 impl LowerImpl for Impl {
     fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum> {
+        let polarity = self.polarity.lower();
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
 
-            if !trait_ref.is_positive() && !self.assoc_ty_values.is_empty() {
+            if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
                 return Err(format_err!(
                     "negative impls cannot define associated values"
                 ));
             }
 
-            let trait_id = trait_ref.trait_ref().trait_id;
+            let trait_id = trait_ref.trait_id;
             let where_clauses = self.lower_where_clauses(&env)?;
             let associated_ty_values = self
                 .assoc_ty_values
@@ -963,14 +989,14 @@ impl LowerImpl for Impl {
                 trait_ref,
                 where_clauses,
                 associated_ty_values,
-                impl_type: match self.impl_type {
-                    ImplType::Local => rust_ir::ImplType::Local,
-                    ImplType::External => rust_ir::ImplType::External,
-                },
             })
         })?;
 
-        Ok(rust_ir::ImplDatum { binders: binders })
+        Ok(rust_ir::ImplDatum {
+            polarity,
+            binders: binders,
+            impl_type: self.impl_type.lower(),
+        })
     }
 }
 
@@ -1080,18 +1106,14 @@ impl LowerTrait for TraitDefn {
             Ok(rust_ir::TraitDatumBound {
                 trait_ref: trait_ref,
                 where_clauses: self.lower_where_clauses(env)?,
-                flags: rust_ir::TraitFlags {
-                    auto: self.flags.auto,
-                    marker: self.flags.marker,
-                    upstream: self.flags.upstream,
-                    fundamental: self.flags.fundamental,
-                    non_enumerable: self.flags.non_enumerable,
-                },
                 associated_ty_ids,
             })
         })?;
 
-        Ok(rust_ir::TraitDatum { binders: binders })
+        Ok(rust_ir::TraitDatum {
+            binders: binders,
+            flags: self.flags.lower(),
+        })
     }
 }
 

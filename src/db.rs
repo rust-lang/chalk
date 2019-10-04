@@ -93,7 +93,7 @@ impl RustIrDatabase for ChalkDatabase {
             .impl_data
             .iter()
             .filter(|(_, impl_datum)| {
-                let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
+                let trait_ref = &impl_datum.binders.value.trait_ref;
                 trait_id == trait_ref.trait_id && {
                     assert_eq!(trait_ref.parameters.len(), parameters.len());
                     <[_] as CouldMatch<[_]>>::could_match(&parameters, &trait_ref.parameters)
@@ -109,9 +109,7 @@ impl RustIrDatabase for ChalkDatabase {
             .impl_data
             .iter()
             .filter(|(_, impl_datum)| {
-                let impl_trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
-                let impl_type = impl_datum.binders.value.impl_type;
-                impl_trait_id == trait_id && impl_type == ImplType::Local
+                impl_datum.trait_id() == trait_id && impl_datum.impl_type == ImplType::Local
             })
             .map(|(&impl_id, _)| impl_id)
             .collect()
@@ -126,7 +124,7 @@ impl RustIrDatabase for ChalkDatabase {
             .impl_data
             .values()
             .any(|impl_datum| {
-                let impl_trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
+                let impl_trait_ref = &impl_datum.binders.value.trait_ref;
                 impl_trait_ref.trait_id == auto_trait_id
                     && match impl_trait_ref.parameters[0].assert_ty_ref() {
                         Ty::Apply(apply) => match apply.name {

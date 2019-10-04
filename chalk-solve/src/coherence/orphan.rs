@@ -26,7 +26,7 @@ pub fn perform_orphan_check(
         .binders
         .map_ref(|bound_impl| {
             // Ignoring the polarization of the impl's polarized trait ref
-            DomainGoal::LocalImplAllowed(bound_impl.trait_ref.trait_ref().clone())
+            DomainGoal::LocalImplAllowed(bound_impl.trait_ref.clone())
         })
         .cast();
 
@@ -38,7 +38,7 @@ pub fn perform_orphan_check(
     debug!("overlaps = {:?}", is_allowed);
 
     if !is_allowed {
-        let trait_id = impl_datum.binders.value.trait_ref.trait_ref().trait_id;
+        let trait_id = impl_datum.trait_id();
         let trait_name = db.type_name(trait_id.into());
         Err(CoherenceError::FailedOrphanCheck(trait_name))?;
     }

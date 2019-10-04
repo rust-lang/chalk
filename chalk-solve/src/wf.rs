@@ -184,10 +184,9 @@ where
     pub fn verify_trait_impl(&self, impl_id: ImplId) -> Result<(), WfError> {
         let impl_datum = self.db.impl_datum(impl_id);
 
-        let trait_ref = match impl_datum.binders.value.trait_ref {
-            PolarizedTraitRef::Positive(ref trait_ref) => trait_ref,
-            _ => return Ok(()),
-        };
+        if !impl_datum.is_positive() {
+            return Ok(());
+        }
 
         // We retrieve all the input types of the where clauses appearing on the trait impl,
         // e.g. in:
@@ -217,6 +216,7 @@ where
         // }
         // ```
         let mut header_input_types = Vec::new();
+        let trait_ref = &impl_datum.binders.value.trait_ref;
         trait_ref.fold(&mut header_input_types);
 
         // Associated type values are special because they can be parametric (independently of
@@ -341,7 +341,7 @@ where
         if is_legal {
             Ok(())
         } else {
-            let trait_ref = impl_datum.binders.value.trait_ref.trait_ref();
+            let trait_ref = &impl_datum.binders.value.trait_ref;
             let name = self.db.type_name(trait_ref.trait_id.into());
             Err(WfError::IllFormedTraitImpl(name))
         }

@@ -61,7 +61,7 @@ impl Program {
     pub(crate) fn local_impl_ids(&self) -> Vec<ImplId> {
         self.impl_data
             .iter()
-            .filter(|(_, impl_datum)| impl_datum.binders.value.impl_type == ImplType::Local)
+            .filter(|(_, impl_datum)| impl_datum.impl_type == ImplType::Local)
             .map(|(&impl_id, _)| impl_id)
             .collect()
     }
