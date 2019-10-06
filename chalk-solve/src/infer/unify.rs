@@ -118,6 +118,10 @@ impl<'t> Unifier<'t> {
 
             (&Ty::InferenceVar(var), ty @ &Ty::Apply(_))
             | (ty @ &Ty::Apply(_), &Ty::InferenceVar(var))
+            | (&Ty::InferenceVar(var), ty @ &Ty::Opaque(_))
+            | (ty @ Ty::Opaque(_), &Ty::InferenceVar(var))
+            | (&Ty::InferenceVar(var), ty @ &Ty::Dyn(_))
+            | (ty @ &Ty::Dyn(_), &Ty::InferenceVar(var))
             | (&Ty::InferenceVar(var), ty @ &Ty::ForAll(_))
             | (ty @ &Ty::ForAll(_), &Ty::InferenceVar(var)) => self.unify_var_ty(var, ty),
 
@@ -138,13 +142,24 @@ impl<'t> Unifier<'t> {
                 Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
             }
 
+            (&Ty::Opaque(ref qwc1), &Ty::Opaque(ref qwc2))
+            | (&Ty::Dyn(ref qwc1), &Ty::Dyn(ref qwc2))
+            | (&Ty::Dyn(ref qwc1), &Ty::Opaque(ref qwc2))
+            | (&Ty::Opaque(ref qwc1), &Ty::Dyn(ref qwc2)) => {
+                Zip::zip_with(self, qwc1, qwc2)
+            }
+
             (ty @ &Ty::Apply(_), &Ty::Projection(ref proj))
             | (ty @ &Ty::ForAll(_), &Ty::Projection(ref proj))
             | (ty @ &Ty::InferenceVar(_), &Ty::Projection(ref proj))
+            | (ty @ &Ty::Dyn(_), &Ty::Projection(ref proj))
+            | (ty @ &Ty::Opaque(_), &Ty::Projection(ref proj))
             | (&Ty::Projection(ref proj), ty @ &Ty::Projection(_))
             | (&Ty::Projection(ref proj), ty @ &Ty::Apply(_))
             | (&Ty::Projection(ref proj), ty @ &Ty::ForAll(_))
-            | (&Ty::Projection(ref proj), ty @ &Ty::InferenceVar(_)) => {
+            | (&Ty::Projection(ref proj), ty @ &Ty::InferenceVar(_))
+            | (&Ty::Projection(ref proj), ty @ &Ty::Dyn(_))
+            | (&Ty::Projection(ref proj), ty @ &Ty::Opaque(_)) => {
                 self.unify_projection_ty(proj, ty)
             }
 

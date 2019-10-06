@@ -178,9 +178,12 @@ impl<'infer> AntiUnifier<'infer> {
 
             // Ugh. Aggregating two types like `for<'a> fn(&'a u32,
             // &'a u32)` and `for<'a, 'b> fn(&'a u32, &'b u32)` seems
-            // kinda' hard. Don't try to be smart for now, just plop a
+            // kinda hard. Don't try to be smart for now, just plop a
             // variable in there and be done with it.
-            (Ty::BoundVar(_), Ty::BoundVar(_)) | (Ty::ForAll(_), Ty::ForAll(_)) => {
+            (Ty::BoundVar(_), Ty::BoundVar(_))
+            | (Ty::ForAll(_), Ty::ForAll(_))
+            | (Ty::Dyn(_), Ty::Dyn(_))
+            | (Ty::Opaque(_), Ty::Opaque(_)) => {
                 self.new_variable()
             }
 
@@ -195,6 +198,8 @@ impl<'infer> AntiUnifier<'infer> {
             // Mismatched base kinds.
             (Ty::InferenceVar(_), _)
             | (Ty::BoundVar(_), _)
+            | (Ty::Dyn(_), _)
+            | (Ty::Opaque(_), _)
             | (Ty::ForAll(_), _)
             | (Ty::Apply(_), _)
             | (Ty::Projection(_), _) => self.new_variable(),
