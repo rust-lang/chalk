@@ -7,7 +7,7 @@
 //! This algorithm is very closed based on the description found in the
 //! following paper, which I will refer to in the comments as EWFS:
 //!
-//! > Efficient Top-Down Computation of Queries Under the Well-formed Semantics
+//! > Efficient Top-Down Computation of Queries Under the Well-founded Semantics
 //! > (Chen, Swift, and Warren; Journal of Logic Programming '95)
 //!
 //! However, to understand that paper, I would recommend first
