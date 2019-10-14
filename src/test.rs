@@ -117,40 +117,7 @@ mod implied_bounds;
 mod impls;
 mod projection;
 mod unify;
-
-#[test]
-fn struct_wf() {
-    test! {
-        program {
-            struct Foo<T> where T: Eq { }
-            struct Bar { }
-            struct Baz { }
-
-            trait Eq { }
-
-            impl Eq for Baz { }
-            impl<T> Eq for Foo<T> where T: Eq { }
-        }
-
-        goal {
-            WellFormed(Foo<Bar>)
-        } yields {
-            "No possible solution"
-        }
-
-        goal {
-            WellFormed(Foo<Baz>)
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-
-        goal {
-            WellFormed(Foo<Foo<Baz>>)
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-    }
-}
+mod wf_goals;
 
 #[test]
 fn generic_trait() {
