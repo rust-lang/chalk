@@ -116,30 +116,6 @@ mod impls;
 mod projection;
 
 #[test]
-#[should_panic]
-fn overflow() {
-    test! {
-        program {
-            trait Q { }
-            struct Z { }
-            struct G<X>
-            struct S<X>
-
-            impl Q for Z { }
-            impl<X> Q for G<X> where X: Q { }
-            impl<X> Q for S<X> where X: Q, S<G<X>>: Q { }
-        }
-
-        // Will try to prove S<G<Z>>: Q then S<G<G<Z>>>: Q etc ad infinitum
-        goal {
-            S<Z>: Q
-        } yields {
-            ""
-        }
-    }
-}
-
-#[test]
 fn implied_bounds() {
     test! {
         program {
