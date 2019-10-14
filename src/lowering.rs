@@ -3,6 +3,7 @@ use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
+use chalk_rust_ir::IntoWhereClauses;
 use chalk_rust_ir::{Anonymize, ToParameter};
 use failure::{Fail, Fallible};
 use itertools::Itertools;
@@ -858,27 +859,29 @@ impl LowerTy for Ty {
                 NameLookup::Parameter(d) => Ok(chalk_ir::Ty::BoundVar(d)),
             },
 
-            Ty::Dyn { bounds } => Ok(chalk_ir::Ty::Dyn(env.in_binders(
+            Ty::Dyn { ref bounds } => Ok(chalk_ir::Ty::Dyn(env.in_binders(
                 // FIXME: Figure out a proper name for this type parameter
                 Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
                 |env| {
-                    bounds
-                        .lower()?
+                    Ok(bounds
+                        .lower(env)?
+                        .iter()
                         .flat_map(|qil| qil.into_where_clauses(chalk_ir::Ty::BoundVar(0)))
-                        .collect()
+                        .collect())
                 },
-            ))),
+            )?)),
 
-            Ty::Opaque { bounds } => Ok(chalk_ir::Ty::Opaque(env.in_binders(
+            Ty::Opaque { ref bounds } => Ok(chalk_ir::Ty::Opaque(env.in_binders(
                 // FIXME: Figure out a proper name for this type parameter
                 Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
                 |env| {
-                    bounds
-                        .lower()?
+                    Ok(bounds
+                        .lower(env)?
+                        .iter()
                         .flat_map(|qil| qil.into_where_clauses(chalk_ir::Ty::BoundVar(0)))
-                        .collect()
+                        .collect())
                 },
-            ))),
+            )?)),
 
             Ty::Apply { name, ref args } => {
                 let id = match env.lookup(name)? {
