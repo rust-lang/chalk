@@ -120,54 +120,6 @@ mod projection;
 /// Demonstrates that, given the expected value of the associated
 /// type, we can use that to narrow down the relevant impls.
 #[test]
-fn normalize_rev_infer() {
-    test! {
-        program {
-            trait Identity { type Item; }
-            struct u32 { }
-            struct i32 { }
-            impl Identity for u32 { type Item = u32; }
-            impl Identity for i32 { type Item = i32; }
-        }
-
-        goal {
-            exists<T> {
-                T: Identity<Item = u32>
-            }
-        } yields {
-            "Unique; substitution [?0 := u32]"
-        }
-    }
-}
-
-/// Demonstrates that, given the expected value of the associated
-/// type, we can use that to narrow down the relevant impls.
-#[test]
-fn normalize_rev_infer_gat() {
-    test! {
-        program {
-            trait Combine { type Item<T>; }
-            struct u32 { }
-            struct i32 { }
-            struct Either<T, U> { }
-            impl Combine for u32 { type Item<U> = Either<u32, U>; }
-            impl Combine for i32 { type Item<U> = Either<i32, U>; }
-        }
-
-        goal {
-            exists<T, U> {
-                T: Combine<Item<U> = Either<u32, i32>>
-            }
-        } yields {
-            // T is ?1 and U is ?0, so this is surprising, but correct! (See #126.)
-            "Unique; substitution [?0 := i32, ?1 := u32]"
-        }
-    }
-}
-
-/// Demonstrates that, given the expected value of the associated
-/// type, we can use that to narrow down the relevant impls.
-#[test]
 fn region_equality() {
     test! {
         program {
