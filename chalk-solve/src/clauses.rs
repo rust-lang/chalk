@@ -268,8 +268,17 @@ fn push_program_clauses_for_associated_type_values_in_impls_of(
     }
 }
 
-/// Given the "self-type" of a domain goal, push potentially relevant program
-/// clauses.
+/// Examine `T` and push clauses that may be relevant to proving the
+/// following sorts of goals (and maybe others):
+///
+/// * `DomainGoal::WellFormed(T)`
+/// * `DomainGoal::IsUpstream(T)`
+/// * `DomainGoal::DownstreamType(T)`
+/// * `DomainGoal::IsFullyVisible(T)`
+/// * `DomainGoal::IsLocal(T)`
+///
+/// Note that the type `T` must not be an unbound inference variable;
+/// earlier parts of the logic should "flounder" in that case.
 fn match_ty(
     db: &dyn RustIrDatabase,
     environment: &Arc<Environment>,
