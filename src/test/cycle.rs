@@ -147,14 +147,13 @@ fn multiple_ambiguous_cycles() {
 }
 
 #[test]
-#[should_panic]
 fn overflow() {
     test! {
         program {
             trait Q { }
             struct Z { }
-            struct G<X>
-            struct S<X>
+            struct G<X> { }
+            struct S<X> { }
 
             impl Q for Z { }
             impl<X> Q for G<X> where X: Q { }
@@ -165,7 +164,7 @@ fn overflow() {
         goal {
             S<Z>: Q
         } yields {
-            ""
+            "No possible solution"
         }
     }
 }
