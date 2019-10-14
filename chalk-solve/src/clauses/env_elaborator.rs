@@ -61,8 +61,12 @@ impl<'db, 'set> EnvElaborator<'db, 'set> {
             Ty::Projection(projection_ty) => {
                 self.visit_projection_ty(projection_ty);
             }
-            // FIXME #203
-            Ty::Dyn(_) | Ty::Opaque(_) | Ty::ForAll(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
+
+            // FIXME(#203) -- We haven't fully figured out the implied
+            // bounds story around object and impl trait types.
+            Ty::Dyn(_) | Ty::Opaque(_) => (),
+
+            Ty::ForAll(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
         }
         self.round.extend(clauses);
     }
