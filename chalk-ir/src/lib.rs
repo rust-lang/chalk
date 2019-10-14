@@ -827,6 +827,10 @@ impl<T> Binders<T>
 where
     T: Fold,
 {
+    /// Substitute `parameters` for the variables introduced by these
+    /// binders. So if the binders represent (e.g.) `<X, Y> { T }` and
+    /// parameters is the slice `[A, B]`, then returns `[X => A, Y =>
+    /// B] T`.
     pub fn substitute(&self, parameters: &[Parameter]) -> T::Result {
         assert_eq!(self.binders.len(), parameters.len());
         Subst::apply(parameters, &self.value)
