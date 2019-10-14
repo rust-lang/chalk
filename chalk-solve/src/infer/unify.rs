@@ -105,6 +105,8 @@ impl<'t> Unifier<'t> {
         );
 
         match (a, b) {
+            // Unifying two inference variables: unify them in the underlying
+            // ena table.
             (&Ty::InferenceVar(var1), &Ty::InferenceVar(var2)) => {
                 debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
                 let var1 = EnaVariable::from(var1);
@@ -116,6 +118,7 @@ impl<'t> Unifier<'t> {
                     .expect("unification of two unbound variables cannot fail"))
             }
 
+            // Unifying an inference variables with a non-inference variable.
             (&Ty::InferenceVar(var), ty @ &Ty::Apply(_))
             | (ty @ &Ty::Apply(_), &Ty::InferenceVar(var))
             | (&Ty::InferenceVar(var), ty @ &Ty::Opaque(_))
@@ -125,16 +128,23 @@ impl<'t> Unifier<'t> {
             | (&Ty::InferenceVar(var), ty @ &Ty::ForAll(_))
             | (ty @ &Ty::ForAll(_), &Ty::InferenceVar(var)) => self.unify_var_ty(var, ty),
 
+            // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&Ty::ForAll(ref quantified_ty1), &Ty::ForAll(ref quantified_ty2)) => {
                 self.unify_forall_tys(quantified_ty1, quantified_ty2)
             }
 
-            (&Ty::ForAll(ref quantified_ty), apply_ty @ &Ty::Apply(_))
-            | (apply_ty @ &Ty::Apply(_), &Ty::ForAll(ref quantified_ty)) => {
-                self.unify_forall_apply(quantified_ty, apply_ty)
+            // Unifying `forall<X> { T }` with some other type `U`
+            (&Ty::ForAll(ref quantified_ty), other_ty @ &Ty::Apply(_))
+            | (&Ty::ForAll(ref quantified_ty), other_ty @ &Ty::Dyn(_))
+            | (&Ty::ForAll(ref quantified_ty), other_ty @ &Ty::Opaque(_))
+            | (other_ty @ &Ty::Apply(_), &Ty::ForAll(ref quantified_ty))
+            | (other_ty @ &Ty::Dyn(_), &Ty::ForAll(ref quantified_ty))
+            | (other_ty @ &Ty::Opaque(_), &Ty::ForAll(ref quantified_ty)) => {
+                self.unify_forall_other(quantified_ty, other_ty)
             }
 
             (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
+                // Cannot unify (e.g.) some struct type `Foo` and some struct type `Bar`
                 if apply1.name != apply2.name {
                     return Err(NoSolution);
                 }
@@ -142,13 +152,26 @@ impl<'t> Unifier<'t> {
                 Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
             }
 
-            (&Ty::Opaque(ref qwc1), &Ty::Opaque(ref qwc2))
-            | (&Ty::Dyn(ref qwc1), &Ty::Dyn(ref qwc2))
-            | (&Ty::Dyn(ref qwc1), &Ty::Opaque(ref qwc2))
-            | (&Ty::Opaque(ref qwc1), &Ty::Dyn(ref qwc2)) => {
-                Zip::zip_with(self, qwc1, qwc2)
+            // Cannot unify (e.g.) some struct type `Foo` and an `impl Trait` type
+            (&Ty::Apply(_), &Ty::Opaque(_)) | (&Ty::Opaque(_), &Ty::Apply(_)) => {
+                return Err(NoSolution);
             }
 
+            // Cannot unify (e.g.) some struct type `Foo` and a `dyn Trait` type
+            (&Ty::Apply(_), &Ty::Dyn(_)) | (&Ty::Dyn(_), &Ty::Apply(_)) => {
+                return Err(NoSolution);
+            }
+
+            // Cannot unify (e.g.) some `dyn Trait` and some `impl Trait` type
+            (&Ty::Dyn(..), &Ty::Opaque(..)) | (&Ty::Opaque(..), &Ty::Dyn(..)) => {
+                return Err(NoSolution);
+            }
+
+            (&Ty::Opaque(ref qwc1), &Ty::Opaque(ref qwc2))
+            | (&Ty::Dyn(ref qwc1), &Ty::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
+
+            // Unifying an associated type projection `<T as
+            // Trait>::Item` with some other type `U`.
             (ty @ &Ty::Apply(_), &Ty::Projection(ref proj))
             | (ty @ &Ty::ForAll(_), &Ty::Projection(ref proj))
             | (ty @ &Ty::InferenceVar(_), &Ty::Projection(ref proj))
@@ -201,6 +224,12 @@ impl<'t> Unifier<'t> {
         self.sub_unify(ty1, ty2)
     }
 
+    /// Unify an associated type projection `proj` like `<T as Trait>::Item` with some other
+    /// type `ty` (which might also be a projection). Creates a goal like
+    ///
+    /// ```notrust
+    /// ProjectionEq(<T as Trait>::Item = U)
+    /// ```
     fn unify_projection_ty(&mut self, proj: &ProjectionTy, ty: &Ty) -> Fallible<()> {
         Ok(self.goals.push(InEnvironment::new(
             self.environment,
@@ -212,7 +241,11 @@ impl<'t> Unifier<'t> {
         )))
     }
 
-    fn unify_forall_apply(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Fallible<()> {
+    /// Unifying `forall<X> { T }` with some other type `U` --
+    /// to do so, we create a fresh placeholder `P` for `X` and
+    /// see if `[X/Px] T` can be unified with `U`. This should
+    /// almost never be true, actually, unless `X` is unused.
+    fn unify_forall_other(&mut self, ty1: &QuantifiedTy, ty2: &Ty) -> Fallible<()> {
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|idx| Lifetime::Placeholder(PlaceholderIndex { ui, idx }).cast())
@@ -224,6 +257,12 @@ impl<'t> Unifier<'t> {
         self.sub_unify(ty1, ty2)
     }
 
+    /// Unify an inference variable `var` with some non-inference
+    /// variable `ty`, just bind `var` to `ty`. But we must enforce two conditions:
+    ///
+    /// - `var` does not appear inside of `ty` (the standard `OccursCheck`)
+    /// - `ty` does not reference anything in a lifetime that could not be named in `var`
+    ///   (the extended `OccursCheck` created to handle universes)
     fn unify_var_ty(&mut self, var: InferenceVar, ty: &Ty) -> Fallible<()> {
         debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
 
