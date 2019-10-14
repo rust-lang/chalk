@@ -167,7 +167,19 @@ fn program_clauses_that_could_match(
                 }
             }
 
-            // Check for impl and dyn Traits so that we generate `Implemented(impl Foo: Foo)`
+            // If the self type is `dyn Foo` (or `impl Foo`), then we generate clauses like:
+            //
+            // ```notrust
+            // Implemented(dyn Foo: Foo)
+            // ```
+            //
+            // FIXME. This is presently rather wasteful, in that we
+            // don't check that the `dyn Foo: Foo` trait is relevant
+            // to the goal `goal` that we are actually *trying* to
+            // prove (though there is some later code that will screen
+            // out irrelevant stuff). In other words, we might be
+            // trying to prove `dyn Foo: Bar`, in which case the clause
+            // for `dyn Foo: Foo` is not particularly relevant.
             match trait_ref.self_type_parameter() {
                 Some(Ty::Opaque(qwc)) | Some(Ty::Dyn(qwc)) => {
                     let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
