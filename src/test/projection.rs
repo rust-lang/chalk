@@ -419,3 +419,82 @@ fn forall_projection_gat() {
         }
     }
 }
+
+#[test]
+fn normalize_under_binder() {
+    test! {
+        program {
+            struct Ref<'a, T> { }
+            struct I32 { }
+
+            trait Deref<'a> {
+                type Item;
+            }
+
+            trait Id<'a> {
+                type Item;
+            }
+
+            impl<'a, T> Deref<'a> for Ref<'a, T> {
+                type Item = T;
+            }
+
+            impl<'a, T> Id<'a> for Ref<'a, T> {
+                type Item = Ref<'a, T>;
+            }
+        }
+
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Ref<'a, I32>: Deref<'a, Item = U>
+                }
+            }
+        } yields {
+            "Ambiguous"
+        }
+
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Normalize(<Ref<'a, I32> as Deref<'a>>::Item -> U)
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := I32], lifetime constraints []"
+        }
+
+        goal {
+            forall<'a> {
+                exists<U> {
+                    Ref<'a, I32>: Id<'a, Item = U>
+                }
+            }
+        } yields {
+            "Ambiguous"
+        }
+
+        goal {
+            forall<'a> {
+                exists<U> {
+                    Normalize(<Ref<'a, I32> as Id<'a>>::Item -> U)
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := Ref<'!1_0, I32>], lifetime constraints []"
+        }
+
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Normalize(<Ref<'a, I32> as Id<'a>>::Item -> U)
+                }
+            }
+        } yields {
+            "Unique; for<?U0> { \
+             substitution [?0 := Ref<'^0, I32>], \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }] \
+             }"
+        }
+    }
+}
