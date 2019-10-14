@@ -74,3 +74,81 @@ fn prove_infer() {
         }
     }
 }
+
+/// Test the interaction of `forall` goals and impls. For example,
+/// test that we can prove things like
+///
+/// ```notrust
+/// forall<T> { Vec<T>: Marker }
+/// ```
+///
+/// given a suitably generic impl.
+#[test]
+fn prove_forall() {
+    test! {
+        program {
+            struct Foo { }
+            struct Vec<T> { }
+
+            trait Marker { }
+            impl<T> Marker for Vec<T> { }
+
+            trait Clone { }
+            impl Clone for Foo { }
+
+            impl<T> Clone for Vec<T> where T: Clone { }
+        }
+
+        goal {
+            forall<T> { T: Marker }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T> { not { T: Marker } }
+        } yields {
+            "No"
+        }
+
+        goal {
+            not { forall<T> { T: Marker } }
+        } yields {
+            "Unique"
+        }
+
+        // If we assume `T: Marker`, then obviously `T: Marker`.
+        goal {
+            forall<T> { if (T: Marker) { T: Marker } }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        // We don't have to know anything about `T` to know that
+        // `Vec<T>: Marker`.
+        goal {
+            forall<T> { Vec<T>: Marker }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        // Here, we don't know that `T: Clone`, so we can't prove that
+        // `Vec<T>: Clone`.
+        goal {
+            forall<T> { Vec<T>: Clone }
+        } yields {
+            "No possible solution"
+        }
+
+        // Here, we do know that `T: Clone`, so we can.
+        goal {
+            forall<T> {
+                if (T: Clone) {
+                    Vec<T>: Clone
+                }
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
