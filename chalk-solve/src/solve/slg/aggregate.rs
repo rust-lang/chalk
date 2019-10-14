@@ -183,9 +183,7 @@ impl<'infer> AntiUnifier<'infer> {
             (Ty::BoundVar(_), Ty::BoundVar(_))
             | (Ty::ForAll(_), Ty::ForAll(_))
             | (Ty::Dyn(_), Ty::Dyn(_))
-            | (Ty::Opaque(_), Ty::Opaque(_)) => {
-                self.new_variable()
-            }
+            | (Ty::Opaque(_), Ty::Opaque(_)) => self.new_variable(),
 
             (Ty::Apply(apply1), Ty::Apply(apply2)) => {
                 self.aggregate_application_tys(apply1, apply2)
