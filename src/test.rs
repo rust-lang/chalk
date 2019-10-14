@@ -148,37 +148,6 @@ fn inner_cycle() {
 }
 
 #[test]
-fn prove_infer() {
-    test! {
-        program {
-            struct Foo { }
-            struct Bar { }
-            trait Map<T> { }
-            impl Map<Bar> for Foo { }
-            impl Map<Foo> for Bar { }
-        }
-
-        goal {
-            exists<A, B> { A: Map<B> }
-        } yields {
-            "Ambiguous; no inference guidance"
-        }
-
-        goal {
-            exists<A> { A: Map<Bar> }
-        } yields {
-            "Unique; substitution [?0 := Foo], lifetime constraints []"
-        }
-
-        goal {
-            exists<A> { Foo: Map<A> }
-        } yields {
-            "Unique; substitution [?0 := Bar], lifetime constraints []"
-        }
-    }
-}
-
-#[test]
 fn prove_forall() {
     test! {
         program {
