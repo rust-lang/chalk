@@ -85,6 +85,8 @@ impl Debug for Ty {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             Ty::BoundVar(depth) => write!(fmt, "^{}", depth),
+            Ty::Dyn(clauses) => write!(fmt, "{:?}", clauses),
+            Ty::Opaque(clauses) => write!(fmt, "{:?}", clauses),
             Ty::InferenceVar(var) => write!(fmt, "{:?}", var),
             Ty::Apply(apply) => write!(fmt, "{:?}", apply),
             Ty::Projection(proj) => write!(fmt, "{:?}", proj),

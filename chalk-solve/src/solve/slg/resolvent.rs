@@ -346,6 +346,10 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
 
             (Ty::Apply(answer), Ty::Apply(pending)) => Zip::zip_with(self, answer, pending),
 
+            (Ty::Dyn(answer), Ty::Dyn(pending)) | (Ty::Opaque(answer), Ty::Opaque(pending)) => {
+                Zip::zip_with(self, answer, pending)
+            }
+
             (Ty::Projection(answer), Ty::Projection(pending)) => {
                 Zip::zip_with(self, answer, pending)
             }
@@ -366,6 +370,8 @@ impl<'t> Zipper for AnswerSubstitutor<'t> {
 
             (Ty::BoundVar(_), _)
             | (Ty::Apply(_), _)
+            | (Ty::Dyn(_), _)
+            | (Ty::Opaque(_), _)
             | (Ty::Projection(_), _)
             | (Ty::ForAll(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",

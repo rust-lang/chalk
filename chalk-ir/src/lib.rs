@@ -25,7 +25,7 @@ macro_rules! impl_debugs {
 use crate::cast::Cast;
 use crate::fold::shift::Shift;
 use crate::fold::{
-    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder,
+    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder, Subst,
 };
 use chalk_engine::fallible::*;
 use lalrpop_intern::InternedString;
@@ -234,6 +234,41 @@ pub enum Ty {
     /// This type is also used for base types like `u32` (which just apply
     /// an empty list).
     Apply(ApplicationTy),
+
+    /// A "dyn" type is a trait object type created via the "dyn Trait" syntax.
+    /// In the chalk parser, the traits that the object represents is parsed as
+    /// a QuantifiedInlineBound, and is then changed to a list of where clauses
+    /// during lowering.
+    ///
+    /// See the `Opaque` variant for a discussion about the use of
+    /// binders here.
+    Dyn(Binders<Vec<QuantifiedWhereClause>>),
+
+    /// An "opaque" type is one that is created via the "impl Trait" syntax.
+    /// They are named so because the concrete type implementing the trait
+    /// is unknown, and hence the type is opaque to us. The only information
+    /// that we know of is that this type implements the traits listed by the
+    /// user.
+    ///
+    /// The "binder" here represents the unknown self type. So, a type like
+    /// `impl for<'a> Fn(&'a u32)` would be represented with two-levels of
+    /// binder, as "depicted" here:
+    ///
+    /// ```notrust
+    /// exists<type> {
+    ///    vec![
+    ///        // A QuantifiedWhereClause:
+    ///        forall<region> { ^1: Fn(&^0 u32) }
+    ///    ]
+    /// }
+    /// ```
+    ///
+    /// The outer `exists<type>` binder indicates that there exists
+    /// some type that meets the criteria within, but that type is not
+    /// known. It is referenced within the type using `^1`, indicating
+    /// a bound type with debruijn index 1 (i.e., skipping through one
+    /// level of binder).
+    Opaque(Binders<Vec<QuantifiedWhereClause>>),
 
     /// A "projection" type corresponds to an (unnormalized)
     /// projection like `<P0 as Trait<P1..Pn>>::Foo`. Note that the
@@ -785,6 +820,20 @@ impl<T> Binders<T> {
 
     pub fn len(&self) -> usize {
         self.binders.len()
+    }
+}
+
+impl<T> Binders<T>
+where
+    T: Fold,
+{
+    /// Substitute `parameters` for the variables introduced by these
+    /// binders. So if the binders represent (e.g.) `<X, Y> { T }` and
+    /// parameters is the slice `[A, B]`, then returns `[X => A, Y =>
+    /// B] T`.
+    pub fn substitute(&self, parameters: &[Parameter]) -> T::Result {
+        assert_eq!(self.binders.len(), parameters.len());
+        Subst::apply(parameters, &self.value)
     }
 }
 

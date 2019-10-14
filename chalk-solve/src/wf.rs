@@ -68,6 +68,10 @@ impl FoldInputTypes for Ty {
                 accumulator.push(self.clone());
                 app.parameters.fold(accumulator);
             }
+            Ty::Dyn(qwc) | Ty::Opaque(qwc) => {
+                accumulator.push(self.clone());
+                qwc.fold(accumulator);
+            }
             Ty::Projection(proj) => {
                 accumulator.push(self.clone());
                 proj.parameters.fold(accumulator);

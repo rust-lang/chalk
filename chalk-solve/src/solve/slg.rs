@@ -447,7 +447,11 @@ impl MayInvalidate {
             }
 
             // For everything else, be conservative here and just say we may invalidate.
-            (Ty::ForAll(_), _) | (Ty::Apply(_), _) | (Ty::Projection(_), _) => true,
+            (Ty::ForAll(_), _)
+            | (Ty::Dyn(_), _)
+            | (Ty::Opaque(_), _)
+            | (Ty::Apply(_), _)
+            | (Ty::Projection(_), _) => true,
         }
     }
 
