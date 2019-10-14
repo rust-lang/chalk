@@ -341,3 +341,81 @@ fn normalize_gat_with_higher_ranked_trait_bound() {
         }
     }
 }
+
+#[test]
+fn forall_projection() {
+    test! {
+        program {
+            trait Eq<T> { }
+            impl<T> Eq<T> for T { }
+
+            trait DropLt<'a> { type Item; }
+            impl<'a, T> DropLt<'a> for T { type Item = T; }
+
+            struct Unit { }
+            struct Ref<'a, T> { }
+        }
+
+        goal {
+            for<'a> <Unit as DropLt<'a>>::Item: Eq<Unit>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+/// Demonstrates that, given the expected value of the associated
+/// type, we can use that to narrow down the relevant impls.
+#[test]
+fn forall_projection_gat() {
+    test! {
+        program {
+            trait Eq<T> { }
+            impl<T> Eq<T> for T { }
+
+            trait Sized { }
+
+            trait DropOuter<'a> { type Item<U> where U: Sized; }
+            impl<'a, T> DropOuter<'a> for T { type Item<U> = T; }
+
+            struct Unit { }
+            struct Ref<'a, T> { }
+        }
+
+        goal {
+            forall<T> {
+                for<'a> <Unit as DropOuter<'a>>::Item<T>: Eq<Unit>
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Sized) {
+                    for<'a> <Unit as DropOuter<'a>>::Item<T>: Eq<Unit>
+                }
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<'a, T> {
+                WellFormed(<Unit as DropOuter<'a>>::Item<T>)
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Sized) {
+                    WellFormed(for<'a> <Unit as DropOuter<'a>>::Item<T>: Eq<Unit>)
+                }
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
