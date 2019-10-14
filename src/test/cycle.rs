@@ -99,3 +99,49 @@ fn cycle_unique_solution() {
         }
     }
 }
+
+#[test]
+fn multiple_ambiguous_cycles() {
+    test! {
+        program {
+            trait WF { }
+            trait Sized { }
+
+            struct Vec<T> { }
+            struct Int { }
+
+            impl Sized for Int { }
+            impl WF for Int { }
+
+            impl<T> WF for Vec<T> where T: Sized { }
+            impl<T> Sized for Vec<T> where T: WF, T: Sized { }
+        }
+
+        //          ?T: WF
+        //             |
+        //             |
+        //             |
+        // Int: WF. <-----> (Vec<?T>: WF) :- (?T: Sized)
+        //                              |
+        //                              |
+        //                              |
+        //              Int: Sized. <-------> (Vec<?T>: Sized) :- (?T: Sized), (?T: WF)
+        //                                                            |            |
+        //                                                            |            |
+        //                                                            |            |
+        //                                                          cycle        cycle
+        //
+        // Depending on the evaluation order of the above tree (which cycle we come upon first),
+        // we may fail to reach a fixed point if we loop continuously because `Ambig` does not perform
+        // any unification. We must stop looping as soon as we encounter `Ambig`. In fact without
+        // this strategy, the above program will not even be loaded because of the overlap check which
+        // will loop forever.
+        goal {
+            exists<T> {
+                T: WF
+            }
+        } yields {
+            "Ambig"
+        }
+    }
+}
