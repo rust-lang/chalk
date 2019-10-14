@@ -15,7 +15,7 @@ macro_rules! index_struct {
             #[allow(dead_code)]
             $v fn get_and_increment(&mut self) -> Self {
                 let old_value = *self;
-                self.value += 1;
+                self.increment();
                 old_value
             }
 
@@ -31,14 +31,14 @@ macro_rules! index_struct {
         }
 
         impl ::std::fmt::Debug for $n {
-            fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+            fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 write!(fmt, "{}({})", stringify!($n), self.value)
             }
         }
 
         impl From<usize> for $n {
             fn from(value: usize) -> Self {
-                Self { value: value }
+                Self { value }
             }
         }
     }
