@@ -1,3 +1,6 @@
+//! Tests related to the basic conversion of impls into logical predicates
+//! and other core logic functions.
+
 use super::*;
 
 #[test]
