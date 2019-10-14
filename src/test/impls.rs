@@ -245,3 +245,86 @@ fn normalize_rev_infer_gat() {
         }
     }
 }
+
+#[test]
+fn generic_trait() {
+    test! {
+        program {
+            struct Int { }
+            struct Uint { }
+
+            trait Eq<T> { }
+
+            impl Eq<Int> for Int { }
+            impl Eq<Uint> for Uint { }
+        }
+
+        goal {
+            Int: Eq<Int>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            Uint: Eq<Uint>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            Int: Eq<Uint>
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+// Test that we properly detect failure even if there are applicable impls at
+// the top level, if we can't find anything to fill in those impls with
+fn deep_failure() {
+    test! {
+        program {
+            struct Foo<T> {}
+            trait Bar {}
+            trait Baz {}
+
+            impl<T> Bar for Foo<T> where T: Baz {}
+        }
+
+        goal {
+            exists<T> { T: Baz }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            exists<T> { Foo<T>: Bar }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+// Test that we infer a unique solution even if it requires multiple levels of
+// search to do so
+fn deep_success() {
+    test! {
+        program {
+            struct Foo<T> {}
+            struct ImplsBaz {}
+            trait Bar {}
+            trait Baz {}
+
+            impl Baz for ImplsBaz {}
+            impl<T> Bar for Foo<T> where T: Baz {}
+        }
+
+        goal {
+            exists<T> { Foo<T>: Bar }
+        } yields {
+            "Unique; substitution [?0 := ImplsBaz]"
+        }
+    }
+}
