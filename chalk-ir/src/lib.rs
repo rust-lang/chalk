@@ -254,7 +254,7 @@ pub enum Ty {
     /// `impl for<'a> Fn(&'a u32)` would be represented with two-levels of
     /// binder, as "depicted" here:
     ///
-    /// ```
+    /// ```notrust
     /// exists<type> {
     ///    vec![
     ///        // A QuantifiedWhereClause:
@@ -823,7 +823,10 @@ impl<T> Binders<T> {
     }
 }
 
-impl<T> Binders<T> where T: Fold {
+impl<T> Binders<T>
+where
+    T: Fold,
+{
     pub fn substitute(&self, parameters: &[Parameter]) -> T::Result {
         assert_eq!(self.binders.len(), parameters.len());
         Subst::apply(parameters, &self.value)
