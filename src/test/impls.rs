@@ -188,3 +188,45 @@ fn inner_cycle() {
         }
     }
 }
+
+#[test]
+fn higher_ranked() {
+    test! {
+        program {
+            struct u8 { }
+            struct SomeType<T> { }
+            trait Foo<T> { }
+            impl<U> Foo<u8> for SomeType<U> { }
+        }
+
+        goal {
+            exists<V> {
+                forall<U> {
+                    SomeType<U>: Foo<V>
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := u8], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn ordering() {
+    test! {
+        program {
+            trait Foo<T> { }
+            impl<U> Foo<U> for U { }
+        }
+
+        goal {
+            exists<V> {
+                forall<U> {
+                    U: Foo<V>
+                }
+            }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
