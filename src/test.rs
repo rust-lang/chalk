@@ -10,7 +10,7 @@ use chalk_solve::{Solution, SolverChoice};
 mod bench;
 mod coherence;
 mod slg;
-mod wf;
+mod wf_lowering;
 
 fn assert_result(result: &Option<Solution>, expected: &str) {
     let result = match result {
