@@ -511,3 +511,131 @@ fn inapplicable_assumption_does_not_shadow() {
         }
     }
 }
+
+#[test]
+fn partial_overlap_2() {
+    test! {
+        program {
+            trait Marker<T> {}
+            trait Foo {}
+            trait Bar {}
+
+            struct i32 {}
+            struct u32 {}
+
+            impl<T> Marker<i32> for T where T: Foo {}
+            impl<T> Marker<u32> for T where T: Bar {}
+        }
+
+        goal {
+            forall<T> {
+                if (T: Foo; T: Bar) {
+                    exists<A> { T: Marker<A> }
+                }
+            }
+        } yields {
+            "Ambiguous"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Foo; T: Bar) {
+                    T: Marker<u32>
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> {
+                if (T: Foo; T: Bar) {
+                    T: Marker<i32>
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn partial_overlap_3() {
+    test! {
+        program {
+            #[marker] trait Marker {}
+            trait Foo {}
+            trait Bar {}
+
+            impl<T> Marker for T where T: Foo {}
+            impl<T> Marker for T where T: Bar {}
+
+            struct i32 {}
+            impl Foo for i32 {}
+            impl Bar for i32 {}
+        }
+
+        goal {
+            forall<T> {
+                if (T: Foo; T: Bar) { T: Marker }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            i32: Marker
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn clauses_in_if_goals() {
+    test! {
+        program {
+            trait Foo { }
+            struct Vec<T> { }
+            struct i32 { }
+        }
+
+        goal {
+            if (forall<T> { T: Foo }) {
+                forall<T> { T: Foo }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> {
+                if (Vec<T>: Foo :- T: Foo) {
+                    if (T: Foo) {
+                        Vec<T>: Foo
+                    }
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            if (forall<T> { Vec<T>: Foo :- T: Foo }) {
+                if (i32: Foo) {
+                    Vec<i32>: Foo
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            if (forall<T> { Vec<T>: Foo :- T: Foo }) {
+                Vec<i32>: Foo
+            }
+        } yields {
+            "No possible solution"
+        }
+    }
+}

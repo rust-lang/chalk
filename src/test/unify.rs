@@ -250,3 +250,35 @@ fn mixed_indices_normalize_gat_application() {
         }
     }
 }
+
+#[test]
+fn quantified_types() {
+    test! {
+        program {
+            trait Foo { }
+            struct fn<'a> { }
+            struct fn2<'a, 'b> { }
+            impl Foo for for<'a> fn<'a> { }
+        }
+
+        goal {
+            for<'a> fn<'a>: Foo
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            for<'a, 'b> fn2<'a, 'b> = for<'b, 'a> fn2<'a, 'b>
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<'a> { fn<'a>: Foo }
+        } yields {
+            // Lifetime constraints are unsatisfiable
+            "Unique; substitution [], \
+            lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '!1_0 }]"
+        }
+    }
+}

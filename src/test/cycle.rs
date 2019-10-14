@@ -168,3 +168,30 @@ fn overflow() {
         }
     }
 }
+
+#[test]
+fn overflow_universe() {
+    test! {
+        program {
+            struct Foo { }
+
+            trait Bar { }
+
+            // When asked to solve X: Bar, we will produce a
+            // requirement to solve !1_0: Bar. And then when asked to
+            // solve that, we'll produce a requirement to solve !1_1:
+            // Bar.  And so forth.
+            forall<X> { X: Bar if forall<Y> { Y: Bar } }
+        }
+
+        goal {
+            Foo: Bar
+        } yields {
+            // The internal universe canonicalization in the on-demand/recursive
+            // solver means that when we are asked to solve (e.g.)
+            // `!1_1: Bar`, we rewrite that to `!1_0: Bar`, identifying a
+            // cycle.
+            "No possible solution"
+        }
+    }
+}

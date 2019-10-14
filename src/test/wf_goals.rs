@@ -35,3 +35,23 @@ fn struct_wf() {
         }
     }
 }
+
+#[test]
+fn recursive_where_clause_on_type() {
+    test! {
+        program {
+            trait Bar { }
+            trait Foo where Self: Bar { }
+
+            struct S where S: Foo { }
+
+            impl Foo for S { }
+        }
+
+        goal {
+            WellFormed(S)
+        } yields {
+            "No possible solution"
+        }
+    }
+}
