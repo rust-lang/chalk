@@ -116,39 +116,6 @@ mod impls;
 mod projection;
 
 #[test]
-fn inner_cycle() {
-    // Interesting test that shows why recursive solver needs to run
-    // to an inner fixed point during iteration. Here, the first
-    // round, we get that `?T: A` has a unique sol'n `?T = i32`.  On
-    // the second round, we ought to get ambiguous: but if we don't
-    // run the `?T: B` to a fixed point, it will terminate with `?T =
-    // i32`, leading to an (incorrect) unique solution.
-    test! {
-        program {
-            #[marker]
-            trait A { }
-            #[marker]
-            trait B { }
-
-            struct i32 { }
-            struct Vec<T> { }
-
-            impl<T> A for T where T: B { }
-            impl A for i32 { }
-
-            impl<T> B for T where T: A { }
-            impl<T> B for Vec<T> where T: B { }
-        }
-
-        goal {
-            exists<T> { T: A }
-        } yields {
-            "Ambiguous"
-        }
-    }
-}
-
-#[test]
 fn higher_ranked() {
     test! {
         program {
