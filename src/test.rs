@@ -112,7 +112,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
     }
 }
 
-mod basic_impls;
+mod impls;
 
 #[test]
 fn inner_cycle() {
