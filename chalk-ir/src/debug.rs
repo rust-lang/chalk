@@ -132,14 +132,44 @@ impl Debug for ApplicationTy {
     }
 }
 
+impl TraitRef {
+    /// Returns a "Debuggable" type that prints like `P0 as Trait<P1..>`
+    pub fn with_as(&self) -> impl std::fmt::Debug + '_ {
+        SeparatorTraitRef {
+            trait_ref: self,
+            separator: " as ",
+        }
+    }
+
+    /// Returns a "Debuggable" type that prints like `P0: Trait<P1..>`
+    pub fn with_colon(&self) -> impl std::fmt::Debug + '_ {
+        SeparatorTraitRef {
+            trait_ref: self,
+            separator: ": ",
+        }
+    }
+}
+
 impl Debug for TraitRef {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        Debug::fmt(&self.with_as(), fmt)
+    }
+}
+
+struct SeparatorTraitRef<'me> {
+    trait_ref: &'me TraitRef,
+    separator: &'me str,
+}
+
+impl Debug for SeparatorTraitRef<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(
             fmt,
-            "{:?} as {:?}{:?}",
-            self.parameters[0],
-            self.trait_id,
-            Angle(&self.parameters[1..])
+            "{:?}{}{:?}{:?}",
+            self.trait_ref.parameters[0],
+            self.separator,
+            self.trait_ref.trait_id,
+            Angle(&self.trait_ref.parameters[1..])
         )
     }
 }
