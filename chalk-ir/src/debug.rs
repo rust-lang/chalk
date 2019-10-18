@@ -259,7 +259,6 @@ impl Debug for DomainGoal {
             DomainGoal::WellFormed(n) => write!(fmt, "{:?}", n),
             DomainGoal::FromEnv(n) => write!(fmt, "{:?}", n),
             DomainGoal::Normalize(n) => write!(fmt, "{:?}", n),
-            DomainGoal::InScope(n) => write!(fmt, "InScope({:?})", n),
             DomainGoal::IsLocal(n) => write!(fmt, "IsLocal({:?})", n),
             DomainGoal::IsUpstream(n) => write!(fmt, "IsUpstream({:?})", n),
             DomainGoal::IsFullyVisible(n) => write!(fmt, "IsFullyVisible({:?})", n),

@@ -236,7 +236,6 @@ pub enum DomainGoal {
     TyWellFormed { ty: Ty },
     TyFromEnv { ty: Ty },
     TraitRefFromEnv { trait_ref: TraitRef },
-    TraitInScope { trait_name: Identifier },
     IsLocal { ty: Ty },
     IsUpstream { ty: Ty },
     IsFullyVisible { ty: Ty },

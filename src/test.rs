@@ -122,26 +122,3 @@ mod negation;
 mod projection;
 mod unify;
 mod wf_goals;
-
-#[test]
-fn inscope() {
-    test! {
-        program {
-            trait Foo { }
-        }
-
-        goal {
-            InScope(Foo)
-        } yields {
-            "No possible solution"
-        }
-
-        goal {
-            if (InScope(Foo)) {
-                InScope(Foo)
-            }
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-    }
-}

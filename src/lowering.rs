@@ -502,18 +502,6 @@ impl LowerDomainGoal for DomainGoal {
             DomainGoal::TraitRefFromEnv { trait_ref } => vec![chalk_ir::DomainGoal::FromEnv(
                 chalk_ir::FromEnv::Trait(trait_ref.lower(env)?),
             )],
-            DomainGoal::TraitInScope { trait_name } => {
-                let id = match env.lookup(*trait_name)? {
-                    NameLookup::Type(id) => id,
-                    NameLookup::Parameter(_) => Err(RustIrError::NotTrait(*trait_name))?,
-                };
-
-                if env.type_kind(id).sort != rust_ir::TypeSort::Trait {
-                    Err(RustIrError::NotTrait(*trait_name))?;
-                }
-
-                vec![chalk_ir::DomainGoal::InScope(id.into())]
-            }
             DomainGoal::IsLocal { ty } => vec![chalk_ir::DomainGoal::IsLocal(ty.lower(env)?)],
             DomainGoal::IsUpstream { ty } => vec![chalk_ir::DomainGoal::IsUpstream(ty.lower(env)?)],
             DomainGoal::IsFullyVisible { ty } => {

@@ -232,7 +232,6 @@ enum_zip!(DomainGoal {
     WellFormed,
     FromEnv,
     Normalize,
-    InScope,
     IsLocal,
     IsUpstream,
     IsFullyVisible,

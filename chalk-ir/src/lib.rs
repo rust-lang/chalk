@@ -74,19 +74,6 @@ impl Environment {
         env.clauses = env_clauses.into_iter().collect();
         Arc::new(env)
     }
-
-    /// Return the set of all in-scope trait ids from the environment.
-    /// This is used in "unselected normalization" of projections like
-    /// `T::Item`, where the trait is not fully known.
-    ///
-    /// FIXME -- This is a bit of a hack, because we assume that the
-    /// set of in-scope traits is always found in the environment and
-    /// has a simple form. This happens to be true, of course.
-    pub fn in_scope_trait_ids(&self) -> impl Iterator<Item = TraitId> + '_ {
-        self.clauses
-            .iter()
-            .flat_map(|clause| clause.in_scope_trait_id())
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -641,8 +628,6 @@ pub enum DomainGoal {
 
     Normalize(Normalize),
 
-    InScope(TypeKindId),
-
     /// True if a type is considered to have been "defined" by the current crate. This is true for
     /// a `struct Foo { }` but false for a `#[upstream] struct Foo { }`. However, for fundamental types
     /// like `Box<T>`, it is true if `T` is local.
@@ -875,30 +860,10 @@ pub struct ProgramClauseImplication {
     pub conditions: Vec<Goal>,
 }
 
-impl ProgramClauseImplication {
-    /// See `Environment::in_scope_trait_ids`
-    pub fn in_scope_trait_id(&self) -> Option<TraitId> {
-        match self.consequence {
-            DomainGoal::InScope(TypeKindId::TraitId(trait_id)) => Some(trait_id),
-            _ => None,
-        }
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ProgramClause {
     Implies(ProgramClauseImplication),
     ForAll(Binders<ProgramClauseImplication>),
-}
-
-impl ProgramClause {
-    /// See `Environment::in_scope_trait_ids`
-    pub fn in_scope_trait_id(&self) -> Option<TraitId> {
-        match self {
-            ProgramClause::Implies(implication) => implication.in_scope_trait_id(),
-            ProgramClause::ForAll(binders) => binders.value.in_scope_trait_id(),
-        }
-    }
 }
 
 impl ProgramClause {

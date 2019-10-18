@@ -67,16 +67,6 @@ impl ToProgramClauses for AssociatedTyValue {
     ///         Implemented(Iter<'a, T>: 'a).   // (2)
     /// }
     /// ```
-    ///
-    /// and:
-    ///
-    /// ```notrust
-    /// forall<'a, T> {
-    ///     UnselectedNormalize(Vec<T>::IntoIter<'a> -> Iter<'a, T>) :-
-    ///         InScope(Iterable),
-    ///         Normalize(<Vec<T> as Iterable>::IntoIter<'a> -> Iter<'a, T>).
-    /// }
-    /// ```
     fn to_program_clauses(&self, db: &dyn RustIrDatabase, clauses: &mut Vec<ProgramClause>) {
         let impl_datum = db.impl_datum(self.impl_id);
         let associated_ty = db.associated_ty_data(self.associated_ty_id);

@@ -228,7 +228,6 @@ fn program_clauses_that_could_match(
                 clauses,
             );
         }
-        DomainGoal::InScope(type_kind_id) => match_type_kind(db, *type_kind_id, clauses),
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)
             .to_program_clauses(db, clauses),
