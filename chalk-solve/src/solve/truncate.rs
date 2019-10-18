@@ -2,6 +2,7 @@
 
 use crate::infer::InferenceTable;
 use chalk_engine::fallible::*;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{
     self, DefaultFreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder, Fold, TypeFolder,
@@ -14,7 +15,7 @@ pub(crate) fn truncate<T>(
     value: &T,
 ) -> Truncated<T::Result>
 where
-    T: Fold,
+    T: Fold<ChalkIr>,
 {
     debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
 
@@ -60,7 +61,7 @@ impl<'infer> Truncater<'infer> {
         }
     }
 
-    fn overflow(&mut self, pre_size: usize) -> Ty {
+    fn overflow(&mut self, pre_size: usize) -> Ty<ChalkIr> {
         self.overflow = true;
         self.current_size = pre_size + 1;
         let universe = self.infer.max_universe();
@@ -68,8 +69,8 @@ impl<'infer> Truncater<'infer> {
     }
 }
 
-impl<'infer> TypeFolder for Truncater<'infer> {
-    fn fold_ty(&mut self, ty: &Ty, binders: usize) -> Fallible<Ty> {
+impl<'infer> TypeFolder<ChalkIr> for Truncater<'infer> {
+    fn fold_ty(&mut self, ty: &Ty<ChalkIr>, binders: usize) -> Fallible<Ty<ChalkIr>> {
         if let Some(normalized_ty) = self.infer.normalize_shallow(ty) {
             return self.fold_ty(&normalized_ty, binders);
         }
@@ -104,7 +105,11 @@ impl<'infer> TypeFolder for Truncater<'infer> {
         Ok(result)
     }
 
-    fn fold_lifetime(&mut self, lifetime: &Lifetime, binders: usize) -> Fallible<Lifetime> {
+    fn fold_lifetime(
+        &mut self,
+        lifetime: &Lifetime<ChalkIr>,
+        binders: usize,
+    ) -> Fallible<Lifetime<ChalkIr>> {
         fold::super_fold_lifetime(self, lifetime, binders)
     }
 }

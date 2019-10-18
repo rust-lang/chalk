@@ -1,3 +1,4 @@
+use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::*;
 use std::fmt::Debug;
 
@@ -9,7 +10,10 @@ impl InferenceTable {
     /// inference variable. This substitution can then be applied to
     /// C, which would be equivalent to
     /// `self.instantiate_canonical(v)`.
-    pub(crate) fn fresh_subst(&mut self, binders: &[ParameterKind<UniverseIndex>]) -> Substitution {
+    pub(crate) fn fresh_subst(
+        &mut self,
+        binders: &[ParameterKind<UniverseIndex>],
+    ) -> Substitution<ChalkIr> {
         Substitution {
             parameters: binders
                 .iter()
@@ -24,7 +28,7 @@ impl InferenceTable {
     /// Variant on `instantiate` that takes a `Canonical<T>`.
     pub(crate) fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
     where
-        T: Fold + Debug,
+        T: Fold<ChalkIr> + Debug,
     {
         let subst = self.fresh_subst(&bound.binders);
         bound.value.fold_with(&mut &subst, 0).unwrap()
@@ -42,7 +46,7 @@ impl InferenceTable {
         arg: &T,
     ) -> T::Result
     where
-        T: Fold,
+        T: Fold<ChalkIr>,
         U: IntoIterator<Item = ParameterKind<()>>,
     {
         let binders: Vec<_> = binders
@@ -60,7 +64,7 @@ impl InferenceTable {
         arg: &impl BindersAndValue<Output = T>,
     ) -> T::Result
     where
-        T: Fold,
+        T: Fold<ChalkIr>,
     {
         let (binders, value) = arg.split();
         let max_universe = self.max_universe;
@@ -73,7 +77,7 @@ impl InferenceTable {
         arg: &impl BindersAndValue<Output = T>,
     ) -> T::Result
     where
-        T: Fold,
+        T: Fold<ChalkIr>,
     {
         let (binders, value) = arg.split();
         let ui = self.new_universe();

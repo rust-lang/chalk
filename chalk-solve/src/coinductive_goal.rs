@@ -1,4 +1,5 @@
 use crate::RustIrDatabase;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 
 pub trait IsCoinductive {
@@ -13,7 +14,7 @@ pub trait IsCoinductive {
     fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool;
 }
 
-impl IsCoinductive for Goal {
+impl IsCoinductive for Goal<ChalkIr> {
     fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool {
         match self {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => match wca {
@@ -27,7 +28,7 @@ impl IsCoinductive for Goal {
     }
 }
 
-impl IsCoinductive for UCanonical<InEnvironment<Goal>> {
+impl IsCoinductive for UCanonical<InEnvironment<Goal<ChalkIr>>> {
     fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool {
         self.canonical.value.goal.is_coinductive(db)
     }

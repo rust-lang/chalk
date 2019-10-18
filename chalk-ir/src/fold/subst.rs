@@ -1,30 +1,30 @@
 use super::*;
 use crate::fold::shift::Shift;
 
-pub struct Subst<'s> {
+pub struct Subst<'s, TF: TypeFamily> {
     /// Values to substitute. A reference to a free variable with
     /// index `i` will be mapped to `parameters[i]` -- if `i >
     /// parameters.len()`, then we will leave the variable untouched.
-    parameters: &'s [Parameter],
+    parameters: &'s [Parameter<TF>],
 }
 
-impl<'s> Subst<'s> {
-    pub fn apply<T: Fold>(parameters: &[Parameter], value: &T) -> T::Result {
+impl<'s, TF: TypeFamily> Subst<'s, TF> {
+    pub fn apply<T: Fold<TF>>(parameters: &[Parameter<TF>], value: &T) -> T::Result {
         value.fold_with(&mut Subst { parameters }, 0).unwrap()
     }
 }
 
-impl QuantifiedTy {
-    pub fn substitute(&self, parameters: &[Parameter]) -> Ty {
+impl<TF: TypeFamily> QuantifiedTy<TF> {
+    pub fn substitute(&self, parameters: &[Parameter<TF>]) -> Ty<TF> {
         assert_eq!(self.num_binders, parameters.len());
         Subst::apply(parameters, &self.ty)
     }
 }
 
-impl<'b> DefaultTypeFolder for Subst<'b> {}
+impl<'b, TF: TypeFamily> DefaultTypeFolder for Subst<'b, TF> {}
 
-impl<'b> FreeVarFolder for Subst<'b> {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         if depth >= self.parameters.len() {
             Ok(Ty::BoundVar(depth - self.parameters.len() + binders))
         } else {
@@ -35,7 +35,7 @@ impl<'b> FreeVarFolder for Subst<'b> {
         }
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
         if depth >= self.parameters.len() {
             Ok(Lifetime::BoundVar(depth - self.parameters.len() + binders))
         } else {
@@ -47,6 +47,6 @@ impl<'b> FreeVarFolder for Subst<'b> {
     }
 }
 
-impl<'b> DefaultPlaceholderFolder for Subst<'b> {}
+impl<'b, TF: TypeFamily> DefaultPlaceholderFolder for Subst<'b, TF> {}
 
-impl<'b> DefaultInferenceFolder for Subst<'b> {}
+impl<'b, TF: TypeFamily> DefaultInferenceFolder for Subst<'b, TF> {}

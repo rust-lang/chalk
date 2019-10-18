@@ -5,7 +5,7 @@ use crate::*;
 
 /// Methods for converting debruijn indices to move values into or out
 /// of binders.
-pub trait Shift: Fold {
+pub trait Shift<TF: TypeFamily>: Fold<TF> {
     /// Shifts debruijn indices in `self` **up**, which is used when a
     /// value is being placed under additional levels of binders.
     ///
@@ -61,7 +61,7 @@ pub trait Shift: Fold {
     fn shifted_out(&self, adjustment: usize) -> Fallible<Self::Result>;
 }
 
-impl<T: Fold + Eq> Shift for T {
+impl<T: Fold<TF> + Eq, TF: TypeFamily> Shift<TF> for T {
     fn shifted_in(&self, adjustment: usize) -> T::Result {
         self.fold_with(&mut Shifter { adjustment }, 0).unwrap()
     }
@@ -88,12 +88,12 @@ impl Shifter {
 
 impl DefaultTypeFolder for Shifter {}
 
-impl FreeVarFolder for Shifter {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<TF: TypeFamily> FreeVarFolder<TF> for Shifter {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         Ok(Ty::BoundVar(self.adjust(depth, binders)))
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
         Ok(Lifetime::BoundVar(self.adjust(depth, binders)))
     }
 }
@@ -130,12 +130,12 @@ impl DownShifter {
 
 impl DefaultTypeFolder for DownShifter {}
 
-impl FreeVarFolder for DownShifter {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty> {
+impl<TF: TypeFamily> FreeVarFolder<TF> for DownShifter {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         Ok(Ty::BoundVar(self.adjust(depth, binders)?))
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
         Ok(Lifetime::BoundVar(self.adjust(depth, binders)?))
     }
 }

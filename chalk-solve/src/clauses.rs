@@ -3,6 +3,7 @@ use self::program_clauses::ToProgramClauses;
 use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::could_match::CouldMatch;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
@@ -44,7 +45,7 @@ pub fn push_auto_trait_impls(
     auto_trait_id: TraitId,
     struct_id: StructId,
     program: &dyn RustIrDatabase,
-    vec: &mut Vec<ProgramClause>,
+    vec: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
     debug_heading!(
         "push_auto_trait_impls({:?}, {:?})",
@@ -108,9 +109,9 @@ pub fn push_auto_trait_impls(
 /// derived from the trait `Clone` and its impls.
 pub(crate) fn program_clauses_for_goal<'db>(
     db: &'db dyn RustIrDatabase,
-    environment: &Arc<Environment>,
-    goal: &DomainGoal,
-) -> Vec<ProgramClause> {
+    environment: &Arc<Environment<ChalkIr>>,
+    goal: &DomainGoal<ChalkIr>,
+) -> Vec<ProgramClause<ChalkIr>> {
     debug_heading!(
         "program_clauses_for_goal(goal={:?}, environment={:?})",
         goal,
@@ -134,9 +135,9 @@ pub(crate) fn program_clauses_for_goal<'db>(
 /// be.
 fn program_clauses_that_could_match(
     db: &dyn RustIrDatabase,
-    environment: &Arc<Environment>,
-    goal: &DomainGoal,
-    clauses: &mut Vec<ProgramClause>,
+    environment: &Arc<Environment<ChalkIr>>,
+    goal: &DomainGoal<ChalkIr>,
+    clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
     match goal {
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
@@ -252,8 +253,8 @@ fn program_clauses_that_could_match(
 fn push_program_clauses_for_associated_type_values_in_impls_of(
     db: &dyn RustIrDatabase,
     trait_id: TraitId,
-    trait_parameters: &[Parameter],
-    clauses: &mut Vec<ProgramClause>,
+    trait_parameters: &[Parameter<ChalkIr>],
+    clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
     for impl_id in db.impls_for_trait(trait_id, trait_parameters) {
         let impl_datum = db.impl_datum(impl_id);
@@ -280,9 +281,9 @@ fn push_program_clauses_for_associated_type_values_in_impls_of(
 /// earlier parts of the logic should "flounder" in that case.
 fn match_ty(
     db: &dyn RustIrDatabase,
-    environment: &Arc<Environment>,
-    ty: &Ty,
-    clauses: &mut Vec<ProgramClause>,
+    environment: &Arc<Environment<ChalkIr>>,
+    ty: &Ty<ChalkIr>,
+    clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
     match ty {
         Ty::Apply(application_ty) => match application_ty.name {
@@ -305,7 +306,7 @@ fn match_ty(
 fn match_type_kind(
     db: &dyn RustIrDatabase,
     type_kind_id: TypeKindId,
-    clauses: &mut Vec<ProgramClause>,
+    clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
     match type_kind_id {
         TypeKindId::TypeId(type_id) => db
@@ -320,8 +321,8 @@ fn match_type_kind(
 
 fn program_clauses_for_env<'db>(
     db: &'db dyn RustIrDatabase,
-    environment: &Arc<Environment>,
-    clauses: &mut Vec<ProgramClause>,
+    environment: &Arc<Environment<ChalkIr>>,
+    clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
     let mut last_round = FxHashSet::default();
     elaborate_env_clauses(db, &environment.clauses, &mut last_round);

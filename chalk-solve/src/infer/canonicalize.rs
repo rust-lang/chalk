@@ -1,4 +1,5 @@
 use chalk_engine::fallible::*;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{
     DefaultFreeVarFolder, DefaultTypeFolder, Fold, InferenceFolder, PlaceholderFolder,
@@ -27,7 +28,7 @@ impl InferenceTable {
     ///
     /// A substitution mapping from the free variables to their re-bound form is
     /// also returned.
-    pub(crate) fn canonicalize<T: Fold>(&mut self, value: &T) -> Canonicalized<T::Result> {
+    pub(crate) fn canonicalize<T: Fold<ChalkIr>>(&mut self, value: &T) -> Canonicalized<T::Result> {
         debug!("canonicalize({:#?})", value);
         let mut q = Canonicalizer {
             table: self,
@@ -95,12 +96,12 @@ impl<'q> Canonicalizer<'q> {
 
 impl<'q> DefaultTypeFolder for Canonicalizer<'q> {}
 
-impl<'q> PlaceholderFolder for Canonicalizer<'q> {
+impl<'q> PlaceholderFolder<ChalkIr> for Canonicalizer<'q> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty> {
+    ) -> Fallible<Ty<ChalkIr>> {
         self.max_universe = max(self.max_universe, universe.ui);
         Ok(universe.to_ty())
     }
@@ -109,7 +110,7 @@ impl<'q> PlaceholderFolder for Canonicalizer<'q> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Lifetime> {
+    ) -> Fallible<Lifetime<ChalkIr>> {
         self.max_universe = max(self.max_universe, universe.ui);
         Ok(universe.to_lifetime())
     }
@@ -121,8 +122,8 @@ impl<'q> DefaultFreeVarFolder for Canonicalizer<'q> {
     }
 }
 
-impl<'q> InferenceFolder for Canonicalizer<'q> {
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty> {
+impl<'q> InferenceFolder<ChalkIr> for Canonicalizer<'q> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<ChalkIr>> {
         debug_heading!("fold_inference_ty(depth={:?}, binders={:?})", var, binders);
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
@@ -143,7 +144,11 @@ impl<'q> InferenceFolder for Canonicalizer<'q> {
         }
     }
 
-    fn fold_inference_lifetime(&mut self, var: InferenceVar, binders: usize) -> Fallible<Lifetime> {
+    fn fold_inference_lifetime(
+        &mut self,
+        var: InferenceVar,
+        binders: usize,
+    ) -> Fallible<Lifetime<ChalkIr>> {
         debug_heading!(
             "fold_inference_lifetime(depth={:?}, binders={:?})",
             var,

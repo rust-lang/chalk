@@ -1,3 +1,4 @@
+use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 use chalk_ir::{cast::Cast, fold::Fold};
 
@@ -47,9 +48,9 @@ impl InferenceTable {
     pub(crate) fn from_canonical<T>(
         num_universes: usize,
         canonical: &Canonical<T>,
-    ) -> (Self, Substitution, T)
+    ) -> (Self, Substitution<ChalkIr>, T)
     where
-        T: Fold<Result = T> + Clone,
+        T: Fold<ChalkIr, Result = T> + Clone,
     {
         let mut table = InferenceTable::new();
 
@@ -125,7 +126,7 @@ impl InferenceTable {
     /// `binders` is the number of binders under which `leaf` appears;
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
-    pub(crate) fn normalize_shallow(&mut self, leaf: &Ty) -> Option<Ty> {
+    pub(crate) fn normalize_shallow(&mut self, leaf: &Ty<ChalkIr>) -> Option<Ty<ChalkIr>> {
         let var = EnaVariable::from(leaf.inference_var()?);
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
@@ -139,7 +140,10 @@ impl InferenceTable {
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
-    pub(crate) fn normalize_lifetime(&mut self, leaf: &Lifetime) -> Option<Lifetime> {
+    pub(crate) fn normalize_lifetime(
+        &mut self,
+        leaf: &Lifetime<ChalkIr>,
+    ) -> Option<Lifetime<ChalkIr>> {
         let var = EnaVariable::from(leaf.inference_var()?);
         let v1 = self.probe_lifetime_var(var)?;
         assert!(!v1.needs_shift());
@@ -162,7 +166,7 @@ impl InferenceTable {
     /// This method is only valid for inference variables of kind
     /// type. If this variable is of a different kind, then the
     /// function may panic.
-    fn probe_ty_var(&mut self, var: EnaVariable) -> Option<Ty> {
+    fn probe_ty_var(&mut self, var: EnaVariable) -> Option<Ty<ChalkIr>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().ty().unwrap().clone()),
@@ -176,7 +180,7 @@ impl InferenceTable {
     ///
     /// This method is only valid for inference variables of kind
     /// lifetime. If this variable is of a different kind, then the function may panic.
-    fn probe_lifetime_var(&mut self, var: EnaVariable) -> Option<Lifetime> {
+    fn probe_lifetime_var(&mut self, var: EnaVariable) -> Option<Lifetime<ChalkIr>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().lifetime().unwrap().clone()),
@@ -197,11 +201,11 @@ impl InferenceTable {
 }
 
 pub(crate) trait ParameterEnaVariableExt {
-    fn to_parameter(self) -> Parameter;
+    fn to_parameter(self) -> Parameter<ChalkIr>;
 }
 
 impl ParameterEnaVariableExt for ParameterEnaVariable {
-    fn to_parameter(self) -> Parameter {
+    fn to_parameter(self) -> Parameter<ChalkIr> {
         match self {
             ParameterKind::Ty(v) => v.to_ty().cast(),
             ParameterKind::Lifetime(v) => v.to_lifetime().cast(),

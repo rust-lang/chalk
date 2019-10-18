@@ -1,3 +1,4 @@
+use crate::family::ChalkIr;
 use crate::{ProjectionTy, TypeKindId};
 use std::cell::RefCell;
 use std::fmt;
@@ -16,7 +17,7 @@ pub trait DebugContext {
 
     fn debug_projection(
         &self,
-        projection: &ProjectionTy,
+        projection: &ProjectionTy<ChalkIr>,
         fmt: &mut fmt::Formatter,
     ) -> Result<(), fmt::Error>;
 }

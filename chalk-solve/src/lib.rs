@@ -1,3 +1,4 @@
+use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::fmt::Debug;
@@ -17,7 +18,7 @@ pub mod wf;
 pub trait RustIrDatabase: Debug {
     /// Returns any "custom program clauses" that do not derive from
     /// Rust IR. Used only in testing the underlying solver.
-    fn custom_clauses(&self) -> Vec<ProgramClause>;
+    fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>>;
 
     /// Returns the datum for the associated type with the given id.
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
@@ -40,7 +41,7 @@ pub trait RustIrDatabase: Debug {
     /// apply. The parameters are provided as a "hint" to help the
     /// implementor do less work, but can be completely ignored if
     /// desired.
-    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter]) -> Vec<ImplId>;
+    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter<ChalkIr>]) -> Vec<ImplId>;
 
     /// Returns the impls that require coherence checking. This is not the
     /// full set of impls that exist:
@@ -75,8 +76,12 @@ pub trait RustIrDatabase: Debug {
     /// trait) and `['x]` (from the type).
     fn split_projection<'p>(
         &self,
-        projection: &'p ProjectionTy,
-    ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]);
+        projection: &'p ProjectionTy<ChalkIr>,
+    ) -> (
+        Arc<AssociatedTyDatum>,
+        &'p [Parameter<ChalkIr>],
+        &'p [Parameter<ChalkIr>],
+    );
 }
 
 pub use solve::Guidance;

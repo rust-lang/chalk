@@ -4,6 +4,7 @@ use crate::ext::*;
 use crate::solve::SolverChoice;
 use crate::RustIrDatabase;
 use chalk_ir::cast::*;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::*;
 use chalk_ir::*;
@@ -42,27 +43,27 @@ pub struct WfSolver<'db, DB: RustIrDatabase> {
 
 /// A trait for retrieving all types appearing in some Chalk construction.
 trait FoldInputTypes {
-    fn fold(&self, accumulator: &mut Vec<Ty>);
+    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>);
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
+    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
         for f in self {
             f.fold(accumulator);
         }
     }
 }
 
-impl FoldInputTypes for Parameter {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
+impl FoldInputTypes for Parameter<ChalkIr> {
+    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
         if let ParameterKind::Ty(ty) = &self.0 {
             ty.fold(accumulator)
         }
     }
 }
 
-impl FoldInputTypes for Ty {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
+impl FoldInputTypes for Ty<ChalkIr> {
+    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
         match self {
             Ty::Apply(app) => {
                 accumulator.push(self.clone());
@@ -92,21 +93,21 @@ impl FoldInputTypes for Ty {
     }
 }
 
-impl FoldInputTypes for TraitRef {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
+impl FoldInputTypes for TraitRef<ChalkIr> {
+    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
         self.parameters.fold(accumulator);
     }
 }
 
-impl FoldInputTypes for ProjectionEq {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
+impl FoldInputTypes for ProjectionEq<ChalkIr> {
+    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
         Ty::Projection(self.projection.clone()).fold(accumulator);
         self.ty.fold(accumulator);
     }
 }
 
-impl FoldInputTypes for WhereClause {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
+impl FoldInputTypes for WhereClause<ChalkIr> {
+    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
         match self {
             WhereClause::Implemented(tr) => tr.fold(accumulator),
             WhereClause::ProjectionEq(p) => p.fold(accumulator),
@@ -115,7 +116,7 @@ impl FoldInputTypes for WhereClause {
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty>) {
+    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
         self.value.fold(accumulator);
     }
 }

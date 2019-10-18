@@ -1,4 +1,5 @@
 use chalk_ir::debug::Angle;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
     Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, TypeId,
@@ -30,7 +31,7 @@ pub struct Program {
     pub(crate) associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum>>,
 
     /// For each user-specified clause
-    pub(crate) custom_clauses: Vec<ProgramClause>,
+    pub(crate) custom_clauses: Vec<ProgramClause<ChalkIr>>,
 }
 
 impl Program {
@@ -43,8 +44,12 @@ impl Program {
     /// Used primarily for debugging output.
     pub(crate) fn split_projection<'p>(
         &self,
-        projection: &'p ProjectionTy,
-    ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]) {
+        projection: &'p ProjectionTy<ChalkIr>,
+    ) -> (
+        Arc<AssociatedTyDatum>,
+        &'p [Parameter<ChalkIr>],
+        &'p [Parameter<ChalkIr>],
+    ) {
         let ProjectionTy {
             associated_ty_id,
             ref parameters,
@@ -94,7 +99,7 @@ impl tls::DebugContext for Program {
 
     fn debug_projection(
         &self,
-        projection_ty: &ProjectionTy,
+        projection_ty: &ProjectionTy<ChalkIr>,
         fmt: &mut fmt::Formatter,
     ) -> Result<(), fmt::Error> {
         let (associated_ty_data, trait_params, other_params) = self.split_projection(projection_ty);

@@ -47,76 +47,77 @@ macro_rules! reflexive_impl {
     };
 }
 
-reflexive_impl!(TraitRef);
-reflexive_impl!(LeafGoal);
-reflexive_impl!(DomainGoal);
-reflexive_impl!(WhereClause);
+reflexive_impl!(for(TF: TypeFamily) TraitRef<TF>);
+reflexive_impl!(for(TF: TypeFamily) LeafGoal<TF>);
+reflexive_impl!(for(TF: TypeFamily) DomainGoal<TF>);
+reflexive_impl!(for(TF: TypeFamily) WhereClause<TF>);
 
-impl Cast<WhereClause> for TraitRef {
-    fn cast(self) -> WhereClause {
+impl<TF: TypeFamily> Cast<WhereClause<TF>> for TraitRef<TF> {
+    fn cast(self) -> WhereClause<TF> {
         WhereClause::Implemented(self)
     }
 }
 
-impl Cast<WhereClause> for ProjectionEq {
-    fn cast(self) -> WhereClause {
+impl<TF: TypeFamily> Cast<WhereClause<TF>> for ProjectionEq<TF> {
+    fn cast(self) -> WhereClause<TF> {
         WhereClause::ProjectionEq(self)
     }
 }
 
-impl<T> Cast<DomainGoal> for T
+impl<T, TF> Cast<DomainGoal<TF>> for T
 where
-    T: Cast<WhereClause>,
+    T: Cast<WhereClause<TF>>,
+    TF: TypeFamily,
 {
-    fn cast(self) -> DomainGoal {
+    fn cast(self) -> DomainGoal<TF> {
         DomainGoal::Holds(self.cast())
     }
 }
 
-impl<T> Cast<LeafGoal> for T
+impl<T, TF: TypeFamily> Cast<LeafGoal<TF>> for T
 where
-    T: Cast<DomainGoal>,
+    T: Cast<DomainGoal<TF>>,
 {
-    fn cast(self) -> LeafGoal {
+    fn cast(self) -> LeafGoal<TF> {
         LeafGoal::DomainGoal(self.cast())
     }
 }
 
-impl<T> Cast<Goal> for T
+impl<T, TF: TypeFamily> Cast<Goal<TF>> for T
 where
-    T: Cast<LeafGoal>,
+    T: Cast<LeafGoal<TF>>,
 {
-    fn cast(self) -> Goal {
+    fn cast(self) -> Goal<TF> {
         Goal::Leaf(self.cast())
     }
 }
 
-impl Cast<DomainGoal> for Normalize {
-    fn cast(self) -> DomainGoal {
+impl<TF: TypeFamily> Cast<DomainGoal<TF>> for Normalize<TF> {
+    fn cast(self) -> DomainGoal<TF> {
         DomainGoal::Normalize(self)
     }
 }
 
-impl Cast<DomainGoal> for WellFormed {
-    fn cast(self) -> DomainGoal {
+impl<TF: TypeFamily> Cast<DomainGoal<TF>> for WellFormed<TF> {
+    fn cast(self) -> DomainGoal<TF> {
         DomainGoal::WellFormed(self)
     }
 }
 
-impl Cast<DomainGoal> for FromEnv {
-    fn cast(self) -> DomainGoal {
+impl<TF: TypeFamily> Cast<DomainGoal<TF>> for FromEnv<TF> {
+    fn cast(self) -> DomainGoal<TF> {
         DomainGoal::FromEnv(self)
     }
 }
 
-impl Cast<LeafGoal> for EqGoal {
-    fn cast(self) -> LeafGoal {
+impl<TF: TypeFamily> Cast<LeafGoal<TF>> for EqGoal<TF> {
+    fn cast(self) -> LeafGoal<TF> {
         LeafGoal::EqGoal(self)
     }
 }
 
-impl<T: Cast<Goal>> Cast<Goal> for Binders<T> {
-    fn cast(self) -> Goal {
+impl<T: Cast<Goal<TF>>, TF: TypeFamily> Cast<Goal<TF>> for Binders<T> {
+    fn cast(self) -> Goal<TF> {
         if self.binders.is_empty() {
             self.value.cast()
         } else {
@@ -128,35 +129,36 @@ impl<T: Cast<Goal>> Cast<Goal> for Binders<T> {
     }
 }
 
-impl Cast<Ty> for ApplicationTy {
-    fn cast(self) -> Ty {
+impl<TF: TypeFamily> Cast<Ty<TF>> for ApplicationTy<TF> {
+    fn cast(self) -> Ty<TF> {
         Ty::Apply(self)
     }
 }
 
-impl Cast<Ty> for ProjectionTy {
-    fn cast(self) -> Ty {
+impl<TF: TypeFamily> Cast<Ty<TF>> for ProjectionTy<TF> {
+    fn cast(self) -> Ty<TF> {
         Ty::Projection(self)
     }
 }
 
-impl Cast<Parameter> for Ty {
-    fn cast(self) -> Parameter {
+impl<TF: TypeFamily> Cast<Parameter<TF>> for Ty<TF> {
+    fn cast(self) -> Parameter<TF> {
         Parameter(ParameterKind::Ty(self))
     }
 }
 
-impl Cast<Parameter> for Lifetime {
-    fn cast(self) -> Parameter {
+impl<TF: TypeFamily> Cast<Parameter<TF>> for Lifetime<TF> {
+    fn cast(self) -> Parameter<TF> {
         Parameter(ParameterKind::Lifetime(self))
     }
 }
 
-impl<T> Cast<ProgramClause> for T
+impl<T, TF> Cast<ProgramClause<TF>> for T
 where
-    T: Cast<DomainGoal>,
+    T: Cast<DomainGoal<TF>>,
+    TF: TypeFamily,
 {
-    fn cast(self) -> ProgramClause {
+    fn cast(self) -> ProgramClause<TF> {
         ProgramClause::Implies(ProgramClauseImplication {
             consequence: self.cast(),
             conditions: vec![],
@@ -164,10 +166,14 @@ where
     }
 }
 
-impl<T: Cast<DomainGoal>> Cast<ProgramClause> for Binders<T> {
-    fn cast(self) -> ProgramClause {
+impl<T, TF> Cast<ProgramClause<TF>> for Binders<T>
+where
+    T: Cast<DomainGoal<TF>>,
+    TF: TypeFamily,
+{
+    fn cast(self) -> ProgramClause<TF> {
         if self.binders.is_empty() {
-            Cast::<ProgramClause>::cast(self.value)
+            Cast::<ProgramClause<TF>>::cast(self.value)
         } else {
             ProgramClause::ForAll(self.map(|bound| ProgramClauseImplication {
                 consequence: bound.cast(),
@@ -177,14 +183,14 @@ impl<T: Cast<DomainGoal>> Cast<ProgramClause> for Binders<T> {
     }
 }
 
-impl Cast<ProgramClause> for ProgramClauseImplication {
-    fn cast(self) -> ProgramClause {
+impl<TF: TypeFamily> Cast<ProgramClause<TF>> for ProgramClauseImplication<TF> {
+    fn cast(self) -> ProgramClause<TF> {
         ProgramClause::Implies(self)
     }
 }
 
-impl Cast<ProgramClause> for Binders<ProgramClauseImplication> {
-    fn cast(self) -> ProgramClause {
+impl<TF: TypeFamily> Cast<ProgramClause<TF>> for Binders<ProgramClauseImplication<TF>> {
+    fn cast(self) -> ProgramClause<TF> {
         ProgramClause::ForAll(self)
     }
 }
@@ -200,7 +206,11 @@ macro_rules! map_impl {
 }
 
 map_impl!(impl[T: Cast<U>, U] Cast<Option<U>> for Option<T>);
-map_impl!(impl[T: Cast<U>, U] Cast<InEnvironment<U>> for InEnvironment<T>);
+map_impl!(impl[
+    T: HasTypeFamily<TypeFamily = TF> + Cast<U>,
+    U: HasTypeFamily<TypeFamily = TF>,
+    TF: TypeFamily,
+] Cast<InEnvironment<U>> for InEnvironment<T>);
 map_impl!(impl[T: Cast<U>, U, E] Cast<Result<U, E>> for Result<T, E>);
 
 impl<T, U> Cast<Canonical<U>> for Canonical<T>

@@ -3,6 +3,7 @@ use crate::ext::*;
 use crate::RustIrDatabase;
 use crate::Solution;
 use chalk_ir::cast::*;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use chalk_rust_ir::*;
@@ -223,6 +224,6 @@ where
     }
 }
 
-fn params(impl_datum: &ImplDatum) -> &[Parameter] {
+fn params(impl_datum: &ImplDatum) -> &[Parameter<ChalkIr>] {
     &impl_datum.binders.value.trait_ref.parameters
 }
