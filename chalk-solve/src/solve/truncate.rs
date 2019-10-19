@@ -8,6 +8,7 @@ use chalk_ir::fold::{
     self, DefaultFreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder, Fold, TypeFolder,
 };
 use chalk_ir::*;
+use std::fmt::Debug;
 
 pub(crate) fn truncate<T>(
     infer: &mut InferenceTable,
@@ -16,6 +17,7 @@ pub(crate) fn truncate<T>(
 ) -> Truncated<T::Result>
 where
     T: Fold<ChalkIr>,
+    T::Result: Debug,
 {
     debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
 
