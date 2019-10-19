@@ -48,7 +48,7 @@ impl EnaVariable {
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a type (we can't check it).
     pub(crate) fn to_ty(self) -> Ty<ChalkIr> {
-        self.0.to_ty()
+        self.0.to_ty::<ChalkIr>()
     }
 
     /// Convert this inference variable into a lifetime. When using this

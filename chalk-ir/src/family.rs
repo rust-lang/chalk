@@ -1,24 +1,61 @@
+use crate::cast::Cast;
 use crate::debug::Angle;
+use crate::fold::{Fold, Folder, ReflexiveFold};
 use crate::tls;
+use crate::zip::Zip;
+use crate::Parameter;
+use crate::ParameterKind;
 use crate::ProjectionTy;
+use crate::Ty;
+use chalk_engine::fallible::Fallible;
 use std::fmt::{self, Debug};
 use std::hash::Hash;
 
 pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
+    type Type: Debug
+        + Clone
+        + Eq
+        + Ord
+        + Hash
+        + ReflexiveFold<Self>
+        + Zip<Self>
+        + Lookup<Ty<Self>>
+        + Cast<Parameter<Self>>;
+
     fn debug_projection(
         projection: &ProjectionTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
+
+    fn intern_ty(ty: Ty<Self>) -> Self::Type;
 }
 
 pub trait HasTypeFamily {
     type TypeFamily: TypeFamily;
 }
 
+pub trait Lookup<DataType> {
+    fn lookup_ref(&self) -> &DataType;
+
+    fn lookup(self) -> DataType;
+}
+
+impl Lookup<Ty<ChalkIr>> for Ty<ChalkIr> {
+    fn lookup_ref(&self) -> &Ty<ChalkIr> {
+        self
+    }
+
+    fn lookup(self) -> Ty<ChalkIr> {
+        self
+    }
+}
+
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct ChalkIr {}
 
 impl TypeFamily for ChalkIr {
+    type Type = Ty<ChalkIr>;
+
     fn debug_projection(
         projection: &ProjectionTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
@@ -33,6 +70,10 @@ impl TypeFamily for ChalkIr {
             ),
         })
     }
+
+    fn intern_ty(ty: Ty<ChalkIr>) -> Ty<ChalkIr> {
+        ty
+    }
 }
 
 impl<T: HasTypeFamily> HasTypeFamily for [T] {
@@ -41,4 +82,21 @@ impl<T: HasTypeFamily> HasTypeFamily for [T] {
 
 impl<T: HasTypeFamily> HasTypeFamily for Vec<T> {
     type TypeFamily = T::TypeFamily;
+}
+
+impl Fold<ChalkIr> for Ty<ChalkIr> {
+    type Result = Self;
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<ChalkIr>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        folder.fold_ty(self, binders)
+    }
+}
+
+impl Cast<Parameter<ChalkIr>> for Ty<ChalkIr> {
+    fn cast(self) -> Parameter<ChalkIr> {
+        Parameter(ParameterKind::Ty(self))
+    }
 }

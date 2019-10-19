@@ -141,12 +141,6 @@ impl<TF: TypeFamily> Cast<Ty<TF>> for ProjectionTy<TF> {
     }
 }
 
-impl<TF: TypeFamily> Cast<Parameter<TF>> for Ty<TF> {
-    fn cast(self) -> Parameter<TF> {
-        Parameter(ParameterKind::Ty(self))
-    }
-}
-
 impl<TF: TypeFamily> Cast<Parameter<TF>> for Lifetime<TF> {
     fn cast(self) -> Parameter<TF> {
         Parameter(ParameterKind::Lifetime(self))

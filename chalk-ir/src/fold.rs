@@ -65,7 +65,7 @@ pub trait Folder<TF: TypeFamily>:
 }
 
 pub trait TypeFolder<TF: TypeFamily> {
-    fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TF>>;
+    fn fold_ty(&mut self, ty: &TF::Type, binders: usize) -> Fallible<TF::Type>;
     fn fold_lifetime(&mut self, lifetime: &Lifetime<TF>, binders: usize) -> Fallible<Lifetime<TF>>;
 }
 
@@ -91,7 +91,7 @@ where
     T: FreeVarFolder<TF> + InferenceFolder<TF> + PlaceholderFolder<TF> + DefaultTypeFolder,
     TF: TypeFamily,
 {
-    fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TF>> {
+    fn fold_ty(&mut self, ty: &TF::Type, binders: usize) -> Fallible<TF::Type> {
         super_fold_ty(self.to_dyn(), ty, binders)
     }
 
@@ -113,7 +113,7 @@ pub trait FreeVarFolder<TF: TypeFamily> {
     /// - `binders` is the number of binders in scope.
     ///
     /// This should return a type suitable for a context with `binders` in scope.
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>>;
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type>;
 
     /// As `fold_free_var_ty`, but for lifetimes.
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>>;
@@ -132,11 +132,11 @@ pub trait DefaultFreeVarFolder {
 }
 
 impl<T: DefaultFreeVarFolder, TF: TypeFamily> FreeVarFolder<TF> for T {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
         if T::forbid() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(Ty::BoundVar(depth + binders))
+            Ok(TF::intern_ty(Ty::BoundVar(depth + binders)))
         }
     }
 
@@ -161,7 +161,7 @@ pub trait PlaceholderFolder<TF: TypeFamily> {
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Ty<TF>>;
+    ) -> Fallible<TF::Type>;
 
     /// As with `fold_free_placeholder_ty`, but for lifetimes.
     fn fold_free_placeholder_lifetime(
@@ -188,11 +188,11 @@ impl<T: DefaultPlaceholderFolder, TF: TypeFamily> PlaceholderFolder<TF> for T {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty<TF>> {
+    ) -> Fallible<TF::Type> {
         if T::forbid() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
-            Ok(universe.to_ty())
+            Ok(TF::intern_ty(universe.to_ty()))
         }
     }
 
@@ -217,7 +217,7 @@ pub trait InferenceFolder<TF: TypeFamily> {
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<TF>>;
+    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<TF::Type>;
 
     /// As with `fold_free_inference_ty`, but for lifetimes.
     fn fold_inference_lifetime(
@@ -240,11 +240,11 @@ pub trait DefaultInferenceFolder {
 }
 
 impl<T: DefaultInferenceFolder, TF: TypeFamily> InferenceFolder<TF> for T {
-    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TF>> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<TF::Type> {
         if T::forbid() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
-            Ok(var.to_ty())
+            Ok(var.to_ty::<TF>())
         }
     }
 
@@ -259,6 +259,15 @@ impl<T: DefaultInferenceFolder, TF: TypeFamily> InferenceFolder<TF> for T {
             Ok(var.to_lifetime())
         }
     }
+}
+
+pub trait ReflexiveFold<TF: TypeFamily>: Fold<TF, Result = Self> + Sized {}
+
+impl<T, TF> ReflexiveFold<TF> for T
+where
+    T: Fold<TF, Result = Self>,
+    TF: TypeFamily,
+{
 }
 
 /// Applies the given folder to a value.
@@ -334,33 +343,28 @@ impl<T: Fold<TF>, TF: TypeFamily> Fold<TF> for Option<T> {
     }
 }
 
-impl<TF: TypeFamily> Fold<TF> for Ty<TF> {
-    type Result = Self;
-    fn fold_with(&self, folder: &mut dyn Folder<TF>, binders: usize) -> Fallible<Self::Result> {
-        folder.fold_ty(self, binders)
-    }
-}
-
 pub fn super_fold_ty<TF>(
     folder: &mut dyn Folder<TF>,
-    ty: &Ty<TF>,
+    ty: &TF::Type,
     binders: usize,
-) -> Fallible<Ty<TF>>
+) -> Fallible<TF::Type>
 where
     TF: TypeFamily,
 {
-    match *ty {
+    match ty.lookup_ref() {
         Ty::BoundVar(depth) => {
-            if depth >= binders {
-                folder.fold_free_var_ty(depth - binders, binders)
+            if *depth >= binders {
+                folder.fold_free_var_ty(*depth - binders, binders)
             } else {
-                Ok(Ty::BoundVar(depth))
+                Ok(TF::intern_ty(Ty::BoundVar(*depth)))
             }
         }
-        Ty::Dyn(ref clauses) => Ok(Ty::Dyn(clauses.fold_with(folder, binders)?)),
-        Ty::Opaque(ref clauses) => Ok(Ty::Opaque(clauses.fold_with(folder, binders)?)),
-        Ty::InferenceVar(var) => folder.fold_inference_ty(var, binders),
-        Ty::Apply(ref apply) => {
+        Ty::Dyn(clauses) => Ok(TF::intern_ty(Ty::Dyn(clauses.fold_with(folder, binders)?))),
+        Ty::Opaque(clauses) => Ok(TF::intern_ty(Ty::Opaque(
+            clauses.fold_with(folder, binders)?,
+        ))),
+        Ty::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
+        Ty::Apply(apply) => {
             let ApplicationTy {
                 name,
                 ref parameters,
@@ -378,12 +382,16 @@ where
 
                 TypeName::TypeKindId(_) | TypeName::AssociatedType(_) => {
                     let parameters = parameters.fold_with(folder, binders)?;
-                    Ok(ApplicationTy { name, parameters }.cast())
+                    Ok(TF::intern_ty(ApplicationTy { name, parameters }.cast()))
                 }
             }
         }
-        Ty::Projection(ref proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?)),
-        Ty::ForAll(ref quantified_ty) => Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?)),
+        Ty::Projection(proj) => Ok(TF::intern_ty(Ty::Projection(
+            proj.fold_with(folder, binders)?,
+        ))),
+        Ty::ForAll(quantified_ty) => Ok(TF::intern_ty(Ty::ForAll(
+            quantified_ty.fold_with(folder, binders)?,
+        ))),
     }
 }
 
