@@ -71,10 +71,11 @@ impl ChalkDatabase {
     pub fn solve_multiple(
         &self,
         goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        f: impl FnMut(Canonical<ConstrainedSubst<ChalkIr>>) -> bool,
-    ) {
+        f: impl FnMut(Canonical<ConstrainedSubst<ChalkIr>>, bool) -> bool,
+    ) -> bool {
         let solver = self.solver();
-        solver.lock().unwrap().solve_multiple(self, goal, f);
+        let solution = solver.lock().unwrap().solve_multiple(self, goal, f);
+        solution
     }
 }
 

@@ -107,16 +107,18 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         goal: &C::UCanonicalGoalInEnvironment,
-        mut f: impl FnMut(C::CanonicalConstrainedSubst) -> bool,
-    ) {
+        mut f: impl FnMut(C::CanonicalConstrainedSubst, bool) -> bool,
+    ) -> bool {
         let mut answers = self.iter_answers(context, goal);
-        while let Some(answer) = answers.peek_answer() {
-            if f(context.make_unique_solution(answer)) {
-                answers.next_answer();
-            } else {
-                break;
+        while let Some(answer) = answers.next_answer() {
+            if !f(
+                context.make_unique_solution(answer),
+                answers.peek_answer().is_some(),
+            ) {
+                return false;
             }
         }
+        return true;
     }
 
     /// True if all the tables on the stack starting from `depth` and

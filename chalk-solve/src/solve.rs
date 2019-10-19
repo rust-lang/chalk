@@ -143,12 +143,17 @@ impl Solver {
     /// - `goal` the goal to solve
     /// - `f` -- function to proceed solution. New solutions will be generated
     /// while function returns `true`.
+    ///
+    /// # Returns
+    ///
+    /// - `true` all solutions were processed with the function.
+    /// - `false` the function returned `false` and solutions were interrupted.
     pub fn solve_multiple(
         &mut self,
         program: &dyn RustIrDatabase,
         goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        f: impl FnMut(Canonical<ConstrainedSubst<ChalkIr>>) -> bool,
-    ) {
+        f: impl FnMut(Canonical<ConstrainedSubst<ChalkIr>>, bool) -> bool,
+    ) -> bool {
         let ops = self.forest.context().ops(program);
         self.forest.solve_multiple(&ops, goal, f)
     }
