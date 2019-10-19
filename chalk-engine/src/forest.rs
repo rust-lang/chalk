@@ -99,6 +99,26 @@ impl<C: Context> Forest<C> {
         context.make_solution(C::canonical(&goal), self.iter_answers(context, goal))
     }
 
+    /// Solves a given goal, producing the solution. This will do only
+    /// as much work towards `goal` as it has to (and that works is
+    /// cached for future attempts). Calls provided function `f` to
+    /// iterate over multiple solutions until the function return `false`.
+    pub fn solve_multiple(
+        &mut self,
+        context: &impl ContextOps<C>,
+        goal: &C::UCanonicalGoalInEnvironment,
+        mut f: impl FnMut(C::CanonicalConstrainedSubst) -> bool,
+    ) {
+        let mut answers = self.iter_answers(context, goal);
+        while let Some(answer) = answers.peek_answer() {
+            if f(context.make_unique_solution(answer)) {
+                answers.next_answer();
+            } else {
+                break;
+            }
+        }
+    }
+
     /// True if all the tables on the stack starting from `depth` and
     /// continuing until the top of the stack are coinductive.
     ///

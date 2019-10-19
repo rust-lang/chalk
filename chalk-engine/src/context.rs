@@ -200,6 +200,9 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         canonical_ex_clause: &C::CanonicalExClause,
         op: impl WithInstantiatedExClause<C, Output = R>,
     ) -> R;
+
+    /// returns unique solution from answer
+    fn make_unique_solution(&self, answer: SimplifiedAnswer<C>) -> C::CanonicalConstrainedSubst;
 }
 
 /// Callback trait for `instantiate_ucanonical_goal`. Unlike the other

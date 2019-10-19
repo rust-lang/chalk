@@ -16,7 +16,7 @@ use chalk_ir::*;
 
 use chalk_engine::context;
 use chalk_engine::hh::HhGoal;
-use chalk_engine::{DelayedLiteral, ExClause, Literal};
+use chalk_engine::{DelayedLiteral, ExClause, Literal, SimplifiedAnswer};
 
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -169,6 +169,14 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
             InferenceTable::from_canonical(num_universes, canonical_ex_clause);
         let dyn_infer = &mut TruncatingInferenceTable::new(self.program, self.max_size, infer);
         op.with(dyn_infer, ex_cluse)
+    }
+
+    fn make_unique_solution(
+        &self,
+        answer: SimplifiedAnswer<SlgContext>,
+    ) -> Canonical<ConstrainedSubst<ChalkIr>> {
+        let SimplifiedAnswer { subst, .. } = answer;
+        subst
     }
 }
 

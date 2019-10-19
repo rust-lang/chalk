@@ -68,22 +68,26 @@ impl LoadedProgram {
         let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
         let peeled_goal = goal.into_peeled_goal();
         if multiple_answers {
-            let mut answers = self.db.solve_multiple(&peeled_goal).into_iter().peekable();
-            while let Some(v) = answers.peek() {
+            self.db.solve_multiple(&peeled_goal, |v| {
                 println!("{}\n", v);
                 if let Some(ref mut rl) = rl {
-                    let next = rl.readline("Show next answer (y/n): ")?;
-                    if "y" == next {
-                        answers.next();
-                    } else if "n" == next {
-                        break;
-                    } else {
-                        println!("Unknown response. Try again.");
+                    loop {
+                        if let Ok(next) = rl.readline("Show next answer (y/n): ") {
+                            if "y" == next {
+                                return true;
+                            } else if "n" == next {
+                                return false;
+                            } else {
+                                println!("Unknown response. Try again.");
+                            }
+                        } else {
+                            return false;
+                        }
                     }
                 } else {
-                    answers.next();
+                    true
                 }
-            }
+            });
             println!("No more solutions");
         } else {
             match self.db.solve(&peeled_goal) {
