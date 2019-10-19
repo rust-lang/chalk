@@ -55,7 +55,7 @@ impl EnaVariable {
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a lifetime (we can't check it).
     pub(crate) fn to_lifetime(self) -> Lifetime<ChalkIr> {
-        self.0.to_lifetime()
+        self.0.to_lifetime::<ChalkIr>()
     }
 }
 

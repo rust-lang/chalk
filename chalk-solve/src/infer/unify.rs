@@ -442,12 +442,12 @@ impl<'u, 't> PlaceholderFolder<ChalkIr> for OccursCheck<'u, 't> {
 
             let tick_x = self.unifier.table.new_variable(self.universe_index);
             self.unifier
-                .push_lifetime_eq_constraint(tick_x.to_lifetime(), ui.to_lifetime());
+                .push_lifetime_eq_constraint(tick_x.to_lifetime(), ui.to_lifetime::<ChalkIr>());
             Ok(tick_x.to_lifetime())
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name
             // this lifetime, no problem.
-            Ok(ui.to_lifetime()) // no need to shift, not relative to depth
+            Ok(ui.to_lifetime::<ChalkIr>()) // no need to shift, not relative to depth
         }
     }
 }

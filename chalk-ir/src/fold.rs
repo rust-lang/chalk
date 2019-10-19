@@ -66,7 +66,7 @@ pub trait Folder<TF: TypeFamily>:
 
 pub trait TypeFolder<TF: TypeFamily> {
     fn fold_ty(&mut self, ty: &TF::Type, binders: usize) -> Fallible<TF::Type>;
-    fn fold_lifetime(&mut self, lifetime: &Lifetime<TF>, binders: usize) -> Fallible<Lifetime<TF>>;
+    fn fold_lifetime(&mut self, lifetime: &TF::Lifetime, binders: usize) -> Fallible<TF::Lifetime>;
 }
 
 impl<T, TF> Folder<TF> for T
@@ -95,7 +95,7 @@ where
         super_fold_ty(self.to_dyn(), ty, binders)
     }
 
-    fn fold_lifetime(&mut self, lifetime: &Lifetime<TF>, binders: usize) -> Fallible<Lifetime<TF>> {
+    fn fold_lifetime(&mut self, lifetime: &TF::Lifetime, binders: usize) -> Fallible<TF::Lifetime> {
         super_fold_lifetime(self.to_dyn(), lifetime, binders)
     }
 }
@@ -116,7 +116,7 @@ pub trait FreeVarFolder<TF: TypeFamily> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type>;
 
     /// As `fold_free_var_ty`, but for lifetimes.
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>>;
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<TF::Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
@@ -140,11 +140,11 @@ impl<T: DefaultFreeVarFolder, TF: TypeFamily> FreeVarFolder<TF> for T {
         }
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<TF::Lifetime> {
         if T::forbid() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(Lifetime::BoundVar(depth + binders))
+            Ok(TF::intern_lifetime(Lifetime::BoundVar(depth + binders)))
         }
     }
 }
@@ -168,7 +168,7 @@ pub trait PlaceholderFolder<TF: TypeFamily> {
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Lifetime<TF>>;
+    ) -> Fallible<TF::Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
@@ -200,11 +200,11 @@ impl<T: DefaultPlaceholderFolder, TF: TypeFamily> PlaceholderFolder<TF> for T {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Lifetime<TF>> {
+    ) -> Fallible<TF::Lifetime> {
         if T::forbid() {
             panic!("unexpected placeholder lifetime `{:?}`", universe)
         } else {
-            Ok(universe.to_lifetime())
+            Ok(universe.to_lifetime::<TF>())
         }
     }
 }
@@ -224,7 +224,7 @@ pub trait InferenceFolder<TF: TypeFamily> {
         &mut self,
         var: InferenceVar,
         binders: usize,
-    ) -> Fallible<Lifetime<TF>>;
+    ) -> Fallible<TF::Lifetime>;
 }
 
 /// A convenience trait. If you implement this, you get an
@@ -252,11 +252,11 @@ impl<T: DefaultInferenceFolder, TF: TypeFamily> InferenceFolder<TF> for T {
         &mut self,
         var: InferenceVar,
         _binders: usize,
-    ) -> Fallible<Lifetime<TF>> {
+    ) -> Fallible<TF::Lifetime> {
         if T::forbid() {
             panic!("unexpected inference lifetime `'{:?}`", var)
         } else {
-            Ok(var.to_lifetime())
+            Ok(var.to_lifetime::<TF>())
         }
     }
 }
@@ -447,28 +447,23 @@ where
     }
 }
 
-impl<TF: TypeFamily> Fold<TF> for Lifetime<TF> {
-    type Result = Self;
-    fn fold_with(&self, folder: &mut dyn Folder<TF>, binders: usize) -> Fallible<Self::Result> {
-        folder.fold_lifetime(self, binders)
-    }
-}
-
 pub fn super_fold_lifetime<TF: TypeFamily>(
     folder: &mut dyn Folder<TF>,
-    lifetime: &Lifetime<TF>,
+    lifetime: &TF::Lifetime,
     binders: usize,
-) -> Fallible<Lifetime<TF>> {
-    match *lifetime {
+) -> Fallible<TF::Lifetime> {
+    match lifetime.lookup_ref() {
         Lifetime::BoundVar(depth) => {
-            if depth >= binders {
+            if *depth >= binders {
                 folder.fold_free_var_lifetime(depth - binders, binders)
             } else {
-                Ok(Lifetime::BoundVar(depth))
+                Ok(TF::intern_lifetime(Lifetime::BoundVar(*depth)))
             }
         }
-        Lifetime::InferenceVar(var) => folder.fold_inference_lifetime(var, binders),
-        Lifetime::Placeholder(universe) => folder.fold_free_placeholder_lifetime(universe, binders),
+        Lifetime::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
+        Lifetime::Placeholder(universe) => {
+            folder.fold_free_placeholder_lifetime(*universe, binders)
+        }
         Lifetime::Phantom(..) => unreachable!(),
     }
 }

@@ -112,7 +112,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for Canonicalizer<'q> {
         _binders: usize,
     ) -> Fallible<Lifetime<ChalkIr>> {
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_lifetime())
+        Ok(universe.to_lifetime::<ChalkIr>())
     }
 }
 

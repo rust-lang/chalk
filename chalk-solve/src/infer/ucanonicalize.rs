@@ -245,7 +245,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UCollector<'q> {
         _binders: usize,
     ) -> Fallible<Lifetime<ChalkIr>> {
         self.universes.add(universe.ui);
-        Ok(universe.to_lifetime())
+        Ok(universe.to_lifetime::<ChalkIr>())
     }
 }
 
@@ -293,7 +293,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UMapToCanonical<'q> {
             ui: universe,
             idx: universe0.idx,
         }
-        .to_lifetime())
+        .to_lifetime::<ChalkIr>())
     }
 }
 
@@ -329,7 +329,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UMapFromCanonical<'q> {
             ui: universe,
             idx: universe0.idx,
         }
-        .to_lifetime())
+        .to_lifetime::<ChalkIr>())
     }
 }
 

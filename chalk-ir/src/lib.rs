@@ -357,8 +357,8 @@ impl InferenceVar {
         TF::intern_ty(Ty::InferenceVar(self))
     }
 
-    pub fn to_lifetime<TF: TypeFamily>(self) -> Lifetime<TF> {
-        Lifetime::InferenceVar(self)
+    pub fn to_lifetime<TF: TypeFamily>(self) -> TF::Lifetime {
+        TF::intern_lifetime(Lifetime::InferenceVar(self))
     }
 }
 
@@ -417,8 +417,8 @@ pub struct PlaceholderIndex {
 }
 
 impl PlaceholderIndex {
-    pub fn to_lifetime<TF: TypeFamily>(self) -> Lifetime<TF> {
-        Lifetime::Placeholder(self)
+    pub fn to_lifetime<TF: TypeFamily>(self) -> TF::Lifetime {
+        TF::intern_lifetime(Lifetime::Placeholder(self))
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> TF::Type {
@@ -517,7 +517,7 @@ impl<T, L> ParameterKind<T, L> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Parameter<TF: TypeFamily>(pub ParameterKind<TF::Type, Lifetime<TF>>);
+pub struct Parameter<TF: TypeFamily>(pub ParameterKind<TF::Type, TF::Lifetime>);
 
 impl<TF: TypeFamily> HasTypeFamily for Parameter<TF> {
     type TypeFamily = TF;
@@ -528,11 +528,11 @@ impl<TF: TypeFamily> Parameter<TF> {
         self.as_ref().ty().unwrap()
     }
 
-    pub fn assert_lifetime_ref(&self) -> &Lifetime<TF> {
+    pub fn assert_lifetime_ref(&self) -> &TF::Lifetime {
         self.as_ref().lifetime().unwrap()
     }
 
-    pub fn as_ref(&self) -> ParameterKind<&TF::Type, &Lifetime<TF>> {
+    pub fn as_ref(&self) -> ParameterKind<&TF::Type, &TF::Lifetime> {
         match &self.0 {
             ParameterKind::Ty(t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(l) => ParameterKind::Lifetime(l),
@@ -553,7 +553,7 @@ impl<TF: TypeFamily> Parameter<TF> {
         }
     }
 
-    pub fn lifetime(self) -> Option<Lifetime<TF>> {
+    pub fn lifetime(self) -> Option<TF::Lifetime> {
         match self.0 {
             ParameterKind::Lifetime(t) => Some(t),
             _ => None,
@@ -1070,7 +1070,7 @@ pub enum QuantifierKind {
 /// checking in the compiler.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Constraint<TF: TypeFamily> {
-    LifetimeEq(Lifetime<TF>, Lifetime<TF>),
+    LifetimeEq(TF::Lifetime, TF::Lifetime),
 }
 
 impl<TF: TypeFamily> HasTypeFamily for Constraint<TF> {
@@ -1112,8 +1112,10 @@ impl<TF: TypeFamily> Substitution<TF> {
                     Ty::BoundVar(depth) => index == *depth,
                     _ => false,
                 },
-                ParameterKind::Lifetime(Lifetime::BoundVar(depth)) => index == *depth,
-                _ => false,
+                ParameterKind::Lifetime(lifetime) => match lifetime.lookup_ref() {
+                    Lifetime::BoundVar(depth) => index == *depth,
+                    _ => false,
+                },
             })
     }
 }
@@ -1129,7 +1131,7 @@ impl<'a, TF: TypeFamily> FreeVarFolder<TF> for &'a Substitution<TF> {
         Ok(ty.shifted_in(binders))
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<TF::Lifetime> {
         let l = &self.parameters[depth];
         let l = l.assert_lifetime_ref();
         Ok(l.shifted_in(binders))

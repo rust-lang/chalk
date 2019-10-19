@@ -37,9 +37,11 @@ impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
         }
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<TF::Lifetime> {
         if depth >= self.parameters.len() {
-            Ok(Lifetime::BoundVar(depth - self.parameters.len() + binders))
+            Ok(TF::intern_lifetime(Lifetime::BoundVar(
+                depth - self.parameters.len() + binders,
+            )))
         } else {
             match self.parameters[depth].0 {
                 ParameterKind::Lifetime(ref l) => Ok(l.shifted_in(binders)),
