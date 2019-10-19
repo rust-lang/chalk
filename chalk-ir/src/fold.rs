@@ -136,7 +136,7 @@ impl<T: DefaultFreeVarFolder, TF: TypeFamily> FreeVarFolder<TF> for T {
         if T::forbid() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(TF::intern_ty(Ty::BoundVar(depth + binders)))
+            Ok(Ty::<TF>::BoundVar(depth + binders).intern())
         }
     }
 
@@ -144,7 +144,7 @@ impl<T: DefaultFreeVarFolder, TF: TypeFamily> FreeVarFolder<TF> for T {
         if T::forbid() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(TF::intern_lifetime(Lifetime::BoundVar(depth + binders)))
+            Ok(Lifetime::<TF>::BoundVar(depth + binders).intern())
         }
     }
 }
@@ -356,7 +356,7 @@ where
             if *depth >= binders {
                 folder.fold_free_var_ty(*depth - binders, binders)
             } else {
-                Ok(TF::intern_ty(Ty::BoundVar(*depth)))
+                Ok(Ty::<TF>::BoundVar(*depth).intern())
             }
         }
         Ty::Dyn(clauses) => Ok(TF::intern_ty(Ty::Dyn(clauses.fold_with(folder, binders)?))),
@@ -382,16 +382,14 @@ where
 
                 TypeName::TypeKindId(_) | TypeName::AssociatedType(_) => {
                     let parameters = parameters.fold_with(folder, binders)?;
-                    Ok(TF::intern_ty(ApplicationTy { name, parameters }.cast()))
+                    Ok(ApplicationTy { name, parameters }.cast().intern())
                 }
             }
         }
-        Ty::Projection(proj) => Ok(TF::intern_ty(Ty::Projection(
-            proj.fold_with(folder, binders)?,
-        ))),
-        Ty::ForAll(quantified_ty) => Ok(TF::intern_ty(Ty::ForAll(
-            quantified_ty.fold_with(folder, binders)?,
-        ))),
+        Ty::Projection(proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?).intern()),
+        Ty::ForAll(quantified_ty) => {
+            Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?).intern())
+        }
     }
 }
 
@@ -457,7 +455,7 @@ pub fn super_fold_lifetime<TF: TypeFamily>(
             if *depth >= binders {
                 folder.fold_free_var_lifetime(depth - binders, binders)
             } else {
-                Ok(TF::intern_lifetime(Lifetime::BoundVar(*depth)))
+                Ok(Lifetime::<TF>::BoundVar(*depth).intern())
             }
         }
         Lifetime::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),

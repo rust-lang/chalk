@@ -303,6 +303,10 @@ impl<TF: TypeFamily> HasTypeFamily for Ty<TF> {
 }
 
 impl<TF: TypeFamily> Ty<TF> {
+    fn intern(self) -> TF::Type {
+        TF::intern_ty(self)
+    }
+
     /// If this is a `Ty::BoundVar(d)`, returns `Some(d)` else `None`.
     pub fn bound(&self) -> Option<usize> {
         if let Ty::BoundVar(depth) = *self {
@@ -332,7 +336,7 @@ impl<TF: TypeFamily> Ty<TF> {
     /// needs to be shifted across binders. This is a very inefficient
     /// check, intended only for debug assertions, because I am lazy.
     pub fn needs_shift(&self) -> bool {
-        let ty = TF::intern_ty(self.clone());
+        let ty = self.clone().intern();
         ty != ty.shifted_in(1)
     }
 }
@@ -354,11 +358,11 @@ impl InferenceVar {
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> TF::Type {
-        TF::intern_ty(Ty::InferenceVar(self))
+        Ty::<TF>::InferenceVar(self).intern()
     }
 
     pub fn to_lifetime<TF: TypeFamily>(self) -> TF::Lifetime {
-        TF::intern_lifetime(Lifetime::InferenceVar(self))
+        Lifetime::<TF>::InferenceVar(self).intern()
     }
 }
 
@@ -384,6 +388,10 @@ pub enum Lifetime<TF: TypeFamily> {
 }
 
 impl<TF: TypeFamily> Lifetime<TF> {
+    fn intern(self) -> TF::Lifetime {
+        TF::intern_lifetime(self)
+    }
+
     /// If this is a `Lifetime::InferenceVar(d)`, returns `Some(d)` else `None`.
     pub fn inference_var(&self) -> Option<InferenceVar> {
         if let Lifetime::InferenceVar(depth) = *self {
@@ -418,14 +426,15 @@ pub struct PlaceholderIndex {
 
 impl PlaceholderIndex {
     pub fn to_lifetime<TF: TypeFamily>(self) -> TF::Lifetime {
-        TF::intern_lifetime(Lifetime::Placeholder(self))
+        Lifetime::<TF>::Placeholder(self).intern()
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> TF::Type {
-        TF::intern_ty(Ty::Apply(ApplicationTy {
+        Ty::Apply(ApplicationTy::<TF> {
             name: TypeName::Placeholder(self),
             parameters: vec![],
-        }))
+        })
+        .intern()
     }
 }
 
@@ -860,7 +869,7 @@ impl<T> Binders<T> {
         T: Shift<TF>,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
-        let new_var = TF::intern_ty(Ty::BoundVar(0));
+        let new_var = Ty::<TF>::BoundVar(0).intern();
         let value = op(self.value.shifted_in(1), new_var);
         Binders {
             binders: iter::once(ParameterKind::Ty(()))

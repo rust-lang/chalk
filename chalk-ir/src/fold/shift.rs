@@ -90,13 +90,11 @@ impl DefaultTypeFolder for Shifter {}
 
 impl<TF: TypeFamily> FreeVarFolder<TF> for Shifter {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
-        Ok(TF::intern_ty(Ty::BoundVar(self.adjust(depth, binders))))
+        Ok(Ty::<TF>::BoundVar(self.adjust(depth, binders)).intern())
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<TF::Lifetime> {
-        Ok(TF::intern_lifetime(Lifetime::BoundVar(
-            self.adjust(depth, binders),
-        )))
+        Ok(Lifetime::<TF>::BoundVar(self.adjust(depth, binders)).intern())
     }
 }
 
@@ -134,13 +132,11 @@ impl DefaultTypeFolder for DownShifter {}
 
 impl<TF: TypeFamily> FreeVarFolder<TF> for DownShifter {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
-        Ok(TF::intern_ty(Ty::BoundVar(self.adjust(depth, binders)?)))
+        Ok(Ty::<TF>::BoundVar(self.adjust(depth, binders)?).intern())
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<TF::Lifetime> {
-        Ok(TF::intern_lifetime(Lifetime::BoundVar(
-            self.adjust(depth, binders)?,
-        )))
+        Ok(Lifetime::<TF>::BoundVar(self.adjust(depth, binders)?).intern())
     }
 }
 
