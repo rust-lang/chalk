@@ -417,7 +417,7 @@ impl<'u, 't> PlaceholderFolder<ChalkIr> for OccursCheck<'u, 't> {
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
-            Ok(universe.to_ty()) // no need to shift, not relative to depth
+            Ok(universe.to_ty::<ChalkIr>()) // no need to shift, not relative to depth
         }
     }
 

@@ -421,11 +421,11 @@ impl PlaceholderIndex {
         Lifetime::Placeholder(self)
     }
 
-    pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
-        Ty::Apply(ApplicationTy {
+    pub fn to_ty<TF: TypeFamily>(self) -> TF::Type {
+        TF::intern_ty(Ty::Apply(ApplicationTy {
             name: TypeName::Placeholder(self),
             parameters: vec![],
-        })
+        }))
     }
 }
 

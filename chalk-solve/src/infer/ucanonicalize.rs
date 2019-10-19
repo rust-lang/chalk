@@ -236,7 +236,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UCollector<'q> {
         _binders: usize,
     ) -> Fallible<Ty<ChalkIr>> {
         self.universes.add(universe.ui);
-        Ok(universe.to_ty())
+        Ok(universe.to_ty::<ChalkIr>())
     }
 
     fn fold_free_placeholder_lifetime(
@@ -280,7 +280,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UMapToCanonical<'q> {
             ui,
             idx: universe0.idx,
         }
-        .to_ty())
+        .to_ty::<ChalkIr>())
     }
 
     fn fold_free_placeholder_lifetime(
@@ -316,7 +316,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UMapFromCanonical<'q> {
             ui,
             idx: universe0.idx,
         }
-        .to_ty())
+        .to_ty::<ChalkIr>())
     }
 
     fn fold_free_placeholder_lifetime(

@@ -192,7 +192,7 @@ impl<T: DefaultPlaceholderFolder, TF: TypeFamily> PlaceholderFolder<TF> for T {
         if T::forbid() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
-            Ok(TF::intern_ty(universe.to_ty()))
+            Ok(universe.to_ty::<TF>())
         }
     }
 

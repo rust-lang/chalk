@@ -91,7 +91,7 @@ impl InferenceTable {
                         let lt = placeholder_idx.to_lifetime();
                         lt.cast()
                     }
-                    ParameterKind::Ty(()) => placeholder_idx.to_ty().cast(),
+                    ParameterKind::Ty(()) => placeholder_idx.to_ty::<ChalkIr>().cast(),
                 }
             })
             .collect();

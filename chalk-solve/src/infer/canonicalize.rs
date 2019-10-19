@@ -103,7 +103,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for Canonicalizer<'q> {
         _binders: usize,
     ) -> Fallible<Ty<ChalkIr>> {
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_ty())
+        Ok(universe.to_ty::<ChalkIr>())
     }
 
     fn fold_free_placeholder_lifetime(
