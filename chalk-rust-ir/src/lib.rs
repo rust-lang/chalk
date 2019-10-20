@@ -266,6 +266,22 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
     }
 }
 
+/// Represents an associated type declaration found inside of a trait:
+///
+/// ```notrust
+/// trait Foo<P1..Pn> { // P0 is Self
+///     type Bar<Pn..Pm>: [bounds]
+///     where
+///         [where_clauses];
+/// }
+/// ```
+///
+/// The meaning of each of these parts:
+///
+/// * The *parameters* `P0...Pm` are all in scope for this associaed type.
+/// * The *bounds* `bounds` are things that the impl must prove to be true.
+/// * The *where clauses* `where_clauses` are things that the impl can *assume* to be true
+///   (but which projectors must prove).
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyDatum {
     /// The trait this associated type is defined in.
@@ -277,8 +293,9 @@ pub struct AssociatedTyDatum {
     /// Name of this associated type.
     pub name: Identifier,
 
-    /// Parameters on this associated type, beginning with those from the trait,
-    /// but possibly including more.
+    /// Parameters on this associated type, beginning with those from
+    /// the trait, but possibly including more. These are the
+    /// parameter `P0..Pm` in the trait declaration above.
     pub parameter_kinds: Vec<ParameterKind<Identifier>>,
 
     /// Bounds on the associated type itself.
