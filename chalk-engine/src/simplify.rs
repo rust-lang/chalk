@@ -8,12 +8,12 @@ impl<C: Context> Forest<C> {
     /// Simplifies an HH goal into a series of positive domain goals
     /// and negative HH goals. This operation may fail if the HH goal
     /// includes unifications that cannot be completed.
-    pub(super) fn simplify_hh_goal<I: Context>(
-        infer: &mut dyn InferenceTable<C, I>,
-        subst: I::Substitution,
-        initial_environment: &I::Environment,
-        initial_hh_goal: HhGoal<I>,
-    ) -> Fallible<ExClause<I>> {
+    pub(super) fn simplify_hh_goal(
+        infer: &mut dyn InferenceTable<C>,
+        subst: C::Substitution,
+        initial_environment: &C::Environment,
+        initial_hh_goal: HhGoal<C>,
+    ) -> Fallible<ExClause<C>> {
         let mut ex_clause = ExClause {
             subst,
             delayed_literals: vec![],
@@ -47,7 +47,7 @@ impl<C: Context> Forest<C> {
                 HhGoal::Not(subgoal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(I::goal_in_environment(
+                        .push(Literal::Negative(C::goal_in_environment(
                             &environment,
                             subgoal,
                         )));
@@ -59,7 +59,7 @@ impl<C: Context> Forest<C> {
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Positive(I::goal_in_environment(
+                        .push(Literal::Positive(C::goal_in_environment(
                             &environment,
                             infer.into_goal(domain_goal),
                         )));
@@ -74,7 +74,7 @@ impl<C: Context> Forest<C> {
                     let goal = infer.cannot_prove();
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(I::goal_in_environment(
+                        .push(Literal::Negative(C::goal_in_environment(
                             &environment,
                             goal,
                         )));

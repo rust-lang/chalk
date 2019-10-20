@@ -191,49 +191,15 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &C::UCanonicalGoalInEnvironment,
-        op: impl WithInstantiatedUCanonicalGoal<C, Output = R>,
+        op: impl FnOnce(&mut dyn InferenceTable<C>, C::Substitution, C::Environment, C::Goal) -> R,
     ) -> R;
 
     fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
         canonical_ex_clause: &C::CanonicalExClause,
-        op: impl WithInstantiatedExClause<C, Output = R>,
+        op: impl FnOnce(&mut dyn InferenceTable<C>, ExClause<C>) -> R,
     ) -> R;
-}
-
-/// Callback trait for `instantiate_ucanonical_goal`. Unlike the other
-/// traits in this file, this is not implemented by the context crate, but rather
-/// by code in this crate.
-///
-/// This basically plays the role of an `FnOnce` -- but unlike an
-/// `FnOnce`, the `with` method is generic.
-pub trait WithInstantiatedUCanonicalGoal<C: Context> {
-    type Output;
-
-    fn with<I: Context>(
-        self,
-        infer: &mut dyn InferenceTable<C, I>,
-        subst: I::Substitution,
-        environment: I::Environment,
-        goal: I::Goal,
-    ) -> Self::Output;
-}
-
-/// Callback trait for `instantiate_ex_clause`. Unlike the other
-/// traits in this file, this is not implemented by the context crate,
-/// but rather by code in this crate.
-///
-/// This basically plays the role of an `FnOnce` -- but unlike an
-/// `FnOnce`, the `with` method is generic.
-pub trait WithInstantiatedExClause<C: Context> {
-    type Output;
-
-    fn with<I: Context>(
-        self,
-        infer: &mut dyn InferenceTable<C, I>,
-        ex_clause: ExClause<I>,
-    ) -> Self::Output;
 }
 
 /// Methods for combining solutions to yield an aggregate solution.
@@ -247,9 +213,7 @@ pub trait AggregateOps<C: Context> {
 
 /// An "inference table" contains the state to support unification and
 /// other operations on terms.
-pub trait InferenceTable<C: Context, I: Context>:
-    ResolventOps<C, I> + TruncateOps<C, I> + UnificationOps<C, I>
-{
+pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> + UnificationOps<C> {
     /// Convert the context's goal type into the `HhGoal` type that
     /// the SLG solver understands. The expectation is that the
     /// context's goal type has the same set of variants, but with
@@ -258,20 +222,20 @@ pub trait InferenceTable<C: Context, I: Context>:
     /// conversion -- that is, we convert the outermost goal into an
     /// `HhGoal`, but the goals contained within are left as context
     /// goals.
-    fn into_hh_goal(&mut self, goal: I::Goal) -> HhGoal<I>;
+    fn into_hh_goal(&mut self, goal: C::Goal) -> HhGoal<C>;
 
     // Used by: simplify
-    fn add_clauses(&mut self, env: &I::Environment, clauses: I::ProgramClauses) -> I::Environment;
+    fn add_clauses(&mut self, env: &C::Environment, clauses: C::ProgramClauses) -> C::Environment;
 
     /// Upcast this domain goal into a more general goal.
-    fn into_goal(&self, domain_goal: I::DomainGoal) -> I::Goal;
+    fn into_goal(&self, domain_goal: C::DomainGoal) -> C::Goal;
 
     /// Create a "cannot prove" goal (see `HhGoal::CannotProve`).
-    fn cannot_prove(&self) -> I::Goal;
+    fn cannot_prove(&self) -> C::Goal;
 
     /// Selects the next appropriate subgoal index for evaluation.
     /// Used by: logic
-    fn next_subgoal_index(&mut self, ex_clause: &ExClause<I>) -> usize;
+    fn next_subgoal_index(&mut self, ex_clause: &ExClause<C>) -> usize;
 }
 
 /// Error type for the `UnificationOps::program_clauses` method --
@@ -280,7 +244,7 @@ pub trait InferenceTable<C: Context, I: Context>:
 pub struct Floundered;
 
 /// Methods for unifying and manipulating terms and binders.
-pub trait UnificationOps<C: Context, I: Context> {
+pub trait UnificationOps<C: Context> {
     /// Returns the set of program clauses that might apply to
     /// `goal`. (This set can be over-approximated, naturally.)
     ///
@@ -290,30 +254,30 @@ pub trait UnificationOps<C: Context, I: Context> {
     /// first; the goal will be considered floundered.
     fn program_clauses(
         &mut self,
-        environment: &I::Environment,
-        goal: &I::DomainGoal,
-    ) -> Result<Vec<I::ProgramClause>, Floundered>;
+        environment: &C::Environment,
+        goal: &C::DomainGoal,
+    ) -> Result<Vec<C::ProgramClause>, Floundered>;
 
     // Used by: simplify
-    fn instantiate_binders_universally(&mut self, arg: &I::BindersGoal) -> I::Goal;
+    fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
     // Used by: simplify
-    fn instantiate_binders_existentially(&mut self, arg: &I::BindersGoal) -> I::Goal;
+    fn instantiate_binders_existentially(&mut self, arg: &C::BindersGoal) -> C::Goal;
 
     // Used by: logic (but for debugging only)
-    fn debug_ex_clause<'v>(&mut self, value: &'v ExClause<I>) -> Box<dyn Debug + 'v>;
+    fn debug_ex_clause<'v>(&mut self, value: &'v ExClause<C>) -> Box<dyn Debug + 'v>;
 
     // Used by: logic
-    fn canonicalize_goal(&mut self, value: &I::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;
+    fn canonicalize_goal(&mut self, value: &C::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;
 
     // Used by: logic
-    fn canonicalize_ex_clause(&mut self, value: &ExClause<I>) -> C::CanonicalExClause;
+    fn canonicalize_ex_clause(&mut self, value: &ExClause<C>) -> C::CanonicalExClause;
 
     // Used by: logic
     fn canonicalize_constrained_subst(
         &mut self,
-        subst: I::Substitution,
-        constraints: Vec<I::RegionConstraint>,
+        subst: C::Substitution,
+        constraints: Vec<C::RegionConstraint>,
     ) -> C::CanonicalConstrainedSubst;
 
     // Used by: logic
@@ -325,25 +289,25 @@ pub trait UnificationOps<C: Context, I: Context> {
     fn sink_answer_subset(
         &self,
         value: &C::CanonicalConstrainedSubst,
-    ) -> I::CanonicalConstrainedSubst;
+    ) -> C::CanonicalConstrainedSubst;
 
-    fn lift_delayed_literal(&self, value: DelayedLiteral<I>) -> DelayedLiteral<C>;
+    fn lift_delayed_literal(&self, value: DelayedLiteral<C>) -> DelayedLiteral<C>;
 
     // Used by: logic
-    fn invert_goal(&mut self, value: &I::GoalInEnvironment) -> Option<I::GoalInEnvironment>;
+    fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
 
     // Used by: simplify
     fn unify_parameters(
         &mut self,
-        environment: &I::Environment,
-        variance: I::Variance,
-        a: &I::Parameter,
-        b: &I::Parameter,
-    ) -> Fallible<I::UnificationResult>;
+        environment: &C::Environment,
+        variance: C::Variance,
+        a: &C::Parameter,
+        b: &C::Parameter,
+    ) -> Fallible<C::UnificationResult>;
 
     /// Add the residual subgoals as new subgoals of the ex-clause.
     /// Also add region constraints.
-    fn into_ex_clause(&mut self, result: I::UnificationResult, ex_clause: &mut ExClause<I>);
+    fn into_ex_clause(&mut self, result: C::UnificationResult, ex_clause: &mut ExClause<C>);
 }
 
 /// "Truncation" (called "abstraction" in the papers referenced below)
@@ -359,17 +323,17 @@ pub trait UnificationOps<C: Context, I: Context> {
 ///   - Riguzzi and Swift; ACM Transactions on Computational Logic 2013
 /// - Radial Restraint
 ///   - Grosof and Swift; 2013
-pub trait TruncateOps<C: Context, I: Context> {
+pub trait TruncateOps<C: Context> {
     /// If `subgoal` is too large, return a truncated variant (else
     /// return `None`).
-    fn truncate_goal(&mut self, subgoal: &I::GoalInEnvironment) -> Option<I::GoalInEnvironment>;
+    fn truncate_goal(&mut self, subgoal: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
 
     /// If `subst` is too large, return a truncated variant (else
     /// return `None`).
-    fn truncate_answer(&mut self, subst: &I::Substitution) -> Option<I::Substitution>;
+    fn truncate_answer(&mut self, subst: &C::Substitution) -> Option<C::Substitution>;
 }
 
-pub trait ResolventOps<C: Context, I: Context> {
+pub trait ResolventOps<C: Context> {
     /// Combines the `goal` (instantiated within `infer`) with the
     /// given program clause to yield the start of a new strand (a
     /// canonical ex-clause).
@@ -377,19 +341,19 @@ pub trait ResolventOps<C: Context, I: Context> {
     /// The bindings in `infer` are unaffected by this operation.
     fn resolvent_clause(
         &mut self,
-        environment: &I::Environment,
-        goal: &I::DomainGoal,
-        subst: &I::Substitution,
-        clause: &I::ProgramClause,
+        environment: &C::Environment,
+        goal: &C::DomainGoal,
+        subst: &C::Substitution,
+        clause: &C::ProgramClause,
     ) -> Fallible<C::CanonicalExClause>;
 
     fn apply_answer_subst(
         &mut self,
-        ex_clause: ExClause<I>,
-        selected_goal: &I::GoalInEnvironment,
+        ex_clause: ExClause<C>,
+        selected_goal: &C::GoalInEnvironment,
         answer_table_goal: &C::CanonicalGoalInEnvironment,
         canonical_answer_subst: &C::CanonicalConstrainedSubst,
-    ) -> Fallible<ExClause<I>>;
+    ) -> Fallible<ExClause<C>>;
 }
 
 pub trait AnswerStream<C: Context> {

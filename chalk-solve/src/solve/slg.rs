@@ -151,24 +151,29 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        op: impl context::WithInstantiatedUCanonicalGoal<SlgContext, Output = R>,
+        op: impl FnOnce(
+            &mut dyn context::InferenceTable<SlgContext>,
+            Substitution<ChalkIr>,
+            Arc<Environment<ChalkIr>>,
+            Goal<ChalkIr>,
+        ) -> R,
     ) -> R {
         let (infer, subst, InEnvironment { environment, goal }) =
             InferenceTable::from_canonical(arg.universes, &arg.canonical);
         let dyn_infer = &mut TruncatingInferenceTable::new(self.program, self.max_size, infer);
-        op.with(dyn_infer, subst, environment, goal)
+        op(dyn_infer, subst, environment, goal)
     }
 
     fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
         canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
-        op: impl context::WithInstantiatedExClause<SlgContext, Output = R>,
+        op: impl FnOnce(&mut dyn context::InferenceTable<SlgContext>, ExClause<SlgContext>) -> R,
     ) -> R {
         let (infer, _subst, ex_cluse) =
             InferenceTable::from_canonical(num_universes, canonical_ex_clause);
         let dyn_infer = &mut TruncatingInferenceTable::new(self.program, self.max_size, infer);
-        op.with(dyn_infer, ex_cluse)
+        op(dyn_infer, ex_cluse)
     }
 }
 
@@ -182,10 +187,10 @@ impl<'me> TruncatingInferenceTable<'me> {
     }
 }
 
-impl<'me> context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
+impl<'me> context::TruncateOps<SlgContext> for TruncatingInferenceTable<'me> {
     fn truncate_goal(
         &mut self,
-        subgoal: &InEnvironment<Goal<ChalkIr>>,
+        subgoal: &InEnvironment<Goal<ChalkIr>>
     ) -> Option<InEnvironment<Goal<ChalkIr>>> {
         let Truncated { overflow, value } =
             truncate::truncate(&mut self.infer, self.max_size, subgoal);
@@ -207,7 +212,7 @@ impl<'me> context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTa
     }
 }
 
-impl<'me> context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
+impl<'me> context::InferenceTable<SlgContext> for TruncatingInferenceTable<'me> {
     fn into_hh_goal(&mut self, goal: Goal<ChalkIr>) -> HhGoal<SlgContext> {
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
@@ -251,7 +256,7 @@ impl<'me> context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenc
     }
 }
 
-impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
+impl<'me> context::UnificationOps<SlgContext> for TruncatingInferenceTable<'me> {
     fn program_clauses(
         &mut self,
         environment: &Arc<Environment<ChalkIr>>,
