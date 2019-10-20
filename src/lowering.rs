@@ -53,7 +53,7 @@ struct Env<'k> {
 #[derive(Debug, PartialEq, Eq)]
 struct AssociatedTyInfo {
     id: chalk_ir::TypeId,
-    addl_parameter_kinds: Vec<chalk_ir::ParameterKind<chalk_ir::Identifier>>,
+    addl_parameter_kinds: Vec<chalk_ir::ParameterKind<()>>,
 }
 
 enum NameLookup {
@@ -168,7 +168,7 @@ impl LowerProgram for Program {
                     let addl_parameter_kinds = defn.all_parameters();
                     let info = AssociatedTyInfo {
                         id: TypeId(next_item_id()),
-                        addl_parameter_kinds,
+                        addl_parameter_kinds: addl_parameter_kinds.anonymize(),
                     };
                     associated_ty_infos.insert((TraitId(raw_id), defn.name.str), info);
                 }
@@ -223,7 +223,7 @@ impl LowerProgram for Program {
                                 trait_id: TraitId(raw_id),
                                 id: info.id,
                                 name: defn.name.str,
-                                parameter_kinds: parameter_kinds,
+                                parameter_kinds: parameter_kinds.anonymize(),
                                 bounds: defn.bounds.lower(&env)?,
                                 where_clauses: defn.where_clauses.lower(&env)?,
                             }),

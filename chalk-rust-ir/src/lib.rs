@@ -296,7 +296,7 @@ pub struct AssociatedTyDatum {
     /// Parameters on this associated type, beginning with those from
     /// the trait, but possibly including more. These are the
     /// parameter `P0..Pm` in the trait declaration above.
-    pub parameter_kinds: Vec<ParameterKind<Identifier>>,
+    pub parameter_kinds: Vec<ParameterKind<()>>,
 
     /// Bounds on the associated type itself.
     ///
@@ -317,7 +317,6 @@ impl AssociatedTyDatum {
     pub fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause<ChalkIr>> {
         let parameters = self
             .parameter_kinds
-            .anonymize()
             .iter()
             .zip(0..)
             .map(|p| p.to_parameter())
