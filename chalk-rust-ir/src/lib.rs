@@ -4,7 +4,7 @@
 
 use chalk_derive::Fold;
 use chalk_ir::cast::Cast;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::{ChalkIr, HasTypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
     ApplicationTy, Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq,
@@ -135,6 +135,10 @@ pub struct TraitFlags {
 pub enum InlineBound {
     TraitBound(TraitBound),
     ProjectionEqBound(ProjectionEqBound),
+}
+
+impl HasTypeFamily for InlineBound {
+    type TypeFamily = ChalkIr;
 }
 
 pub type QuantifiedInlineBound = Binders<InlineBound>;
@@ -293,11 +297,14 @@ pub struct AssociatedTyDatum {
     /// Name of this associated type.
     pub name: Identifier,
 
-    /// Parameters on this associated type, beginning with those from
-    /// the trait, but possibly including more. These are the
-    /// parameter `P0..Pm` in the trait declaration above.
-    pub parameter_kinds: Vec<ParameterKind<()>>,
+    /// These binders represent the `P0...Pm` variables.
+    pub binders: Binders<AssociatedTyDatumBound>,
+}
 
+/// Encodes the parts of `AssociatedTyDatum` where the parameters
+/// `P0..Pm` are in scope (`bounds` and `where_clauses`).
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AssociatedTyDatumBound {
     /// Bounds on the associated type itself.
     ///
     /// These must be proven by the implementer, for all possible parameters that
@@ -314,18 +321,30 @@ impl AssociatedTyDatum {
     /// ```notrust
     /// Implemented(<?0 as Foo>::Item<?1>: Sized)
     /// ```
+    ///
+    /// these quantified where clauses are in the scope of the
+    /// `binders` field.
     pub fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause<ChalkIr>> {
-        let parameters = self
-            .parameter_kinds
-            .iter()
-            .zip(0..)
-            .map(|p| p.to_parameter())
-            .collect();
+        let Binders { binders, value } = &self.binders;
+
+        // Create a list `P0...Pn` of references to the binders in
+        // scope for this associated type:
+        let parameters = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
+
+        // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
         let self_ty = Ty::Projection(ProjectionTy {
             associated_ty_id: self.id,
             parameters,
         });
-        self.bounds
+
+        // Now use that as the self type for the bounds, transformating
+        // something like `type Bar<Pn..Pm>: Debug` into
+        //
+        // ```
+        // <P0 as Foo<P1..Pn>>::Item<Pn..Pm>: Debug
+        // ```
+        value
+            .bounds
             .iter()
             .flat_map(|b| b.into_where_clauses(self_ty.clone()))
             .collect()

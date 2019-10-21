@@ -6,7 +6,6 @@ use crate::RustIrDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::*;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use itertools::Itertools;
@@ -238,9 +237,6 @@ where
         // ```
         // we would issue the following subgoal: `forall<'a> { WellFormed(Box<&'a T>) }`.
         let compute_assoc_ty_goal = |assoc_ty: &AssociatedTyValue| {
-            let assoc_ty_datum = self.db.associated_ty_data(assoc_ty.associated_ty_id);
-            let bounds = &assoc_ty_datum.bounds;
-
             let mut input_types = Vec::new();
             assoc_ty.value.value.ty.fold(&mut input_types);
 
@@ -260,11 +256,14 @@ where
                 .chain(trait_ref.parameters.iter().cloned())
                 .collect();
 
+            let assoc_ty_datum = self.db.associated_ty_data(assoc_ty.associated_ty_id);
+            let assoc_ty_datum_bounds = assoc_ty_datum.binders.map_ref(|d| &d.bounds);
+
             // Add bounds from the trait. Because they are defined on the trait,
             // their parameters must be substituted with those of the impl.
-            let bound_goals = bounds
-                .iter()
-                .map(|b| Subst::apply(&all_parameters, b))
+            let bound_goals = assoc_ty_datum_bounds
+                .into_iter()
+                .map(|quantified_bound| quantified_bound.substitute(&all_parameters))
                 .flat_map(|b| b.into_where_clauses(assoc_ty.value.value.ty.clone()))
                 .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
                 .casted();
@@ -278,9 +277,10 @@ where
             // Add where clauses from the associated ty definition. We must
             // substitute parameters here, like we did with the bounds above.
             let hypotheses = assoc_ty_datum
-                .where_clauses
-                .iter()
-                .map(|wc| Subst::apply(&all_parameters, wc))
+                .binders
+                .map_ref(|b| &b.where_clauses)
+                .into_iter()
+                .map(|wc| wc.substitute(&all_parameters))
                 .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
                 .casted()
                 .collect();

@@ -215,7 +215,13 @@ impl LowerProgram for Program {
 
                         let mut parameter_kinds = defn.all_parameters();
                         parameter_kinds.extend(d.all_parameters());
-                        let env = empty_env.introduce(parameter_kinds.clone())?;
+
+                        let binders = empty_env.in_binders(parameter_kinds, |env| {
+                            Ok(rust_ir::AssociatedTyDatumBound {
+                                bounds: defn.bounds.lower(&env)?,
+                                where_clauses: defn.where_clauses.lower(&env)?,
+                            })
+                        })?;
 
                         associated_ty_data.insert(
                             info.id,
@@ -223,9 +229,7 @@ impl LowerProgram for Program {
                                 trait_id: TraitId(raw_id),
                                 id: info.id,
                                 name: defn.name.str,
-                                parameter_kinds: parameter_kinds.anonymize(),
-                                bounds: defn.bounds.lower(&env)?,
-                                where_clauses: defn.where_clauses.lower(&env)?,
+                                binders: binders,
                             }),
                         );
                     }
@@ -1147,8 +1151,8 @@ impl LowerGoal<LoweredProgram> for Goal {
             .map(|(&associated_ty_id, datum)| {
                 let trait_datum = &program.trait_data[&datum.trait_id];
                 let num_trait_params = trait_datum.binders.len();
-                let num_addl_params = datum.parameter_kinds.len() - num_trait_params;
-                let addl_parameter_kinds = datum.parameter_kinds[..num_addl_params].to_owned();
+                let num_addl_params = datum.binders.len() - num_trait_params;
+                let addl_parameter_kinds = datum.binders.binders[..num_addl_params].to_owned();
                 let info = AssociatedTyInfo {
                     id: associated_ty_id,
                     addl_parameter_kinds,

@@ -150,6 +150,10 @@ impl<T: HasTypeFamily> HasTypeFamily for Vec<T> {
     type TypeFamily = T::TypeFamily;
 }
 
+impl<T: HasTypeFamily + ?Sized> HasTypeFamily for &T {
+    type TypeFamily = T::TypeFamily;
+}
+
 impl Fold<ChalkIr> for Ty<ChalkIr> {
     type Result = Self;
     fn fold_with(

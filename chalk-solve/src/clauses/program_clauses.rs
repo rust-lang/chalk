@@ -2,7 +2,6 @@ use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::Subst;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::iter;
@@ -115,9 +114,10 @@ impl ToProgramClauses for AssociatedTyValue {
         // 2. any where-clauses from the `type` declaration in the trait: the
         //    parameters must be substituted with those of the impl
         let assoc_ty_where_clauses = associated_ty
-            .where_clauses
-            .iter()
-            .map(|wc| Subst::apply(&all_parameters, wc))
+            .binders
+            .map_ref(|b| &b.where_clauses)
+            .into_iter()
+            .map(|wc| wc.substitute(&all_parameters))
             .casted();
 
         let impl_where_clauses = impl_datum
@@ -701,11 +701,7 @@ impl ToProgramClauses for AssociatedTyDatum {
         db: &dyn RustIrDatabase,
         clauses: &mut Vec<ProgramClause<ChalkIr>>,
     ) {
-        let binders: Vec<_> = self
-            .parameter_kinds
-            .iter()
-            .map(|pk| pk.map(|_| ()))
-            .collect();
+        let binders = &self.binders.binders;
         let parameters: Vec<_> = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
         let projection = ProjectionTy {
             associated_ty_id: self.id,
@@ -763,7 +759,9 @@ impl ToProgramClauses for AssociatedTyDatum {
                     consequence: WellFormed::Ty(app_ty.clone()).cast(),
                     conditions: iter::once(WellFormed::Trait(trait_ref.clone()).cast())
                         .chain(
-                            self.where_clauses
+                            self.binders
+                                .value
+                                .where_clauses
                                 .iter()
                                 .cloned()
                                 .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
@@ -799,7 +797,7 @@ impl ToProgramClauses for AssociatedTyDatum {
         //    }
         //
         // This is really a family of clauses, one for each where clause.
-        clauses.extend(self.where_clauses.iter().map(|wc| {
+        clauses.extend(self.binders.value.where_clauses.iter().map(|wc| {
             // Don't forget to move the binders to the left in case of higher-ranked where clauses.
             let shift = wc.binders.len();
             Binders {
@@ -823,7 +821,7 @@ impl ToProgramClauses for AssociatedTyDatum {
             let from_env_trait =
                 iter::once(FromEnv::Trait(trait_ref.clone()).shifted_in(shift).cast());
 
-            let where_clauses = self.where_clauses.iter().cloned().casted();
+            let where_clauses = self.binders.value.where_clauses.iter().cloned().casted();
 
             Binders {
                 binders: bound
@@ -841,7 +839,7 @@ impl ToProgramClauses for AssociatedTyDatum {
         }));
 
         // add new type parameter U
-        let mut binders = binders;
+        let mut binders = binders.clone();
         binders.push(ParameterKind::Ty(()));
         let ty = Ty::BoundVar(binders.len() - 1);
 
