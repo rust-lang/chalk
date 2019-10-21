@@ -9,7 +9,7 @@ pub struct Span {
 
 impl Span {
     pub fn new(lo: usize, hi: usize) -> Self {
-        Span { lo: lo, hi: hi }
+        Span { lo, hi }
     }
 }
 
