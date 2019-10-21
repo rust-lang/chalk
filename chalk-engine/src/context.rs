@@ -78,6 +78,9 @@ pub trait Context: Clone + Debug {
     /// Represents a goal along with an environment.
     type GoalInEnvironment: Debug + Clone + Eq + Hash;
 
+    /// Represents an inference table.
+    type InferenceTable: InferenceTable<Self>;
+
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Debug + Clone;
 
@@ -176,6 +179,20 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         goal: &C::UCanonicalGoalInEnvironment,
     ) -> C::CanonicalConstrainedSubst;
 
+    /// Returns the set of program clauses that might apply to
+    /// `goal`. (This set can be over-approximated, naturally.)
+    ///
+    /// If this callback returns `None`, that indicates that the set
+    /// of program clauses cannot be enumerated because there are
+    /// unresolved type variables that would have to be resolved
+    /// first; the goal will be considered floundered.
+    fn program_clauses(
+        &self,
+        environment: &C::Environment,
+        goal: &C::DomainGoal,
+        infer: &mut C::InferenceTable,
+    ) -> Result<Vec<C::ProgramClause>, Floundered>;
+
     /// Create an inference table for processing a new goal and instantiate that goal
     /// in that context, returning "all the pieces".
     ///
@@ -191,14 +208,14 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &C::UCanonicalGoalInEnvironment,
-        op: impl FnOnce(&mut dyn InferenceTable<C>, C::Substitution, C::Environment, C::Goal) -> R,
+        op: impl FnOnce(C::InferenceTable, C::Substitution, C::Environment, C::Goal) -> R,
     ) -> R;
 
     fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
         canonical_ex_clause: &C::CanonicalExClause,
-        op: impl FnOnce(&mut dyn InferenceTable<C>, ExClause<C>) -> R,
+        op: impl FnOnce(C::InferenceTable, ExClause<C>) -> R,
     ) -> R;
 }
 
@@ -245,19 +262,6 @@ pub struct Floundered;
 
 /// Methods for unifying and manipulating terms and binders.
 pub trait UnificationOps<C: Context> {
-    /// Returns the set of program clauses that might apply to
-    /// `goal`. (This set can be over-approximated, naturally.)
-    ///
-    /// If this callback returns `None`, that indicates that the set
-    /// of program clauses cannot be enumerated because there are
-    /// unresolved type variables that would have to be resolved
-    /// first; the goal will be considered floundered.
-    fn program_clauses(
-        &mut self,
-        environment: &C::Environment,
-        goal: &C::DomainGoal,
-    ) -> Result<Vec<C::ProgramClause>, Floundered>;
-
     // Used by: simplify
     fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
 

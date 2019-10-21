@@ -1,4 +1,4 @@
-use crate::context::{prelude::*, Floundered};
+use crate::context::{prelude::*, Floundered, UnificationOps};
 use crate::fallible::NoSolution;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
@@ -239,12 +239,12 @@ impl<C: Context> Forest<C> {
                     let result: StrandResult<C, ()> = context.instantiate_ex_clause(
                         num_universes,
                         &canonical_ex_clause,
-                        |infer, ex_clause| {
+                        |mut infer, ex_clause| {
                             let strand = Strand {
                                 ex_clause,
                                 selected_subgoal: selected_subgoal.clone(),
                             };
-                            self.pursue_strand(context, depth, infer, strand)
+                            self.pursue_strand(context, depth, &mut infer, strand)
                         },
                     );
                     match result {
@@ -413,7 +413,7 @@ impl<C: Context> Forest<C> {
             let (new_canonical, subgoal_table) = context.instantiate_ex_clause(
                 num_universes,
                 &canonical_ex_clause,
-                |infer, ex_clause| {
+                |mut infer, ex_clause| {
                     let strand = Strand {
                         ex_clause,
                         selected_subgoal: selected_subgoal.clone(),
@@ -421,7 +421,7 @@ impl<C: Context> Forest<C> {
                     let (delayed_strand, subgoal_table) =
                         Self::delay_strand_after_cycle(table, strand);
                     (
-                        Self::canonicalize_strand(infer, delayed_strand),
+                        Self::canonicalize_strand(&mut infer, delayed_strand),
                         subgoal_table,
                     )
                 },
@@ -763,15 +763,16 @@ impl<C: Context> Forest<C> {
     fn push_initial_strands(&mut self, context: &impl ContextOps<C>, table: TableIndex) {
         // Instantiate the table goal with fresh inference variables.
         let table_goal = self.tables[table].table_goal.clone();
-        context.instantiate_ucanonical_goal(&table_goal, |infer, subst, environment, goal| {
-            self.push_initial_strands_instantiated(table, infer, subst, environment, goal);
+        context.instantiate_ucanonical_goal(&table_goal, |mut infer, subst, environment, goal| {
+            self.push_initial_strands_instantiated(context, table, &mut infer, subst, environment, goal);
         });
     }
 
     fn push_initial_strands_instantiated(
         &mut self,
+        context: &impl ContextOps<C>, 
         table: TableIndex,
-        infer: &mut dyn InferenceTable<C>,
+        infer: &mut C::InferenceTable,
         subst: C::Substitution,
         environment: C::Environment,
         goal: C::Goal,
@@ -779,7 +780,7 @@ impl<C: Context> Forest<C> {
         let table_ref = &mut self.tables[table];
         match infer.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
-                match infer.program_clauses(&environment, &domain_goal) {
+                match context.program_clauses(&environment, &domain_goal, infer) {
                     Ok(clauses) => {
                         for clause in clauses {
                             info!("program clause = {:#?}", clause);

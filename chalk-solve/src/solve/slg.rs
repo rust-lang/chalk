@@ -48,8 +48,7 @@ pub(crate) struct SlgContextOps<'me> {
     max_size: usize,
 }
 
-pub(super) struct TruncatingInferenceTable<'me> {
-    program: &'me dyn RustIrDatabase,
+pub struct TruncatingInferenceTable {
     max_size: usize,
     infer: InferenceTable,
 }
@@ -61,6 +60,7 @@ impl context::Context for SlgContext {
     type UniverseMap = UniverseMap;
     type InferenceNormalizedSubst = Substitution<ChalkIr>;
     type Solution = Solution;
+    type InferenceTable = TruncatingInferenceTable;
     type Environment = Arc<Environment<ChalkIr>>;
     type DomainGoal = DomainGoal<ChalkIr>;
     type Goal = Goal<ChalkIr>;
@@ -148,11 +148,57 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
             .quantified
     }
 
+    fn program_clauses(
+        &self,
+        environment: &Arc<Environment<ChalkIr>>,
+        goal: &DomainGoal<ChalkIr>,
+        infer: &mut TruncatingInferenceTable,
+    ) -> Result<Vec<ProgramClause<ChalkIr>>, Floundered> {
+        // Look for floundering goals:
+        match goal {
+            // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
+            DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
+                let trait_datum = self.program.trait_datum(trait_ref.trait_id);
+                if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
+                    let self_ty = trait_ref.self_type_parameter().unwrap();
+                    if let Some(v) = self_ty.inference_var() {
+                        if !infer.infer.var_is_bound(v) {
+                            return Err(Floundered);
+                        }
+                    }
+                }
+            }
+
+            DomainGoal::WellFormed(WellFormed::Ty(ty))
+            | DomainGoal::IsUpstream(ty)
+            | DomainGoal::DownstreamType(ty)
+            | DomainGoal::IsFullyVisible(ty)
+            | DomainGoal::IsLocal(ty) => match ty {
+                Ty::InferenceVar(_) => return Err(Floundered),
+                _ => {}
+            },
+
+            _ => {}
+        }
+
+        let mut clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal);
+
+        clauses.extend(
+            environment
+                .clauses
+                .iter()
+                .filter(|&env_clause| env_clause.could_match(goal))
+                .cloned(),
+        );
+
+        Ok(clauses)
+    }
+
     fn instantiate_ucanonical_goal<R>(
         &self,
         arg: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
         op: impl FnOnce(
-            &mut dyn context::InferenceTable<SlgContext>,
+            TruncatingInferenceTable,
             Substitution<ChalkIr>,
             Arc<Environment<ChalkIr>>,
             Goal<ChalkIr>,
@@ -160,34 +206,33 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
     ) -> R {
         let (infer, subst, InEnvironment { environment, goal }) =
             InferenceTable::from_canonical(arg.universes, &arg.canonical);
-        let dyn_infer = &mut TruncatingInferenceTable::new(self.program, self.max_size, infer);
-        op(dyn_infer, subst, environment, goal)
+        let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
+        op(infer_table, subst, environment, goal)
     }
 
     fn instantiate_ex_clause<R>(
         &self,
         num_universes: usize,
         canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
-        op: impl FnOnce(&mut dyn context::InferenceTable<SlgContext>, ExClause<SlgContext>) -> R,
+        op: impl FnOnce(TruncatingInferenceTable, ExClause<SlgContext>) -> R,
     ) -> R {
         let (infer, _subst, ex_cluse) =
             InferenceTable::from_canonical(num_universes, canonical_ex_clause);
-        let dyn_infer = &mut TruncatingInferenceTable::new(self.program, self.max_size, infer);
-        op(dyn_infer, ex_cluse)
+        let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
+        op(infer_table, ex_cluse)
     }
 }
 
-impl<'me> TruncatingInferenceTable<'me> {
-    fn new(program: &'me dyn RustIrDatabase, max_size: usize, infer: InferenceTable) -> Self {
+impl TruncatingInferenceTable {
+    fn new(max_size: usize, infer: InferenceTable) -> Self {
         Self {
-            program,
             max_size,
             infer,
         }
     }
 }
 
-impl<'me> context::TruncateOps<SlgContext> for TruncatingInferenceTable<'me> {
+impl context::TruncateOps<SlgContext> for TruncatingInferenceTable {
     fn truncate_goal(
         &mut self,
         subgoal: &InEnvironment<Goal<ChalkIr>>
@@ -212,7 +257,7 @@ impl<'me> context::TruncateOps<SlgContext> for TruncatingInferenceTable<'me> {
     }
 }
 
-impl<'me> context::InferenceTable<SlgContext> for TruncatingInferenceTable<'me> {
+impl context::InferenceTable<SlgContext> for TruncatingInferenceTable {
     fn into_hh_goal(&mut self, goal: Goal<ChalkIr>) -> HhGoal<SlgContext> {
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
@@ -256,52 +301,7 @@ impl<'me> context::InferenceTable<SlgContext> for TruncatingInferenceTable<'me> 
     }
 }
 
-impl<'me> context::UnificationOps<SlgContext> for TruncatingInferenceTable<'me> {
-    fn program_clauses(
-        &mut self,
-        environment: &Arc<Environment<ChalkIr>>,
-        goal: &DomainGoal<ChalkIr>,
-    ) -> Result<Vec<ProgramClause<ChalkIr>>, Floundered> {
-        // Look for floundering goals:
-        match goal {
-            // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
-            DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
-                let trait_datum = self.program.trait_datum(trait_ref.trait_id);
-                if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                    let self_ty = trait_ref.self_type_parameter().unwrap();
-                    if let Some(v) = self_ty.inference_var() {
-                        if !self.infer.var_is_bound(v) {
-                            return Err(Floundered);
-                        }
-                    }
-                }
-            }
-
-            DomainGoal::WellFormed(WellFormed::Ty(ty))
-            | DomainGoal::IsUpstream(ty)
-            | DomainGoal::DownstreamType(ty)
-            | DomainGoal::IsFullyVisible(ty)
-            | DomainGoal::IsLocal(ty) => match ty {
-                Ty::InferenceVar(_) => return Err(Floundered),
-                _ => {}
-            },
-
-            _ => {}
-        }
-
-        let mut clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal);
-
-        clauses.extend(
-            environment
-                .clauses
-                .iter()
-                .filter(|&env_clause| env_clause.could_match(goal))
-                .cloned(),
-        );
-
-        Ok(clauses)
-    }
-
+impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
     fn instantiate_binders_universally(
         &mut self,
         arg: &Binders<Box<Goal<ChalkIr>>>,
