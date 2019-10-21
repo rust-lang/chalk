@@ -239,12 +239,13 @@ impl<C: Context> Forest<C> {
                     let result: StrandResult<C, ()> = context.instantiate_ex_clause(
                         num_universes,
                         &canonical_ex_clause,
-                        |mut infer, ex_clause| {
+                        |infer, ex_clause| {
                             let strand = Strand {
+                                infer,
                                 ex_clause,
                                 selected_subgoal: selected_subgoal.clone(),
                             };
-                            self.pursue_strand(context, depth, &mut infer, strand)
+                            self.pursue_strand(context, depth, strand)
                         },
                     );
                     match result {
@@ -301,14 +302,14 @@ impl<C: Context> Forest<C> {
     }
 
     fn canonicalize_strand(
-        infer: &mut dyn InferenceTable<C>,
         strand: Strand<C>,
     ) -> CanonicalStrand<C> {
         let Strand {
+            mut infer,
             ex_clause,
             selected_subgoal,
         } = strand;
-        Self::canonicalize_strand_from(infer, &ex_clause, selected_subgoal)
+        Self::canonicalize_strand_from(&mut infer, &ex_clause, selected_subgoal)
     }
 
     fn canonicalize_strand_from(
@@ -413,15 +414,16 @@ impl<C: Context> Forest<C> {
             let (new_canonical, subgoal_table) = context.instantiate_ex_clause(
                 num_universes,
                 &canonical_ex_clause,
-                |mut infer, ex_clause| {
+                |infer, ex_clause| {
                     let strand = Strand {
+                        infer,
                         ex_clause,
                         selected_subgoal: selected_subgoal.clone(),
                     };
                     let (delayed_strand, subgoal_table) =
                         Self::delay_strand_after_cycle(table, strand);
                     (
-                        Self::canonicalize_strand(&mut infer, delayed_strand),
+                        Self::canonicalize_strand(delayed_strand),
                         subgoal_table,
                     )
                 },
@@ -477,14 +479,13 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        infer: &mut dyn InferenceTable<C>,
         mut strand: Strand<C>,
     ) -> StrandResult<C, ()> {
         info_heading!(
             "pursue_strand(table={:?}, depth={:?}, ex_clause={:#?}, selected_subgoal={:?})",
             self.stack[depth].table,
             depth,
-            infer.debug_ex_clause(&strand.ex_clause),
+            strand.infer.debug_ex_clause(&strand.ex_clause),
             strand.selected_subgoal,
         );
 
@@ -492,7 +493,7 @@ impl<C: Context> Forest<C> {
         while strand.selected_subgoal.is_none() {
             if strand.ex_clause.subgoals.len() == 0 {
                 if strand.ex_clause.floundered_subgoals.is_empty() {
-                    return self.pursue_answer(depth, infer, strand);
+                    return self.pursue_answer(depth, strand);
                 }
 
                 self.reconsider_floundered_subgoals(&mut strand.ex_clause);
@@ -505,12 +506,12 @@ impl<C: Context> Forest<C> {
                 continue;
             }
 
-            let subgoal_index = infer.next_subgoal_index(&strand.ex_clause);
+            let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
 
             // Get or create table for this subgoal.
             match self.get_or_create_table_for_subgoal(
                 context,
-                infer,
+                &mut strand.infer,
                 &strand.ex_clause.subgoals[subgoal_index],
             ) {
                 Some((subgoal_table, universe_map)) => {
@@ -536,10 +537,10 @@ impl<C: Context> Forest<C> {
         let selected_subgoal = strand.selected_subgoal.clone().unwrap();
         match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
             Literal::Positive(_) => {
-                self.pursue_positive_subgoal(context, depth, infer, strand, &selected_subgoal)
+                self.pursue_positive_subgoal(context, depth, strand, &selected_subgoal)
             }
             Literal::Negative(_) => {
-                self.pursue_negative_subgoal(context, depth, infer, strand, &selected_subgoal)
+                self.pursue_negative_subgoal(context, depth, strand, &selected_subgoal)
             }
         }
     }
@@ -555,11 +556,11 @@ impl<C: Context> Forest<C> {
     fn pursue_answer(
         &mut self,
         depth: StackIndex,
-        infer: &mut dyn InferenceTable<C>,
         strand: Strand<C>,
     ) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
         let Strand {
+            mut infer,
             ex_clause:
                 ExClause {
                     subst,
@@ -992,7 +993,6 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        infer: &mut dyn InferenceTable<C>,
         mut strand: Strand<C>,
         selected_subgoal: &SelectedSubgoal<C>,
     ) -> StrandResult<C, ()> {
@@ -1019,6 +1019,7 @@ impl<C: Context> Forest<C> {
                         && self.tables[subgoal_table].coinductive_goal
                 );
                 let Strand {
+                    infer,
                     mut ex_clause,
                     selected_subgoal: _,
                 } = strand;
@@ -1026,8 +1027,8 @@ impl<C: Context> Forest<C> {
                 return self.pursue_strand_recursively(
                     context,
                     depth,
-                    infer,
                     Strand {
+                        infer,
                         ex_clause,
                         selected_subgoal: None,
                     },
@@ -1045,13 +1046,13 @@ impl<C: Context> Forest<C> {
                 info!("pursue_positive_subgoal: floundered");
                 self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
                 strand.selected_subgoal = None;
-                self.tables[table].push_strand(Self::canonicalize_strand(infer, strand));
+                self.tables[table].push_strand(Self::canonicalize_strand(strand));
                 return Err(StrandFail::QuantumExceeded);
             }
             Err(RecursiveSearchFail::QuantumExceeded) => {
                 // We'll have to revisit this strand later
                 info!("pursue_positive_subgoal: quantum exceeded");
-                self.tables[table].push_strand(Self::canonicalize_strand(infer, strand));
+                self.tables[table].push_strand(Self::canonicalize_strand(strand));
                 return Err(StrandFail::QuantumExceeded);
             }
             Err(RecursiveSearchFail::Cycle(minimums)) => {
@@ -1059,17 +1060,18 @@ impl<C: Context> Forest<C> {
                     "pursue_positive_subgoal: cycle with minimums {:?}",
                     minimums
                 );
-                let canonical_strand = Self::canonicalize_strand(infer, strand);
+                let canonical_strand = Self::canonicalize_strand(strand);
                 return Err(StrandFail::Cycle(canonical_strand, minimums));
             }
         }
 
         // Whichever way this particular answer turns out, there may
         // yet be *more* answers. Enqueue that alternative for later.
-        self.push_strand_pursuing_next_answer(depth, infer, &mut strand, selected_subgoal);
+        self.push_strand_pursuing_next_answer(depth, &mut strand, selected_subgoal);
 
         // OK, let's follow *this* answer and see where it leads.
         let Strand {
+            mut infer,
             mut ex_clause,
             selected_subgoal: _,
         } = strand;
@@ -1109,13 +1111,13 @@ impl<C: Context> Forest<C> {
                 ex_clause.current_time.increment();
 
                 // Apply answer abstraction.
-                let ex_clause = self.truncate_returned(ex_clause, infer);
+                let ex_clause = self.truncate_returned(ex_clause, &mut infer);
 
                 self.pursue_strand_recursively(
                     context,
                     depth,
-                    infer,
                     Strand {
+                        infer,
                         ex_clause,
                         selected_subgoal: None,
                     },
@@ -1223,10 +1225,9 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        infer: &mut dyn InferenceTable<C>,
         strand: Strand<C>,
     ) -> StrandResult<C, ()> {
-        crate::maybe_grow_stack(|| self.pursue_strand(context, depth, infer, strand))
+        crate::maybe_grow_stack(|| self.pursue_strand(context, depth, strand))
     }
 
     /// Invoked when we have found a successful answer to the given
@@ -1235,7 +1236,6 @@ impl<C: Context> Forest<C> {
     fn push_strand_pursuing_next_answer(
         &mut self,
         depth: StackIndex,
-        infer: &mut dyn InferenceTable<C>,
         strand: &mut Strand<C>,
         selected_subgoal: &SelectedSubgoal<C>,
     ) {
@@ -1243,7 +1243,7 @@ impl<C: Context> Forest<C> {
         let mut selected_subgoal = selected_subgoal.clone();
         selected_subgoal.answer_index.increment();
         self.tables[table].push_strand(Self::canonicalize_strand_from(
-            infer,
+            &mut strand.infer,
             &strand.ex_clause,
             Some(selected_subgoal),
         ));
@@ -1253,7 +1253,6 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        infer: &mut dyn InferenceTable<C>,
         strand: Strand<C>,
         selected_subgoal: &SelectedSubgoal<C>,
     ) -> StrandResult<C, ()> {
@@ -1342,7 +1341,7 @@ impl<C: Context> Forest<C> {
                     "pursue_negative_subgoal: found neg cycle at depth {:?}",
                     min
                 );
-                let canonical_strand = Self::canonicalize_strand(infer, strand);
+                let canonical_strand = Self::canonicalize_strand(strand);
                 return Err(StrandFail::Cycle(
                     canonical_strand,
                     Minimums {
@@ -1362,7 +1361,7 @@ impl<C: Context> Forest<C> {
             // Learned nothing yet. Have to try again some other time.
             Err(RecursiveSearchFail::QuantumExceeded) => {
                 info!("pursue_negative_subgoal: quantum exceeded");
-                self.tables[table].push_strand(Self::canonicalize_strand(infer, strand));
+                self.tables[table].push_strand(Self::canonicalize_strand(strand));
                 return Err(StrandFail::QuantumExceeded);
             }
         }
@@ -1373,6 +1372,7 @@ impl<C: Context> Forest<C> {
         // any need to unify things, because the subgoal must be
         // ground (i). We may need to add a delayed literal, though (ii).
         let Strand {
+            infer,
             mut ex_clause,
             selected_subgoal: _,
         } = strand;
@@ -1381,8 +1381,8 @@ impl<C: Context> Forest<C> {
         self.pursue_strand_recursively(
             context,
             depth,
-            infer,
             Strand {
+                infer,
                 ex_clause,
                 selected_subgoal: None,
             },

@@ -12,6 +12,8 @@ pub(crate) struct CanonicalStrand<C: Context> {
 }
 
 pub(crate) struct Strand<C: Context> {
+    pub(super) infer: C::InferenceTable,
+
     pub(super) ex_clause: ExClause<C>,
 
     /// Index into `ex_clause.subgoals`.
