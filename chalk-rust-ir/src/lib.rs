@@ -59,6 +59,7 @@ pub struct DefaultImplDatumBound {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatum {
     pub binders: Binders<StructDatumBound>,
+    pub flags: StructFlags,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -66,7 +67,6 @@ pub struct StructDatumBound {
     pub self_ty: ApplicationTy<ChalkIr>,
     pub fields: Vec<Ty<ChalkIr>>,
     pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
-    pub flags: StructFlags,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

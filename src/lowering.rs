@@ -595,14 +595,15 @@ impl LowerStructDefn for StructDefn {
                 self_ty,
                 fields: fields?,
                 where_clauses,
-                flags: rust_ir::StructFlags {
-                    upstream: self.flags.upstream,
-                    fundamental: self.flags.fundamental,
-                },
             })
         })?;
 
-        Ok(rust_ir::StructDatum { binders })
+        let flags = rust_ir::StructFlags {
+            upstream: self.flags.upstream,
+            fundamental: self.flags.fundamental,
+        };
+
+        Ok(rust_ir::StructDatum { binders, flags })
     }
 }
 

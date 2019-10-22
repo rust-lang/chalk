@@ -282,7 +282,7 @@ impl ToProgramClauses for StructDatum {
         }
 
         // Types that are not marked `#[upstream]` satisfy IsLocal(TypeName)
-        if !self.binders.value.flags.upstream {
+        if !self.flags.upstream {
             // `IsLocalTy(Ty)` depends *only* on whether the type is marked #[upstream] and nothing else
             let is_local = self
                 .binders
@@ -293,7 +293,7 @@ impl ToProgramClauses for StructDatum {
                 .cast();
 
             clauses.push(is_local);
-        } else if self.binders.value.flags.fundamental {
+        } else if self.flags.fundamental {
             // If a type is `#[upstream]`, but is also `#[fundamental]`, it satisfies IsLocal
             // if and only if its parameters satisfy IsLocal
             fundamental_rule!(IsLocal);
@@ -312,7 +312,7 @@ impl ToProgramClauses for StructDatum {
             clauses.push(is_upstream);
         }
 
-        if self.binders.value.flags.fundamental {
+        if self.flags.fundamental {
             fundamental_rule!(DownstreamType);
         }
 
