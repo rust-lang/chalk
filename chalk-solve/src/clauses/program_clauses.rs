@@ -220,144 +220,111 @@ impl ToProgramClauses for StructDatum {
     ///
     fn to_program_clauses(
         &self,
-        _db: &dyn RustIrDatabase,
+        db: &dyn RustIrDatabase,
         clauses: &mut Vec<ProgramClause<ChalkIr>>,
     ) {
-        let self_ty = ApplicationTy {
-            name: self.id.cast(),
-            parameters: self
-                .binders
-                .binders
-                .iter()
-                .zip(0..)
-                .map(|p| p.to_parameter())
-                .collect(),
-        };
+        debug_heading!("StructDatum::to_program_clauses(self={:?})", self);
 
-        let wf = self
-            .binders
-            .map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: WellFormed::Ty(self_ty.clone().cast()).cast(),
+        let mut builder = ClauseBuilder::new(db, clauses);
 
-                conditions: bound_datum
-                    .where_clauses
+        let binders = self.binders.map_ref(|b| &b.where_clauses);
+        builder.push_binders(&binders, |builder, where_clauses| {
+            let self_ty = &ApplicationTy {
+                name: self.id.cast(),
+                parameters: builder.placeholders_in_scope().to_vec(),
+            };
+
+            // forall<T> {
+            //     WF(Foo<T>) :- WF(T: Eq).
+            // }
+            builder.push_clause(
+                WellFormed::Ty(self_ty.clone().cast()),
+                where_clauses
                     .iter()
                     .cloned()
-                    .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
-                    .casted()
-                    .collect(),
-            })
-            .cast();
+                    .map(|wc| wc.map(|bound| bound.into_well_formed_goal())),
+            );
 
-        let is_fully_visible = self
-            .binders
-            .map_ref(|_bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsFullyVisible(self_ty.clone().cast()),
-                conditions: self_ty
+            // forall<T> {
+            //     IsFullyVisible(Foo<T>) :- IsFullyVisible(T).
+            // }
+            builder.push_clause(
+                DomainGoal::IsFullyVisible(self_ty.clone().cast()),
+                self_ty
                     .type_parameters()
                     .map(|ty| DomainGoal::IsFullyVisible(ty).cast())
-                    .collect(),
-            })
-            .cast();
-
-        clauses.push(wf);
-        clauses.push(is_fully_visible);
-
-        // Fundamental types often have rules in the form of:
-        //     Goal(FundamentalType<T>) :- Goal(T)
-        // This macro makes creating that kind of clause easy
-        macro_rules! fundamental_rule {
-            ($goal:ident) => {
-                // Fundamental types must always have at least one type parameter for this rule to
-                // make any sense. We currently do not have have any fundamental types with more than
-                // one type parameter, nor do we know what the behaviour for that should be. Thus, we
-                // are asserting here that there is only a single type parameter until the day when
-                // someone makes a decision about how that should behave.
-                assert_eq!(self_ty.len_type_parameters(), 1,
-                    "Only fundamental types with a single parameter are supported");
-
-                clauses.push(self.binders.map_ref(|_bound_datum| ProgramClauseImplication {
-                    consequence: DomainGoal::$goal(self_ty.clone().cast()),
-                    conditions: vec![
-                    DomainGoal::$goal(
-                        // This unwrap is safe because we asserted above for the presence of a type
-                        // parameter
-                        self_ty.first_type_parameter().unwrap()
-                    ).cast(),
-                    ],
-                }).cast());
-            };
-        }
-
-        // Types that are not marked `#[upstream]` satisfy IsLocal(TypeName)
-        if !self.flags.upstream {
-            // `IsLocalTy(Ty)` depends *only* on whether the type is marked #[upstream] and nothing else
-            let is_local = self
-                .binders
-                .map_ref(|_bound_datum| ProgramClauseImplication {
-                    consequence: DomainGoal::IsLocal(self_ty.clone().cast()),
-                    conditions: Vec::new(),
-                })
-                .cast();
-
-            clauses.push(is_local);
-        } else if self.flags.fundamental {
-            // If a type is `#[upstream]`, but is also `#[fundamental]`, it satisfies IsLocal
-            // if and only if its parameters satisfy IsLocal
-            fundamental_rule!(IsLocal);
-            fundamental_rule!(IsUpstream);
-        } else {
-            // The type is just upstream and not fundamental
-
-            let is_upstream = self
-                .binders
-                .map_ref(|_bound_datum| ProgramClauseImplication {
-                    consequence: DomainGoal::IsUpstream(self_ty.clone().cast()),
-                    conditions: Vec::new(),
-                })
-                .cast();
-
-            clauses.push(is_upstream);
-        }
-
-        if self.flags.fundamental {
-            fundamental_rule!(DownstreamType);
-        }
-
-        let condition = DomainGoal::FromEnv(FromEnv::Ty(self_ty.clone().cast()));
-
-        for wc in self
-            .binders
-            .value
-            .where_clauses
-            .iter()
-            .cloned()
-            .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
-        {
-            // We move the binders of the where-clause to the left, e.g. if we had:
-            //
-            // `forall<T> { WellFormed(Foo<T>) :- forall<'a> Implemented(T: Fn(&'a i32)) }`
-            //
-            // then the reverse rule will be:
-            //
-            // `forall<'a, T> { FromEnv(T: Fn(&'a i32)) :- FromEnv(Foo<T>) }`
-            //
-            let shift = wc.binders.len();
-            clauses.push(
-                Binders {
-                    binders: wc
-                        .binders
-                        .into_iter()
-                        .chain(self.binders.binders.clone())
-                        .collect(),
-                    value: ProgramClauseImplication {
-                        consequence: wc.value,
-                        conditions: vec![condition.clone().shifted_in(shift).cast()],
-                    },
-                }
-                .cast(),
+                    .inspect(|_: &Goal<_>| ()), // provide a type hint
             );
-        }
+
+            // Fundamental types often have rules in the form of:
+            //     Goal(FundamentalType<T>) :- Goal(T)
+            // This macro makes creating that kind of clause easy
+            macro_rules! fundamental_rule {
+                ($goal:ident) => {
+                    // Fundamental types must always have at least one
+                    // type parameter for this rule to make any
+                    // sense. We currently do not have have any
+                    // fundamental types with more than one type
+                    // parameter, nor do we know what the behaviour
+                    // for that should be. Thus, we are asserting here
+                    // that there is only a single type parameter
+                    // until the day when someone makes a decision
+                    // about how that should behave.
+                    assert_eq!(
+                        self_ty.len_type_parameters(),
+                        1,
+                        "Only fundamental types with a single parameter are supported"
+                    );
+
+                    builder.push_clause(
+                        DomainGoal::$goal(self_ty.clone().cast()),
+                        Some(DomainGoal::$goal(
+                            // This unwrap is safe because we asserted
+                            // above for the presence of a type
+                            // parameter
+                            self_ty.first_type_parameter().unwrap(),
+                        )),
+                    );
+                };
+            }
+
+            // Types that are not marked `#[upstream]` satisfy IsLocal(TypeName)
+            if !self.flags.upstream {
+                // `IsLocalTy(Ty)` depends *only* on whether the type
+                // is marked #[upstream] and nothing else
+                builder.push_fact(DomainGoal::IsLocal(self_ty.clone().cast()));
+            } else if self.flags.fundamental {
+                // If a type is `#[upstream]`, but is also
+                // `#[fundamental]`, it satisfies IsLocal if and only
+                // if its parameters satisfy IsLocal
+                fundamental_rule!(IsLocal);
+                fundamental_rule!(IsUpstream);
+            } else {
+                // The type is just upstream and not fundamental
+                builder.push_fact(DomainGoal::IsUpstream(self_ty.clone().cast()));
+            }
+
+            if self.flags.fundamental {
+                fundamental_rule!(DownstreamType);
+            }
+
+            for qwc in where_clauses {
+                // We move the binders of the where-clause to the left, e.g. if we had:
+                //
+                // `forall<T> { WellFormed(Foo<T>) :- forall<'a> Implemented(T: Fn(&'a i32)) }`
+                //
+                // then the reverse rule will be:
+                //
+                // `forall<'a, T> { FromEnv(T: Fn(&'a i32)) :- FromEnv(Foo<T>) }`
+                //
+                builder.push_binders(&qwc, |builder, wc| {
+                    builder.push_clause(
+                        wc.into_from_env_goal(),
+                        Some(FromEnv::Ty(self_ty.clone().cast())),
+                    );
+                });
+            }
+        });
     }
 }
 

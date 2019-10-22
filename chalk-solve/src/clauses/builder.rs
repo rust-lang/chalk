@@ -22,6 +22,10 @@ impl<'me> ClauseBuilder<'me> {
         }
     }
 
+    pub fn push_fact(&mut self, consequence: impl Cast<DomainGoal<ChalkIr>>) {
+        self.push_clause(consequence, None::<Goal<_>>);
+    }
+
     pub fn push_clause(
         &mut self,
         consequence: impl Cast<DomainGoal<ChalkIr>>,
@@ -40,6 +44,8 @@ impl<'me> ClauseBuilder<'me> {
                 value: clause,
             }));
         }
+
+        debug!("pushed clause {:?}", self.clauses.last());
     }
 
     /// Accesses the placeholders for the current list of parameters in scope.

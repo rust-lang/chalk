@@ -50,6 +50,7 @@ macro_rules! reflexive_impl {
 reflexive_impl!(for(TF: TypeFamily) TraitRef<TF>);
 reflexive_impl!(for(TF: TypeFamily) LeafGoal<TF>);
 reflexive_impl!(for(TF: TypeFamily) DomainGoal<TF>);
+reflexive_impl!(for(TF: TypeFamily) Goal<TF>);
 reflexive_impl!(for(TF: TypeFamily) WhereClause<TF>);
 
 impl<TF: TypeFamily> Cast<WhereClause<TF>> for TraitRef<TF> {
