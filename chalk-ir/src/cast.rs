@@ -226,6 +226,21 @@ where
     }
 }
 
+impl Cast<TypeKindId> for StructId {
+    fn cast(self) -> TypeKindId {
+        TypeKindId::StructId(self)
+    }
+}
+
+impl<T> Cast<TypeName> for T
+where
+    T: Cast<TypeKindId>,
+{
+    fn cast(self) -> TypeName {
+        TypeName::TypeKindId(self.cast())
+    }
+}
+
 impl<T> Cast<T> for &T
 where
     T: Clone,

@@ -570,29 +570,17 @@ impl LowerStructDefn for StructDefn {
         struct_id: chalk_ir::StructId,
         env: &Env,
     ) -> Fallible<rust_ir::StructDatum> {
+        if self.flags.fundamental && self.all_parameters().len() != 1 {
+            return Err(format_err!(
+                "Only fundamental types with a single parameter are supported"
+            ));
+        }
+
         let binders = env.in_binders(self.all_parameters(), |env| {
-            let self_ty = chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::TypeKindId(struct_id.into()),
-                parameters: self
-                    .all_parameters()
-                    .anonymize()
-                    .iter()
-                    .zip(0..)
-                    .map(|p| p.to_parameter())
-                    .collect(),
-            };
-
-            if self.flags.fundamental && self_ty.len_type_parameters() != 1 {
-                return Err(format_err!(
-                    "Only fundamental types with a single parameter are supported"
-                ));
-            }
-
             let fields: Fallible<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
             let where_clauses = self.lower_where_clauses(env)?;
 
             Ok(rust_ir::StructDatumBound {
-                self_ty,
                 fields: fields?,
                 where_clauses,
             })
@@ -603,7 +591,11 @@ impl LowerStructDefn for StructDefn {
             fundamental: self.flags.fundamental,
         };
 
-        Ok(rust_ir::StructDatum { binders, flags })
+        Ok(rust_ir::StructDatum {
+            id: struct_id,
+            binders,
+            flags,
+        })
     }
 }
 

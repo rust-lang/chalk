@@ -7,8 +7,8 @@ use chalk_ir::cast::Cast;
 use chalk_ir::family::{ChalkIr, HasTypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
-    ApplicationTy, Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq,
-    ProjectionTy, QuantifiedWhereClause, TraitId, TraitRef, Ty, TypeId, WhereClause,
+    Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq, ProjectionTy,
+    QuantifiedWhereClause, StructId, TraitId, TraitRef, Ty, TypeId, TypeName, WhereClause,
 };
 use std::iter;
 
@@ -59,12 +59,18 @@ pub struct DefaultImplDatumBound {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatum {
     pub binders: Binders<StructDatumBound>,
+    pub id: StructId,
     pub flags: StructFlags,
+}
+
+impl StructDatum {
+    pub fn name(&self) -> TypeName {
+        self.id.cast()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
-    pub self_ty: ApplicationTy<ChalkIr>,
     pub fields: Vec<Ty<ChalkIr>>,
     pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
 }

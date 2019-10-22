@@ -72,8 +72,14 @@ pub fn push_auto_trait_impls(
         return;
     }
 
-    let binders = struct_datum.binders.map_ref(|b| (&b.self_ty, &b.fields));
-    builder.push_binders(&binders, |builder, (self_ty, fields)| {
+    let binders = struct_datum.binders.map_ref(|b| &b.fields);
+    builder.push_binders(&binders, |builder, fields| {
+        let self_ty: Ty<_> = ApplicationTy {
+            name: struct_id.cast(),
+            parameters: builder.placeholders_in_scope().to_vec(),
+        }
+        .cast();
+
         // trait_ref = `MyStruct<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
             trait_id: auto_trait_id,

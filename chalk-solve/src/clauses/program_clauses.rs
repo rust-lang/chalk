@@ -223,10 +223,21 @@ impl ToProgramClauses for StructDatum {
         _db: &dyn RustIrDatabase,
         clauses: &mut Vec<ProgramClause<ChalkIr>>,
     ) {
+        let self_ty = ApplicationTy {
+            name: self.id.cast(),
+            parameters: self
+                .binders
+                .binders
+                .iter()
+                .zip(0..)
+                .map(|p| p.to_parameter())
+                .collect(),
+        };
+
         let wf = self
             .binders
             .map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: WellFormed::Ty(bound_datum.self_ty.clone().cast()).cast(),
+                consequence: WellFormed::Ty(self_ty.clone().cast()).cast(),
 
                 conditions: bound_datum
                     .where_clauses
@@ -240,10 +251,9 @@ impl ToProgramClauses for StructDatum {
 
         let is_fully_visible = self
             .binders
-            .map_ref(|bound_datum| ProgramClauseImplication {
-                consequence: DomainGoal::IsFullyVisible(bound_datum.self_ty.clone().cast()),
-                conditions: bound_datum
-                    .self_ty
+            .map_ref(|_bound_datum| ProgramClauseImplication {
+                consequence: DomainGoal::IsFullyVisible(self_ty.clone().cast()),
+                conditions: self_ty
                     .type_parameters()
                     .map(|ty| DomainGoal::IsFullyVisible(ty).cast())
                     .collect(),
@@ -263,16 +273,16 @@ impl ToProgramClauses for StructDatum {
                 // one type parameter, nor do we know what the behaviour for that should be. Thus, we
                 // are asserting here that there is only a single type parameter until the day when
                 // someone makes a decision about how that should behave.
-                assert_eq!(self.binders.value.self_ty.len_type_parameters(), 1,
+                assert_eq!(self_ty.len_type_parameters(), 1,
                     "Only fundamental types with a single parameter are supported");
 
-                clauses.push(self.binders.map_ref(|bound_datum| ProgramClauseImplication {
-                    consequence: DomainGoal::$goal(bound_datum.self_ty.clone().cast()),
+                clauses.push(self.binders.map_ref(|_bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::$goal(self_ty.clone().cast()),
                     conditions: vec![
                     DomainGoal::$goal(
                         // This unwrap is safe because we asserted above for the presence of a type
                         // parameter
-                        bound_datum.self_ty.first_type_parameter().unwrap()
+                        self_ty.first_type_parameter().unwrap()
                     ).cast(),
                     ],
                 }).cast());
@@ -284,8 +294,8 @@ impl ToProgramClauses for StructDatum {
             // `IsLocalTy(Ty)` depends *only* on whether the type is marked #[upstream] and nothing else
             let is_local = self
                 .binders
-                .map_ref(|bound_datum| ProgramClauseImplication {
-                    consequence: DomainGoal::IsLocal(bound_datum.self_ty.clone().cast()),
+                .map_ref(|_bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::IsLocal(self_ty.clone().cast()),
                     conditions: Vec::new(),
                 })
                 .cast();
@@ -301,8 +311,8 @@ impl ToProgramClauses for StructDatum {
 
             let is_upstream = self
                 .binders
-                .map_ref(|bound_datum| ProgramClauseImplication {
-                    consequence: DomainGoal::IsUpstream(bound_datum.self_ty.clone().cast()),
+                .map_ref(|_bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::IsUpstream(self_ty.clone().cast()),
                     conditions: Vec::new(),
                 })
                 .cast();
@@ -314,7 +324,7 @@ impl ToProgramClauses for StructDatum {
             fundamental_rule!(DownstreamType);
         }
 
-        let condition = DomainGoal::FromEnv(FromEnv::Ty(self.binders.value.self_ty.clone().cast()));
+        let condition = DomainGoal::FromEnv(FromEnv::Ty(self_ty.clone().cast()));
 
         for wc in self
             .binders

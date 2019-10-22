@@ -42,10 +42,10 @@ impl<'me> ClauseBuilder<'me> {
         }
     }
 
-    // /// Accesses the placeholders for the current list of parameters in scope.
-    // pub fn placeholders_in_scope(&self) -> &[Parameter<ChalkIr>] {
-    //     &self.parameters
-    // }
+    /// Accesses the placeholders for the current list of parameters in scope.
+    pub fn placeholders_in_scope(&self) -> &[Parameter<ChalkIr>] {
+        &self.parameters
+    }
 
     /// Executes `op` with the `binders` in-scope; `op` is invoked
     /// with the bound value `v` as a parameter. After `op` finishes,
