@@ -1,3 +1,4 @@
+use crate::clauses::builder::ClauseBuilder;
 use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::family::ChalkIr;
@@ -5,9 +6,6 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::iter;
-
-mod builder;
-use builder::ClauseBuilder;
 
 /// Trait for lowering a given piece of rust-ir source (e.g., an impl
 /// or struct definition) into its associated "program clauses" --

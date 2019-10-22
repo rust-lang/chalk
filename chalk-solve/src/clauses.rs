@@ -7,6 +7,7 @@ use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
 
+mod builder;
 mod env_elaborator;
 pub mod program_clauses;
 
