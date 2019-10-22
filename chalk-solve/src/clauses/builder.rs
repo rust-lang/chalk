@@ -4,6 +4,7 @@ use chalk_ir::family::{ChalkIr, HasTypeFamily};
 use chalk_ir::fold::Fold;
 use chalk_ir::*;
 use chalk_rust_ir::*;
+use std::marker::PhantomData;
 
 pub struct ClauseBuilder<'me> {
     pub db: &'me dyn RustIrDatabase,
@@ -79,5 +80,27 @@ impl<'me> ClauseBuilder<'me> {
 
         self.binders.truncate(old_len);
         self.parameters.truncate(old_len);
+    }
+
+    /// Push a single binder, for a type, at the end of the binder
+    /// list.  The indices of previously bound variables are
+    /// unaffected and hence the context remains usable. Invokes `op`,
+    /// passing a type representing this new type variable in as an
+    /// argument.
+    #[allow(dead_code)]
+    pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<ChalkIr>)) {
+        let binders = Binders {
+            binders: vec![ParameterKind::Ty(())],
+            value: PhantomData::<ChalkIr>,
+        };
+        self.push_binders(&binders, |this, PhantomData| {
+            let ty = this
+                .placeholders_in_scope()
+                .last()
+                .unwrap()
+                .assert_ty_ref()
+                .clone();
+            op(this, ty)
+        });
     }
 }

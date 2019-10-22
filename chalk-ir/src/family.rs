@@ -11,6 +11,7 @@ use crate::Ty;
 use chalk_engine::fallible::Fallible;
 use std::fmt::{self, Debug};
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 /// A "type family" encapsulates the concrete representation of
 /// certain "core types" from chalk-ir. All the types in chalk-ir are
@@ -142,6 +143,10 @@ impl TypeFamily for ChalkIr {
     }
 }
 
+impl HasTypeFamily for ChalkIr {
+    type TypeFamily = ChalkIr;
+}
+
 impl<T: HasTypeFamily> HasTypeFamily for [T] {
     type TypeFamily = T::TypeFamily;
 }
@@ -152,6 +157,10 @@ impl<T: HasTypeFamily> HasTypeFamily for Vec<T> {
 
 impl<T: HasTypeFamily + ?Sized> HasTypeFamily for &T {
     type TypeFamily = T::TypeFamily;
+}
+
+impl<TF: TypeFamily> HasTypeFamily for PhantomData<TF> {
+    type TypeFamily = TF;
 }
 
 impl<A, B, TF> HasTypeFamily for (A, B)
