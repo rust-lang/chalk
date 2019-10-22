@@ -6,6 +6,9 @@ use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::iter;
 
+mod builder;
+use builder::ClauseBuilder;
+
 /// Trait for lowering a given piece of rust-ir source (e.g., an impl
 /// or struct definition) into its associated "program clauses" --
 /// that is, into the lowered, logical rules that it defines.
@@ -33,18 +36,15 @@ impl ToProgramClauses for ImplDatum {
     /// on its own.
     fn to_program_clauses(
         &self,
-        _db: &dyn RustIrDatabase,
+        db: &dyn RustIrDatabase,
         clauses: &mut Vec<ProgramClause<ChalkIr>>,
     ) {
+        let mut builder = ClauseBuilder::new(db, clauses);
         if self.is_positive() {
-            clauses.push(
-                self.binders
-                    .map_ref(|bound| ProgramClauseImplication {
-                        consequence: bound.trait_ref.clone().cast(),
-                        conditions: bound.where_clauses.iter().cloned().casted().collect(),
-                    })
-                    .cast(),
-            );
+            let binders = self.binders.map_ref(|b| (&b.trait_ref, &b.where_clauses));
+            builder.push_binders(&binders, |builder, (trait_ref, where_clauses)| {
+                builder.push_clause(trait_ref, where_clauses);
+            });
         }
     }
 }

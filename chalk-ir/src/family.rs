@@ -154,6 +154,15 @@ impl<T: HasTypeFamily + ?Sized> HasTypeFamily for &T {
     type TypeFamily = T::TypeFamily;
 }
 
+impl<A, B, TF> HasTypeFamily for (A, B)
+where
+    A: HasTypeFamily<TypeFamily = TF>,
+    B: HasTypeFamily<TypeFamily = TF>,
+    TF: TypeFamily,
+{
+    type TypeFamily = TF;
+}
+
 impl Fold<ChalkIr> for Ty<ChalkIr> {
     type Result = Self;
     fn fold_with(

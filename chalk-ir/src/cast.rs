@@ -226,6 +226,15 @@ where
     }
 }
 
+impl<T> Cast<T> for &T
+where
+    T: Clone,
+{
+    fn cast(self) -> T {
+        self.clone()
+    }
+}
+
 pub struct Casted<I, U> {
     iterator: I,
     _cast: PhantomData<U>,
