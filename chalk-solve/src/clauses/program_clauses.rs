@@ -447,9 +447,20 @@ impl ToProgramClauses for TraitDatum {
         _db: &dyn RustIrDatabase,
         clauses: &mut Vec<ProgramClause<ChalkIr>>,
     ) {
-        let trait_ref = self.binders.value.trait_ref.clone();
+        let parameters: Vec<_> = self
+            .binders
+            .binders
+            .iter()
+            .zip(0..)
+            .map(|p| p.to_parameter())
+            .collect();
 
-        let trait_ref_impl = WhereClause::Implemented(self.binders.value.trait_ref.clone());
+        let trait_ref = chalk_ir::TraitRef {
+            trait_id: self.id,
+            parameters,
+        };
+
+        let trait_ref_impl = WhereClause::Implemented(trait_ref.clone());
 
         let wf = self
             .binders
@@ -474,16 +485,14 @@ impl ToProgramClauses for TraitDatum {
         // The number of parameters will always be at least 1 because of the Self parameter
         // that is automatically added to every trait. This is important because otherwise
         // the added program clauses would not have any conditions.
-        let type_parameters: Vec<_> = self.binders.value.trait_ref.type_parameters().collect();
+        let type_parameters: Vec<_> = trait_ref.type_parameters().collect();
 
         // Add all cases for potential downstream impls that could exist
         clauses.extend((0..type_parameters.len()).map(|i| {
             let impl_may_exist =
                 self.binders
                     .map_ref(|bound_datum| ProgramClauseImplication {
-                        consequence: DomainGoal::Holds(WhereClause::Implemented(
-                            bound_datum.trait_ref.clone(),
-                        )),
+                        consequence: DomainGoal::Holds(WhereClause::Implemented(trait_ref.clone())),
                         conditions: bound_datum
                             .where_clauses
                             .iter()
@@ -507,8 +516,8 @@ impl ToProgramClauses for TraitDatum {
         if !self.flags.upstream {
             let impl_allowed = self
                 .binders
-                .map_ref(|bound_datum| ProgramClauseImplication {
-                    consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
+                .map_ref(|_bound_datum| ProgramClauseImplication {
+                    consequence: DomainGoal::LocalImplAllowed(trait_ref.clone()),
                     conditions: Vec::new(),
                 })
                 .cast();
@@ -518,8 +527,8 @@ impl ToProgramClauses for TraitDatum {
             clauses.extend((0..type_parameters.len()).map(|i| {
                 let impl_maybe_allowed = self
                     .binders
-                    .map_ref(|bound_datum| ProgramClauseImplication {
-                        consequence: DomainGoal::LocalImplAllowed(bound_datum.trait_ref.clone()),
+                    .map_ref(|_bound_datum| ProgramClauseImplication {
+                        consequence: DomainGoal::LocalImplAllowed(trait_ref.clone()),
                         conditions: (0..i)
                             .map(|j| DomainGoal::IsFullyVisible(type_parameters[j].clone()).cast())
                             .chain(iter::once(
@@ -538,9 +547,7 @@ impl ToProgramClauses for TraitDatum {
                 let impl_may_exist = self
                     .binders
                     .map_ref(|bound_datum| ProgramClauseImplication {
-                        consequence: DomainGoal::Holds(WhereClause::Implemented(
-                            bound_datum.trait_ref.clone(),
-                        )),
+                        consequence: DomainGoal::Holds(WhereClause::Implemented(trait_ref.clone())),
                         conditions: bound_datum
                             .where_clauses
                             .iter()
@@ -548,8 +555,7 @@ impl ToProgramClauses for TraitDatum {
                             .casted()
                             .chain(iter::once(DomainGoal::Compatible(()).cast()))
                             .chain(
-                                bound_datum
-                                    .trait_ref
+                                trait_ref
                                     .type_parameters()
                                     .map(|ty| DomainGoal::IsUpstream(ty).cast()),
                             )

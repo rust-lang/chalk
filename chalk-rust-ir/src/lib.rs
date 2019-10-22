@@ -83,6 +83,8 @@ pub struct StructFlags {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum {
+    pub id: TraitId,
+
     pub binders: Binders<TraitDatumBound>,
 
     /// "Flags" indicate special kinds of traits, like auto traits.
@@ -99,25 +101,10 @@ impl TraitDatum {
     pub fn is_non_enumerable_trait(&self) -> bool {
         self.flags.non_enumerable
     }
-
-    pub fn trait_id(&self) -> TraitId {
-        self.binders.value.trait_ref.trait_id
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
-    /// A "reference" to the trait, with all generic parameters
-    /// represented as bound values. So e.g. for
-    ///
-    /// ```ignore
-    /// trait Foo<T> {}
-    /// ```
-    ///
-    /// this would be `^0: Foo<^1>`, where `^0` represents the
-    /// debruijn index for `Self` and so forth.
-    pub trait_ref: TraitRef<ChalkIr>,
-
     /// Where clauses defined on the trait:
     ///
     /// ```ignore

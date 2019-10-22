@@ -1097,14 +1097,11 @@ trait LowerTrait {
 
 impl LowerTrait for TraitDefn {
     fn lower_trait(&self, trait_id: chalk_ir::TraitId, env: &Env) -> Fallible<rust_ir::TraitDatum> {
-        let binders = env.in_binders(self.all_parameters(), |env| {
-            let trait_ref = chalk_ir::TraitRef {
-                trait_id: trait_id,
-                parameters: self.parameter_refs(),
-            };
-
+        let all_parameters = self.all_parameters();
+        let all_parameters_len = all_parameters.len();
+        let binders = env.in_binders(all_parameters, |env| {
             if self.flags.auto {
-                if trait_ref.parameters.len() > 1 {
+                if all_parameters_len > 1 {
                     return Err(format_err!("auto trait cannot have parameters"));
                 }
                 if !self.where_clauses.is_empty() {
@@ -1119,13 +1116,13 @@ impl LowerTrait for TraitDefn {
                 .collect();
 
             Ok(rust_ir::TraitDatumBound {
-                trait_ref: trait_ref,
                 where_clauses: self.lower_where_clauses(env)?,
                 associated_ty_ids,
             })
         })?;
 
         Ok(rust_ir::TraitDatum {
+            id: trait_id,
             binders: binders,
             flags: self.flags.lower(),
         })
