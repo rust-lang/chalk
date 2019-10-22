@@ -93,6 +93,10 @@ impl TraitDatum {
     pub fn is_non_enumerable_trait(&self) -> bool {
         self.flags.non_enumerable
     }
+
+    pub fn trait_id(&self) -> TraitId {
+        self.binders.value.trait_ref.trait_id
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

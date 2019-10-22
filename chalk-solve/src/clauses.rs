@@ -53,14 +53,13 @@ pub fn push_auto_trait_impls(
         struct_id
     );
 
-    let auto_trait = &program.trait_datum(auto_trait_id);
     let struct_datum = &program.struct_datum(struct_id);
 
     // Must be an auto trait.
-    assert!(auto_trait.is_auto_trait());
+    assert!(program.trait_datum(auto_trait_id).is_auto_trait());
 
     // Auto traits never have generic parameters of their own (apart from `Self`).
-    assert_eq!(auto_trait.binders.binders.len(), 1);
+    assert_eq!(program.trait_datum(auto_trait_id).binders.len(), 1);
 
     // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
     // for Foo<..>`, where `Foo` is the struct we're looking at, then
@@ -73,7 +72,7 @@ pub fn push_auto_trait_impls(
     vec.push({
         // trait_ref = `MyStruct<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
-            trait_id: auto_trait.binders.value.trait_ref.trait_id,
+            trait_id: auto_trait_id,
             parameters: vec![Ty::Apply(struct_datum.binders.value.self_ty.clone()).cast()],
         };
 
