@@ -1,4 +1,4 @@
-use crate::cast::Cast;
+use crate::cast::CastTo;
 use crate::debug::Angle;
 use crate::fold::{Fold, Folder, ReflexiveFold};
 use crate::tls;
@@ -39,7 +39,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
         + ReflexiveFold<Self>
         + Zip<Self>
         + Lookup<Ty<Self>>
-        + Cast<Parameter<Self>>;
+        + CastTo<Parameter<Self>>;
 
     /// "Interned" representation of lifetimes. You can use the
     /// `Lookup` trait to convert this to a `Lifetime<Self>`.
@@ -51,7 +51,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
         + ReflexiveFold<Self>
         + Zip<Self>
         + Lookup<Lifetime<Self>>
-        + Cast<Parameter<Self>>;
+        + CastTo<Parameter<Self>>;
 
     /// Prints the debug representation of a projection. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -183,8 +183,8 @@ impl Fold<ChalkIr> for Ty<ChalkIr> {
     }
 }
 
-impl Cast<Parameter<ChalkIr>> for Ty<ChalkIr> {
-    fn cast(self) -> Parameter<ChalkIr> {
+impl CastTo<Parameter<ChalkIr>> for Ty<ChalkIr> {
+    fn cast_to(self) -> Parameter<ChalkIr> {
         Parameter(ParameterKind::Ty(self))
     }
 }
@@ -200,8 +200,8 @@ impl Fold<ChalkIr> for Lifetime<ChalkIr> {
     }
 }
 
-impl Cast<Parameter<ChalkIr>> for Lifetime<ChalkIr> {
-    fn cast(self) -> Parameter<ChalkIr> {
+impl CastTo<Parameter<ChalkIr>> for Lifetime<ChalkIr> {
+    fn cast_to(self) -> Parameter<ChalkIr> {
         Parameter(ParameterKind::Lifetime(self))
     }
 }

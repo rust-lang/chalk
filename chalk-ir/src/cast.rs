@@ -26,21 +26,47 @@ use std::marker::PhantomData;
 /// as part of this, they should always use the same set of free
 /// variables (the `Canonical` implementation, for example, relies on
 /// that).
-pub trait Cast<T>: Sized {
-    fn cast(self) -> T;
+///
+/// # Iterators
+///
+/// If you import the `Caster` trait, you can also write `.casted()` on an
+/// iterator chain to cast every instance within.
+///
+/// # Implementing Cast
+///
+/// Do not implement `Cast` directly. Instead, implement `CastTo`.
+/// This split setup allows us to write `foo.cast::<T>()` to mean
+/// "cast to T".
+pub trait Cast: Sized {
+    fn cast<U>(self) -> U
+    where
+        Self: CastTo<U>,
+    {
+        self.cast_to()
+    }
+}
+
+impl<T> Cast for T {}
+
+/// The "helper" trait for `cast` that actually implements the
+/// transformations. You can also use this if you want to have
+/// functions that take (e.g.) an `impl CastTo<Goal<_>>` or something
+/// like that.
+pub trait CastTo<T>: Sized {
+    fn cast_to(self) -> T;
 }
 
 macro_rules! reflexive_impl {
     (for($($t:tt)*) $u:ty) => {
-        impl<$($t)*> Cast<$u> for $u {
-            fn cast(self) -> $u {
+        impl<$($t)*> CastTo<$u> for $u {
+            fn cast_to(self) -> $u {
                 self
             }
         }
     };
     ($u:ty) => {
-        impl Cast<$u> for $u {
-            fn cast(self) -> $u {
+        impl CastTo<$u> for $u {
+            fn cast_to(self) -> $u {
                 self
             }
         }
@@ -53,72 +79,72 @@ reflexive_impl!(for(TF: TypeFamily) DomainGoal<TF>);
 reflexive_impl!(for(TF: TypeFamily) Goal<TF>);
 reflexive_impl!(for(TF: TypeFamily) WhereClause<TF>);
 
-impl<TF: TypeFamily> Cast<WhereClause<TF>> for TraitRef<TF> {
-    fn cast(self) -> WhereClause<TF> {
+impl<TF: TypeFamily> CastTo<WhereClause<TF>> for TraitRef<TF> {
+    fn cast_to(self) -> WhereClause<TF> {
         WhereClause::Implemented(self)
     }
 }
 
-impl<TF: TypeFamily> Cast<WhereClause<TF>> for ProjectionEq<TF> {
-    fn cast(self) -> WhereClause<TF> {
+impl<TF: TypeFamily> CastTo<WhereClause<TF>> for ProjectionEq<TF> {
+    fn cast_to(self) -> WhereClause<TF> {
         WhereClause::ProjectionEq(self)
     }
 }
 
-impl<T, TF> Cast<DomainGoal<TF>> for T
+impl<T, TF> CastTo<DomainGoal<TF>> for T
 where
-    T: Cast<WhereClause<TF>>,
+    T: CastTo<WhereClause<TF>>,
     TF: TypeFamily,
 {
-    fn cast(self) -> DomainGoal<TF> {
+    fn cast_to(self) -> DomainGoal<TF> {
         DomainGoal::Holds(self.cast())
     }
 }
 
-impl<T, TF: TypeFamily> Cast<LeafGoal<TF>> for T
+impl<T, TF: TypeFamily> CastTo<LeafGoal<TF>> for T
 where
-    T: Cast<DomainGoal<TF>>,
+    T: CastTo<DomainGoal<TF>>,
 {
-    fn cast(self) -> LeafGoal<TF> {
+    fn cast_to(self) -> LeafGoal<TF> {
         LeafGoal::DomainGoal(self.cast())
     }
 }
 
-impl<T, TF: TypeFamily> Cast<Goal<TF>> for T
+impl<T, TF: TypeFamily> CastTo<Goal<TF>> for T
 where
-    T: Cast<LeafGoal<TF>>,
+    T: CastTo<LeafGoal<TF>>,
 {
-    fn cast(self) -> Goal<TF> {
+    fn cast_to(self) -> Goal<TF> {
         Goal::Leaf(self.cast())
     }
 }
 
-impl<TF: TypeFamily> Cast<DomainGoal<TF>> for Normalize<TF> {
-    fn cast(self) -> DomainGoal<TF> {
+impl<TF: TypeFamily> CastTo<DomainGoal<TF>> for Normalize<TF> {
+    fn cast_to(self) -> DomainGoal<TF> {
         DomainGoal::Normalize(self)
     }
 }
 
-impl<TF: TypeFamily> Cast<DomainGoal<TF>> for WellFormed<TF> {
-    fn cast(self) -> DomainGoal<TF> {
+impl<TF: TypeFamily> CastTo<DomainGoal<TF>> for WellFormed<TF> {
+    fn cast_to(self) -> DomainGoal<TF> {
         DomainGoal::WellFormed(self)
     }
 }
 
-impl<TF: TypeFamily> Cast<DomainGoal<TF>> for FromEnv<TF> {
-    fn cast(self) -> DomainGoal<TF> {
+impl<TF: TypeFamily> CastTo<DomainGoal<TF>> for FromEnv<TF> {
+    fn cast_to(self) -> DomainGoal<TF> {
         DomainGoal::FromEnv(self)
     }
 }
 
-impl<TF: TypeFamily> Cast<LeafGoal<TF>> for EqGoal<TF> {
-    fn cast(self) -> LeafGoal<TF> {
+impl<TF: TypeFamily> CastTo<LeafGoal<TF>> for EqGoal<TF> {
+    fn cast_to(self) -> LeafGoal<TF> {
         LeafGoal::EqGoal(self)
     }
 }
 
-impl<T: Cast<Goal<TF>>, TF: TypeFamily> Cast<Goal<TF>> for Binders<T> {
-    fn cast(self) -> Goal<TF> {
+impl<T: CastTo<Goal<TF>>, TF: TypeFamily> CastTo<Goal<TF>> for Binders<T> {
+    fn cast_to(self) -> Goal<TF> {
         if self.binders.is_empty() {
             self.value.cast()
         } else {
@@ -130,24 +156,24 @@ impl<T: Cast<Goal<TF>>, TF: TypeFamily> Cast<Goal<TF>> for Binders<T> {
     }
 }
 
-impl<TF: TypeFamily> Cast<Ty<TF>> for ApplicationTy<TF> {
-    fn cast(self) -> Ty<TF> {
+impl<TF: TypeFamily> CastTo<Ty<TF>> for ApplicationTy<TF> {
+    fn cast_to(self) -> Ty<TF> {
         Ty::Apply(self)
     }
 }
 
-impl<TF: TypeFamily> Cast<Ty<TF>> for ProjectionTy<TF> {
-    fn cast(self) -> Ty<TF> {
+impl<TF: TypeFamily> CastTo<Ty<TF>> for ProjectionTy<TF> {
+    fn cast_to(self) -> Ty<TF> {
         Ty::Projection(self)
     }
 }
 
-impl<T, TF> Cast<ProgramClause<TF>> for T
+impl<T, TF> CastTo<ProgramClause<TF>> for T
 where
-    T: Cast<DomainGoal<TF>>,
+    T: CastTo<DomainGoal<TF>>,
     TF: TypeFamily,
 {
-    fn cast(self) -> ProgramClause<TF> {
+    fn cast_to(self) -> ProgramClause<TF> {
         ProgramClause::Implies(ProgramClauseImplication {
             consequence: self.cast(),
             conditions: vec![],
@@ -155,14 +181,14 @@ where
     }
 }
 
-impl<T, TF> Cast<ProgramClause<TF>> for Binders<T>
+impl<T, TF> CastTo<ProgramClause<TF>> for Binders<T>
 where
-    T: Cast<DomainGoal<TF>>,
+    T: CastTo<DomainGoal<TF>>,
     TF: TypeFamily,
 {
-    fn cast(self) -> ProgramClause<TF> {
+    fn cast_to(self) -> ProgramClause<TF> {
         if self.binders.is_empty() {
-            Cast::<ProgramClause<TF>>::cast(self.value)
+            self.value.cast::<ProgramClause<TF>>()
         } else {
             ProgramClause::ForAll(self.map(|bound| ProgramClauseImplication {
                 consequence: bound.cast(),
@@ -172,41 +198,41 @@ where
     }
 }
 
-impl<TF: TypeFamily> Cast<ProgramClause<TF>> for ProgramClauseImplication<TF> {
-    fn cast(self) -> ProgramClause<TF> {
+impl<TF: TypeFamily> CastTo<ProgramClause<TF>> for ProgramClauseImplication<TF> {
+    fn cast_to(self) -> ProgramClause<TF> {
         ProgramClause::Implies(self)
     }
 }
 
-impl<TF: TypeFamily> Cast<ProgramClause<TF>> for Binders<ProgramClauseImplication<TF>> {
-    fn cast(self) -> ProgramClause<TF> {
+impl<TF: TypeFamily> CastTo<ProgramClause<TF>> for Binders<ProgramClauseImplication<TF>> {
+    fn cast_to(self) -> ProgramClause<TF> {
         ProgramClause::ForAll(self)
     }
 }
 
 macro_rules! map_impl {
-    (impl[$($t:tt)*] Cast<$b:ty> for $a:ty) => {
-        impl<$($t)*> Cast<$b> for $a {
-            fn cast(self) -> $b {
+    (impl[$($t:tt)*] CastTo<$b:ty> for $a:ty) => {
+        impl<$($t)*> CastTo<$b> for $a {
+            fn cast_to(self) -> $b {
                 self.map(|v| v.cast())
             }
         }
     }
 }
 
-map_impl!(impl[T: Cast<U>, U] Cast<Option<U>> for Option<T>);
+map_impl!(impl[T: CastTo<U>, U] CastTo<Option<U>> for Option<T>);
 map_impl!(impl[
-    T: HasTypeFamily<TypeFamily = TF> + Cast<U>,
+    T: HasTypeFamily<TypeFamily = TF> + CastTo<U>,
     U: HasTypeFamily<TypeFamily = TF>,
     TF: TypeFamily,
-] Cast<InEnvironment<U>> for InEnvironment<T>);
-map_impl!(impl[T: Cast<U>, U, E] Cast<Result<U, E>> for Result<T, E>);
+] CastTo<InEnvironment<U>> for InEnvironment<T>);
+map_impl!(impl[T: CastTo<U>, U, E] CastTo<Result<U, E>> for Result<T, E>);
 
-impl<T, U> Cast<Canonical<U>> for Canonical<T>
+impl<T, U> CastTo<Canonical<U>> for Canonical<T>
 where
-    T: Cast<U>,
+    T: CastTo<U>,
 {
-    fn cast(self) -> Canonical<U> {
+    fn cast_to(self) -> Canonical<U> {
         // Subtle point: It should be ok to re-use the binders here,
         // because `cast()` never introduces new inference variables,
         // nor changes the "substance" of the type we are working
@@ -218,35 +244,35 @@ where
     }
 }
 
-impl<T, U> Cast<Vec<U>> for Vec<T>
+impl<T, U> CastTo<Vec<U>> for Vec<T>
 where
-    T: Cast<U>,
+    T: CastTo<U>,
 {
-    fn cast(self) -> Vec<U> {
+    fn cast_to(self) -> Vec<U> {
         self.into_iter().casted().collect()
     }
 }
 
-impl Cast<TypeKindId> for StructId {
-    fn cast(self) -> TypeKindId {
+impl CastTo<TypeKindId> for StructId {
+    fn cast_to(self) -> TypeKindId {
         TypeKindId::StructId(self)
     }
 }
 
-impl<T> Cast<TypeName> for T
+impl<T> CastTo<TypeName> for T
 where
-    T: Cast<TypeKindId>,
+    T: CastTo<TypeKindId>,
 {
-    fn cast(self) -> TypeName {
+    fn cast_to(self) -> TypeName {
         TypeName::TypeKindId(self.cast())
     }
 }
 
-impl<T> Cast<T> for &T
+impl<T> CastTo<T> for &T
 where
     T: Clone,
 {
-    fn cast(self) -> T {
+    fn cast_to(self) -> T {
         self.clone()
     }
 }
@@ -258,12 +284,12 @@ pub struct Casted<I, U> {
 
 impl<I: Iterator, U> Iterator for Casted<I, U>
 where
-    I::Item: Cast<U>,
+    I::Item: CastTo<U>,
 {
     type Item = U;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next().map(|item| item.cast())
+        self.iterator.next().map(|item| item.cast_to())
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -273,15 +299,16 @@ where
 
 /// An iterator adapter that casts each element we are iterating over
 /// to some other type.
-pub trait Caster<U>: Sized {
-    fn casted(self) -> Casted<Self, U>;
-}
-
-impl<I: Iterator, U> Caster<U> for I {
-    fn casted(self) -> Casted<Self, U> {
+pub trait Caster: Iterator + Sized {
+    fn casted<U>(self) -> Casted<Self, U>
+    where
+        Self::Item: CastTo<U>,
+    {
         Casted {
             iterator: self,
             _cast: PhantomData,
         }
     }
 }
+
+impl<I> Caster for I where I: Iterator {}

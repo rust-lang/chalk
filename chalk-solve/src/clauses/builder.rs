@@ -1,4 +1,4 @@
-use crate::cast::{Cast, Caster};
+use crate::cast::{Cast, CastTo, Caster};
 use crate::RustIrDatabase;
 use chalk_ir::family::{ChalkIr, HasTypeFamily};
 use chalk_ir::fold::Fold;
@@ -23,14 +23,14 @@ impl<'me> ClauseBuilder<'me> {
         }
     }
 
-    pub fn push_fact(&mut self, consequence: impl Cast<DomainGoal<ChalkIr>>) {
+    pub fn push_fact(&mut self, consequence: impl CastTo<DomainGoal<ChalkIr>>) {
         self.push_clause(consequence, None::<Goal<_>>);
     }
 
     pub fn push_clause(
         &mut self,
-        consequence: impl Cast<DomainGoal<ChalkIr>>,
-        conditions: impl IntoIterator<Item = impl Cast<Goal<ChalkIr>>>,
+        consequence: impl CastTo<DomainGoal<ChalkIr>>,
+        conditions: impl IntoIterator<Item = impl CastTo<Goal<ChalkIr>>>,
     ) {
         let clause = ProgramClauseImplication {
             consequence: consequence.cast(),
