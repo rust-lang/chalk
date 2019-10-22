@@ -773,6 +773,24 @@ impl<TF: TypeFamily> HasTypeFamily for WhereClause<TF> {
     type TypeFamily = TF;
 }
 
+impl<TF: TypeFamily> QuantifiedWhereClause<TF> {
+    /// As with `WhereClause::into_well_formed_goal`, but for a
+    /// quantified where clause. For example, `forall<T> {
+    /// Implemented(T: Trait)}` would map to `forall<T> {
+    /// WellFormed(T: Trait) }`.
+    pub fn into_well_formed_goal(self) -> Binders<DomainGoal<TF>> {
+        self.map(|wc| wc.into_well_formed_goal())
+    }
+
+    /// As with `WhereClause::into_from_env_goal`, but mapped over any
+    /// binders. For example, `forall<T> {
+    /// Implemented(T: Trait)}` would map to `forall<T> {
+    /// FromEnv(T: Trait) }`.
+    pub fn into_from_env_goal(self) -> Binders<DomainGoal<TF>> {
+        self.map(|wc| wc.into_from_env_goal())
+    }
+}
+
 impl<TF: TypeFamily> HasTypeFamily for DomainGoal<TF> {
     type TypeFamily = TF;
 }

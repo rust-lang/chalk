@@ -265,7 +265,7 @@ where
                 .into_iter()
                 .map(|quantified_bound| quantified_bound.substitute(&all_parameters))
                 .flat_map(|b| b.into_where_clauses(assoc_ty.value.value.ty.clone()))
-                .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
+                .map(|qwc| qwc.into_well_formed_goal())
                 .casted();
 
             let goals = wf_goals.chain(bound_goals);
@@ -280,8 +280,8 @@ where
                 .binders
                 .map_ref(|b| &b.where_clauses)
                 .into_iter()
-                .map(|wc| wc.substitute(&all_parameters))
-                .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+                .map(|qwc| qwc.substitute(&all_parameters))
+                .map(|qwc| qwc.into_from_env_goal())
                 .casted()
                 .collect();
 
@@ -319,7 +319,7 @@ where
             .where_clauses
             .iter()
             .cloned()
-            .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
+            .map(|qwc| qwc.into_from_env_goal())
             .casted()
             .chain(
                 header_input_types

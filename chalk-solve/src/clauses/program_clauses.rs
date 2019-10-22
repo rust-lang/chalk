@@ -242,7 +242,7 @@ impl ToProgramClauses for StructDatum {
                 where_clauses
                     .iter()
                     .cloned()
-                    .map(|wc| wc.map(|bound| bound.into_well_formed_goal())),
+                    .map(|qwc| qwc.into_well_formed_goal()),
             );
 
             // forall<T> {
@@ -461,7 +461,7 @@ impl ToProgramClauses for TraitDatum {
                         .where_clauses
                         .iter()
                         .cloned()
-                        .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
+                        .map(|qwc| qwc.into_well_formed_goal())
                         .casted()
                         .chain(Some(DomainGoal::Holds(trait_ref_impl.clone()).cast()))
                         .collect()
@@ -570,20 +570,20 @@ impl ToProgramClauses for TraitDatum {
                 .where_clauses
                 .iter()
                 .cloned()
-                .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
-                .map(|wc| {
+                .map(|qwc| qwc.into_from_env_goal())
+                .map(|qwc| {
                     // We move the binders of the where-clause to the left for the reverse rules,
                     // cf `StructDatum::to_program_clauses`.
-                    let shift = wc.binders.len();
+                    let shift = qwc.binders.len();
 
                     Binders {
-                        binders: wc
+                        binders: qwc
                             .binders
                             .into_iter()
                             .chain(self.binders.binders.clone())
                             .collect(),
                         value: ProgramClauseImplication {
-                            consequence: wc.value,
+                            consequence: qwc.value,
                             conditions: vec![condition.clone().shifted_in(shift).cast()],
                         },
                     }
@@ -730,7 +730,7 @@ impl ToProgramClauses for AssociatedTyDatum {
                         where_clauses
                             .iter()
                             .cloned()
-                            .map(|qwc| qwc.map(|wc| wc.into_well_formed_goal()))
+                            .map(|qwc| qwc.into_well_formed_goal())
                             .casted(),
                     ),
             );
