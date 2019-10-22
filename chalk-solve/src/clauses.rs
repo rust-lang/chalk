@@ -1,3 +1,4 @@
+use self::builder::ClauseBuilder;
 use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
 use crate::RustIrDatabase;
@@ -44,8 +45,8 @@ pub mod program_clauses;
 pub fn push_auto_trait_impls(
     auto_trait_id: TraitId,
     struct_id: StructId,
-    program: &dyn RustIrDatabase,
-    vec: &mut Vec<ProgramClause<ChalkIr>>,
+    db: &dyn RustIrDatabase,
+    clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
     debug_heading!(
         "push_auto_trait_impls({:?}, {:?})",
@@ -53,27 +54,30 @@ pub fn push_auto_trait_impls(
         struct_id
     );
 
-    let struct_datum = &program.struct_datum(struct_id);
+    let mut builder = ClauseBuilder::new(db, clauses);
+
+    let struct_datum = &builder.db.struct_datum(struct_id);
 
     // Must be an auto trait.
-    assert!(program.trait_datum(auto_trait_id).is_auto_trait());
+    assert!(builder.db.trait_datum(auto_trait_id).is_auto_trait());
 
     // Auto traits never have generic parameters of their own (apart from `Self`).
-    assert_eq!(program.trait_datum(auto_trait_id).binders.len(), 1);
+    assert_eq!(builder.db.trait_datum(auto_trait_id).binders.len(), 1);
 
     // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
     // for Foo<..>`, where `Foo` is the struct we're looking at, then
     // we don't generate our own rules.
-    if program.impl_provided_for(auto_trait_id, struct_id) {
+    if builder.db.impl_provided_for(auto_trait_id, struct_id) {
         debug!("impl provided");
         return;
     }
 
-    vec.push({
+    let binders = struct_datum.binders.map_ref(|b| (&b.self_ty, &b.fields));
+    builder.push_binders(&binders, |builder, (self_ty, fields)| {
         // trait_ref = `MyStruct<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
             trait_id: auto_trait_id,
-            parameters: vec![Ty::Apply(struct_datum.binders.value.self_ty.clone()).cast()],
+            parameters: vec![self_ty.cast()],
         };
 
         // forall<P0..Pn> { // generic parameters from struct
@@ -82,22 +86,13 @@ pub fn push_auto_trait_impls(
         //      ...
         //      FieldN: MyAutoTrait
         // }
-        struct_datum
-            .binders
-            .map_ref(|struct_contents| ProgramClauseImplication {
-                consequence: auto_trait_ref.clone().cast(),
-                conditions: struct_contents
-                    .fields
-                    .iter()
-                    .cloned()
-                    .map(|field_ty| TraitRef {
-                        trait_id: auto_trait_id,
-                        parameters: vec![field_ty.cast()],
-                    })
-                    .casted()
-                    .collect(),
-            })
-            .cast()
+        builder.push_clause(
+            auto_trait_ref,
+            fields.iter().map(|field_ty| TraitRef {
+                trait_id: auto_trait_id,
+                parameters: vec![field_ty.clone().cast()],
+            }),
+        );
     });
 }
 
