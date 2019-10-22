@@ -357,31 +357,35 @@ where
             clauses.fold_with(folder, binders)?,
         ))),
         Ty::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
-        Ty::Apply(apply) => {
-            let ApplicationTy {
-                name,
-                ref parameters,
-            } = *apply;
-            match name {
-                TypeName::Placeholder(ui) => {
-                    assert!(
-                        parameters.is_empty(),
-                        "type {:?} with parameters {:?}",
-                        ty,
-                        parameters
-                    );
-                    folder.fold_free_placeholder_ty(ui, binders)
-                }
-
-                TypeName::TypeKindId(_) | TypeName::AssociatedType(_) | TypeName::Error => {
-                    let parameters = parameters.fold_with(folder, binders)?;
-                    Ok(ApplicationTy { name, parameters }.cast().intern())
-                }
-            }
-        }
+        Ty::Apply(apply) => Ok(apply.fold_with(folder, binders)?),
         Ty::Projection(proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?).intern()),
         Ty::ForAll(quantified_ty) => {
             Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?).intern())
+        }
+    }
+}
+
+impl<TF: TypeFamily> Fold<TF> for ApplicationTy<TF> {
+    type Result = TF::Type;
+
+    fn fold_with(&self, folder: &mut dyn Folder<TF>, binders: usize) -> Fallible<Self::Result> {
+        let ApplicationTy { name, parameters } = self;
+        let name = *name;
+        match name {
+            TypeName::Placeholder(ui) => {
+                assert!(
+                    parameters.is_empty(),
+                    "placeholder type {:?} with parameters {:?}",
+                    self,
+                    parameters
+                );
+                folder.fold_free_placeholder_ty(ui, binders)
+            }
+
+            TypeName::TypeKindId(_) | TypeName::AssociatedType(_) | TypeName::Error => {
+                let parameters = parameters.fold_with(folder, binders)?;
+                Ok(ApplicationTy { name, parameters }.cast().intern())
+            }
         }
     }
 }
