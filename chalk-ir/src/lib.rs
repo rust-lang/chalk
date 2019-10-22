@@ -851,9 +851,9 @@ impl<T> Binders<T> {
         }
     }
 
-    pub fn map_ref<U, OP>(&self, op: OP) -> Binders<U>
+    pub fn map_ref<'a, U, OP>(&'a self, op: OP) -> Binders<U>
     where
-        OP: FnOnce(&T) -> U,
+        OP: FnOnce(&'a T) -> U,
     {
         let value = op(&self.value);
         Binders {
