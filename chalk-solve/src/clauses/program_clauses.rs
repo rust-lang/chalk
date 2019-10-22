@@ -676,172 +676,126 @@ impl ToProgramClauses for AssociatedTyDatum {
         db: &dyn RustIrDatabase,
         clauses: &mut Vec<ProgramClause<ChalkIr>>,
     ) {
-        let binders = &self.binders.binders;
-        let parameters: Vec<_> = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
-        let projection = ProjectionTy {
-            associated_ty_id: self.id,
-            parameters: parameters.clone(),
-        };
+        let mut builder = ClauseBuilder::new(db, clauses);
 
-        // Retrieve the trait ref embedding the associated type
-        let trait_ref = {
-            let (associated_ty_data, trait_params, _) = db.split_projection(&projection);
-            TraitRef {
-                trait_id: associated_ty_data.trait_id,
-                parameters: trait_params.to_owned(),
+        let binders = self.binders.map_ref(|b| (&b.where_clauses, &b.bounds));
+        builder.push_binders(&binders, |builder, (where_clauses, bounds)| {
+            let parameters = builder.placeholders_in_scope().to_vec();
+
+            let projection = ProjectionTy {
+                associated_ty_id: self.id,
+                parameters: parameters.clone(),
+            };
+
+            // Retrieve the trait ref embedding the associated type
+            let trait_ref = {
+                let (associated_ty_data, trait_params, _) = db.split_projection(&projection);
+                TraitRef {
+                    trait_id: associated_ty_data.trait_id,
+                    parameters: trait_params.to_owned(),
+                }
+            };
+
+            // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
+            // we would produce `(Iterator::Item)<T>`.
+            let app_ty: Ty<_> = ApplicationTy {
+                name: TypeName::AssociatedType(self.id),
+                parameters,
             }
-        };
+            .cast();
 
-        // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
-        // we would produce `(Iterator::Item)<T>`.
-        let app = ApplicationTy {
-            name: TypeName::AssociatedType(self.id),
-            parameters,
-        };
-        let app_ty = Ty::Apply(app);
+            let projection_eq = ProjectionEq {
+                projection: projection.clone(),
+                ty: app_ty.clone(),
+            };
 
-        let projection_eq = ProjectionEq {
-            projection: projection.clone(),
-            ty: app_ty.clone(),
-        };
+            // Fallback rule. The solver uses this to move between the projection
+            // and placeholder type.
+            //
+            //    forall<Self> {
+            //        ProjectionEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
+            //    }
+            builder.push_fact(projection_eq);
 
-        // Fallback rule. The solver uses this to move between the projection
-        // and placeholder type.
-        //
-        //    forall<Self> {
-        //        ProjectionEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
-        //    }
-        clauses.push(
-            Binders {
-                binders: binders.clone(),
-                value: ProgramClauseImplication {
-                    consequence: projection_eq.cast(),
-                    conditions: vec![],
-                },
+            // Well-formedness of projection type.
+            //
+            //    forall<Self> {
+            //        WellFormed((Foo::Assoc)<Self>) :- WellFormed(Self: Foo), WellFormed(WC).
+            //    }
+            builder.push_clause(
+                WellFormed::Ty(app_ty.clone()),
+                iter::once(WellFormed::Trait(trait_ref.clone()).cast())
+                    .inspect(|_: &Goal<_>| ()) // provide a type hint
+                    .chain(
+                        where_clauses
+                            .iter()
+                            .cloned()
+                            .map(|qwc| qwc.map(|wc| wc.into_well_formed_goal()))
+                            .casted(),
+                    ),
+            );
+
+            // Assuming well-formedness of projection type means we can assume
+            // the trait ref as well. Mostly used in function bodies.
+            //
+            //    forall<Self> {
+            //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).
+            //    }
+            builder.push_clause(
+                FromEnv::Trait(trait_ref.clone()),
+                Some(FromEnv::Ty(app_ty.clone())),
+            );
+
+            // Reverse rule for where clauses.
+            //
+            //    forall<Self> {
+            //        FromEnv(WC) :- FromEnv((Foo::Assoc)<Self>).
+            //    }
+            //
+            // This is really a family of clauses, one for each where clause.
+            for qwc in &where_clauses {
+                builder.push_binders(qwc, |builder, wc| {
+                    builder.push_clause(wc.into_from_env_goal(), Some(FromEnv::Ty(app_ty.clone())));
+                });
             }
-            .cast(),
-        );
 
-        // Well-formedness of projection type.
-        //
-        //    forall<Self> {
-        //        WellFormed((Foo::Assoc)<Self>) :- WellFormed(Self: Foo), WellFormed(WC).
-        //    }
-        clauses.push(
-            Binders {
-                binders: binders.clone(),
-                value: ProgramClauseImplication {
-                    consequence: WellFormed::Ty(app_ty.clone()).cast(),
-                    conditions: iter::once(WellFormed::Trait(trait_ref.clone()).cast())
-                        .chain(
-                            self.binders
-                                .value
-                                .where_clauses
-                                .iter()
-                                .cloned()
-                                .map(|wc| wc.map(|bound| bound.into_well_formed_goal()))
-                                .casted(),
-                        )
-                        .collect(),
-                },
+            // Reverse rule for implied bounds.
+            //
+            //    forall<Self> {
+            //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), WC
+            //    }
+            for quantified_bound in &bounds {
+                builder.push_binders(quantified_bound, |builder, bound| {
+                    for wc in bound.into_where_clauses(projection.clone().cast()) {
+                        builder.push_clause(
+                            wc.into_from_env_goal(),
+                            iter::once(FromEnv::Trait(trait_ref.clone()).cast())
+                                .chain(where_clauses.iter().cloned().casted())
+                                .inspect(|_: &Goal<_>| ()), // provide a type hint
+                        );
+                    }
+                });
             }
-            .cast(),
-        );
 
-        // Assuming well-formedness of projection type means we can assume
-        // the trait ref as well. Mostly used in function bodies.
-        //
-        //    forall<Self> {
-        //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).
-        //    }
-        clauses.push(
-            Binders {
-                binders: binders.clone(),
-                value: ProgramClauseImplication {
-                    consequence: FromEnv::Trait(trait_ref.clone()).cast(),
-                    conditions: vec![FromEnv::Ty(app_ty.clone()).cast()],
-                },
-            }
-            .cast(),
-        );
+            // add new type parameter U
+            builder.push_bound_ty(|builder, ty| {
+                // `Normalize(<T as Foo>::Assoc -> U)`
+                let normalize = Normalize {
+                    projection: projection.clone(),
+                    ty: ty.clone(),
+                };
 
-        // Reverse rule for where clauses.
-        //
-        //    forall<Self> {
-        //        FromEnv(WC) :- FromEnv((Foo::Assoc)<Self>).
-        //    }
-        //
-        // This is really a family of clauses, one for each where clause.
-        clauses.extend(self.binders.value.where_clauses.iter().map(|wc| {
-            // Don't forget to move the binders to the left in case of higher-ranked where clauses.
-            let shift = wc.binders.len();
-            Binders {
-                binders: wc.binders.iter().chain(binders.iter()).cloned().collect(),
-                value: ProgramClauseImplication {
-                    consequence: wc.value.clone().into_from_env_goal(),
-                    conditions: vec![FromEnv::Ty(app_ty.clone()).shifted_in(shift).cast()],
-                },
-            }
-            .cast()
-        }));
+                // `ProjectionEq(<T as Foo>::Assoc = U)`
+                let projection_eq = ProjectionEq { projection, ty };
 
-        // Reverse rule for implied bounds.
-        //
-        //    forall<Self> {
-        //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), WC
-        //    }
-        clauses.extend(self.bounds_on_self().into_iter().map(|bound| {
-            // Same as above in case of higher-ranked inline bounds.
-            let shift = bound.binders.len();
-            let from_env_trait =
-                iter::once(FromEnv::Trait(trait_ref.clone()).shifted_in(shift).cast());
-
-            let where_clauses = self.binders.value.where_clauses.iter().cloned().casted();
-
-            Binders {
-                binders: bound
-                    .binders
-                    .iter()
-                    .chain(binders.iter())
-                    .cloned()
-                    .collect(),
-                value: ProgramClauseImplication {
-                    consequence: bound.value.clone().into_from_env_goal(),
-                    conditions: from_env_trait.chain(where_clauses).collect(),
-                },
-            }
-            .cast()
-        }));
-
-        // add new type parameter U
-        let mut binders = binders.clone();
-        binders.push(ParameterKind::Ty(()));
-        let ty = Ty::BoundVar(binders.len() - 1);
-
-        // `Normalize(<T as Foo>::Assoc -> U)`
-        let normalize = Normalize {
-            projection: projection.clone(),
-            ty: ty.clone(),
-        };
-
-        // `ProjectionEq(<T as Foo>::Assoc = U)`
-        let projection_eq = ProjectionEq { projection, ty };
-
-        // Projection equality rule from above.
-        //
-        //    forall<T, U> {
-        //        ProjectionEq(<T as Foo>::Assoc = U) :-
-        //            Normalize(<T as Foo>::Assoc -> U).
-        //    }
-        clauses.push(
-            Binders {
-                binders,
-                value: ProgramClauseImplication {
-                    consequence: projection_eq.cast(),
-                    conditions: vec![normalize.cast()],
-                },
-            }
-            .cast(),
-        );
+                // Projection equality rule from above.
+                //
+                //    forall<T, U> {
+                //        ProjectionEq(<T as Foo>::Assoc = U) :-
+                //            Normalize(<T as Foo>::Assoc -> U).
+                //    }
+                builder.push_clause(projection_eq, Some(normalize));
+            });
+        });
     }
 }
