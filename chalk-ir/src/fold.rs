@@ -610,33 +610,10 @@ macro_rules! struct_fold {
     };
 }
 
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for ProjectionTy<TF> {
-    associated_ty_id,
-    parameters,
-});
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for TraitRef<TF> {
-    trait_id,
-    parameters,
-});
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for Normalize<TF> { projection, ty });
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for ProjectionEq<TF> { projection, ty });
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for Environment<TF> { clauses });
 struct_fold!(impl[TF: TypeFamily, F] Fold<TF> for InEnvironment<F> {
     environment,
     goal,
 } where F: HasTypeFamily<TypeFamily = TF> + Fold<TF, Result = F>);
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for EqGoal<TF> { a, b });
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for ProgramClauseImplication<TF> {
-    consequence,
-    conditions,
-});
-
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for ConstrainedSubst<TF> {
-    subst, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
-    constraints,
-});
-
-// struct_fold!(impl[TF: TypeFamily] Fold<TF> for ApplicationTy { name, parameters }); -- intentionally omitted, folded through Ty
 
 impl<C: Context, TF: TypeFamily> Fold<TF> for ExClause<C>
 where

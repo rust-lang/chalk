@@ -5,6 +5,7 @@ use crate::fold::{
     DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder, Subst,
 };
 use chalk_engine::fallible::*;
+use fold_derive::Fold;
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
@@ -61,7 +62,7 @@ pub mod tls;
 
 pub type Identifier = InternedString;
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment<TF: TypeFamily> {
@@ -438,6 +439,7 @@ impl PlaceholderIndex {
     }
 }
 
+// Fold derive intentionally omitted, folded through Ty
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ApplicationTy<TF: TypeFamily> {
     pub name: TypeName,
@@ -570,7 +572,7 @@ impl<TF: TypeFamily> Parameter<TF> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct ProjectionTy<TF: TypeFamily> {
     pub associated_ty_id: TypeId,
     pub parameters: Vec<Parameter<TF>>,
@@ -580,7 +582,7 @@ impl<TF: TypeFamily> HasTypeFamily for ProjectionTy<TF> {
     type TypeFamily = TF;
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct TraitRef<TF: TypeFamily> {
     pub trait_id: TraitId,
     pub parameters: Vec<Parameter<TF>>,
@@ -791,7 +793,7 @@ pub enum LeafGoal<TF: TypeFamily> {
     DomainGoal(DomainGoal<TF>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct EqGoal<TF: TypeFamily> {
     pub a: Parameter<TF>,
     pub b: Parameter<TF>,
@@ -801,7 +803,7 @@ pub struct EqGoal<TF: TypeFamily> {
 /// type. A projection `T::Foo` normalizes to the type `U` if we can
 /// **match it to an impl** and that impl has a `type Foo = V` where
 /// `U = V`.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct Normalize<TF: TypeFamily> {
     pub projection: ProjectionTy<TF>,
     pub ty: TF::Type,
@@ -810,7 +812,7 @@ pub struct Normalize<TF: TypeFamily> {
 /// Proves **equality** between a projection `T::Foo` and a type
 /// `U`. Equality can be proven via normalization, but we can also
 /// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct ProjectionEq<TF: TypeFamily> {
     pub projection: ProjectionTy<TF>,
     pub ty: TF::Type,
@@ -931,7 +933,7 @@ impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
 pub struct ProgramClauseImplication<TF: TypeFamily> {
     pub consequence: DomainGoal<TF>,
     pub conditions: Vec<Goal<TF>>,
@@ -1154,8 +1156,8 @@ impl<'a, TF: TypeFamily> DefaultPlaceholderFolder for &'a Substitution<TF> {}
 /// substitution stores the values for the query's unknown variables,
 /// and the constraints represents any region constraints that must
 /// additionally be solved.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
 pub struct ConstrainedSubst<TF: TypeFamily> {
-    pub subst: Substitution<TF>,
+    pub subst: Substitution<TF>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
     pub constraints: Vec<InEnvironment<Constraint<TF>>>,
 }
