@@ -16,7 +16,7 @@ mod test;
 
 type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeKindId>;
 type TypeKinds = BTreeMap<chalk_ir::TypeKindId, rust_ir::TypeKind>;
-type AssociatedTyInfos = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyInfo>;
+type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyLookup>;
 type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usize>;
 
 #[derive(Fail, Debug)]
@@ -44,14 +44,27 @@ pub enum RustIrError {
 struct Env<'k> {
     type_ids: &'k TypeIds,
     type_kinds: &'k TypeKinds,
-    associated_ty_infos: &'k AssociatedTyInfos,
+    associated_ty_lookups: &'k AssociatedTyLookups,
     /// Parameter identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
     parameter_map: ParameterMap,
 }
 
+/// Information about an associated type **declaration** (i.e., an
+/// `AssociatedTyDatum`). This information is gathered in the first
+/// phase of creating the Rust IR and is then later used to lookup the
+/// "id" of an associated type.
+///
+/// ```ignore
+/// trait Foo {
+///     type Bar<'a>; // <-- associated type declaration
+///          // ----
+///          // |
+///          // addl_parameter_kinds
+/// }
+/// ```
 #[derive(Debug, PartialEq, Eq)]
-struct AssociatedTyInfo {
+struct AssociatedTyLookup {
     id: chalk_ir::TypeId,
     addl_parameter_kinds: Vec<chalk_ir::ParameterKind<()>>,
 }
@@ -158,7 +171,7 @@ impl LowerProgram for Program {
         let raw_ids: Vec<_> = self.items.iter().map(|_| next_item_id()).collect();
 
         // Create ids for associated types
-        let mut associated_ty_infos = BTreeMap::new();
+        let mut associated_ty_lookups = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             if let Item::TraitDefn(ref d) = *item {
                 if d.flags.auto && !d.assoc_ty_defns.is_empty() {
@@ -166,11 +179,11 @@ impl LowerProgram for Program {
                 }
                 for defn in &d.assoc_ty_defns {
                     let addl_parameter_kinds = defn.all_parameters();
-                    let info = AssociatedTyInfo {
+                    let lookup = AssociatedTyLookup {
                         id: TypeId(next_item_id()),
                         addl_parameter_kinds: addl_parameter_kinds.anonymize(),
                     };
-                    associated_ty_infos.insert((TraitId(raw_id), defn.name.str), info);
+                    associated_ty_lookups.insert((TraitId(raw_id), defn.name.str), lookup);
                 }
             }
         }
@@ -197,7 +210,7 @@ impl LowerProgram for Program {
             let empty_env = Env {
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
-                associated_ty_infos: &associated_ty_infos,
+                associated_ty_lookups: &associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
             };
 
@@ -211,7 +224,7 @@ impl LowerProgram for Program {
                     trait_data.insert(trait_id, Arc::new(d.lower_trait(trait_id, &empty_env)?));
 
                     for defn in &d.assoc_ty_defns {
-                        let info = &associated_ty_infos[&(trait_id, defn.name.str)];
+                        let lookup = &associated_ty_lookups[&(trait_id, defn.name.str)];
 
                         let mut parameter_kinds = defn.all_parameters();
                         parameter_kinds.extend(d.all_parameters());
@@ -224,10 +237,10 @@ impl LowerProgram for Program {
                         })?;
 
                         associated_ty_data.insert(
-                            info.id,
+                            lookup.id,
                             Arc::new(rust_ir::AssociatedTyDatum {
                                 trait_id: TraitId(raw_id),
-                                id: info.id,
+                                id: lookup.id,
                                 name: defn.name.str,
                                 binders: binders,
                             }),
@@ -681,11 +694,11 @@ trait LowerProjectionEqBound {
 impl LowerProjectionEqBound for ProjectionEqBound {
     fn lower(&self, env: &Env) -> Fallible<rust_ir::ProjectionEqBound> {
         let trait_bound = self.trait_bound.lower(env)?;
-        let info = match env
-            .associated_ty_infos
+        let lookup = match env
+            .associated_ty_lookups
             .get(&(trait_bound.trait_id, self.name.str))
         {
-            Some(info) => info,
+            Some(lookup) => lookup,
             None => {
                 return Err(format_err!(
                     "no associated type `{}` defined in trait",
@@ -699,21 +712,21 @@ impl LowerProjectionEqBound for ProjectionEqBound {
             .map(|a| a.lower(env))
             .collect::<Fallible<_>>()?;
 
-        if args.len() != info.addl_parameter_kinds.len() {
+        if args.len() != lookup.addl_parameter_kinds.len() {
             return Err(format_err!(
                 "wrong number of parameters for associated type (expected {}, got {})",
-                info.addl_parameter_kinds.len(),
+                lookup.addl_parameter_kinds.len(),
                 args.len()
             ));
         }
 
-        for (param, arg) in info.addl_parameter_kinds.iter().zip(args.iter()) {
+        for (param, arg) in lookup.addl_parameter_kinds.iter().zip(args.iter()) {
             check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
         }
 
         Ok(rust_ir::ProjectionEqBound {
             trait_bound,
-            associated_ty_id: info.id,
+            associated_ty_id: lookup.id,
             parameters: args,
             value: self.value.lower(env)?,
         })
@@ -815,8 +828,8 @@ impl LowerProjectionTy for ProjectionTy {
             trait_id,
             parameters: trait_parameters,
         } = trait_ref.lower(env)?;
-        let info = match env.associated_ty_infos.get(&(trait_id.into(), name.str)) {
-            Some(info) => info,
+        let lookup = match env.associated_ty_lookups.get(&(trait_id.into(), name.str)) {
+            Some(lookup) => lookup,
             None => {
                 return Err(format_err!(
                     "no associated type `{}` defined in trait",
@@ -826,22 +839,22 @@ impl LowerProjectionTy for ProjectionTy {
         };
         let mut args: Vec<_> = args.iter().map(|a| a.lower(env)).collect::<Fallible<_>>()?;
 
-        if args.len() != info.addl_parameter_kinds.len() {
+        if args.len() != lookup.addl_parameter_kinds.len() {
             return Err(format_err!(
                 "wrong number of parameters for associated type (expected {}, got {})",
-                info.addl_parameter_kinds.len(),
+                lookup.addl_parameter_kinds.len(),
                 args.len()
             ));
         }
 
-        for (param, arg) in info.addl_parameter_kinds.iter().zip(args.iter()) {
+        for (param, arg) in lookup.addl_parameter_kinds.iter().zip(args.iter()) {
             check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
         }
 
         args.extend(trait_parameters);
 
         Ok(chalk_ir::ProjectionTy {
-            associated_ty_id: info.id,
+            associated_ty_id: lookup.id,
             parameters: args,
         })
     }
@@ -1077,7 +1090,7 @@ impl LowerAssocTyValue for AssocTyValue {
         impl_id: chalk_ir::ImplId,
         env: &Env,
     ) -> Fallible<rust_ir::AssociatedTyValue> {
-        let info = &env.associated_ty_infos[&(trait_id, self.name.str)];
+        let lookup = &env.associated_ty_lookups[&(trait_id, self.name.str)];
         let value = env.in_binders(self.all_parameters(), |env| {
             Ok(rust_ir::AssociatedTyValueBound {
                 ty: self.value.lower(env)?,
@@ -1085,7 +1098,7 @@ impl LowerAssocTyValue for AssocTyValue {
         })?;
         Ok(rust_ir::AssociatedTyValue {
             impl_id,
-            associated_ty_id: info.id,
+            associated_ty_id: lookup.id,
             value: value,
         })
     }
@@ -1117,7 +1130,7 @@ impl LowerTrait for TraitDefn {
         let associated_ty_ids: Vec<_> = self
             .assoc_ty_defns
             .iter()
-            .map(|defn| env.associated_ty_infos[&(trait_id, defn.name.str)].id)
+            .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str)].id)
             .collect();
 
         Ok(rust_ir::TraitDatum {
@@ -1135,7 +1148,7 @@ pub trait LowerGoal<A> {
 
 impl LowerGoal<LoweredProgram> for Goal {
     fn lower(&self, program: &LoweredProgram) -> Fallible<Box<chalk_ir::Goal<ChalkIr>>> {
-        let associated_ty_infos: BTreeMap<_, _> = program
+        let associated_ty_lookups: BTreeMap<_, _> = program
             .associated_ty_data
             .iter()
             .map(|(&associated_ty_id, datum)| {
@@ -1143,18 +1156,18 @@ impl LowerGoal<LoweredProgram> for Goal {
                 let num_trait_params = trait_datum.binders.len();
                 let num_addl_params = datum.binders.len() - num_trait_params;
                 let addl_parameter_kinds = datum.binders.binders[..num_addl_params].to_owned();
-                let info = AssociatedTyInfo {
+                let lookup = AssociatedTyLookup {
                     id: associated_ty_id,
                     addl_parameter_kinds,
                 };
-                ((datum.trait_id, datum.name), info)
+                ((datum.trait_id, datum.name), lookup)
             })
             .collect();
 
         let env = Env {
             type_ids: &program.type_ids,
             type_kinds: &program.type_kinds,
-            associated_ty_infos: &associated_ty_infos,
+            associated_ty_lookups: &associated_ty_lookups,
             parameter_map: BTreeMap::new(),
         };
 
