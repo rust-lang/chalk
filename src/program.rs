@@ -45,8 +45,6 @@ impl Program {
     /// *associated type itself*. So e.g. if you have `(Iterator::Item)<F>`,
     /// this would return `([F], [])`, since `Iterator::Item` is not generic
     /// and hence doesn't have any type parameters itself.
-    ///
-    /// Used primarily for debugging output.
     pub(crate) fn split_projection<'p>(
         &self,
         projection: &'p ProjectionTy<ChalkIr>,

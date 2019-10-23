@@ -232,20 +232,43 @@ impl LowerProgram for Program {
                     let struct_id = StructId(raw_id);
                     struct_data.insert(struct_id, Arc::new(d.lower_struct(struct_id, &empty_env)?));
                 }
-                Item::TraitDefn(ref d) => {
+                Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
-                    trait_data.insert(trait_id, Arc::new(d.lower_trait(trait_id, &empty_env)?));
+                    trait_data.insert(
+                        trait_id,
+                        Arc::new(trait_defn.lower_trait(trait_id, &empty_env)?),
+                    );
 
-                    for defn in &d.assoc_ty_defns {
-                        let lookup = &associated_ty_lookups[&(trait_id, defn.name.str)];
+                    for assoc_ty_defn in &trait_defn.assoc_ty_defns {
+                        let lookup = &associated_ty_lookups[&(trait_id, assoc_ty_defn.name.str)];
 
-                        let mut parameter_kinds = defn.all_parameters();
-                        parameter_kinds.extend(d.all_parameters());
+                        // The parameters in scope for the associated
+                        // type definitions are *both* those from the
+                        // trait *and* those from the associated type
+                        // itself.
+                        //
+                        // Insert the associated type parameters first
+                        // into the list so that they are given the
+                        // indices starting from 0. This corresponds
+                        // to the "de bruijn" convention where "more
+                        // inner" sets of parameters get the lower
+                        // indices:
+                        //
+                        // e.g., in this example, the indices would be
+                        // assigned `[A0, A1, T0, T1]`:
+                        //
+                        // ```
+                        // trait Foo<T0, T1> {
+                        //     type Bar<A0, A1>;
+                        // }
+                        // ```
+                        let mut parameter_kinds = assoc_ty_defn.all_parameters();
+                        parameter_kinds.extend(trait_defn.all_parameters());
 
                         let binders = empty_env.in_binders(parameter_kinds, |env| {
                             Ok(rust_ir::AssociatedTyDatumBound {
-                                bounds: defn.bounds.lower(&env)?,
-                                where_clauses: defn.where_clauses.lower(&env)?,
+                                bounds: assoc_ty_defn.bounds.lower(&env)?,
+                                where_clauses: assoc_ty_defn.where_clauses.lower(&env)?,
                             })
                         })?;
 
@@ -254,17 +277,21 @@ impl LowerProgram for Program {
                             Arc::new(rust_ir::AssociatedTyDatum {
                                 trait_id: TraitId(raw_id),
                                 id: lookup.id,
-                                name: defn.name.str,
+                                name: assoc_ty_defn.name.str,
                                 binders: binders,
                             }),
                         );
                     }
                 }
-                Item::Impl(ref d) => {
+                Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
                     impl_data.insert(
                         impl_id,
-                        Arc::new(d.lower_impl(&empty_env, impl_id, &associated_ty_value_ids)?),
+                        Arc::new(impl_defn.lower_impl(
+                            &empty_env,
+                            impl_id,
+                            &associated_ty_value_ids,
+                        )?),
                     );
                 }
                 Item::Clause(ref clause) => {

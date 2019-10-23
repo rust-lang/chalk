@@ -299,7 +299,11 @@ pub struct AssociatedTyDatum {
     /// Name of this associated type.
     pub name: Identifier,
 
-    /// These binders represent the `P0...Pm` variables.
+    /// These binders represent the `P0...Pm` variables.  The binders
+    /// are in the order `[Pn..Pm; P0..Pn]`. That is, the variables
+    /// from `Bar` come first (corresponding to the de bruijn concept
+    /// that "inner" binders are lower indices, although within a
+    /// given binder we do not have an ordering).
     pub binders: Binders<AssociatedTyDatumBound>,
 }
 
