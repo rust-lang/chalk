@@ -90,7 +90,7 @@ impl<TF: TypeFamily> Environment<TF> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct InEnvironment<G: HasTypeFamily> {
     pub environment: Arc<Environment<G::TypeFamily>>,
     pub goal: G,

@@ -531,29 +531,6 @@ where
     }
 }
 
-#[macro_export]
-macro_rules! struct_fold {
-    (impl[$($param:tt)*] Fold<$TF:ty> for $self:ty { $($name:ident),* $(,)* } $($w:tt)*) => {
-        impl<$($param)*> $crate::fold::Fold<$TF> for $self $($w)* {
-            type Result = Self;
-            fn fold_with(
-                &self,
-                folder: &mut dyn ($crate::fold::Folder<$TF>),
-                binders: usize,
-            ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
-                Ok(Self {
-                    $($name: self.$name.fold_with(folder, binders)?),*
-                })
-            }
-        }
-    };
-}
-
-struct_fold!(impl[TF: TypeFamily, F] Fold<TF> for InEnvironment<F> {
-    environment,
-    goal,
-} where F: HasTypeFamily<TypeFamily = TF> + Fold<TF, Result = F>);
-
 impl<C: Context, TF: TypeFamily> Fold<TF> for ExClause<C>
 where
     C: Context,
