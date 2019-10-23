@@ -6,6 +6,10 @@ use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::marker::PhantomData;
 
+/// The "clause builder" is a useful tool for building up sets of
+/// program clauses. It takes ownership of the output vector while it
+/// lasts, and offers methods like `push_clause` and so forth to
+/// append to it.
 pub struct ClauseBuilder<'me> {
     pub db: &'me dyn RustIrDatabase,
     clauses: &'me mut Vec<ProgramClause<ChalkIr>>,
@@ -23,10 +27,18 @@ impl<'me> ClauseBuilder<'me> {
         }
     }
 
+    /// Pushes a "fact" `forall<..> { consequence }` into the set of
+    /// program clauses, meaning something that we can assume to be
+    /// true unconditionally. The `forall<..>` binders will be
+    /// whichever binders have been pushed (see `push_binders`).
     pub fn push_fact(&mut self, consequence: impl CastTo<DomainGoal<ChalkIr>>) {
         self.push_clause(consequence, None::<Goal<_>>);
     }
 
+    /// Pushes a clause `forall<..> { consequence :- conditions }`
+    /// into the set of program clauses, meaning that `consequence`
+    /// can be proven if `conditions` are all true.  The `forall<..>`
+    /// binders will be whichever binders have been pushed (see `push_binders`).
     pub fn push_clause(
         &mut self,
         consequence: impl CastTo<DomainGoal<ChalkIr>>,
