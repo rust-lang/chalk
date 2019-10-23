@@ -100,25 +100,12 @@ impl ToProgramClauses for AssociatedTyValue {
             .map(|p| p.to_parameter())
             .collect();
 
-        // Get the trait ref from the impl -- so in our example above
-        // this would be `Vec<!T>: Iterable`.
-        let (impl_parameters, atv_parameters) =
-            db.split_associated_ty_value_parameters(&all_parameters, self);
-        let impl_trait_ref = {
-            impl_datum
-                .binders
-                .map_ref(|b| &b.trait_ref)
-                .substitute(&impl_parameters)
-        };
-
-        // Create the parameters for the projection -- in our example
-        // above, this would be `['!a, Vec<!T>]`, corresponding to
-        // `<Vec<!t> as Iterator>::Item<'!a>`
-        let projection_parameters: Vec<_> = atv_parameters
-            .iter()
-            .chain(&impl_trait_ref.parameters)
-            .cloned()
-            .collect();
+        // Get the projection for this associated type:
+        //
+        // * `trait_ref`: `Vec<!T>: Iterable`
+        // * `projection`: `<Vec<!T> as Iterable>::Iter<'!a`>
+        let (impl_trait_ref, projection) =
+            db.impl_trait_ref_and_projection_from_associated_ty_value(&all_parameters, self);
 
         // Assemble the full list of conditions for projection to be valid.
         // This comes in two parts, marked as (1) and (2) in doc above:
@@ -130,7 +117,7 @@ impl ToProgramClauses for AssociatedTyValue {
             .binders
             .map_ref(|b| &b.where_clauses)
             .into_iter()
-            .map(|wc| wc.substitute(&projection_parameters))
+            .map(|wc| wc.substitute(&projection.parameters))
             .casted();
 
         let impl_where_clauses = impl_datum

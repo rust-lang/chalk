@@ -97,6 +97,61 @@ pub trait Split: RustIrDatabase {
         let (other_params, impl_params) = parameters.split_at(split_point);
         (impl_params, other_params)
     }
+
+    /// Given the full set of parameters for an associated type *value*
+    /// (which appears in an impl), returns the trait reference
+    /// and projection that are being satisfied by that value.
+    ///
+    /// # Example
+    ///
+    /// ```ignore (example)
+    /// impl<T> Iterable for Vec<T> {
+    ///     type Iter<'a>;
+    /// }
+    /// ```
+    ///
+    /// Here we expect the full set of parameters for `Iter`, which
+    /// would be `['x, Y]`, where `'x` is the value for `'a` and `Y`
+    /// is the value for `T`.
+    ///
+    /// Returns the pair of:
+    ///
+    /// * the trait-ref `Vec<Y>: Iterable`
+    /// * the projection `<Vec<Y> as Iterable>::Iter<'x>`
+    fn impl_trait_ref_and_projection_from_associated_ty_value(
+        &self,
+        parameters: &[Parameter<ChalkIr>],
+        associated_ty_value: &AssociatedTyValue,
+    ) -> (TraitRef<ChalkIr>, ProjectionTy<ChalkIr>) {
+        let impl_datum = self.impl_datum(associated_ty_value.impl_id);
+
+        // Get the trait ref from the impl -- so in our example above
+        // this would be `Box<!T>: Foo`.
+        let (impl_parameters, atv_parameters) =
+            self.split_associated_ty_value_parameters(&parameters, associated_ty_value);
+        let trait_ref = {
+            impl_datum
+                .binders
+                .map_ref(|b| &b.trait_ref)
+                .substitute(&impl_parameters)
+        };
+
+        // Create the parameters for the projection -- in our example
+        // above, this would be `['!a, Box<!T>]`, corresponding to
+        // `<Box<!T> as Foo>::Item<'!a>`
+        let projection_parameters: Vec<_> = atv_parameters
+            .iter()
+            .chain(&trait_ref.parameters)
+            .cloned()
+            .collect();
+
+        let projection = ProjectionTy {
+            associated_ty_id: associated_ty_value.associated_ty_id,
+            parameters: projection_parameters,
+        };
+
+        (trait_ref, projection)
+    }
 }
 
 impl<DB: RustIrDatabase + ?Sized> Split for DB {}
