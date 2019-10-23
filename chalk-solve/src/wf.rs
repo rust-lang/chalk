@@ -317,7 +317,7 @@ where
         // * `projection`: `<Box<!T> as Foo>::Item<'!a`>
         let (_, projection) = self
             .db
-            .impl_trait_ref_and_projection_from_associated_ty_value(&all_parameters, assoc_ty);
+            .impl_parameters_and_projection_from_associated_ty_value(&all_parameters, assoc_ty);
 
         // Get the ty that the impl is using -- `Box<&'!a !T>`, in our example
         let AssociatedTyValueBound { ty: value_ty } = assoc_ty.value.substitute(&all_parameters);

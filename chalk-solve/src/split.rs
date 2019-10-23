@@ -117,15 +117,15 @@ pub trait Split: RustIrDatabase {
     ///
     /// Returns the pair of:
     ///
-    /// * the trait-ref `Vec<Y>: Iterable`
+    /// * the parameters that apply to the impl (`Y`, in our example)
     /// * the projection `<Vec<Y> as Iterable>::Iter<'x>`
-    fn impl_trait_ref_and_projection_from_associated_ty_value(
+    fn impl_parameters_and_projection_from_associated_ty_value<'p>(
         &self,
-        parameters: &[Parameter<ChalkIr>],
+        parameters: &'p [Parameter<ChalkIr>],
         associated_ty_value: &AssociatedTyValue,
-    ) -> (TraitRef<ChalkIr>, ProjectionTy<ChalkIr>) {
+    ) -> (&'p [Parameter<ChalkIr>], ProjectionTy<ChalkIr>) {
         debug_heading!(
-            "impl_trait_ref_and_projection_from_associated_ty_value(parameters={:?})",
+            "impl_parameters_and_projection_from_associated_ty_value(parameters={:?})",
             parameters,
         );
 
@@ -155,10 +155,11 @@ pub trait Split: RustIrDatabase {
             parameters: projection_parameters,
         };
 
+        debug!("impl_parameters: {:?}", impl_parameters);
         debug!("trait_ref: {:?}", trait_ref);
         debug!("projection: {:?}", projection);
 
-        (trait_ref, projection)
+        (impl_parameters, projection)
     }
 }
 
