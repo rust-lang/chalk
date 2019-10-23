@@ -207,7 +207,14 @@ fn atc_accounting() {
             }
         ],
     },
-    impl_type: Local
+    impl_type: Local,
+    associated_ty_value_ids: [
+        AssociatedTyValueId(
+            RawId {
+                index: 5,
+            },
+        ),
+    ],
 }"#
             .replace(",\n", "\n")
         );

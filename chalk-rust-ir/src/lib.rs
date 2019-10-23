@@ -16,6 +16,7 @@ use std::iter;
 pub enum LangItem {}
 
 /// Identifier for an "associated type value" found in some impl.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyValueId(pub RawId);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -23,6 +24,7 @@ pub struct ImplDatum {
     pub polarity: Polarity,
     pub binders: Binders<ImplDatumBound>,
     pub impl_type: ImplType,
+    pub associated_ty_value_ids: Vec<AssociatedTyValueId>,
 }
 
 impl ImplDatum {

@@ -1021,7 +1021,7 @@ impl LowerImpl for Impl {
         &self,
         empty_env: &Env,
         impl_id: ImplId,
-        _associated_ty_value_ids: &AssociatedTyValueIds,
+        associated_ty_value_ids: &AssociatedTyValueIds,
     ) -> Fallible<rust_ir::ImplDatum> {
         let polarity = self.polarity.lower();
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
@@ -1047,10 +1047,20 @@ impl LowerImpl for Impl {
             })
         })?;
 
+        // lookup the ids for each of the "associated type values"
+        // within the impl, which should have already assigned and
+        // stored in the map
+        let associated_ty_value_ids = self
+            .assoc_ty_values
+            .iter()
+            .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str)])
+            .collect();
+
         Ok(rust_ir::ImplDatum {
             polarity,
             binders: binders,
             impl_type: self.impl_type.lower(),
+            associated_ty_value_ids,
         })
     }
 }
