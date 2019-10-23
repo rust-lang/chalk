@@ -217,7 +217,7 @@ impl LowerProgram for Program {
         let mut trait_data = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
-        let associated_ty_values = BTreeMap::new();
+        let mut associated_ty_values = BTreeMap::new();
         let mut custom_clauses = Vec::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
@@ -285,14 +285,41 @@ impl LowerProgram for Program {
                 }
                 Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
-                    impl_data.insert(
+                    let impl_datum = Arc::new(impl_defn.lower_impl(
+                        &empty_env,
                         impl_id,
-                        Arc::new(impl_defn.lower_impl(
-                            &empty_env,
-                            impl_id,
-                            &associated_ty_value_ids,
-                        )?),
-                    );
+                        &associated_ty_value_ids,
+                    )?);
+                    impl_data.insert(impl_id, impl_datum.clone());
+                    let trait_id = impl_datum.trait_id();
+
+                    for atv in &impl_defn.assoc_ty_values {
+                        let atv_id = associated_ty_value_ids[&(impl_id, atv.name.str)];
+                        let lookup = &associated_ty_lookups[&(trait_id, atv.name.str)];
+
+                        // The parameters in scope for the associated
+                        // type definitions are *both* those from the
+                        // impl *and* those from the associated type
+                        // itself. As in the "trait" case above, we begin
+                        // with the parameters from the impl.
+                        let mut parameter_kinds = atv.all_parameters();
+                        parameter_kinds.extend(impl_defn.all_parameters());
+
+                        let value = empty_env.in_binders(parameter_kinds, |env| {
+                            Ok(rust_ir::AssociatedTyValueBound {
+                                ty: atv.value.lower(env)?,
+                            })
+                        })?;
+
+                        associated_ty_values.insert(
+                            atv_id,
+                            Arc::new(rust_ir::AssociatedTyValue {
+                                impl_id,
+                                associated_ty_id: lookup.id,
+                                value,
+                            }),
+                        );
+                    }
                 }
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
@@ -1050,9 +1077,12 @@ impl LowerImpl for Impl {
         impl_id: ImplId,
         associated_ty_value_ids: &AssociatedTyValueIds,
     ) -> Fallible<rust_ir::ImplDatum> {
+        debug_heading!("LowerImpl::lower_impl(impl_id={:?})", impl_id);
+
         let polarity = self.polarity.lower();
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
+            debug!("trait_ref = {:?}", trait_ref);
 
             if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
                 return Err(format_err!(
@@ -1060,17 +1090,11 @@ impl LowerImpl for Impl {
                 ));
             }
 
-            let trait_id = trait_ref.trait_id;
             let where_clauses = self.lower_where_clauses(&env)?;
-            let associated_ty_values = self
-                .assoc_ty_values
-                .iter()
-                .map(|v| v.lower(trait_id.into(), impl_id, env))
-                .collect::<Fallible<_>>()?;
+            debug!("where_clauses = {:?}", trait_ref);
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
                 where_clauses,
-                associated_ty_values,
             })
         })?;
 
@@ -1082,6 +1106,8 @@ impl LowerImpl for Impl {
             .iter()
             .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str)])
             .collect();
+
+        debug!("associated_ty_value_ids = {:?}", associated_ty_value_ids);
 
         Ok(rust_ir::ImplDatum {
             polarity,
@@ -1135,36 +1161,6 @@ impl LowerClause for Clause {
             )
             .collect();
         Ok(clauses)
-    }
-}
-
-trait LowerAssocTyValue {
-    fn lower(
-        &self,
-        trait_id: chalk_ir::TraitId,
-        impl_id: chalk_ir::ImplId,
-        env: &Env,
-    ) -> Fallible<rust_ir::AssociatedTyValue>;
-}
-
-impl LowerAssocTyValue for AssocTyValue {
-    fn lower(
-        &self,
-        trait_id: chalk_ir::TraitId,
-        impl_id: chalk_ir::ImplId,
-        env: &Env,
-    ) -> Fallible<rust_ir::AssociatedTyValue> {
-        let lookup = &env.associated_ty_lookups[&(trait_id, self.name.str)];
-        let value = env.in_binders(self.all_parameters(), |env| {
-            Ok(rust_ir::AssociatedTyValueBound {
-                ty: self.value.lower(env)?,
-            })
-        })?;
-        Ok(rust_ir::AssociatedTyValue {
-            impl_id,
-            associated_ty_id: lookup.id,
-            value: value,
-        })
     }
 }
 

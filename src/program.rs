@@ -7,7 +7,8 @@ use chalk_ir::{
     TypeKindId, TypeName,
 };
 use chalk_rust_ir::{
-    AssociatedTyDatum, AssociatedTyValue, ImplDatum, ImplType, StructDatum, TraitDatum, TypeKind,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
+    TraitDatum, TypeKind,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -30,7 +31,7 @@ pub struct Program {
     pub(crate) impl_data: BTreeMap<ImplId, Arc<ImplDatum>>,
 
     /// For each associated ty value `type Foo = XXX` found in an impl:
-    pub(crate) associated_ty_values: BTreeMap<TypeId, Arc<AssociatedTyValue>>,
+    pub(crate) associated_ty_values: BTreeMap<AssociatedTyValueId, Arc<AssociatedTyValue>>,
 
     /// For each trait:
     pub(crate) trait_data: BTreeMap<TraitId, Arc<TraitDatum>>,
@@ -111,6 +112,10 @@ impl RustIrDatabase for Program {
 
     fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum> {
         self.impl_data[&id].clone()
+    }
+
+    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue> {
+        self.associated_ty_values[&id].clone()
     }
 
     fn struct_datum(&self, id: StructId) -> Arc<StructDatum> {

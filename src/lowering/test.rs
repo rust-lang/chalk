@@ -188,35 +188,21 @@ fn atc_accounting() {
         SolverChoice::default(),
     );
     db.with_program(|program| {
-        let impl_text = format!("{:#?}", &program.impl_data.values().next().unwrap());
-        println!("{}", impl_text);
+        let atv_text = format!(
+            "{:#?}",
+            &program.associated_ty_values.values().next().unwrap()
+        );
+        println!("{}", atv_text);
         assert_eq!(
-            &impl_text[..].replace(",\n", "\n"),
-            &r#"ImplDatum {
-    polarity: Positive,
-    binders: for<type> ImplDatumBound {
-        trait_ref: Vec<^0> as Iterable,
-        where_clauses: [],
-        associated_ty_values: [
-            AssociatedTyValue {
-                impl_id: ImplId(2),
-                associated_ty_id: (Iterable::Iter),
-                value: for<lifetime> AssociatedTyValueBound {
-                    ty: Iter<'^0, ^1>
-                }
-            }
-        ],
+            &atv_text[..].replace(",\n", "\n"),
+            &r#"AssociatedTyValue {
+    impl_id: ImplId(2),
+    associated_ty_id: (Iterable::Iter),
+    value: for<lifetime, type> AssociatedTyValueBound {
+        ty: Iter<'^0, ^1>
     },
-    impl_type: Local,
-    associated_ty_value_ids: [
-        AssociatedTyValueId(
-            RawId {
-                index: 5,
-            },
-        ),
-    ],
 }"#
-            .replace(",\n", "\n")
+            .replace(",\n", "\n"),
         );
         let goal = db
             .parse_and_lower_goal(

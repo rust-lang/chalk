@@ -224,11 +224,9 @@ where
         trait_ref.fold(&mut header_input_types);
 
         let assoc_ty_goals = impl_datum
-            .binders
-            .value
-            .associated_ty_values
+            .associated_ty_value_ids
             .iter()
-            .filter_map(|g| self.compute_assoc_ty_goal(&impl_datum, g));
+            .filter_map(|&id| self.compute_assoc_ty_goal(id));
 
         // Things to prove well-formed: input types of the where-clauses, projection types
         // appearing in the header, associated type values, and of course the trait ref.
@@ -291,7 +289,7 @@ where
     ///
     /// ```ignore
     /// trait Foo {
-    ///     type Item<'a>
+    ///     type Item<'a>: Clone where Self: 'a
     /// }
     ///
     /// impl<T> Foo for Box<T> {
@@ -300,27 +298,15 @@ where
     /// ```
     ///
     /// we would issue the following subgoal: `forall<'a> { WellFormed(Box<&'a T>) }`.
-    fn compute_assoc_ty_goal(
-        &self,
-        impl_datum: &ImplDatum,
-        assoc_ty: &AssociatedTyValue,
-    ) -> Option<Goal<ChalkIr>> {
-        let mut input_types = Vec::new();
-        assoc_ty.value.value.ty.fold(&mut input_types);
-
-        // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
-        let all_binders: Vec<_> = assoc_ty
-            .value
-            .binders
-            .iter()
-            .chain(impl_datum.binders.binders.iter())
-            .cloned()
-            .collect();
+    fn compute_assoc_ty_goal(&self, assoc_ty_id: AssociatedTyValueId) -> Option<Goal<ChalkIr>> {
+        let assoc_ty = &self.db.associated_ty_value(assoc_ty_id);
 
         // The substitutions for the binders on this associated type
         // value. These would be placeholders like `'!a` and `!T`, in
         // our example above.
-        let all_parameters: Vec<_> = all_binders
+        let all_parameters: Vec<_> = assoc_ty
+            .value
+            .binders
             .iter()
             .zip(0..)
             .map(|p| p.to_parameter())
@@ -333,23 +319,40 @@ where
             .db
             .impl_trait_ref_and_projection_from_associated_ty_value(&all_parameters, assoc_ty);
 
+        // Get the ty that the impl is using -- `Box<&'!a !T>`, in our example
+        let AssociatedTyValueBound { ty: value_ty } = assoc_ty.value.substitute(&all_parameters);
+
+        let mut input_types = Vec::new();
+        value_ty.fold(&mut input_types);
+
+        // We require that `WellFormed(T)` for each type that appears in the value
         let wf_goals = input_types
             .into_iter()
             .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
             .casted();
 
-        let assoc_ty_datum = self.db.associated_ty_data(assoc_ty.associated_ty_id);
-        let assoc_ty_datum_bounds = assoc_ty_datum.binders.map_ref(|d| &d.bounds);
+        // Get the bounds and where clauses from the trait
+        // declaration, substituted appropriately.
+        //
+        // From our example:
+        //
+        // * bounds - in trait, `Clone`, in impl, `Clone`
+        // * where clauses - in trait, `Self: 'a`, in impl, `Box<!T>: '!a`
+        let assoc_ty_datum = self.db.associated_ty_data(projection.associated_ty_id);
+        let AssociatedTyDatumBound {
+            bounds: defn_bounds,
+            where_clauses: defn_where_clauses,
+        } = assoc_ty_datum.binders.substitute(&projection.parameters);
 
-        // Add bounds from the trait. Because they are defined on the trait,
-        // their parameters must be substituted with those of the impl.
-        let bound_goals = assoc_ty_datum_bounds
-            .into_iter()
-            .map(|quantified_bound| quantified_bound.substitute(&projection.parameters))
-            .flat_map(|b| b.into_where_clauses(assoc_ty.value.value.ty.clone()))
+        // Check that the `value_ty` meets the bounds (i.e., `Box<!T>: Clone`).
+        let bound_goals = defn_bounds
+            .iter()
+            .cloned()
+            .flat_map(|qb| qb.into_where_clauses(value_ty.clone()))
             .map(|qwc| qwc.into_well_formed_goal())
             .casted();
 
+        // Concatenate the WF goals of inner types + the requirements from trait
         let goals = wf_goals.chain(bound_goals);
         let goal = match goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf))) {
             Some(goal) => goal,
@@ -358,17 +361,22 @@ where
 
         // Add where clauses from the associated ty definition. We must
         // substitute parameters here, like we did with the bounds above.
-        let hypotheses = assoc_ty_datum
-            .binders
-            .map_ref(|b| &b.where_clauses)
-            .into_iter()
-            .map(|qwc| qwc.substitute(&projection.parameters))
+        let hypotheses = defn_where_clauses
+            .iter()
+            .cloned()
             .map(|qwc| qwc.into_from_env_goal())
             .casted()
             .collect();
 
         let goal = Goal::Implies(hypotheses, Box::new(goal));
 
-        Some(goal.quantify(QuantifierKind::ForAll, assoc_ty.value.binders.clone()))
+        // Create a composed goal that is universally quantified over
+        // the parameters from the associated type value (e.g.,
+        // `forall<'a> { .. }` in our example).
+        let (_, value_binders) = self
+            .db
+            .split_associated_ty_value_parameters(&assoc_ty.value.binders, assoc_ty);
+
+        Some(goal.quantify(QuantifierKind::ForAll, value_binders.to_vec()))
     }
 }

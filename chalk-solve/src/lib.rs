@@ -33,6 +33,9 @@ pub trait RustIrDatabase: Debug {
     /// Returns the datum for the impl with the given id.
     fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum>;
 
+    /// Returns the `AssociatedTyValue` with the given id.
+    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue>;
+
     /// Returns a list of potentially relevant impls for a given
     /// trait-id; we also supply the type parameters that we are
     /// trying to match (if known: these parameters may contain

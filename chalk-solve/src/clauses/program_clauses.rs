@@ -82,19 +82,12 @@ impl ToProgramClauses for AssociatedTyValue {
         let impl_datum = db.impl_datum(self.impl_id);
         let associated_ty = db.associated_ty_data(self.associated_ty_id);
 
-        // Begin with the innermost parameters (`'a`) and then add those from impl (`T`).
-        let all_binders: Vec<_> = self
-            .value
-            .binders
-            .iter()
-            .chain(impl_datum.binders.binders.iter())
-            .cloned()
-            .collect();
-
         // The substitutions for the binders on this associated type
         // value. These would be placeholders like `'!a` and `!T`, in
         // our example above.
-        let all_parameters: Vec<_> = all_binders
+        let all_parameters: Vec<_> = self
+            .value
+            .binders
             .iter()
             .zip(0..)
             .map(|p| p.to_parameter())
@@ -104,7 +97,8 @@ impl ToProgramClauses for AssociatedTyValue {
         //
         // * `trait_ref`: `Vec<!T>: Iterable`
         // * `projection`: `<Vec<!T> as Iterable>::Iter<'!a`>
-        let (impl_trait_ref, projection) =
+        let (impl_params, _) = db.split_associated_ty_value_parameters(&all_parameters, self);
+        let (_impl_trait_ref, projection) =
             db.impl_trait_ref_and_projection_from_associated_ty_value(&all_parameters, self);
 
         // Assemble the full list of conditions for projection to be valid.
@@ -113,44 +107,21 @@ impl ToProgramClauses for AssociatedTyValue {
         // 1. require that the where clauses from the impl apply
         // 2. any where-clauses from the `type` declaration in the trait: the
         //    parameters must be substituted with those of the impl
+        let impl_where_clauses = impl_datum
+            .binders
+            .map_ref(|b| &b.where_clauses)
+            .substitute(impl_params);
+
         let assoc_ty_where_clauses = associated_ty
             .binders
             .map_ref(|b| &b.where_clauses)
+            .substitute(&projection.parameters);
+
+        let conditions: Vec<Goal<_>> = assoc_ty_where_clauses
             .into_iter()
-            .map(|wc| wc.substitute(&projection.parameters))
-            .casted();
-
-        let impl_where_clauses = impl_datum
-            .binders
-            .value
-            .where_clauses
-            .iter()
-            .map(|wc| wc.shifted_in(self.value.len()))
-            .casted();
-
-        let conditions: Vec<Goal<_>> = assoc_ty_where_clauses.chain(impl_where_clauses).collect();
-
-        // Bound parameters + `Self` type of the trait-ref
-        let parameters: Vec<_> = {
-            // First add refs to the bound parameters (`'a`, in above example)
-            let parameters = self.value.binders.iter().zip(0..).map(|p| p.to_parameter());
-
-            // Then add the `Self` type (`Vec<T>`, in above example)
-            parameters
-                .chain(Some(impl_trait_ref.parameters[0].clone()))
-                .collect()
-        };
-
-        let projection = ProjectionTy {
-            associated_ty_id: self.associated_ty_id,
-
-            // Add the remaining parameters of the trait-ref, if any
-            parameters: parameters
-                .iter()
-                .chain(&impl_trait_ref.parameters[1..])
-                .cloned()
-                .collect(),
-        };
+            .chain(impl_where_clauses)
+            .casted()
+            .collect();
 
         let normalize_goal = DomainGoal::Normalize(Normalize {
             projection,
@@ -159,13 +130,15 @@ impl ToProgramClauses for AssociatedTyValue {
 
         // Determine the normalization
         let normalization = Binders {
-            binders: all_binders,
+            binders: self.value.binders.clone(),
             value: ProgramClauseImplication {
                 consequence: normalize_goal,
                 conditions,
             },
         }
         .cast();
+
+        debug!("normalization = {:?}", normalization);
 
         clauses.push(normalization);
     }

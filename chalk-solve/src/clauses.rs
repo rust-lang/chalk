@@ -257,13 +257,25 @@ fn push_program_clauses_for_associated_type_values_in_impls_of(
     trait_parameters: &[Parameter<ChalkIr>],
     clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
+    debug_heading!(
+        "push_program_clauses_for_associated_type_values_in_impls_of(\
+         trait_id={:?}, \
+         trait_parameters={:?})",
+        trait_id,
+        trait_parameters,
+    );
+
     for impl_id in db.impls_for_trait(trait_id, trait_parameters) {
         let impl_datum = db.impl_datum(impl_id);
         if !impl_datum.is_positive() {
             continue;
         }
 
-        for atv in &impl_datum.binders.value.associated_ty_values {
+        debug!("impl_id = {:?}", impl_id);
+
+        for &atv_id in &impl_datum.associated_ty_value_ids {
+            let atv = db.associated_ty_value(atv_id);
+            debug!("atv_id = {:?} atv = {:#?}", atv_id, atv);
             atv.to_program_clauses(db, clauses);
         }
     }

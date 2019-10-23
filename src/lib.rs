@@ -2,6 +2,9 @@
 #![cfg_attr(feature = "bench", feature(test))]
 
 #[macro_use]
+extern crate chalk_macros;
+
+#[macro_use]
 extern crate failure;
 
 #[macro_use]

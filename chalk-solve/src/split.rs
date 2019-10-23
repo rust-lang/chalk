@@ -58,9 +58,10 @@ pub trait Split: RustIrDatabase {
         }
     }
 
-    /// Given the full set of parameters for an associated type *value*
-    /// (which appears in an impl), splits them into the substitutions for
-    /// the *impl* and those for the *associated type*.
+    /// Given the full set of parameters (or binders) for an
+    /// associated type *value* (which appears in an impl), splits
+    /// them into the substitutions for the *impl* and those for the
+    /// *associated type*.
     ///
     /// # Example
     ///
@@ -80,11 +81,11 @@ pub trait Split: RustIrDatabase {
     ///
     /// * the parameters for the impl (`[Y]`, in our example)
     /// * the parameters for the associated type value (`['a]`, in our example)
-    fn split_associated_ty_value_parameters<'p>(
+    fn split_associated_ty_value_parameters<'p, P>(
         &self,
-        parameters: &'p [Parameter<ChalkIr>],
+        parameters: &'p [P],
         associated_ty_value: &AssociatedTyValue,
-    ) -> (&'p [Parameter<ChalkIr>], &'p [Parameter<ChalkIr>]) {
+    ) -> (&'p [P], &'p [P]) {
         let impl_datum = self.impl_datum(associated_ty_value.impl_id);
         let impl_params_len = impl_datum.binders.len();
         assert!(parameters.len() >= impl_params_len);
@@ -123,6 +124,11 @@ pub trait Split: RustIrDatabase {
         parameters: &[Parameter<ChalkIr>],
         associated_ty_value: &AssociatedTyValue,
     ) -> (TraitRef<ChalkIr>, ProjectionTy<ChalkIr>) {
+        debug_heading!(
+            "impl_trait_ref_and_projection_from_associated_ty_value(parameters={:?})",
+            parameters,
+        );
+
         let impl_datum = self.impl_datum(associated_ty_value.impl_id);
 
         // Get the trait ref from the impl -- so in our example above
@@ -130,10 +136,9 @@ pub trait Split: RustIrDatabase {
         let (impl_parameters, atv_parameters) =
             self.split_associated_ty_value_parameters(&parameters, associated_ty_value);
         let trait_ref = {
-            impl_datum
-                .binders
-                .map_ref(|b| &b.trait_ref)
-                .substitute(&impl_parameters)
+            let impl_trait_ref = impl_datum.binders.map_ref(|b| &b.trait_ref);
+            debug!("impl_trait_ref: {:?}", impl_trait_ref);
+            impl_trait_ref.substitute(&impl_parameters)
         };
 
         // Create the parameters for the projection -- in our example
@@ -149,6 +154,9 @@ pub trait Split: RustIrDatabase {
             associated_ty_id: associated_ty_value.associated_ty_id,
             parameters: projection_parameters,
         };
+
+        debug!("trait_ref: {:?}", trait_ref);
+        debug!("projection: {:?}", projection);
 
         (trait_ref, projection)
     }

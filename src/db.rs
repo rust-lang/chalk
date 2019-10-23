@@ -18,6 +18,8 @@ use chalk_ir::TypeId;
 use chalk_ir::TypeKindId;
 use chalk_ir::UCanonical;
 use chalk_rust_ir::AssociatedTyDatum;
+use chalk_rust_ir::AssociatedTyValue;
+use chalk_rust_ir::AssociatedTyValueId;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
@@ -89,6 +91,10 @@ impl RustIrDatabase for ChalkDatabase {
 
     fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum> {
         self.program_ir().unwrap().impl_datum(id)
+    }
+
+    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue> {
+        self.program_ir().unwrap().associated_ty_values[&id].clone()
     }
 
     fn struct_datum(&self, id: StructId) -> Arc<StructDatum> {

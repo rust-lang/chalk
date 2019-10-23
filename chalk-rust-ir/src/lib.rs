@@ -16,7 +16,7 @@ use std::iter;
 pub enum LangItem {}
 
 /// Identifier for an "associated type value" found in some impl.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssociatedTyValueId(pub RawId);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -41,7 +41,6 @@ impl ImplDatum {
 pub struct ImplDatumBound {
     pub trait_ref: TraitRef<ChalkIr>,
     pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
-    pub associated_ty_values: Vec<AssociatedTyValue>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -309,7 +308,8 @@ pub struct AssociatedTyDatum {
 
 /// Encodes the parts of `AssociatedTyDatum` where the parameters
 /// `P0..Pm` are in scope (`bounds` and `where_clauses`).
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[has_type_family(ChalkIr)]
 pub struct AssociatedTyDatumBound {
     /// Bounds on the associated type itself.
     ///
@@ -319,6 +319,10 @@ pub struct AssociatedTyDatumBound {
 
     /// Where clauses that must hold for the projection to be well-formed.
     pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
+}
+
+impl HasTypeFamily for AssociatedTyDatumBound {
+    type TypeFamily = ChalkIr;
 }
 
 impl AssociatedTyDatum {
@@ -410,6 +414,10 @@ pub struct AssociatedTyValue {
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<ChalkIr>,
+}
+
+impl HasTypeFamily for AssociatedTyValueBound {
+    type TypeFamily = ChalkIr;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

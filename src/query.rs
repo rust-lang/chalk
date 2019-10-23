@@ -155,10 +155,9 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         if datum.is_positive() {
             datum.to_program_clauses(db, &mut program_clauses);
             datum
-                .binders
-                .value
-                .associated_ty_values
+                .associated_ty_value_ids
                 .iter()
+                .map(|&atv_id| db.associated_ty_value(atv_id))
                 .for_each(|atv| atv.to_program_clauses(db, &mut program_clauses));
         }
     }
