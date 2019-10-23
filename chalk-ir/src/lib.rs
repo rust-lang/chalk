@@ -584,6 +584,14 @@ impl<TF: TypeFamily> TraitRef<TF> {
     pub fn self_type_parameter(&self) -> Option<TF::Type> {
         self.type_parameters().next()
     }
+
+    pub fn from_env(self) -> FromEnv<TF> {
+        FromEnv::Trait(self)
+    }
+
+    pub fn well_formed(self) -> WellFormed<TF> {
+        WellFormed::Trait(self)
+    }
 }
 
 /// Where clauses that can be written by a Rust programmer.
