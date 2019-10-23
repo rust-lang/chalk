@@ -86,7 +86,7 @@ impl<'db, 'set> EnvElaborator<'db, 'set> {
                 // If we know that `T: Iterator`, then we also know
                 // things about `<T as Iterator>::Item`, so push those
                 // implied bounds too:
-                for &associated_ty_id in &trait_datum.binders.value.associated_ty_ids {
+                for &associated_ty_id in &trait_datum.associated_ty_ids {
                     self.db
                         .associated_ty_data(associated_ty_id)
                         .to_program_clauses(self.db, &mut clauses);
