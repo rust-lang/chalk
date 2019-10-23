@@ -4,8 +4,7 @@ use chalk_ir::family::ChalkIr;
 use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
-use chalk_rust_ir::IntoWhereClauses;
-use chalk_rust_ir::{Anonymize, ToParameter};
+use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
 use failure::{Fail, Fallible};
 use itertools::Itertools;
 use lalrpop_intern::intern;
@@ -17,6 +16,7 @@ mod test;
 type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeKindId>;
 type TypeKinds = BTreeMap<chalk_ir::TypeKindId, rust_ir::TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyLookup>;
+type AssociatedTyValueIds = BTreeMap<(chalk_ir::ImplId, chalk_ir::Identifier), AssociatedTyValueId>;
 type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usize>;
 
 #[derive(Fail, Debug)]
@@ -170,21 +170,33 @@ impl LowerProgram for Program {
         // based just on its position:
         let raw_ids: Vec<_> = self.items.iter().map(|_| next_item_id()).collect();
 
-        // Create ids for associated types
+        // Create ids for associated type declarations and values
         let mut associated_ty_lookups = BTreeMap::new();
+        let mut associated_ty_value_ids = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
-            if let Item::TraitDefn(ref d) = *item {
-                if d.flags.auto && !d.assoc_ty_defns.is_empty() {
-                    return Err(format_err!("auto trait cannot define associated types"));
+            match item {
+                Item::TraitDefn(d) => {
+                    if d.flags.auto && !d.assoc_ty_defns.is_empty() {
+                        return Err(format_err!("auto trait cannot define associated types"));
+                    }
+                    for defn in &d.assoc_ty_defns {
+                        let addl_parameter_kinds = defn.all_parameters();
+                        let lookup = AssociatedTyLookup {
+                            id: TypeId(next_item_id()),
+                            addl_parameter_kinds: addl_parameter_kinds.anonymize(),
+                        };
+                        associated_ty_lookups.insert((TraitId(raw_id), defn.name.str), lookup);
+                    }
                 }
-                for defn in &d.assoc_ty_defns {
-                    let addl_parameter_kinds = defn.all_parameters();
-                    let lookup = AssociatedTyLookup {
-                        id: TypeId(next_item_id()),
-                        addl_parameter_kinds: addl_parameter_kinds.anonymize(),
-                    };
-                    associated_ty_lookups.insert((TraitId(raw_id), defn.name.str), lookup);
+
+                Item::Impl(d) => {
+                    for atv in &d.assoc_ty_values {
+                        let atv_id = AssociatedTyValueId(next_item_id());
+                        associated_ty_value_ids.insert((ImplId(raw_id), atv.name.str), atv_id);
+                    }
                 }
+
+                _ => {}
             }
         }
 
@@ -205,6 +217,7 @@ impl LowerProgram for Program {
         let mut trait_data = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
+        let associated_ty_values = BTreeMap::new();
         let mut custom_clauses = Vec::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
@@ -249,7 +262,10 @@ impl LowerProgram for Program {
                 }
                 Item::Impl(ref d) => {
                     let impl_id = ImplId(raw_id);
-                    impl_data.insert(impl_id, Arc::new(d.lower_impl(&empty_env, impl_id)?));
+                    impl_data.insert(
+                        impl_id,
+                        Arc::new(d.lower_impl(&empty_env, impl_id, &associated_ty_value_ids)?),
+                    );
                 }
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
@@ -263,6 +279,7 @@ impl LowerProgram for Program {
             struct_data,
             trait_data,
             impl_data,
+            associated_ty_values,
             associated_ty_data,
             custom_clauses,
         };
@@ -991,11 +1008,21 @@ impl LowerLifetime for Lifetime {
 }
 
 trait LowerImpl {
-    fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum>;
+    fn lower_impl(
+        &self,
+        empty_env: &Env,
+        impl_id: ImplId,
+        associated_ty_value_ids: &AssociatedTyValueIds,
+    ) -> Fallible<rust_ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum> {
+    fn lower_impl(
+        &self,
+        empty_env: &Env,
+        impl_id: ImplId,
+        _associated_ty_value_ids: &AssociatedTyValueIds,
+    ) -> Fallible<rust_ir::ImplDatum> {
         let polarity = self.polarity.lower();
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;

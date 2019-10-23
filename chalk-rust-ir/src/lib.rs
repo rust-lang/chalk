@@ -8,12 +8,15 @@ use chalk_ir::family::{ChalkIr, HasTypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
     Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq, ProjectionTy,
-    QuantifiedWhereClause, StructId, TraitId, TraitRef, Ty, TypeId, TypeName, WhereClause,
+    QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TypeId, TypeName, WhereClause,
 };
 use std::iter;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LangItem {}
+
+/// Identifier for an "associated type value" found in some impl.
+pub struct AssociatedTyValueId(pub RawId);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum {

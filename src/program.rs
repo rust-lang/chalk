@@ -5,7 +5,9 @@ use chalk_ir::{
     Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, TypeId,
     TypeKindId,
 };
-use chalk_rust_ir::{AssociatedTyDatum, ImplDatum, ImplType, StructDatum, TraitDatum, TypeKind};
+use chalk_rust_ir::{
+    AssociatedTyDatum, AssociatedTyValue, ImplDatum, ImplType, StructDatum, TraitDatum, TypeKind,
+};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
@@ -24,10 +26,13 @@ pub struct Program {
     /// For each impl:
     pub(crate) impl_data: BTreeMap<ImplId, Arc<ImplDatum>>,
 
+    /// For each associated ty value `type Foo = XXX` found in an impl:
+    pub(crate) associated_ty_values: BTreeMap<TypeId, Arc<AssociatedTyValue>>,
+
     /// For each trait:
     pub(crate) trait_data: BTreeMap<TraitId, Arc<TraitDatum>>,
 
-    /// For each associated ty:
+    /// For each associated ty declaration `type Foo` found in a trait:
     pub(crate) associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum>>,
 
     /// For each user-specified clause
