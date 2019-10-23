@@ -57,6 +57,46 @@ pub trait Split: RustIrDatabase {
             parameters: trait_params.to_owned(),
         }
     }
+
+    /// Given the full set of parameters for an associated type *value*
+    /// (which appears in an impl), splits them into the substitutions for
+    /// the *impl* and those for the *associated type*.
+    ///
+    /// # Example
+    ///
+    /// ```ignore (example)
+    /// impl<T> Iterable for Vec<T> {
+    ///     type Iter<'a>;
+    /// }
+    /// ```
+    ///
+    /// in this example, the full set of parameters would be `['x,
+    /// Y]`, where `'x` is the value for `'a` and `Y` is the value for
+    /// `T`.
+    ///
+    /// # Returns
+    ///
+    /// Returns the pair of:
+    ///
+    /// * the parameters for the impl (`[Y]`, in our example)
+    /// * the parameters for the associated type value (`['a]`, in our example)
+    fn split_associated_ty_value_parameters<'p>(
+        &self,
+        parameters: &'p [Parameter<ChalkIr>],
+        associated_ty_value: &AssociatedTyValue,
+    ) -> (&'p [Parameter<ChalkIr>], &'p [Parameter<ChalkIr>]) {
+        let impl_datum = self.impl_datum(associated_ty_value.impl_id);
+        let impl_params_len = impl_datum.binders.len();
+        assert!(parameters.len() >= impl_params_len);
+
+        // the impl parameters are a suffix
+        //
+        // [ P0..Pn, Pn...Pm ]
+        //           ^^^^^^^ impl parameters
+        let split_point = parameters.len() - impl_params_len;
+        let (other_params, impl_params) = parameters.split_at(split_point);
+        (impl_params, other_params)
+    }
 }
 
 impl<DB: RustIrDatabase + ?Sized> Split for DB {}
