@@ -2,7 +2,6 @@ use crate::error::ChalkError;
 use crate::lowering::LowerGoal;
 use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
-use chalk_ir::could_match::CouldMatch;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::Canonical;
@@ -13,17 +12,13 @@ use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
 use chalk_ir::Parameter;
 use chalk_ir::ProgramClause;
-use chalk_ir::ProjectionTy;
 use chalk_ir::StructId;
 use chalk_ir::TraitId;
-use chalk_ir::Ty;
 use chalk_ir::TypeId;
 use chalk_ir::TypeKindId;
-use chalk_ir::TypeName;
 use chalk_ir::UCanonical;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::ImplDatum;
-use chalk_rust_ir::ImplType;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_solve::RustIrDatabase;
@@ -81,90 +76,44 @@ impl ChalkDatabase {
 
 impl RustIrDatabase for ChalkDatabase {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
-        self.program_ir().unwrap().custom_clauses.clone()
+        self.program_ir().unwrap().custom_clauses()
     }
 
     fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
-        self.program_ir().unwrap().associated_ty_data[&ty].clone()
+        self.program_ir().unwrap().associated_ty_data(ty)
     }
 
     fn trait_datum(&self, id: TraitId) -> Arc<TraitDatum> {
-        self.program_ir().unwrap().trait_data[&id].clone()
+        self.program_ir().unwrap().trait_datum(id)
     }
 
     fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum> {
-        self.program_ir().unwrap().impl_data[&id].clone()
+        self.program_ir().unwrap().impl_datum(id)
     }
 
     fn struct_datum(&self, id: StructId) -> Arc<StructDatum> {
-        self.program_ir().unwrap().struct_data[&id].clone()
+        self.program_ir().unwrap().struct_datum(id)
     }
 
     fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter<ChalkIr>]) -> Vec<ImplId> {
         self.program_ir()
             .unwrap()
-            .impl_data
-            .iter()
-            .filter(|(_, impl_datum)| {
-                let trait_ref = &impl_datum.binders.value.trait_ref;
-                trait_id == trait_ref.trait_id && {
-                    assert_eq!(trait_ref.parameters.len(), parameters.len());
-                    <[_] as CouldMatch<[_]>>::could_match(&parameters, &trait_ref.parameters)
-                }
-            })
-            .map(|(&impl_id, _)| impl_id)
-            .collect()
+            .impls_for_trait(trait_id, parameters)
     }
 
     fn local_impls_to_coherence_check(&self, trait_id: TraitId) -> Vec<ImplId> {
         self.program_ir()
             .unwrap()
-            .impl_data
-            .iter()
-            .filter(|(_, impl_datum)| {
-                impl_datum.trait_id() == trait_id && impl_datum.impl_type == ImplType::Local
-            })
-            .map(|(&impl_id, _)| impl_id)
-            .collect()
+            .local_impls_to_coherence_check(trait_id)
     }
 
     fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool {
-        // Look for an impl like `impl Send for Foo` where `Foo` is
-        // the struct.  See `push_auto_trait_impls` for more.
-        let type_kind_id = TypeKindId::StructId(struct_id);
         self.program_ir()
             .unwrap()
-            .impl_data
-            .values()
-            .any(|impl_datum| {
-                let impl_trait_ref = &impl_datum.binders.value.trait_ref;
-                impl_trait_ref.trait_id == auto_trait_id
-                    && match impl_trait_ref.parameters[0].assert_ty_ref() {
-                        Ty::Apply(apply) => match apply.name {
-                            TypeName::TypeKindId(id) => id == type_kind_id,
-                            _ => false,
-                        },
-
-                        _ => false,
-                    }
-            })
+            .impl_provided_for(auto_trait_id, struct_id)
     }
 
     fn type_name(&self, id: TypeKindId) -> Identifier {
-        match self.program_ir().unwrap().type_kinds.get(&id) {
-            Some(v) => v.name,
-            None => panic!("no type with id `{:?}`", id),
-        }
-    }
-
-    fn split_projection<'p>(
-        &self,
-        projection: &'p ProjectionTy<ChalkIr>,
-    ) -> (
-        Arc<AssociatedTyDatum>,
-        &'p [Parameter<ChalkIr>],
-        &'p [Parameter<ChalkIr>],
-    ) {
-        self.program_ir().unwrap().split_projection(projection)
+        self.program_ir().unwrap().type_name(id)
     }
 }

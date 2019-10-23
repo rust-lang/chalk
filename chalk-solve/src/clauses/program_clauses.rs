@@ -1,4 +1,5 @@
 use crate::clauses::builder::ClauseBuilder;
+use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::family::ChalkIr;
@@ -694,13 +695,7 @@ impl ToProgramClauses for AssociatedTyDatum {
             };
 
             // Retrieve the trait ref embedding the associated type
-            let trait_ref = {
-                let (associated_ty_data, trait_params, _) = db.split_projection(&projection);
-                TraitRef {
-                    trait_id: associated_ty_data.trait_id,
-                    parameters: trait_params.to_owned(),
-                }
-            };
+            let trait_ref = builder.db.trait_ref_from_projection(&projection);
 
             // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
             // we would produce `(Iterator::Item)<T>`.

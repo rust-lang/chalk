@@ -1,6 +1,7 @@
 use self::builder::ClauseBuilder;
 use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
+use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::could_match::CouldMatch;
@@ -221,7 +222,7 @@ fn program_clauses_that_could_match(
             // ```
             let associated_ty_datum = db.associated_ty_data(projection.associated_ty_id);
             let trait_id = associated_ty_datum.trait_id;
-            let (_, trait_parameters, _) = db.split_projection(projection);
+            let trait_parameters = db.trait_parameters_from_projection(projection);
             push_program_clauses_for_associated_type_values_in_impls_of(
                 db,
                 trait_id,
