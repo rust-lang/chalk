@@ -70,18 +70,6 @@ impl Debug for TypeName {
     }
 }
 
-impl Debug for ItemId {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match self {
-            ItemId::StructId(id @ StructId(_)) => write!(fmt, "{:?}", TypeKindId::StructId(*id)),
-            ItemId::TraitId(id @ TraitId(_)) => write!(fmt, "{:?}", TypeKindId::TraitId(*id)),
-            ItemId::TypeId(id @ TypeId(_)) => write!(fmt, "{:?}", TypeKindId::TypeId(*id)),
-            ItemId::ImplId(id @ ImplId(_)) => write!(fmt, "{:?}", id),
-            ItemId::ClauseId(ClauseId(id)) => write!(fmt, "{:?}", id),
-        }
-    }
-}
-
 impl<TF: TypeFamily> Debug for Ty<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {

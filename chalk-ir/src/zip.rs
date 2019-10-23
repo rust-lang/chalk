@@ -154,7 +154,6 @@ macro_rules! eq_zip {
     };
 }
 
-eq_zip!(TF => ItemId);
 eq_zip!(TF => StructId);
 eq_zip!(TF => TraitId);
 eq_zip!(TF => TypeId);

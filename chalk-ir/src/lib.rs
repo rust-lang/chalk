@@ -178,16 +178,6 @@ pub struct ClauseId(pub RawId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TypeId(pub RawId);
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ItemId {
-    StructId(StructId),
-    TraitId(TraitId),
-    ImplId(ImplId),
-    ClauseId(ClauseId),
-    TypeId(TypeId),
-}
-
-impl_froms!(ItemId: StructId, TraitId, ImplId, ClauseId, TypeId);
 impl_debugs!(ImplId, ClauseId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -208,16 +198,6 @@ impl TypeKindId {
 }
 
 impl_froms!(TypeKindId: TypeId, TraitId, StructId);
-
-impl From<TypeKindId> for ItemId {
-    fn from(type_kind_id: TypeKindId) -> ItemId {
-        match type_kind_id {
-            TypeKindId::TypeId(id) => ItemId::TypeId(id),
-            TypeKindId::TraitId(id) => ItemId::TraitId(id),
-            TypeKindId::StructId(id) => ItemId::StructId(id),
-        }
-    }
-}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(non_camel_case_types)]
