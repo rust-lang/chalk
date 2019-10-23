@@ -2,7 +2,8 @@ use crate::cast::Cast;
 use crate::family::Lookup;
 use crate::fold::shift::Shift;
 use crate::fold::{
-    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder, Subst,
+    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, Folder,
+    FreeVarFolder, Subst,
 };
 use chalk_engine::fallible::*;
 use fold_derive::Fold;

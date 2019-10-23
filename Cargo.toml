@@ -48,4 +48,8 @@ path = "chalk-engine"
 version = "0.1.0"
 path = "chalk-rust-ir"
 
+[dependencies.fold-derive]
+version = "0.1.0"
+path = "fold-derive"
+
 [workspace]

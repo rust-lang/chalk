@@ -7,11 +7,12 @@ extern crate chalk_ir;
 
 use chalk_ir::cast::Cast;
 use chalk_ir::family::ChalkIr;
-use chalk_ir::fold::shift::Shift;
+use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
     ApplicationTy, Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq,
     ProjectionTy, QuantifiedWhereClause, TraitId, TraitRef, Ty, TypeId, WhereClause,
 };
+use fold_derive::Fold;
 use std::iter;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -182,16 +183,12 @@ impl IntoWhereClauses for QuantifiedInlineBound {
 
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[fold_family(ChalkIr)]
 pub struct TraitBound {
     pub trait_id: TraitId,
     pub args_no_self: Vec<Parameter<ChalkIr>>,
 }
-
-struct_fold!(impl[] Fold<ChalkIr> for TraitBound {
-    trait_id,
-    args_no_self,
-});
 
 impl TraitBound {
     fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
@@ -210,7 +207,8 @@ impl TraitBound {
 }
 /// Represents a projection equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[fold_family(ChalkIr)]
 pub struct ProjectionEqBound {
     pub trait_bound: TraitBound,
     pub associated_ty_id: TypeId,
@@ -218,13 +216,6 @@ pub struct ProjectionEqBound {
     pub parameters: Vec<Parameter<ChalkIr>>,
     pub value: Ty<ChalkIr>,
 }
-
-struct_fold!(impl[] Fold<ChalkIr> for ProjectionEqBound {
-    trait_bound,
-    associated_ty_id,
-    parameters,
-    value,
-});
 
 impl ProjectionEqBound {
     fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
@@ -337,7 +328,8 @@ impl AssociatedTyDatum {
 ///     type Item = XXX; // <-- represents this line!
 /// }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[fold_family(ChalkIr)]
 pub struct AssociatedTyValue {
     /// Impl in which this associated type value is found.  You might
     /// need to look at this to find the generic parameters defined on
@@ -376,19 +368,12 @@ pub struct AssociatedTyValue {
     pub value: Binders<AssociatedTyValueBound>,
 }
 
-struct_fold!(impl[] Fold<ChalkIr> for AssociatedTyValue {
-    impl_id,
-    associated_ty_id,
-    value,
-});
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[fold_family(ChalkIr)]
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<ChalkIr>,
 }
-
-struct_fold!(impl[] Fold<ChalkIr> for AssociatedTyValueBound { ty });
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {

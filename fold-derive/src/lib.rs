@@ -1,10 +1,10 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{parse_macro_input, Fields, ItemStruct};
 
-#[proc_macro_derive(Fold)]
+#[proc_macro_derive(Fold, attributes(fold_family))]
 pub fn derive_fold(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemStruct);
 
@@ -12,13 +12,23 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let fields = fold_fields(&input.fields);
 
+    // Allow custom Fold parameter using the `#[fold_family(Param)]` attribute
+    let generics = if let Some(attr) = input.attrs.iter().find(|a| a.path.is_ident("fold_family")) {
+        let arg = attr
+            .parse_args::<proc_macro2::TokenStream>()
+            .expect("Expected fold_family argument");
+        quote! { < #arg > }
+    } else {
+        ty_generics.to_token_stream()
+    };
+
     TokenStream::from(quote! {
-        impl#impl_generics Fold #ty_generics for #name #ty_generics #where_clause {
+        impl#impl_generics Fold #generics for #name #ty_generics #where_clause {
             type Result = Self;
 
             fn fold_with(
                 &self,
-                folder: &mut dyn crate::fold::Folder #ty_generics,
+                folder: &mut dyn Folder #generics,
                 binders: usize,
             ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                 Ok(Self {
@@ -27,6 +37,11 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
             }
         }
     })
+}
+
+#[proc_macro_attribute]
+pub fn fold_family(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    item
 }
 
 fn fold_fields(fields: &Fields) -> impl Iterator<Item = proc_macro2::TokenStream> + '_ {
