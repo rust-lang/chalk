@@ -2,9 +2,6 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
-#[macro_use]
-extern crate chalk_ir;
-
 use chalk_ir::cast::Cast;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
@@ -133,13 +130,12 @@ pub struct TraitFlags {
 }
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[fold_family(ChalkIr)]
 pub enum InlineBound {
     TraitBound(TraitBound),
     ProjectionEqBound(ProjectionEqBound),
 }
-
-enum_fold!(impl[] Fold<ChalkIr> for InlineBound { TraitBound(a), ProjectionEqBound(a) });
 
 pub type QuantifiedInlineBound = Binders<InlineBound>;
 

@@ -604,13 +604,13 @@ impl<TF: TypeFamily> TraitRef<TF> {
 }
 
 /// Where clauses that can be written by a Rust programmer.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum WhereClause<TF: TypeFamily> {
     Implemented(TraitRef<TF>),
     ProjectionEq(ProjectionEq<TF>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum WellFormed<TF: TypeFamily> {
     /// A predicate which is true is some trait ref is well-formed.
     /// For example, given the following trait definitions:
@@ -644,7 +644,7 @@ impl<TF: TypeFamily> HasTypeFamily for WellFormed<TF> {
     type TypeFamily = TF;
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum FromEnv<TF: TypeFamily> {
     /// A predicate which enables deriving everything which should be true if we *know* that
     /// some trait ref is well-formed. For example given the above trait definitions, we can use
@@ -680,7 +680,7 @@ impl<TF: TypeFamily> HasTypeFamily for FromEnv<TF> {
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum DomainGoal<TF: TypeFamily> {
     Holds(WhereClause<TF>),
 
@@ -785,7 +785,7 @@ impl<TF: TypeFamily> DomainGoal<TF> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 /// A goal that does not involve any logical connectives. Equality is treated
 /// specially by the logic (as with most first-order logics), since it interacts
 /// with unification etc.
@@ -940,7 +940,7 @@ pub struct ProgramClauseImplication<TF: TypeFamily> {
     pub conditions: Vec<Goal<TF>>,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
 pub enum ProgramClause<TF: TypeFamily> {
     Implies(ProgramClauseImplication<TF>),
     ForAll(Binders<ProgramClauseImplication<TF>>),
@@ -998,7 +998,7 @@ impl<T> UCanonical<T> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum Goal<TF: TypeFamily> {
     /// Introduces a binding at depth 0, shifting other bindings up
@@ -1080,7 +1080,7 @@ pub enum QuantifierKind {
 /// lifetime constraints, instead gathering them up to return with our solution
 /// for later checking. This allows for decoupling between type and region
 /// checking in the compiler.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum Constraint<TF: TypeFamily> {
     LifetimeEq(TF::Lifetime, TF::Lifetime),
 }
