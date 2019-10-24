@@ -6,6 +6,7 @@
 extern crate chalk_ir;
 
 use chalk_ir::cast::Cast;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::{
     ApplicationTy, Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq,
@@ -35,8 +36,8 @@ impl ImplDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatumBound {
-    pub trait_ref: TraitRef,
-    pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub trait_ref: TraitRef<ChalkIr>,
+    pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
     pub associated_ty_values: Vec<AssociatedTyValue>,
 }
 
@@ -53,8 +54,8 @@ pub struct DefaultImplDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DefaultImplDatumBound {
-    pub trait_ref: TraitRef,
-    pub accessible_tys: Vec<Ty>,
+    pub trait_ref: TraitRef<ChalkIr>,
+    pub accessible_tys: Vec<Ty<ChalkIr>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -64,9 +65,9 @@ pub struct StructDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
-    pub self_ty: ApplicationTy,
-    pub fields: Vec<Ty>,
-    pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub self_ty: ApplicationTy<ChalkIr>,
+    pub fields: Vec<Ty<ChalkIr>>,
+    pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
     pub flags: StructFlags,
 }
 
@@ -107,7 +108,7 @@ pub struct TraitDatumBound {
     ///
     /// this would be `^0: Foo<^1>`, where `^0` represents the
     /// debruijn index for `Self` and so forth.
-    pub trait_ref: TraitRef,
+    pub trait_ref: TraitRef<ChalkIr>,
 
     /// Where clauses defined on the trait:
     ///
@@ -115,7 +116,7 @@ pub struct TraitDatumBound {
     /// trait Foo<T> where T: Debug { }
     ///              ^^^^^^^^^^^^^^
     /// ```
-    pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
 
     /// The id of each associated type defined in the trait.
     pub associated_ty_ids: Vec<TypeId>,
@@ -137,25 +138,25 @@ pub enum InlineBound {
     ProjectionEqBound(ProjectionEqBound),
 }
 
-enum_fold!(InlineBound[] { TraitBound(a), ProjectionEqBound(a) });
+enum_fold!(impl[] Fold<ChalkIr> for InlineBound { TraitBound(a), ProjectionEqBound(a) });
 
 pub type QuantifiedInlineBound = Binders<InlineBound>;
 
 pub trait IntoWhereClauses {
     type Output;
 
-    fn into_where_clauses(&self, self_ty: Ty) -> Vec<Self::Output>;
+    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<Self::Output>;
 }
 
 impl IntoWhereClauses for InlineBound {
-    type Output = WhereClause;
+    type Output = WhereClause<ChalkIr>;
 
     /// Applies the `InlineBound` to `self_ty` and lowers to a
     /// [`chalk_ir::DomainGoal`].
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
-    fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
+    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
         match self {
             InlineBound::TraitBound(b) => b.into_where_clauses(self_ty),
             InlineBound::ProjectionEqBound(b) => b.into_where_clauses(self_ty),
@@ -164,9 +165,9 @@ impl IntoWhereClauses for InlineBound {
 }
 
 impl IntoWhereClauses for QuantifiedInlineBound {
-    type Output = QuantifiedWhereClause;
+    type Output = QuantifiedWhereClause<ChalkIr>;
 
-    fn into_where_clauses(&self, self_ty: Ty) -> Vec<QuantifiedWhereClause> {
+    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<QuantifiedWhereClause<ChalkIr>> {
         let self_ty = self_ty.shifted_in(self.binders.len());
         self.value
             .into_where_clauses(self_ty)
@@ -184,21 +185,21 @@ impl IntoWhereClauses for QuantifiedInlineBound {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitBound {
     pub trait_id: TraitId,
-    pub args_no_self: Vec<Parameter>,
+    pub args_no_self: Vec<Parameter<ChalkIr>>,
 }
 
-struct_fold!(TraitBound {
+struct_fold!(impl[] Fold<ChalkIr> for TraitBound {
     trait_id,
     args_no_self,
 });
 
 impl TraitBound {
-    fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
+    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
         let trait_ref = self.as_trait_ref(self_ty);
         vec![WhereClause::Implemented(trait_ref)]
     }
 
-    pub fn as_trait_ref(&self, self_ty: Ty) -> TraitRef {
+    pub fn as_trait_ref(&self, self_ty: Ty<ChalkIr>) -> TraitRef<ChalkIr> {
         TraitRef {
             trait_id: self.trait_id,
             parameters: iter::once(self_ty.cast())
@@ -214,11 +215,11 @@ pub struct ProjectionEqBound {
     pub trait_bound: TraitBound,
     pub associated_ty_id: TypeId,
     /// Does not include trait parameters.
-    pub parameters: Vec<Parameter>,
-    pub value: Ty,
+    pub parameters: Vec<Parameter<ChalkIr>>,
+    pub value: Ty<ChalkIr>,
 }
 
-struct_fold!(ProjectionEqBound {
+struct_fold!(impl[] Fold<ChalkIr> for ProjectionEqBound {
     trait_bound,
     associated_ty_id,
     parameters,
@@ -226,7 +227,7 @@ struct_fold!(ProjectionEqBound {
 });
 
 impl ProjectionEqBound {
-    fn into_where_clauses(&self, self_ty: Ty) -> Vec<WhereClause> {
+    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 
         let mut parameters = self.parameters.clone();
@@ -265,11 +266,11 @@ pub trait ToParameter {
     /// the indices, and invoke `to_parameter()` on the `(binder,
     /// index)` pair. The result will be a reference to a bound
     /// variable of appropriate kind at the corresponding index.
-    fn to_parameter(&self) -> Parameter;
+    fn to_parameter(&self) -> Parameter<ChalkIr>;
 }
 
 impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
-    fn to_parameter(&self) -> Parameter {
+    fn to_parameter(&self) -> Parameter<ChalkIr> {
         let &(binder, index) = self;
         match *binder {
             ParameterKind::Lifetime(_) => Lifetime::BoundVar(index).cast(),
@@ -300,7 +301,7 @@ pub struct AssociatedTyDatum {
     pub bounds: Vec<QuantifiedInlineBound>,
 
     /// Where clauses that must hold for the projection to be well-formed.
-    pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
 }
 
 impl AssociatedTyDatum {
@@ -309,7 +310,7 @@ impl AssociatedTyDatum {
     /// ```notrust
     /// Implemented(<?0 as Foo>::Item<?1>: Sized)
     /// ```
-    pub fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause> {
+    pub fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause<ChalkIr>> {
         let parameters = self
             .parameter_kinds
             .anonymize()
@@ -375,7 +376,7 @@ pub struct AssociatedTyValue {
     pub value: Binders<AssociatedTyValueBound>,
 }
 
-struct_fold!(AssociatedTyValue {
+struct_fold!(impl[] Fold<ChalkIr> for AssociatedTyValue {
     impl_id,
     associated_ty_id,
     value,
@@ -384,10 +385,10 @@ struct_fold!(AssociatedTyValue {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
-    pub ty: Ty,
+    pub ty: Ty<ChalkIr>,
 }
 
-struct_fold!(AssociatedTyValueBound { ty });
+struct_fold!(impl[] Fold<ChalkIr> for AssociatedTyValueBound { ty });
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {

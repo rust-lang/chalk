@@ -11,6 +11,7 @@ use chalk_engine::fallible::Fallible;
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
 use chalk_ir::could_match::CouldMatch;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 
 use chalk_engine::context;
@@ -54,83 +55,90 @@ pub(super) struct TruncatingInferenceTable<'me> {
 }
 
 impl context::Context for SlgContext {
-    type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal>>;
+    type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal<ChalkIr>>>;
     type CanonicalExClause = Canonical<ExClause<Self>>;
-    type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal>>;
+    type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal<ChalkIr>>>;
     type UniverseMap = UniverseMap;
-    type InferenceNormalizedSubst = Substitution;
+    type InferenceNormalizedSubst = Substitution<ChalkIr>;
     type Solution = Solution;
-    type Environment = Arc<Environment>;
-    type DomainGoal = DomainGoal;
-    type Goal = Goal;
-    type BindersGoal = Binders<Box<Goal>>;
-    type Parameter = Parameter;
-    type ProgramClause = ProgramClause;
-    type ProgramClauses = Vec<ProgramClause>;
+    type Environment = Arc<Environment<ChalkIr>>;
+    type DomainGoal = DomainGoal<ChalkIr>;
+    type Goal = Goal<ChalkIr>;
+    type BindersGoal = Binders<Box<Goal<ChalkIr>>>;
+    type Parameter = Parameter<ChalkIr>;
+    type ProgramClause = ProgramClause<ChalkIr>;
+    type ProgramClauses = Vec<ProgramClause<ChalkIr>>;
     type UnificationResult = UnificationResult;
-    type CanonicalConstrainedSubst = Canonical<ConstrainedSubst>;
-    type GoalInEnvironment = InEnvironment<Goal>;
-    type Substitution = Substitution;
-    type RegionConstraint = InEnvironment<Constraint>;
+    type CanonicalConstrainedSubst = Canonical<ConstrainedSubst<ChalkIr>>;
+    type GoalInEnvironment = InEnvironment<Goal<ChalkIr>>;
+    type Substitution = Substitution<ChalkIr>;
+    type RegionConstraint = InEnvironment<Constraint<ChalkIr>>;
     type Variance = ();
 
-    fn goal_in_environment(environment: &Arc<Environment>, goal: Goal) -> InEnvironment<Goal> {
+    fn goal_in_environment(
+        environment: &Arc<Environment<ChalkIr>>,
+        goal: Goal<ChalkIr>,
+    ) -> InEnvironment<Goal<ChalkIr>> {
         InEnvironment::new(environment, goal)
     }
 
     fn inference_normalized_subst_from_ex_clause(
         canon_ex_clause: &Canonical<ExClause<SlgContext>>,
-    ) -> &Substitution {
+    ) -> &Substitution<ChalkIr> {
         &canon_ex_clause.value.subst
     }
 
-    fn empty_constraints(ccs: &Canonical<ConstrainedSubst>) -> bool {
+    fn empty_constraints(ccs: &Canonical<ConstrainedSubst<ChalkIr>>) -> bool {
         ccs.value.constraints.is_empty()
     }
 
-    fn inference_normalized_subst_from_subst(ccs: &Canonical<ConstrainedSubst>) -> &Substitution {
+    fn inference_normalized_subst_from_subst(
+        ccs: &Canonical<ConstrainedSubst<ChalkIr>>,
+    ) -> &Substitution<ChalkIr> {
         &ccs.value.subst
     }
 
-    fn canonical(u_canon: &UCanonical<InEnvironment<Goal>>) -> &Canonical<InEnvironment<Goal>> {
+    fn canonical(
+        u_canon: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
+    ) -> &Canonical<InEnvironment<Goal<ChalkIr>>> {
         &u_canon.canonical
     }
 
     fn is_trivial_substitution(
-        u_canon: &UCanonical<InEnvironment<Goal>>,
-        canonical_subst: &Canonical<ConstrainedSubst>,
+        u_canon: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
+        canonical_subst: &Canonical<ConstrainedSubst<ChalkIr>>,
     ) -> bool {
         u_canon.is_trivial_substitution(canonical_subst)
     }
 
-    fn num_universes(u_canon: &UCanonical<InEnvironment<Goal>>) -> usize {
+    fn num_universes(u_canon: &UCanonical<InEnvironment<Goal<ChalkIr>>>) -> usize {
         u_canon.universes
     }
 
     fn map_goal_from_canonical(
         map: &UniverseMap,
-        value: &Canonical<InEnvironment<Goal>>,
-    ) -> Canonical<InEnvironment<Goal>> {
+        value: &Canonical<InEnvironment<Goal<ChalkIr>>>,
+    ) -> Canonical<InEnvironment<Goal<ChalkIr>>> {
         map.map_from_canonical(value)
     }
 
     fn map_subst_from_canonical(
         map: &UniverseMap,
-        value: &Canonical<ConstrainedSubst>,
-    ) -> Canonical<ConstrainedSubst> {
+        value: &Canonical<ConstrainedSubst<ChalkIr>>,
+    ) -> Canonical<ConstrainedSubst<ChalkIr>> {
         map.map_from_canonical(value)
     }
 }
 
 impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
-    fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal>>) -> bool {
+    fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>) -> bool {
         goal.is_coinductive(self.program)
     }
 
     fn identity_constrained_subst(
         &self,
-        goal: &UCanonical<InEnvironment<Goal>>,
-    ) -> Canonical<ConstrainedSubst> {
+        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
+    ) -> Canonical<ConstrainedSubst<ChalkIr>> {
         let (mut infer, subst, _) = InferenceTable::from_canonical(goal.universes, &goal.canonical);
         infer
             .canonicalize(&ConstrainedSubst {
@@ -142,7 +150,7 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
 
     fn instantiate_ucanonical_goal<R>(
         &self,
-        arg: &UCanonical<InEnvironment<Goal>>,
+        arg: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
         op: impl context::WithInstantiatedUCanonicalGoal<SlgContext, Output = R>,
     ) -> R {
         let (infer, subst, InEnvironment { environment, goal }) =
@@ -175,7 +183,10 @@ impl<'me> TruncatingInferenceTable<'me> {
 }
 
 impl<'me> context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
-    fn truncate_goal(&mut self, subgoal: &InEnvironment<Goal>) -> Option<InEnvironment<Goal>> {
+    fn truncate_goal(
+        &mut self,
+        subgoal: &InEnvironment<Goal<ChalkIr>>,
+    ) -> Option<InEnvironment<Goal<ChalkIr>>> {
         let Truncated { overflow, value } =
             truncate::truncate(&mut self.infer, self.max_size, subgoal);
         if overflow {
@@ -185,7 +196,7 @@ impl<'me> context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTa
         }
     }
 
-    fn truncate_answer(&mut self, subst: &Substitution) -> Option<Substitution> {
+    fn truncate_answer(&mut self, subst: &Substitution<ChalkIr>) -> Option<Substitution<ChalkIr>> {
         let Truncated { overflow, value } =
             truncate::truncate(&mut self.infer, self.max_size, subst);
         if overflow {
@@ -197,7 +208,7 @@ impl<'me> context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTa
 }
 
 impl<'me> context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
-    fn into_hh_goal(&mut self, goal: Goal) -> HhGoal<SlgContext> {
+    fn into_hh_goal(&mut self, goal: Goal<ChalkIr>) -> HhGoal<SlgContext> {
         match goal {
             Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
             Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
@@ -213,17 +224,17 @@ impl<'me> context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenc
     // Used by: simplify
     fn add_clauses(
         &mut self,
-        env: &Arc<Environment>,
-        clauses: Vec<ProgramClause>,
-    ) -> Arc<Environment> {
+        env: &Arc<Environment<ChalkIr>>,
+        clauses: Vec<ProgramClause<ChalkIr>>,
+    ) -> Arc<Environment<ChalkIr>> {
         Environment::add_clauses(env, clauses)
     }
 
-    fn into_goal(&self, domain_goal: DomainGoal) -> Goal {
+    fn into_goal(&self, domain_goal: DomainGoal<ChalkIr>) -> Goal<ChalkIr> {
         domain_goal.cast()
     }
 
-    fn cannot_prove(&self) -> Goal {
+    fn cannot_prove(&self) -> Goal<ChalkIr> {
         Goal::CannotProve(())
     }
 
@@ -243,9 +254,9 @@ impl<'me> context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenc
 impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
     fn program_clauses(
         &mut self,
-        environment: &Arc<Environment>,
-        goal: &DomainGoal,
-    ) -> Result<Vec<ProgramClause>, Floundered> {
+        environment: &Arc<Environment<ChalkIr>>,
+        goal: &DomainGoal<ChalkIr>,
+    ) -> Result<Vec<ProgramClause<ChalkIr>>, Floundered> {
         // Look for floundering goals:
         match goal {
             // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
@@ -286,11 +297,17 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         Ok(clauses)
     }
 
-    fn instantiate_binders_universally(&mut self, arg: &Binders<Box<Goal>>) -> Goal {
+    fn instantiate_binders_universally(
+        &mut self,
+        arg: &Binders<Box<Goal<ChalkIr>>>,
+    ) -> Goal<ChalkIr> {
         *self.infer.instantiate_binders_universally(arg)
     }
 
-    fn instantiate_binders_existentially(&mut self, arg: &Binders<Box<Goal>>) -> Goal {
+    fn instantiate_binders_existentially(
+        &mut self,
+        arg: &Binders<Box<Goal<ChalkIr>>>,
+    ) -> Goal<ChalkIr> {
         *self.infer.instantiate_binders_existentially(arg)
     }
 
@@ -298,7 +315,10 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         Box::new(self.infer.normalize_deep(value))
     }
 
-    fn canonicalize_goal(&mut self, value: &InEnvironment<Goal>) -> Canonical<InEnvironment<Goal>> {
+    fn canonicalize_goal(
+        &mut self,
+        value: &InEnvironment<Goal<ChalkIr>>,
+    ) -> Canonical<InEnvironment<Goal<ChalkIr>>> {
         self.infer.canonicalize(value).quantified
     }
 
@@ -311,9 +331,9 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
 
     fn canonicalize_constrained_subst(
         &mut self,
-        subst: Substitution,
-        constraints: Vec<InEnvironment<Constraint>>,
-    ) -> Canonical<ConstrainedSubst> {
+        subst: Substitution<ChalkIr>,
+        constraints: Vec<InEnvironment<Constraint<ChalkIr>>>,
+    ) -> Canonical<ConstrainedSubst<ChalkIr>> {
         self.infer
             .canonicalize(&ConstrainedSubst { subst, constraints })
             .quantified
@@ -321,9 +341,9 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
 
     fn u_canonicalize_goal(
         &mut self,
-        value: &Canonical<InEnvironment<Goal>>,
+        value: &Canonical<InEnvironment<Goal<ChalkIr>>>,
     ) -> (
-        UCanonical<InEnvironment<Goal>>,
+        UCanonical<InEnvironment<Goal<ChalkIr>>>,
         crate::infer::ucanonicalize::UniverseMap,
     ) {
         let UCanonicalized {
@@ -333,23 +353,29 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         (quantified, universes)
     }
 
-    fn invert_goal(&mut self, value: &InEnvironment<Goal>) -> Option<InEnvironment<Goal>> {
+    fn invert_goal(
+        &mut self,
+        value: &InEnvironment<Goal<ChalkIr>>,
+    ) -> Option<InEnvironment<Goal<ChalkIr>>> {
         self.infer.invert(value)
     }
 
     fn unify_parameters(
         &mut self,
-        environment: &Arc<Environment>,
+        environment: &Arc<Environment<ChalkIr>>,
         _: (),
-        a: &Parameter,
-        b: &Parameter,
+        a: &Parameter<ChalkIr>,
+        b: &Parameter<ChalkIr>,
     ) -> Fallible<UnificationResult> {
         self.infer.unify(environment, a, b)
     }
 
     /// Since we do not have distinct types for the inference context and the slg-context,
     /// these conversion operations are just no-ops.q
-    fn sink_answer_subset(&self, c: &Canonical<ConstrainedSubst>) -> Canonical<ConstrainedSubst> {
+    fn sink_answer_subset(
+        &self,
+        c: &Canonical<ConstrainedSubst<ChalkIr>>,
+    ) -> Canonical<ConstrainedSubst<ChalkIr>> {
         c.clone()
     }
 
@@ -373,11 +399,11 @@ fn into_ex_clause(result: UnificationResult, ex_clause: &mut ExClause<SlgContext
 }
 
 trait SubstitutionExt {
-    fn may_invalidate(&self, subst: &Canonical<Substitution>) -> bool;
+    fn may_invalidate(&self, subst: &Canonical<Substitution<ChalkIr>>) -> bool;
 }
 
-impl SubstitutionExt for Substitution {
-    fn may_invalidate(&self, subst: &Canonical<Substitution>) -> bool {
+impl SubstitutionExt for Substitution<ChalkIr> {
+    fn may_invalidate(&self, subst: &Canonical<Substitution<ChalkIr>>) -> bool {
         self.parameters
             .iter()
             .zip(&subst.value.parameters)
@@ -389,7 +415,11 @@ impl SubstitutionExt for Substitution {
 struct MayInvalidate;
 
 impl MayInvalidate {
-    fn aggregate_parameters(&mut self, new: &Parameter, current: &Parameter) -> bool {
+    fn aggregate_parameters(
+        &mut self,
+        new: &Parameter<ChalkIr>,
+        current: &Parameter<ChalkIr>,
+    ) -> bool {
         match (&new.0, &current.0) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
@@ -403,7 +433,7 @@ impl MayInvalidate {
     }
 
     // Returns true if the two types could be unequal.
-    fn aggregate_tys(&mut self, new: &Ty, current: &Ty) -> bool {
+    fn aggregate_tys(&mut self, new: &Ty<ChalkIr>, current: &Ty<ChalkIr>) -> bool {
         match (new, current) {
             (_, Ty::BoundVar(_)) => {
                 // If the aggregate solution already has an inference
@@ -455,11 +485,15 @@ impl MayInvalidate {
         }
     }
 
-    fn aggregate_lifetimes(&mut self, _: &Lifetime, _: &Lifetime) -> bool {
+    fn aggregate_lifetimes(&mut self, _: &Lifetime<ChalkIr>, _: &Lifetime<ChalkIr>) -> bool {
         true
     }
 
-    fn aggregate_application_tys(&mut self, new: &ApplicationTy, current: &ApplicationTy) -> bool {
+    fn aggregate_application_tys(
+        &mut self,
+        new: &ApplicationTy<ChalkIr>,
+        current: &ApplicationTy<ChalkIr>,
+    ) -> bool {
         let ApplicationTy {
             name: new_name,
             parameters: new_parameters,
@@ -472,7 +506,11 @@ impl MayInvalidate {
         self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
     }
 
-    fn aggregate_projection_tys(&mut self, new: &ProjectionTy, current: &ProjectionTy) -> bool {
+    fn aggregate_projection_tys(
+        &mut self,
+        new: &ProjectionTy<ChalkIr>,
+        current: &ProjectionTy<ChalkIr>,
+    ) -> bool {
         let ProjectionTy {
             associated_ty_id: new_name,
             parameters: new_parameters,
@@ -488,9 +526,9 @@ impl MayInvalidate {
     fn aggregate_name_and_substs<N>(
         &mut self,
         new_name: N,
-        new_parameters: &[Parameter],
+        new_parameters: &[Parameter<ChalkIr>],
         current_name: N,
-        current_parameters: &[Parameter],
+        current_parameters: &[Parameter<ChalkIr>],
     ) -> bool
     where
         N: Copy + Eq + Debug,

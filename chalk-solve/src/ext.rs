@@ -1,4 +1,5 @@
 use crate::infer::InferenceTable;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::Fold;
 use chalk_ir::*;
 
@@ -6,8 +7,8 @@ pub trait CanonicalExt<T> {
     fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
-        T: Fold,
-        U: Fold;
+        T: Fold<ChalkIr>,
+        U: Fold<ChalkIr>;
 }
 
 impl<T> CanonicalExt<T> for Canonical<T> {
@@ -21,8 +22,8 @@ impl<T> CanonicalExt<T> for Canonical<T> {
     fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
-        T: Fold,
-        U: Fold,
+        T: Fold<ChalkIr>,
+        U: Fold<ChalkIr>,
     {
         // Subtle: It is only quite rarely correct to apply `op` and
         // just re-use our existing binders. For that to be valid, the
@@ -44,18 +45,18 @@ impl<T> CanonicalExt<T> for Canonical<T> {
 }
 
 pub trait GoalExt {
-    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal>>;
-    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>>;
+    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<ChalkIr>>>;
+    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<ChalkIr>>>;
 }
 
-impl GoalExt for Goal {
+impl GoalExt for Goal<ChalkIr> {
     /// Returns a canonical goal in which the outermost `exists<>` and
     /// `forall<>` quantifiers (as well as implications) have been
     /// "peeled" and are converted into free universal or existential
     /// variables. Assumes that this goal is a "closed goal" which
     /// does not -- at present -- contain any variables. Useful for
     /// REPLs and tests but not much else.
-    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal>> {
+    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<ChalkIr>>> {
         let mut infer = InferenceTable::new();
         let peeled_goal = {
             let mut env_goal = InEnvironment::new(&Environment::new(), self);
@@ -94,7 +95,7 @@ impl GoalExt for Goal {
     /// # Panics
     ///
     /// Will panic if this goal does in fact contain free variables.
-    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal>> {
+    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<ChalkIr>>> {
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(), self);
         let canonical_goal = infer.canonicalize(&env_goal).quantified;

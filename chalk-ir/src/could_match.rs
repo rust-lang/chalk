@@ -1,3 +1,4 @@
+use crate::family::HasTypeFamily;
 use crate::zip::{Zip, Zipper};
 use crate::*;
 
@@ -6,14 +7,18 @@ pub trait CouldMatch<T: ?Sized> {
     fn could_match(&self, other: &T) -> bool;
 }
 
-impl<T: Zip + ?Sized> CouldMatch<T> for T {
+impl<T, TF> CouldMatch<T> for T
+where
+    T: Zip<TF> + ?Sized + HasTypeFamily<TypeFamily = TF>,
+    TF: TypeFamily,
+{
     fn could_match(&self, other: &T) -> bool {
         return Zip::zip_with(&mut MatchZipper, self, other).is_ok();
 
         struct MatchZipper;
 
-        impl Zipper for MatchZipper {
-            fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Fallible<()> {
+        impl<TF: TypeFamily> Zipper<TF> for MatchZipper {
+            fn zip_tys(&mut self, a: &Ty<TF>, b: &Ty<TF>) -> Fallible<()> {
                 let could_match = match (a, b) {
                     (&Ty::Apply(ref a), &Ty::Apply(ref b)) => {
                         let names_could_match = a.name == b.name;
@@ -35,13 +40,13 @@ impl<T: Zip + ?Sized> CouldMatch<T> for T {
                 }
             }
 
-            fn zip_lifetimes(&mut self, _: &Lifetime, _: &Lifetime) -> Fallible<()> {
+            fn zip_lifetimes(&mut self, _: &Lifetime<TF>, _: &Lifetime<TF>) -> Fallible<()> {
                 Ok(())
             }
 
             fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
             where
-                T: Zip,
+                T: Zip<TF>,
             {
                 Zip::zip_with(self, &a.value, &b.value)
             }
@@ -49,8 +54,8 @@ impl<T: Zip + ?Sized> CouldMatch<T> for T {
     }
 }
 
-impl CouldMatch<DomainGoal> for ProgramClause {
-    fn could_match(&self, other: &DomainGoal) -> bool {
+impl<TF: TypeFamily> CouldMatch<DomainGoal<TF>> for ProgramClause<TF> {
+    fn could_match(&self, other: &DomainGoal<TF>) -> bool {
         match self {
             ProgramClause::Implies(implication) => implication.consequence.could_match(other),
 

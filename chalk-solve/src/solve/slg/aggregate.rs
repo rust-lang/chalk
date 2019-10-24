@@ -5,6 +5,7 @@ use crate::solve::slg::SlgContextOps;
 use crate::solve::slg::SubstitutionExt;
 use crate::solve::{Guidance, Solution};
 use chalk_ir::cast::Cast;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 
 use chalk_engine::context;
@@ -16,7 +17,7 @@ use std::fmt::Debug;
 impl<'me> context::AggregateOps<SlgContext> for SlgContextOps<'me> {
     fn make_solution(
         &self,
-        root_goal: &Canonical<InEnvironment<Goal>>,
+        root_goal: &Canonical<InEnvironment<Goal<ChalkIr>>>,
         mut simplified_answers: impl context::AnswerStream<SlgContext>,
     ) -> Option<Solution> {
         // No answers at all?
@@ -79,10 +80,10 @@ impl<'me> context::AggregateOps<SlgContext> for SlgContextOps<'me> {
 /// u32` and the new answer is `?0 = i32`, then the guidance would
 /// become `?0 = ?X` (where `?X` is some fresh variable).
 fn merge_into_guidance(
-    root_goal: &Canonical<InEnvironment<Goal>>,
-    guidance: Canonical<Substitution>,
-    answer: &Canonical<ConstrainedSubst>,
-) -> Canonical<Substitution> {
+    root_goal: &Canonical<InEnvironment<Goal<ChalkIr>>>,
+    guidance: Canonical<Substitution<ChalkIr>>,
+    answer: &Canonical<ConstrainedSubst<ChalkIr>>,
+) -> Canonical<Substitution<ChalkIr>> {
     let mut infer = InferenceTable::new();
     let Canonical {
         value: ConstrainedSubst {
@@ -133,7 +134,7 @@ fn merge_into_guidance(
     infer.canonicalize(&aggr_subst).quantified
 }
 
-fn is_trivial(subst: &Canonical<Substitution>) -> bool {
+fn is_trivial(subst: &Canonical<Substitution<ChalkIr>>) -> bool {
     // A subst is trivial if..
     subst
         .value
@@ -167,7 +168,7 @@ struct AntiUnifier<'infer> {
 }
 
 impl<'infer> AntiUnifier<'infer> {
-    fn aggregate_tys(&mut self, ty0: &Ty, ty1: &Ty) -> Ty {
+    fn aggregate_tys(&mut self, ty0: &Ty<ChalkIr>, ty1: &Ty<ChalkIr>) -> Ty<ChalkIr> {
         match (ty0, ty1) {
             // If we see bound things on either side, just drop in a
             // fresh variable. This means we will sometimes
@@ -204,7 +205,11 @@ impl<'infer> AntiUnifier<'infer> {
         }
     }
 
-    fn aggregate_application_tys(&mut self, apply1: &ApplicationTy, apply2: &ApplicationTy) -> Ty {
+    fn aggregate_application_tys(
+        &mut self,
+        apply1: &ApplicationTy<ChalkIr>,
+        apply2: &ApplicationTy<ChalkIr>,
+    ) -> Ty<ChalkIr> {
         let ApplicationTy {
             name: name1,
             parameters: parameters1,
@@ -219,7 +224,11 @@ impl<'infer> AntiUnifier<'infer> {
             .unwrap_or_else(|| self.new_variable())
     }
 
-    fn aggregate_projection_tys(&mut self, proj1: &ProjectionTy, proj2: &ProjectionTy) -> Ty {
+    fn aggregate_projection_tys(
+        &mut self,
+        proj1: &ProjectionTy<ChalkIr>,
+        proj2: &ProjectionTy<ChalkIr>,
+    ) -> Ty<ChalkIr> {
         let ProjectionTy {
             associated_ty_id: name1,
             parameters: parameters1,
@@ -242,10 +251,10 @@ impl<'infer> AntiUnifier<'infer> {
     fn aggregate_name_and_substs<N>(
         &mut self,
         name1: N,
-        parameters1: &[Parameter],
+        parameters1: &[Parameter<ChalkIr>],
         name2: N,
-        parameters2: &[Parameter],
-    ) -> Option<(N, Vec<Parameter>)>
+        parameters2: &[Parameter<ChalkIr>],
+    ) -> Option<(N, Vec<Parameter<ChalkIr>>)>
     where
         N: Copy + Eq + Debug,
     {
@@ -273,7 +282,11 @@ impl<'infer> AntiUnifier<'infer> {
         Some((name, parameters))
     }
 
-    fn aggregate_parameters(&mut self, p1: &Parameter, p2: &Parameter) -> Parameter {
+    fn aggregate_parameters(
+        &mut self,
+        p1: &Parameter<ChalkIr>,
+        p2: &Parameter<ChalkIr>,
+    ) -> Parameter<ChalkIr> {
         match (&p1.0, &p2.0) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2).cast(),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
@@ -285,7 +298,11 @@ impl<'infer> AntiUnifier<'infer> {
         }
     }
 
-    fn aggregate_lifetimes(&mut self, l1: &Lifetime, l2: &Lifetime) -> Lifetime {
+    fn aggregate_lifetimes(
+        &mut self,
+        l1: &Lifetime<ChalkIr>,
+        l2: &Lifetime<ChalkIr>,
+    ) -> Lifetime<ChalkIr> {
         match (l1, l2) {
             (Lifetime::InferenceVar(_), _) | (_, Lifetime::InferenceVar(_)) => {
                 self.new_lifetime_variable()
@@ -300,14 +317,16 @@ impl<'infer> AntiUnifier<'infer> {
                     self.new_lifetime_variable()
                 }
             }
+
+            (Lifetime::Phantom(..), _) | (_, Lifetime::Phantom(..)) => unreachable!(),
         }
     }
 
-    fn new_variable(&mut self) -> Ty {
+    fn new_variable(&mut self) -> Ty<ChalkIr> {
         self.infer.new_variable(self.universe).to_ty()
     }
 
-    fn new_lifetime_variable(&mut self) -> Lifetime {
+    fn new_lifetime_variable(&mut self) -> Lifetime<ChalkIr> {
         self.infer.new_variable(self.universe).to_lifetime()
     }
 }

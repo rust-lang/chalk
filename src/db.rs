@@ -3,6 +3,7 @@ use crate::lowering::LowerGoal;
 use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
 use chalk_ir::could_match::CouldMatch;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::Goal;
 use chalk_ir::Identifier;
@@ -54,12 +55,12 @@ impl ChalkDatabase {
         tls::set_current_program(&program, || op(&program))
     }
 
-    pub fn parse_and_lower_goal(&self, text: &str) -> Result<Box<Goal>, ChalkError> {
+    pub fn parse_and_lower_goal(&self, text: &str) -> Result<Box<Goal<ChalkIr>>, ChalkError> {
         let program = self.checked_program()?;
         Ok(chalk_parse::parse_goal(text)?.lower(&*program)?)
     }
 
-    pub fn solve(&self, goal: &UCanonical<InEnvironment<Goal>>) -> Option<Solution> {
+    pub fn solve(&self, goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>) -> Option<Solution> {
         let solver = self.solver();
         let solution = solver.lock().unwrap().solve(self, goal);
         solution
@@ -67,7 +68,7 @@ impl ChalkDatabase {
 }
 
 impl RustIrDatabase for ChalkDatabase {
-    fn custom_clauses(&self) -> Vec<ProgramClause> {
+    fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
         self.program_ir().unwrap().custom_clauses.clone()
     }
 
@@ -87,7 +88,7 @@ impl RustIrDatabase for ChalkDatabase {
         self.program_ir().unwrap().struct_data[&id].clone()
     }
 
-    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter]) -> Vec<ImplId> {
+    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter<ChalkIr>]) -> Vec<ImplId> {
         self.program_ir()
             .unwrap()
             .impl_data
@@ -146,8 +147,12 @@ impl RustIrDatabase for ChalkDatabase {
 
     fn split_projection<'p>(
         &self,
-        projection: &'p ProjectionTy,
-    ) -> (Arc<AssociatedTyDatum>, &'p [Parameter], &'p [Parameter]) {
+        projection: &'p ProjectionTy<ChalkIr>,
+    ) -> (
+        Arc<AssociatedTyDatum>,
+        &'p [Parameter<ChalkIr>],
+        &'p [Parameter<ChalkIr>],
+    ) {
         self.program_ir().unwrap().split_projection(projection)
     }
 }

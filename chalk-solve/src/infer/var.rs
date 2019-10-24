@@ -1,4 +1,5 @@
 use chalk_ir::cast::Cast;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 use ena::unify::{UnifyKey, UnifyValue};
 use std::cmp::min;
@@ -46,15 +47,15 @@ impl EnaVariable {
     /// Convert this inference variable into a type. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a type (we can't check it).
-    pub(crate) fn to_ty(self) -> Ty {
-        self.0.to_ty()
+    pub(crate) fn to_ty(self) -> Ty<ChalkIr> {
+        self.0.to_ty::<ChalkIr>()
     }
 
     /// Convert this inference variable into a lifetime. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a lifetime (we can't check it).
-    pub(crate) fn to_lifetime(self) -> Lifetime {
-        self.0.to_lifetime()
+    pub(crate) fn to_lifetime(self) -> Lifetime<ChalkIr> {
+        self.0.to_lifetime::<ChalkIr>()
     }
 }
 
@@ -80,17 +81,17 @@ impl UnifyKey for EnaVariable {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum InferenceValue {
     Unbound(UniverseIndex),
-    Bound(Parameter),
+    Bound(Parameter<ChalkIr>),
 }
 
-impl From<Ty> for InferenceValue {
-    fn from(ty: Ty) -> Self {
+impl From<Ty<ChalkIr>> for InferenceValue {
+    fn from(ty: Ty<ChalkIr>) -> Self {
         InferenceValue::Bound(ty.cast())
     }
 }
 
-impl From<Lifetime> for InferenceValue {
-    fn from(lifetime: Lifetime) -> Self {
+impl From<Lifetime<ChalkIr>> for InferenceValue {
+    fn from(lifetime: Lifetime<ChalkIr>) -> Self {
         InferenceValue::Bound(lifetime.cast())
     }
 }

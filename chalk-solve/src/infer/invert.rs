@@ -1,4 +1,5 @@
 use chalk_engine::fallible::*;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{
     DefaultFreeVarFolder, DefaultInferenceFolder, DefaultTypeFolder, Fold, PlaceholderFolder,
@@ -74,7 +75,7 @@ impl InferenceTable {
     /// `None`) until the second unification has occurred.)
     pub(crate) fn invert<T>(&mut self, value: &T) -> Option<T::Result>
     where
-        T: Fold<Result = T>,
+        T: Fold<ChalkIr, Result = T>,
     {
         let Canonicalized {
             free_vars,
@@ -115,12 +116,12 @@ impl<'q> Inverter<'q> {
 
 impl<'q> DefaultTypeFolder for Inverter<'q> {}
 
-impl<'q> PlaceholderFolder for Inverter<'q> {
+impl<'q> PlaceholderFolder<ChalkIr> for Inverter<'q> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Ty> {
+    ) -> Fallible<Ty<ChalkIr>> {
         let table = &mut self.table;
         Ok(self
             .inverted_ty
@@ -134,7 +135,7 @@ impl<'q> PlaceholderFolder for Inverter<'q> {
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Lifetime> {
+    ) -> Fallible<Lifetime<ChalkIr>> {
         let table = &mut self.table;
         Ok(self
             .inverted_lifetime

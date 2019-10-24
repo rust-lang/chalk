@@ -1,4 +1,5 @@
 use chalk_engine::fallible::*;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{
     DefaultFreeVarFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, InferenceFolder,
@@ -19,7 +20,7 @@ impl InferenceTable {
     /// See also `InferenceTable::canonicalize`, which -- during real
     /// processing -- is often used to capture the "current state" of
     /// variables.
-    pub(crate) fn normalize_deep<T: Fold>(&mut self, value: &T) -> T::Result {
+    pub(crate) fn normalize_deep<T: Fold<ChalkIr>>(&mut self, value: &T) -> T::Result {
         value
             .fold_with(&mut DeepNormalizer { table: self }, 0)
             .unwrap()
@@ -34,8 +35,8 @@ impl<'table> DefaultTypeFolder for DeepNormalizer<'table> {}
 
 impl<'table> DefaultPlaceholderFolder for DeepNormalizer<'table> {}
 
-impl<'table> InferenceFolder for DeepNormalizer<'table> {
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty> {
+impl<'table> InferenceFolder<ChalkIr> for DeepNormalizer<'table> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<ChalkIr>> {
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
             Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(binders)), // FIXME shift
@@ -43,7 +44,11 @@ impl<'table> InferenceFolder for DeepNormalizer<'table> {
         }
     }
 
-    fn fold_inference_lifetime(&mut self, var: InferenceVar, binders: usize) -> Fallible<Lifetime> {
+    fn fold_inference_lifetime(
+        &mut self,
+        var: InferenceVar,
+        binders: usize,
+    ) -> Fallible<Lifetime<ChalkIr>> {
         let var = EnaVariable::from(var);
         match self.table.probe_lifetime_var(var) {
             Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(binders)),

@@ -293,8 +293,6 @@ DomainGoal: DomainGoal = {
     // `<T as Foo>::U -> Bar` -- a normalization
     "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
 
-    "InScope" "(" <t:Id> ")" => DomainGoal::TraitInScope { trait_name: t },
-
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
     "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },
     "IsFullyVisible" "(" <ty:Ty> ")" => DomainGoal::IsFullyVisible { ty },

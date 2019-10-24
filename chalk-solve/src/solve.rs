@@ -1,6 +1,7 @@
 use crate::solve::slg::SlgContext;
 use crate::RustIrDatabase;
 use chalk_engine::forest::Forest;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 use std::fmt;
 
@@ -13,7 +14,7 @@ pub enum Solution {
     /// The goal indeed holds, and there is a unique value for all existential
     /// variables. In this case, we also record a set of lifetime constraints
     /// which must also hold for the goal to be valid.
-    Unique(Canonical<ConstrainedSubst>),
+    Unique(Canonical<ConstrainedSubst<ChalkIr>>),
 
     /// The goal may be provable in multiple ways, but regardless we may have some guidance
     /// for type inference. In this case, we don't return any lifetime
@@ -29,12 +30,12 @@ pub enum Guidance {
     /// The existential variables *must* have the given values if the goal is
     /// ever to hold, but that alone isn't enough to guarantee the goal will
     /// actually hold.
-    Definite(Canonical<Substitution>),
+    Definite(Canonical<Substitution<ChalkIr>>),
 
     /// There are multiple plausible values for the existentials, but the ones
     /// here are suggested as the preferred choice heuristically. These should
     /// be used for inference fallback only.
-    Suggested(Canonical<Substitution>),
+    Suggested(Canonical<Substitution<ChalkIr>>),
 
     /// There's no useful information to feed back to type inference
     Unknown,
@@ -122,7 +123,7 @@ impl Solver {
     pub fn solve(
         &mut self,
         program: &dyn RustIrDatabase,
-        goal: &UCanonical<InEnvironment<Goal>>,
+        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
     ) -> Option<Solution> {
         let ops = self.forest.context().ops(program);
         self.forest.solve(&ops, goal)
@@ -166,7 +167,7 @@ impl TestSolver {
     pub fn force_answers(
         &mut self,
         program: &dyn RustIrDatabase,
-        goal: &UCanonical<InEnvironment<Goal>>,
+        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
         num_answers: usize,
     ) -> Box<dyn std::fmt::Debug> {
         let ops = self.forest.context().ops(program);
@@ -185,7 +186,7 @@ impl TestSolver {
     pub fn num_cached_answers_for_goal(
         &mut self,
         program: &dyn RustIrDatabase,
-        goal: &UCanonical<InEnvironment<Goal>>,
+        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
     ) -> usize {
         let ops = self.forest.context().ops(program);
         self.forest.num_cached_answers_for_goal(&ops, goal)

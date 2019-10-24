@@ -19,33 +19,37 @@ use std::sync::Arc;
 /// represented by two distinct `ItemId` values, and the impl for
 /// `ItemId` requires that all `ItemId` in the two zipped values match
 /// up.
-pub trait Zipper {
+pub trait Zipper<TF: TypeFamily> {
     /// Indicates that the two types `a` and `b` were found in
     /// matching spots, beneath `binders` levels of binders.
-    fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Fallible<()>;
+    fn zip_tys(&mut self, a: &Ty<TF>, b: &Ty<TF>) -> Fallible<()>;
 
     /// Indicates that the two lifetimes `a` and `b` were found in
     /// matching spots, beneath `binders` levels of binders.
-    fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Fallible<()>;
+    fn zip_lifetimes(&mut self, a: &Lifetime<TF>, b: &Lifetime<TF>) -> Fallible<()>;
 
     /// Zips two values appearing beneath binders.
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip + Fold<Result = T>;
+        T: Zip<TF> + Fold<TF, Result = T>;
 }
 
-impl<'f, Z: Zipper> Zipper for &'f mut Z {
-    fn zip_tys(&mut self, a: &Ty, b: &Ty) -> Fallible<()> {
+impl<'f, Z, TF> Zipper<TF> for &'f mut Z
+where
+    TF: TypeFamily,
+    Z: Zipper<TF>,
+{
+    fn zip_tys(&mut self, a: &Ty<TF>, b: &Ty<TF>) -> Fallible<()> {
         (**self).zip_tys(a, b)
     }
 
-    fn zip_lifetimes(&mut self, a: &Lifetime, b: &Lifetime) -> Fallible<()> {
+    fn zip_lifetimes(&mut self, a: &Lifetime<TF>, b: &Lifetime<TF>) -> Fallible<()> {
         (**self).zip_lifetimes(a, b)
     }
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip + Fold<Result = T>,
+        T: Zip<TF> + Fold<TF, Result = T>,
     {
         (**self).zip_binders(a, b)
     }
@@ -58,30 +62,33 @@ impl<'f, Z: Zipper> Zipper for &'f mut Z {
 ///
 /// To implement the trait, typically you would use one of the macros
 /// like `eq_zip!`, `struct_zip!`, or `enum_zip!`.
-pub trait Zip: Debug {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>;
+pub trait Zip<TF>: Debug
+where
+    TF: TypeFamily,
+{
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>;
 }
 
-impl<'a, T: ?Sized + Zip> Zip for &'a T {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        <T as Zip>::zip_with(zipper, a, b)
+impl<'a, T: ?Sized + Zip<TF>, TF: TypeFamily> Zip<TF> for &'a T {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+        <T as Zip<TF>>::zip_with(zipper, a, b)
     }
 }
 
-impl Zip for () {
-    fn zip_with<Z: Zipper>(_: &mut Z, _: &Self, _: &Self) -> Fallible<()> {
+impl<TF: TypeFamily> Zip<TF> for () {
+    fn zip_with<Z: Zipper<TF>>(_: &mut Z, _: &Self, _: &Self) -> Fallible<()> {
         Ok(())
     }
 }
 
-impl<T: Zip> Zip for Vec<T> {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        <[T] as Zip>::zip_with(zipper, a, b)
+impl<T: Zip<TF>, TF: TypeFamily> Zip<TF> for Vec<T> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+        <[T] as Zip<TF>>::zip_with(zipper, a, b)
     }
 }
 
-impl<T: Zip> Zip for [T] {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+impl<T: Zip<TF>, TF: TypeFamily> Zip<TF> for [T] {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         if a.len() != b.len() {
             return Err(NoSolution);
         }
@@ -94,40 +101,40 @@ impl<T: Zip> Zip for [T] {
     }
 }
 
-impl<T: Zip> Zip for Arc<T> {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        <T as Zip>::zip_with(zipper, a, b)
+impl<T: Zip<TF>, TF: TypeFamily> Zip<TF> for Arc<T> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+        <T as Zip<TF>>::zip_with(zipper, a, b)
     }
 }
 
-impl<T: Zip> Zip for Box<T> {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        <T as Zip>::zip_with(zipper, a, b)
+impl<T: Zip<TF>, TF: TypeFamily> Zip<TF> for Box<T> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+        <T as Zip<TF>>::zip_with(zipper, a, b)
     }
 }
 
-impl<T: Zip, U: Zip> Zip for (T, U) {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+impl<T: Zip<TF>, U: Zip<TF>, TF: TypeFamily> Zip<TF> for (T, U) {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         Zip::zip_with(zipper, &a.0, &b.0)?;
         Zip::zip_with(zipper, &a.1, &b.1)?;
         Ok(())
     }
 }
 
-impl Zip for Ty {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+impl<TF: TypeFamily> Zip<TF> for Ty<TF> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         zipper.zip_tys(a, b)
     }
 }
 
-impl Zip for Lifetime {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+impl<TF: TypeFamily> Zip<TF> for Lifetime<TF> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         zipper.zip_lifetimes(a, b)
     }
 }
 
-impl<T: Zip + Fold<Result = T>> Zip for Binders<T> {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+impl<TF: TypeFamily, T: Zip<TF> + Fold<TF, Result = T>> Zip<TF> for Binders<T> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         zipper.zip_binders(a, b)
     }
 }
@@ -135,9 +142,9 @@ impl<T: Zip + Fold<Result = T>> Zip for Binders<T> {
 /// Generates a Zip impl that requires the two values be
 /// equal. Suitable for atomic, scalar values.
 macro_rules! eq_zip {
-    ($t:ty) => {
-        impl Zip for $t {
-            fn zip_with<Z: Zipper>(_zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    ($TF:ident => $t:ty) => {
+        impl<$TF: TypeFamily> Zip<$TF> for $t {
+            fn zip_with<Z: Zipper<$TF>>(_zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
                 if a != b {
                     return Err(NoSolution);
                 }
@@ -147,22 +154,23 @@ macro_rules! eq_zip {
     };
 }
 
-eq_zip!(ItemId);
-eq_zip!(StructId);
-eq_zip!(TraitId);
-eq_zip!(TypeId);
-eq_zip!(TypeKindId);
-eq_zip!(TypeName);
-eq_zip!(Identifier);
-eq_zip!(QuantifierKind);
+eq_zip!(TF => ItemId);
+eq_zip!(TF => StructId);
+eq_zip!(TF => TraitId);
+eq_zip!(TF => TypeId);
+eq_zip!(TF => TypeKindId);
+eq_zip!(TF => TypeName);
+eq_zip!(TF => Identifier);
+eq_zip!(TF => QuantifierKind);
+eq_zip!(TF => PhantomData<TF>);
 
 /// Generates a Zip impl that zips each field of the struct in turn.
 macro_rules! struct_zip {
-    ($t:ident$([$($param:tt)*])* { $($field:ident),* $(,)* } $($w:tt)*) => {
-        impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
-            fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    (impl[$($param:tt)*] Zip<$TF:ty> for $self:ty { $($field:ident),* $(,)* } $($w:tt)*) => {
+        impl<$($param)*> Zip<$TF> for $self $($w)* {
+            fn zip_with<Z: Zipper<$TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
                 // Validate that we have indeed listed all fields
-                let $t { $($field: _),* } = *a;
+                let Self { $($field: _),* } = *a;
                 $(
                     Zip::zip_with(zipper, &a.$field, &b.$field)?;
                 )*
@@ -172,26 +180,32 @@ macro_rules! struct_zip {
     }
 }
 
-struct_zip!(TraitRef {
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for TraitRef<TF> {
     trait_id,
     parameters,
 });
-struct_zip!(InEnvironment[T] { environment, goal } where T: Zip);
-struct_zip!(ApplicationTy { name, parameters });
-struct_zip!(ProjectionTy {
+struct_zip!(impl[
+    T: HasTypeFamily<TypeFamily = TF> + Zip<TF>,
+    TF: TypeFamily,
+] Zip<TF> for InEnvironment<T> {
+    environment,
+    goal,
+});
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for ApplicationTy<TF> { name, parameters });
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for ProjectionTy<TF> {
     associated_ty_id,
     parameters,
 });
-struct_zip!(Normalize { projection, ty });
-struct_zip!(ProjectionEq { projection, ty });
-struct_zip!(EqGoal { a, b });
-struct_zip!(ProgramClauseImplication {
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for Normalize<TF> { projection, ty });
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for ProjectionEq<TF> { projection, ty });
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for EqGoal<TF> { a, b });
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for ProgramClauseImplication<TF> {
     consequence,
     conditions
 });
 
-impl Zip for Environment {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+impl<TF: TypeFamily> Zip<TF> for Environment<TF> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
         Zip::zip_with(zipper, &a.clauses, &b.clauses)?;
         Ok(())
@@ -202,17 +216,17 @@ impl Zip for Environment {
 /// variant, then zips each field of the variant in turn. Only works
 /// if all variants have a single parenthesized value right now.
 macro_rules! enum_zip {
-    ($t:ident$([$($param:tt)*])* { $( $variant:ident ),* $(,)* } $($w:tt)*) => {
-        impl$(<$($param)*>)* Zip for $t $(<$($param)*>)* $($w)* {
-            fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    (impl<$TF:ident $(, $param:ident)*> for $self:ty { $( $variant:ident ),* $(,)* } $($w:tt)*) => {
+        impl<$TF: TypeFamily, $(, $param)*> Zip<$TF> for $self $($w)* {
+            fn zip_with<Z: Zipper<$TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
                 match (a, b) {
                     $(
-                        (&$t :: $variant (ref f_a), &$t :: $variant (ref f_b)) => {
+                        (Self :: $variant (f_a), Self :: $variant (f_b)) => {
                             Zip::zip_with(zipper, f_a, f_b)
                         }
                     )*
 
-                    $((&$t :: $variant ( .. ), _))|* => {
+                    $((Self :: $variant ( .. ), _))|* => {
                         return Err(NoSolution);
                     }
                 }
@@ -221,18 +235,14 @@ macro_rules! enum_zip {
     }
 }
 
-enum_zip!(WhereClause {
-    Implemented,
-    ProjectionEq
-});
-enum_zip!(WellFormed { Trait, Ty });
-enum_zip!(FromEnv { Trait, Ty });
-enum_zip!(DomainGoal {
+enum_zip!(impl<TF> for WellFormed<TF> { Trait, Ty });
+enum_zip!(impl<TF> for FromEnv<TF> { Trait, Ty });
+enum_zip!(impl<TF> for WhereClause<TF> { Implemented, ProjectionEq });
+enum_zip!(impl<TF> for DomainGoal<TF> {
     Holds,
     WellFormed,
     FromEnv,
     Normalize,
-    InScope,
     IsLocal,
     IsUpstream,
     IsFullyVisible,
@@ -240,14 +250,14 @@ enum_zip!(DomainGoal {
     Compatible,
     DownstreamType
 });
-enum_zip!(LeafGoal { DomainGoal, EqGoal });
-enum_zip!(ProgramClause { Implies, ForAll });
+enum_zip!(impl<TF> for LeafGoal<TF> { DomainGoal, EqGoal });
+enum_zip!(impl<TF> for ProgramClause<TF> { Implies, ForAll });
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the
 // relevant name mangling.
-impl Zip for Goal {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+impl<TF: TypeFamily> Zip<TF> for Goal<TF> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         match (a, b) {
             (&Goal::Quantified(ref f_a, ref g_a), &Goal::Quantified(ref f_b, ref g_b)) => {
                 Zip::zip_with(zipper, f_a, f_b)?;
@@ -277,22 +287,20 @@ impl Zip for Goal {
 }
 
 // I'm too lazy to make `enum_zip` support type parameters.
-impl<T: Zip, L: Zip> Zip for ParameterKind<T, L> {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+impl<T: Zip<TF>, L: Zip<TF>, TF: TypeFamily> Zip<TF> for ParameterKind<T, L> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         match (a, b) {
-            (&ParameterKind::Ty(ref a), &ParameterKind::Ty(ref b)) => Zip::zip_with(zipper, a, b),
-            (&ParameterKind::Lifetime(ref a), &ParameterKind::Lifetime(ref b)) => {
-                Zip::zip_with(zipper, a, b)
-            }
-            (&ParameterKind::Ty(_), _) | (&ParameterKind::Lifetime(_), _) => {
+            (ParameterKind::Ty(a), ParameterKind::Ty(b)) => Zip::zip_with(zipper, a, b),
+            (ParameterKind::Lifetime(a), ParameterKind::Lifetime(b)) => Zip::zip_with(zipper, a, b),
+            (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
                 panic!("zipping things of mixed kind")
             }
         }
     }
 }
 
-impl Zip for Parameter {
-    fn zip_with<Z: Zipper>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+impl<TF: TypeFamily> Zip<TF> for Parameter<TF> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         Zip::zip_with(zipper, &a.0, &b.0)
     }
 }
