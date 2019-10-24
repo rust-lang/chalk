@@ -1,5 +1,5 @@
 [package]
-name = "fold-derive"
+name = "chalk-derive"
 version = "0.1.0"
 license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]

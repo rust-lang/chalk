@@ -18,6 +18,6 @@ path = "../chalk-macros"
 version = "0.9.0"
 path = "../chalk-engine"
 
-[dependencies.fold-derive]
+[dependencies.chalk-derive]
 version = "0.1.0"
-path = "../fold-derive"
+path = "../chalk-derive"

@@ -5,8 +5,8 @@ use crate::fold::{
     DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, Folder,
     FreeVarFolder, Subst,
 };
+use chalk_derive::Fold;
 use chalk_engine::fallible::*;
-use fold_derive::Fold;
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;

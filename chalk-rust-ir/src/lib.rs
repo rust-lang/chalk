@@ -2,6 +2,7 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
+use chalk_derive::Fold;
 use chalk_ir::cast::Cast;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
@@ -9,7 +10,6 @@ use chalk_ir::{
     ApplicationTy, Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq,
     ProjectionTy, QuantifiedWhereClause, TraitId, TraitRef, Ty, TypeId, WhereClause,
 };
-use fold_derive::Fold;
 use std::iter;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
