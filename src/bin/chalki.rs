@@ -28,6 +28,7 @@ Options:
   --goal=GOAL         Specifies a goal to evaluate (may be given more than once).
   --overflow-depth=N  Specifies the overflow depth [default: 10].
   --no-cache          Disable caching.
+  --multiple          Ouput multiple answers instead of ambiguous solution.
 ";
 
 /// This struct represents the various command line options available.
@@ -37,6 +38,7 @@ struct Args {
     flag_goal: Vec<String>,
     flag_overflow_depth: usize,
     flag_no_cache: bool,
+    flag_multiple: bool,
 }
 
 /// A loaded and parsed program.
@@ -56,13 +58,38 @@ impl LoadedProgram {
     }
 
     /// Parse a goal and attempt to solve it, using the specified solver.
-    fn goal(&self, text: &str) -> Result<()> {
+    fn goal(
+        &self,
+        mut rl: Option<&mut rustyline::Editor<()>>,
+        text: &str,
+        multiple_answers: bool,
+    ) -> Result<()> {
         let program = self.db.checked_program()?;
         let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
         let peeled_goal = goal.into_peeled_goal();
-        match self.db.solve(&peeled_goal) {
-            Some(v) => println!("{}\n", v),
-            None => println!("No possible solution.\n"),
+        if multiple_answers {
+            let mut answers = self.db.solve_multiple(&peeled_goal).into_iter().peekable();
+            while let Some(v) = answers.peek() {
+                println!("{}\n", v);
+                if let Some(ref mut rl) = rl {
+                    let next = rl.readline("Show next answer (y/n): ")?;
+                    if "y" == next {
+                        answers.next();
+                    } else if "n" == next {
+                        break;
+                    } else {
+                        println!("Unknown response. Try again.");
+                    }
+                } else {
+                    answers.next();
+                }
+            }
+            println!("No more solutions");
+        } else {
+            match self.db.solve(&peeled_goal) {
+                Some(v) => println!("{}\n", v),
+                None => println!("No possible solution.\n"),
+            }
         }
         Ok(())
     }
@@ -111,7 +138,7 @@ fn run() -> Result<()> {
         // and exit.
         prog.db.with_program(|_| -> Result<()> {
             for g in &args.flag_goal {
-                if let Err(e) = prog.goal(g) {
+                if let Err(e) = prog.goal(None, g, args.flag_multiple) {
                     eprintln!("error: {}", e);
                     exit(1);
                 }
@@ -199,7 +226,7 @@ fn process(
                 // Assume this is a goal.
                 // TODO: Print out "type 'help' to see available commands" if it
                 // fails to parse?
-                _ => prog.goal(command)?,
+                _ => prog.goal(Some(rl), command, args.flag_multiple)?,
             }
             Ok(())
         })?

@@ -65,6 +65,13 @@ impl ChalkDatabase {
         let solution = solver.lock().unwrap().solve(self, goal);
         solution
     }
+
+    pub fn solve_multiple(&self, goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>) -> Vec<i32> {
+        let solver = self.solver();
+        let solution = solver.lock().unwrap().solve(self, goal);
+        // ToDo: do something real
+        vec![1, 2, 3, 4, 5]
+    }
 }
 
 impl RustIrDatabase for ChalkDatabase {
