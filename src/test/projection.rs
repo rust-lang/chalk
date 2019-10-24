@@ -500,7 +500,6 @@ fn normalize_under_binder() {
 }
 
 #[test]
-#[should_panic]
 fn normalize_under_binder_multi() {
     test! {
         program {
@@ -531,8 +530,8 @@ fn normalize_under_binder_multi() {
                 }
             }
         } yields_all {
-            "s",
-            "s2"
+            "for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0, I32>, '^1>], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }, InEnvironment { environment: Env([]), goal: '^1 == '!1_0 }] }",
+            "substitution [?0 := I32], lifetime constraints []"
         }
 
         goal {
@@ -542,8 +541,7 @@ fn normalize_under_binder_multi() {
                 }
             }
         } yields_first {
-            "s",
-            "s2"
+            "for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0, I32>, '^1>], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }, InEnvironment { environment: Env([]), goal: '^1 == '!1_0 }] }"
         }
     }
 }

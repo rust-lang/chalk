@@ -26,6 +26,20 @@ fn assert_result(result: &Option<Solution>, expected: &str) {
     assert!(!expected1.is_empty() && result1.starts_with(&expected1));
 }
 
+fn assert_canonical(
+    result: &chalk_ir::Canonical<chalk_ir::ConstrainedSubst<chalk_ir::family::ChalkIr>>,
+    expected: &str,
+) {
+    let result = format!("{}", result);
+
+    println!("expected:\n{}", expected);
+    println!("actual:\n{}", result);
+
+    let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
+    let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
+    assert!(!expected1.is_empty() && result1.starts_with(&expected1));
+}
+
 // different goals
 enum TestGoal {
     // solver should produce same aggregated single solution
@@ -148,7 +162,37 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                     let result = db.solve(&peeled_goal);
                     assert_result(&result, expected);
                 }
-                _ => panic!("Implement it"),
+                TestGoal::All(expected) => {
+                    let mut expected = expected.into_iter();
+                    assert!(
+                        db.solve_multiple(&peeled_goal, |result, next_result| {
+                            match expected.next() {
+                                Some(expected) => {
+                                    assert_canonical(&result, expected);
+                                }
+                                None => {
+                                    assert!(!next_result, "Unexpected next solution");
+                                }
+                            }
+                            true
+                        }),
+                        "Not all solutions processed"
+                    );
+                }
+                TestGoal::First(expected) => {
+                    let mut expected = expected.into_iter();
+                    db.solve_multiple(&peeled_goal, |result, next_result| match expected.next() {
+                        Some(solution) => {
+                            assert_canonical(&result, solution);
+                            if !next_result {
+                                assert!(expected.next().is_none(), "Not enough solutions found");
+                            }
+                            true
+                        }
+                        None => false,
+                    });
+                    assert!(expected.next().is_none(), "Not enough solutions found");
+                }
             }
         });
     }
