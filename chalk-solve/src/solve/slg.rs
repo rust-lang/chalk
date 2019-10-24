@@ -171,7 +171,7 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
         op.with(dyn_infer, ex_cluse)
     }
 
-    fn make_unique_solution(
+    fn constrained_subst_from_answer(
         &self,
         answer: SimplifiedAnswer<SlgContext>,
     ) -> Canonical<ConstrainedSubst<ChalkIr>> {

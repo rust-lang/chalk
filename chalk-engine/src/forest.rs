@@ -112,7 +112,7 @@ impl<C: Context> Forest<C> {
         let mut answers = self.iter_answers(context, goal);
         while let Some(answer) = answers.next_answer() {
             if !f(
-                context.make_unique_solution(answer),
+                context.constrained_subst_from_answer(answer),
                 answers.peek_answer().is_some(),
             ) {
                 return false;
