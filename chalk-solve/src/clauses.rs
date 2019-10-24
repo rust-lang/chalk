@@ -3,7 +3,7 @@ use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
 use crate::split::Split;
 use crate::RustIrDatabase;
-use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::cast::Cast;
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
@@ -169,10 +169,31 @@ fn program_clauses_that_could_match(
                 }
             }
 
-            // If the self type is `dyn Foo` (or `impl Foo`), then we generate clauses like:
+            // If the self type `S` is a `dyn trait` type, we wish to generate program-clauses
+            // that indicates that it implements its own traits. For example, a `dyn Write` type
+            // implements `Write` and so on.
             //
-            // ```notrust
-            // Implemented(dyn Foo: Foo)
+            // To see how this works, consider as an example the type `dyn Fn(&u8)`. This is
+            // really shorthand for `dyn for<'a> Fn<(&'a u8), Output = ()>`, and we represent
+            // that type as something like this:
+            //
+            // ```
+            // dyn(exists<T> {
+            //     forall<'a> { Implemented(T: Fn<'a>) },
+            //     forall<'a> { ProjectionEq(<T as Fn<'a>>::Output, ()) },
+            // })
+            // ```
+            //
+            // so what we wish to do is to generate program clauses of the form:
+            //
+            // ```
+            // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
+            // ```
+            //
+            // or
+            //
+            // ```
+            // forall<'a> { ProjectionEq(<dyn Fn(&u8) as Fn<'a>>::Output, ()) },
             // ```
             //
             // FIXME. This is presently rather wasteful, in that we
@@ -182,11 +203,28 @@ fn program_clauses_that_could_match(
             // out irrelevant stuff). In other words, we might be
             // trying to prove `dyn Foo: Bar`, in which case the clause
             // for `dyn Foo: Foo` is not particularly relevant.
-            match trait_ref.self_type_parameter() {
-                Some(Ty::Opaque(qwc)) | Some(Ty::Dyn(qwc)) => {
-                    let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
-                    let wc = qwc.substitute(&[self_ty.cast()]);
-                    clauses.extend(wc.into_iter().casted());
+            let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
+            match &self_ty {
+                Ty::Opaque(exists_qwcs) | Ty::Dyn(exists_qwcs) => {
+                    // In this arm, `self_ty` is the `dyn Fn(&u8)`,
+                    // and `exists_qwcs` is the `exists<T> { .. }`
+                    // clauses shown above.
+
+                    let mut builder = ClauseBuilder::new(db, clauses);
+
+                    for exists_qwc in exists_qwcs.into_iter() {
+                        // Replace the `T` from `exists<T> { .. }` with `self_ty`,
+                        // yielding clases like
+                        //
+                        // ```
+                        // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
+                        // ```
+                        let qwc = exists_qwc.substitute(&[self_ty.clone().cast()]);
+
+                        builder.push_binders(&qwc, |builder, wc| {
+                            builder.push_fact(wc);
+                        });
+                    }
                 }
                 _ => {}
             }
