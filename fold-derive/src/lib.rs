@@ -113,8 +113,3 @@ fn is_type_family_param(param: &GenericParam) -> Option<&Ident> {
         _ => None,
     }
 }
-
-#[proc_macro_attribute]
-pub fn fold_family(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    item
-}
