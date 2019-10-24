@@ -1,5 +1,8 @@
 language: rust
-cache: cargo
+
+# This seems to be causing timeouts and problems like
+# https://travis-ci.com/rust-lang/chalk/jobs/249066404
+# cache: cargo
 
 rust:
   - stable
