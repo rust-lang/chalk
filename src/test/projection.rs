@@ -500,6 +500,55 @@ fn normalize_under_binder() {
 }
 
 #[test]
+#[should_panic]
+fn normalize_under_binder_multi() {
+    test! {
+        program {
+            struct Ref<'a, T> { }
+            struct I32 { }
+
+            trait Deref<'a> {
+                type Item;
+            }
+
+            trait Id<'a> {
+                type Item;
+            }
+
+            impl<'a, T> Deref<'a> for Ref<'a, T> {
+                type Item = T;
+            }
+
+            impl<'a, T> Id<'a> for Ref<'a, T> {
+                type Item = Ref<'a, T>;
+            }
+        }
+
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Ref<'a, I32>: Deref<'a, Item = U>
+                }
+            }
+        } yields_all {
+            "s",
+            "s2"
+        }
+
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Ref<'a, I32>: Deref<'a, Item = U>
+                }
+            }
+        } yields_first {
+            "s",
+            "s2"
+        }
+    }
+}
+
+#[test]
 fn projection_from_env_a() {
     test! {
         program {

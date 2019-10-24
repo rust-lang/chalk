@@ -26,6 +26,16 @@ fn assert_result(result: &Option<Solution>, expected: &str) {
     assert!(!expected1.is_empty() && result1.starts_with(&expected1));
 }
 
+// different goals
+enum TestGoal {
+    // solver should produce same aggregated single solution
+    Aggregated(&'static str),
+    // solver should produce exactly multiple solutions
+    All(Vec<&'static str>),
+    // solver should produce first same multiple solutions
+    First(Vec<&'static str>),
+}
+
 macro_rules! test {
     (program $program:tt $($goals:tt)*) => {
         test!(@program[$program]
@@ -45,7 +55,34 @@ macro_rules! test {
         test!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::default(), $expected)
+                      (stringify!($goal), SolverChoice::default(), TestGoal::Aggregated($expected))
+              ]
+              @unparsed_goals[$($unparsed_goals)*])
+    };
+
+    // goal { G } yields_all { "Y1", "Y2", ... , "YN" } -- test both solvers gets exactly N same answers in
+    // the same order
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt yields_all { $($expected:expr),* }
+        $($unparsed_goals:tt)*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), SolverChoice::default(), TestGoal::All(vec![$($expected),*]))
+              ]
+              @unparsed_goals[$($unparsed_goals)*])
+    };
+
+    // goal { G } yields_first { "Y1", "Y2", ... , "YN" } -- test both solvers gets at least N same first answers
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt yields_first { $($expected:expr),* }
+        $($unparsed_goals:tt)*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), SolverChoice::default(), TestGoal::First(vec![$($expected),*]))
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };
@@ -78,7 +115,7 @@ macro_rules! test {
     };
 }
 
-fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
+fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
@@ -106,8 +143,13 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, &str)>) {
 
             println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal();
-            let result = db.solve(&peeled_goal);
-            assert_result(&result, expected);
+            match expected {
+                TestGoal::Aggregated(expected) => {
+                    let result = db.solve(&peeled_goal);
+                    assert_result(&result, expected);
+                }
+                _ => panic!("Implement it"),
+            }
         });
     }
 }
