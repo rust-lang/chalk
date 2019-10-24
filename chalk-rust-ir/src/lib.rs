@@ -131,7 +131,7 @@ pub struct TraitFlags {
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-#[fold_family(ChalkIr)]
+#[has_type_family(ChalkIr)]
 pub enum InlineBound {
     TraitBound(TraitBound),
     ProjectionEqBound(ProjectionEqBound),
@@ -180,7 +180,7 @@ impl IntoWhereClauses for QuantifiedInlineBound {
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-#[fold_family(ChalkIr)]
+#[has_type_family(ChalkIr)]
 pub struct TraitBound {
     pub trait_id: TraitId,
     pub args_no_self: Vec<Parameter<ChalkIr>>,
@@ -204,7 +204,7 @@ impl TraitBound {
 /// Represents a projection equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-#[fold_family(ChalkIr)]
+#[has_type_family(ChalkIr)]
 pub struct ProjectionEqBound {
     pub trait_bound: TraitBound,
     pub associated_ty_id: TypeId,
@@ -325,7 +325,7 @@ impl AssociatedTyDatum {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-#[fold_family(ChalkIr)]
+#[has_type_family(ChalkIr)]
 pub struct AssociatedTyValue {
     /// Impl in which this associated type value is found.  You might
     /// need to look at this to find the generic parameters defined on
@@ -365,7 +365,7 @@ pub struct AssociatedTyValue {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-#[fold_family(ChalkIr)]
+#[has_type_family(ChalkIr)]
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<ChalkIr>,

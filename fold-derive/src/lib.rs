@@ -4,7 +4,7 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{parse_macro_input, Data, DeriveInput, GenericParam, Ident, TypeParamBound};
 
-#[proc_macro_derive(Fold, attributes(fold_family))]
+#[proc_macro_derive(Fold, attributes(has_type_family))]
 pub fn derive_fold(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
@@ -12,16 +12,19 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     let (_, ty_generics, where_clause_ref) = input.generics.split_for_impl();
     let body = derive_fold_body(input.data);
 
-    // Allow custom Fold parameter using the `#[fold_family(Param)]` attribute
-    let mut generics =
-        if let Some(attr) = input.attrs.iter().find(|a| a.path.is_ident("fold_family")) {
-            let arg = attr
-                .parse_args::<proc_macro2::TokenStream>()
-                .expect("Expected fold_family argument");
-            quote! { < #arg > } // TODO extend instead of overriding?
-        } else {
-            ty_generics.to_token_stream()
-        };
+    // Allow custom Fold parameter using the `#[has_type_family(Param)]` attribute
+    let mut generics = if let Some(attr) = input
+        .attrs
+        .iter()
+        .find(|a| a.path.is_ident("has_type_family"))
+    {
+        let arg = attr
+            .parse_args::<proc_macro2::TokenStream>()
+            .expect("Expected has_type_family argument");
+        quote! { < #arg > } // TODO extend instead of overriding?
+    } else {
+        ty_generics.to_token_stream()
+    };
 
     let mut impl_generics = input.generics.clone();
     let mut where_clause = where_clause_ref.cloned();
