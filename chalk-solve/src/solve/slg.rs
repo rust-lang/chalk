@@ -319,11 +319,16 @@ impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
         Box::new(self.infer.normalize_deep(value))
     }
 
-    fn canonicalize_goal(
+    fn fully_canonicalize_goal(
         &mut self,
-        value: &InEnvironment<Goal<ChalkIr>>,
-    ) -> Canonical<InEnvironment<Goal<ChalkIr>>> {
-        self.infer.canonicalize(value).quantified
+        value: &InEnvironment<Goal<ChalkIr>>
+    ) -> (UCanonical<InEnvironment<Goal<ChalkIr>>>, UniverseMap) {
+        let canonicalized_goal = self.infer.canonicalize(value).quantified;
+        let UCanonicalized {
+            quantified,
+            universes,
+        } = self.infer.u_canonicalize(&canonicalized_goal);
+        (quantified, universes)
     }
 
     fn canonicalize_ex_clause(
@@ -341,20 +346,6 @@ impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
         self.infer
             .canonicalize(&ConstrainedSubst { subst, constraints })
             .quantified
-    }
-
-    fn u_canonicalize_goal(
-        &mut self,
-        value: &Canonical<InEnvironment<Goal<ChalkIr>>>,
-    ) -> (
-        UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        crate::infer::ucanonicalize::UniverseMap,
-    ) {
-        let UCanonicalized {
-            quantified,
-            universes,
-        } = self.infer.u_canonicalize(value);
-        (quantified, universes)
     }
 
     fn invert_goal(

@@ -272,7 +272,7 @@ pub trait UnificationOps<C: Context> {
     fn debug_ex_clause<'v>(&mut self, value: &'v ExClause<C>) -> Box<dyn Debug + 'v>;
 
     // Used by: logic
-    fn canonicalize_goal(&mut self, value: &C::GoalInEnvironment) -> C::CanonicalGoalInEnvironment;
+    fn fully_canonicalize_goal(&mut self, value: &C::GoalInEnvironment) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     // Used by: logic
     fn canonicalize_ex_clause(&mut self, value: &ExClause<C>) -> C::CanonicalExClause;
@@ -283,12 +283,6 @@ pub trait UnificationOps<C: Context> {
         subst: C::Substitution,
         constraints: Vec<C::RegionConstraint>,
     ) -> C::CanonicalConstrainedSubst;
-
-    // Used by: logic
-    fn u_canonicalize_goal(
-        &mut self,
-        value: &C::CanonicalGoalInEnvironment,
-    ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     fn sink_answer_subset(
         &self,

@@ -706,14 +706,13 @@ impl<C: Context> Forest<C> {
         debug_heading!("get_or_create_table_for_subgoal(subgoal={:?})", subgoal);
 
         // Subgoal abstraction:
-        let canonical_subgoal = match subgoal {
+        let (ucanonical_subgoal, universe_map) = match subgoal {
             Literal::Positive(subgoal) => self.abstract_positive_literal(infer, subgoal),
             Literal::Negative(subgoal) => self.abstract_negative_literal(infer, subgoal)?,
         };
 
-        debug!("canonical_subgoal={:?}", canonical_subgoal);
-
-        let (ucanonical_subgoal, universe_map) = infer.u_canonicalize_goal(&canonical_subgoal);
+        debug!("ucanonical_subgoal={:?}", ucanonical_subgoal);
+        debug!("universe_map={:?}", universe_map);
 
         let table = self.get_or_create_table_for_ucanonical_goal(context, ucanonical_subgoal);
 
@@ -837,7 +836,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         infer: &mut dyn InferenceTable<C>,
         subgoal: &C::GoalInEnvironment,
-    ) -> C::CanonicalGoalInEnvironment {
+    ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap) {
         // Subgoal abstraction: Rather than looking up the table for
         // `selected_goal` directly, first apply the truncation
         // function. This may introduce fresh variables, making the
@@ -862,10 +861,10 @@ impl<C: Context> Forest<C> {
         // will fail to unify with our selected goal, producing no
         // resolvent.
         match infer.truncate_goal(subgoal) {
-            None => infer.canonicalize_goal(subgoal),
+            None => infer.fully_canonicalize_goal(subgoal),
             Some(truncated_subgoal) => {
                 debug!("truncated={:?}", truncated_subgoal);
-                infer.canonicalize_goal(&truncated_subgoal)
+                infer.fully_canonicalize_goal(&truncated_subgoal)
             }
         }
     }
@@ -881,7 +880,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         infer: &mut dyn InferenceTable<C>,
         subgoal: &C::GoalInEnvironment,
-    ) -> Option<C::CanonicalGoalInEnvironment> {
+    ) -> Option<(C::UCanonicalGoalInEnvironment, C::UniverseMap)> {
         // First, we have to check that the selected negative literal
         // is ground, and invert any universally quantified variables.
         //
@@ -974,7 +973,7 @@ impl<C: Context> Forest<C> {
         // with it yet.
         match infer.truncate_goal(&inverted_subgoal) {
             Some(_) => None,
-            None => Some(infer.canonicalize_goal(&inverted_subgoal)),
+            None => Some(infer.fully_canonicalize_goal(&inverted_subgoal)),
         }
     }
 
