@@ -11,7 +11,7 @@ impl<C: Context> Forest<C> {
     pub(super) fn simplify_hh_goal(
         infer: &mut dyn InferenceTable<C>,
         subst: C::Substitution,
-        initial_environment: &C::Environment,
+        initial_environment: C::Environment,
         initial_hh_goal: HhGoal<C>,
     ) -> Fallible<ExClause<C>> {
         let mut ex_clause = ExClause {
@@ -24,7 +24,7 @@ impl<C: Context> Forest<C> {
         };
 
         // A stack of higher-level goals to process.
-        let mut pending_goals = vec![(initial_environment.clone(), initial_hh_goal)];
+        let mut pending_goals = vec![(initial_environment, initial_hh_goal)];
 
         while let Some((environment, hh_goal)) = pending_goals.pop() {
             match hh_goal {
