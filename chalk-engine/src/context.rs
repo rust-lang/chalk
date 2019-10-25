@@ -118,10 +118,6 @@ pub trait Context: Clone + Debug {
     /// the equality relation.
     type Variance;
 
-    /// The successful result from unification: contains new subgoals
-    /// and things that can be attached to an ex-clause.
-    type UnificationResult;
-
     /// Given an environment and a goal, glue them together to create
     /// a `GoalInEnvironment`.
     fn goal_in_environment(
@@ -294,18 +290,20 @@ pub trait UnificationOps<C: Context> {
     // Used by: logic
     fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
 
+    /// First unify the parameters, then add the residual subgoals
+    /// as new subgoals of the ex-clause.
+    /// Also add region constraints.
+    /// 
+    /// If the parameters fail to unify, then `Error` is returned
     // Used by: simplify
-    fn unify_parameters(
+    fn unify_parameters_into_ex_clause(
         &mut self,
         environment: &C::Environment,
         variance: C::Variance,
         a: &C::Parameter,
         b: &C::Parameter,
-    ) -> Fallible<C::UnificationResult>;
-
-    /// Add the residual subgoals as new subgoals of the ex-clause.
-    /// Also add region constraints.
-    fn into_ex_clause(&mut self, result: C::UnificationResult, ex_clause: &mut ExClause<C>);
+        ex_clause: &mut ExClause<C>,
+    ) -> Fallible<()>;
 }
 
 /// "Truncation" (called "abstraction" in the papers referenced below)

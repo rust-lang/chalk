@@ -53,8 +53,7 @@ impl<C: Context> Forest<C> {
                         )));
                 }
                 HhGoal::Unify(variance, a, b) => {
-                    let result = infer.unify_parameters(&environment, variance, &a, &b)?;
-                    infer.into_ex_clause(result, &mut ex_clause)
+                    infer.unify_parameters_into_ex_clause(&environment, variance, &a, &b, &mut ex_clause)?
                 }
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause

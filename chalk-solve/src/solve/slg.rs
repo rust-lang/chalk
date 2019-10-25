@@ -67,7 +67,6 @@ impl context::Context for SlgContext {
     type Parameter = Parameter<ChalkIr>;
     type ProgramClause = ProgramClause<ChalkIr>;
     type ProgramClauses = Vec<ProgramClause<ChalkIr>>;
-    type UnificationResult = UnificationResult;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst<ChalkIr>>;
     type GoalInEnvironment = InEnvironment<Goal<ChalkIr>>;
     type Substitution = Substitution<ChalkIr>;
@@ -355,14 +354,16 @@ impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
         self.infer.invert(value)
     }
 
-    fn unify_parameters(
+    fn unify_parameters_into_ex_clause(
         &mut self,
         environment: &Environment<ChalkIr>,
         _: (),
         a: &Parameter<ChalkIr>,
         b: &Parameter<ChalkIr>,
-    ) -> Fallible<UnificationResult> {
-        self.infer.unify(environment, a, b)
+        ex_clause: &mut ExClause<SlgContext>
+    ) -> Fallible<()> {
+        let result = self.infer.unify(environment, a, b)?;
+        Ok(into_ex_clause(result, ex_clause))
     }
 
     /// Since we do not have distinct types for the inference context and the slg-context,
@@ -378,10 +379,6 @@ impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
     /// these conversion operations are just no-ops.q
     fn lift_delayed_literal(&self, c: DelayedLiteral<SlgContext>) -> DelayedLiteral<SlgContext> {
         c
-    }
-
-    fn into_ex_clause(&mut self, result: UnificationResult, ex_clause: &mut ExClause<SlgContext>) {
-        into_ex_clause(result, ex_clause)
     }
 }
 
