@@ -19,7 +19,6 @@ use chalk_engine::hh::HhGoal;
 use chalk_engine::{DelayedLiteral, ExClause, Literal};
 
 use std::fmt::Debug;
-use std::sync::Arc;
 
 mod aggregate;
 mod resolvent;
@@ -61,7 +60,7 @@ impl context::Context for SlgContext {
     type InferenceNormalizedSubst = Substitution<ChalkIr>;
     type Solution = Solution;
     type InferenceTable = TruncatingInferenceTable;
-    type Environment = Arc<Environment<ChalkIr>>;
+    type Environment = Environment<ChalkIr>;
     type DomainGoal = DomainGoal<ChalkIr>;
     type Goal = Goal<ChalkIr>;
     type BindersGoal = Binders<Box<Goal<ChalkIr>>>;
@@ -76,7 +75,7 @@ impl context::Context for SlgContext {
     type Variance = ();
 
     fn goal_in_environment(
-        environment: &Arc<Environment<ChalkIr>>,
+        environment: &Environment<ChalkIr>,
         goal: Goal<ChalkIr>,
     ) -> InEnvironment<Goal<ChalkIr>> {
         InEnvironment::new(environment, goal)
@@ -150,7 +149,7 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
 
     fn program_clauses(
         &self,
-        environment: &Arc<Environment<ChalkIr>>,
+        environment: &Environment<ChalkIr>,
         goal: &DomainGoal<ChalkIr>,
         infer: &mut TruncatingInferenceTable,
     ) -> Result<Vec<ProgramClause<ChalkIr>>, Floundered> {
@@ -200,7 +199,7 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
         op: impl FnOnce(
             TruncatingInferenceTable,
             Substitution<ChalkIr>,
-            Arc<Environment<ChalkIr>>,
+            Environment<ChalkIr>,
             Goal<ChalkIr>,
         ) -> R,
     ) -> R {
@@ -274,9 +273,9 @@ impl context::InferenceTable<SlgContext> for TruncatingInferenceTable {
     // Used by: simplify
     fn add_clauses(
         &mut self,
-        env: &Arc<Environment<ChalkIr>>,
+        env: &Environment<ChalkIr>,
         clauses: Vec<ProgramClause<ChalkIr>>,
-    ) -> Arc<Environment<ChalkIr>> {
+    ) -> Environment<ChalkIr> {
         Environment::add_clauses(env, clauses)
     }
 
@@ -367,7 +366,7 @@ impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
 
     fn unify_parameters(
         &mut self,
-        environment: &Arc<Environment<ChalkIr>>,
+        environment: &Environment<ChalkIr>,
         _: (),
         a: &Parameter<ChalkIr>,
         b: &Parameter<ChalkIr>,

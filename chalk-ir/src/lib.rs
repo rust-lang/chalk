@@ -11,7 +11,6 @@ use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
 use std::marker::PhantomData;
-use std::sync::Arc;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Void {}
@@ -75,29 +74,29 @@ impl<TF: TypeFamily> HasTypeFamily for Environment<TF> {
 }
 
 impl<TF: TypeFamily> Environment<TF> {
-    pub fn new() -> Arc<Self> {
-        Arc::new(Environment { clauses: vec![] })
+    pub fn new() -> Self {
+        Environment { clauses: vec![] }
     }
 
-    pub fn add_clauses<I>(&self, clauses: I) -> Arc<Self>
+    pub fn add_clauses<I>(&self, clauses: I) -> Self
     where
         I: IntoIterator<Item = ProgramClause<TF>>,
     {
         let mut env = self.clone();
         let env_clauses: BTreeSet<_> = env.clauses.into_iter().chain(clauses).collect();
         env.clauses = env_clauses.into_iter().collect();
-        Arc::new(env)
+        env
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct InEnvironment<G: HasTypeFamily> {
-    pub environment: Arc<Environment<G::TypeFamily>>,
+    pub environment: Environment<G::TypeFamily>,
     pub goal: G,
 }
 
 impl<G: HasTypeFamily> InEnvironment<G> {
-    pub fn new(environment: &Arc<Environment<G::TypeFamily>>, goal: G) -> Self {
+    pub fn new(environment: &Environment<G::TypeFamily>, goal: G) -> Self {
         InEnvironment {
             environment: environment.clone(),
             goal,

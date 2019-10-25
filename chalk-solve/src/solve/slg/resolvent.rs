@@ -9,7 +9,6 @@ use chalk_ir::*;
 
 use chalk_engine::context;
 use chalk_engine::{ExClause, Literal, TimeStamp};
-use std::sync::Arc;
 
 ///////////////////////////////////////////////////////////////////////////
 // SLG RESOLVENTS
@@ -58,7 +57,7 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
     /// - `clause` is the program clause that may be useful to that end
     fn resolvent_clause(
         &mut self,
-        environment: &Arc<Environment<ChalkIr>>,
+        environment: &Environment<ChalkIr>,
         goal: &DomainGoal<ChalkIr>,
         subst: &Substitution<ChalkIr>,
         clause: &ProgramClause<ChalkIr>,
@@ -246,7 +245,7 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
 
 struct AnswerSubstitutor<'t> {
     table: &'t mut InferenceTable,
-    environment: &'t Arc<Environment<ChalkIr>>,
+    environment: &'t Environment<ChalkIr>,
     answer_subst: &'t Substitution<ChalkIr>,
     answer_binders: usize,
     pending_binders: usize,
@@ -256,7 +255,7 @@ struct AnswerSubstitutor<'t> {
 impl<'t> AnswerSubstitutor<'t> {
     fn substitute<T: Zip<ChalkIr>>(
         table: &mut InferenceTable,
-        environment: &Arc<Environment<ChalkIr>>,
+        environment: &Environment<ChalkIr>,
         answer_subst: &Substitution<ChalkIr>,
         ex_clause: ExClause<SlgContext>,
         answer: &T,

@@ -104,7 +104,7 @@ impl<C: Context> Forest<C> {
     ///
     /// Example: Given a program like:
     ///
-    /// ```
+    /// ```notrust
     /// struct Foo { a: Option<Box<Bar>> }
     /// struct Bar { a: Option<Box<Foo>> }
     /// trait XXX { }
