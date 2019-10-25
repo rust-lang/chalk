@@ -368,15 +368,6 @@ impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
 
     /// Since we do not have distinct types for the inference context and the slg-context,
     /// these conversion operations are just no-ops.q
-    fn sink_answer_subset(
-        &self,
-        c: &Canonical<ConstrainedSubst<ChalkIr>>,
-    ) -> Canonical<ConstrainedSubst<ChalkIr>> {
-        c.clone()
-    }
-
-    /// Since we do not have distinct types for the inference context and the slg-context,
-    /// these conversion operations are just no-ops.q
     fn lift_delayed_literal(&self, c: DelayedLiteral<SlgContext>) -> DelayedLiteral<SlgContext> {
         c
     }

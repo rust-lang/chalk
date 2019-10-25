@@ -280,11 +280,6 @@ pub trait UnificationOps<C: Context> {
         constraints: Vec<C::RegionConstraint>,
     ) -> C::CanonicalConstrainedSubst;
 
-    fn sink_answer_subset(
-        &self,
-        value: &C::CanonicalConstrainedSubst,
-    ) -> C::CanonicalConstrainedSubst;
-
     fn lift_delayed_literal(&self, value: DelayedLiteral<C>) -> DelayedLiteral<C>;
 
     // Used by: logic

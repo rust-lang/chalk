@@ -57,12 +57,7 @@ pub use self::subst::Subst;
 /// ```
 pub trait Folder<TF: TypeFamily>:
     FreeVarFolder<TF> + InferenceFolder<TF> + PlaceholderFolder<TF> + TypeFolder<TF>
-{
-    /// Returns a "dynamic" version of this trait. There is no
-    /// **particular** reason to require this, except that I didn't
-    /// feel like making `super_fold_ty` generic for no reason.
-    fn to_dyn(&mut self) -> &mut dyn Folder<TF>;
-}
+{}
 
 pub trait TypeFolder<TF: TypeFamily> {
     fn fold_ty(&mut self, ty: &TF::Type, binders: usize) -> Fallible<TF::Type>;
@@ -73,11 +68,7 @@ impl<T, TF> Folder<TF> for T
 where
     T: FreeVarFolder<TF> + InferenceFolder<TF> + PlaceholderFolder<TF> + TypeFolder<TF>,
     TF: TypeFamily,
-{
-    fn to_dyn(&mut self) -> &mut dyn Folder<TF> {
-        self
-    }
-}
+{}
 
 /// A convenience trait that indicates that this folder doesn't take
 /// any action on types in particular, but just recursively folds
@@ -92,11 +83,11 @@ where
     TF: TypeFamily,
 {
     fn fold_ty(&mut self, ty: &TF::Type, binders: usize) -> Fallible<TF::Type> {
-        super_fold_ty(self.to_dyn(), ty, binders)
+        super_fold_ty(self, ty, binders)
     }
 
     fn fold_lifetime(&mut self, lifetime: &TF::Lifetime, binders: usize) -> Fallible<TF::Lifetime> {
-        super_fold_lifetime(self.to_dyn(), lifetime, binders)
+        super_fold_lifetime(self, lifetime, binders)
     }
 }
 

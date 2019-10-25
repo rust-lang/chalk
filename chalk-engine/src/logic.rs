@@ -1101,7 +1101,7 @@ impl<C: Context> Forest<C> {
                     if !answer.delayed_literals.is_empty() {
                         ex_clause.delayed_literals.push(DelayedLiteral::Positive(
                             subgoal_table,
-                            infer.sink_answer_subset(&answer.subst),
+                            answer.subst.clone(),
                         ));
                     }
                 }
