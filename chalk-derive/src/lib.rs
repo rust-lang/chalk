@@ -4,13 +4,14 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{parse_macro_input, Data, DeriveInput, GenericParam, Ident, TypeParamBound};
 
+/// Derives Fold for structs and enums for which one of the following is true:
+/// - It has a `#[has_type_family(TheTypeFamily)]` attribute
+/// - There is a parameter `T: HasTypeFamily`
+/// - There is a parameter `T: TypeFamily`
 #[proc_macro_derive(Fold, attributes(has_type_family))]
 pub fn derive_fold(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
-
-    let name = input.ident;
     let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
-    let body = derive_fold_body(input.data);
 
     let mut where_clause = where_clause_ref.cloned();
     let generics = if let Some(attr) = input
@@ -18,7 +19,6 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         .iter()
         .find(|a| a.path.is_ident("has_type_family"))
     {
-        // Allow custom Fold parameter using the `#[has_type_family(Param)]` attribute
         let arg = attr
             .parse_args::<proc_macro2::TokenStream>()
             .expect("Expected has_type_family argument");
@@ -27,7 +27,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         .generics
         .params
         .iter()
-        .find_map(|p| is_type_family_param(p))
+        .find_map(|p| has_type_family_bound(p))
     {
         let tf = quote! { <#param as HasTypeFamily>::TypeFamily };
 
@@ -41,6 +41,8 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         ty_generics.to_token_stream()
     };
 
+    let name = input.ident;
+    let body = derive_fold_body(input.data);
     TokenStream::from(quote! {
         impl #impl_generics Fold #generics for #name #ty_generics #where_clause {
             type Result = Self;
@@ -56,6 +58,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     })
 }
 
+/// Generates the body of the Fold impl
 fn derive_fold_body(data: Data) -> proc_macro2::TokenStream {
     match data {
         Data::Struct(s) => {
@@ -91,7 +94,8 @@ fn derive_fold_body(data: Data) -> proc_macro2::TokenStream {
     }
 }
 
-fn is_type_family_param(param: &GenericParam) -> Option<&Ident> {
+/// Checks whether a generic parameter has a `: HasTypeFamily` bound
+fn has_type_family_bound(param: &GenericParam) -> Option<&Ident> {
     match param {
         GenericParam::Type(ref t) => t.bounds.iter().find_map(|b| {
             if let TypeParamBound::Trait(trait_bound) = b {
