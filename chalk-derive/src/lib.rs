@@ -99,7 +99,11 @@ fn has_type_family_bound(param: &GenericParam) -> Option<&Ident> {
     match param {
         GenericParam::Type(ref t) => t.bounds.iter().find_map(|b| {
             if let TypeParamBound::Trait(trait_bound) = b {
-                if trait_bound.path.get_ident().map(|i| i.to_string())
+                if trait_bound
+                    .path
+                    .segments
+                    .last()
+                    .map(|s| s.ident.to_string())
                     == Some(String::from("HasTypeFamily"))
                 {
                     return Some(&t.ident);
