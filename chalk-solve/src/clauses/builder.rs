@@ -100,7 +100,7 @@ impl<'me> ClauseBuilder<'me> {
     /// passing a type representing this new type variable in as an
     /// argument.
     #[allow(dead_code)]
-    pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<ChalkIr>)) {
+    pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, TyData<ChalkIr>)) {
         let binders = Binders {
             binders: vec![ParameterKind::Ty(())],
             value: PhantomData::<ChalkIr>,

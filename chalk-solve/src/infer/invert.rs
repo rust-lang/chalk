@@ -121,7 +121,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for Inverter<'q> {
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Ty<ChalkIr>> {
+    ) -> Fallible<TyData<ChalkIr>> {
         let table = &mut self.table;
         Ok(self
             .inverted_ty

@@ -101,7 +101,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for Canonicalizer<'q> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty<ChalkIr>> {
+    ) -> Fallible<TyData<ChalkIr>> {
         self.max_universe = max(self.max_universe, universe.ui);
         Ok(universe.to_ty::<ChalkIr>())
     }
@@ -123,7 +123,11 @@ impl<'q> DefaultFreeVarFolder for Canonicalizer<'q> {
 }
 
 impl<'q> InferenceFolder<ChalkIr> for Canonicalizer<'q> {
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<ChalkIr>> {
+    fn fold_inference_ty(
+        &mut self,
+        var: InferenceVar,
+        binders: usize,
+    ) -> Fallible<TyData<ChalkIr>> {
         debug_heading!("fold_inference_ty(depth={:?}, binders={:?})", var, binders);
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
@@ -139,7 +143,7 @@ impl<'q> InferenceFolder<ChalkIr> for Canonicalizer<'q> {
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(Ty::BoundVar(position + binders))
+                Ok(TyData::BoundVar(position + binders))
             }
         }
     }

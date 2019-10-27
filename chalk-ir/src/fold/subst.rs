@@ -26,7 +26,7 @@ impl<'b, TF: TypeFamily> DefaultTypeFolder for Subst<'b, TF> {}
 impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
         if depth >= self.parameters.len() {
-            Ok(Ty::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
+            Ok(TyData::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
         } else {
             match self.parameters[depth].0 {
                 ParameterKind::Ty(ref t) => Ok(t.shifted_in(binders)),

@@ -18,9 +18,9 @@ where
         struct MatchZipper;
 
         impl<TF: TypeFamily> Zipper<TF> for MatchZipper {
-            fn zip_tys(&mut self, a: &Ty<TF>, b: &Ty<TF>) -> Fallible<()> {
+            fn zip_tys(&mut self, a: &TyData<TF>, b: &TyData<TF>) -> Fallible<()> {
                 let could_match = match (a, b) {
-                    (&Ty::Apply(ref a), &Ty::Apply(ref b)) => {
+                    (&TyData::Apply(ref a), &TyData::Apply(ref b)) => {
                         let names_could_match = a.name == b.name;
 
                         names_could_match

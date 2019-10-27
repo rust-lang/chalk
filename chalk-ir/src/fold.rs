@@ -98,10 +98,10 @@ where
 /// is used when you are instantiating previously bound things with some
 /// replacement.
 pub trait FreeVarFolder<TF: TypeFamily> {
-    /// Invoked for `Ty::BoundVar` instances that are not bound within the type being folded
+    /// Invoked for `TyData::BoundVar` instances that are not bound within the type being folded
     /// over:
     ///
-    /// - `depth` is the depth of the `Ty::BoundVar`; this has been adjusted to account for binders
+    /// - `depth` is the depth of the `TyData::BoundVar`; this has been adjusted to account for binders
     ///   in scope.
     /// - `binders` is the number of binders in scope.
     ///
@@ -129,7 +129,7 @@ impl<T: DefaultFreeVarFolder, TF: TypeFamily> FreeVarFolder<TF> for T {
         if T::forbid() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(Ty::<TF>::BoundVar(depth + binders).intern())
+            Ok(TyData::<TF>::BoundVar(depth + binders).intern())
         }
     }
 
@@ -345,22 +345,26 @@ where
     TF: TypeFamily,
 {
     match ty.lookup_ref() {
-        Ty::BoundVar(depth) => {
+        TyData::BoundVar(depth) => {
             if *depth >= binders {
                 folder.fold_free_var_ty(*depth - binders, binders)
             } else {
-                Ok(Ty::<TF>::BoundVar(*depth).intern())
+                Ok(TyData::<TF>::BoundVar(*depth).intern())
             }
         }
-        Ty::Dyn(clauses) => Ok(TF::intern_ty(Ty::Dyn(clauses.fold_with(folder, binders)?))),
-        Ty::Opaque(clauses) => Ok(TF::intern_ty(Ty::Opaque(
+        TyData::Dyn(clauses) => Ok(TF::intern_ty(TyData::Dyn(
             clauses.fold_with(folder, binders)?,
         ))),
-        Ty::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
-        Ty::Apply(apply) => Ok(apply.fold_with(folder, binders)?),
-        Ty::Projection(proj) => Ok(Ty::Projection(proj.fold_with(folder, binders)?).intern()),
-        Ty::ForAll(quantified_ty) => {
-            Ok(Ty::ForAll(quantified_ty.fold_with(folder, binders)?).intern())
+        TyData::Opaque(clauses) => Ok(TF::intern_ty(TyData::Opaque(
+            clauses.fold_with(folder, binders)?,
+        ))),
+        TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
+        TyData::Apply(apply) => Ok(apply.fold_with(folder, binders)?),
+        TyData::Projection(proj) => {
+            Ok(TyData::Projection(proj.fold_with(folder, binders)?).intern())
+        }
+        TyData::ForAll(quantified_ty) => {
+            Ok(TyData::ForAll(quantified_ty.fold_with(folder, binders)?).intern())
         }
     }
 }

@@ -212,7 +212,7 @@ pub enum TypeSort {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Ty<TF: TypeFamily> {
+pub enum TyData<TF: TypeFamily> {
     /// An "application" type is one that applies the set of type
     /// arguments to some base type. For example, `Vec<u32>` would be
     /// "applying" the parameters `[u32]` to the code type `Vec`.
@@ -283,27 +283,27 @@ pub enum Ty<TF: TypeFamily> {
     InferenceVar(InferenceVar),
 }
 
-impl<TF: TypeFamily> HasTypeFamily for Ty<TF> {
+impl<TF: TypeFamily> HasTypeFamily for TyData<TF> {
     type TypeFamily = TF;
 }
 
-impl<TF: TypeFamily> Ty<TF> {
+impl<TF: TypeFamily> TyData<TF> {
     fn intern(self) -> TF::Type {
         TF::intern_ty(self)
     }
 
-    /// If this is a `Ty::BoundVar(d)`, returns `Some(d)` else `None`.
+    /// If this is a `TyData::BoundVar(d)`, returns `Some(d)` else `None`.
     pub fn bound(&self) -> Option<usize> {
-        if let Ty::BoundVar(depth) = *self {
+        if let TyData::BoundVar(depth) = *self {
             Some(depth)
         } else {
             None
         }
     }
 
-    /// If this is a `Ty::InferenceVar(d)`, returns `Some(d)` else `None`.
+    /// If this is a `TyData::InferenceVar(d)`, returns `Some(d)` else `None`.
     pub fn inference_var(&self) -> Option<InferenceVar> {
-        if let Ty::InferenceVar(depth) = *self {
+        if let TyData::InferenceVar(depth) = *self {
             Some(depth)
         } else {
             None
@@ -312,7 +312,7 @@ impl<TF: TypeFamily> Ty<TF> {
 
     pub fn is_projection(&self) -> bool {
         match *self {
-            Ty::Projection(..) => true,
+            TyData::Projection(..) => true,
             _ => false,
         }
     }
@@ -343,7 +343,7 @@ impl InferenceVar {
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> TF::Type {
-        Ty::<TF>::InferenceVar(self).intern()
+        TyData::<TF>::InferenceVar(self).intern()
     }
 
     pub fn to_lifetime<TF: TypeFamily>(self) -> TF::Lifetime {
@@ -365,7 +365,7 @@ impl<TF: TypeFamily> HasTypeFamily for QuantifiedTy<TF> {
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Lifetime<TF: TypeFamily> {
-    /// See Ty::Var(_).
+    /// See TyData::Var(_).
     BoundVar(usize),
     InferenceVar(InferenceVar),
     Placeholder(PlaceholderIndex),
@@ -415,7 +415,7 @@ impl PlaceholderIndex {
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> TF::Type {
-        Ty::Apply(ApplicationTy::<TF> {
+        TyData::Apply(ApplicationTy::<TF> {
             name: TypeName::Placeholder(self),
             parameters: vec![],
         })
@@ -881,7 +881,7 @@ impl<T> Binders<T> {
         T: Shift<TF>,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
-        let new_var = Ty::<TF>::BoundVar(0).intern();
+        let new_var = TyData::<TF>::BoundVar(0).intern();
         let value = op(self.value.shifted_in(1), new_var);
         Binders {
             binders: iter::once(ParameterKind::Ty(()))
@@ -1144,7 +1144,7 @@ impl<TF: TypeFamily> Substitution<TF> {
             .zip(0..)
             .all(|(parameter, index)| match &parameter.0 {
                 ParameterKind::Ty(ty) => match ty.lookup_ref() {
-                    Ty::BoundVar(depth) => index == *depth,
+                    TyData::BoundVar(depth) => index == *depth,
                     _ => false,
                 },
                 ParameterKind::Lifetime(lifetime) => match lifetime.lookup_ref() {

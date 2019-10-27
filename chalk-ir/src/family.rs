@@ -7,7 +7,7 @@ use crate::Lifetime;
 use crate::Parameter;
 use crate::ParameterKind;
 use crate::ProjectionTy;
-use crate::Ty;
+use crate::TyData;
 use chalk_engine::fallible::Fallible;
 use std::fmt::{self, Debug};
 use std::hash::Hash;
@@ -38,7 +38,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
         + Hash
         + ReflexiveFold<Self>
         + Zip<Self>
-        + Lookup<Ty<Self>>
+        + Lookup<TyData<Self>>
         + CastTo<Parameter<Self>>;
 
     /// "Interned" representation of lifetimes. You can use the
@@ -63,8 +63,8 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     ) -> fmt::Result;
 
     /// Create an "interned" type from `ty`. You can also use the
-    /// `Ty::intern` method, which is preferred.
-    fn intern_ty(ty: Ty<Self>) -> Self::Type;
+    /// `TyData::intern` method, which is preferred.
+    fn intern_ty(ty: TyData<Self>) -> Self::Type;
 
     /// Create an "interned" type from `lifetime`. You can also use
     /// the `Lifetime::intern` method, which is preferred.
@@ -90,12 +90,12 @@ pub trait Lookup<DataType> {
     fn lookup(self) -> DataType;
 }
 
-impl Lookup<Ty<ChalkIr>> for Ty<ChalkIr> {
-    fn lookup_ref(&self) -> &Ty<ChalkIr> {
+impl Lookup<TyData<ChalkIr>> for TyData<ChalkIr> {
+    fn lookup_ref(&self) -> &TyData<ChalkIr> {
         self
     }
 
-    fn lookup(self) -> Ty<ChalkIr> {
+    fn lookup(self) -> TyData<ChalkIr> {
         self
     }
 }
@@ -116,7 +116,7 @@ impl Lookup<Lifetime<ChalkIr>> for Lifetime<ChalkIr> {
 pub struct ChalkIr {}
 
 impl TypeFamily for ChalkIr {
-    type Type = Ty<ChalkIr>;
+    type Type = TyData<ChalkIr>;
     type Lifetime = Lifetime<ChalkIr>;
 
     fn debug_projection(
@@ -134,7 +134,7 @@ impl TypeFamily for ChalkIr {
         })
     }
 
-    fn intern_ty(ty: Ty<ChalkIr>) -> Ty<ChalkIr> {
+    fn intern_ty(ty: TyData<ChalkIr>) -> TyData<ChalkIr> {
         ty
     }
 
@@ -172,7 +172,7 @@ where
     type TypeFamily = TF;
 }
 
-impl Fold<ChalkIr> for Ty<ChalkIr> {
+impl Fold<ChalkIr> for TyData<ChalkIr> {
     type Result = Self;
     fn fold_with(
         &self,
@@ -183,7 +183,7 @@ impl Fold<ChalkIr> for Ty<ChalkIr> {
     }
 }
 
-impl CastTo<Parameter<ChalkIr>> for Ty<ChalkIr> {
+impl CastTo<Parameter<ChalkIr>> for TyData<ChalkIr> {
     fn cast_to(self) -> Parameter<ChalkIr> {
         Parameter(ParameterKind::Ty(self))
     }

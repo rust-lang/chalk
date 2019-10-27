@@ -22,7 +22,7 @@ use std::sync::Arc;
 pub trait Zipper<TF: TypeFamily> {
     /// Indicates that the two types `a` and `b` were found in
     /// matching spots, beneath `binders` levels of binders.
-    fn zip_tys(&mut self, a: &Ty<TF>, b: &Ty<TF>) -> Fallible<()>;
+    fn zip_tys(&mut self, a: &TyData<TF>, b: &TyData<TF>) -> Fallible<()>;
 
     /// Indicates that the two lifetimes `a` and `b` were found in
     /// matching spots, beneath `binders` levels of binders.
@@ -39,7 +39,7 @@ where
     TF: TypeFamily,
     Z: Zipper<TF>,
 {
-    fn zip_tys(&mut self, a: &Ty<TF>, b: &Ty<TF>) -> Fallible<()> {
+    fn zip_tys(&mut self, a: &TyData<TF>, b: &TyData<TF>) -> Fallible<()> {
         (**self).zip_tys(a, b)
     }
 
@@ -121,7 +121,7 @@ impl<T: Zip<TF>, U: Zip<TF>, TF: TypeFamily> Zip<TF> for (T, U) {
     }
 }
 
-impl<TF: TypeFamily> Zip<TF> for Ty<TF> {
+impl<TF: TypeFamily> Zip<TF> for TyData<TF> {
     fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         zipper.zip_tys(a, b)
     }

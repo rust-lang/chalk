@@ -42,11 +42,11 @@ pub struct WfSolver<'db, DB: RustIrDatabase> {
 
 /// A trait for retrieving all types appearing in some Chalk construction.
 trait FoldInputTypes {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>);
+    fn fold(&self, accumulator: &mut Vec<TyData<ChalkIr>>);
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+    fn fold(&self, accumulator: &mut Vec<TyData<ChalkIr>>) {
         for f in self {
             f.fold(accumulator);
         }
@@ -54,59 +54,61 @@ impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
 }
 
 impl FoldInputTypes for Parameter<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+    fn fold(&self, accumulator: &mut Vec<TyData<ChalkIr>>) {
         if let ParameterKind::Ty(ty) = &self.0 {
             ty.fold(accumulator)
         }
     }
 }
 
-impl FoldInputTypes for Ty<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+impl FoldInputTypes for TyData<ChalkIr> {
+    fn fold(&self, accumulator: &mut Vec<TyData<ChalkIr>>) {
         match self {
-            Ty::Apply(app) => {
+            TyData::Apply(app) => {
                 accumulator.push(self.clone());
                 app.parameters.fold(accumulator);
             }
-            Ty::Dyn(qwc) | Ty::Opaque(qwc) => {
+            TyData::Dyn(qwc) | TyData::Opaque(qwc) => {
                 accumulator.push(self.clone());
                 qwc.fold(accumulator);
             }
-            Ty::Projection(proj) => {
+            TyData::Projection(proj) => {
                 accumulator.push(self.clone());
                 proj.parameters.fold(accumulator);
             }
 
             // Type parameters do not carry any input types (so we can sort of assume they are
             // always WF).
-            Ty::BoundVar(..) => (),
+            TyData::BoundVar(..) => (),
 
             // Higher-kinded types such as `for<'a> fn(&'a u32)` introduce their own implied
             // bounds, and these bounds will be enforced upon calling such a function. In some
             // sense, well-formedness requirements for the input types of an HKT will be enforced
             // lazily, so no need to include them here.
-            Ty::ForAll(..) => (),
+            TyData::ForAll(..) => (),
 
-            Ty::InferenceVar(..) => panic!("unexpected inference variable in wf rules: {:?}", self),
+            TyData::InferenceVar(..) => {
+                panic!("unexpected inference variable in wf rules: {:?}", self)
+            }
         }
     }
 }
 
 impl FoldInputTypes for TraitRef<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+    fn fold(&self, accumulator: &mut Vec<TyData<ChalkIr>>) {
         self.parameters.fold(accumulator);
     }
 }
 
 impl FoldInputTypes for ProjectionEq<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
-        Ty::Projection(self.projection.clone()).fold(accumulator);
+    fn fold(&self, accumulator: &mut Vec<TyData<ChalkIr>>) {
+        TyData::Projection(self.projection.clone()).fold(accumulator);
         self.ty.fold(accumulator);
     }
 }
 
 impl FoldInputTypes for WhereClause<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+    fn fold(&self, accumulator: &mut Vec<TyData<ChalkIr>>) {
         match self {
             WhereClause::Implemented(tr) => tr.fold(accumulator),
             WhereClause::ProjectionEq(p) => p.fold(accumulator),
@@ -115,7 +117,7 @@ impl FoldInputTypes for WhereClause<ChalkIr> {
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+    fn fold(&self, accumulator: &mut Vec<TyData<ChalkIr>>) {
         self.value.fold(accumulator);
     }
 }

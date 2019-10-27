@@ -8,7 +8,8 @@ use chalk_ir::family::{ChalkIr, HasTypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
     Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq, ProjectionTy,
-    QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TypeId, TypeName, WhereClause,
+    QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, TyData, TypeId, TypeName,
+    WhereClause,
 };
 use std::iter;
 
@@ -57,7 +58,7 @@ pub struct DefaultImplDatum {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DefaultImplDatumBound {
     pub trait_ref: TraitRef<ChalkIr>,
-    pub accessible_tys: Vec<Ty<ChalkIr>>,
+    pub accessible_tys: Vec<TyData<ChalkIr>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -75,7 +76,7 @@ impl StructDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
-    pub fields: Vec<Ty<ChalkIr>>,
+    pub fields: Vec<TyData<ChalkIr>>,
     pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
 }
 
@@ -147,7 +148,7 @@ pub type QuantifiedInlineBound = Binders<InlineBound>;
 pub trait IntoWhereClauses {
     type Output;
 
-    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<Self::Output>;
+    fn into_where_clauses(&self, self_ty: TyData<ChalkIr>) -> Vec<Self::Output>;
 }
 
 impl IntoWhereClauses for InlineBound {
@@ -158,7 +159,7 @@ impl IntoWhereClauses for InlineBound {
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
-    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
+    fn into_where_clauses(&self, self_ty: TyData<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
         match self {
             InlineBound::TraitBound(b) => b.into_where_clauses(self_ty),
             InlineBound::ProjectionEqBound(b) => b.into_where_clauses(self_ty),
@@ -169,7 +170,7 @@ impl IntoWhereClauses for InlineBound {
 impl IntoWhereClauses for QuantifiedInlineBound {
     type Output = QuantifiedWhereClause<ChalkIr>;
 
-    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<QuantifiedWhereClause<ChalkIr>> {
+    fn into_where_clauses(&self, self_ty: TyData<ChalkIr>) -> Vec<QuantifiedWhereClause<ChalkIr>> {
         let self_ty = self_ty.shifted_in(self.binders.len());
         self.value
             .into_where_clauses(self_ty)
@@ -192,12 +193,12 @@ pub struct TraitBound {
 }
 
 impl TraitBound {
-    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
+    fn into_where_clauses(&self, self_ty: TyData<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
         let trait_ref = self.as_trait_ref(self_ty);
         vec![WhereClause::Implemented(trait_ref)]
     }
 
-    pub fn as_trait_ref(&self, self_ty: Ty<ChalkIr>) -> TraitRef<ChalkIr> {
+    pub fn as_trait_ref(&self, self_ty: TyData<ChalkIr>) -> TraitRef<ChalkIr> {
         TraitRef {
             trait_id: self.trait_id,
             parameters: iter::once(self_ty.cast())
@@ -215,11 +216,11 @@ pub struct ProjectionEqBound {
     pub associated_ty_id: TypeId,
     /// Does not include trait parameters.
     pub parameters: Vec<Parameter<ChalkIr>>,
-    pub value: Ty<ChalkIr>,
+    pub value: TyData<ChalkIr>,
 }
 
 impl ProjectionEqBound {
-    fn into_where_clauses(&self, self_ty: Ty<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
+    fn into_where_clauses(&self, self_ty: TyData<ChalkIr>) -> Vec<WhereClause<ChalkIr>> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 
         let mut parameters = self.parameters.clone();
@@ -266,7 +267,7 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
         let &(binder, index) = self;
         match *binder {
             ParameterKind::Lifetime(_) => Lifetime::BoundVar(index).cast(),
-            ParameterKind::Ty(_) => Ty::BoundVar(index).cast(),
+            ParameterKind::Ty(_) => TyData::BoundVar(index).cast(),
         }
     }
 }
@@ -342,7 +343,7 @@ impl AssociatedTyDatum {
         let parameters = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
-        let self_ty = Ty::Projection(ProjectionTy {
+        let self_ty = TyData::Projection(ProjectionTy {
             associated_ty_id: self.id,
             parameters,
         });
@@ -413,7 +414,7 @@ pub struct AssociatedTyValue {
 #[has_type_family(ChalkIr)]
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
-    pub ty: Ty<ChalkIr>,
+    pub ty: TyData<ChalkIr>,
 }
 
 impl HasTypeFamily for AssociatedTyValueBound {

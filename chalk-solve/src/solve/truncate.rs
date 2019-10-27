@@ -63,7 +63,7 @@ impl<'infer> Truncater<'infer> {
         }
     }
 
-    fn overflow(&mut self, pre_size: usize) -> Ty<ChalkIr> {
+    fn overflow(&mut self, pre_size: usize) -> TyData<ChalkIr> {
         self.overflow = true;
         self.current_size = pre_size + 1;
         let universe = self.infer.max_universe();
@@ -72,7 +72,7 @@ impl<'infer> Truncater<'infer> {
 }
 
 impl<'infer> TypeFolder<ChalkIr> for Truncater<'infer> {
-    fn fold_ty(&mut self, ty: &Ty<ChalkIr>, binders: usize) -> Fallible<Ty<ChalkIr>> {
+    fn fold_ty(&mut self, ty: &TyData<ChalkIr>, binders: usize) -> Fallible<TyData<ChalkIr>> {
         if let Some(normalized_ty) = self.infer.normalize_shallow(ty) {
             return self.fold_ty(&normalized_ty, binders);
         }

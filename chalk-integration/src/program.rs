@@ -3,7 +3,7 @@ use chalk_ir::debug::Angle;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, Ty, TypeId,
+    Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, TyData, TypeId,
     TypeKindId, TypeName,
 };
 use chalk_rust_ir::{
@@ -154,7 +154,7 @@ impl RustIrDatabase for Program {
             let impl_trait_ref = &impl_datum.binders.value.trait_ref;
             impl_trait_ref.trait_id == auto_trait_id
                 && match impl_trait_ref.parameters[0].assert_ty_ref() {
-                    Ty::Apply(apply) => match apply.name {
+                    TyData::Apply(apply) => match apply.name {
                         TypeName::TypeKindId(id) => id == type_kind_id,
                         _ => false,
                     },

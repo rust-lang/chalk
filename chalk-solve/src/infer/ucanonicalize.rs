@@ -234,7 +234,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UCollector<'q> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty<ChalkIr>> {
+    ) -> Fallible<TyData<ChalkIr>> {
         self.universes.add(universe.ui);
         Ok(universe.to_ty::<ChalkIr>())
     }
@@ -274,7 +274,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UMapToCanonical<'q> {
         &mut self,
         universe0: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty<ChalkIr>> {
+    ) -> Fallible<TyData<ChalkIr>> {
         let ui = self.universes.map_universe_to_canonical(universe0.ui);
         Ok(PlaceholderIndex {
             ui,
@@ -310,7 +310,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UMapFromCanonical<'q> {
         &mut self,
         universe0: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty<ChalkIr>> {
+    ) -> Fallible<TyData<ChalkIr>> {
         let ui = self.universes.map_universe_from_canonical(universe0.ui);
         Ok(PlaceholderIndex {
             ui,

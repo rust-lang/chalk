@@ -156,15 +156,15 @@ impl<T: CastTo<Goal<TF>>, TF: TypeFamily> CastTo<Goal<TF>> for Binders<T> {
     }
 }
 
-impl<TF: TypeFamily> CastTo<Ty<TF>> for ApplicationTy<TF> {
-    fn cast_to(self) -> Ty<TF> {
-        Ty::Apply(self)
+impl<TF: TypeFamily> CastTo<TyData<TF>> for ApplicationTy<TF> {
+    fn cast_to(self) -> TyData<TF> {
+        TyData::Apply(self)
     }
 }
 
-impl<TF: TypeFamily> CastTo<Ty<TF>> for ProjectionTy<TF> {
-    fn cast_to(self) -> Ty<TF> {
-        Ty::Projection(self)
+impl<TF: TypeFamily> CastTo<TyData<TF>> for ProjectionTy<TF> {
+    fn cast_to(self) -> TyData<TF> {
+        TyData::Projection(self)
     }
 }
 

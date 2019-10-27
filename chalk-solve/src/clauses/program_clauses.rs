@@ -581,7 +581,7 @@ impl ToProgramClauses for AssociatedTyDatum {
 
             // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
             // we would produce `(Iterator::Item)<T>`.
-            let app_ty: Ty<_> = ApplicationTy {
+            let app_ty: TyData<_> = ApplicationTy {
                 name: TypeName::AssociatedType(self.id),
                 parameters,
             }

@@ -906,11 +906,11 @@ impl LowerProjectionTy for ProjectionTy {
 }
 
 trait LowerTy {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>>;
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TyData<ChalkIr>>;
 }
 
 impl LowerTy for Ty {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TyData<ChalkIr>> {
         match *self {
             Ty::Id { name } => match env.lookup(name)? {
                 NameLookup::Type(id) => {
@@ -922,35 +922,35 @@ impl LowerTy for Ty {
                             actual: 0,
                         })?
                     } else {
-                        Ok(chalk_ir::Ty::Apply(chalk_ir::ApplicationTy {
+                        Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                             name: chalk_ir::TypeName::TypeKindId(id.into()),
                             parameters: vec![],
                         }))
                     }
                 }
-                NameLookup::Parameter(d) => Ok(chalk_ir::Ty::BoundVar(d)),
+                NameLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d)),
             },
 
-            Ty::Dyn { ref bounds } => Ok(chalk_ir::Ty::Dyn(env.in_binders(
+            Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(env.in_binders(
                 // FIXME: Figure out a proper name for this type parameter
                 Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
                 |env| {
                     Ok(bounds
                         .lower(env)?
                         .iter()
-                        .flat_map(|qil| qil.into_where_clauses(chalk_ir::Ty::BoundVar(0)))
+                        .flat_map(|qil| qil.into_where_clauses(chalk_ir::TyData::BoundVar(0)))
                         .collect())
                 },
             )?)),
 
-            Ty::Opaque { ref bounds } => Ok(chalk_ir::Ty::Opaque(env.in_binders(
+            Ty::Opaque { ref bounds } => Ok(chalk_ir::TyData::Opaque(env.in_binders(
                 // FIXME: Figure out a proper name for this type parameter
                 Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
                 |env| {
                     Ok(bounds
                         .lower(env)?
                         .iter()
-                        .flat_map(|qil| qil.into_where_clauses(chalk_ir::Ty::BoundVar(0)))
+                        .flat_map(|qil| qil.into_where_clauses(chalk_ir::TyData::BoundVar(0)))
                         .collect())
                 },
             )?)),
@@ -985,13 +985,13 @@ impl LowerTy for Ty {
                     }
                 }
 
-                Ok(chalk_ir::Ty::Apply(chalk_ir::ApplicationTy {
+                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                     name: chalk_ir::TypeName::TypeKindId(id.into()),
                     parameters: parameters,
                 }))
             }
 
-            Ty::Projection { ref proj } => Ok(chalk_ir::Ty::Projection(proj.lower(env)?)),
+            Ty::Projection { ref proj } => Ok(chalk_ir::TyData::Projection(proj.lower(env)?)),
 
             Ty::ForAll {
                 ref lifetime_names,
@@ -1008,7 +1008,7 @@ impl LowerTy for Ty {
                     num_binders: lifetime_names.len(),
                     ty,
                 };
-                Ok(chalk_ir::Ty::ForAll(Box::new(quantified_ty)))
+                Ok(chalk_ir::TyData::ForAll(Box::new(quantified_ty)))
             }
         }
     }
