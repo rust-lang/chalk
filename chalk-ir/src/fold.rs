@@ -514,52 +514,6 @@ copy_fold!(TF => chalk_engine::TimeStamp);
 copy_fold!(TF => ());
 copy_fold!(TF => PhantomData<TF>);
 
-#[macro_export]
-macro_rules! enum_fold {
-    (impl[$($param:tt)*] Fold<$TF:ty> for $self:ty { $($variant:ident($($name:ident),*)),* $(,)* } $($w:tt)*) => {
-        impl<$($param)*>
-            $crate::fold::Fold<$TF>
-            for $self $($w)*
-        {
-            type Result = Self;
-
-            #[allow(unused_variables)]
-            fn fold_with(
-                &self,
-                folder: &mut dyn ($crate::fold::Folder<$TF>),
-                binders: usize,
-            ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
-                match *self {
-                    $(
-                        Self::$variant( $(ref $name),* ) => {
-                            Ok(Self::$variant( $($name.fold_with(folder, binders)?),* ))
-                        }
-                    )*
-                }
-            }
-        }
-    };
-
-    // Hacky variant for use in slg::context::implementation
-    ($s:ty { $p:ident :: { $($variant:ident($($name:ident),*)),* } }) => {
-        impl $crate::fold::Fold<TF> for $s {
-            type Result = $s;
-            fn fold_with(&self,
-                         folder: &mut dyn ($crate::fold::Folder),
-                         binders: usize)
-                         -> ::chalk_engine::fallible::Fallible<Self::Result> {
-                match self {
-                    $(
-                        $p::$variant( $($name),* ) => {
-                            Ok($p::$variant( $($name.fold_with(folder, binders)?),* ))
-                        }
-                    )*
-                }
-            }
-        }
-    }
-}
-
 impl<TF: TypeFamily, T, L> Fold<TF> for ParameterKind<T, L>
 where
     T: Fold<TF>,
@@ -576,67 +530,6 @@ where
         }
     }
 }
-
-enum_fold!(impl[TF: TypeFamily] Fold<TF> for WellFormed<TF> { Trait(a), Ty(a) });
-enum_fold!(impl[TF: TypeFamily] Fold<TF> for FromEnv<TF> { Trait(a), Ty(a) });
-enum_fold!(impl[TF: TypeFamily] Fold<TF> for WhereClause<TF> { Implemented(a), ProjectionEq(a) });
-enum_fold!(impl[TF: TypeFamily] Fold<TF> for DomainGoal<TF> {
-    Holds(a), WellFormed(a), FromEnv(a), Normalize(a),
-    IsLocal(a), IsUpstream(a), IsFullyVisible(a),
-    LocalImplAllowed(a), Compatible(a), DownstreamType(a),
-});
-enum_fold!(impl[TF: TypeFamily] Fold<TF> for LeafGoal<TF> { EqGoal(a), DomainGoal(a) });
-enum_fold!(impl[TF: TypeFamily] Fold<TF> for Constraint<TF> { LifetimeEq(a, b), });
-enum_fold!(impl[TF: TypeFamily] Fold<TF> for Goal<TF> { Quantified(qkind, subgoal), Implies(wc, subgoal), And(g1, g2), Not(g),
-                    Leaf(wc), CannotProve(a) });
-enum_fold!(impl[TF: TypeFamily] Fold<TF> for ProgramClause<TF> { Implies(a), ForAll(a) });
-enum_fold!(impl[TF: TypeFamily] Fold<TF> for Void { });
-
-#[macro_export]
-macro_rules! struct_fold {
-    (impl[$($param:tt)*] Fold<$TF:ty> for $self:ty { $($name:ident),* $(,)* } $($w:tt)*) => {
-        impl<$($param)*> $crate::fold::Fold<$TF> for $self $($w)* {
-            type Result = Self;
-            fn fold_with(
-                &self,
-                folder: &mut dyn ($crate::fold::Folder<$TF>),
-                binders: usize,
-            ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
-                Ok(Self {
-                    $($name: self.$name.fold_with(folder, binders)?),*
-                })
-            }
-        }
-    };
-}
-
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for ProjectionTy<TF> {
-    associated_ty_id,
-    parameters,
-});
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for TraitRef<TF> {
-    trait_id,
-    parameters,
-});
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for Normalize<TF> { projection, ty });
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for ProjectionEq<TF> { projection, ty });
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for Environment<TF> { clauses });
-struct_fold!(impl[TF: TypeFamily, F] Fold<TF> for InEnvironment<F> {
-    environment,
-    goal,
-} where F: HasTypeFamily<TypeFamily = TF> + Fold<TF, Result = F>);
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for EqGoal<TF> { a, b });
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for ProgramClauseImplication<TF> {
-    consequence,
-    conditions,
-});
-
-struct_fold!(impl[TF: TypeFamily] Fold<TF> for ConstrainedSubst<TF> {
-    subst, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
-    constraints,
-});
-
-// struct_fold!(impl[TF: TypeFamily] Fold<TF> for ApplicationTy { name, parameters }); -- intentionally omitted, folded through Ty
 
 impl<C: Context, TF: TypeFamily> Fold<TF> for ExClause<C>
 where

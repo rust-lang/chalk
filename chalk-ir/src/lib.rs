@@ -2,8 +2,10 @@ use crate::cast::Cast;
 use crate::family::Lookup;
 use crate::fold::shift::Shift;
 use crate::fold::{
-    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder, Subst,
+    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, Folder,
+    FreeVarFolder, Subst,
 };
+use chalk_derive::Fold;
 use chalk_engine::fallible::*;
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
@@ -61,7 +63,7 @@ pub mod tls;
 
 pub type Identifier = InternedString;
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment<TF: TypeFamily> {
@@ -88,7 +90,7 @@ impl<TF: TypeFamily> Environment<TF> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct InEnvironment<G: HasTypeFamily> {
     pub environment: Arc<Environment<G::TypeFamily>>,
     pub goal: G,
@@ -438,6 +440,7 @@ impl PlaceholderIndex {
     }
 }
 
+// Fold derive intentionally omitted, folded through Ty
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ApplicationTy<TF: TypeFamily> {
     pub name: TypeName,
@@ -570,7 +573,7 @@ impl<TF: TypeFamily> Parameter<TF> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct ProjectionTy<TF: TypeFamily> {
     pub associated_ty_id: TypeId,
     pub parameters: Vec<Parameter<TF>>,
@@ -580,7 +583,7 @@ impl<TF: TypeFamily> HasTypeFamily for ProjectionTy<TF> {
     type TypeFamily = TF;
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct TraitRef<TF: TypeFamily> {
     pub trait_id: TraitId,
     pub parameters: Vec<Parameter<TF>>,
@@ -601,13 +604,13 @@ impl<TF: TypeFamily> TraitRef<TF> {
 }
 
 /// Where clauses that can be written by a Rust programmer.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum WhereClause<TF: TypeFamily> {
     Implemented(TraitRef<TF>),
     ProjectionEq(ProjectionEq<TF>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum WellFormed<TF: TypeFamily> {
     /// A predicate which is true is some trait ref is well-formed.
     /// For example, given the following trait definitions:
@@ -641,7 +644,7 @@ impl<TF: TypeFamily> HasTypeFamily for WellFormed<TF> {
     type TypeFamily = TF;
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum FromEnv<TF: TypeFamily> {
     /// A predicate which enables deriving everything which should be true if we *know* that
     /// some trait ref is well-formed. For example given the above trait definitions, we can use
@@ -677,7 +680,7 @@ impl<TF: TypeFamily> HasTypeFamily for FromEnv<TF> {
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum DomainGoal<TF: TypeFamily> {
     Holds(WhereClause<TF>),
 
@@ -782,7 +785,7 @@ impl<TF: TypeFamily> DomainGoal<TF> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 /// A goal that does not involve any logical connectives. Equality is treated
 /// specially by the logic (as with most first-order logics), since it interacts
 /// with unification etc.
@@ -791,7 +794,7 @@ pub enum LeafGoal<TF: TypeFamily> {
     DomainGoal(DomainGoal<TF>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct EqGoal<TF: TypeFamily> {
     pub a: Parameter<TF>,
     pub b: Parameter<TF>,
@@ -801,7 +804,7 @@ pub struct EqGoal<TF: TypeFamily> {
 /// type. A projection `T::Foo` normalizes to the type `U` if we can
 /// **match it to an impl** and that impl has a `type Foo = V` where
 /// `U = V`.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct Normalize<TF: TypeFamily> {
     pub projection: ProjectionTy<TF>,
     pub ty: TF::Type,
@@ -810,7 +813,7 @@ pub struct Normalize<TF: TypeFamily> {
 /// Proves **equality** between a projection `T::Foo` and a type
 /// `U`. Equality can be proven via normalization, but we can also
 /// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct ProjectionEq<TF: TypeFamily> {
     pub projection: ProjectionTy<TF>,
     pub ty: TF::Type,
@@ -931,13 +934,13 @@ impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
 pub struct ProgramClauseImplication<TF: TypeFamily> {
     pub consequence: DomainGoal<TF>,
     pub conditions: Vec<Goal<TF>>,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
 pub enum ProgramClause<TF: TypeFamily> {
     Implies(ProgramClauseImplication<TF>),
     ForAll(Binders<ProgramClauseImplication<TF>>),
@@ -995,7 +998,7 @@ impl<T> UCanonical<T> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum Goal<TF: TypeFamily> {
     /// Introduces a binding at depth 0, shifting other bindings up
@@ -1077,7 +1080,7 @@ pub enum QuantifierKind {
 /// lifetime constraints, instead gathering them up to return with our solution
 /// for later checking. This allows for decoupling between type and region
 /// checking in the compiler.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum Constraint<TF: TypeFamily> {
     LifetimeEq(TF::Lifetime, TF::Lifetime),
 }
@@ -1154,8 +1157,8 @@ impl<'a, TF: TypeFamily> DefaultPlaceholderFolder for &'a Substitution<TF> {}
 /// substitution stores the values for the query's unknown variables,
 /// and the constraints represents any region constraints that must
 /// additionally be solved.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
 pub struct ConstrainedSubst<TF: TypeFamily> {
-    pub subst: Substitution<TF>,
+    pub subst: Substitution<TF>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
     pub constraints: Vec<InEnvironment<Constraint<TF>>>,
 }

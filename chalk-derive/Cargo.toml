@@ -1,0 +1,20 @@
+[package]
+name = "chalk-derive"
+version = "0.1.0"
+license = "Apache-2.0/MIT"
+authors = ["Rust Compiler Team", "Chalk developers"]
+repository = "https://github.com/rust-lang/chalk"
+readme = "README.md"
+keywords = ["compiler", "traits", "prolog"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1.0.2"
+proc-macro2 = "1.0.6"
+
+[dependencies.syn]
+version = "1.0.5"
+features = ["full"]

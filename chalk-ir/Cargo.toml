@@ -19,3 +19,7 @@ path = "../chalk-macros"
 [dependencies.chalk-engine]
 version = "0.9.0"
 path = "../chalk-engine"
+
+[dependencies.chalk-derive]
+version = "0.1.0"
+path = "../chalk-derive"
