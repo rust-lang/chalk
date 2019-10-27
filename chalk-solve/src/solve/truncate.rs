@@ -109,9 +109,9 @@ impl<'infer> TypeFolder<ChalkIr> for Truncater<'infer> {
 
     fn fold_lifetime(
         &mut self,
-        lifetime: &Lifetime<ChalkIr>,
+        lifetime: &LifetimeData<ChalkIr>,
         binders: usize,
-    ) -> Fallible<Lifetime<ChalkIr>> {
+    ) -> Fallible<LifetimeData<ChalkIr>> {
         fold::super_fold_lifetime(self, lifetime, binders)
     }
 }

@@ -3,7 +3,7 @@ use crate::debug::Angle;
 use crate::fold::{Fold, Folder, ReflexiveFold};
 use crate::tls;
 use crate::zip::Zip;
-use crate::Lifetime;
+use crate::LifetimeData;
 use crate::Parameter;
 use crate::ParameterKind;
 use crate::ProjectionTy;
@@ -42,7 +42,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
         + Hash
         + ReflexiveFold<Self>
         + Zip<Self>
-        + Lookup<Lifetime<Self>>
+        + Lookup<LifetimeData<Self>>
         + CastTo<Parameter<Self>>;
 
     /// Prints the debug representation of a projection. To get good
@@ -63,7 +63,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" type from `lifetime`. You can also use
     /// the `Lifetime::intern` method, which is preferred.
-    fn intern_lifetime(lifetime: Lifetime<Self>) -> Self::Lifetime;
+    fn intern_lifetime(lifetime: LifetimeData<Self>) -> Self::Lifetime;
 }
 
 /// Implemented by types that have an associated type family (which
@@ -85,12 +85,12 @@ pub trait Lookup<DataType> {
     fn lookup(self) -> DataType;
 }
 
-impl Lookup<Lifetime<ChalkIr>> for Lifetime<ChalkIr> {
-    fn lookup_ref(&self) -> &Lifetime<ChalkIr> {
+impl Lookup<LifetimeData<ChalkIr>> for LifetimeData<ChalkIr> {
+    fn lookup_ref(&self) -> &LifetimeData<ChalkIr> {
         self
     }
 
-    fn lookup(self) -> Lifetime<ChalkIr> {
+    fn lookup(self) -> LifetimeData<ChalkIr> {
         self
     }
 }
@@ -102,7 +102,7 @@ pub struct ChalkIr {}
 
 impl TypeFamily for ChalkIr {
     type InternedType = TyData<ChalkIr>;
-    type Lifetime = Lifetime<ChalkIr>;
+    type Lifetime = LifetimeData<ChalkIr>;
 
     fn debug_projection(
         projection: &ProjectionTy<ChalkIr>,
@@ -127,7 +127,7 @@ impl TypeFamily for ChalkIr {
         ty
     }
 
-    fn intern_lifetime(lifetime: Lifetime<ChalkIr>) -> Lifetime<ChalkIr> {
+    fn intern_lifetime(lifetime: LifetimeData<ChalkIr>) -> LifetimeData<ChalkIr> {
         lifetime
     }
 }
@@ -161,7 +161,7 @@ where
     type TypeFamily = TF;
 }
 
-impl Fold<ChalkIr> for Lifetime<ChalkIr> {
+impl Fold<ChalkIr> for LifetimeData<ChalkIr> {
     type Result = Self;
     fn fold_with(
         &self,
@@ -172,7 +172,7 @@ impl Fold<ChalkIr> for Lifetime<ChalkIr> {
     }
 }
 
-impl CastTo<Parameter<ChalkIr>> for Lifetime<ChalkIr> {
+impl CastTo<Parameter<ChalkIr>> for LifetimeData<ChalkIr> {
     fn cast_to(self) -> Parameter<ChalkIr> {
         Parameter(ParameterKind::Lifetime(self))
     }

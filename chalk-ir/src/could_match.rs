@@ -40,7 +40,11 @@ where
                 }
             }
 
-            fn zip_lifetimes(&mut self, _: &Lifetime<TF>, _: &Lifetime<TF>) -> Fallible<()> {
+            fn zip_lifetimes(
+                &mut self,
+                _: &LifetimeData<TF>,
+                _: &LifetimeData<TF>,
+            ) -> Fallible<()> {
                 Ok(())
             }
 

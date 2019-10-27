@@ -54,7 +54,7 @@ impl EnaVariable {
     /// Convert this inference variable into a lifetime. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a lifetime (we can't check it).
-    pub(crate) fn to_lifetime(self) -> Lifetime<ChalkIr> {
+    pub(crate) fn to_lifetime(self) -> LifetimeData<ChalkIr> {
         self.0.to_lifetime::<ChalkIr>()
     }
 }
@@ -90,8 +90,8 @@ impl From<Ty<ChalkIr>> for InferenceValue {
     }
 }
 
-impl From<Lifetime<ChalkIr>> for InferenceValue {
-    fn from(lifetime: Lifetime<ChalkIr>) -> Self {
+impl From<LifetimeData<ChalkIr>> for InferenceValue {
+    fn from(lifetime: LifetimeData<ChalkIr>) -> Self {
         InferenceValue::Bound(lifetime.cast())
     }
 }

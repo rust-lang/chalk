@@ -299,17 +299,19 @@ impl<'infer> AntiUnifier<'infer> {
 
     fn aggregate_lifetimes(
         &mut self,
-        l1: &Lifetime<ChalkIr>,
-        l2: &Lifetime<ChalkIr>,
-    ) -> Lifetime<ChalkIr> {
+        l1: &LifetimeData<ChalkIr>,
+        l2: &LifetimeData<ChalkIr>,
+    ) -> LifetimeData<ChalkIr> {
         match (l1, l2) {
-            (Lifetime::InferenceVar(_), _) | (_, Lifetime::InferenceVar(_)) => {
+            (LifetimeData::InferenceVar(_), _) | (_, LifetimeData::InferenceVar(_)) => {
                 self.new_lifetime_variable()
             }
 
-            (Lifetime::BoundVar(_), _) | (_, Lifetime::BoundVar(_)) => self.new_lifetime_variable(),
+            (LifetimeData::BoundVar(_), _) | (_, LifetimeData::BoundVar(_)) => {
+                self.new_lifetime_variable()
+            }
 
-            (Lifetime::Placeholder(_), Lifetime::Placeholder(_)) => {
+            (LifetimeData::Placeholder(_), LifetimeData::Placeholder(_)) => {
                 if l1 == l2 {
                     *l1
                 } else {
@@ -317,7 +319,7 @@ impl<'infer> AntiUnifier<'infer> {
                 }
             }
 
-            (Lifetime::Phantom(..), _) | (_, Lifetime::Phantom(..)) => unreachable!(),
+            (LifetimeData::Phantom(..), _) | (_, LifetimeData::Phantom(..)) => unreachable!(),
         }
     }
 
@@ -325,7 +327,7 @@ impl<'infer> AntiUnifier<'infer> {
         self.infer.new_variable(self.universe).to_ty()
     }
 
-    fn new_lifetime_variable(&mut self) -> Lifetime<ChalkIr> {
+    fn new_lifetime_variable(&mut self) -> LifetimeData<ChalkIr> {
         self.infer.new_variable(self.universe).to_lifetime()
     }
 }

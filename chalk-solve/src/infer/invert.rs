@@ -135,7 +135,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for Inverter<'q> {
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Lifetime<ChalkIr>> {
+    ) -> Fallible<LifetimeData<ChalkIr>> {
         let table = &mut self.table;
         Ok(self
             .inverted_lifetime

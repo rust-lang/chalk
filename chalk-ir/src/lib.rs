@@ -376,7 +376,7 @@ impl InferenceVar {
     }
 
     pub fn to_lifetime<TF: TypeFamily>(self) -> TF::Lifetime {
-        Lifetime::<TF>::InferenceVar(self).intern()
+        LifetimeData::<TF>::InferenceVar(self).intern()
     }
 }
 
@@ -393,7 +393,7 @@ impl<TF: TypeFamily> HasTypeFamily for QuantifiedTy<TF> {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Lifetime<TF: TypeFamily> {
+pub enum LifetimeData<TF: TypeFamily> {
     /// See TyData::Var(_).
     BoundVar(usize),
     InferenceVar(InferenceVar),
@@ -401,14 +401,14 @@ pub enum Lifetime<TF: TypeFamily> {
     Phantom(Void, PhantomData<TF>),
 }
 
-impl<TF: TypeFamily> Lifetime<TF> {
+impl<TF: TypeFamily> LifetimeData<TF> {
     fn intern(self) -> TF::Lifetime {
         TF::intern_lifetime(self)
     }
 
     /// If this is a `Lifetime::InferenceVar(d)`, returns `Some(d)` else `None`.
     pub fn inference_var(&self) -> Option<InferenceVar> {
-        if let Lifetime::InferenceVar(depth) = *self {
+        if let LifetimeData::InferenceVar(depth) = *self {
             Some(depth)
         } else {
             None
@@ -419,10 +419,10 @@ impl<TF: TypeFamily> Lifetime<TF> {
     /// needs to be shifted across binders. Meant for debug assertions.
     pub fn needs_shift(&self) -> bool {
         match self {
-            Lifetime::BoundVar(_) => true,
-            Lifetime::InferenceVar(_) => false,
-            Lifetime::Placeholder(_) => false,
-            Lifetime::Phantom(..) => unreachable!(),
+            LifetimeData::BoundVar(_) => true,
+            LifetimeData::InferenceVar(_) => false,
+            LifetimeData::Placeholder(_) => false,
+            LifetimeData::Phantom(..) => unreachable!(),
         }
     }
 }
@@ -440,7 +440,7 @@ pub struct PlaceholderIndex {
 
 impl PlaceholderIndex {
     pub fn to_lifetime<TF: TypeFamily>(self) -> TF::Lifetime {
-        Lifetime::<TF>::Placeholder(self).intern()
+        LifetimeData::<TF>::Placeholder(self).intern()
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
@@ -1187,7 +1187,7 @@ impl<TF: TypeFamily> Substitution<TF> {
                     _ => false,
                 },
                 ParameterKind::Lifetime(lifetime) => match lifetime.lookup_ref() {
-                    Lifetime::BoundVar(depth) => index == *depth,
+                    LifetimeData::BoundVar(depth) => index == *depth,
                     _ => false,
                 },
             })

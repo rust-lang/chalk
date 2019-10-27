@@ -7,9 +7,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::family::{ChalkIr, HasTypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
-    Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq, ProjectionTy,
-    QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TyData, TypeId, TypeName,
-    WhereClause,
+    Binders, Identifier, ImplId, LifetimeData, Parameter, ParameterKind, ProjectionEq,
+    ProjectionTy, QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TyData, TypeId,
+    TypeName, WhereClause,
 };
 use std::iter;
 
@@ -267,7 +267,7 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
     fn to_parameter(&self) -> Parameter<ChalkIr> {
         let &(binder, index) = self;
         match *binder {
-            ParameterKind::Lifetime(_) => Lifetime::BoundVar(index).cast(),
+            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(index).cast(),
             ParameterKind::Ty(_) => TyData::BoundVar(index).intern().cast(),
         }
     }

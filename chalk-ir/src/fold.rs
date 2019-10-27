@@ -137,7 +137,7 @@ impl<T: DefaultFreeVarFolder, TF: TypeFamily> FreeVarFolder<TF> for T {
         if T::forbid() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(Lifetime::<TF>::BoundVar(depth + binders).intern())
+            Ok(LifetimeData::<TF>::BoundVar(depth + binders).intern())
         }
     }
 }
@@ -456,18 +456,18 @@ pub fn super_fold_lifetime<TF: TypeFamily>(
     binders: usize,
 ) -> Fallible<TF::Lifetime> {
     match lifetime.lookup_ref() {
-        Lifetime::BoundVar(depth) => {
+        LifetimeData::BoundVar(depth) => {
             if *depth >= binders {
                 folder.fold_free_var_lifetime(depth - binders, binders)
             } else {
-                Ok(Lifetime::<TF>::BoundVar(*depth).intern())
+                Ok(LifetimeData::<TF>::BoundVar(*depth).intern())
             }
         }
-        Lifetime::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
-        Lifetime::Placeholder(universe) => {
+        LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
+        LifetimeData::Placeholder(universe) => {
             folder.fold_free_placeholder_lifetime(*universe, binders)
         }
-        Lifetime::Phantom(..) => unreachable!(),
+        LifetimeData::Phantom(..) => unreachable!(),
     }
 }
 

@@ -103,13 +103,13 @@ impl<TF: TypeFamily> Debug for QuantifiedTy<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for Lifetime<TF> {
+impl<TF: TypeFamily> Debug for LifetimeData<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            Lifetime::BoundVar(depth) => write!(fmt, "'^{}", depth),
-            Lifetime::InferenceVar(var) => write!(fmt, "'{:?}", var),
-            Lifetime::Placeholder(index) => write!(fmt, "'{:?}", index),
-            Lifetime::Phantom(..) => unreachable!(),
+            LifetimeData::BoundVar(depth) => write!(fmt, "'^{}", depth),
+            LifetimeData::InferenceVar(var) => write!(fmt, "'{:?}", var),
+            LifetimeData::Placeholder(index) => write!(fmt, "'{:?}", index),
+            LifetimeData::Phantom(..) => unreachable!(),
         }
     }
 }

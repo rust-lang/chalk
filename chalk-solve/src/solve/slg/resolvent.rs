@@ -276,7 +276,7 @@ impl<'t> AnswerSubstitutor<'t> {
     fn unify_free_answer_var(
         &mut self,
         answer_depth: usize,
-        pending: ParameterKind<&Ty<ChalkIr>, &Lifetime<ChalkIr>>,
+        pending: ParameterKind<&Ty<ChalkIr>, &LifetimeData<ChalkIr>>,
     ) -> Fallible<bool> {
         // This variable is bound in the answer, not free, so it
         // doesn't represent a reference into the answer substitution.
@@ -383,40 +383,40 @@ impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
 
     fn zip_lifetimes(
         &mut self,
-        answer: &Lifetime<ChalkIr>,
-        pending: &Lifetime<ChalkIr>,
+        answer: &LifetimeData<ChalkIr>,
+        pending: &LifetimeData<ChalkIr>,
     ) -> Fallible<()> {
         if let Some(pending) = self.table.normalize_lifetime(pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
-        if let Lifetime::BoundVar(answer_depth) = answer {
+        if let LifetimeData::BoundVar(answer_depth) = answer {
             if self.unify_free_answer_var(*answer_depth, ParameterKind::Lifetime(pending))? {
                 return Ok(());
             }
         }
 
         match (answer, pending) {
-            (Lifetime::BoundVar(answer_depth), Lifetime::BoundVar(pending_depth)) => {
+            (LifetimeData::BoundVar(answer_depth), LifetimeData::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (Lifetime::Placeholder(_), Lifetime::Placeholder(_)) => {
+            (LifetimeData::Placeholder(_), LifetimeData::Placeholder(_)) => {
                 assert_eq!(answer, pending);
                 Ok(())
             }
 
-            (Lifetime::InferenceVar(_), _) | (_, Lifetime::InferenceVar(_)) => panic!(
+            (LifetimeData::InferenceVar(_), _) | (_, LifetimeData::InferenceVar(_)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
                 answer, pending,
             ),
 
-            (Lifetime::BoundVar(_), _) | (Lifetime::Placeholder(_), _) => panic!(
+            (LifetimeData::BoundVar(_), _) | (LifetimeData::Placeholder(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),
 
-            (Lifetime::Phantom(..), _) => unreachable!(),
+            (LifetimeData::Phantom(..), _) => unreachable!(),
         }
     }
 

@@ -110,7 +110,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for Canonicalizer<'q> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Lifetime<ChalkIr>> {
+    ) -> Fallible<LifetimeData<ChalkIr>> {
         self.max_universe = max(self.max_universe, universe.ui);
         Ok(universe.to_lifetime::<ChalkIr>())
     }
@@ -148,7 +148,7 @@ impl<'q> InferenceFolder<ChalkIr> for Canonicalizer<'q> {
         &mut self,
         var: InferenceVar,
         binders: usize,
-    ) -> Fallible<Lifetime<ChalkIr>> {
+    ) -> Fallible<LifetimeData<ChalkIr>> {
         debug_heading!(
             "fold_inference_lifetime(depth={:?}, binders={:?})",
             var,
@@ -164,7 +164,7 @@ impl<'q> InferenceFolder<ChalkIr> for Canonicalizer<'q> {
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(Lifetime::BoundVar(position + binders))
+                Ok(LifetimeData::BoundVar(position + binders))
             }
         }
     }

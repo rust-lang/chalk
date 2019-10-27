@@ -463,7 +463,11 @@ impl MayInvalidate {
         }
     }
 
-    fn aggregate_lifetimes(&mut self, _: &Lifetime<ChalkIr>, _: &Lifetime<ChalkIr>) -> bool {
+    fn aggregate_lifetimes(
+        &mut self,
+        _: &LifetimeData<ChalkIr>,
+        _: &LifetimeData<ChalkIr>,
+    ) -> bool {
         true
     }
 

@@ -1038,14 +1038,14 @@ impl LowerParameter for Parameter {
 }
 
 trait LowerLifetime {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>>;
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::LifetimeData<ChalkIr>>;
 }
 
 impl LowerLifetime for Lifetime {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::LifetimeData<ChalkIr>> {
         match *self {
             Lifetime::Id { name } => match env.lookup_lifetime(name)? {
-                LifetimeLookup::Parameter(d) => Ok(chalk_ir::Lifetime::BoundVar(d)),
+                LifetimeLookup::Parameter(d) => Ok(chalk_ir::LifetimeData::BoundVar(d)),
             },
         }
     }
