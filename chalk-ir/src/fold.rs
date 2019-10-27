@@ -380,7 +380,7 @@ where
                     folder.fold_free_placeholder_ty(ui, binders)
                 }
 
-                TypeName::TypeKindId(_) | TypeName::AssociatedType(_) => {
+                TypeName::TypeKindId(_) | TypeName::AssociatedType(_) | TypeName::Error => {
                     let parameters = parameters.fold_with(folder, binders)?;
                     Ok(ApplicationTy { name, parameters }.cast().intern())
                 }

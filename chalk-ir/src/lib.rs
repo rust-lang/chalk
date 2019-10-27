@@ -128,6 +128,10 @@ pub enum TypeName {
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(TypeId),
+
+    /// This can be used to represent an error, e.g. during name resolution of a type.
+    /// Chalk itself will not produce this, just pass it through when given.
+    Error,
 }
 
 /// An universe index is how a universally quantified parameter is
