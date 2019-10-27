@@ -20,7 +20,7 @@ impl InferenceTable {
     /// See also `InferenceTable::canonicalize`, which -- during real
     /// processing -- is often used to capture the "current state" of
     /// variables.
-    pub(crate) fn normalize_deep<T: Fold<ChalkIr>>(&mut self, value: &T) -> T::Result {
+    pub(crate) fn normalize_deep<T: Fold<ChalkIr, ChalkIr>>(&mut self, value: &T) -> T::Result {
         value
             .fold_with(&mut DeepNormalizer { table: self }, 0)
             .unwrap()

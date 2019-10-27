@@ -9,7 +9,7 @@ pub struct Subst<'s, TF: TypeFamily> {
 }
 
 impl<'s, TF: TypeFamily> Subst<'s, TF> {
-    pub fn apply<T: Fold<TF>>(parameters: &[Parameter<TF>], value: &T) -> T::Result {
+    pub fn apply<T: Fold<TF, TF>>(parameters: &[Parameter<TF>], value: &T) -> T::Result {
         value.fold_with(&mut Subst { parameters }, 0).unwrap()
     }
 }

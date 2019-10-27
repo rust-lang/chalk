@@ -13,8 +13,8 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
 
-    let name = input.ident;
-    let body = derive_fold_body(input.data);
+    let type_name = input.ident;
+    let body = derive_fold_body(&type_name, input.data);
 
     if let Some(attr) = input
         .attrs
@@ -23,7 +23,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     {
         // Hardcoded type-family:
         //
-        // impl Fold<ChalkIr> for Type {
+        // impl Fold<ChalkIr, ChalkIr> for Type {
         //     type Result = Self;
         // }
         let arg = attr
@@ -31,12 +31,12 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
             .expect("Expected has_type_family argument");
 
         return TokenStream::from(quote! {
-            impl #impl_generics Fold < #arg > for #name #ty_generics #where_clause_ref {
+            impl #impl_generics Fold < #arg, #arg > for #type_name #ty_generics #where_clause_ref {
                 type Result = Self;
 
                 fn fold_with(
                     &self,
-                    folder: &mut dyn Folder < #arg >,
+                    folder: &mut dyn Folder < #arg, #arg >,
                     binders: usize,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                     #body
@@ -64,30 +64,43 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         //
         // Example:
         //
-        // impl<T> Fold<<T as HasTypeFamily>::TypeFamily> for Binders<T>
+        // impl<T, _TF, _TTF, _U> Fold<_TF, _TTF> for Binders<T>
         // where
-        //     T: HasTypeFamily,
-        //     T: Fold<<T as HasTypeFamily>::TypeFamily, Result = T>
+        //     T: HasTypeFamily<TypeFamily = _TF>,
+        //     T: Fold<_TF, _TTF, Result = _U>,
+        //     U: HasTypeFamily<TypeFamily = _TTF>,
         // {
-        //     type Result = Binders<T>;
+        //     type Result = Binders<_U>;
         // }
 
-        let tf = quote! { <#param as HasTypeFamily>::TypeFamily };
-        let mut where_clause = where_clause_ref.cloned();
+        let mut impl_generics = input.generics.clone();
+        impl_generics.params.extend(vec![
+            GenericParam::Type(syn::parse(quote! { _TF: TypeFamily }.into()).unwrap()),
+            GenericParam::Type(syn::parse(quote! { _TTF: TypeFamily }.into()).unwrap()),
+            GenericParam::Type(
+                syn::parse(quote! { _U: HasTypeFamily<TypeFamily = _TTF> }.into()).unwrap(),
+            ),
+        ]);
+
+        let mut where_clause = where_clause_ref
+            .cloned()
+            .unwrap_or_else(|| syn::parse2(quote![where]).unwrap());
         where_clause
-            .get_or_insert(syn::parse2(quote![where]).unwrap())
             .predicates
-            .push(syn::parse2(quote! { #param: Fold<#tf, Result = #param> }).unwrap());
+            .push(syn::parse2(quote! { #param: HasTypeFamily<TypeFamily = _TF> }).unwrap());
+        where_clause
+            .predicates
+            .push(syn::parse2(quote! { #param: Fold<_TF, _TTF, Result = _U> }).unwrap());
 
         return TokenStream::from(quote! {
-            impl #impl_generics Fold < #tf > for #name < #param >
+            impl #impl_generics Fold < _TF, _TTF > for #type_name < #param >
                 #where_clause
             {
-                type Result = #name < #param >;
+                type Result = #type_name < _U >;
 
                 fn fold_with(
                     &self,
-                    folder: &mut dyn Folder < #tf >,
+                    folder: &mut dyn Folder < _TF, _TTF >,
                     binders: usize,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                     #body
@@ -100,23 +113,29 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     //
     // Example:
     //
-    // impl<TF> Fold<TF> for Foo<TF>
+    // impl<TF, _TTF> Fold<TF, _TTF> for Foo<TF>
     // where
     //     TF: HasTypeFamily,
+    //     _TTF: HasTypeFamily,
     // {
-    //     type Result = Foo<TF>;
+    //     type Result = Foo<_TTF>;
     // }
 
     if let Some(tf) = is_type_family(&generic_param0) {
+        let mut impl_generics = input.generics.clone();
+        impl_generics.params.extend(vec![GenericParam::Type(
+            syn::parse(quote! { _TTF: TypeFamily }.into()).unwrap(),
+        )]);
+
         return TokenStream::from(quote! {
-            impl #impl_generics Fold < #tf > for #name < #tf >
+            impl #impl_generics Fold < #tf, _TTF > for #type_name < #tf >
                 #where_clause_ref
             {
-                type Result = #name < #tf >;
+                type Result = #type_name < _TTF >;
 
                 fn fold_with(
                     &self,
-                    folder: &mut dyn Folder < #tf >,
+                    folder: &mut dyn Folder < #tf, _TTF >,
                     binders: usize,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                     #body
@@ -129,7 +148,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
 }
 
 /// Generates the body of the Fold impl
-fn derive_fold_body(data: Data) -> proc_macro2::TokenStream {
+fn derive_fold_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream {
     match data {
         Data::Struct(s) => {
             let fields = s.fields.into_iter().map(|f| {
@@ -137,7 +156,7 @@ fn derive_fold_body(data: Data) -> proc_macro2::TokenStream {
                 quote! { #name: self.#name.fold_with(folder, binders)? }
             });
             quote! {
-                Ok(Self {
+                Ok(#type_name {
                     #(#fields),*
                 })
             }
@@ -149,8 +168,8 @@ fn derive_fold_body(data: Data) -> proc_macro2::TokenStream {
                     .map(|index| format_ident!("a{}", index))
                     .collect();
                 quote! {
-                    Self::#variant( #(ref #names),* ) => {
-                        Ok(Self::#variant( #(#names.fold_with(folder, binders)?),* ))
+                    #type_name::#variant( #(ref #names),* ) => {
+                        Ok(#type_name::#variant( #(#names.fold_with(folder, binders)?),* ))
                     }
                 }
             });

@@ -28,7 +28,10 @@ impl InferenceTable {
     ///
     /// A substitution mapping from the free variables to their re-bound form is
     /// also returned.
-    pub(crate) fn canonicalize<T: Fold<ChalkIr>>(&mut self, value: &T) -> Canonicalized<T::Result> {
+    pub(crate) fn canonicalize<T: Fold<ChalkIr, ChalkIr>>(
+        &mut self,
+        value: &T,
+    ) -> Canonicalized<T::Result> {
         debug!("canonicalize({:#?})", value);
         let mut q = Canonicalizer {
             table: self,

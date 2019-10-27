@@ -933,7 +933,7 @@ impl<T> Binders<T> {
     /// forall<?0, ?1> will become forall<?0, ?1, ?2> where ?0 is the fresh variable
     pub fn with_fresh_type_var<U, TF>(
         self,
-        op: impl FnOnce(<T as Fold<TF>>::Result, Ty<TF>) -> U,
+        op: impl FnOnce(<T as Fold<TF, TF>>::Result, Ty<TF>) -> U,
     ) -> Binders<U>
     where
         TF: TypeFamily,
@@ -957,7 +957,7 @@ impl<T> Binders<T> {
 
 impl<T, TF> Binders<T>
 where
-    T: Fold<TF> + HasTypeFamily<TypeFamily = TF>,
+    T: Fold<TF, TF> + HasTypeFamily<TypeFamily = TF>,
     TF: TypeFamily,
 {
     /// Substitute `parameters` for the variables introduced by these

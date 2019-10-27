@@ -16,7 +16,7 @@ pub(crate) fn truncate<T>(
     value: &T,
 ) -> Truncated<T::Result>
 where
-    T: Fold<ChalkIr>,
+    T: Fold<ChalkIr, ChalkIr>,
     T::Result: Debug,
 {
     debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
@@ -71,7 +71,7 @@ impl<'infer> Truncater<'infer> {
     }
 }
 
-impl<'infer> TypeFolder<ChalkIr> for Truncater<'infer> {
+impl<'infer> TypeFolder<ChalkIr, ChalkIr> for Truncater<'infer> {
     fn fold_ty(&mut self, ty: &Ty<ChalkIr>, binders: usize) -> Fallible<Ty<ChalkIr>> {
         if let Some(normalized_ty) = self.infer.normalize_shallow(ty) {
             return self.fold_ty(&normalized_ty, binders);

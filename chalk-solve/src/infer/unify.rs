@@ -80,7 +80,7 @@ impl<'t> Unifier<'t> {
     /// environment, we invoke this routine.
     fn sub_unify<T>(&mut self, ty1: T, ty2: T) -> Fallible<()>
     where
-        T: Zip<ChalkIr> + Fold<ChalkIr>,
+        T: Zip<ChalkIr> + Fold<ChalkIr, ChalkIr>,
     {
         let sub_unifier = Unifier::new(self.table, &self.environment);
         let UnificationResult { goals, constraints } = sub_unifier.unify(&ty1, &ty2)?;
@@ -398,7 +398,7 @@ impl<'t> Zipper<ChalkIr> for Unifier<'t> {
 
     fn zip_binders<T>(&mut self, _: &Binders<T>, _: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<ChalkIr> + Fold<ChalkIr, Result = T>,
+        T: Zip<ChalkIr> + Fold<ChalkIr, ChalkIr, Result = T>,
     {
         panic!("cannot unify things with binders (other than types)")
     }
