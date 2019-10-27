@@ -9,7 +9,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
     let name = input.ident;
-    let (_, ty_generics, where_clause_ref) = input.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
     let body = derive_fold_body(input.data);
 
     // Allow custom Fold parameter using the `#[has_type_family(Param)]` attribute
@@ -26,29 +26,22 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         ty_generics.to_token_stream()
     };
 
-    let mut impl_generics = input.generics.clone();
     let mut where_clause = where_clause_ref.cloned();
 
-    // if any impl_generics G : TypeFamily:
-    // #impl_generics += TF: TypeFamily
+    // if any impl_generics G : HasTypeFamily:
     // #generics = TF
-    // #where_clause += G: HasTypeFamily<TypeFamily = TF> + Fold<TF, Result = G>
+    // #where_clause += G: Fold<TF, Result = G>
     if let Some(param) = input
         .generics
         .params
         .iter()
         .find_map(|p| is_type_family_param(p))
     {
-        impl_generics.params.push(GenericParam::Type(
-            syn::parse(quote! { TF: TypeFamily }.into()).unwrap(),
-        ));
-        generics = quote! { <TF> };
+        let tf = quote! { <#param as HasTypeFamily>::TypeFamily };
+
+        generics = quote! { <#tf> };
         // TODO extend where clause instead of overriding
-        where_clause = syn::parse(
-            quote! { where #param: HasTypeFamily<TypeFamily = TF> + Fold<TF, Result = #param> }
-                .into(),
-        )
-        .unwrap()
+        where_clause = syn::parse2(quote! { where #param: Fold<#tf, Result = #param> }).unwrap()
     }
 
     TokenStream::from(quote! {
