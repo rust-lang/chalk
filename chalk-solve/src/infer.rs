@@ -142,8 +142,8 @@ impl InferenceTable {
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
     pub(crate) fn normalize_lifetime(
         &mut self,
-        leaf: &LifetimeData<ChalkIr>,
-    ) -> Option<LifetimeData<ChalkIr>> {
+        leaf: &Lifetime<ChalkIr>,
+    ) -> Option<Lifetime<ChalkIr>> {
         let var = EnaVariable::from(leaf.inference_var()?);
         let v1 = self.probe_lifetime_var(var)?;
         assert!(!v1.needs_shift());
@@ -180,7 +180,7 @@ impl InferenceTable {
     ///
     /// This method is only valid for inference variables of kind
     /// lifetime. If this variable is of a different kind, then the function may panic.
-    fn probe_lifetime_var(&mut self, var: EnaVariable) -> Option<LifetimeData<ChalkIr>> {
+    fn probe_lifetime_var(&mut self, var: EnaVariable) -> Option<Lifetime<ChalkIr>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().lifetime().unwrap().clone()),

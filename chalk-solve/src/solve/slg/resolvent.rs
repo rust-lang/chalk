@@ -276,7 +276,7 @@ impl<'t> AnswerSubstitutor<'t> {
     fn unify_free_answer_var(
         &mut self,
         answer_depth: usize,
-        pending: ParameterKind<&Ty<ChalkIr>, &LifetimeData<ChalkIr>>,
+        pending: ParameterKind<&Ty<ChalkIr>, &Lifetime<ChalkIr>>,
     ) -> Fallible<bool> {
         // This variable is bound in the answer, not free, so it
         // doesn't represent a reference into the answer substitution.
@@ -383,20 +383,20 @@ impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
 
     fn zip_lifetimes(
         &mut self,
-        answer: &LifetimeData<ChalkIr>,
-        pending: &LifetimeData<ChalkIr>,
+        answer: &Lifetime<ChalkIr>,
+        pending: &Lifetime<ChalkIr>,
     ) -> Fallible<()> {
         if let Some(pending) = self.table.normalize_lifetime(pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
-        if let LifetimeData::BoundVar(answer_depth) = answer {
+        if let LifetimeData::BoundVar(answer_depth) = answer.data() {
             if self.unify_free_answer_var(*answer_depth, ParameterKind::Lifetime(pending))? {
                 return Ok(());
             }
         }
 
-        match (answer, pending) {
+        match (answer.data(), pending.data()) {
             (LifetimeData::BoundVar(answer_depth), LifetimeData::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }

@@ -219,7 +219,11 @@ impl<'t> Unifier<'t> {
 
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|idx| LifetimeData::Placeholder(PlaceholderIndex { ui, idx }).cast())
+            .map(|idx| {
+                LifetimeData::Placeholder(PlaceholderIndex { ui, idx })
+                    .intern()
+                    .cast()
+            })
             .collect();
 
         let max_universe = self.table.max_universe;
@@ -267,7 +271,11 @@ impl<'t> Unifier<'t> {
     ) -> Fallible<()> {
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|idx| LifetimeData::Placeholder(PlaceholderIndex { ui, idx }).cast())
+            .map(|idx| {
+                LifetimeData::Placeholder(PlaceholderIndex { ui, idx })
+                    .intern()
+                    .cast()
+            })
             .collect();
 
         let ty1 = ty1.substitute(&lifetimes1);
@@ -307,8 +315,8 @@ impl<'t> Unifier<'t> {
 
     fn unify_lifetime_lifetime(
         &mut self,
-        a: &LifetimeData<ChalkIr>,
-        b: &LifetimeData<ChalkIr>,
+        a: &Lifetime<ChalkIr>,
+        b: &Lifetime<ChalkIr>,
     ) -> Fallible<()> {
         if let Some(n_a) = self.table.normalize_lifetime(a) {
             return self.unify_lifetime_lifetime(&n_a, b);
@@ -318,7 +326,7 @@ impl<'t> Unifier<'t> {
 
         debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
 
-        match (a, b) {
+        match (a.data(), b.data()) {
             (&LifetimeData::InferenceVar(var_a), &LifetimeData::InferenceVar(var_b)) => {
                 let var_a = EnaVariable::from(var_a);
                 let var_b = EnaVariable::from(var_b);
@@ -339,7 +347,7 @@ impl<'t> Unifier<'t> {
                         "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
                         var, var_ui, idx.ui
                     );
-                    let v = LifetimeData::Placeholder(idx);
+                    let v = LifetimeData::Placeholder(idx).intern();
                     self.table
                         .unify
                         .unify_var_value(var, InferenceValue::from(v))
@@ -371,7 +379,7 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    fn push_lifetime_eq_constraint(&mut self, a: LifetimeData<ChalkIr>, b: LifetimeData<ChalkIr>) {
+    fn push_lifetime_eq_constraint(&mut self, a: Lifetime<ChalkIr>, b: Lifetime<ChalkIr>) {
         self.constraints.push(InEnvironment::new(
             self.environment,
             Constraint::LifetimeEq(a, b),
@@ -384,11 +392,7 @@ impl<'t> Zipper<ChalkIr> for Unifier<'t> {
         self.unify_ty_ty(a, b)
     }
 
-    fn zip_lifetimes(
-        &mut self,
-        a: &LifetimeData<ChalkIr>,
-        b: &LifetimeData<ChalkIr>,
-    ) -> Fallible<()> {
+    fn zip_lifetimes(&mut self, a: &Lifetime<ChalkIr>, b: &Lifetime<ChalkIr>) -> Fallible<()> {
         self.unify_lifetime_lifetime(a, b)
     }
 
@@ -435,7 +439,7 @@ impl<'u, 't> PlaceholderFolder<ChalkIr> for OccursCheck<'u, 't> {
         &mut self,
         ui: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<LifetimeData<ChalkIr>> {
+    ) -> Fallible<Lifetime<ChalkIr>> {
         if self.universe_index < ui.ui {
             // Scenario is like:
             //
@@ -505,7 +509,7 @@ impl<'u, 't> InferenceFolder<ChalkIr> for OccursCheck<'u, 't> {
         &mut self,
         var: InferenceVar,
         binders: usize,
-    ) -> Fallible<LifetimeData<ChalkIr>> {
+    ) -> Fallible<Lifetime<ChalkIr>> {
         // a free existentially bound region; find the
         // inference variable it corresponds to
         let var = EnaVariable::from(var);

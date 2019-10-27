@@ -243,7 +243,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UCollector<'q> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<LifetimeData<ChalkIr>> {
+    ) -> Fallible<Lifetime<ChalkIr>> {
         self.universes.add(universe.ui);
         Ok(universe.to_lifetime::<ChalkIr>())
     }
@@ -287,7 +287,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UMapToCanonical<'q> {
         &mut self,
         universe0: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<LifetimeData<ChalkIr>> {
+    ) -> Fallible<Lifetime<ChalkIr>> {
         let universe = self.universes.map_universe_to_canonical(universe0.ui);
         Ok(PlaceholderIndex {
             ui: universe,
@@ -323,7 +323,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for UMapFromCanonical<'q> {
         &mut self,
         universe0: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<LifetimeData<ChalkIr>> {
+    ) -> Fallible<Lifetime<ChalkIr>> {
         let universe = self.universes.map_universe_from_canonical(universe0.ui);
         Ok(PlaceholderIndex {
             ui: universe,

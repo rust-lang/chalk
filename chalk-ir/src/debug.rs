@@ -71,7 +71,7 @@ impl Debug for TypeName {
 }
 impl<TF: TypeFamily> Debug for Ty<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?}", &self.interned)
+        write!(fmt, "{:?}", self.data())
     }
 }
 
@@ -100,6 +100,12 @@ impl<TF: TypeFamily> Debug for QuantifiedTy<TF> {
         // FIXME -- we should introduce some names or something here
         let QuantifiedTy { num_binders, ty } = self;
         write!(fmt, "for<{}> {:?}", num_binders, ty)
+    }
+}
+
+impl<TF: TypeFamily> Debug for Lifetime<TF> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{:?}", self.data())
     }
 }
 

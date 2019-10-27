@@ -26,7 +26,7 @@ pub trait Zipper<TF: TypeFamily> {
 
     /// Indicates that the two lifetimes `a` and `b` were found in
     /// matching spots, beneath `binders` levels of binders.
-    fn zip_lifetimes(&mut self, a: &LifetimeData<TF>, b: &LifetimeData<TF>) -> Fallible<()>;
+    fn zip_lifetimes(&mut self, a: &Lifetime<TF>, b: &Lifetime<TF>) -> Fallible<()>;
 
     /// Zips two values appearing beneath binders.
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
@@ -43,7 +43,7 @@ where
         (**self).zip_tys(a, b)
     }
 
-    fn zip_lifetimes(&mut self, a: &LifetimeData<TF>, b: &LifetimeData<TF>) -> Fallible<()> {
+    fn zip_lifetimes(&mut self, a: &Lifetime<TF>, b: &Lifetime<TF>) -> Fallible<()> {
         (**self).zip_lifetimes(a, b)
     }
 
@@ -127,7 +127,7 @@ impl<TF: TypeFamily> Zip<TF> for Ty<TF> {
     }
 }
 
-impl<TF: TypeFamily> Zip<TF> for LifetimeData<TF> {
+impl<TF: TypeFamily> Zip<TF> for Lifetime<TF> {
     fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         zipper.zip_lifetimes(a, b)
     }

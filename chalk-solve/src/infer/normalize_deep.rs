@@ -48,7 +48,7 @@ impl<'table> InferenceFolder<ChalkIr> for DeepNormalizer<'table> {
         &mut self,
         var: InferenceVar,
         binders: usize,
-    ) -> Fallible<LifetimeData<ChalkIr>> {
+    ) -> Fallible<Lifetime<ChalkIr>> {
         let var = EnaVariable::from(var);
         match self.table.probe_lifetime_var(var) {
             Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(binders)),

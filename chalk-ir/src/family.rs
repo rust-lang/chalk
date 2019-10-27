@@ -1,14 +1,8 @@
-use crate::cast::CastTo;
 use crate::debug::Angle;
-use crate::fold::{Fold, Folder, ReflexiveFold};
 use crate::tls;
-use crate::zip::Zip;
 use crate::LifetimeData;
-use crate::Parameter;
-use crate::ParameterKind;
 use crate::ProjectionTy;
 use crate::TyData;
-use chalk_engine::fallible::Fallible;
 use std::fmt::{self, Debug};
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -35,15 +29,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// "Interned" representation of lifetimes. You can use the
     /// `Lookup` trait to convert this to a `Lifetime<Self>`.
-    type Lifetime: Debug
-        + Clone
-        + Eq
-        + Ord
-        + Hash
-        + ReflexiveFold<Self>
-        + Zip<Self>
-        + Lookup<LifetimeData<Self>>
-        + CastTo<Parameter<Self>>;
+    type InternedLifetime: Debug + Clone + Eq + Ord + Hash;
 
     /// Prints the debug representation of a projection. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -63,7 +49,9 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" type from `lifetime`. You can also use
     /// the `Lifetime::intern` method, which is preferred.
-    fn intern_lifetime(lifetime: LifetimeData<Self>) -> Self::Lifetime;
+    fn intern_lifetime(lifetime: LifetimeData<Self>) -> Self::InternedLifetime;
+
+    fn lifetime_data(lifetime: &Self::InternedLifetime) -> &LifetimeData<Self>;
 }
 
 /// Implemented by types that have an associated type family (which
@@ -77,24 +65,6 @@ pub trait HasTypeFamily {
     type TypeFamily: TypeFamily;
 }
 
-/// Given an interned representation, convert to the uninterned enum
-/// `DataType`. Used to (e.g.) convert from `Ty<TF>` to `Ty<TF>`.
-pub trait Lookup<DataType> {
-    fn lookup_ref(&self) -> &DataType;
-
-    fn lookup(self) -> DataType;
-}
-
-impl Lookup<LifetimeData<ChalkIr>> for LifetimeData<ChalkIr> {
-    fn lookup_ref(&self) -> &LifetimeData<ChalkIr> {
-        self
-    }
-
-    fn lookup(self) -> LifetimeData<ChalkIr> {
-        self
-    }
-}
-
 /// The default "type family" and the only type family used by chalk
 /// itself. In this family, no interning actually occurs.
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -102,7 +72,7 @@ pub struct ChalkIr {}
 
 impl TypeFamily for ChalkIr {
     type InternedType = TyData<ChalkIr>;
-    type Lifetime = LifetimeData<ChalkIr>;
+    type InternedLifetime = LifetimeData<ChalkIr>;
 
     fn debug_projection(
         projection: &ProjectionTy<ChalkIr>,
@@ -128,6 +98,10 @@ impl TypeFamily for ChalkIr {
     }
 
     fn intern_lifetime(lifetime: LifetimeData<ChalkIr>) -> LifetimeData<ChalkIr> {
+        lifetime
+    }
+
+    fn lifetime_data(lifetime: &LifetimeData<ChalkIr>) -> &LifetimeData<ChalkIr> {
         lifetime
     }
 }
@@ -159,21 +133,4 @@ where
     TF: TypeFamily,
 {
     type TypeFamily = TF;
-}
-
-impl Fold<ChalkIr> for LifetimeData<ChalkIr> {
-    type Result = Self;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<ChalkIr>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        folder.fold_lifetime(self, binders)
-    }
-}
-
-impl CastTo<Parameter<ChalkIr>> for LifetimeData<ChalkIr> {
-    fn cast_to(self) -> Parameter<ChalkIr> {
-        Parameter(ParameterKind::Lifetime(self))
-    }
 }

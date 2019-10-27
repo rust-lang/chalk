@@ -267,7 +267,7 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
     fn to_parameter(&self) -> Parameter<ChalkIr> {
         let &(binder, index) = self;
         match *binder {
-            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(index).cast(),
+            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(index).intern().cast(),
             ParameterKind::Ty(_) => TyData::BoundVar(index).intern().cast(),
         }
     }
