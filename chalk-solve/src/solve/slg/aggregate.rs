@@ -166,8 +166,8 @@ struct AntiUnifier<'infer> {
 }
 
 impl<'infer> AntiUnifier<'infer> {
-    fn aggregate_tys(&mut self, ty0: &TyData<ChalkIr>, ty1: &TyData<ChalkIr>) -> TyData<ChalkIr> {
-        match (ty0, ty1) {
+    fn aggregate_tys(&mut self, ty0: &Ty<ChalkIr>, ty1: &Ty<ChalkIr>) -> Ty<ChalkIr> {
+        match (ty0.data(), ty1.data()) {
             // If we see bound things on either side, just drop in a
             // fresh variable. This means we will sometimes
             // overgeneralize.  So for example if we have two
@@ -207,7 +207,7 @@ impl<'infer> AntiUnifier<'infer> {
         &mut self,
         apply1: &ApplicationTy<ChalkIr>,
         apply2: &ApplicationTy<ChalkIr>,
-    ) -> TyData<ChalkIr> {
+    ) -> Ty<ChalkIr> {
         let ApplicationTy {
             name: name1,
             parameters: parameters1,
@@ -218,7 +218,7 @@ impl<'infer> AntiUnifier<'infer> {
         } = apply2;
 
         self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
-            .map(|(&name, parameters)| TyData::Apply(ApplicationTy { name, parameters }))
+            .map(|(&name, parameters)| TyData::Apply(ApplicationTy { name, parameters }).intern())
             .unwrap_or_else(|| self.new_variable())
     }
 
@@ -226,7 +226,7 @@ impl<'infer> AntiUnifier<'infer> {
         &mut self,
         proj1: &ProjectionTy<ChalkIr>,
         proj2: &ProjectionTy<ChalkIr>,
-    ) -> TyData<ChalkIr> {
+    ) -> Ty<ChalkIr> {
         let ProjectionTy {
             associated_ty_id: name1,
             parameters: parameters1,
@@ -242,6 +242,7 @@ impl<'infer> AntiUnifier<'infer> {
                     associated_ty_id,
                     parameters,
                 })
+                .intern()
             })
             .unwrap_or_else(|| self.new_variable())
     }
@@ -320,7 +321,7 @@ impl<'infer> AntiUnifier<'infer> {
         }
     }
 
-    fn new_variable(&mut self) -> TyData<ChalkIr> {
+    fn new_variable(&mut self) -> Ty<ChalkIr> {
         self.infer.new_variable(self.universe).to_ty()
     }
 

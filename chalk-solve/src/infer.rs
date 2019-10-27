@@ -126,7 +126,7 @@ impl InferenceTable {
     /// `binders` is the number of binders under which `leaf` appears;
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
-    pub(crate) fn normalize_shallow(&mut self, leaf: &TyData<ChalkIr>) -> Option<TyData<ChalkIr>> {
+    pub(crate) fn normalize_shallow(&mut self, leaf: &Ty<ChalkIr>) -> Option<Ty<ChalkIr>> {
         let var = EnaVariable::from(leaf.inference_var()?);
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
@@ -166,7 +166,7 @@ impl InferenceTable {
     /// This method is only valid for inference variables of kind
     /// type. If this variable is of a different kind, then the
     /// function may panic.
-    fn probe_ty_var(&mut self, var: EnaVariable) -> Option<TyData<ChalkIr>> {
+    fn probe_ty_var(&mut self, var: EnaVariable) -> Option<Ty<ChalkIr>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().ty().unwrap().clone()),

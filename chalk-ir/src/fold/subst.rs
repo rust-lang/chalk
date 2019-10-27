@@ -15,7 +15,7 @@ impl<'s, TF: TypeFamily> Subst<'s, TF> {
 }
 
 impl<TF: TypeFamily> QuantifiedTy<TF> {
-    pub fn substitute(&self, parameters: &[Parameter<TF>]) -> TF::Type {
+    pub fn substitute(&self, parameters: &[Parameter<TF>]) -> Ty<TF> {
         assert_eq!(self.num_binders, parameters.len());
         Subst::apply(parameters, &self.ty)
     }
@@ -24,7 +24,7 @@ impl<TF: TypeFamily> QuantifiedTy<TF> {
 impl<'b, TF: TypeFamily> DefaultTypeFolder for Subst<'b, TF> {}
 
 impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         if depth >= self.parameters.len() {
             Ok(TyData::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
         } else {

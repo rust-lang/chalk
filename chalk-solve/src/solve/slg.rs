@@ -171,7 +171,7 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
             | DomainGoal::IsUpstream(ty)
             | DomainGoal::DownstreamType(ty)
             | DomainGoal::IsFullyVisible(ty)
-            | DomainGoal::IsLocal(ty) => match ty {
+            | DomainGoal::IsLocal(ty) => match ty.data() {
                 TyData::InferenceVar(_) => return Err(Floundered),
                 _ => {}
             },
@@ -411,8 +411,8 @@ impl MayInvalidate {
     }
 
     // Returns true if the two types could be unequal.
-    fn aggregate_tys(&mut self, new: &TyData<ChalkIr>, current: &TyData<ChalkIr>) -> bool {
-        match (new, current) {
+    fn aggregate_tys(&mut self, new: &Ty<ChalkIr>, current: &Ty<ChalkIr>) -> bool {
+        match (new.data(), current.data()) {
             (_, TyData::BoundVar(_)) => {
                 // If the aggregate solution already has an inference
                 // variable here, then no matter what type we produce,

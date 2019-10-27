@@ -89,7 +89,7 @@ impl<'t> Unifier<'t> {
         Ok(())
     }
 
-    fn unify_ty_ty<'a>(&mut self, a: &'a TyData<ChalkIr>, b: &'a TyData<ChalkIr>) -> Fallible<()> {
+    fn unify_ty_ty<'a>(&mut self, a: &'a Ty<ChalkIr>, b: &'a Ty<ChalkIr>) -> Fallible<()> {
         //         ^^                 ^^         ^^ FIXME rustc bug
         if let Some(n_a) = self.table.normalize_shallow(a) {
             return self.unify_ty_ty(&n_a, b);
@@ -104,7 +104,7 @@ impl<'t> Unifier<'t> {
             b
         );
 
-        match (a, b) {
+        match (a.data(), b.data()) {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
             (&TyData::InferenceVar(var1), &TyData::InferenceVar(var2)) => {
@@ -119,14 +119,15 @@ impl<'t> Unifier<'t> {
             }
 
             // Unifying an inference variables with a non-inference variable.
-            (&TyData::InferenceVar(var), ty @ &TyData::Apply(_))
-            | (ty @ &TyData::Apply(_), &TyData::InferenceVar(var))
-            | (&TyData::InferenceVar(var), ty @ &TyData::Opaque(_))
-            | (ty @ TyData::Opaque(_), &TyData::InferenceVar(var))
-            | (&TyData::InferenceVar(var), ty @ &TyData::Dyn(_))
-            | (ty @ &TyData::Dyn(_), &TyData::InferenceVar(var))
-            | (&TyData::InferenceVar(var), ty @ &TyData::ForAll(_))
-            | (ty @ &TyData::ForAll(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, ty),
+            (&TyData::InferenceVar(var), &TyData::Apply(_))
+            | (&TyData::InferenceVar(var), &TyData::Opaque(_))
+            | (&TyData::InferenceVar(var), &TyData::Dyn(_))
+            | (&TyData::InferenceVar(var), &TyData::ForAll(_)) => self.unify_var_ty(var, b),
+
+            (&TyData::Apply(_), &TyData::InferenceVar(var))
+            | (TyData::Opaque(_), &TyData::InferenceVar(var))
+            | (&TyData::Dyn(_), &TyData::InferenceVar(var))
+            | (&TyData::ForAll(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, a),
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&TyData::ForAll(ref quantified_ty1), &TyData::ForAll(ref quantified_ty2)) => {
@@ -134,13 +135,16 @@ impl<'t> Unifier<'t> {
             }
 
             // Unifying `forall<X> { T }` with some other type `U`
-            (&TyData::ForAll(ref quantified_ty), other_ty @ &TyData::Apply(_))
-            | (&TyData::ForAll(ref quantified_ty), other_ty @ &TyData::Dyn(_))
-            | (&TyData::ForAll(ref quantified_ty), other_ty @ &TyData::Opaque(_))
-            | (other_ty @ &TyData::Apply(_), &TyData::ForAll(ref quantified_ty))
-            | (other_ty @ &TyData::Dyn(_), &TyData::ForAll(ref quantified_ty))
-            | (other_ty @ &TyData::Opaque(_), &TyData::ForAll(ref quantified_ty)) => {
-                self.unify_forall_other(quantified_ty, other_ty)
+            (&TyData::ForAll(ref quantified_ty), &TyData::Apply(_))
+            | (&TyData::ForAll(ref quantified_ty), &TyData::Dyn(_))
+            | (&TyData::ForAll(ref quantified_ty), &TyData::Opaque(_)) => {
+                self.unify_forall_other(quantified_ty, b)
+            }
+
+            (&TyData::Apply(_), &TyData::ForAll(ref quantified_ty))
+            | (&TyData::Dyn(_), &TyData::ForAll(ref quantified_ty))
+            | (&TyData::Opaque(_), &TyData::ForAll(ref quantified_ty)) => {
+                self.unify_forall_other(quantified_ty, a)
             }
 
             (&TyData::Apply(ref apply1), &TyData::Apply(ref apply2)) => {
@@ -172,18 +176,21 @@ impl<'t> Unifier<'t> {
 
             // Unifying an associated type projection `<T as
             // Trait>::Item` with some other type `U`.
-            (ty @ &TyData::Apply(_), &TyData::Projection(ref proj))
-            | (ty @ &TyData::ForAll(_), &TyData::Projection(ref proj))
-            | (ty @ &TyData::InferenceVar(_), &TyData::Projection(ref proj))
-            | (ty @ &TyData::Dyn(_), &TyData::Projection(ref proj))
-            | (ty @ &TyData::Opaque(_), &TyData::Projection(ref proj))
-            | (&TyData::Projection(ref proj), ty @ &TyData::Projection(_))
-            | (&TyData::Projection(ref proj), ty @ &TyData::Apply(_))
-            | (&TyData::Projection(ref proj), ty @ &TyData::ForAll(_))
-            | (&TyData::Projection(ref proj), ty @ &TyData::InferenceVar(_))
-            | (&TyData::Projection(ref proj), ty @ &TyData::Dyn(_))
-            | (&TyData::Projection(ref proj), ty @ &TyData::Opaque(_)) => {
-                self.unify_projection_ty(proj, ty)
+            (&TyData::Apply(_), &TyData::Projection(ref proj))
+            | (&TyData::ForAll(_), &TyData::Projection(ref proj))
+            | (&TyData::InferenceVar(_), &TyData::Projection(ref proj))
+            | (&TyData::Dyn(_), &TyData::Projection(ref proj))
+            | (&TyData::Opaque(_), &TyData::Projection(ref proj)) => {
+                self.unify_projection_ty(proj, a)
+            }
+
+            (&TyData::Projection(ref proj), &TyData::Projection(_))
+            | (&TyData::Projection(ref proj), &TyData::Apply(_))
+            | (&TyData::Projection(ref proj), &TyData::ForAll(_))
+            | (&TyData::Projection(ref proj), &TyData::InferenceVar(_))
+            | (&TyData::Projection(ref proj), &TyData::Dyn(_))
+            | (&TyData::Projection(ref proj), &TyData::Opaque(_)) => {
+                self.unify_projection_ty(proj, b)
             }
 
             (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => panic!(
@@ -237,7 +244,7 @@ impl<'t> Unifier<'t> {
     fn unify_projection_ty(
         &mut self,
         proj: &ProjectionTy<ChalkIr>,
-        ty: &TyData<ChalkIr>,
+        ty: &Ty<ChalkIr>,
     ) -> Fallible<()> {
         Ok(self.goals.push(InEnvironment::new(
             self.environment,
@@ -256,7 +263,7 @@ impl<'t> Unifier<'t> {
     fn unify_forall_other(
         &mut self,
         ty1: &QuantifiedTy<ChalkIr>,
-        ty2: &TyData<ChalkIr>,
+        ty2: &Ty<ChalkIr>,
     ) -> Fallible<()> {
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
@@ -275,7 +282,7 @@ impl<'t> Unifier<'t> {
     /// - `var` does not appear inside of `ty` (the standard `OccursCheck`)
     /// - `ty` does not reference anything in a lifetime that could not be named in `var`
     ///   (the extended `OccursCheck` created to handle universes)
-    fn unify_var_ty(&mut self, var: InferenceVar, ty: &TyData<ChalkIr>) -> Fallible<()> {
+    fn unify_var_ty(&mut self, var: InferenceVar, ty: &Ty<ChalkIr>) -> Fallible<()> {
         debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
 
         let var = EnaVariable::from(var);
@@ -373,7 +380,7 @@ impl<'t> Unifier<'t> {
 }
 
 impl<'t> Zipper<ChalkIr> for Unifier<'t> {
-    fn zip_tys(&mut self, a: &TyData<ChalkIr>, b: &TyData<ChalkIr>) -> Fallible<()> {
+    fn zip_tys(&mut self, a: &Ty<ChalkIr>, b: &Ty<ChalkIr>) -> Fallible<()> {
         self.unify_ty_ty(a, b)
     }
 
@@ -412,7 +419,7 @@ impl<'u, 't> PlaceholderFolder<ChalkIr> for OccursCheck<'u, 't> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<TyData<ChalkIr>> {
+    ) -> Fallible<Ty<ChalkIr>> {
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
@@ -452,11 +459,7 @@ impl<'u, 't> PlaceholderFolder<ChalkIr> for OccursCheck<'u, 't> {
 }
 
 impl<'u, 't> InferenceFolder<ChalkIr> for OccursCheck<'u, 't> {
-    fn fold_inference_ty(
-        &mut self,
-        var: InferenceVar,
-        _binders: usize,
-    ) -> Fallible<TyData<ChalkIr>> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<ChalkIr>> {
         let var = EnaVariable::from(var);
         match self.unifier.table.unify.probe_value(var) {
             // If this variable already has a value, fold over that value instead.

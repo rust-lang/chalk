@@ -36,11 +36,7 @@ impl<'table> DefaultTypeFolder for DeepNormalizer<'table> {}
 impl<'table> DefaultPlaceholderFolder for DeepNormalizer<'table> {}
 
 impl<'table> InferenceFolder<ChalkIr> for DeepNormalizer<'table> {
-    fn fold_inference_ty(
-        &mut self,
-        var: InferenceVar,
-        binders: usize,
-    ) -> Fallible<TyData<ChalkIr>> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<ChalkIr>> {
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
             Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(binders)), // FIXME shift

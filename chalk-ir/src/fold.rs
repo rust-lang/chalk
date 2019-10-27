@@ -61,7 +61,7 @@ pub trait Folder<TF: TypeFamily>:
 }
 
 pub trait TypeFolder<TF: TypeFamily> {
-    fn fold_ty(&mut self, ty: &TF::Type, binders: usize) -> Fallible<TF::Type>;
+    fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TF>>;
     fn fold_lifetime(&mut self, lifetime: &TF::Lifetime, binders: usize) -> Fallible<TF::Lifetime>;
 }
 
@@ -84,7 +84,7 @@ where
     T: FreeVarFolder<TF> + InferenceFolder<TF> + PlaceholderFolder<TF> + DefaultTypeFolder,
     TF: TypeFamily,
 {
-    fn fold_ty(&mut self, ty: &TF::Type, binders: usize) -> Fallible<TF::Type> {
+    fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TF>> {
         super_fold_ty(self, ty, binders)
     }
 
@@ -106,7 +106,7 @@ pub trait FreeVarFolder<TF: TypeFamily> {
     /// - `binders` is the number of binders in scope.
     ///
     /// This should return a type suitable for a context with `binders` in scope.
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type>;
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>>;
 
     /// As `fold_free_var_ty`, but for lifetimes.
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<TF::Lifetime>;
@@ -125,7 +125,7 @@ pub trait DefaultFreeVarFolder {
 }
 
 impl<T: DefaultFreeVarFolder, TF: TypeFamily> FreeVarFolder<TF> for T {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         if T::forbid() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
@@ -154,7 +154,7 @@ pub trait PlaceholderFolder<TF: TypeFamily> {
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<TF::Type>;
+    ) -> Fallible<Ty<TF>>;
 
     /// As with `fold_free_placeholder_ty`, but for lifetimes.
     fn fold_free_placeholder_lifetime(
@@ -181,7 +181,7 @@ impl<T: DefaultPlaceholderFolder, TF: TypeFamily> PlaceholderFolder<TF> for T {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<TF::Type> {
+    ) -> Fallible<Ty<TF>> {
         if T::forbid() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
@@ -210,7 +210,7 @@ pub trait InferenceFolder<TF: TypeFamily> {
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<TF::Type>;
+    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<TF>>;
 
     /// As with `fold_free_inference_ty`, but for lifetimes.
     fn fold_inference_lifetime(
@@ -233,7 +233,7 @@ pub trait DefaultInferenceFolder {
 }
 
 impl<T: DefaultInferenceFolder, TF: TypeFamily> InferenceFolder<TF> for T {
-    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<TF::Type> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TF>> {
         if T::forbid() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
@@ -338,13 +338,13 @@ impl<T: Fold<TF>, TF: TypeFamily> Fold<TF> for Option<T> {
 
 pub fn super_fold_ty<TF>(
     folder: &mut dyn Folder<TF>,
-    ty: &TF::Type,
+    ty: &Ty<TF>,
     binders: usize,
-) -> Fallible<TF::Type>
+) -> Fallible<Ty<TF>>
 where
     TF: TypeFamily,
 {
-    match ty.lookup_ref() {
+    match ty.data() {
         TyData::BoundVar(depth) => {
             if *depth >= binders {
                 folder.fold_free_var_ty(*depth - binders, binders)
@@ -352,12 +352,8 @@ where
                 Ok(TyData::<TF>::BoundVar(*depth).intern())
             }
         }
-        TyData::Dyn(clauses) => Ok(TF::intern_ty(TyData::Dyn(
-            clauses.fold_with(folder, binders)?,
-        ))),
-        TyData::Opaque(clauses) => Ok(TF::intern_ty(TyData::Opaque(
-            clauses.fold_with(folder, binders)?,
-        ))),
+        TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
+        TyData::Opaque(clauses) => Ok(TyData::Opaque(clauses.fold_with(folder, binders)?).intern()),
         TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
         TyData::Apply(apply) => Ok(apply.fold_with(folder, binders)?),
         TyData::Projection(proj) => {
@@ -369,8 +365,16 @@ where
     }
 }
 
+impl<TF: TypeFamily> Fold<TF> for Ty<TF> {
+    type Result = Ty<TF>;
+
+    fn fold_with(&self, folder: &mut dyn Folder<TF>, binders: usize) -> Fallible<Self::Result> {
+        folder.fold_ty(self, binders)
+    }
+}
+
 impl<TF: TypeFamily> Fold<TF> for ApplicationTy<TF> {
-    type Result = TF::Type;
+    type Result = Ty<TF>;
 
     fn fold_with(&self, folder: &mut dyn Folder<TF>, binders: usize) -> Fallible<Self::Result> {
         let ApplicationTy { name, parameters } = self;

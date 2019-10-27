@@ -72,11 +72,11 @@ pub fn push_auto_trait_impls(
 
     let binders = struct_datum.binders.map_ref(|b| &b.fields);
     builder.push_binders(&binders, |builder, fields| {
-        let self_ty: TyData<_> = ApplicationTy {
+        let self_ty: Ty<_> = ApplicationTy {
             name: struct_id.cast(),
             parameters: builder.placeholders_in_scope().to_vec(),
         }
-        .cast();
+        .intern();
 
         // trait_ref = `MyStruct<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
@@ -155,7 +155,7 @@ fn program_clauses_that_could_match(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                match trait_ref.parameters[0].assert_ty_ref() {
+                match trait_ref.parameters[0].assert_ty_ref().data() {
                     TyData::Apply(apply) => {
                         if let TypeName::TypeKindId(TypeKindId::StructId(struct_id)) = apply.name {
                             push_auto_trait_impls(builder, trait_id, struct_id);
@@ -210,7 +210,7 @@ fn program_clauses_that_could_match(
             // that goal, because they let us prove other things but
             // not `Clone`.
             let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
-            match &self_ty {
+            match self_ty.data() {
                 TyData::Opaque(exists_qwcs) | TyData::Dyn(exists_qwcs) => {
                     // In this arm, `self_ty` is the `dyn Fn(&u8)`,
                     // and `exists_qwcs` is the `exists<T> { .. }`
@@ -332,12 +332,8 @@ fn push_program_clauses_for_associated_type_values_in_impls_of(
 ///
 /// Note that the type `T` must not be an unbound inference variable;
 /// earlier parts of the logic should "flounder" in that case.
-fn match_ty(
-    builder: &mut ClauseBuilder<'_>,
-    environment: &Environment<ChalkIr>,
-    ty: &TyData<ChalkIr>,
-) {
-    match ty {
+fn match_ty(builder: &mut ClauseBuilder<'_>, environment: &Environment<ChalkIr>, ty: &Ty<ChalkIr>) {
+    match ty.data() {
         TyData::Apply(application_ty) => match application_ty.name {
             TypeName::TypeKindId(type_kind_id) => match_type_kind(builder, type_kind_id),
             TypeName::Placeholder(_) | TypeName::Error => {}

@@ -17,7 +17,7 @@ use std::marker::PhantomData;
 /// certain "core types" from chalk-ir. All the types in chalk-ir are
 /// parameterized by a `TF: TypeFamily`, and so (e.g.) if they want to
 /// store a type, they don't store a `Ty<TF>` instance directly, but
-/// rather prefer a `TF::Type`. You can think of `TF::Type` as the
+/// rather prefer a `Ty<TF>`. You can think of `TF::Type` as the
 /// interned representation (and, indeed, it may well be an interned
 /// pointer, e.g. in rustc).
 ///
@@ -31,15 +31,7 @@ use std::marker::PhantomData;
 pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// "Interned" representation of types. You can use the `Lookup`
     /// trait to convert this to a `Ty<Self>`.
-    type Type: Debug
-        + Clone
-        + Eq
-        + Ord
-        + Hash
-        + ReflexiveFold<Self>
-        + Zip<Self>
-        + Lookup<TyData<Self>>
-        + CastTo<Parameter<Self>>;
+    type InternedType: Debug + Clone + Eq + Ord + Hash;
 
     /// "Interned" representation of lifetimes. You can use the
     /// `Lookup` trait to convert this to a `Lifetime<Self>`.
@@ -64,7 +56,10 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" type from `ty`. You can also use the
     /// `TyData::intern` method, which is preferred.
-    fn intern_ty(ty: TyData<Self>) -> Self::Type;
+    fn intern_ty(ty: TyData<Self>) -> Self::InternedType;
+
+    /// Lookup the `TyData` from an interned type.
+    fn ty_data(ty: &Self::InternedType) -> &TyData<Self>;
 
     /// Create an "interned" type from `lifetime`. You can also use
     /// the `Lifetime::intern` method, which is preferred.
@@ -83,21 +78,11 @@ pub trait HasTypeFamily {
 }
 
 /// Given an interned representation, convert to the uninterned enum
-/// `DataType`. Used to (e.g.) convert from `TF::Type` to `Ty<TF>`.
+/// `DataType`. Used to (e.g.) convert from `Ty<TF>` to `Ty<TF>`.
 pub trait Lookup<DataType> {
     fn lookup_ref(&self) -> &DataType;
 
     fn lookup(self) -> DataType;
-}
-
-impl Lookup<TyData<ChalkIr>> for TyData<ChalkIr> {
-    fn lookup_ref(&self) -> &TyData<ChalkIr> {
-        self
-    }
-
-    fn lookup(self) -> TyData<ChalkIr> {
-        self
-    }
 }
 
 impl Lookup<Lifetime<ChalkIr>> for Lifetime<ChalkIr> {
@@ -116,7 +101,7 @@ impl Lookup<Lifetime<ChalkIr>> for Lifetime<ChalkIr> {
 pub struct ChalkIr {}
 
 impl TypeFamily for ChalkIr {
-    type Type = TyData<ChalkIr>;
+    type InternedType = TyData<ChalkIr>;
     type Lifetime = Lifetime<ChalkIr>;
 
     fn debug_projection(
@@ -135,6 +120,10 @@ impl TypeFamily for ChalkIr {
     }
 
     fn intern_ty(ty: TyData<ChalkIr>) -> TyData<ChalkIr> {
+        ty
+    }
+
+    fn ty_data(ty: &TyData<ChalkIr>) -> &TyData<Self> {
         ty
     }
 
@@ -170,23 +159,6 @@ where
     TF: TypeFamily,
 {
     type TypeFamily = TF;
-}
-
-impl Fold<ChalkIr> for TyData<ChalkIr> {
-    type Result = Self;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<ChalkIr>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        folder.fold_ty(self, binders)
-    }
-}
-
-impl CastTo<Parameter<ChalkIr>> for TyData<ChalkIr> {
-    fn cast_to(self) -> Parameter<ChalkIr> {
-        Parameter(ParameterKind::Ty(self))
-    }
 }
 
 impl Fold<ChalkIr> for Lifetime<ChalkIr> {

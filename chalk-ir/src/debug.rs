@@ -69,6 +69,11 @@ impl Debug for TypeName {
         }
     }
 }
+impl<TF: TypeFamily> Debug for Ty<TF> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{:?}", &self.interned)
+    }
+}
 
 impl<TF: TypeFamily> Debug for TyData<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {

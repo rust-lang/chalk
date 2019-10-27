@@ -47,7 +47,7 @@ impl EnaVariable {
     /// Convert this inference variable into a type. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a type (we can't check it).
-    pub(crate) fn to_ty(self) -> TyData<ChalkIr> {
+    pub(crate) fn to_ty(self) -> Ty<ChalkIr> {
         self.0.to_ty::<ChalkIr>()
     }
 
@@ -84,8 +84,8 @@ pub(crate) enum InferenceValue {
     Bound(Parameter<ChalkIr>),
 }
 
-impl From<TyData<ChalkIr>> for InferenceValue {
-    fn from(ty: TyData<ChalkIr>) -> Self {
+impl From<Ty<ChalkIr>> for InferenceValue {
+    fn from(ty: Ty<ChalkIr>) -> Self {
         InferenceValue::Bound(ty.cast())
     }
 }

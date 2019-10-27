@@ -89,7 +89,7 @@ impl Shifter {
 impl DefaultTypeFolder for Shifter {}
 
 impl<TF: TypeFamily> FreeVarFolder<TF> for Shifter {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         Ok(TyData::<TF>::BoundVar(self.adjust(depth, binders)).intern())
     }
 
@@ -131,7 +131,7 @@ impl DownShifter {
 impl DefaultTypeFolder for DownShifter {}
 
 impl<TF: TypeFamily> FreeVarFolder<TF> for DownShifter {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         Ok(TyData::<TF>::BoundVar(self.adjust(depth, binders)?).intern())
     }
 

@@ -6,29 +6,29 @@ macro_rules! ty {
         $crate::TyData::Apply(ApplicationTy {
             name: ty_name!($n),
             parameters: vec![$(arg!($arg)),*],
-        })
+        }).intern()
     };
 
     (for_all $n:tt $t:tt) => {
         $crate::TyData::ForAll(Box::new(QuantifiedTy {
             num_binders: $n,
             ty: ty!($t),
-        }))
+        })).intern()
     };
 
     (projection (item $n:tt) $($arg:tt)*) => {
         $crate::TyData::Projection(ProjectionTy {
             associated_ty_id: TypeId(RawId { index: $n }),
             parameters: vec![$(arg!($arg)),*],
-        })
+        }).intern()
     };
 
     (infer $b:expr) => {
-        $crate::TyData::InferenceVar($crate::InferenceVar::from($b))
+        $crate::TyData::InferenceVar($crate::InferenceVar::from($b)).intern()
     };
 
     (bound $b:expr) => {
-        $crate::TyData::BoundVar($b)
+        $crate::TyData::BoundVar($b).intern()
     };
 
     (expr $b:expr) => {

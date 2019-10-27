@@ -73,6 +73,7 @@ macro_rules! reflexive_impl {
     };
 }
 
+reflexive_impl!(for(TF: TypeFamily) TyData<TF>);
 reflexive_impl!(for(TF: TypeFamily) TraitRef<TF>);
 reflexive_impl!(for(TF: TypeFamily) LeafGoal<TF>);
 reflexive_impl!(for(TF: TypeFamily) DomainGoal<TF>);
@@ -165,6 +166,12 @@ impl<TF: TypeFamily> CastTo<TyData<TF>> for ApplicationTy<TF> {
 impl<TF: TypeFamily> CastTo<TyData<TF>> for ProjectionTy<TF> {
     fn cast_to(self) -> TyData<TF> {
         TyData::Projection(self)
+    }
+}
+
+impl<TF: TypeFamily> CastTo<Parameter<TF>> for Ty<TF> {
+    fn cast_to(self) -> Parameter<TF> {
+        Parameter(ParameterKind::Ty(self))
     }
 }
 

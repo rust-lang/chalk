@@ -276,7 +276,7 @@ impl<'t> AnswerSubstitutor<'t> {
     fn unify_free_answer_var(
         &mut self,
         answer_depth: usize,
-        pending: ParameterKind<&TyData<ChalkIr>, &Lifetime<ChalkIr>>,
+        pending: ParameterKind<&Ty<ChalkIr>, &Lifetime<ChalkIr>>,
     ) -> Fallible<bool> {
         // This variable is bound in the answer, not free, so it
         // doesn't represent a reference into the answer substitution.
@@ -322,7 +322,7 @@ impl<'t> AnswerSubstitutor<'t> {
 }
 
 impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
-    fn zip_tys(&mut self, answer: &TyData<ChalkIr>, pending: &TyData<ChalkIr>) -> Fallible<()> {
+    fn zip_tys(&mut self, answer: &Ty<ChalkIr>, pending: &Ty<ChalkIr>) -> Fallible<()> {
         if let Some(pending) = self.table.normalize_shallow(pending) {
             return Zip::zip_with(self, answer, &pending);
         }
@@ -331,7 +331,7 @@ impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
         // "inputs" to the subgoal table. We need to extract the
         // resulting answer that the subgoal found and unify it with
         // the value from our "pending subgoal".
-        if let TyData::BoundVar(answer_depth) = answer {
+        if let TyData::BoundVar(answer_depth) = answer.data() {
             if self.unify_free_answer_var(*answer_depth, ParameterKind::Ty(pending))? {
                 return Ok(());
             }
@@ -339,7 +339,7 @@ impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
 
         // Otherwise, the answer and the selected subgoal ought to be a perfect match for
         // one another.
-        match (answer, pending) {
+        match (answer.data(), pending.data()) {
             (TyData::BoundVar(answer_depth), TyData::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }

@@ -906,11 +906,11 @@ impl LowerProjectionTy for ProjectionTy {
 }
 
 trait LowerTy {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TyData<ChalkIr>>;
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>>;
 }
 
 impl LowerTy for Ty {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TyData<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>> {
         match *self {
             Ty::Id { name } => match env.lookup(name)? {
                 NameLookup::Type(id) => {
@@ -925,10 +925,11 @@ impl LowerTy for Ty {
                         Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                             name: chalk_ir::TypeName::TypeKindId(id.into()),
                             parameters: vec![],
-                        }))
+                        })
+                        .intern())
                     }
                 }
-                NameLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d)),
+                NameLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d).intern()),
             },
 
             Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(env.in_binders(
@@ -938,10 +939,13 @@ impl LowerTy for Ty {
                     Ok(bounds
                         .lower(env)?
                         .iter()
-                        .flat_map(|qil| qil.into_where_clauses(chalk_ir::TyData::BoundVar(0)))
+                        .flat_map(|qil| {
+                            qil.into_where_clauses(chalk_ir::TyData::BoundVar(0).intern())
+                        })
                         .collect())
                 },
-            )?)),
+            )?)
+            .intern()),
 
             Ty::Opaque { ref bounds } => Ok(chalk_ir::TyData::Opaque(env.in_binders(
                 // FIXME: Figure out a proper name for this type parameter
@@ -950,10 +954,13 @@ impl LowerTy for Ty {
                     Ok(bounds
                         .lower(env)?
                         .iter()
-                        .flat_map(|qil| qil.into_where_clauses(chalk_ir::TyData::BoundVar(0)))
+                        .flat_map(|qil| {
+                            qil.into_where_clauses(chalk_ir::TyData::BoundVar(0).intern())
+                        })
                         .collect())
                 },
-            )?)),
+            )?)
+            .intern()),
 
             Ty::Apply { name, ref args } => {
                 let id = match env.lookup(name)? {
@@ -988,10 +995,13 @@ impl LowerTy for Ty {
                 Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                     name: chalk_ir::TypeName::TypeKindId(id.into()),
                     parameters: parameters,
-                }))
+                })
+                .intern())
             }
 
-            Ty::Projection { ref proj } => Ok(chalk_ir::TyData::Projection(proj.lower(env)?)),
+            Ty::Projection { ref proj } => {
+                Ok(chalk_ir::TyData::Projection(proj.lower(env)?).intern())
+            }
 
             Ty::ForAll {
                 ref lifetime_names,
@@ -1008,7 +1018,7 @@ impl LowerTy for Ty {
                     num_binders: lifetime_names.len(),
                     ty,
                 };
-                Ok(chalk_ir::TyData::ForAll(Box::new(quantified_ty)))
+                Ok(chalk_ir::TyData::ForAll(Box::new(quantified_ty)).intern())
             }
         }
     }
