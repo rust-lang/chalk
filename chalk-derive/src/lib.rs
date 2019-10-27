@@ -12,26 +12,18 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
     let body = derive_fold_body(input.data);
 
-    // Allow custom Fold parameter using the `#[has_type_family(Param)]` attribute
-    let mut generics = if let Some(attr) = input
+    let mut where_clause = where_clause_ref.cloned();
+    let generics = if let Some(attr) = input
         .attrs
         .iter()
         .find(|a| a.path.is_ident("has_type_family"))
     {
+        // Allow custom Fold parameter using the `#[has_type_family(Param)]` attribute
         let arg = attr
             .parse_args::<proc_macro2::TokenStream>()
             .expect("Expected has_type_family argument");
         quote! { < #arg > } // TODO extend instead of overriding?
-    } else {
-        ty_generics.to_token_stream()
-    };
-
-    let mut where_clause = where_clause_ref.cloned();
-
-    // if any impl_generics G : HasTypeFamily:
-    // #generics = TF
-    // #where_clause += G: Fold<TF, Result = G>
-    if let Some(param) = input
+    } else if let Some(param) = input
         .generics
         .params
         .iter()
@@ -39,10 +31,13 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     {
         let tf = quote! { <#param as HasTypeFamily>::TypeFamily };
 
-        generics = quote! { <#tf> };
         // TODO extend where clause instead of overriding
-        where_clause = syn::parse2(quote! { where #param: Fold<#tf, Result = #param> }).unwrap()
-    }
+        where_clause = syn::parse2(quote! { where #param: Fold<#tf, Result = #param> }).unwrap();
+
+        quote! { <#tf> }
+    } else {
+        ty_generics.to_token_stream()
+    };
 
     TokenStream::from(quote! {
         impl #impl_generics Fold #generics for #name #ty_generics #where_clause {
