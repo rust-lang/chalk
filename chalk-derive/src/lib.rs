@@ -22,7 +22,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         let arg = attr
             .parse_args::<proc_macro2::TokenStream>()
             .expect("Expected has_type_family argument");
-        quote! { < #arg > } // TODO extend instead of overriding?
+        quote! { < #arg > }
     } else if let Some(param) = input
         .generics
         .params
@@ -31,8 +31,10 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     {
         let tf = quote! { <#param as HasTypeFamily>::TypeFamily };
 
-        // TODO extend where clause instead of overriding
-        where_clause = syn::parse2(quote! { where #param: Fold<#tf, Result = #param> }).unwrap();
+        where_clause
+            .get_or_insert(syn::parse2(quote![where]).unwrap())
+            .predicates
+            .push(syn::parse2(quote! { #param: Fold<#tf, Result = #param> }).unwrap());
 
         quote! { <#tf> }
     } else {
