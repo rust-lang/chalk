@@ -223,17 +223,14 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
 
 impl TruncatingInferenceTable {
     fn new(max_size: usize, infer: InferenceTable) -> Self {
-        Self {
-            max_size,
-            infer,
-        }
+        Self { max_size, infer }
     }
 }
 
 impl context::TruncateOps<SlgContext> for TruncatingInferenceTable {
     fn truncate_goal(
         &mut self,
-        subgoal: &InEnvironment<Goal<ChalkIr>>
+        subgoal: &InEnvironment<Goal<ChalkIr>>,
     ) -> Option<InEnvironment<Goal<ChalkIr>>> {
         let Truncated { overflow, value } =
             truncate::truncate(&mut self.infer, self.max_size, subgoal);
@@ -320,7 +317,7 @@ impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
 
     fn fully_canonicalize_goal(
         &mut self,
-        value: &InEnvironment<Goal<ChalkIr>>
+        value: &InEnvironment<Goal<ChalkIr>>,
     ) -> (UCanonical<InEnvironment<Goal<ChalkIr>>>, UniverseMap) {
         let canonicalized_goal = self.infer.canonicalize(value).quantified;
         let UCanonicalized {
@@ -360,7 +357,7 @@ impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
         _: (),
         a: &Parameter<ChalkIr>,
         b: &Parameter<ChalkIr>,
-        ex_clause: &mut ExClause<SlgContext>
+        ex_clause: &mut ExClause<SlgContext>,
     ) -> Fallible<()> {
         let result = self.infer.unify(environment, a, b)?;
         Ok(into_ex_clause(result, ex_clause))

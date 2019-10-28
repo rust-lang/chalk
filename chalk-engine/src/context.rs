@@ -268,7 +268,10 @@ pub trait UnificationOps<C: Context> {
     fn debug_ex_clause<'v>(&mut self, value: &'v ExClause<C>) -> Box<dyn Debug + 'v>;
 
     // Used by: logic
-    fn fully_canonicalize_goal(&mut self, value: &C::GoalInEnvironment) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
+    fn fully_canonicalize_goal(
+        &mut self,
+        value: &C::GoalInEnvironment,
+    ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     // Used by: logic
     fn canonicalize_ex_clause(&mut self, value: &ExClause<C>) -> C::CanonicalExClause;
@@ -288,7 +291,7 @@ pub trait UnificationOps<C: Context> {
     /// First unify the parameters, then add the residual subgoals
     /// as new subgoals of the ex-clause.
     /// Also add region constraints.
-    /// 
+    ///
     /// If the parameters fail to unify, then `Error` is returned
     // Used by: simplify
     fn unify_parameters_into_ex_clause(

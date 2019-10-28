@@ -57,7 +57,8 @@ pub use self::subst::Subst;
 /// ```
 pub trait Folder<TF: TypeFamily>:
     FreeVarFolder<TF> + InferenceFolder<TF> + PlaceholderFolder<TF> + TypeFolder<TF>
-{}
+{
+}
 
 pub trait TypeFolder<TF: TypeFamily> {
     fn fold_ty(&mut self, ty: &TF::Type, binders: usize) -> Fallible<TF::Type>;
@@ -68,7 +69,8 @@ impl<T, TF> Folder<TF> for T
 where
     T: FreeVarFolder<TF> + InferenceFolder<TF> + PlaceholderFolder<TF> + TypeFolder<TF>,
     TF: TypeFamily,
-{}
+{
+}
 
 /// A convenience trait that indicates that this folder doesn't take
 /// any action on types in particular, but just recursively folds

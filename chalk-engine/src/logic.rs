@@ -301,9 +301,7 @@ impl<C: Context> Forest<C> {
         }
     }
 
-    fn canonicalize_strand(
-        strand: Strand<C>,
-    ) -> CanonicalStrand<C> {
+    fn canonicalize_strand(strand: Strand<C>) -> CanonicalStrand<C> {
         let Strand {
             mut infer,
             ex_clause,
@@ -422,10 +420,7 @@ impl<C: Context> Forest<C> {
                     };
                     let (delayed_strand, subgoal_table) =
                         Self::delay_strand_after_cycle(table, strand);
-                    (
-                        Self::canonicalize_strand(delayed_strand),
-                        subgoal_table,
-                    )
+                    (Self::canonicalize_strand(delayed_strand), subgoal_table)
                 },
             );
             *canonical_strand = new_canonical;
@@ -553,11 +548,7 @@ impl<C: Context> Forest<C> {
     ///   strand led nowhere of interest.
     /// - the strand may represent a new answer, in which case it is
     ///   added to the table and `Ok` is returned.
-    fn pursue_answer(
-        &mut self,
-        depth: StackIndex,
-        strand: Strand<C>,
-    ) -> StrandResult<C, ()> {
+    fn pursue_answer(&mut self, depth: StackIndex, strand: Strand<C>) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
         let Strand {
             mut infer,
@@ -764,13 +755,20 @@ impl<C: Context> Forest<C> {
         // Instantiate the table goal with fresh inference variables.
         let table_goal = self.tables[table].table_goal.clone();
         context.instantiate_ucanonical_goal(&table_goal, |mut infer, subst, environment, goal| {
-            self.push_initial_strands_instantiated(context, table, &mut infer, subst, environment, goal);
+            self.push_initial_strands_instantiated(
+                context,
+                table,
+                &mut infer,
+                subst,
+                environment,
+                goal,
+            );
         });
     }
 
     fn push_initial_strands_instantiated(
         &mut self,
-        context: &impl ContextOps<C>, 
+        context: &impl ContextOps<C>,
         table: TableIndex,
         infer: &mut C::InferenceTable,
         subst: C::Substitution,
@@ -811,9 +809,7 @@ impl<C: Context> Forest<C> {
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
-                if let Ok(ex_clause) =
-                    Self::simplify_hh_goal(infer, subst, environment, hh_goal)
-                {
+                if let Ok(ex_clause) = Self::simplify_hh_goal(infer, subst, environment, hh_goal) {
                     info!(
                         "pushing initial strand with ex-clause: {:#?}",
                         infer.debug_ex_clause(&ex_clause),

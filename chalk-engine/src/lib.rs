@@ -288,7 +288,7 @@ pub enum Literal<C: Context> {
 ///     // 1 bar(X)
 ///     // 2 baz(X)   <-- top of stack
 /// ```
-/// 
+///
 /// In this case, `positive` would be initially 0, 1, and 2 for `foo`,
 /// `bar`, and `baz` respectively. This reflects the fact that the
 /// answers for `foo(X)` depend on the answers for `foo(X)`. =)
