@@ -62,9 +62,8 @@ extern crate stacker;
 extern crate rustc_hash;
 
 use crate::context::Context;
-use rustc_hash::FxHashSet;
 use std::cmp::min;
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 use std::usize;
 
 pub mod context;
@@ -112,9 +111,9 @@ pub struct ExClause<C: Context> {
     /// would yield A.
     pub subst: C::Substitution,
 
-    /// Delayed literals: things that we depend on negatively,
-    /// but which have not yet been fully evaluated.
-    pub delayed_literals: Vec<DelayedLiteral<C>>,
+    /// True if any subgoals were depended upon negatively and
+    /// were not fully evaluated. This replaces delayed literals.
+    pub ambiguous: bool,
 
     /// Region constraints we have accumulated.
     pub constraints: Vec<C::RegionConstraint>,
@@ -191,77 +190,23 @@ pub struct FlounderedSubgoal<C: Context> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct SimplifiedAnswers<C: Context> {
-    answers: Vec<SimplifiedAnswer<C>>,
+struct Answers<C: Context> {
+    answers: Vec<Answer<C>>,
 }
 
+/// An "answer" in the on-demand solver corresponds to a fully solved
+/// goal for a particular table (modulo delayed literals). It contains
+/// a substitution
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SimplifiedAnswer<C: Context> {
+pub struct Answer<C: Context> {
     /// A fully instantiated version of the goal for which the query
     /// is true (including region constraints).
     pub subst: C::CanonicalConstrainedSubst,
 
     /// If this flag is set, then the answer could be neither proven
-    /// nor disproven. In general, the existence of a non-empty set of
-    /// delayed literals simply means the answer's status is UNKNOWN,
-    /// either because the size of the answer exceeded `max_size` or
-    /// because of a negative loop (e.g., `P :- not { P }`).
+    /// nor disproven. This could be the size of the answer exceeded
+    /// `max_size` or because of a negative loop (e.g., `P :- not { P }`).
     pub ambiguous: bool,
-}
-
-#[derive(Debug)]
-struct DelayedLiteralSets<C: Context>(InnerDelayedLiteralSets<C>);
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-enum InnerDelayedLiteralSets<C: Context> {
-    /// Corresponds to a single, empty set.
-    None,
-
-    /// Some (non-zero) number of non-empty sets.
-    /// Must be a set of sets, but HashSets are not Hash so we manually ensure uniqueness.
-    Some(Vec<DelayedLiteralSet<C>>),
-}
-
-/// A set of delayed literals.
-///
-/// (One might expect delayed literals to always be ground, since
-/// non-ground negative literals result in floundered
-/// executions. However, due to the approximations introduced via RR
-/// to ensure termination, it *is* in fact possible for delayed goals
-/// to contain free variables. For example, what could happen is that
-/// we get back an approximated answer with `Goal::CannotProve` as a
-/// delayed literal, which in turn forces its subgoal to be delayed,
-/// and so forth. Therefore, we store canonicalized goals.)
-#[derive(Clone, Default)]
-struct DelayedLiteralSet<C: Context> {
-    delayed_literals: FxHashSet<DelayedLiteral<C>>,
-}
-
-impl<T: Context + Debug> Debug for DelayedLiteralSet<T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        // Workaround to keep ordering consistent between nightly and stable
-        let mut literals = self.delayed_literals.iter().collect::<Vec<_>>();
-        literals.sort_by_key(|l| format!("{:?}", l));
-        fmt.debug_set().entries(literals.iter()).finish()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum DelayedLiteral<C: Context> {
-    /// Something which can never be proven nor disproven. Inserted
-    /// when truncation triggers; doesn't arise normally.
-    CannotProve(()),
-
-    /// We are blocked on a negative literal `~G`, where `G` is the
-    /// goal of the given table. Because negative goals must always be
-    /// ground, we don't need any other information.
-    Negative(TableIndex),
-
-    /// We are blocked on a positive literal `Li`; we found a
-    /// **conditional** answer (the `CanonicalConstrainedSubst`) within the
-    /// given table, but we have to come back later and see whether
-    /// that answer turns out to be true.
-    Positive(TableIndex, C::CanonicalConstrainedSubst),
 }
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
@@ -310,53 +255,6 @@ pub enum Literal<C: Context> {
 struct Minimums {
     positive: DepthFirstNumber,
     negative: DepthFirstNumber,
-}
-
-impl<C: Context> DelayedLiteralSets<C> {
-    fn singleton(set: DelayedLiteralSet<C>) -> Self {
-        if set.is_empty() {
-            DelayedLiteralSets(InnerDelayedLiteralSets::None)
-        } else {
-            DelayedLiteralSets(InnerDelayedLiteralSets::Some(vec![set]))
-        }
-    }
-
-    /// Inserts the set if it is minimal in the family.
-    /// Returns true iff the set was inserted.
-    fn insert_if_minimal(&mut self, set: &DelayedLiteralSet<C>) -> bool {
-        match self.0 {
-            // The empty set is always minimal.
-            InnerDelayedLiteralSets::None => false,
-            // Are we inserting an empty set?
-            InnerDelayedLiteralSets::Some(_) if set.is_empty() => {
-                self.0 = InnerDelayedLiteralSets::None;
-                true
-            }
-            InnerDelayedLiteralSets::Some(ref mut sets) => {
-                // Look for a subset.
-                if sets.iter().any(|set| set.is_subset(&set)) {
-                    false
-                } else {
-                    // No subset therefore `set` is minimal, discard supersets and insert.
-                    sets.retain(|set| !set.is_subset(set));
-                    sets.push(set.clone());
-                    true
-                }
-            }
-        }
-    }
-}
-
-impl<C: Context> DelayedLiteralSet<C> {
-    fn is_empty(&self) -> bool {
-        self.delayed_literals.is_empty()
-    }
-
-    fn is_subset(&self, other: &DelayedLiteralSet<C>) -> bool {
-        self.delayed_literals
-            .iter()
-            .all(|elem| other.delayed_literals.contains(elem))
-    }
 }
 
 impl Minimums {

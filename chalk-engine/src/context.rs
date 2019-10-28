@@ -7,7 +7,7 @@
 
 use crate::fallible::Fallible;
 use crate::hh::HhGoal;
-use crate::{DelayedLiteral, ExClause, SimplifiedAnswer};
+use crate::{Answer, ExClause};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -215,10 +215,7 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     ) -> R;
 
     /// returns unique solution from answer
-    fn constrained_subst_from_answer(
-        &self,
-        answer: SimplifiedAnswer<C>,
-    ) -> C::CanonicalConstrainedSubst;
+    fn constrained_subst_from_answer(&self, answer: Answer<C>) -> C::CanonicalConstrainedSubst;
 }
 
 /// Methods for combining solutions to yield an aggregate solution.
@@ -226,7 +223,7 @@ pub trait AggregateOps<C: Context> {
     fn make_solution(
         &self,
         root_goal: &C::CanonicalGoalInEnvironment,
-        simplified_answers: impl AnswerStream<C>,
+        answers: impl AnswerStream<C>,
     ) -> Option<C::Solution>;
 }
 
@@ -288,8 +285,6 @@ pub trait UnificationOps<C: Context> {
         subst: C::Substitution,
         constraints: Vec<C::RegionConstraint>,
     ) -> C::CanonicalConstrainedSubst;
-
-    fn lift_delayed_literal(&self, value: DelayedLiteral<C>) -> DelayedLiteral<C>;
 
     // Used by: logic
     fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
@@ -357,8 +352,8 @@ pub trait ResolventOps<C: Context> {
 }
 
 pub trait AnswerStream<C: Context> {
-    fn peek_answer(&mut self) -> Option<SimplifiedAnswer<C>>;
-    fn next_answer(&mut self) -> Option<SimplifiedAnswer<C>>;
+    fn peek_answer(&mut self) -> Option<Answer<C>>;
+    fn next_answer(&mut self) -> Option<Answer<C>>;
 
     /// Invokes `test` with each possible future answer, returning true immediately
     /// if we find any answer for which `test` returns true.

@@ -16,7 +16,7 @@ use chalk_ir::*;
 
 use chalk_engine::context;
 use chalk_engine::hh::HhGoal;
-use chalk_engine::{DelayedLiteral, ExClause, Literal, SimplifiedAnswer};
+use chalk_engine::{Answer, ExClause, Literal};
 
 use std::fmt::Debug;
 
@@ -222,9 +222,9 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
 
     fn constrained_subst_from_answer(
         &self,
-        answer: SimplifiedAnswer<SlgContext>,
+        answer: Answer<SlgContext>,
     ) -> Canonical<ConstrainedSubst<ChalkIr>> {
-        let SimplifiedAnswer { subst, .. } = answer;
+        let Answer { subst, .. } = answer;
         subst
     }
 }
@@ -369,12 +369,6 @@ impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
     ) -> Fallible<()> {
         let result = self.infer.unify(environment, a, b)?;
         Ok(into_ex_clause(result, ex_clause))
-    }
-
-    /// Since we do not have distinct types for the inference context and the slg-context,
-    /// these conversion operations are just no-ops.q
-    fn lift_delayed_literal(&self, c: DelayedLiteral<SlgContext>) -> DelayedLiteral<SlgContext> {
-        c
     }
 }
 

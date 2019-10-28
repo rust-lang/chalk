@@ -16,7 +16,7 @@ impl<C: Context> Forest<C> {
     ) -> Fallible<ExClause<C>> {
         let mut ex_clause = ExClause {
             subst,
-            delayed_literals: vec![],
+            ambiguous: false,
             constraints: vec![],
             subgoals: vec![],
             current_time: TimeStamp::default(),

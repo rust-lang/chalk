@@ -107,7 +107,7 @@ fn basic() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -142,7 +142,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -152,7 +152,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -162,7 +162,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -172,7 +172,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -182,7 +182,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -327,11 +327,7 @@ fn negative_loop() {
                         },
                         binders: []
                     },
-                    delayed_literals: {
-                        Negative(
-                            TableIndex(1)
-                        )
-                    }
+                    ambiguous: true
                 }
             ]"
         }
@@ -370,7 +366,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -388,7 +384,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -414,7 +410,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -432,7 +428,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -463,7 +459,7 @@ fn subgoal_cycle_inhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -497,7 +493,7 @@ fn basic_region_constraint_from_positive_impl() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -534,7 +530,7 @@ fn example_2_1_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -544,7 +540,7 @@ fn example_2_1_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -554,7 +550,7 @@ fn example_2_1_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -593,7 +589,7 @@ fn example_2_2_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -632,7 +628,7 @@ fn example_2_3_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -658,8 +654,7 @@ fn example_3_3_EWFS() {
         goal {
             a: S
         } first 10 with max 3 {
-            // We don't yet have support for **simplification** --
-            // hence we delay the negatives here but that's it.
+            // Since this makes a cycle, it's ambiguous
             r"[
                 Answer {
                     subst: Canonical {
@@ -669,14 +664,7 @@ fn example_3_3_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {
-                        Negative(
-                            TableIndex(1)
-                        ),
-                        Negative(
-                            TableIndex(6)
-                        )
-                    }
+                    ambiguous: true
                 }
             ]"
         }
@@ -707,11 +695,7 @@ fn contradiction() {
                         },
                         binders: []
                     },
-                    delayed_literals: {
-                        Negative(
-                            TableIndex(0)
-                        )
-                    }
+                    ambiguous: true
                 }
             ]"
         }
@@ -756,7 +740,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -766,7 +750,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -776,7 +760,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -786,7 +770,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -798,11 +782,7 @@ fn cached_answers_1() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: {
-                        CannotProve(
-                            ()
-                        )
-                    }
+                    ambiguous: true
                 }
             ]"
         }
@@ -836,7 +816,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -846,7 +826,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -856,7 +836,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -866,7 +846,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -878,11 +858,7 @@ fn cached_answers_2() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: {
-                        CannotProve(
-                            ()
-                        )
-                    }
+                    ambiguous: true
                 }
             ]"
         }
@@ -916,7 +892,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -926,7 +902,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -936,7 +912,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -948,11 +924,7 @@ fn cached_answers_3() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: {
-                        CannotProve(
-                            ()
-                        )
-                    }
+                    ambiguous: true
                 },
                 Answer {
                     subst: Canonical {
@@ -962,7 +934,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -970,10 +942,8 @@ fn cached_answers_3() {
 }
 
 /// Here, P depends on Q negatively, but Q depends only on itself.
-/// What happens is that P adds a negative link on Q, so that when Q
-/// delays, P is also delayed.
 #[test]
-fn negative_answer_delayed_literal() {
+fn negative_answer_ambiguous() {
     test! {
         program {
             trait P { }
@@ -996,11 +966,7 @@ fn negative_answer_delayed_literal() {
                         },
                         binders: []
                     },
-                    delayed_literals: {
-                        Negative(
-                            TableIndex(1)
-                        )
-                    }
+                    ambiguous: true
                 }
             ]"
         }
@@ -1042,7 +1008,7 @@ fn non_enumerable_traits_direct() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -1052,7 +1018,7 @@ fn non_enumerable_traits_direct() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1069,7 +1035,7 @@ fn non_enumerable_traits_direct() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1168,7 +1134,7 @@ fn non_enumerable_traits_reorder() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1186,7 +1152,7 @@ fn non_enumerable_traits_reorder() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1254,7 +1220,7 @@ fn negative_reorder() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1272,7 +1238,7 @@ fn negative_reorder() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1330,7 +1296,7 @@ fn coinductive_unsound1() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
            ]"
         }

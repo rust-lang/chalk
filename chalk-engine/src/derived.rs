@@ -7,63 +7,6 @@ use std::cmp::{Eq, PartialEq};
 use std::hash::{Hash, Hasher};
 use std::mem;
 
-impl<C: Context> PartialEq for DelayedLiteralSet<C> {
-    fn eq(&self, other: &Self) -> bool {
-        let DelayedLiteralSet {
-            delayed_literals: a1,
-        } = self;
-        let DelayedLiteralSet {
-            delayed_literals: a2,
-        } = other;
-        a1 == a2
-    }
-}
-
-impl<C: Context> Eq for DelayedLiteralSet<C> {}
-
-///////////////////////////////////////////////////////////////////////////
-
-impl<C: Context> PartialEq for DelayedLiteral<C> {
-    fn eq(&self, other: &Self) -> bool {
-        if mem::discriminant(self) != mem::discriminant(other) {
-            return false;
-        }
-
-        match (self, other) {
-            (DelayedLiteral::CannotProve(()), DelayedLiteral::CannotProve(())) => true,
-
-            (DelayedLiteral::Negative(a1), DelayedLiteral::Negative(a2)) => a1 == a2,
-
-            (DelayedLiteral::Positive(a1, b1), DelayedLiteral::Positive(a2, b2)) => {
-                a1 == a2 && b1 == b2
-            }
-
-            _ => panic!(),
-        }
-    }
-}
-
-impl<C: Context> Eq for DelayedLiteral<C> {}
-
-impl<C: Context> Hash for DelayedLiteral<C> {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        mem::discriminant(self).hash(hasher);
-
-        match self {
-            DelayedLiteral::CannotProve(()) => (),
-
-            DelayedLiteral::Negative(a) => {
-                a.hash(hasher);
-            }
-
-            DelayedLiteral::Positive(a, b) => {
-                a.hash(hasher);
-                b.hash(hasher);
-            }
-        }
-    }
-}
-
 ///////////////////////////////////////////////////////////////////////////
 
 impl<C: Context> PartialEq for Literal<C> {

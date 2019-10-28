@@ -3,7 +3,7 @@
 use crate::cast::Cast;
 use crate::*;
 use chalk_engine::context::Context;
-use chalk_engine::{DelayedLiteral, ExClause, FlounderedSubgoal, Literal};
+use chalk_engine::{ExClause, FlounderedSubgoal, Literal};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -537,7 +537,7 @@ where
     fn fold_with(&self, folder: &mut dyn Folder<TF>, binders: usize) -> Fallible<Self::Result> {
         let ExClause {
             subst,
-            delayed_literals,
+            ambiguous,
             constraints,
             subgoals,
             current_time,
@@ -545,7 +545,7 @@ where
         } = self;
         Ok(ExClause {
             subst: subst.fold_with(folder, binders)?,
-            delayed_literals: delayed_literals.fold_with(folder, binders)?,
+            ambiguous: *ambiguous,
             constraints: constraints.fold_with(folder, binders)?,
             subgoals: subgoals.fold_with(folder, binders)?,
             current_time: current_time.fold_with(folder, binders)?,
@@ -573,27 +573,6 @@ where
             floundered_literal: floundered_literal.fold_with(folder, binders)?,
             floundered_time: floundered_time.fold_with(folder, binders)?,
         })
-    }
-}
-
-impl<C: Context, TF: TypeFamily> Fold<TF> for DelayedLiteral<C>
-where
-    C: Context,
-    C::CanonicalConstrainedSubst: Fold<TF, Result = C::CanonicalConstrainedSubst>,
-{
-    type Result = DelayedLiteral<C>;
-
-    fn fold_with(&self, folder: &mut dyn Folder<TF>, binders: usize) -> Fallible<Self::Result> {
-        match self {
-            DelayedLiteral::CannotProve(()) => Ok(DelayedLiteral::CannotProve(())),
-            DelayedLiteral::Negative(table_index) => Ok(DelayedLiteral::Negative(
-                table_index.fold_with(folder, binders)?,
-            )),
-            DelayedLiteral::Positive(table_index, subst) => Ok(DelayedLiteral::Positive(
-                table_index.fold_with(folder, binders)?,
-                subst.fold_with(folder, binders)?,
-            )),
-        }
     }
 }
 
