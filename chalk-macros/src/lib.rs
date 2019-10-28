@@ -31,7 +31,7 @@ thread_local! {
 
 // When CHALK_DEBUG is enabled, we only allow this many frames of
 // nested processing, at which point we assume something has gone
-// awry.
+// away.
 const OVERFLOW_DEPTH: usize = 100;
 
 #[macro_export]
