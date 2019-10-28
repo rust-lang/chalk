@@ -154,7 +154,7 @@ impl TimeStamp {
 /// variables for which it cannot produce a value. The classic example
 /// of floundering is a negative subgoal:
 ///
-/// ```ignore
+/// ```notrust
 /// not { Implemented(?T: Foo) }
 /// ```
 ///
@@ -173,7 +173,7 @@ impl TimeStamp {
 ///
 /// Floundering can also occur indirectly. For example:
 ///
-/// ```rust,ignore
+/// ```notrust
 /// trait Foo { }
 /// impl<T> Foo for T { }
 /// ```
@@ -283,9 +283,11 @@ pub enum Literal<C: Context> {
 /// initialized with the index of the predicate on the stack. So
 /// imagine we have a stack like this:
 ///
+/// ```notrust
 ///     // 0 foo(X)   <-- bottom of stack
 ///     // 1 bar(X)
 ///     // 2 baz(X)   <-- top of stack
+/// ```
 ///
 /// In this case, `positive` would be initially 0, 1, and 2 for `foo`,
 /// `bar`, and `baz` respectively. This reflects the fact that the

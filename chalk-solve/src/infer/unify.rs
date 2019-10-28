@@ -5,7 +5,6 @@ use chalk_ir::fold::{
     DefaultFreeVarFolder, DefaultTypeFolder, Fold, InferenceFolder, PlaceholderFolder,
 };
 use chalk_ir::zip::{Zip, Zipper};
-use std::sync::Arc;
 
 use super::var::*;
 use super::*;
@@ -13,7 +12,7 @@ use super::*;
 impl InferenceTable {
     pub(crate) fn unify<T>(
         &mut self,
-        environment: &Arc<Environment<ChalkIr>>,
+        environment: &Environment<ChalkIr>,
         a: &T,
         b: &T,
     ) -> Fallible<UnificationResult>
@@ -42,7 +41,7 @@ impl InferenceTable {
 
 struct Unifier<'t> {
     table: &'t mut InferenceTable,
-    environment: &'t Arc<Environment<ChalkIr>>,
+    environment: &'t Environment<ChalkIr>,
     goals: Vec<InEnvironment<DomainGoal<ChalkIr>>>,
     constraints: Vec<InEnvironment<Constraint<ChalkIr>>>,
 }
@@ -54,7 +53,7 @@ pub(crate) struct UnificationResult {
 }
 
 impl<'t> Unifier<'t> {
-    fn new(table: &'t mut InferenceTable, environment: &'t Arc<Environment<ChalkIr>>) -> Self {
+    fn new(table: &'t mut InferenceTable, environment: &'t Environment<ChalkIr>) -> Self {
         Unifier {
             environment: environment,
             table: table,

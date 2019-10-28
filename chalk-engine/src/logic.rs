@@ -1,6 +1,4 @@
-use crate::context::{
-    prelude::*, Floundered, WithInstantiatedExClause, WithInstantiatedUCanonicalGoal,
-};
+use crate::context::{prelude::*, Floundered, UnificationOps};
 use crate::fallible::NoSolution;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
@@ -234,14 +232,20 @@ impl<C: Context> Forest<C> {
             match self.tables[table].pop_next_strand() {
                 Some(canonical_strand) => {
                     let num_universes = C::num_universes(&self.tables[table].table_goal);
-                    let result = Self::with_instantiated_strand(
-                        context,
+                    let CanonicalStrand {
+                        canonical_ex_clause,
+                        selected_subgoal,
+                    } = canonical_strand;
+                    let result: StrandResult<C, ()> = context.instantiate_ex_clause(
                         num_universes,
-                        &canonical_strand,
-                        PursueStrand {
-                            forest: self,
-                            context,
-                            depth,
+                        &canonical_ex_clause,
+                        |infer, ex_clause| {
+                            let strand = Strand {
+                                infer,
+                                ex_clause,
+                                selected_subgoal: selected_subgoal.clone(),
+                            };
+                            self.pursue_strand(context, depth, strand)
                         },
                     );
                     match result {
@@ -297,59 +301,18 @@ impl<C: Context> Forest<C> {
         }
     }
 
-    fn with_instantiated_strand<R>(
-        context: &impl ContextOps<C>,
-        num_universes: usize,
-        canonical_strand: &CanonicalStrand<C>,
-        op: impl WithInstantiatedStrand<C, Output = R>,
-    ) -> R {
-        let CanonicalStrand {
-            canonical_ex_clause,
-            selected_subgoal,
-        } = canonical_strand;
-        return context.instantiate_ex_clause(
-            num_universes,
-            &canonical_ex_clause,
-            With {
-                op,
-                selected_subgoal: selected_subgoal.clone(),
-            },
-        );
-
-        struct With<C: Context, OP: WithInstantiatedStrand<C>> {
-            op: OP,
-            selected_subgoal: Option<SelectedSubgoal<C>>,
-        }
-
-        impl<C: Context, OP: WithInstantiatedStrand<C>> WithInstantiatedExClause<C> for With<C, OP> {
-            type Output = OP::Output;
-
-            fn with<I: Context>(
-                self,
-                infer: &mut dyn InferenceTable<C, I>,
-                ex_clause: ExClause<I>,
-            ) -> OP::Output {
-                self.op.with(Strand {
-                    infer,
-                    ex_clause,
-                    selected_subgoal: self.selected_subgoal.clone(),
-                })
-            }
-        }
-    }
-
-    fn canonicalize_strand(strand: Strand<'_, C, impl Context>) -> CanonicalStrand<C> {
+    fn canonicalize_strand(strand: Strand<C>) -> CanonicalStrand<C> {
         let Strand {
-            infer,
+            mut infer,
             ex_clause,
             selected_subgoal,
         } = strand;
-        Self::canonicalize_strand_from(&mut *infer, &ex_clause, selected_subgoal)
+        Self::canonicalize_strand_from(&mut infer, &ex_clause, selected_subgoal)
     }
 
-    fn canonicalize_strand_from<I: Context>(
-        infer: &mut dyn InferenceTable<C, I>,
-        ex_clause: &ExClause<I>,
+    fn canonicalize_strand_from(
+        infer: &mut dyn InferenceTable<C>,
+        ex_clause: &ExClause<C>,
         selected_subgoal: Option<SelectedSubgoal<C>>,
     ) -> CanonicalStrand<C> {
         let canonical_ex_clause = infer.canonicalize_ex_clause(&ex_clause);
@@ -442,19 +405,25 @@ impl<C: Context> Forest<C> {
 
         let num_universes = C::num_universes(&self.tables[table].table_goal);
         for canonical_strand in self.tables[table].strands_mut() {
-            // FIXME if CanonicalExClause were not held abstract, we
-            // could do this in place like we used to (and
-            // `instantiate_strand` could take ownership), since we
-            // don't really need to instantiate here to do this
-            // operation.
-            let (delayed_strand, subgoal_table) = Self::with_instantiated_strand(
-                context,
+            let CanonicalStrand {
+                canonical_ex_clause,
+                selected_subgoal,
+            } = canonical_strand;
+            let (new_canonical, subgoal_table) = context.instantiate_ex_clause(
                 num_universes,
-                canonical_strand,
-                DelayStrandAfterCycle { table },
+                &canonical_ex_clause,
+                |infer, ex_clause| {
+                    let strand = Strand {
+                        infer,
+                        ex_clause,
+                        selected_subgoal: selected_subgoal.clone(),
+                    };
+                    let (delayed_strand, subgoal_table) =
+                        Self::delay_strand_after_cycle(table, strand);
+                    (Self::canonicalize_strand(delayed_strand), subgoal_table)
+                },
             );
-
-            *canonical_strand = delayed_strand;
+            *canonical_strand = new_canonical;
 
             if visited.insert(subgoal_table) {
                 tables.push(subgoal_table);
@@ -468,8 +437,8 @@ impl<C: Context> Forest<C> {
 
     fn delay_strand_after_cycle(
         table: TableIndex,
-        mut strand: Strand<'_, C, impl Context>,
-    ) -> (CanonicalStrand<C>, TableIndex) {
+        mut strand: Strand<C>,
+    ) -> (Strand<C>, TableIndex) {
         let (subgoal_index, subgoal_table) = match &strand.selected_subgoal {
             Some(selected_subgoal) => (
                 selected_subgoal.subgoal_index,
@@ -494,7 +463,7 @@ impl<C: Context> Forest<C> {
             strand.selected_subgoal = None;
         }
 
-        (Self::canonicalize_strand(strand), subgoal_table)
+        (strand, subgoal_table)
     }
 
     /// Pursues `strand` to see if it leads us to a new answer, either
@@ -505,7 +474,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        mut strand: Strand<'_, C, impl Context>,
+        mut strand: Strand<C>,
     ) -> StrandResult<C, ()> {
         info_heading!(
             "pursue_strand(table={:?}, depth={:?}, ex_clause={:#?}, selected_subgoal={:?})",
@@ -537,7 +506,7 @@ impl<C: Context> Forest<C> {
             // Get or create table for this subgoal.
             match self.get_or_create_table_for_subgoal(
                 context,
-                &mut *strand.infer,
+                &mut strand.infer,
                 &strand.ex_clause.subgoals[subgoal_index],
             ) {
                 Some((subgoal_table, universe_map)) => {
@@ -579,14 +548,10 @@ impl<C: Context> Forest<C> {
     ///   strand led nowhere of interest.
     /// - the strand may represent a new answer, in which case it is
     ///   added to the table and `Ok` is returned.
-    fn pursue_answer(
-        &mut self,
-        depth: StackIndex,
-        strand: Strand<'_, C, impl Context>,
-    ) -> StrandResult<C, ()> {
+    fn pursue_answer(&mut self, depth: StackIndex, strand: Strand<C>) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
         let Strand {
-            infer,
+            mut infer,
             ex_clause:
                 ExClause {
                     subst,
@@ -723,23 +688,22 @@ impl<C: Context> Forest<C> {
     /// In terms of the NFTD paper, creating a new table corresponds
     /// to the *New Subgoal* step as well as the *Program Clause
     /// Resolution* steps.
-    fn get_or_create_table_for_subgoal<I: Context>(
+    fn get_or_create_table_for_subgoal(
         &mut self,
         context: &impl ContextOps<C>,
-        infer: &mut dyn InferenceTable<C, I>,
-        subgoal: &Literal<I>,
+        infer: &mut dyn InferenceTable<C>,
+        subgoal: &Literal<C>,
     ) -> Option<(TableIndex, C::UniverseMap)> {
         debug_heading!("get_or_create_table_for_subgoal(subgoal={:?})", subgoal);
 
         // Subgoal abstraction:
-        let canonical_subgoal = match subgoal {
+        let (ucanonical_subgoal, universe_map) = match subgoal {
             Literal::Positive(subgoal) => self.abstract_positive_literal(infer, subgoal),
             Literal::Negative(subgoal) => self.abstract_negative_literal(infer, subgoal)?,
         };
 
-        debug!("canonical_subgoal={:?}", canonical_subgoal);
-
-        let (ucanonical_subgoal, universe_map) = infer.u_canonicalize_goal(&canonical_subgoal);
+        debug!("ucanonical_subgoal={:?}", ucanonical_subgoal);
+        debug!("universe_map={:?}", universe_map);
 
         let table = self.get_or_create_table_for_ucanonical_goal(context, ucanonical_subgoal);
 
@@ -790,44 +754,31 @@ impl<C: Context> Forest<C> {
     fn push_initial_strands(&mut self, context: &impl ContextOps<C>, table: TableIndex) {
         // Instantiate the table goal with fresh inference variables.
         let table_goal = self.tables[table].table_goal.clone();
-        context.instantiate_ucanonical_goal(
-            &table_goal,
-            PushInitialStrandsInstantiated { table, this: self },
-        );
-
-        struct PushInitialStrandsInstantiated<'a, C: Context + 'a> {
-            table: TableIndex,
-            this: &'a mut Forest<C>,
-        }
-
-        impl<'a, C: Context> WithInstantiatedUCanonicalGoal<C> for PushInitialStrandsInstantiated<'a, C> {
-            type Output = ();
-
-            fn with<I: Context>(
-                self,
-                infer: &mut dyn InferenceTable<C, I>,
-                subst: I::Substitution,
-                environment: I::Environment,
-                goal: I::Goal,
-            ) {
-                let PushInitialStrandsInstantiated { table, this } = self;
-                this.push_initial_strands_instantiated(table, infer, subst, environment, goal);
-            }
-        }
+        context.instantiate_ucanonical_goal(&table_goal, |mut infer, subst, environment, goal| {
+            self.push_initial_strands_instantiated(
+                context,
+                table,
+                &mut infer,
+                subst,
+                environment,
+                goal,
+            );
+        });
     }
 
-    fn push_initial_strands_instantiated<I: Context>(
+    fn push_initial_strands_instantiated(
         &mut self,
+        context: &impl ContextOps<C>,
         table: TableIndex,
-        infer: &mut dyn InferenceTable<C, I>,
-        subst: I::Substitution,
-        environment: I::Environment,
-        goal: I::Goal,
+        infer: &mut C::InferenceTable,
+        subst: C::Substitution,
+        environment: C::Environment,
+        goal: C::Goal,
     ) {
         let table_ref = &mut self.tables[table];
         match infer.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
-                match infer.program_clauses(&environment, &domain_goal) {
+                match context.program_clauses(&environment, &domain_goal, infer) {
                     Ok(clauses) => {
                         for clause in clauses {
                             info!("program clause = {:#?}", clause);
@@ -858,18 +809,12 @@ impl<C: Context> Forest<C> {
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
-                if let Ok(ex_clause) =
-                    Self::simplify_hh_goal(&mut *infer, subst, &environment, hh_goal)
-                {
+                if let Ok(ex_clause) = Self::simplify_hh_goal(infer, subst, environment, hh_goal) {
                     info!(
                         "pushing initial strand with ex-clause: {:#?}",
                         infer.debug_ex_clause(&ex_clause),
                     );
-                    table_ref.push_strand(Self::canonicalize_strand(Strand {
-                        infer,
-                        ex_clause,
-                        selected_subgoal: None,
-                    }));
+                    table_ref.push_strand(Self::canonicalize_strand_from(infer, &ex_clause, None));
                 }
             }
         }
@@ -883,11 +828,11 @@ impl<C: Context> Forest<C> {
     /// truncate the goal to ensure termination.
     ///
     /// This technique is described in the SA paper.
-    fn abstract_positive_literal<I: Context>(
+    fn abstract_positive_literal(
         &mut self,
-        infer: &mut dyn InferenceTable<C, I>,
-        subgoal: &I::GoalInEnvironment,
-    ) -> C::CanonicalGoalInEnvironment {
+        infer: &mut dyn InferenceTable<C>,
+        subgoal: &C::GoalInEnvironment,
+    ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap) {
         // Subgoal abstraction: Rather than looking up the table for
         // `selected_goal` directly, first apply the truncation
         // function. This may introduce fresh variables, making the
@@ -912,26 +857,26 @@ impl<C: Context> Forest<C> {
         // will fail to unify with our selected goal, producing no
         // resolvent.
         match infer.truncate_goal(subgoal) {
-            None => infer.canonicalize_goal(subgoal),
+            None => infer.fully_canonicalize_goal(subgoal),
             Some(truncated_subgoal) => {
                 debug!("truncated={:?}", truncated_subgoal);
-                infer.canonicalize_goal(&truncated_subgoal)
+                infer.fully_canonicalize_goal(&truncated_subgoal)
             }
         }
     }
 
     /// Given a selected negative subgoal, the subgoal is "inverted"
-    /// (see `InferenceTable<C, I>::invert`) and then potentially truncated
+    /// (see `InferenceTable<C>::invert`) and then potentially truncated
     /// (see `abstract_positive_literal`). The result subgoal is
     /// canonicalized. In some cases, this may return `None` and hence
     /// fail to yield a useful result, for example if free existential
     /// variables appear in `subgoal` (in which case the execution is
     /// said to "flounder").
-    fn abstract_negative_literal<I: Context>(
+    fn abstract_negative_literal(
         &mut self,
-        infer: &mut dyn InferenceTable<C, I>,
-        subgoal: &I::GoalInEnvironment,
-    ) -> Option<C::CanonicalGoalInEnvironment> {
+        infer: &mut dyn InferenceTable<C>,
+        subgoal: &C::GoalInEnvironment,
+    ) -> Option<(C::UCanonicalGoalInEnvironment, C::UniverseMap)> {
         // First, we have to check that the selected negative literal
         // is ground, and invert any universally quantified variables.
         //
@@ -1024,7 +969,7 @@ impl<C: Context> Forest<C> {
         // with it yet.
         match infer.truncate_goal(&inverted_subgoal) {
             Some(_) => None,
-            None => Some(infer.canonicalize_goal(&inverted_subgoal)),
+            None => Some(infer.fully_canonicalize_goal(&inverted_subgoal)),
         }
     }
 
@@ -1043,7 +988,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        mut strand: Strand<'_, C, impl Context>,
+        mut strand: Strand<C>,
         selected_subgoal: &SelectedSubgoal<C>,
     ) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
@@ -1121,7 +1066,7 @@ impl<C: Context> Forest<C> {
 
         // OK, let's follow *this* answer and see where it leads.
         let Strand {
-            infer,
+            mut infer,
             mut ex_clause,
             selected_subgoal: _,
         } = strand;
@@ -1152,7 +1097,7 @@ impl<C: Context> Forest<C> {
                     if !answer.delayed_literals.is_empty() {
                         ex_clause.delayed_literals.push(DelayedLiteral::Positive(
                             subgoal_table,
-                            infer.sink_answer_subset(&answer.subst),
+                            answer.subst.clone(),
                         ));
                     }
                 }
@@ -1161,7 +1106,7 @@ impl<C: Context> Forest<C> {
                 ex_clause.current_time.increment();
 
                 // Apply answer abstraction.
-                let ex_clause = self.truncate_returned(ex_clause, &mut *infer);
+                let ex_clause = self.truncate_returned(ex_clause, &mut infer);
 
                 self.pursue_strand_recursively(
                     context,
@@ -1205,11 +1150,11 @@ impl<C: Context> Forest<C> {
     /// Used whenever we process an answer (whether new or cached) on
     /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
     /// the resolvent (or factor) if it has grown too large.
-    fn truncate_returned<I: Context>(
+    fn truncate_returned(
         &self,
-        ex_clause: ExClause<I>,
-        infer: &mut dyn InferenceTable<C, I>,
-    ) -> ExClause<I> {
+        ex_clause: ExClause<C>,
+        infer: &mut dyn InferenceTable<C>,
+    ) -> ExClause<C> {
         // DIVERGENCE
         //
         // In the original RR paper, truncation is only applied
@@ -1275,7 +1220,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        strand: Strand<'_, C, impl Context>,
+        strand: Strand<C>,
     ) -> StrandResult<C, ()> {
         crate::maybe_grow_stack(|| self.pursue_strand(context, depth, strand))
     }
@@ -1286,14 +1231,14 @@ impl<C: Context> Forest<C> {
     fn push_strand_pursuing_next_answer(
         &mut self,
         depth: StackIndex,
-        strand: &mut Strand<'_, C, impl Context>,
+        strand: &mut Strand<C>,
         selected_subgoal: &SelectedSubgoal<C>,
     ) {
         let table = self.stack[depth].table;
         let mut selected_subgoal = selected_subgoal.clone();
         selected_subgoal.answer_index.increment();
         self.tables[table].push_strand(Self::canonicalize_strand_from(
-            &mut *strand.infer,
+            &mut strand.infer,
             &strand.ex_clause,
             Some(selected_subgoal),
         ));
@@ -1303,7 +1248,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        strand: Strand<'_, C, impl Context>,
+        strand: Strand<C>,
         selected_subgoal: &SelectedSubgoal<C>,
     ) -> StrandResult<C, ()> {
         let table = self.stack[depth].table;
@@ -1437,37 +1382,5 @@ impl<C: Context> Forest<C> {
                 selected_subgoal: None,
             },
         )
-    }
-}
-
-trait WithInstantiatedStrand<C: Context> {
-    type Output;
-
-    fn with(self, strand: Strand<'_, C, impl Context>) -> Self::Output;
-}
-
-struct PursueStrand<'me, C: Context, CO: ContextOps<C>> {
-    forest: &'me mut Forest<C>,
-    context: &'me CO,
-    depth: StackIndex,
-}
-
-impl<'me, C: Context, CO: ContextOps<C>> WithInstantiatedStrand<C> for PursueStrand<'me, C, CO> {
-    type Output = StrandResult<C, ()>;
-
-    fn with(self, strand: Strand<'_, C, impl Context>) -> Self::Output {
-        self.forest.pursue_strand(self.context, self.depth, strand)
-    }
-}
-
-struct DelayStrandAfterCycle {
-    table: TableIndex,
-}
-
-impl<C: Context> WithInstantiatedStrand<C> for DelayStrandAfterCycle {
-    type Output = (CanonicalStrand<C>, TableIndex);
-
-    fn with(self, strand: Strand<'_, C, impl Context>) -> Self::Output {
-        <Forest<C>>::delay_strand_after_cycle(self.table, strand)
     }
 }

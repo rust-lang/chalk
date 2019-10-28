@@ -104,7 +104,7 @@ impl<C: Context> Forest<C> {
     ///
     /// Example: Given a program like:
     ///
-    /// ```
+    /// ```notrust
     /// struct Foo { a: Option<Box<Bar>> }
     /// struct Bar { a: Option<Box<Foo>> }
     /// trait XXX { }
@@ -143,18 +143,14 @@ impl<C: Context> Forest<C> {
     }
 }
 
-struct ForestSolver<'me, C: Context + 'me, CO: ContextOps<C> + 'me> {
+struct ForestSolver<'me, C: Context, CO: ContextOps<C>> {
     forest: &'me mut Forest<C>,
     context: &'me CO,
     table: TableIndex,
     answer: AnswerIndex,
 }
 
-impl<'me, C, CO> AnswerStream<C> for ForestSolver<'me, C, CO>
-where
-    C: Context,
-    CO: ContextOps<C>,
-{
+impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C, CO> {
     fn peek_answer(&mut self) -> Option<SimplifiedAnswer<C>> {
         loop {
             match self

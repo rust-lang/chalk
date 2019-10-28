@@ -6,7 +6,6 @@ use chalk_ir::could_match::CouldMatch;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
-use std::sync::Arc;
 
 mod env_elaborator;
 pub mod program_clauses;
@@ -109,7 +108,7 @@ pub fn push_auto_trait_impls(
 /// derived from the trait `Clone` and its impls.
 pub(crate) fn program_clauses_for_goal<'db>(
     db: &'db dyn RustIrDatabase,
-    environment: &Arc<Environment<ChalkIr>>,
+    environment: &Environment<ChalkIr>,
     goal: &DomainGoal<ChalkIr>,
 ) -> Vec<ProgramClause<ChalkIr>> {
     debug_heading!(
@@ -135,7 +134,7 @@ pub(crate) fn program_clauses_for_goal<'db>(
 /// be.
 fn program_clauses_that_could_match(
     db: &dyn RustIrDatabase,
-    environment: &Arc<Environment<ChalkIr>>,
+    environment: &Environment<ChalkIr>,
     goal: &DomainGoal<ChalkIr>,
     clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
@@ -281,7 +280,7 @@ fn push_program_clauses_for_associated_type_values_in_impls_of(
 /// earlier parts of the logic should "flounder" in that case.
 fn match_ty(
     db: &dyn RustIrDatabase,
-    environment: &Arc<Environment<ChalkIr>>,
+    environment: &Environment<ChalkIr>,
     ty: &Ty<ChalkIr>,
     clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
@@ -321,7 +320,7 @@ fn match_type_kind(
 
 fn program_clauses_for_env<'db>(
     db: &'db dyn RustIrDatabase,
-    environment: &Arc<Environment<ChalkIr>>,
+    environment: &Environment<ChalkIr>,
     clauses: &mut Vec<ProgramClause<ChalkIr>>,
 ) {
     let mut last_round = FxHashSet::default();

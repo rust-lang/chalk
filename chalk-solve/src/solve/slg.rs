@@ -19,7 +19,6 @@ use chalk_engine::hh::HhGoal;
 use chalk_engine::{DelayedLiteral, ExClause, Literal};
 
 use std::fmt::Debug;
-use std::sync::Arc;
 
 mod aggregate;
 mod resolvent;
@@ -48,8 +47,7 @@ pub(crate) struct SlgContextOps<'me> {
     max_size: usize,
 }
 
-pub(super) struct TruncatingInferenceTable<'me> {
-    program: &'me dyn RustIrDatabase,
+pub struct TruncatingInferenceTable {
     max_size: usize,
     infer: InferenceTable,
 }
@@ -61,14 +59,14 @@ impl context::Context for SlgContext {
     type UniverseMap = UniverseMap;
     type InferenceNormalizedSubst = Substitution<ChalkIr>;
     type Solution = Solution;
-    type Environment = Arc<Environment<ChalkIr>>;
+    type InferenceTable = TruncatingInferenceTable;
+    type Environment = Environment<ChalkIr>;
     type DomainGoal = DomainGoal<ChalkIr>;
     type Goal = Goal<ChalkIr>;
     type BindersGoal = Binders<Box<Goal<ChalkIr>>>;
     type Parameter = Parameter<ChalkIr>;
     type ProgramClause = ProgramClause<ChalkIr>;
     type ProgramClauses = Vec<ProgramClause<ChalkIr>>;
-    type UnificationResult = UnificationResult;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst<ChalkIr>>;
     type GoalInEnvironment = InEnvironment<Goal<ChalkIr>>;
     type Substitution = Substitution<ChalkIr>;
@@ -76,7 +74,7 @@ impl context::Context for SlgContext {
     type Variance = ();
 
     fn goal_in_environment(
-        environment: &Arc<Environment<ChalkIr>>,
+        environment: &Environment<ChalkIr>,
         goal: Goal<ChalkIr>,
     ) -> InEnvironment<Goal<ChalkIr>> {
         InEnvironment::new(environment, goal)
@@ -148,114 +146,11 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
             .quantified
     }
 
-    fn instantiate_ucanonical_goal<R>(
-        &self,
-        arg: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        op: impl context::WithInstantiatedUCanonicalGoal<SlgContext, Output = R>,
-    ) -> R {
-        let (infer, subst, InEnvironment { environment, goal }) =
-            InferenceTable::from_canonical(arg.universes, &arg.canonical);
-        let dyn_infer = &mut TruncatingInferenceTable::new(self.program, self.max_size, infer);
-        op.with(dyn_infer, subst, environment, goal)
-    }
-
-    fn instantiate_ex_clause<R>(
-        &self,
-        num_universes: usize,
-        canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
-        op: impl context::WithInstantiatedExClause<SlgContext, Output = R>,
-    ) -> R {
-        let (infer, _subst, ex_cluse) =
-            InferenceTable::from_canonical(num_universes, canonical_ex_clause);
-        let dyn_infer = &mut TruncatingInferenceTable::new(self.program, self.max_size, infer);
-        op.with(dyn_infer, ex_cluse)
-    }
-}
-
-impl<'me> TruncatingInferenceTable<'me> {
-    fn new(program: &'me dyn RustIrDatabase, max_size: usize, infer: InferenceTable) -> Self {
-        Self {
-            program,
-            max_size,
-            infer,
-        }
-    }
-}
-
-impl<'me> context::TruncateOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
-    fn truncate_goal(
-        &mut self,
-        subgoal: &InEnvironment<Goal<ChalkIr>>,
-    ) -> Option<InEnvironment<Goal<ChalkIr>>> {
-        let Truncated { overflow, value } =
-            truncate::truncate(&mut self.infer, self.max_size, subgoal);
-        if overflow {
-            Some(value)
-        } else {
-            None
-        }
-    }
-
-    fn truncate_answer(&mut self, subst: &Substitution<ChalkIr>) -> Option<Substitution<ChalkIr>> {
-        let Truncated { overflow, value } =
-            truncate::truncate(&mut self.infer, self.max_size, subst);
-        if overflow {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-impl<'me> context::InferenceTable<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
-    fn into_hh_goal(&mut self, goal: Goal<ChalkIr>) -> HhGoal<SlgContext> {
-        match goal {
-            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
-            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
-            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
-            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
-            Goal::Not(g1) => HhGoal::Not(*g1),
-            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify((), a, b),
-            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
-            Goal::CannotProve(()) => HhGoal::CannotProve,
-        }
-    }
-
-    // Used by: simplify
-    fn add_clauses(
-        &mut self,
-        env: &Arc<Environment<ChalkIr>>,
-        clauses: Vec<ProgramClause<ChalkIr>>,
-    ) -> Arc<Environment<ChalkIr>> {
-        Environment::add_clauses(env, clauses)
-    }
-
-    fn into_goal(&self, domain_goal: DomainGoal<ChalkIr>) -> Goal<ChalkIr> {
-        domain_goal.cast()
-    }
-
-    fn cannot_prove(&self) -> Goal<ChalkIr> {
-        Goal::CannotProve(())
-    }
-
-    // Used by: logic
-    fn next_subgoal_index(&mut self, ex_clause: &ExClause<SlgContext>) -> usize {
-        // For now, we always pick the last subgoal in the
-        // list.
-        //
-        // FIXME(rust-lang-nursery/chalk#80) -- we should be more
-        // selective. For example, we don't want to pick a
-        // negative literal that will flounder, and we don't want
-        // to pick things like `?T: Sized` if we can help it.
-        ex_clause.subgoals.len() - 1
-    }
-}
-
-impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenceTable<'me> {
     fn program_clauses(
-        &mut self,
-        environment: &Arc<Environment<ChalkIr>>,
+        &self,
+        environment: &Environment<ChalkIr>,
         goal: &DomainGoal<ChalkIr>,
+        infer: &mut TruncatingInferenceTable,
     ) -> Result<Vec<ProgramClause<ChalkIr>>, Floundered> {
         // Look for floundering goals:
         match goal {
@@ -265,7 +160,7 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
                 if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
                     let self_ty = trait_ref.self_type_parameter().unwrap();
                     if let Some(v) = self_ty.inference_var() {
-                        if !self.infer.var_is_bound(v) {
+                        if !infer.infer.var_is_bound(v) {
                             return Err(Floundered);
                         }
                     }
@@ -297,6 +192,111 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         Ok(clauses)
     }
 
+    fn instantiate_ucanonical_goal<R>(
+        &self,
+        arg: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
+        op: impl FnOnce(
+            TruncatingInferenceTable,
+            Substitution<ChalkIr>,
+            Environment<ChalkIr>,
+            Goal<ChalkIr>,
+        ) -> R,
+    ) -> R {
+        let (infer, subst, InEnvironment { environment, goal }) =
+            InferenceTable::from_canonical(arg.universes, &arg.canonical);
+        let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
+        op(infer_table, subst, environment, goal)
+    }
+
+    fn instantiate_ex_clause<R>(
+        &self,
+        num_universes: usize,
+        canonical_ex_clause: &Canonical<ExClause<SlgContext>>,
+        op: impl FnOnce(TruncatingInferenceTable, ExClause<SlgContext>) -> R,
+    ) -> R {
+        let (infer, _subst, ex_cluse) =
+            InferenceTable::from_canonical(num_universes, canonical_ex_clause);
+        let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
+        op(infer_table, ex_cluse)
+    }
+}
+
+impl TruncatingInferenceTable {
+    fn new(max_size: usize, infer: InferenceTable) -> Self {
+        Self { max_size, infer }
+    }
+}
+
+impl context::TruncateOps<SlgContext> for TruncatingInferenceTable {
+    fn truncate_goal(
+        &mut self,
+        subgoal: &InEnvironment<Goal<ChalkIr>>,
+    ) -> Option<InEnvironment<Goal<ChalkIr>>> {
+        let Truncated { overflow, value } =
+            truncate::truncate(&mut self.infer, self.max_size, subgoal);
+        if overflow {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    fn truncate_answer(&mut self, subst: &Substitution<ChalkIr>) -> Option<Substitution<ChalkIr>> {
+        let Truncated { overflow, value } =
+            truncate::truncate(&mut self.infer, self.max_size, subst);
+        if overflow {
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
+
+impl context::InferenceTable<SlgContext> for TruncatingInferenceTable {
+    fn into_hh_goal(&mut self, goal: Goal<ChalkIr>) -> HhGoal<SlgContext> {
+        match goal {
+            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
+            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
+            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
+            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
+            Goal::Not(g1) => HhGoal::Not(*g1),
+            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify((), a, b),
+            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
+            Goal::CannotProve(()) => HhGoal::CannotProve,
+        }
+    }
+
+    // Used by: simplify
+    fn add_clauses(
+        &mut self,
+        env: &Environment<ChalkIr>,
+        clauses: Vec<ProgramClause<ChalkIr>>,
+    ) -> Environment<ChalkIr> {
+        Environment::add_clauses(env, clauses)
+    }
+
+    fn into_goal(&self, domain_goal: DomainGoal<ChalkIr>) -> Goal<ChalkIr> {
+        domain_goal.cast()
+    }
+
+    fn cannot_prove(&self) -> Goal<ChalkIr> {
+        Goal::CannotProve(())
+    }
+
+    // Used by: logic
+    fn next_subgoal_index(&mut self, ex_clause: &ExClause<SlgContext>) -> usize {
+        // For now, we always pick the last subgoal in the
+        // list.
+        //
+        // FIXME(rust-lang-nursery/chalk#80) -- we should be more
+        // selective. For example, we don't want to pick a
+        // negative literal that will flounder, and we don't want
+        // to pick things like `?T: Sized` if we can help it.
+        ex_clause.subgoals.len() - 1
+    }
+}
+
+impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
     fn instantiate_binders_universally(
         &mut self,
         arg: &Binders<Box<Goal<ChalkIr>>>,
@@ -315,11 +315,16 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         Box::new(self.infer.normalize_deep(value))
     }
 
-    fn canonicalize_goal(
+    fn fully_canonicalize_goal(
         &mut self,
         value: &InEnvironment<Goal<ChalkIr>>,
-    ) -> Canonical<InEnvironment<Goal<ChalkIr>>> {
-        self.infer.canonicalize(value).quantified
+    ) -> (UCanonical<InEnvironment<Goal<ChalkIr>>>, UniverseMap) {
+        let canonicalized_goal = self.infer.canonicalize(value).quantified;
+        let UCanonicalized {
+            quantified,
+            universes,
+        } = self.infer.u_canonicalize(&canonicalized_goal);
+        (quantified, universes)
     }
 
     fn canonicalize_ex_clause(
@@ -339,20 +344,6 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
             .quantified
     }
 
-    fn u_canonicalize_goal(
-        &mut self,
-        value: &Canonical<InEnvironment<Goal<ChalkIr>>>,
-    ) -> (
-        UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        crate::infer::ucanonicalize::UniverseMap,
-    ) {
-        let UCanonicalized {
-            quantified,
-            universes,
-        } = self.infer.u_canonicalize(value);
-        (quantified, universes)
-    }
-
     fn invert_goal(
         &mut self,
         value: &InEnvironment<Goal<ChalkIr>>,
@@ -360,33 +351,22 @@ impl<'me> context::UnificationOps<SlgContext, SlgContext> for TruncatingInferenc
         self.infer.invert(value)
     }
 
-    fn unify_parameters(
+    fn unify_parameters_into_ex_clause(
         &mut self,
-        environment: &Arc<Environment<ChalkIr>>,
+        environment: &Environment<ChalkIr>,
         _: (),
         a: &Parameter<ChalkIr>,
         b: &Parameter<ChalkIr>,
-    ) -> Fallible<UnificationResult> {
-        self.infer.unify(environment, a, b)
-    }
-
-    /// Since we do not have distinct types for the inference context and the slg-context,
-    /// these conversion operations are just no-ops.q
-    fn sink_answer_subset(
-        &self,
-        c: &Canonical<ConstrainedSubst<ChalkIr>>,
-    ) -> Canonical<ConstrainedSubst<ChalkIr>> {
-        c.clone()
+        ex_clause: &mut ExClause<SlgContext>,
+    ) -> Fallible<()> {
+        let result = self.infer.unify(environment, a, b)?;
+        Ok(into_ex_clause(result, ex_clause))
     }
 
     /// Since we do not have distinct types for the inference context and the slg-context,
     /// these conversion operations are just no-ops.q
     fn lift_delayed_literal(&self, c: DelayedLiteral<SlgContext>) -> DelayedLiteral<SlgContext> {
         c
-    }
-
-    fn into_ex_clause(&mut self, result: UnificationResult, ex_clause: &mut ExClause<SlgContext>) {
-        into_ex_clause(result, ex_clause)
     }
 }
 
