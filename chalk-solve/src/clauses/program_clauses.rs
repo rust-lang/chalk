@@ -193,8 +193,7 @@ impl ToProgramClauses for StructDatum {
                 DomainGoal::IsFullyVisible(self_ty.clone().cast()),
                 self_ty
                     .type_parameters()
-                    .map(|ty| DomainGoal::IsFullyVisible(ty).cast())
-                    .inspect(|_: &Goal<_>| ()), // provide a type hint
+                    .map(|ty| DomainGoal::IsFullyVisible(ty).cast::<Goal<_>>()),
             );
 
             // Fundamental types often have rules in the form of:
@@ -250,14 +249,17 @@ impl ToProgramClauses for StructDatum {
             }
 
             for qwc in where_clauses {
-                // We move the binders of the where-clause to the left, e.g. if we had:
+                // Generate implied bounds rules. We have to push the binders from the where-clauses
+                // too -- e.g., if we had `struct Foo<T: for<'a> Bar<&'a i32>>`, we would
+                // create a reverse rule like:
                 //
-                // `forall<T> { WellFormed(Foo<T>) :- forall<'a> Implemented(T: Fn(&'a i32)) }`
+                // ```notrust
+                // forall<T, 'a> { FromEnv(T: Bar<&'a i32>) :- FromEnv(Foo<T>) }
+                // ```
                 //
-                // then the reverse rule will be:
-                //
-                // `forall<'a, T> { FromEnv(T: Fn(&'a i32)) :- FromEnv(Foo<T>) }`
-                //
+                // In other words, you can assume `T: Bar<&'a i32>`
+                // for any `'a` *if* you are assuming that `Foo<T>` is
+                // well formed.
                 builder.push_binders(&qwc, |builder, wc| {
                     builder.push_clause(
                         wc.into_from_env_goal(),
@@ -605,15 +607,13 @@ impl ToProgramClauses for AssociatedTyDatum {
             //    }
             builder.push_clause(
                 WellFormed::Ty(app_ty.clone()),
-                iter::once(WellFormed::Trait(trait_ref.clone()).cast())
-                    .inspect(|_: &Goal<_>| ()) // provide a type hint
-                    .chain(
-                        where_clauses
-                            .iter()
-                            .cloned()
-                            .map(|qwc| qwc.into_well_formed_goal())
-                            .casted(),
-                    ),
+                iter::once(WellFormed::Trait(trait_ref.clone()).cast::<Goal<_>>()).chain(
+                    where_clauses
+                        .iter()
+                        .cloned()
+                        .map(|qwc| qwc.into_well_formed_goal())
+                        .casted(),
+                ),
             );
 
             // Assuming well-formedness of projection type means we can assume
@@ -650,9 +650,8 @@ impl ToProgramClauses for AssociatedTyDatum {
                     for wc in bound.into_where_clauses(projection.clone().cast()) {
                         builder.push_clause(
                             wc.into_from_env_goal(),
-                            iter::once(FromEnv::Trait(trait_ref.clone()).cast())
-                                .chain(where_clauses.iter().cloned().casted())
-                                .inspect(|_: &Goal<_>| ()), // provide a type hint
+                            iter::once(FromEnv::Trait(trait_ref.clone()).cast::<Goal<_>>())
+                                .chain(where_clauses.iter().cloned().casted()),
                         );
                     }
                 });

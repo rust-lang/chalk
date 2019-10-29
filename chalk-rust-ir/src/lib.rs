@@ -347,7 +347,7 @@ impl AssociatedTyDatum {
             parameters,
         });
 
-        // Now use that as the self type for the bounds, transformating
+        // Now use that as the self type for the bounds, transforming
         // something like `type Bar<Pn..Pm>: Debug` into
         //
         // ```
