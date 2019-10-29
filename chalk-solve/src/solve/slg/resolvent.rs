@@ -99,7 +99,7 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
         // Final X-clause that we will return.
         let mut ex_clause = ExClause {
             subst: subst.clone(),
-            delayed_literals: vec![],
+            ambiguous: false,
             constraints: vec![],
             subgoals: vec![],
             current_time: TimeStamp::default(),

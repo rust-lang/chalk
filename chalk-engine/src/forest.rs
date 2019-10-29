@@ -2,9 +2,10 @@ use crate::context::prelude::*;
 use crate::context::AnswerStream;
 use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
-use crate::table::{Answer, AnswerIndex};
+use crate::table::AnswerIndex;
 use crate::tables::Tables;
-use crate::{DepthFirstNumber, SimplifiedAnswer, TableIndex};
+use crate::Answer;
+use crate::{DepthFirstNumber, TableIndex};
 
 pub struct Forest<C: Context> {
     context: C,
@@ -44,6 +45,10 @@ impl<C: Context> Forest<C> {
     ///
     /// Thanks to subgoal abstraction and so forth, this should always
     /// terminate.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a negative cycle was detected.
     pub fn force_answers(
         &mut self,
         context: &impl ContextOps<C>,
@@ -60,6 +65,14 @@ impl<C: Context> Forest<C> {
                     Err(RootSearchFail::Floundered) => return None,
                     Err(RootSearchFail::QuantumExceeded) => continue,
                     Err(RootSearchFail::NoMoreSolutions) => return Some(answers),
+                    Err(RootSearchFail::NegativeCycle) => {
+                        // Negative cycles *ought* to be avoided by construction. Hence panic
+                        // if we find one, as that likely indicates a problem in the chalk-solve
+                        // lowering rules. (In principle, we could propagate this error out,
+                        // and let chalk-solve do the asserting, but that seemed like it would
+                        // complicate the function signature more than it's worth.)
+                        panic!("negative cycle was detected");
+                    }
                 }
             }
 
@@ -173,7 +186,10 @@ struct ForestSolver<'me, C: Context, CO: ContextOps<C>> {
 }
 
 impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C, CO> {
-    fn peek_answer(&mut self) -> Option<SimplifiedAnswer<C>> {
+    /// # Panics
+    ///
+    /// Panics if a negative cycle was detected.
+    fn peek_answer(&mut self) -> Option<Answer<C>> {
         loop {
             match self
                 .forest
@@ -181,28 +197,12 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
             {
                 Ok(()) => {
                     let answer = self.forest.answer(self.table, self.answer);
-
-                    // FIXME(rust-lang/chalk#79) -- if answer
-                    // has delayed literals, we *should* try to
-                    // simplify here (which might involve forcing
-                    // `table` and its dependencies to completion. But
-                    // instead we'll err on the side of ambiguity for
-                    // now. This will sometimes lose us completeness
-                    // around negative reasoning (we'll give ambig
-                    // when we could have given a concrete yes/no
-                    // answer).
-
-                    let simplified_answer = SimplifiedAnswer {
-                        subst: answer.subst.clone(),
-                        ambiguous: !answer.delayed_literals.is_empty(),
-                    };
-
-                    return Some(simplified_answer);
+                    return Some(answer.clone());
                 }
 
                 Err(RootSearchFail::Floundered) => {
                     let table_goal = &self.forest.tables[self.table].table_goal;
-                    return Some(SimplifiedAnswer {
+                    return Some(Answer {
                         subst: self.context.identity_constrained_subst(table_goal),
                         ambiguous: true,
                     });
@@ -213,11 +213,20 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
                 }
 
                 Err(RootSearchFail::QuantumExceeded) => {}
+
+                Err(RootSearchFail::NegativeCycle) => {
+                    // Negative cycles *ought* to be avoided by construction. Hence panic
+                    // if we find one, as that likely indicates a problem in the chalk-solve
+                    // lowering rules. (In principle, we could propagate this error out,
+                    // and let chalk-solve do the asserting, but that seemed like it would
+                    // complicate the function signature more than it's worth.)
+                    panic!("negative cycle was detected");
+                }
             }
         }
     }
 
-    fn next_answer(&mut self) -> Option<SimplifiedAnswer<C>> {
+    fn next_answer(&mut self) -> Option<Answer<C>> {
         self.peek_answer().map(|answer| {
             self.answer.increment();
             answer

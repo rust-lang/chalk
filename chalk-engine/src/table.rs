@@ -1,6 +1,6 @@
 use crate::context::prelude::*;
 use crate::strand::CanonicalStrand;
-use crate::{DelayedLiteralSet, DelayedLiteralSets};
+use crate::Answer;
 use rustc_hash::FxHashMap;
 use std::collections::hash_map::Entry;
 use std::collections::VecDeque;
@@ -27,8 +27,8 @@ pub(crate) struct Table<C: Context> {
     /// detect duplicates. Not every answer in `answers` will be
     /// represented here -- we discard answers from `answers_hash`
     /// (but not `answers`) when better answers arrive (in particular,
-    /// answers with fewer delayed literals).
-    answers_hash: FxHashMap<C::CanonicalConstrainedSubst, DelayedLiteralSets<C>>,
+    /// answers with no ambiguity).
+    answers_hash: FxHashMap<C::CanonicalConstrainedSubst, bool>,
 
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
@@ -39,15 +39,6 @@ index_struct! {
     pub(crate) struct AnswerIndex {
         value: usize,
     }
-}
-
-/// An "answer" in the on-demand solver corresponds to a fully solved
-/// goal for a particular table (modulo delayed literals). It contains
-/// a substitution
-#[derive(Clone, Debug)]
-pub struct Answer<C: Context> {
-    pub(crate) subst: C::CanonicalConstrainedSubst,
-    pub(crate) delayed_literals: DelayedLiteralSet<C>,
 }
 
 impl<C: Context> Table<C> {
@@ -115,14 +106,18 @@ impl<C: Context> Table<C> {
 
         let added = match self.answers_hash.entry(answer.subst.clone()) {
             Entry::Vacant(entry) => {
-                entry.insert(DelayedLiteralSets::singleton(
-                    answer.delayed_literals.clone(),
-                ));
+                entry.insert(answer.ambiguous);
                 true
             }
 
             Entry::Occupied(mut entry) => {
-                entry.get_mut().insert_if_minimal(&answer.delayed_literals)
+                let was_ambiguous = entry.get();
+                if !was_ambiguous || answer.ambiguous {
+                    false
+                } else {
+                    *entry.get_mut() = false;
+                    true
+                }
             }
         };
 
@@ -158,6 +153,6 @@ impl<C: Context> Answer<C> {
     /// An "unconditional" answer is one that must be true -- this is
     /// the case so long as we have no delayed literals.
     pub(super) fn is_unconditional(&self) -> bool {
-        self.delayed_literals.is_empty()
+        !self.ambiguous
     }
 }

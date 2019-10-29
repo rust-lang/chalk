@@ -16,7 +16,7 @@ impl<C: Context> Forest<C> {
     ) -> Fallible<ExClause<C>> {
         let mut ex_clause = ExClause {
             subst,
-            delayed_literals: vec![],
+            ambiguous: false,
             constraints: vec![],
             subgoals: vec![],
             current_time: TimeStamp::default(),
@@ -68,19 +68,7 @@ impl<C: Context> Forest<C> {
                         )));
                 }
                 HhGoal::CannotProve => {
-                    // You can think of `CannotProve` as a special
-                    // goal that is only provable if `not {
-                    // CannotProve }`. Trying to prove this, of
-                    // course, will always create a negative cycle and
-                    // hence a delayed literal that cannot be
-                    // resolved.
-                    let goal = infer.cannot_prove();
-                    ex_clause
-                        .subgoals
-                        .push(Literal::Negative(C::goal_in_environment(
-                            &environment,
-                            goal,
-                        )));
+                    ex_clause.ambiguous = true;
                 }
             }
         }

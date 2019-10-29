@@ -4,12 +4,11 @@ use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::stack::StackIndex;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
-use crate::table::{Answer, AnswerIndex};
+use crate::table::AnswerIndex;
+use crate::Answer;
 use crate::{
-    DelayedLiteral, DelayedLiteralSet, DepthFirstNumber, ExClause, FlounderedSubgoal, Literal,
-    Minimums, TableIndex, TimeStamp,
+    DepthFirstNumber, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
 };
-use rustc_hash::FxHashSet;
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -34,6 +33,10 @@ pub(super) enum RootSearchFail {
     /// (In a purely depth-first-based solver, like Prolog, this
     /// doesn't appear.)
     QuantumExceeded,
+
+    /// A negative cycle was found. This is fail-fast, so even if there was
+    /// possibly a solution (ambiguous or not), it may not have been found.
+    NegativeCycle,
 }
 
 type RecursiveSearchResult<T> = Result<T, RecursiveSearchFail>;
@@ -49,11 +52,15 @@ enum RecursiveSearchFail {
     /// The subgoal cannot be solved without more type information.
     Floundered,
 
+    /// A negative cycle was found. This is fail-fast, so even if there was
+    /// possibly a solution (ambiguous or not), it may not have been found.
+    NegativeCycle,
+
     /// **All** avenues to solve the subgoal we were trying solve
     /// encountered a cyclic dependency on something higher up in the
     /// stack. The `Minimums` encodes how high up (and whether
     /// positive or negative).
-    Cycle(Minimums),
+    PositiveCycle(Minimums),
 
     /// We did not find a solution, but we still have things to try.
     /// Repeat the request, and we'll give one of those a spin.
@@ -79,9 +86,13 @@ pub(super) enum StrandFail<C: Context> {
     /// been rescheduled for later.
     QuantumExceeded,
 
+    /// A negative cycle was found. This is fail-fast, so even if there was
+    /// possibly a solution (ambiguous or not), it may not have been found.
+    NegativeCycle,
+
     /// The strand hit a cyclic dependency. In this case,
     /// we return the strand, as well as a `Minimums` struct.
-    Cycle(CanonicalStrand<C>, Minimums),
+    PositiveCycle(CanonicalStrand<C>, Minimums),
 }
 
 #[derive(Debug)]
@@ -108,10 +119,11 @@ impl<C: Context> Forest<C> {
             Err(RecursiveSearchFail::Floundered) => Err(RootSearchFail::Floundered),
             Err(RecursiveSearchFail::NoMoreSolutions) => Err(RootSearchFail::NoMoreSolutions),
             Err(RecursiveSearchFail::QuantumExceeded) => Err(RootSearchFail::QuantumExceeded),
+            Err(RecursiveSearchFail::NegativeCycle) => Err(RootSearchFail::NegativeCycle),
 
             // Things involving cycles should be impossible since our
             // stack was empty on entry:
-            Ok(EnsureSuccess::Coinductive) | Err(RecursiveSearchFail::Cycle(..)) => {
+            Ok(EnsureSuccess::Coinductive) | Err(RecursiveSearchFail::PositiveCycle(..)) => {
                 panic!("ensure_root_answer: nothing on the stack but cyclic result")
             }
         }
@@ -190,7 +202,7 @@ impl<C: Context> Forest<C> {
                 return Ok(EnsureSuccess::Coinductive);
             }
 
-            return Err(RecursiveSearchFail::Cycle(Minimums {
+            return Err(RecursiveSearchFail::PositiveCycle(Minimums {
                 positive: self.stack[depth].dfn,
                 negative: DepthFirstNumber::MAX,
             }));
@@ -272,7 +284,11 @@ impl<C: Context> Forest<C> {
                             return Err(RecursiveSearchFail::QuantumExceeded);
                         }
 
-                        Err(StrandFail::Cycle(canonical_strand, strand_minimums)) => {
+                        Err(StrandFail::NegativeCycle) => {
+                            return Err(RecursiveSearchFail::NegativeCycle);
+                        }
+
+                        Err(StrandFail::PositiveCycle(canonical_strand, strand_minimums)) => {
                             // This strand encountered a cycle. Stash
                             // it for later and try the next one until
                             // we know that *all* available strands
@@ -292,7 +308,7 @@ impl<C: Context> Forest<C> {
                         return Err(RecursiveSearchFail::NoMoreSolutions);
                     } else {
                         let c = mem::replace(&mut cyclic_strands, vec![]);
-                        if let Some(err) = self.cycle(context, depth, c, cyclic_minimums) {
+                        if let Some(err) = self.cycle(depth, c, cyclic_minimums) {
                             return Err(err);
                         }
                     }
@@ -332,7 +348,6 @@ impl<C: Context> Forest<C> {
     /// an error that we can propagate higher up.
     fn cycle(
         &mut self,
-        context: &impl ContextOps<C>,
         depth: StackIndex,
         strands: Vec<CanonicalStrand<C>>,
         minimums: Minimums,
@@ -349,14 +364,10 @@ impl<C: Context> Forest<C> {
             self.clear_strands_after_cycle(table, strands);
             Some(RecursiveSearchFail::NoMoreSolutions)
         } else if minimums.positive >= dfn && minimums.negative >= dfn {
-            let mut visited = FxHashSet::default();
-            visited.insert(table);
-            self.tables[table].extend_strands(strands);
-            self.delay_strands_after_cycle(context, table, &mut visited);
-            None
+            Some(RecursiveSearchFail::NegativeCycle)
         } else {
             self.tables[table].extend_strands(strands);
-            Some(RecursiveSearchFail::Cycle(minimums))
+            Some(RecursiveSearchFail::PositiveCycle(minimums))
         }
     }
 
@@ -389,81 +400,6 @@ impl<C: Context> Forest<C> {
             let strands = self.tables[strand_table].take_strands();
             self.clear_strands_after_cycle(strand_table, strands);
         }
-    }
-
-    /// Invoked after we have determined that every strand in `table`
-    /// encounters a cycle, and that some of those cycles involve
-    /// negative edges. In that case, walks all negative edges and
-    /// converts them to delayed literals.
-    fn delay_strands_after_cycle(
-        &mut self,
-        context: &impl ContextOps<C>,
-        table: TableIndex,
-        visited: &mut FxHashSet<TableIndex>,
-    ) {
-        let mut tables = vec![];
-
-        let num_universes = C::num_universes(&self.tables[table].table_goal);
-        for canonical_strand in self.tables[table].strands_mut() {
-            let CanonicalStrand {
-                canonical_ex_clause,
-                selected_subgoal,
-            } = canonical_strand;
-            let (new_canonical, subgoal_table) = context.instantiate_ex_clause(
-                num_universes,
-                &canonical_ex_clause,
-                |infer, ex_clause| {
-                    let strand = Strand {
-                        infer,
-                        ex_clause,
-                        selected_subgoal: selected_subgoal.clone(),
-                    };
-                    let (delayed_strand, subgoal_table) =
-                        Self::delay_strand_after_cycle(table, strand);
-                    (Self::canonicalize_strand(delayed_strand), subgoal_table)
-                },
-            );
-            *canonical_strand = new_canonical;
-
-            if visited.insert(subgoal_table) {
-                tables.push(subgoal_table);
-            }
-        }
-
-        for table in tables {
-            self.delay_strands_after_cycle(context, table, visited);
-        }
-    }
-
-    fn delay_strand_after_cycle(
-        table: TableIndex,
-        mut strand: Strand<C>,
-    ) -> (Strand<C>, TableIndex) {
-        let (subgoal_index, subgoal_table) = match &strand.selected_subgoal {
-            Some(selected_subgoal) => (
-                selected_subgoal.subgoal_index,
-                selected_subgoal.subgoal_table,
-            ),
-            None => {
-                panic!(
-                    "delay_strands_after_cycle invoked on strand in table {:?} \
-                     without a selected subgoal: {:?}",
-                    table, strand,
-                );
-            }
-        };
-
-        // Delay negative literals.
-        if let Literal::Negative(_) = strand.ex_clause.subgoals[subgoal_index] {
-            strand.ex_clause.subgoals.remove(subgoal_index);
-            strand
-                .ex_clause
-                .delayed_literals
-                .push(DelayedLiteral::Negative(subgoal_table));
-            strand.selected_subgoal = None;
-        }
-
-        (strand, subgoal_table)
     }
 
     /// Pursues `strand` to see if it leads us to a new answer, either
@@ -556,7 +492,7 @@ impl<C: Context> Forest<C> {
                 ExClause {
                     subst,
                     constraints,
-                    delayed_literals,
+                    ambiguous,
                     subgoals,
                     current_time: _,
                     floundered_subgoals,
@@ -569,18 +505,9 @@ impl<C: Context> Forest<C> {
         let answer_subst = infer.canonicalize_constrained_subst(subst, constraints);
         debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
 
-        let delayed_literals = {
-            let delayed_literals: FxHashSet<_> = delayed_literals
-                .into_iter()
-                .map(|dl| infer.lift_delayed_literal(dl))
-                .collect();
-            DelayedLiteralSet { delayed_literals }
-        };
-        debug!("answer: delayed_literals={:?}", delayed_literals);
-
         let answer = Answer {
             subst: answer_subst,
-            delayed_literals,
+            ambiguous: ambiguous,
         };
 
         // A "trivial" answer is one that is 'just true for all cases'
@@ -642,7 +569,7 @@ impl<C: Context> Forest<C> {
         // is a *bit* suspect; e.g., those things in the environment
         // must be backed by an impl *eventually*).
         let is_trivial_answer = {
-            answer.delayed_literals.is_empty()
+            !answer.ambiguous
                 && C::is_trivial_substitution(&self.tables[table].table_goal, &answer.subst)
                 && C::empty_constraints(&answer.subst)
         };
@@ -1050,13 +977,17 @@ impl<C: Context> Forest<C> {
                 self.tables[table].push_strand(Self::canonicalize_strand(strand));
                 return Err(StrandFail::QuantumExceeded);
             }
-            Err(RecursiveSearchFail::Cycle(minimums)) => {
+            Err(RecursiveSearchFail::NegativeCycle) => {
+                info!("negative cycle detected");
+                return Err(StrandFail::NegativeCycle);
+            }
+            Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
                 info!(
                     "pursue_positive_subgoal: cycle with minimums {:?}",
                     minimums
                 );
                 let canonical_strand = Self::canonicalize_strand(strand);
-                return Err(StrandFail::Cycle(canonical_strand, minimums));
+                return Err(StrandFail::PositiveCycle(canonical_strand, minimums));
             }
         }
 
@@ -1094,11 +1025,8 @@ impl<C: Context> Forest<C> {
                 // part of computing the SLG resolvent.
                 {
                     let answer = self.answer(subgoal_table, answer_index);
-                    if !answer.delayed_literals.is_empty() {
-                        ex_clause.delayed_literals.push(DelayedLiteral::Positive(
-                            subgoal_table,
-                            answer.subst.clone(),
-                        ));
+                    if answer.ambiguous {
+                        ex_clause.ambiguous = true;
                     }
                 }
 
@@ -1180,37 +1108,14 @@ impl<C: Context> Forest<C> {
             None => ex_clause,
 
             // Resolvent got too large. Have to introduce approximation.
-            Some(truncated_subst) => {
-                // DIVERGENCE
-                //
-                // In RR, `self.delayed_literals` would be
-                // preserved. I have chosen to drop them. Keeping
-                // them does allow for the possibility of
-                // eliminating this answer if any of them turn out
-                // to be satisfiable. However, it also introduces
-                // an annoying edge case I didn't want to think
-                // about -- one which, interestingly, the paper
-                // did not discuss, which may indicate it is
-                // impossible for some subtle reason. In
-                // particular, a truncated delayed literal has a
-                // sort of inverse semantics. i.e. if we convert
-                // `Foo :- ~Bar(Rc<Rc<u32>>) |` to `Foo :-
-                // ~Bar(Rc<X>), Unknown |`, then this could be
-                // invalidated by an instance of `Bar(Rc<i32>)`,
-                // which is irrelevant to the original
-                // clause. (There is an additional annoyance,
-                // which is that we may not have tried to solve
-                // `Bar(Rc<X>)` at all.)
-
-                ExClause {
-                    subst: truncated_subst,
-                    delayed_literals: vec![DelayedLiteral::CannotProve(())],
-                    constraints: vec![],
-                    subgoals: vec![],
-                    current_time: TimeStamp::default(),
-                    floundered_subgoals: vec![],
-                }
-            }
+            Some(truncated_subst) => ExClause {
+                subst: truncated_subst,
+                ambiguous: true,
+                constraints: vec![],
+                subgoals: vec![],
+                current_time: TimeStamp::default(),
+                floundered_subgoals: vec![],
+            },
         }
     }
 
@@ -1263,11 +1168,8 @@ impl<C: Context> Forest<C> {
         // error or some kind or (b) continue on to pursue this strand
         // further. We continue onward in the case where we either
         // proved that `answer_index` does not exist (in which case
-        // the negative literal is true) or if we found a delayed
-        // literal (in which case the negative literal *may* be true).
-        // Before exiting the match, then, we set `delayed_literal` to
-        // either `Some` or `None` depending.
-        let delayed_literal: Option<DelayedLiteral<_>>;
+        // the negative literal is true) or if we found an ambiguous answer.
+        let ambiguous: bool;
         match self.ensure_answer_recursively(context, subgoal_table, answer_index) {
             Ok(EnsureSuccess::AnswerAvailable) => {
                 if self.answer(subgoal_table, answer_index).is_unconditional() {
@@ -1279,8 +1181,7 @@ impl<C: Context> Forest<C> {
                 }
 
                 // Got back a conditional answer. We neither succeed
-                // nor fail yet; so what we do is to delay the
-                // selected literal and keep going.
+                // nor fail yet, so just mark as ambiguous.
                 //
                 // This corresponds to the Delaying action in NFTD.
                 // It also interesting to compare this with the EWFS
@@ -1293,7 +1194,11 @@ impl<C: Context> Forest<C> {
                 // table. Then later, when all pending work from that
                 // table is completed, all negative links are
                 // converted to delays.
-                delayed_literal = Some(DelayedLiteral::Negative(subgoal_table));
+                //
+                // Previously, this introduced a `delayed_literal` that
+                // we could follow and potentially resolve later. However,
+                // for simplicity, we now just mark the strand as ambiguous.
+                ambiguous = true;
             }
 
             Ok(EnsureSuccess::Coinductive) => {
@@ -1325,7 +1230,11 @@ impl<C: Context> Forest<C> {
                 return Err(StrandFail::Floundered);
             }
 
-            Err(RecursiveSearchFail::Cycle(minimums)) => {
+            Err(RecursiveSearchFail::NegativeCycle) => {
+                return Err(StrandFail::NegativeCycle);
+            }
+
+            Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
                 // We depend on `not(subgoal)`. For us to continue,
                 // `subgoal` must be completely evaluated. Therefore,
                 // we depend (negatively) on the minimum link of
@@ -1337,7 +1246,7 @@ impl<C: Context> Forest<C> {
                     min
                 );
                 let canonical_strand = Self::canonicalize_strand(strand);
-                return Err(StrandFail::Cycle(
+                return Err(StrandFail::PositiveCycle(
                     canonical_strand,
                     Minimums {
                         positive: self.stack[depth].dfn,
@@ -1350,7 +1259,7 @@ impl<C: Context> Forest<C> {
                 // This answer does not exist. Huzzah, happy days are
                 // here again! =) We can just remove this subgoal and continue
                 // with no need for a delayed literal.
-                delayed_literal = None;
+                ambiguous = false;
             }
 
             // Learned nothing yet. Have to try again some other time.
@@ -1365,14 +1274,16 @@ impl<C: Context> Forest<C> {
         // `answer_index` of the subgoal is a failure, so let's keep
         // going. We can just remove the subgoal from the list without
         // any need to unify things, because the subgoal must be
-        // ground (i). We may need to add a delayed literal, though (ii).
+        // ground.
         let Strand {
             infer,
             mut ex_clause,
             selected_subgoal: _,
         } = strand;
-        ex_clause.subgoals.remove(selected_subgoal.subgoal_index); // (i)
-        ex_clause.delayed_literals.extend(delayed_literal); // (ii)
+        ex_clause.subgoals.remove(selected_subgoal.subgoal_index);
+        if ambiguous {
+            ex_clause.ambiguous = true;
+        }
         self.pursue_strand_recursively(
             context,
             depth,

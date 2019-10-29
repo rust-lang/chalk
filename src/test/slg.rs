@@ -107,7 +107,7 @@ fn basic() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -142,7 +142,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -152,7 +152,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -162,7 +162,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -172,7 +172,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -182,7 +182,7 @@ fn breadth_first() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -304,6 +304,7 @@ fn only_draw_so_many_blow_up() {
 
 /// Here, P and Q depend on one another through a negative loop.
 #[test]
+#[should_panic(expected = "negative cycle")]
 fn negative_loop() {
     test! {
         program {
@@ -318,22 +319,8 @@ fn negative_loop() {
         goal {
             u32: P
         } first 5 with max 3 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    delayed_literals: {
-                        Negative(
-                            TableIndex(1)
-                        )
-                    }
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }
@@ -370,7 +357,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -388,7 +375,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -414,7 +401,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -432,7 +419,7 @@ fn subgoal_cycle_uninhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -463,7 +450,7 @@ fn subgoal_cycle_inhabited() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -497,7 +484,7 @@ fn basic_region_constraint_from_positive_impl() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -534,7 +521,7 @@ fn example_2_1_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -544,7 +531,7 @@ fn example_2_1_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -554,7 +541,7 @@ fn example_2_1_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -593,7 +580,7 @@ fn example_2_2_EWFS() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -601,6 +588,7 @@ fn example_2_2_EWFS() {
 }
 
 #[test]
+#[should_panic(expected = "negative cycle")]
 #[allow(non_snake_case)]
 fn example_2_3_EWFS() {
     test! {
@@ -623,23 +611,14 @@ fn example_2_3_EWFS() {
         goal {
             a: W
         } first 10 with max 3 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    delayed_literals: {}
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }
 
 #[test]
+#[should_panic(expected = "negative cycle")]
 #[allow(non_snake_case)]
 fn example_3_3_EWFS() {
     test! {
@@ -658,27 +637,8 @@ fn example_3_3_EWFS() {
         goal {
             a: S
         } first 10 with max 3 {
-            // We don't yet have support for **simplification** --
-            // hence we delay the negatives here but that's it.
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    delayed_literals: {
-                        Negative(
-                            TableIndex(1)
-                        ),
-                        Negative(
-                            TableIndex(6)
-                        )
-                    }
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }
@@ -686,6 +646,7 @@ fn example_3_3_EWFS() {
 /// Here, P is neither true nor false. If it were true, then it would
 /// be false, and so forth.
 #[test]
+#[should_panic(expected = "negative cycle")]
 fn contradiction() {
     test! {
         program {
@@ -698,22 +659,8 @@ fn contradiction() {
         goal {
             u32: P
         } first 10 with max 3 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    delayed_literals: {
-                        Negative(
-                            TableIndex(0)
-                        )
-                    }
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }
@@ -756,7 +703,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -766,7 +713,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -776,7 +723,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -786,7 +733,7 @@ fn cached_answers_1() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -798,11 +745,7 @@ fn cached_answers_1() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: {
-                        CannotProve(
-                            ()
-                        )
-                    }
+                    ambiguous: true
                 }
             ]"
         }
@@ -836,7 +779,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -846,7 +789,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -856,7 +799,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -866,7 +809,7 @@ fn cached_answers_2() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -878,11 +821,7 @@ fn cached_answers_2() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: {
-                        CannotProve(
-                            ()
-                        )
-                    }
+                    ambiguous: true
                 }
             ]"
         }
@@ -916,7 +855,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -926,7 +865,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -936,7 +875,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -948,11 +887,7 @@ fn cached_answers_3() {
                             Ty(U0)
                         ]
                     },
-                    delayed_literals: {
-                        CannotProve(
-                            ()
-                        )
-                    }
+                    ambiguous: true
                 },
                 Answer {
                     subst: Canonical {
@@ -962,7 +897,7 @@ fn cached_answers_3() {
                         },
                         binders: []
                     },
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -970,10 +905,9 @@ fn cached_answers_3() {
 }
 
 /// Here, P depends on Q negatively, but Q depends only on itself.
-/// What happens is that P adds a negative link on Q, so that when Q
-/// delays, P is also delayed.
 #[test]
-fn negative_answer_delayed_literal() {
+#[should_panic(expected = "negative cycle")]
+fn negative_answer_ambiguous() {
     test! {
         program {
             trait P { }
@@ -987,22 +921,8 @@ fn negative_answer_delayed_literal() {
         goal {
             u32: P
         } first 10 with max 3 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    delayed_literals: {
-                        Negative(
-                            TableIndex(1)
-                        )
-                    }
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }
@@ -1042,7 +962,7 @@ fn non_enumerable_traits_direct() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 },
                 Answer {
                     subst: Canonical {
@@ -1052,7 +972,7 @@ fn non_enumerable_traits_direct() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1069,7 +989,7 @@ fn non_enumerable_traits_direct() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1168,7 +1088,7 @@ fn non_enumerable_traits_reorder() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1186,7 +1106,7 @@ fn non_enumerable_traits_reorder() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1254,7 +1174,7 @@ fn negative_reorder() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1272,7 +1192,7 @@ fn negative_reorder() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
             ]"
         }
@@ -1330,7 +1250,7 @@ fn coinductive_unsound1() {
                         }
                         binders: []
                     }
-                    delayed_literals: {}
+                    ambiguous: false
                 }
            ]"
         }

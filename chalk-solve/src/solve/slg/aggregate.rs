@@ -9,25 +9,25 @@ use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 
 use chalk_engine::context;
-use chalk_engine::SimplifiedAnswer;
+use chalk_engine::Answer;
 use std::fmt::Debug;
 
-/// Draws as many answers as it needs from `simplified_answers` (but
+/// Draws as many answers as it needs from `answers` (but
 /// no more!) in order to come up with a solution.
 impl<'me> context::AggregateOps<SlgContext> for SlgContextOps<'me> {
     fn make_solution(
         &self,
         root_goal: &Canonical<InEnvironment<Goal<ChalkIr>>>,
-        mut simplified_answers: impl context::AnswerStream<SlgContext>,
+        mut answers: impl context::AnswerStream<SlgContext>,
     ) -> Option<Solution> {
         // No answers at all?
-        if simplified_answers.peek_answer().is_none() {
+        if answers.peek_answer().is_none() {
             return None;
         }
-        let SimplifiedAnswer { subst, ambiguous } = simplified_answers.next_answer().unwrap();
+        let Answer { subst, ambiguous } = answers.next_answer().unwrap();
 
         // Exactly 1 unconditional answer?
-        if simplified_answers.peek_answer().is_none() && !ambiguous {
+        if answers.peek_answer().is_none() && !ambiguous {
             return Some(Solution::Unique(subst));
         }
 
@@ -52,13 +52,11 @@ impl<'me> context::AggregateOps<SlgContext> for SlgContextOps<'me> {
                 break Guidance::Unknown;
             }
 
-            if !simplified_answers
-                .any_future_answer(|ref mut new_subst| new_subst.may_invalidate(&subst))
-            {
+            if !answers.any_future_answer(|ref mut new_subst| new_subst.may_invalidate(&subst)) {
                 break Guidance::Definite(subst);
             }
 
-            match simplified_answers.next_answer() {
+            match answers.next_answer() {
                 Some(answer1) => {
                     subst = merge_into_guidance(root_goal, subst, &answer1.subst);
                 }
