@@ -45,6 +45,10 @@ impl<C: Context> Forest<C> {
     ///
     /// Thanks to subgoal abstraction and so forth, this should always
     /// terminate.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a negative cycle was detected.
     pub fn force_answers(
         &mut self,
         context: &impl ContextOps<C>,
@@ -177,6 +181,9 @@ struct ForestSolver<'me, C: Context, CO: ContextOps<C>> {
 }
 
 impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C, CO> {
+    /// # Panics
+    ///
+    /// Panics if a negative cycle was detected.
     fn peek_answer(&mut self) -> Option<Answer<C>> {
         loop {
             match self
