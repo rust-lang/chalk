@@ -55,7 +55,7 @@ impl<'db, 'set> EnvElaborator<'db, 'set> {
                 TypeName::TypeKindId(type_kind_id) => {
                     match_type_kind(self.db, type_kind_id, &mut clauses)
                 }
-                TypeName::Placeholder(_) => (),
+                TypeName::Placeholder(_) | TypeName::Error => (),
                 TypeName::AssociatedType(type_id) => {
                     self.db
                         .associated_ty_data(type_id)

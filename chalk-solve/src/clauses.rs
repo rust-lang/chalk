@@ -287,7 +287,7 @@ fn match_ty(
     match ty {
         Ty::Apply(application_ty) => match application_ty.name {
             TypeName::TypeKindId(type_kind_id) => match_type_kind(db, type_kind_id, clauses),
-            TypeName::Placeholder(_) => {}
+            TypeName::Placeholder(_) | TypeName::Error => {}
             TypeName::AssociatedType(type_id) => db
                 .associated_ty_data(type_id)
                 .to_program_clauses(db, clauses),

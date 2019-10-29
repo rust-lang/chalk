@@ -65,6 +65,7 @@ impl Debug for TypeName {
             TypeName::TypeKindId(id) => write!(fmt, "{:?}", id),
             TypeName::Placeholder(index) => write!(fmt, "{:?}", index),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
+            TypeName::Error => write!(fmt, "{{error}}"),
         }
     }
 }
