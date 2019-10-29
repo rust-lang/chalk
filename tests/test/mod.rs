@@ -115,7 +115,7 @@ macro_rules! test {
     ]) => {
         test!(@program[$program]
               @parsed_goals[$($parsed_goals)*
-                            $($((stringify!($goal), $C, $expected))+)+]
+                            $($((stringify!($goal), $C, TestGoal::All(vec![$expected])))+)+]
               @unparsed_goals[goal $($unparsed_goals)*])
     };
 
@@ -125,7 +125,7 @@ macro_rules! test {
     ]) => {
         test!(@program[$program]
               @parsed_goals[$($parsed_goals)*
-                            $($((stringify!($goal), $C, $expected))+)+]
+                            $($((stringify!($goal), $C, TestGoal::All(vec![$expected])))+)+]
               @unparsed_goals[])
     };
 }

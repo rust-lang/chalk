@@ -667,3 +667,52 @@ fn gat_unify_with_implied_wc() {
         }
     }
 }
+
+#[test]
+fn rust_analyzer_regression() {
+    test! {
+        program {
+            trait FnOnce<Args> {
+                type Output;
+            }
+
+            trait Try {
+                type Ok;
+                type Error;
+            }
+
+            struct Tuple<A, B> { }
+
+            trait ParallelIterator {
+                type Item;
+            }
+        }
+
+        //fn try_reduce_with<PI, R, T>(pi: PI, reduce_op: R) -> Option<T>
+        //    where
+        //        PI: ParallelIterator<Item = T>,
+        //        R: FnOnce(T::Ok) -> T,
+        //        T: Try,
+        //    {
+        //        pi.drive_unindexed()
+        //    }
+        //
+        // where `drive_unindexed` is a method in `ParallelIterator`:
+        //
+        // fn drive_unindexed(self) -> ();
+
+        goal {
+            forall<PI, R, T> {
+                if (
+                    PI: ParallelIterator<Item = T>;
+                    R: FnOnce<Tuple< <T as Try>::Ok, <T as Try>::Ok >>;
+                    T: Try
+                ) {
+                    PI: ParallelIterator
+                }
+            }
+        } yields[SolverChoice::SLG { max_size: 4 }] {
+            "substitution [], lifetime constraints []"
+        }
+    }
+}
