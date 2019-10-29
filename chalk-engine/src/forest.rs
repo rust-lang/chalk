@@ -66,6 +66,11 @@ impl<C: Context> Forest<C> {
                     Err(RootSearchFail::QuantumExceeded) => continue,
                     Err(RootSearchFail::NoMoreSolutions) => return Some(answers),
                     Err(RootSearchFail::NegativeCycle) => {
+                        // Negative cycles *ought* to be avoided by construction. Hence panic
+                        // if we find one, as that likely indicates a problem in the chalk-solve
+                        // lowering rules. (In principle, we could propagate this error out,
+                        // and let chalk-solve do the asserting, but that seemed like it would
+                        // complicate the function signature more than it's worth.)
                         panic!("negative cycle was detected");
                     }
                 }
@@ -210,6 +215,11 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
                 Err(RootSearchFail::QuantumExceeded) => {}
 
                 Err(RootSearchFail::NegativeCycle) => {
+                    // Negative cycles *ought* to be avoided by construction. Hence panic
+                    // if we find one, as that likely indicates a problem in the chalk-solve
+                    // lowering rules. (In principle, we could propagate this error out,
+                    // and let chalk-solve do the asserting, but that seemed like it would
+                    // complicate the function signature more than it's worth.)
                     panic!("negative cycle was detected");
                 }
             }

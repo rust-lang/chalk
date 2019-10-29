@@ -304,7 +304,7 @@ fn only_draw_so_many_blow_up() {
 
 /// Here, P and Q depend on one another through a negative loop.
 #[test]
-#[should_panic]
+#[should_panic(expected = "negative cycle")]
 fn negative_loop() {
     test! {
         program {
@@ -588,7 +588,7 @@ fn example_2_2_EWFS() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "negative cycle")]
 #[allow(non_snake_case)]
 fn example_2_3_EWFS() {
     test! {
@@ -618,7 +618,7 @@ fn example_2_3_EWFS() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "negative cycle")]
 #[allow(non_snake_case)]
 fn example_3_3_EWFS() {
     test! {
@@ -646,7 +646,7 @@ fn example_3_3_EWFS() {
 /// Here, P is neither true nor false. If it were true, then it would
 /// be false, and so forth.
 #[test]
-#[should_panic]
+#[should_panic(expected = "negative cycle")]
 fn contradiction() {
     test! {
         program {
@@ -906,7 +906,7 @@ fn cached_answers_3() {
 
 /// Here, P depends on Q negatively, but Q depends only on itself.
 #[test]
-#[should_panic]
+#[should_panic(expected = "negative cycle")]
 fn negative_answer_ambiguous() {
     test! {
         program {
