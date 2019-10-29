@@ -283,7 +283,7 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
 ///
 /// The meaning of each of these parts:
 ///
-/// * The *parameters* `P0...Pm` are all in scope for this associaed type.
+/// * The *parameters* `P0...Pm` are all in scope for this associated type.
 /// * The *bounds* `bounds` are things that the impl must prove to be true.
 /// * The *where clauses* `where_clauses` are things that the impl can *assume* to be true
 ///   (but which projectors must prove).
