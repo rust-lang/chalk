@@ -287,10 +287,6 @@ impl context::InferenceTable<SlgContext> for TruncatingInferenceTable {
         domain_goal.cast()
     }
 
-    fn cannot_prove(&self) -> Goal<ChalkIr> {
-        Goal::CannotProve(())
-    }
-
     // Used by: logic
     fn next_subgoal_index(&mut self, ex_clause: &ExClause<SlgContext>) -> usize {
         // For now, we always pick the last subgoal in the

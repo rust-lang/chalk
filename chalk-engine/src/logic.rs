@@ -9,7 +9,6 @@ use crate::Answer;
 use crate::{
     DepthFirstNumber, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
 };
-use rustc_hash::FxHashSet;
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -34,6 +33,10 @@ pub(super) enum RootSearchFail {
     /// (In a purely depth-first-based solver, like Prolog, this
     /// doesn't appear.)
     QuantumExceeded,
+
+    /// A negative cycle was found. This is fail-fast, so even if there was
+    /// possibly a solution (ambiguous or not), it may not have been found.
+    NegativeCycle,
 }
 
 type RecursiveSearchResult<T> = Result<T, RecursiveSearchFail>;
@@ -49,11 +52,15 @@ enum RecursiveSearchFail {
     /// The subgoal cannot be solved without more type information.
     Floundered,
 
+    /// A negative cycle was found. This is fail-fast, so even if there was
+    /// possibly a solution (ambiguous or not), it may not have been found.
+    NegativeCycle,
+
     /// **All** avenues to solve the subgoal we were trying solve
     /// encountered a cyclic dependency on something higher up in the
     /// stack. The `Minimums` encodes how high up (and whether
     /// positive or negative).
-    Cycle(Minimums),
+    PositiveCycle(Minimums),
 
     /// We did not find a solution, but we still have things to try.
     /// Repeat the request, and we'll give one of those a spin.
@@ -79,9 +86,13 @@ pub(super) enum StrandFail<C: Context> {
     /// been rescheduled for later.
     QuantumExceeded,
 
+    /// A negative cycle was found. This is fail-fast, so even if there was
+    /// possibly a solution (ambiguous or not), it may not have been found.
+    NegativeCycle,
+
     /// The strand hit a cyclic dependency. In this case,
     /// we return the strand, as well as a `Minimums` struct.
-    Cycle(CanonicalStrand<C>, Minimums),
+    PositiveCycle(CanonicalStrand<C>, Minimums),
 }
 
 #[derive(Debug)]
@@ -108,10 +119,11 @@ impl<C: Context> Forest<C> {
             Err(RecursiveSearchFail::Floundered) => Err(RootSearchFail::Floundered),
             Err(RecursiveSearchFail::NoMoreSolutions) => Err(RootSearchFail::NoMoreSolutions),
             Err(RecursiveSearchFail::QuantumExceeded) => Err(RootSearchFail::QuantumExceeded),
+            Err(RecursiveSearchFail::NegativeCycle) => Err(RootSearchFail::NegativeCycle),
 
             // Things involving cycles should be impossible since our
             // stack was empty on entry:
-            Ok(EnsureSuccess::Coinductive) | Err(RecursiveSearchFail::Cycle(..)) => {
+            Ok(EnsureSuccess::Coinductive) | Err(RecursiveSearchFail::PositiveCycle(..)) => {
                 panic!("ensure_root_answer: nothing on the stack but cyclic result")
             }
         }
@@ -190,7 +202,7 @@ impl<C: Context> Forest<C> {
                 return Ok(EnsureSuccess::Coinductive);
             }
 
-            return Err(RecursiveSearchFail::Cycle(Minimums {
+            return Err(RecursiveSearchFail::PositiveCycle(Minimums {
                 positive: self.stack[depth].dfn,
                 negative: DepthFirstNumber::MAX,
             }));
@@ -272,7 +284,11 @@ impl<C: Context> Forest<C> {
                             return Err(RecursiveSearchFail::QuantumExceeded);
                         }
 
-                        Err(StrandFail::Cycle(canonical_strand, strand_minimums)) => {
+                        Err(StrandFail::NegativeCycle) => {
+                            return Err(RecursiveSearchFail::NegativeCycle);
+                        }
+
+                        Err(StrandFail::PositiveCycle(canonical_strand, strand_minimums)) => {
                             // This strand encountered a cycle. Stash
                             // it for later and try the next one until
                             // we know that *all* available strands
@@ -292,7 +308,7 @@ impl<C: Context> Forest<C> {
                         return Err(RecursiveSearchFail::NoMoreSolutions);
                     } else {
                         let c = mem::replace(&mut cyclic_strands, vec![]);
-                        if let Some(err) = self.cycle(context, depth, c, cyclic_minimums) {
+                        if let Some(err) = self.cycle(depth, c, cyclic_minimums) {
                             return Err(err);
                         }
                     }
@@ -332,7 +348,6 @@ impl<C: Context> Forest<C> {
     /// an error that we can propagate higher up.
     fn cycle(
         &mut self,
-        context: &impl ContextOps<C>,
         depth: StackIndex,
         strands: Vec<CanonicalStrand<C>>,
         minimums: Minimums,
@@ -349,14 +364,10 @@ impl<C: Context> Forest<C> {
             self.clear_strands_after_cycle(table, strands);
             Some(RecursiveSearchFail::NoMoreSolutions)
         } else if minimums.positive >= dfn && minimums.negative >= dfn {
-            let mut visited = FxHashSet::default();
-            visited.insert(table);
-            self.tables[table].extend_strands(strands);
-            self.mark_strands_as_ambiguous(context, table, &mut visited);
-            None
+            Some(RecursiveSearchFail::NegativeCycle)
         } else {
             self.tables[table].extend_strands(strands);
-            Some(RecursiveSearchFail::Cycle(minimums))
+            Some(RecursiveSearchFail::PositiveCycle(minimums))
         }
     }
 
@@ -389,78 +400,6 @@ impl<C: Context> Forest<C> {
             let strands = self.tables[strand_table].take_strands();
             self.clear_strands_after_cycle(strand_table, strands);
         }
-    }
-
-    /// Invoked after we have determined that every strand in `table`
-    /// encounters a cycle, and that some of those cycles involve
-    /// negative edges. In that case, walks all negative edges and
-    /// mark them as ambiguous.
-    fn mark_strands_as_ambiguous(
-        &mut self,
-        context: &impl ContextOps<C>,
-        table: TableIndex,
-        visited: &mut FxHashSet<TableIndex>,
-    ) {
-        let mut tables = vec![];
-
-        let num_universes = C::num_universes(&self.tables[table].table_goal);
-        for canonical_strand in self.tables[table].strands_mut() {
-            let CanonicalStrand {
-                canonical_ex_clause,
-                selected_subgoal,
-            } = canonical_strand;
-            let (new_canonical, subgoal_table) = context.instantiate_ex_clause(
-                num_universes,
-                &canonical_ex_clause,
-                |infer, ex_clause| {
-                    let strand = Strand {
-                        infer,
-                        ex_clause,
-                        selected_subgoal: selected_subgoal.clone(),
-                    };
-                    let (delayed_strand, subgoal_table) =
-                        Self::mark_strand_as_ambiguous(table, strand);
-                    (Self::canonicalize_strand(delayed_strand), subgoal_table)
-                },
-            );
-            *canonical_strand = new_canonical;
-
-            if visited.insert(subgoal_table) {
-                tables.push(subgoal_table);
-            }
-        }
-
-        for table in tables {
-            self.mark_strands_as_ambiguous(context, table, visited);
-        }
-    }
-
-    fn mark_strand_as_ambiguous(
-        table: TableIndex,
-        mut strand: Strand<C>,
-    ) -> (Strand<C>, TableIndex) {
-        let (subgoal_index, subgoal_table) = match &strand.selected_subgoal {
-            Some(selected_subgoal) => (
-                selected_subgoal.subgoal_index,
-                selected_subgoal.subgoal_table,
-            ),
-            None => {
-                panic!(
-                    "delay_strands_after_cycle invoked on strand in table {:?} \
-                     without a selected subgoal: {:?}",
-                    table, strand,
-                );
-            }
-        };
-
-        // Mark negative literals as ambiguous.
-        if let Literal::Negative(_) = strand.ex_clause.subgoals[subgoal_index] {
-            strand.ex_clause.subgoals.remove(subgoal_index);
-            strand.ex_clause.ambiguous = true;
-            strand.selected_subgoal = None;
-        }
-
-        (strand, subgoal_table)
     }
 
     /// Pursues `strand` to see if it leads us to a new answer, either
@@ -1038,13 +977,17 @@ impl<C: Context> Forest<C> {
                 self.tables[table].push_strand(Self::canonicalize_strand(strand));
                 return Err(StrandFail::QuantumExceeded);
             }
-            Err(RecursiveSearchFail::Cycle(minimums)) => {
+            Err(RecursiveSearchFail::NegativeCycle) => {
+                info!("negative cycle detected");
+                return Err(StrandFail::NegativeCycle);
+            }
+            Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
                 info!(
                     "pursue_positive_subgoal: cycle with minimums {:?}",
                     minimums
                 );
                 let canonical_strand = Self::canonicalize_strand(strand);
-                return Err(StrandFail::Cycle(canonical_strand, minimums));
+                return Err(StrandFail::PositiveCycle(canonical_strand, minimums));
             }
         }
 
@@ -1287,7 +1230,11 @@ impl<C: Context> Forest<C> {
                 return Err(StrandFail::Floundered);
             }
 
-            Err(RecursiveSearchFail::Cycle(minimums)) => {
+            Err(RecursiveSearchFail::NegativeCycle) => {
+                return Err(StrandFail::NegativeCycle);
+            }
+
+            Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
                 // We depend on `not(subgoal)`. For us to continue,
                 // `subgoal` must be completely evaluated. Therefore,
                 // we depend (negatively) on the minimum link of
@@ -1299,7 +1246,7 @@ impl<C: Context> Forest<C> {
                     min
                 );
                 let canonical_strand = Self::canonicalize_strand(strand);
-                return Err(StrandFail::Cycle(
+                return Err(StrandFail::PositiveCycle(
                     canonical_strand,
                     Minimums {
                         positive: self.stack[depth].dfn,

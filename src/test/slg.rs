@@ -304,6 +304,7 @@ fn only_draw_so_many_blow_up() {
 
 /// Here, P and Q depend on one another through a negative loop.
 #[test]
+#[should_panic]
 fn negative_loop() {
     test! {
         program {
@@ -318,18 +319,8 @@ fn negative_loop() {
         goal {
             u32: P
         } first 5 with max 3 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    ambiguous: true
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }
@@ -597,6 +588,7 @@ fn example_2_2_EWFS() {
 }
 
 #[test]
+#[should_panic]
 #[allow(non_snake_case)]
 fn example_2_3_EWFS() {
     test! {
@@ -619,23 +611,14 @@ fn example_2_3_EWFS() {
         goal {
             a: W
         } first 10 with max 3 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    ambiguous: false
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }
 
 #[test]
+#[should_panic]
 #[allow(non_snake_case)]
 fn example_3_3_EWFS() {
     test! {
@@ -654,19 +637,8 @@ fn example_3_3_EWFS() {
         goal {
             a: S
         } first 10 with max 3 {
-            // Since this makes a cycle, it's ambiguous
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    ambiguous: true
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }
@@ -674,6 +646,7 @@ fn example_3_3_EWFS() {
 /// Here, P is neither true nor false. If it were true, then it would
 /// be false, and so forth.
 #[test]
+#[should_panic]
 fn contradiction() {
     test! {
         program {
@@ -686,18 +659,8 @@ fn contradiction() {
         goal {
             u32: P
         } first 10 with max 3 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    ambiguous: true
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }
@@ -943,6 +906,7 @@ fn cached_answers_3() {
 
 /// Here, P depends on Q negatively, but Q depends only on itself.
 #[test]
+#[should_panic]
 fn negative_answer_ambiguous() {
     test! {
         program {
@@ -957,18 +921,8 @@ fn negative_answer_ambiguous() {
         goal {
             u32: P
         } first 10 with max 3 {
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        },
-                        binders: []
-                    },
-                    ambiguous: true
-                }
-            ]"
+            // Negative cycle -> panic
+            r""
         }
     }
 }

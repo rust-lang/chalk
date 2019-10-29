@@ -246,9 +246,6 @@ pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> + Unifica
     /// Upcast this domain goal into a more general goal.
     fn into_goal(&self, domain_goal: C::DomainGoal) -> C::Goal;
 
-    /// Create a "cannot prove" goal (see `HhGoal::CannotProve`).
-    fn cannot_prove(&self) -> C::Goal;
-
     /// Selects the next appropriate subgoal index for evaluation.
     /// Used by: logic
     fn next_subgoal_index(&mut self, ex_clause: &ExClause<C>) -> usize;

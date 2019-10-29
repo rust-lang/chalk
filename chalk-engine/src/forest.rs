@@ -61,6 +61,9 @@ impl<C: Context> Forest<C> {
                     Err(RootSearchFail::Floundered) => return None,
                     Err(RootSearchFail::QuantumExceeded) => continue,
                     Err(RootSearchFail::NoMoreSolutions) => return Some(answers),
+                    Err(RootSearchFail::NegativeCycle) => {
+                        panic!("negative cycle was detected");
+                    }
                 }
             }
 
@@ -198,6 +201,10 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
                 }
 
                 Err(RootSearchFail::QuantumExceeded) => {}
+
+                Err(RootSearchFail::NegativeCycle) => {
+                    panic!("negative cycle was detected");
+                }
             }
         }
     }
