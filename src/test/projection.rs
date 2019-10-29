@@ -500,6 +500,53 @@ fn normalize_under_binder() {
 }
 
 #[test]
+fn normalize_under_binder_multi() {
+    test! {
+        program {
+            struct Ref<'a, T> { }
+            struct I32 { }
+
+            trait Deref<'a> {
+                type Item;
+            }
+
+            trait Id<'a> {
+                type Item;
+            }
+
+            impl<'a, T> Deref<'a> for Ref<'a, T> {
+                type Item = T;
+            }
+
+            impl<'a, T> Id<'a> for Ref<'a, T> {
+                type Item = Ref<'a, T>;
+            }
+        }
+
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Ref<'a, I32>: Deref<'a, Item = U>
+                }
+            }
+        } yields_all {
+            "for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0, I32>, '^1>], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }, InEnvironment { environment: Env([]), goal: '^1 == '!1_0 }] }",
+            "substitution [?0 := I32], lifetime constraints []"
+        }
+
+        goal {
+            exists<U> {
+                forall<'a> {
+                    Ref<'a, I32>: Deref<'a, Item = U>
+                }
+            }
+        } yields_first {
+            "for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0, I32>, '^1>], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }, InEnvironment { environment: Env([]), goal: '^1 == '!1_0 }] }"
+        }
+    }
+}
+
+#[test]
 fn projection_from_env_a() {
     test! {
         program {

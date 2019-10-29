@@ -213,6 +213,12 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         canonical_ex_clause: &C::CanonicalExClause,
         op: impl FnOnce(C::InferenceTable, ExClause<C>) -> R,
     ) -> R;
+
+    /// returns unique solution from answer
+    fn constrained_subst_from_answer(
+        &self,
+        answer: SimplifiedAnswer<C>,
+    ) -> C::CanonicalConstrainedSubst;
 }
 
 /// Methods for combining solutions to yield an aggregate solution.

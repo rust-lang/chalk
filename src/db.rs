@@ -5,6 +5,8 @@ use crate::query::{Lowering, LoweringDatabase};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
+use chalk_ir::Canonical;
+use chalk_ir::ConstrainedSubst;
 use chalk_ir::Goal;
 use chalk_ir::Identifier;
 use chalk_ir::ImplId;
@@ -63,6 +65,16 @@ impl ChalkDatabase {
     pub fn solve(&self, goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>) -> Option<Solution> {
         let solver = self.solver();
         let solution = solver.lock().unwrap().solve(self, goal);
+        solution
+    }
+
+    pub fn solve_multiple(
+        &self,
+        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
+        f: impl FnMut(Canonical<ConstrainedSubst<ChalkIr>>, bool) -> bool,
+    ) -> bool {
+        let solver = self.solver();
+        let solution = solver.lock().unwrap().solve_multiple(self, goal, f);
         solution
     }
 }

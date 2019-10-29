@@ -129,6 +129,38 @@ impl Solver {
         self.forest.solve(&ops, goal)
     }
 
+    /// Attempts to solve the given goal, which must be in canonical
+    /// form. Provides multiple solutions to function `f`.  This will do
+    /// only as much work towards `goal` as it has to (and that work
+    /// is cached for future attempts).
+    ///
+    /// # Parameters
+    ///
+    /// - `program` -- defines the program clauses in scope.
+    ///   - **Important:** You must supply the same set of program clauses
+    ///     each time you invoke `solve`, as otherwise the cached data may be
+    ///     invalid.
+    /// - `goal` the goal to solve
+    /// - `f` -- function to proceed solution. New solutions will be generated
+    /// while function returns `true`.
+    ///   - first argument is solution found
+    ///   - second argument is ther next solution present
+    ///   - returns true if next solution should be handled
+    ///
+    /// # Returns
+    ///
+    /// - `true` all solutions were processed with the function.
+    /// - `false` the function returned `false` and solutions were interrupted.
+    pub fn solve_multiple(
+        &mut self,
+        program: &dyn RustIrDatabase,
+        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
+        f: impl FnMut(Canonical<ConstrainedSubst<ChalkIr>>, bool) -> bool,
+    ) -> bool {
+        let ops = self.forest.context().ops(program);
+        self.forest.solve_multiple(&ops, goal, f)
+    }
+
     pub fn into_test(self) -> TestSolver {
         TestSolver { state: self }
     }
