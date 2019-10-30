@@ -52,4 +52,8 @@ path = "chalk-rust-ir"
 version = "0.1.0"
 path = "chalk-derive"
 
+[dependencies.chalk-integration]
+version = "0.1.0"
+path = "chalk-integration"
+
 [workspace]

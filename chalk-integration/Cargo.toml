@@ -1,0 +1,36 @@
+[package]
+name = "chalk-integration"
+version = "0.1.0"
+license = "Apache-2.0/MIT"
+description = "Sample solver setup for Chalk"
+authors = ["Rust Compiler Team", "Chalk developers"]
+repository = "https://github.com/rust-lang/chalk"
+keywords = ["compiler", "traits", "prolog"]
+edition = "2018"
+
+[dependencies]
+derive-new = "0.5.6"
+itertools = "0.7.8"
+failure = "0.1"
+lalrpop-intern = "0.15.1"
+salsa = "0.10.0"
+
+[dependencies.chalk-solve]
+version = "0.1.0"
+path = "../chalk-solve"
+
+[dependencies.chalk-parse]
+version = "0.1.0"
+path = "../chalk-parse"
+
+[dependencies.chalk-ir]
+version = "0.1.0"
+path = "../chalk-ir"
+
+[dependencies.chalk-rust-ir]
+version = "0.1.0"
+path = "../chalk-rust-ir"
+
+[dependencies.chalk-macros]
+version = "0.1.0"
+path = "../chalk-macros"

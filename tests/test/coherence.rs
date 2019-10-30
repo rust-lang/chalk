@@ -1,6 +1,4 @@
-#![cfg(test)]
-
-use crate::query::LoweringDatabase;
+use chalk_integration::query::LoweringDatabase;
 
 #[test]
 fn two_impls_for_same_type() {

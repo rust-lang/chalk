@@ -1,6 +1,4 @@
-#![cfg(test)]
-
-use crate::query::LoweringDatabase;
+use chalk_integration::query::LoweringDatabase;
 
 #[test]
 fn well_formed_trait_decl() {

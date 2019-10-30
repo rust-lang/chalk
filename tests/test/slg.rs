@@ -1,7 +1,5 @@
-#![cfg(test)]
-
-use crate::db::ChalkDatabase;
 use crate::test_util::*;
+use chalk_integration::db::ChalkDatabase;
 use chalk_solve::ext::*;
 use chalk_solve::SolverChoice;
 
