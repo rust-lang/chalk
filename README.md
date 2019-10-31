@@ -34,6 +34,10 @@ Here are some blog posts talking about chalk:
 - [Cyclic queries in chalk](http://smallcultfollowing.com/babysteps/blog/2017/09/12/tabling-handling-cyclic-queries-in-chalk/)
     - Handling cyclic relations and enabling the implementation of implied bounds and other long-desired features in an elegant way
 
+## REPL
+
+There is a repl mainly for debugging purposes which can be run by `cargo run`. Some basic examples are in [libstd.chalk](libstd.chalk).
+
 ## Contributing
 
 If you're like to contribute, consider joining the [Traits Working Group](https://github.com/rust-lang/rust/issues/48416). We hang out on the [rust-lang discord](http://discord.gg/rust-lang) in the `#wg-traits` channel (Lang category).
