@@ -1,8 +1,6 @@
 use crate::clauses::builder::ClauseBuilder;
 use crate::split::Split;
-use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::iter;
@@ -11,11 +9,7 @@ use std::iter;
 /// or struct definition) into its associated "program clauses" --
 /// that is, into the lowered, logical rules that it defines.
 pub trait ToProgramClauses {
-    fn to_program_clauses(
-        &self,
-        db: &dyn RustIrDatabase,
-        clauses: &mut Vec<ProgramClause<ChalkIr>>,
-    );
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_>);
 }
 
 impl ToProgramClauses for ImplDatum {
@@ -32,12 +26,7 @@ impl ToProgramClauses for ImplDatum {
     /// generate nothing -- this is just a way to *opt out* from the
     /// default auto trait impls, it doesn't have any positive effect
     /// on its own.
-    fn to_program_clauses(
-        &self,
-        db: &dyn RustIrDatabase,
-        clauses: &mut Vec<ProgramClause<ChalkIr>>,
-    ) {
-        let mut builder = ClauseBuilder::new(db, clauses);
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_>) {
         if self.is_positive() {
             let binders = self.binders.map_ref(|b| (&b.trait_ref, &b.where_clauses));
             builder.push_binders(&binders, |builder, (trait_ref, where_clauses)| {
@@ -73,15 +62,9 @@ impl ToProgramClauses for AssociatedTyValue {
     ///         Implemented(Iter<'a, T>: 'a).   // (2)
     /// }
     /// ```
-    fn to_program_clauses(
-        &self,
-        db: &dyn RustIrDatabase,
-        clauses: &mut Vec<ProgramClause<ChalkIr>>,
-    ) {
-        let impl_datum = db.impl_datum(self.impl_id);
-        let associated_ty = db.associated_ty_data(self.associated_ty_id);
-
-        let mut builder = ClauseBuilder::new(db, clauses);
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_>) {
+        let impl_datum = builder.db.impl_datum(self.impl_id);
+        let associated_ty = builder.db.associated_ty_data(self.associated_ty_id);
 
         builder.push_binders(&self.value, |builder, assoc_ty_value| {
             let all_parameters = builder.placeholders_in_scope().to_vec();
@@ -90,8 +73,9 @@ impl ToProgramClauses for AssociatedTyValue {
             //
             // * `impl_params`: `[!T]`
             // * `projection`: `<Vec<!T> as Iterable>::Iter<'!a`>
-            let (impl_params, projection) =
-                db.impl_parameters_and_projection_from_associated_ty_value(&all_parameters, self);
+            let (impl_params, projection) = builder
+                .db
+                .impl_parameters_and_projection_from_associated_ty_value(&all_parameters, self);
 
             // Assemble the full list of conditions for projection to be valid.
             // This comes in two parts, marked as (1) and (2) in doc above:
@@ -181,14 +165,8 @@ impl ToProgramClauses for StructDatum {
     /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
     /// ```
     ///
-    fn to_program_clauses(
-        &self,
-        db: &dyn RustIrDatabase,
-        clauses: &mut Vec<ProgramClause<ChalkIr>>,
-    ) {
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_>) {
         debug_heading!("StructDatum::to_program_clauses(self={:?})", self);
-
-        let mut builder = ClauseBuilder::new(db, clauses);
 
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         builder.push_binders(&binders, |builder, where_clauses| {
@@ -405,13 +383,7 @@ impl ToProgramClauses for TraitDatum {
     /// To implement fundamental traits, we simply just do not add the rule above that allows
     /// upstream types to implement upstream traits. Fundamental traits are not allowed to
     /// compatibly do that.
-    fn to_program_clauses(
-        &self,
-        db: &dyn RustIrDatabase,
-        clauses: &mut Vec<ProgramClause<ChalkIr>>,
-    ) {
-        let mut builder = ClauseBuilder::new(db, clauses);
-
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_>) {
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         builder.push_binders(&binders, |builder, where_clauses| {
             let parameters = builder.placeholders_in_scope().to_vec();
@@ -592,13 +564,7 @@ impl ToProgramClauses for AssociatedTyDatum {
     ///     FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self, 'a,T>).
     /// }
     /// ```
-    fn to_program_clauses(
-        &self,
-        db: &dyn RustIrDatabase,
-        clauses: &mut Vec<ProgramClause<ChalkIr>>,
-    ) {
-        let mut builder = ClauseBuilder::new(db, clauses);
-
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_>) {
         let binders = self.binders.map_ref(|b| (&b.where_clauses, &b.bounds));
         builder.push_binders(&binders, |builder, (where_clauses, bounds)| {
             let parameters = builder.placeholders_in_scope().to_vec();
