@@ -40,4 +40,4 @@ There is a repl mainly for debugging purposes which can be run by `cargo run`. S
 
 ## Contributing
 
-If you're like to contribute, consider joining the [Traits Working Group](https://github.com/rust-lang/rust/issues/48416). We hang out on the [rust-lang discord](http://discord.gg/rust-lang) in the `#wg-traits` channel (Lang category).
+If you're like to contribute, consider joining the [Traits Working Group](https://rust-lang.github.io/compiler-team/working-groups/traits/). We hang out on the [rust-lang zulip](https://rust-lang.zulipchat.com) in the [#wg-traits](https://rust-lang.zulipchat.com/#narrow/stream/144729-wg-traits) and [#wg-rls-2.0/chalk](https://rust-lang.zulipchat.com/#narrow/stream/191167-t-compiler.2Fwg-rls-2.2E0.2Fchalk) streams.
