@@ -5,7 +5,6 @@ use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
-use failure::Fail;
 use itertools::Itertools;
 use lalrpop_intern::intern;
 use std::collections::BTreeMap;
@@ -19,78 +18,129 @@ type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usiz
 
 pub type LowerResult<T> = Result<T, RustIrError>;
 
-#[derive(Fail, Debug)]
+#[derive(Debug)]
 pub enum RustIrError {
-    #[fail(display = "invalid type name `{}`", _0)]
     InvalidTypeName(Identifier),
-    #[fail(display = "invalid lifetime name `{}`", _0)]
     InvalidLifetimeName(Identifier),
-    #[fail(display = "duplicate lang item `{:?}`", _0)]
     DuplicateLangItem(rust_ir::LangItem),
-    #[fail(display = "expected a trait, found `{}`, which is not a trait", _0)]
     NotTrait(Identifier),
-    #[fail(display = "duplicate or shadowed parameters")]
-    DuplicateOrShadowedParamters,
-    #[fail(display = "auto trait cannot define associated types")]
+    DuplicateOrShadowedParameters,
     AutoTraitAssociatedTypes,
-    #[fail(display = "auto trait cannot have parameters")]
     AutoTraitParameters,
-    #[fail(display = "auto trait cannot have where clauses")]
     AutoTraitWhereClauses,
-    #[fail(display = "only fundamental types with a single parameter are supported")]
     InvalidFundamentalTypesParameters,
-    #[fail(display = "negative impls cannot define associated values")]
     NegativeImplAssociatedValues,
-    #[fail(display = "no associated type `{}` defined in trait", _0)]
     MissingAssociatedType(Identifier),
-    #[fail(
-        display = "`{}` takes {} type parameters, not {}",
-        identifier, expected, actual
-    )]
     IncorrectNumberOfTypeParameters {
         identifier: Identifier,
         expected: usize,
         actual: usize,
     },
-    #[fail(
-        display = "wrong number of parameters for associated type `{}` (expected {}, got {})",
-        identifier, expected, actual
-    )]
     IncorrectNumberOfAssociatedTypeParameters {
         identifier: Identifier,
         expected: usize,
         actual: usize,
     },
-    #[fail(
-        display = "incorrect parameter kind for `{}`: expected {}, found {}",
-        identifier, expected, actual
-    )]
     IncorrectParameterKind {
         identifier: Identifier,
         expected: Kind,
         actual: Kind,
     },
-    #[fail(
-        display = "incorrect parameter kind for trait `{}`: expected {}, found {}",
-        identifier, expected, actual
-    )]
     IncorrectTraitParameterKind {
         identifier: Identifier,
         expected: Kind,
         actual: Kind,
     },
-    #[fail(
-        display = "incorrect associated type parameter kind for `{}`: expected {}, found {}",
-        identifier, expected, actual
-    )]
     IncorrectAssociatedTypeParameterKind {
         identifier: Identifier,
         expected: Kind,
         actual: Kind,
     },
-    #[fail(display = "cannot apply type parameter `{}`", _0)]
     CannotApplyTypeParameter(Identifier),
 }
+
+impl std::fmt::Display for RustIrError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            RustIrError::InvalidTypeName(name) => write!(f, "invalid type name `{}`", name),
+            RustIrError::InvalidLifetimeName(name) => write!(f, "invalid lifetime name `{}`", name),
+            RustIrError::DuplicateLangItem(item) => write!(f, "duplicate lang item `{:?}`", item),
+            RustIrError::NotTrait(name) => write!(
+                f,
+                "expected a trait, found `{}`, which is not a trait",
+                name
+            ),
+            RustIrError::DuplicateOrShadowedParameters => {
+                write!(f, "duplicate or shadowed parameters")
+            }
+            RustIrError::AutoTraitAssociatedTypes => {
+                write!(f, "auto trait cannot define associated types")
+            }
+            RustIrError::AutoTraitParameters => write!(f, "auto trait cannot have parameters"),
+            RustIrError::AutoTraitWhereClauses => write!(f, "auto trait cannot have where clauses"),
+            RustIrError::InvalidFundamentalTypesParameters => write!(
+                f,
+                "only fundamental types with a single parameter are supported"
+            ),
+            RustIrError::NegativeImplAssociatedValues => {
+                write!(f, "negative impls cannot define associated values")
+            }
+            RustIrError::MissingAssociatedType(name) => {
+                write!(f, "no associated type `{}` defined in trait", name)
+            }
+            RustIrError::IncorrectNumberOfTypeParameters {
+                identifier,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "`{}` takes {} type parameters, not {}",
+                identifier, expected, actual
+            ),
+            RustIrError::IncorrectNumberOfAssociatedTypeParameters {
+                identifier,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "wrong number of parameters for associated type `{}` (expected {}, got {})",
+                identifier, expected, actual
+            ),
+            RustIrError::IncorrectParameterKind {
+                identifier,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "incorrect parameter kind for `{}`: expected {}, found {}",
+                identifier, expected, actual
+            ),
+            RustIrError::IncorrectTraitParameterKind {
+                identifier,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "incorrect parameter kind for trait `{}`: expected {}, found {}",
+                identifier, expected, actual
+            ),
+            RustIrError::IncorrectAssociatedTypeParameterKind {
+                identifier,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "incorrect associated type parameter kind for `{}`: expected {}, found {}",
+                identifier, expected, actual
+            ),
+            RustIrError::CannotApplyTypeParameter(name) => {
+                write!(f, "cannot apply type parameter `{}`", name)
+            }
+        }
+    }
+}
+
+impl std::error::Error for RustIrError {}
 
 #[derive(Clone, Debug)]
 struct Env<'k> {
@@ -181,7 +231,7 @@ impl<'k> Env<'k> {
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
-            Err(RustIrError::DuplicateOrShadowedParamters)?;
+            Err(RustIrError::DuplicateOrShadowedParameters)?;
         }
         Ok(Env {
             parameter_map,

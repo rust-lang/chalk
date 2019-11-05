@@ -1,7 +1,6 @@
 use crate::lowering::RustIrError;
 use chalk_solve::coherence::CoherenceError;
 use chalk_solve::wf::WfError;
-use failure::Error;
 
 /// Wrapper type for the various errors that can occur during chalk
 /// processing.
@@ -10,14 +9,6 @@ pub struct ChalkError {
     /// For now, we just convert the error into a string, which makes
     /// it trivially hashable etc.
     error_text: String,
-}
-
-impl From<Error> for ChalkError {
-    fn from(value: Error) -> Self {
-        ChalkError {
-            error_text: value.to_string(),
-        }
-    }
 }
 
 impl From<Box<dyn std::error::Error>> for ChalkError {
