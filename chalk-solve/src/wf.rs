@@ -352,15 +352,27 @@ where
         //
         // From our example:
         //
-        // * bounds - in trait, `Clone`, in impl, `Clone`
-        // * where clauses - in trait, `Self: 'a`, in impl, `Box<!T>: '!a`
+        // * bounds
+        //     * original in trait, `Clone`
+        //     * after substituting impl parameters, `Clone`
+        //     * note that the self-type is not yet supplied for bounds,
+        //       we will do that later
+        // * where clauses
+        //     * original in trait, `Self: 'a`
+        //     * after substituting impl parameters, `Box<!T>: '!a`
         let assoc_ty_datum = self.db.associated_ty_data(projection.associated_ty_id);
         let AssociatedTyDatumBound {
             bounds: defn_bounds,
             where_clauses: defn_where_clauses,
         } = assoc_ty_datum.binders.substitute(&projection.parameters);
 
-        // Check that the `value_ty` meets the bounds (i.e., `Box<!T>: Clone`).
+        // Check that the `value_ty` meets the bounds from the trait.
+        // Here we take the substituted bounds (`defn_bounds`) and we
+        // supply the self-type `value_ty` to yield the final result.
+        //
+        // In our example, the bound was `Clone`, so the combined
+        // result is `Box<!T>: Clone`. This is then converted to a
+        // well-formed goal like `WellFormed(Box<!T>: Clone)`.
         let bound_goals = defn_bounds
             .iter()
             .cloned()
