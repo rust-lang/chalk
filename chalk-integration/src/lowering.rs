@@ -5,7 +5,7 @@ use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
-use failure::{Fail, Fallible};
+use failure::Fail;
 use itertools::Itertools;
 use lalrpop_intern::intern;
 use std::collections::BTreeMap;
@@ -16,6 +16,8 @@ type TypeKinds = BTreeMap<chalk_ir::TypeKindId, rust_ir::TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyLookup>;
 type AssociatedTyValueIds = BTreeMap<(chalk_ir::ImplId, chalk_ir::Identifier), AssociatedTyValueId>;
 type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usize>;
+
+pub type LowerResult<T> = Result<T, RustIrError>;
 
 #[derive(Fail, Debug)]
 pub enum RustIrError {
@@ -132,7 +134,7 @@ const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
 impl<'k> Env<'k> {
-    fn lookup(&self, name: Identifier) -> Fallible<NameLookup> {
+    fn lookup(&self, name: Identifier) -> LowerResult<NameLookup> {
         if let Some(k) = self
             .parameter_map
             .get(&chalk_ir::ParameterKind::Ty(name.str))
@@ -147,7 +149,7 @@ impl<'k> Env<'k> {
         Err(RustIrError::InvalidTypeName(name))?
     }
 
-    fn lookup_lifetime(&self, name: Identifier) -> Fallible<LifetimeLookup> {
+    fn lookup_lifetime(&self, name: Identifier) -> LowerResult<LifetimeLookup> {
         if let Some(k) = self
             .parameter_map
             .get(&chalk_ir::ParameterKind::Lifetime(name.str))
@@ -165,7 +167,7 @@ impl<'k> Env<'k> {
     /// Introduces new parameters, shifting the indices of existing
     /// parameters to accommodate them. The indices of the new binders
     /// will be assigned in order as they are iterated.
-    fn introduce<I>(&self, binders: I) -> Fallible<Self>
+    fn introduce<I>(&self, binders: I) -> LowerResult<Self>
     where
         I: IntoIterator<Item = chalk_ir::ParameterKind<chalk_ir::Identifier>>,
         I::IntoIter: ExactSizeIterator,
@@ -187,11 +189,11 @@ impl<'k> Env<'k> {
         })
     }
 
-    fn in_binders<I, T, OP>(&self, binders: I, op: OP) -> Fallible<chalk_ir::Binders<T>>
+    fn in_binders<I, T, OP>(&self, binders: I, op: OP) -> LowerResult<chalk_ir::Binders<T>>
     where
         I: IntoIterator<Item = chalk_ir::ParameterKind<chalk_ir::Identifier>>,
         I::IntoIter: ExactSizeIterator,
-        OP: FnOnce(&Self) -> Fallible<T>,
+        OP: FnOnce(&Self) -> LowerResult<T>,
     {
         let binders: Vec<_> = binders.into_iter().collect();
         let env = self.introduce(binders.iter().cloned())?;
@@ -204,11 +206,11 @@ impl<'k> Env<'k> {
 
 pub(crate) trait LowerProgram {
     /// Lowers from a Program AST to the internal IR for a program.
-    fn lower(&self) -> Fallible<LoweredProgram>;
+    fn lower(&self) -> LowerResult<LoweredProgram>;
 }
 
 impl LowerProgram for Program {
-    fn lower(&self) -> Fallible<LoweredProgram> {
+    fn lower(&self) -> LowerResult<LoweredProgram> {
         let mut index = 0;
         let mut next_item_id = || -> chalk_ir::RawId {
             let i = index;
@@ -393,7 +395,7 @@ impl LowerProgram for Program {
 }
 
 trait LowerTypeKind {
-    fn lower_type_kind(&self) -> Fallible<rust_ir::TypeKind>;
+    fn lower_type_kind(&self) -> LowerResult<rust_ir::TypeKind>;
 }
 
 trait LowerParameterMap {
@@ -517,13 +519,13 @@ trait LowerWhereClauses {
     fn lower_where_clauses(
         &self,
         env: &Env,
-    ) -> Fallible<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
+    ) -> LowerResult<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
         self.where_clauses().lower(env)
     }
 }
 
 impl LowerTypeKind for StructDefn {
-    fn lower_type_kind(&self) -> Fallible<rust_ir::TypeKind> {
+    fn lower_type_kind(&self) -> LowerResult<rust_ir::TypeKind> {
         Ok(rust_ir::TypeKind {
             sort: rust_ir::TypeSort::Struct,
             name: self.name.str,
@@ -542,7 +544,7 @@ impl LowerWhereClauses for StructDefn {
 }
 
 impl LowerTypeKind for TraitDefn {
-    fn lower_type_kind(&self) -> Fallible<rust_ir::TypeKind> {
+    fn lower_type_kind(&self) -> LowerResult<rust_ir::TypeKind> {
         let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
         Ok(rust_ir::TypeKind {
             sort: rust_ir::TypeSort::Trait,
@@ -569,11 +571,11 @@ impl LowerWhereClauses for Impl {
 }
 
 trait LowerWhereClauseVec {
-    fn lower(&self, env: &Env) -> Fallible<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>>;
+    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>>;
 }
 
 impl LowerWhereClauseVec for [QuantifiedWhereClause] {
-    fn lower(&self, env: &Env) -> Fallible<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
         self.iter()
             .flat_map(|wc| match wc.lower(env) {
                 Ok(v) => v.into_iter().map(Ok).collect(),
@@ -588,11 +590,11 @@ trait LowerWhereClause<T> {
     /// Some AST `where` clauses can lower to multiple ones, this is why we return a `Vec`.
     /// As for now, this is the only the case for `where T: Foo<Item = U>` which lowers to
     /// `Implemented(T: Foo)` and `ProjectionEq(<T as Foo>::Item = U)`.
-    fn lower(&self, env: &Env) -> Fallible<Vec<T>>;
+    fn lower(&self, env: &Env) -> LowerResult<Vec<T>>;
 }
 
 impl LowerWhereClause<chalk_ir::WhereClause<ChalkIr>> for WhereClause {
-    fn lower(&self, env: &Env) -> Fallible<Vec<chalk_ir::WhereClause<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::WhereClause<ChalkIr>>> {
         let where_clauses = match self {
             WhereClause::Implemented { trait_ref } => {
                 vec![chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?)]
@@ -609,7 +611,7 @@ impl LowerWhereClause<chalk_ir::WhereClause<ChalkIr>> for WhereClause {
     }
 }
 impl LowerWhereClause<chalk_ir::QuantifiedWhereClause<ChalkIr>> for QuantifiedWhereClause {
-    fn lower(&self, env: &Env) -> Fallible<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
         let parameter_kinds = self.parameter_kinds.iter().map(|pk| pk.lower());
         let binders = env.in_binders(parameter_kinds, |env| Ok(self.where_clause.lower(env)?))?;
         Ok(binders.into_iter().collect())
@@ -617,11 +619,11 @@ impl LowerWhereClause<chalk_ir::QuantifiedWhereClause<ChalkIr>> for QuantifiedWh
 }
 
 trait LowerDomainGoal {
-    fn lower(&self, env: &Env) -> Fallible<Vec<chalk_ir::DomainGoal<ChalkIr>>>;
+    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::DomainGoal<ChalkIr>>>;
 }
 
 impl LowerDomainGoal for DomainGoal {
-    fn lower(&self, env: &Env) -> Fallible<Vec<chalk_ir::DomainGoal<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::DomainGoal<ChalkIr>>> {
         let goals = match self {
             DomainGoal::Holds { where_clause } => {
                 where_clause.lower(env)?.into_iter().casted().collect()
@@ -664,11 +666,11 @@ impl LowerDomainGoal for DomainGoal {
 }
 
 trait LowerLeafGoal {
-    fn lower(&self, env: &Env) -> Fallible<Vec<chalk_ir::LeafGoal<ChalkIr>>>;
+    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::LeafGoal<ChalkIr>>>;
 }
 
 impl LowerLeafGoal for LeafGoal {
-    fn lower(&self, env: &Env) -> Fallible<Vec<chalk_ir::LeafGoal<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::LeafGoal<ChalkIr>>> {
         let goals = match self {
             LeafGoal::DomainGoal { goal } => goal
                 .lower(env)?
@@ -695,7 +697,7 @@ trait LowerStructDefn {
         &self,
         struct_id: chalk_ir::StructId,
         env: &Env,
-    ) -> Fallible<rust_ir::StructDatum>;
+    ) -> LowerResult<rust_ir::StructDatum>;
 }
 
 impl LowerStructDefn for StructDefn {
@@ -703,13 +705,13 @@ impl LowerStructDefn for StructDefn {
         &self,
         struct_id: chalk_ir::StructId,
         env: &Env,
-    ) -> Fallible<rust_ir::StructDatum> {
+    ) -> LowerResult<rust_ir::StructDatum> {
         if self.flags.fundamental && self.all_parameters().len() != 1 {
             Err(RustIrError::InvalidFundamentalTypesParameters)?;
         }
 
         let binders = env.in_binders(self.all_parameters(), |env| {
-            let fields: Fallible<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
+            let fields: LowerResult<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
             let where_clauses = self.lower_where_clauses(env)?;
 
             Ok(rust_ir::StructDatumBound {
@@ -732,11 +734,11 @@ impl LowerStructDefn for StructDefn {
 }
 
 trait LowerTraitRef {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::TraitRef<ChalkIr>>;
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TraitRef<ChalkIr>>;
 }
 
 impl LowerTraitRef for TraitRef {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::TraitRef<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TraitRef<ChalkIr>> {
         let without_self = TraitBound {
             trait_name: self.trait_name,
             args_no_self: self.args.iter().cloned().skip(1).collect(),
@@ -749,11 +751,11 @@ impl LowerTraitRef for TraitRef {
 }
 
 trait LowerTraitBound {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::TraitBound>;
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound>;
 }
 
 impl LowerTraitBound for TraitBound {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::TraitBound> {
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound> {
         let trait_id = match env.lookup(self.trait_name)? {
             NameLookup::Type(TypeKindId::TraitId(trait_id)) => trait_id,
             NameLookup::Type(_) | NameLookup::Parameter(_) => {
@@ -770,7 +772,7 @@ impl LowerTraitBound for TraitBound {
             .args_no_self
             .iter()
             .map(|a| Ok(a.lower(env)?))
-            .collect::<Fallible<Vec<_>>>()?;
+            .collect::<LowerResult<Vec<_>>>()?;
 
         if parameters.len() != k.binders.len() {
             Err(RustIrError::IncorrectNumberOfTypeParameters {
@@ -798,11 +800,11 @@ impl LowerTraitBound for TraitBound {
 }
 
 trait LowerProjectionEqBound {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::ProjectionEqBound>;
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::ProjectionEqBound>;
 }
 
 impl LowerProjectionEqBound for ProjectionEqBound {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::ProjectionEqBound> {
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::ProjectionEqBound> {
         let trait_bound = self.trait_bound.lower(env)?;
         let lookup = match env
             .associated_ty_lookups
@@ -815,7 +817,7 @@ impl LowerProjectionEqBound for ProjectionEqBound {
             .args
             .iter()
             .map(|a| a.lower(env))
-            .collect::<Fallible<_>>()?;
+            .collect::<LowerResult<_>>()?;
 
         if args.len() != lookup.addl_parameter_kinds.len() {
             Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
@@ -845,11 +847,11 @@ impl LowerProjectionEqBound for ProjectionEqBound {
 }
 
 trait LowerInlineBound {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::InlineBound>;
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::InlineBound>;
 }
 
 impl LowerInlineBound for InlineBound {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::InlineBound> {
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::InlineBound> {
         let bound = match self {
             InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(b.lower(&env)?),
             InlineBound::ProjectionEqBound(b) => {
@@ -861,11 +863,11 @@ impl LowerInlineBound for InlineBound {
 }
 
 trait LowerQuantifiedInlineBound {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::QuantifiedInlineBound>;
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::QuantifiedInlineBound>;
 }
 
 impl LowerQuantifiedInlineBound for QuantifiedInlineBound {
-    fn lower(&self, env: &Env) -> Fallible<rust_ir::QuantifiedInlineBound> {
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::QuantifiedInlineBound> {
         let parameter_kinds = self.parameter_kinds.iter().map(|pk| pk.lower());
         let binders = env.in_binders(parameter_kinds, |env| Ok(self.bound.lower(env)?))?;
         Ok(binders)
@@ -873,11 +875,11 @@ impl LowerQuantifiedInlineBound for QuantifiedInlineBound {
 }
 
 trait LowerQuantifiedInlineBoundVec {
-    fn lower(&self, env: &Env) -> Fallible<Vec<rust_ir::QuantifiedInlineBound>>;
+    fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound>>;
 }
 
 impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
-    fn lower(&self, env: &Env) -> Fallible<Vec<rust_ir::QuantifiedInlineBound>> {
+    fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound>> {
         self.iter().map(|b| b.lower(env)).collect()
     }
 }
@@ -925,11 +927,11 @@ impl LowerTraitFlags for TraitFlags {
 }
 
 trait LowerProjectionTy {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::ProjectionTy<ChalkIr>>;
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::ProjectionTy<ChalkIr>>;
 }
 
 impl LowerProjectionTy for ProjectionTy {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::ProjectionTy<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::ProjectionTy<ChalkIr>> {
         let ProjectionTy {
             ref trait_ref,
             ref name,
@@ -943,7 +945,10 @@ impl LowerProjectionTy for ProjectionTy {
             Some(lookup) => lookup,
             None => Err(RustIrError::MissingAssociatedType(self.name))?,
         };
-        let mut args: Vec<_> = args.iter().map(|a| a.lower(env)).collect::<Fallible<_>>()?;
+        let mut args: Vec<_> = args
+            .iter()
+            .map(|a| a.lower(env))
+            .collect::<LowerResult<_>>()?;
 
         if args.len() != lookup.addl_parameter_kinds.len() {
             Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
@@ -973,11 +978,11 @@ impl LowerProjectionTy for ProjectionTy {
 }
 
 trait LowerTy {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::Ty<ChalkIr>>;
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>>;
 }
 
 impl LowerTy for Ty {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::Ty<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>> {
         match *self {
             Ty::Id { name } => match env.lookup(name)? {
                 NameLookup::Type(id) => {
@@ -1040,7 +1045,7 @@ impl LowerTy for Ty {
                 let parameters = args
                     .iter()
                     .map(|t| Ok(t.lower(env)?))
-                    .collect::<Fallible<Vec<_>>>()?;
+                    .collect::<LowerResult<Vec<_>>>()?;
 
                 for (param, arg) in k.binders.binders.iter().zip(args.iter()) {
                     if param.kind() != arg.kind() {
@@ -1082,11 +1087,11 @@ impl LowerTy for Ty {
 }
 
 trait LowerParameter {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::Parameter<ChalkIr>>;
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Parameter<ChalkIr>>;
 }
 
 impl LowerParameter for Parameter {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::Parameter<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Parameter<ChalkIr>> {
         match *self {
             Parameter::Ty(ref t) => Ok(t.lower(env)?.cast()),
             Parameter::Lifetime(ref l) => Ok(l.lower(env)?.cast()),
@@ -1095,11 +1100,11 @@ impl LowerParameter for Parameter {
 }
 
 trait LowerLifetime {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::Lifetime<ChalkIr>>;
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>>;
 }
 
 impl LowerLifetime for Lifetime {
-    fn lower(&self, env: &Env) -> Fallible<chalk_ir::Lifetime<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>> {
         match *self {
             Lifetime::Id { name } => match env.lookup_lifetime(name)? {
                 LifetimeLookup::Parameter(d) => Ok(chalk_ir::Lifetime::BoundVar(d)),
@@ -1114,7 +1119,7 @@ trait LowerImpl {
         empty_env: &Env,
         impl_id: ImplId,
         associated_ty_value_ids: &AssociatedTyValueIds,
-    ) -> Fallible<rust_ir::ImplDatum>;
+    ) -> LowerResult<rust_ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
@@ -1123,7 +1128,7 @@ impl LowerImpl for Impl {
         empty_env: &Env,
         impl_id: ImplId,
         associated_ty_value_ids: &AssociatedTyValueIds,
-    ) -> Fallible<rust_ir::ImplDatum> {
+    ) -> LowerResult<rust_ir::ImplDatum> {
         debug_heading!("LowerImpl::lower_impl(impl_id={:?})", impl_id);
 
         let polarity = self.polarity.lower();
@@ -1164,11 +1169,11 @@ impl LowerImpl for Impl {
 }
 
 trait LowerClause {
-    fn lower_clause(&self, env: &Env) -> Fallible<Vec<chalk_ir::ProgramClause<ChalkIr>>>;
+    fn lower_clause(&self, env: &Env) -> LowerResult<Vec<chalk_ir::ProgramClause<ChalkIr>>>;
 }
 
 impl LowerClause for Clause {
-    fn lower_clause(&self, env: &Env) -> Fallible<Vec<chalk_ir::ProgramClause<ChalkIr>>> {
+    fn lower_clause(&self, env: &Env) -> LowerResult<Vec<chalk_ir::ProgramClause<ChalkIr>>> {
         let implications = env.in_binders(self.all_parameters(), |env| {
             let consequences: Vec<chalk_ir::DomainGoal<ChalkIr>> = self.consequence.lower(env)?;
 
@@ -1177,7 +1182,7 @@ impl LowerClause for Clause {
                 .iter()
                 .map(|g| g.lower(env).map(|g| *g))
                 .rev() // (*)
-                .collect::<Fallible<_>>()?;
+                .collect::<LowerResult<_>>()?;
 
             // (*) Subtle: in the SLG solver, we pop conditions from R to
             // L. To preserve the expected order (L to R), we must
@@ -1210,11 +1215,19 @@ impl LowerClause for Clause {
 }
 
 trait LowerTrait {
-    fn lower_trait(&self, trait_id: chalk_ir::TraitId, env: &Env) -> Fallible<rust_ir::TraitDatum>;
+    fn lower_trait(
+        &self,
+        trait_id: chalk_ir::TraitId,
+        env: &Env,
+    ) -> LowerResult<rust_ir::TraitDatum>;
 }
 
 impl LowerTrait for TraitDefn {
-    fn lower_trait(&self, trait_id: chalk_ir::TraitId, env: &Env) -> Fallible<rust_ir::TraitDatum> {
+    fn lower_trait(
+        &self,
+        trait_id: chalk_ir::TraitId,
+        env: &Env,
+    ) -> LowerResult<rust_ir::TraitDatum> {
         let all_parameters = self.all_parameters();
         let all_parameters_len = all_parameters.len();
         let binders = env.in_binders(all_parameters, |env| {
@@ -1248,11 +1261,11 @@ impl LowerTrait for TraitDefn {
 }
 
 pub trait LowerGoal<A> {
-    fn lower(&self, arg: &A) -> Fallible<Box<chalk_ir::Goal<ChalkIr>>>;
+    fn lower(&self, arg: &A) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>>;
 }
 
 impl LowerGoal<LoweredProgram> for Goal {
-    fn lower(&self, program: &LoweredProgram) -> Fallible<Box<chalk_ir::Goal<ChalkIr>>> {
+    fn lower(&self, program: &LoweredProgram) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>> {
         let associated_ty_lookups: BTreeMap<_, _> = program
             .associated_ty_data
             .iter()
@@ -1281,7 +1294,7 @@ impl LowerGoal<LoweredProgram> for Goal {
 }
 
 impl<'k> LowerGoal<Env<'k>> for Goal {
-    fn lower(&self, env: &Env<'k>) -> Fallible<Box<chalk_ir::Goal<ChalkIr>>> {
+    fn lower(&self, env: &Env<'k>) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>> {
         match self {
             Goal::ForAll(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::ForAll, ids),
             Goal::Exists(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::Exists, ids),
@@ -1290,7 +1303,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`
                 // in the assumptions of an `if` goal, e.g. `if (T: Trait) { ... }` lowers to
                 // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
-                let where_clauses: Fallible<Vec<_>> = hyp
+                let where_clauses: LowerResult<Vec<_>> = hyp
                     .into_iter()
                     .flat_map(|h| h.lower_clause(env).apply_result())
                     .map(|result| result.map(|h| h.into_from_env_clause()))
@@ -1324,7 +1337,7 @@ trait LowerQuantifiedGoal {
         env: &Env,
         quantifier_kind: chalk_ir::QuantifierKind,
         parameter_kinds: &[ParameterKind],
-    ) -> Fallible<Box<chalk_ir::Goal<ChalkIr>>>;
+    ) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>>;
 }
 
 impl LowerQuantifiedGoal for Goal {
@@ -1333,7 +1346,7 @@ impl LowerQuantifiedGoal for Goal {
         env: &Env,
         quantifier_kind: chalk_ir::QuantifierKind,
         parameter_kinds: &[ParameterKind],
-    ) -> Fallible<Box<chalk_ir::Goal<ChalkIr>>> {
+    ) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>> {
         if parameter_kinds.is_empty() {
             return self.lower(env);
         }
@@ -1347,14 +1360,14 @@ impl LowerQuantifiedGoal for Goal {
     }
 }
 
-/// Lowers Fallible<Vec<T>> -> Vec<Fallible<T>>.
+/// Lowers LowerResult<Vec<T>> -> Vec<LowerResult<T>>.
 trait ApplyResult {
     type Output;
     fn apply_result(self) -> Self::Output;
 }
 
-impl<T> ApplyResult for Fallible<Vec<T>> {
-    type Output = Vec<Fallible<T>>;
+impl<T> ApplyResult for LowerResult<Vec<T>> {
+    type Output = Vec<LowerResult<T>>;
     fn apply_result(self) -> Self::Output {
         match self {
             Ok(v) => v.into_iter().map(Ok).collect(),

@@ -1,3 +1,4 @@
+use crate::lowering::RustIrError;
 use chalk_solve::coherence::CoherenceError;
 use chalk_solve::wf::WfError;
 use failure::Error;
@@ -37,6 +38,14 @@ impl From<WfError> for ChalkError {
 
 impl From<CoherenceError> for ChalkError {
     fn from(value: CoherenceError) -> Self {
+        ChalkError {
+            error_text: value.to_string(),
+        }
+    }
+}
+
+impl From<RustIrError> for ChalkError {
+    fn from(value: RustIrError) -> Self {
         ChalkError {
             error_text: value.to_string(),
         }

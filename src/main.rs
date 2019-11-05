@@ -65,7 +65,10 @@ impl LoadedProgram {
         multiple_answers: bool,
     ) -> Result<()> {
         let program = self.db.checked_program()?;
-        let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
+        use failure::Fail;
+        let goal = chalk_parse::parse_goal(text)?
+            .lower(&*program)
+            .map_err(|e| e.compat())?;
         let peeled_goal = goal.into_peeled_goal();
         if multiple_answers {
             if self.db.solve_multiple(&peeled_goal, |v, has_next| {
