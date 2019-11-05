@@ -34,7 +34,7 @@ fn auto_trait() {
             #[auto] trait Foo<T> { }
         }
         error_msg {
-            "auto trait cannot have parameters"
+            "auto trait `Foo` cannot have parameters"
         }
     }
 
@@ -44,7 +44,7 @@ fn auto_trait() {
             #[auto] trait Foo where Self: Bar { }
         }
         error_msg {
-            "auto trait cannot have where clauses"
+            "auto trait `Foo` cannot have where clauses"
         }
     }
 
@@ -55,7 +55,7 @@ fn auto_trait() {
             }
         }
         error_msg {
-            "auto trait cannot define associated types"
+            "auto trait `Foo` cannot define associated types"
         }
     }
 
@@ -81,7 +81,7 @@ fn negative_impl() {
             }
         }
         error_msg {
-            "negative impls cannot define associated values"
+            "negative impl for trait `Foo` cannot define associated values"
         }
     }
 
@@ -421,7 +421,7 @@ fn fundamental_multiple_type_parameters() {
         }
 
         error_msg {
-            "only fundamental types with a single parameter are supported"
+            "only a single parameter supported for fundamental type `Boxes`"
         }
     }
 }

@@ -25,11 +25,11 @@ pub enum RustIrError {
     DuplicateLangItem(rust_ir::LangItem),
     NotTrait(Identifier),
     DuplicateOrShadowedParameters,
-    AutoTraitAssociatedTypes,
-    AutoTraitParameters,
-    AutoTraitWhereClauses,
-    InvalidFundamentalTypesParameters,
-    NegativeImplAssociatedValues,
+    AutoTraitAssociatedTypes(Identifier),
+    AutoTraitParameters(Identifier),
+    AutoTraitWhereClauses(Identifier),
+    InvalidFundamentalTypesParameters(Identifier),
+    NegativeImplAssociatedValues(Identifier),
     MissingAssociatedType(Identifier),
     IncorrectNumberOfTypeParameters {
         identifier: Identifier,
@@ -73,18 +73,25 @@ impl std::fmt::Display for RustIrError {
             RustIrError::DuplicateOrShadowedParameters => {
                 write!(f, "duplicate or shadowed parameters")
             }
-            RustIrError::AutoTraitAssociatedTypes => {
-                write!(f, "auto trait cannot define associated types")
+            RustIrError::AutoTraitAssociatedTypes(name) => {
+                write!(f, "auto trait `{}` cannot define associated types", name)
             }
-            RustIrError::AutoTraitParameters => write!(f, "auto trait cannot have parameters"),
-            RustIrError::AutoTraitWhereClauses => write!(f, "auto trait cannot have where clauses"),
-            RustIrError::InvalidFundamentalTypesParameters => write!(
+            RustIrError::AutoTraitParameters(name) => {
+                write!(f, "auto trait `{}` cannot have parameters", name)
+            }
+            RustIrError::AutoTraitWhereClauses(name) => {
+                write!(f, "auto trait `{}` cannot have where clauses", name)
+            }
+            RustIrError::InvalidFundamentalTypesParameters(name) => write!(
                 f,
-                "only fundamental types with a single parameter are supported"
+                "only a single parameter supported for fundamental type `{}`",
+                name
             ),
-            RustIrError::NegativeImplAssociatedValues => {
-                write!(f, "negative impls cannot define associated values")
-            }
+            RustIrError::NegativeImplAssociatedValues(name) => write!(
+                f,
+                "negative impl for trait `{}` cannot define associated values",
+                name
+            ),
             RustIrError::MissingAssociatedType(name) => {
                 write!(f, "no associated type `{}` defined in trait", name)
             }
@@ -279,7 +286,7 @@ impl LowerProgram for Program {
             match item {
                 Item::TraitDefn(d) => {
                     if d.flags.auto && !d.assoc_ty_defns.is_empty() {
-                        Err(RustIrError::AutoTraitAssociatedTypes)?;
+                        Err(RustIrError::AutoTraitAssociatedTypes(d.name))?;
                     }
                     for defn in &d.assoc_ty_defns {
                         let addl_parameter_kinds = defn.all_parameters();
@@ -757,7 +764,7 @@ impl LowerStructDefn for StructDefn {
         env: &Env,
     ) -> LowerResult<rust_ir::StructDatum> {
         if self.flags.fundamental && self.all_parameters().len() != 1 {
-            Err(RustIrError::InvalidFundamentalTypesParameters)?;
+            Err(RustIrError::InvalidFundamentalTypesParameters(self.name))?;
         }
 
         let binders = env.in_binders(self.all_parameters(), |env| {
@@ -1187,7 +1194,9 @@ impl LowerImpl for Impl {
             debug!("trait_ref = {:?}", trait_ref);
 
             if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
-                Err(RustIrError::NegativeImplAssociatedValues)?;
+                Err(RustIrError::NegativeImplAssociatedValues(
+                    self.trait_ref.trait_name,
+                ))?;
             }
 
             let where_clauses = self.lower_where_clauses(&env)?;
@@ -1283,10 +1292,10 @@ impl LowerTrait for TraitDefn {
         let binders = env.in_binders(all_parameters, |env| {
             if self.flags.auto {
                 if all_parameters_len > 1 {
-                    Err(RustIrError::AutoTraitParameters)?;
+                    Err(RustIrError::AutoTraitParameters(self.name))?;
                 }
                 if !self.where_clauses.is_empty() {
-                    Err(RustIrError::AutoTraitWhereClauses)?;
+                    Err(RustIrError::AutoTraitWhereClauses(self.name))?;
                 }
             }
 
