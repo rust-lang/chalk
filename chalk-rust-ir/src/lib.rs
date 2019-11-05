@@ -4,22 +4,27 @@
 
 use chalk_derive::Fold;
 use chalk_ir::cast::Cast;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::{ChalkIr, HasTypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
-    ApplicationTy, Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq,
-    ProjectionTy, QuantifiedWhereClause, TraitId, TraitRef, Ty, TypeId, WhereClause,
+    Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq, ProjectionTy,
+    QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TypeId, TypeName, WhereClause,
 };
 use std::iter;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LangItem {}
 
+/// Identifier for an "associated type value" found in some impl.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AssociatedTyValueId(pub RawId);
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum {
     pub polarity: Polarity,
     pub binders: Binders<ImplDatumBound>,
     pub impl_type: ImplType,
+    pub associated_ty_value_ids: Vec<AssociatedTyValueId>,
 }
 
 impl ImplDatum {
@@ -36,7 +41,6 @@ impl ImplDatum {
 pub struct ImplDatumBound {
     pub trait_ref: TraitRef<ChalkIr>,
     pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
-    pub associated_ty_values: Vec<AssociatedTyValue>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -59,14 +63,20 @@ pub struct DefaultImplDatumBound {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatum {
     pub binders: Binders<StructDatumBound>,
+    pub id: StructId,
+    pub flags: StructFlags,
+}
+
+impl StructDatum {
+    pub fn name(&self) -> TypeName {
+        self.id.cast()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatumBound {
-    pub self_ty: ApplicationTy<ChalkIr>,
     pub fields: Vec<Ty<ChalkIr>>,
     pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
-    pub flags: StructFlags,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -77,12 +87,17 @@ pub struct StructFlags {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum {
+    pub id: TraitId,
+
     pub binders: Binders<TraitDatumBound>,
 
     /// "Flags" indicate special kinds of traits, like auto traits.
     /// In Rust syntax these are represented in different ways, but in
     /// chalk we add annotations like `#[auto]`.
     pub flags: TraitFlags,
+
+    /// The id of each associated type defined in the trait.
+    pub associated_ty_ids: Vec<TypeId>,
 }
 
 impl TraitDatum {
@@ -97,17 +112,6 @@ impl TraitDatum {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatumBound {
-    /// A "reference" to the trait, with all generic parameters
-    /// represented as bound values. So e.g. for
-    ///
-    /// ```ignore
-    /// trait Foo<T> {}
-    /// ```
-    ///
-    /// this would be `^0: Foo<^1>`, where `^0` represents the
-    /// debruijn index for `Self` and so forth.
-    pub trait_ref: TraitRef<ChalkIr>,
-
     /// Where clauses defined on the trait:
     ///
     /// ```ignore
@@ -115,9 +119,6 @@ pub struct TraitDatumBound {
     ///              ^^^^^^^^^^^^^^
     /// ```
     pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
-
-    /// The id of each associated type defined in the trait.
-    pub associated_ty_ids: Vec<TypeId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -135,6 +136,10 @@ pub struct TraitFlags {
 pub enum InlineBound {
     TraitBound(TraitBound),
     ProjectionEqBound(ProjectionEqBound),
+}
+
+impl HasTypeFamily for InlineBound {
+    type TypeFamily = ChalkIr;
 }
 
 pub type QuantifiedInlineBound = Binders<InlineBound>;
@@ -266,6 +271,22 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
     }
 }
 
+/// Represents an associated type declaration found inside of a trait:
+///
+/// ```notrust
+/// trait Foo<P1..Pn> { // P0 is Self
+///     type Bar<Pn..Pm>: [bounds]
+///     where
+///         [where_clauses];
+/// }
+/// ```
+///
+/// The meaning of each of these parts:
+///
+/// * The *parameters* `P0...Pm` are all in scope for this associated type.
+/// * The *bounds* `bounds` are things that the impl must prove to be true.
+/// * The *where clauses* `where_clauses` are things that the impl can *assume* to be true
+///   (but which projectors must prove).
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyDatum {
     /// The trait this associated type is defined in.
@@ -277,10 +298,19 @@ pub struct AssociatedTyDatum {
     /// Name of this associated type.
     pub name: Identifier,
 
-    /// Parameters on this associated type, beginning with those from the trait,
-    /// but possibly including more.
-    pub parameter_kinds: Vec<ParameterKind<Identifier>>,
+    /// These binders represent the `P0...Pm` variables.  The binders
+    /// are in the order `[Pn..Pm; P0..Pn]`. That is, the variables
+    /// from `Bar` come first (corresponding to the de bruijn concept
+    /// that "inner" binders are lower indices, although within a
+    /// given binder we do not have an ordering).
+    pub binders: Binders<AssociatedTyDatumBound>,
+}
 
+/// Encodes the parts of `AssociatedTyDatum` where the parameters
+/// `P0..Pm` are in scope (`bounds` and `where_clauses`).
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[has_type_family(ChalkIr)]
+pub struct AssociatedTyDatumBound {
     /// Bounds on the associated type itself.
     ///
     /// These must be proven by the implementer, for all possible parameters that
@@ -291,25 +321,40 @@ pub struct AssociatedTyDatum {
     pub where_clauses: Vec<QuantifiedWhereClause<ChalkIr>>,
 }
 
+impl HasTypeFamily for AssociatedTyDatumBound {
+    type TypeFamily = ChalkIr;
+}
+
 impl AssociatedTyDatum {
     /// Returns the associated ty's bounds applied to the projection type, e.g.:
     ///
     /// ```notrust
     /// Implemented(<?0 as Foo>::Item<?1>: Sized)
     /// ```
+    ///
+    /// these quantified where clauses are in the scope of the
+    /// `binders` field.
     pub fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause<ChalkIr>> {
-        let parameters = self
-            .parameter_kinds
-            .anonymize()
-            .iter()
-            .zip(0..)
-            .map(|p| p.to_parameter())
-            .collect();
+        let Binders { binders, value } = &self.binders;
+
+        // Create a list `P0...Pn` of references to the binders in
+        // scope for this associated type:
+        let parameters = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
+
+        // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
         let self_ty = Ty::Projection(ProjectionTy {
             associated_ty_id: self.id,
             parameters,
         });
-        self.bounds
+
+        // Now use that as the self type for the bounds, transforming
+        // something like `type Bar<Pn..Pm>: Debug` into
+        //
+        // ```
+        // <P0 as Foo<P1..Pn>>::Item<Pn..Pm>: Debug
+        // ```
+        value
+            .bounds
             .iter()
             .flat_map(|b| b.into_where_clauses(self_ty.clone()))
             .collect()
@@ -369,6 +414,10 @@ pub struct AssociatedTyValue {
 pub struct AssociatedTyValueBound {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<ChalkIr>,
+}
+
+impl HasTypeFamily for AssociatedTyValueBound {
+    type TypeFamily = ChalkIr;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

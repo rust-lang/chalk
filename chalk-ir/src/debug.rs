@@ -70,18 +70,6 @@ impl Debug for TypeName {
     }
 }
 
-impl Debug for ItemId {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match self {
-            ItemId::StructId(id @ StructId(_)) => write!(fmt, "{:?}", TypeKindId::StructId(*id)),
-            ItemId::TraitId(id @ TraitId(_)) => write!(fmt, "{:?}", TypeKindId::TraitId(*id)),
-            ItemId::TypeId(id @ TypeId(_)) => write!(fmt, "{:?}", TypeKindId::TypeId(*id)),
-            ItemId::ImplId(id @ ImplId(_)) => write!(fmt, "{:?}", id),
-            ItemId::ClauseId(ClauseId(id)) => write!(fmt, "{:?}", id),
-        }
-    }
-}
-
 impl<TF: TypeFamily> Debug for Ty<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
@@ -225,7 +213,7 @@ impl<TF: TypeFamily> Debug for WhereClause<TF> {
 impl<TF: TypeFamily> Debug for FromEnv<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            FromEnv::Trait(t) => write!(fmt, "FromEnv({:?})", t),
+            FromEnv::Trait(t) => write!(fmt, "FromEnv({:?})", t.with_colon()),
             FromEnv::Ty(t) => write!(fmt, "FromEnv({:?})", t),
         }
     }
@@ -234,7 +222,7 @@ impl<TF: TypeFamily> Debug for FromEnv<TF> {
 impl<TF: TypeFamily> Debug for WellFormed<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            WellFormed::Trait(t) => write!(fmt, "WellFormed({:?})", t),
+            WellFormed::Trait(t) => write!(fmt, "WellFormed({:?})", t.with_colon()),
             WellFormed::Ty(t) => write!(fmt, "WellFormed({:?})", t),
         }
     }

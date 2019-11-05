@@ -13,6 +13,7 @@ mod coinductive_goal;
 pub mod ext;
 mod infer;
 mod solve;
+pub mod split;
 pub mod wf;
 
 pub trait RustIrDatabase: Debug {
@@ -31,6 +32,9 @@ pub trait RustIrDatabase: Debug {
 
     /// Returns the datum for the impl with the given id.
     fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum>;
+
+    /// Returns the `AssociatedTyValue` with the given id.
+    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue>;
 
     /// Returns a list of potentially relevant impls for a given
     /// trait-id; we also supply the type parameters that we are
@@ -61,27 +65,6 @@ pub trait RustIrDatabase: Debug {
 
     /// Returns the name for the type with the given id.
     fn type_name(&self, id: TypeKindId) -> Identifier;
-
-    /// Given a projection of an associated type, splits the type
-    /// parameters into two parts: those that come from the trait, and
-    /// those that come from the associated type itself.
-    ///
-    /// e.g. given a projection `<Foo as Iterable>::Item<'x>`, where `Iterable` is defined like so:
-    ///
-    /// ```ignore
-    /// trait Iterable { type Item<'a>; }
-    /// ```
-    ///
-    /// we would split into the type parameter lists `[Foo]` (from the
-    /// trait) and `['x]` (from the type).
-    fn split_projection<'p>(
-        &self,
-        projection: &'p ProjectionTy<ChalkIr>,
-    ) -> (
-        Arc<AssociatedTyDatum>,
-        &'p [Parameter<ChalkIr>],
-        &'p [Parameter<ChalkIr>],
-    );
 }
 
 pub use solve::Guidance;

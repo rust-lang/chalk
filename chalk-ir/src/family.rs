@@ -1,4 +1,4 @@
-use crate::cast::Cast;
+use crate::cast::CastTo;
 use crate::debug::Angle;
 use crate::fold::{Fold, Folder, ReflexiveFold};
 use crate::tls;
@@ -11,6 +11,7 @@ use crate::Ty;
 use chalk_engine::fallible::Fallible;
 use std::fmt::{self, Debug};
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 /// A "type family" encapsulates the concrete representation of
 /// certain "core types" from chalk-ir. All the types in chalk-ir are
@@ -38,7 +39,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
         + ReflexiveFold<Self>
         + Zip<Self>
         + Lookup<Ty<Self>>
-        + Cast<Parameter<Self>>;
+        + CastTo<Parameter<Self>>;
 
     /// "Interned" representation of lifetimes. You can use the
     /// `Lookup` trait to convert this to a `Lifetime<Self>`.
@@ -50,7 +51,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
         + ReflexiveFold<Self>
         + Zip<Self>
         + Lookup<Lifetime<Self>>
-        + Cast<Parameter<Self>>;
+        + CastTo<Parameter<Self>>;
 
     /// Prints the debug representation of a projection. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -142,12 +143,33 @@ impl TypeFamily for ChalkIr {
     }
 }
 
+impl HasTypeFamily for ChalkIr {
+    type TypeFamily = ChalkIr;
+}
+
 impl<T: HasTypeFamily> HasTypeFamily for [T] {
     type TypeFamily = T::TypeFamily;
 }
 
 impl<T: HasTypeFamily> HasTypeFamily for Vec<T> {
     type TypeFamily = T::TypeFamily;
+}
+
+impl<T: HasTypeFamily + ?Sized> HasTypeFamily for &T {
+    type TypeFamily = T::TypeFamily;
+}
+
+impl<TF: TypeFamily> HasTypeFamily for PhantomData<TF> {
+    type TypeFamily = TF;
+}
+
+impl<A, B, TF> HasTypeFamily for (A, B)
+where
+    A: HasTypeFamily<TypeFamily = TF>,
+    B: HasTypeFamily<TypeFamily = TF>,
+    TF: TypeFamily,
+{
+    type TypeFamily = TF;
 }
 
 impl Fold<ChalkIr> for Ty<ChalkIr> {
@@ -161,8 +183,8 @@ impl Fold<ChalkIr> for Ty<ChalkIr> {
     }
 }
 
-impl Cast<Parameter<ChalkIr>> for Ty<ChalkIr> {
-    fn cast(self) -> Parameter<ChalkIr> {
+impl CastTo<Parameter<ChalkIr>> for Ty<ChalkIr> {
+    fn cast_to(self) -> Parameter<ChalkIr> {
         Parameter(ParameterKind::Ty(self))
     }
 }
@@ -178,8 +200,8 @@ impl Fold<ChalkIr> for Lifetime<ChalkIr> {
     }
 }
 
-impl Cast<Parameter<ChalkIr>> for Lifetime<ChalkIr> {
-    fn cast(self) -> Parameter<ChalkIr> {
+impl CastTo<Parameter<ChalkIr>> for Lifetime<ChalkIr> {
+    fn cast_to(self) -> Parameter<ChalkIr> {
         Parameter(ParameterKind::Lifetime(self))
     }
 }

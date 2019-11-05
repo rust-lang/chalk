@@ -178,16 +178,6 @@ pub struct ClauseId(pub RawId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TypeId(pub RawId);
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ItemId {
-    StructId(StructId),
-    TraitId(TraitId),
-    ImplId(ImplId),
-    ClauseId(ClauseId),
-    TypeId(TypeId),
-}
-
-impl_froms!(ItemId: StructId, TraitId, ImplId, ClauseId, TypeId);
 impl_debugs!(ImplId, ClauseId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -208,16 +198,6 @@ impl TypeKindId {
 }
 
 impl_froms!(TypeKindId: TypeId, TraitId, StructId);
-
-impl From<TypeKindId> for ItemId {
-    fn from(type_kind_id: TypeKindId) -> ItemId {
-        match type_kind_id {
-            TypeKindId::TypeId(id) => ItemId::TypeId(id),
-            TypeKindId::TraitId(id) => ItemId::TraitId(id),
-            TypeKindId::StructId(id) => ItemId::StructId(id),
-        }
-    }
-}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(non_camel_case_types)]
@@ -604,6 +584,14 @@ impl<TF: TypeFamily> TraitRef<TF> {
     pub fn self_type_parameter(&self) -> Option<TF::Type> {
         self.type_parameters().next()
     }
+
+    pub fn from_env(self) -> FromEnv<TF> {
+        FromEnv::Trait(self)
+    }
+
+    pub fn well_formed(self) -> WellFormed<TF> {
+        WellFormed::Trait(self)
+    }
 }
 
 /// Where clauses that can be written by a Rust programmer.
@@ -773,6 +761,24 @@ impl<TF: TypeFamily> HasTypeFamily for WhereClause<TF> {
     type TypeFamily = TF;
 }
 
+impl<TF: TypeFamily> QuantifiedWhereClause<TF> {
+    /// As with `WhereClause::into_well_formed_goal`, but for a
+    /// quantified where clause. For example, `forall<T> {
+    /// Implemented(T: Trait)}` would map to `forall<T> {
+    /// WellFormed(T: Trait) }`.
+    pub fn into_well_formed_goal(self) -> Binders<DomainGoal<TF>> {
+        self.map(|wc| wc.into_well_formed_goal())
+    }
+
+    /// As with `WhereClause::into_from_env_goal`, but mapped over any
+    /// binders. For example, `forall<T> {
+    /// Implemented(T: Trait)}` would map to `forall<T> {
+    /// FromEnv(T: Trait) }`.
+    pub fn into_from_env_goal(self) -> Binders<DomainGoal<TF>> {
+        self.map(|wc| wc.into_from_env_goal())
+    }
+}
+
 impl<TF: TypeFamily> HasTypeFamily for DomainGoal<TF> {
     type TypeFamily = TF;
 }
@@ -851,9 +857,9 @@ impl<T> Binders<T> {
         }
     }
 
-    pub fn map_ref<U, OP>(&self, op: OP) -> Binders<U>
+    pub fn map_ref<'a, U, OP>(&'a self, op: OP) -> Binders<U>
     where
-        OP: FnOnce(&T) -> U,
+        OP: FnOnce(&'a T) -> U,
     {
         let value = op(&self.value);
         Binders {
@@ -902,6 +908,20 @@ where
     pub fn substitute(&self, parameters: &[Parameter<TF>]) -> T::Result {
         assert_eq!(self.binders.len(), parameters.len());
         Subst::apply(parameters, &self.value)
+    }
+}
+
+/// Allows iterating over a `&Binders<Vec<T>>`, for instance. Each
+/// element will be a `Binders<&T>`.
+impl<'a, V> IntoIterator for &'a Binders<V>
+where
+    &'a V: IntoIterator,
+{
+    type Item = Binders<<&'a V as IntoIterator>::Item>;
+    type IntoIter = BindersIntoIterator<&'a V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.map_ref(|r| r).into_iter()
     }
 }
 

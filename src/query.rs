@@ -7,6 +7,7 @@ use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use chalk_ir::tls;
 use chalk_ir::TraitId;
+use chalk_solve::clauses::builder::ClauseBuilder;
 use chalk_solve::clauses::program_clauses::ToProgramClauses;
 use chalk_solve::coherence::orphan;
 use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
@@ -119,20 +120,22 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
     //       forall P0...Pn. Something :- Conditions
     let mut program_clauses = program.custom_clauses.clone();
 
+    let builder = &mut ClauseBuilder::new(db, &mut program_clauses);
+
     program
         .associated_ty_data
         .values()
-        .for_each(|d| d.to_program_clauses(db, &mut program_clauses));
+        .for_each(|d| d.to_program_clauses(builder));
 
     program
         .trait_data
         .values()
-        .for_each(|d| d.to_program_clauses(db, &mut program_clauses));
+        .for_each(|d| d.to_program_clauses(builder));
 
     program
         .struct_data
         .values()
-        .for_each(|d| d.to_program_clauses(db, &mut program_clauses));
+        .for_each(|d| d.to_program_clauses(builder));
 
     for (&auto_trait_id, _) in program
         .trait_data
@@ -140,12 +143,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         .filter(|(_, auto_trait)| auto_trait.is_auto_trait())
     {
         for &struct_id in program.struct_data.keys() {
-            chalk_solve::clauses::push_auto_trait_impls(
-                auto_trait_id,
-                struct_id,
-                db,
-                &mut program_clauses,
-            );
+            chalk_solve::clauses::push_auto_trait_impls(builder, auto_trait_id, struct_id);
         }
     }
 
@@ -153,13 +151,12 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         // If we encounter a negative impl, do not generate any rule. Negative impls
         // are currently just there to deactivate default impls for auto traits.
         if datum.is_positive() {
-            datum.to_program_clauses(db, &mut program_clauses);
+            datum.to_program_clauses(builder);
             datum
-                .binders
-                .value
-                .associated_ty_values
+                .associated_ty_value_ids
                 .iter()
-                .for_each(|atv| atv.to_program_clauses(db, &mut program_clauses));
+                .map(|&atv_id| db.associated_ty_value(atv_id))
+                .for_each(|atv| atv.to_program_clauses(builder));
         }
     }
 

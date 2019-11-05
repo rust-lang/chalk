@@ -4,8 +4,7 @@ use chalk_ir::family::ChalkIr;
 use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
-use chalk_rust_ir::IntoWhereClauses;
-use chalk_rust_ir::{Anonymize, ToParameter};
+use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
 use failure::{Fail, Fallible};
 use itertools::Itertools;
 use lalrpop_intern::intern;
@@ -16,7 +15,8 @@ mod test;
 
 type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeKindId>;
 type TypeKinds = BTreeMap<chalk_ir::TypeKindId, rust_ir::TypeKind>;
-type AssociatedTyInfos = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyInfo>;
+type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyLookup>;
+type AssociatedTyValueIds = BTreeMap<(chalk_ir::ImplId, chalk_ir::Identifier), AssociatedTyValueId>;
 type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usize>;
 
 #[derive(Fail, Debug)]
@@ -44,16 +44,29 @@ pub enum RustIrError {
 struct Env<'k> {
     type_ids: &'k TypeIds,
     type_kinds: &'k TypeKinds,
-    associated_ty_infos: &'k AssociatedTyInfos,
+    associated_ty_lookups: &'k AssociatedTyLookups,
     /// Parameter identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
     parameter_map: ParameterMap,
 }
 
+/// Information about an associated type **declaration** (i.e., an
+/// `AssociatedTyDatum`). This information is gathered in the first
+/// phase of creating the Rust IR and is then later used to lookup the
+/// "id" of an associated type.
+///
+/// ```ignore
+/// trait Foo {
+///     type Bar<'a>; // <-- associated type declaration
+///          // ----
+///          // |
+///          // addl_parameter_kinds
+/// }
+/// ```
 #[derive(Debug, PartialEq, Eq)]
-struct AssociatedTyInfo {
+struct AssociatedTyLookup {
     id: chalk_ir::TypeId,
-    addl_parameter_kinds: Vec<chalk_ir::ParameterKind<chalk_ir::Identifier>>,
+    addl_parameter_kinds: Vec<chalk_ir::ParameterKind<()>>,
 }
 
 enum NameLookup {
@@ -157,21 +170,33 @@ impl LowerProgram for Program {
         // based just on its position:
         let raw_ids: Vec<_> = self.items.iter().map(|_| next_item_id()).collect();
 
-        // Create ids for associated types
-        let mut associated_ty_infos = BTreeMap::new();
+        // Create ids for associated type declarations and values
+        let mut associated_ty_lookups = BTreeMap::new();
+        let mut associated_ty_value_ids = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
-            if let Item::TraitDefn(ref d) = *item {
-                if d.flags.auto && !d.assoc_ty_defns.is_empty() {
-                    return Err(format_err!("auto trait cannot define associated types"));
+            match item {
+                Item::TraitDefn(d) => {
+                    if d.flags.auto && !d.assoc_ty_defns.is_empty() {
+                        return Err(format_err!("auto trait cannot define associated types"));
+                    }
+                    for defn in &d.assoc_ty_defns {
+                        let addl_parameter_kinds = defn.all_parameters();
+                        let lookup = AssociatedTyLookup {
+                            id: TypeId(next_item_id()),
+                            addl_parameter_kinds: addl_parameter_kinds.anonymize(),
+                        };
+                        associated_ty_lookups.insert((TraitId(raw_id), defn.name.str), lookup);
+                    }
                 }
-                for defn in &d.assoc_ty_defns {
-                    let addl_parameter_kinds = defn.all_parameters();
-                    let info = AssociatedTyInfo {
-                        id: TypeId(next_item_id()),
-                        addl_parameter_kinds,
-                    };
-                    associated_ty_infos.insert((TraitId(raw_id), defn.name.str), info);
+
+                Item::Impl(d) => {
+                    for atv in &d.assoc_ty_values {
+                        let atv_id = AssociatedTyValueId(next_item_id());
+                        associated_ty_value_ids.insert((ImplId(raw_id), atv.name.str), atv_id);
+                    }
                 }
+
+                _ => {}
             }
         }
 
@@ -192,12 +217,13 @@ impl LowerProgram for Program {
         let mut trait_data = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
+        let mut associated_ty_values = BTreeMap::new();
         let mut custom_clauses = Vec::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
                 type_ids: &type_ids,
                 type_kinds: &type_kinds,
-                associated_ty_infos: &associated_ty_infos,
+                associated_ty_lookups: &associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
             };
 
@@ -206,33 +232,94 @@ impl LowerProgram for Program {
                     let struct_id = StructId(raw_id);
                     struct_data.insert(struct_id, Arc::new(d.lower_struct(struct_id, &empty_env)?));
                 }
-                Item::TraitDefn(ref d) => {
+                Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
-                    trait_data.insert(trait_id, Arc::new(d.lower_trait(trait_id, &empty_env)?));
+                    trait_data.insert(
+                        trait_id,
+                        Arc::new(trait_defn.lower_trait(trait_id, &empty_env)?),
+                    );
 
-                    for defn in &d.assoc_ty_defns {
-                        let info = &associated_ty_infos[&(trait_id, defn.name.str)];
+                    for assoc_ty_defn in &trait_defn.assoc_ty_defns {
+                        let lookup = &associated_ty_lookups[&(trait_id, assoc_ty_defn.name.str)];
 
-                        let mut parameter_kinds = defn.all_parameters();
-                        parameter_kinds.extend(d.all_parameters());
-                        let env = empty_env.introduce(parameter_kinds.clone())?;
+                        // The parameters in scope for the associated
+                        // type definitions are *both* those from the
+                        // trait *and* those from the associated type
+                        // itself.
+                        //
+                        // Insert the associated type parameters first
+                        // into the list so that they are given the
+                        // indices starting from 0. This corresponds
+                        // to the "de bruijn" convention where "more
+                        // inner" sets of parameters get the lower
+                        // indices:
+                        //
+                        // e.g., in this example, the indices would be
+                        // assigned `[A0, A1, T0, T1]`:
+                        //
+                        // ```
+                        // trait Foo<T0, T1> {
+                        //     type Bar<A0, A1>;
+                        // }
+                        // ```
+                        let mut parameter_kinds = assoc_ty_defn.all_parameters();
+                        parameter_kinds.extend(trait_defn.all_parameters());
+
+                        let binders = empty_env.in_binders(parameter_kinds, |env| {
+                            Ok(rust_ir::AssociatedTyDatumBound {
+                                bounds: assoc_ty_defn.bounds.lower(&env)?,
+                                where_clauses: assoc_ty_defn.where_clauses.lower(&env)?,
+                            })
+                        })?;
 
                         associated_ty_data.insert(
-                            info.id,
+                            lookup.id,
                             Arc::new(rust_ir::AssociatedTyDatum {
                                 trait_id: TraitId(raw_id),
-                                id: info.id,
-                                name: defn.name.str,
-                                parameter_kinds: parameter_kinds,
-                                bounds: defn.bounds.lower(&env)?,
-                                where_clauses: defn.where_clauses.lower(&env)?,
+                                id: lookup.id,
+                                name: assoc_ty_defn.name.str,
+                                binders: binders,
                             }),
                         );
                     }
                 }
-                Item::Impl(ref d) => {
+                Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
-                    impl_data.insert(impl_id, Arc::new(d.lower_impl(&empty_env, impl_id)?));
+                    let impl_datum = Arc::new(impl_defn.lower_impl(
+                        &empty_env,
+                        impl_id,
+                        &associated_ty_value_ids,
+                    )?);
+                    impl_data.insert(impl_id, impl_datum.clone());
+                    let trait_id = impl_datum.trait_id();
+
+                    for atv in &impl_defn.assoc_ty_values {
+                        let atv_id = associated_ty_value_ids[&(impl_id, atv.name.str)];
+                        let lookup = &associated_ty_lookups[&(trait_id, atv.name.str)];
+
+                        // The parameters in scope for the associated
+                        // type definitions are *both* those from the
+                        // impl *and* those from the associated type
+                        // itself. As in the "trait" case above, we begin
+                        // with the parameters from the impl.
+                        let mut parameter_kinds = atv.all_parameters();
+                        parameter_kinds.extend(impl_defn.all_parameters());
+
+                        let value = empty_env.in_binders(parameter_kinds, |env| {
+                            Ok(rust_ir::AssociatedTyValueBound {
+                                ty: atv.value.lower(env)?,
+                            })
+                        })?;
+
+                        associated_ty_values.insert(
+                            atv_id,
+                            Arc::new(rust_ir::AssociatedTyValue {
+                                impl_id,
+                                associated_ty_id: lookup.id,
+                                value,
+                            }),
+                        );
+                    }
                 }
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
@@ -246,6 +333,7 @@ impl LowerProgram for Program {
             struct_data,
             trait_data,
             impl_data,
+            associated_ty_values,
             associated_ty_data,
             custom_clauses,
         };
@@ -566,39 +654,32 @@ impl LowerStructDefn for StructDefn {
         struct_id: chalk_ir::StructId,
         env: &Env,
     ) -> Fallible<rust_ir::StructDatum> {
+        if self.flags.fundamental && self.all_parameters().len() != 1 {
+            return Err(format_err!(
+                "Only fundamental types with a single parameter are supported"
+            ));
+        }
+
         let binders = env.in_binders(self.all_parameters(), |env| {
-            let self_ty = chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::TypeKindId(struct_id.into()),
-                parameters: self
-                    .all_parameters()
-                    .anonymize()
-                    .iter()
-                    .zip(0..)
-                    .map(|p| p.to_parameter())
-                    .collect(),
-            };
-
-            if self.flags.fundamental && self_ty.len_type_parameters() != 1 {
-                return Err(format_err!(
-                    "Only fundamental types with a single parameter are supported"
-                ));
-            }
-
             let fields: Fallible<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
             let where_clauses = self.lower_where_clauses(env)?;
 
             Ok(rust_ir::StructDatumBound {
-                self_ty,
                 fields: fields?,
                 where_clauses,
-                flags: rust_ir::StructFlags {
-                    upstream: self.flags.upstream,
-                    fundamental: self.flags.fundamental,
-                },
             })
         })?;
 
-        Ok(rust_ir::StructDatum { binders })
+        let flags = rust_ir::StructFlags {
+            upstream: self.flags.upstream,
+            fundamental: self.flags.fundamental,
+        };
+
+        Ok(rust_ir::StructDatum {
+            id: struct_id,
+            binders,
+            flags,
+        })
     }
 }
 
@@ -684,11 +765,11 @@ trait LowerProjectionEqBound {
 impl LowerProjectionEqBound for ProjectionEqBound {
     fn lower(&self, env: &Env) -> Fallible<rust_ir::ProjectionEqBound> {
         let trait_bound = self.trait_bound.lower(env)?;
-        let info = match env
-            .associated_ty_infos
+        let lookup = match env
+            .associated_ty_lookups
             .get(&(trait_bound.trait_id, self.name.str))
         {
-            Some(info) => info,
+            Some(lookup) => lookup,
             None => {
                 return Err(format_err!(
                     "no associated type `{}` defined in trait",
@@ -702,21 +783,21 @@ impl LowerProjectionEqBound for ProjectionEqBound {
             .map(|a| a.lower(env))
             .collect::<Fallible<_>>()?;
 
-        if args.len() != info.addl_parameter_kinds.len() {
+        if args.len() != lookup.addl_parameter_kinds.len() {
             return Err(format_err!(
                 "wrong number of parameters for associated type (expected {}, got {})",
-                info.addl_parameter_kinds.len(),
+                lookup.addl_parameter_kinds.len(),
                 args.len()
             ));
         }
 
-        for (param, arg) in info.addl_parameter_kinds.iter().zip(args.iter()) {
+        for (param, arg) in lookup.addl_parameter_kinds.iter().zip(args.iter()) {
             check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
         }
 
         Ok(rust_ir::ProjectionEqBound {
             trait_bound,
-            associated_ty_id: info.id,
+            associated_ty_id: lookup.id,
             parameters: args,
             value: self.value.lower(env)?,
         })
@@ -818,8 +899,8 @@ impl LowerProjectionTy for ProjectionTy {
             trait_id,
             parameters: trait_parameters,
         } = trait_ref.lower(env)?;
-        let info = match env.associated_ty_infos.get(&(trait_id.into(), name.str)) {
-            Some(info) => info,
+        let lookup = match env.associated_ty_lookups.get(&(trait_id.into(), name.str)) {
+            Some(lookup) => lookup,
             None => {
                 return Err(format_err!(
                     "no associated type `{}` defined in trait",
@@ -829,22 +910,22 @@ impl LowerProjectionTy for ProjectionTy {
         };
         let mut args: Vec<_> = args.iter().map(|a| a.lower(env)).collect::<Fallible<_>>()?;
 
-        if args.len() != info.addl_parameter_kinds.len() {
+        if args.len() != lookup.addl_parameter_kinds.len() {
             return Err(format_err!(
                 "wrong number of parameters for associated type (expected {}, got {})",
-                info.addl_parameter_kinds.len(),
+                lookup.addl_parameter_kinds.len(),
                 args.len()
             ));
         }
 
-        for (param, arg) in info.addl_parameter_kinds.iter().zip(args.iter()) {
+        for (param, arg) in lookup.addl_parameter_kinds.iter().zip(args.iter()) {
             check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
         }
 
         args.extend(trait_parameters);
 
         Ok(chalk_ir::ProjectionTy {
-            associated_ty_id: info.id,
+            associated_ty_id: lookup.id,
             parameters: args,
         })
     }
@@ -981,14 +1062,27 @@ impl LowerLifetime for Lifetime {
 }
 
 trait LowerImpl {
-    fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum>;
+    fn lower_impl(
+        &self,
+        empty_env: &Env,
+        impl_id: ImplId,
+        associated_ty_value_ids: &AssociatedTyValueIds,
+    ) -> Fallible<rust_ir::ImplDatum>;
 }
 
 impl LowerImpl for Impl {
-    fn lower_impl(&self, empty_env: &Env, impl_id: ImplId) -> Fallible<rust_ir::ImplDatum> {
+    fn lower_impl(
+        &self,
+        empty_env: &Env,
+        impl_id: ImplId,
+        associated_ty_value_ids: &AssociatedTyValueIds,
+    ) -> Fallible<rust_ir::ImplDatum> {
+        debug_heading!("LowerImpl::lower_impl(impl_id={:?})", impl_id);
+
         let polarity = self.polarity.lower();
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
+            debug!("trait_ref = {:?}", trait_ref);
 
             if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
                 return Err(format_err!(
@@ -996,24 +1090,30 @@ impl LowerImpl for Impl {
                 ));
             }
 
-            let trait_id = trait_ref.trait_id;
             let where_clauses = self.lower_where_clauses(&env)?;
-            let associated_ty_values = self
-                .assoc_ty_values
-                .iter()
-                .map(|v| v.lower(trait_id.into(), impl_id, env))
-                .collect::<Fallible<_>>()?;
+            debug!("where_clauses = {:?}", trait_ref);
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
                 where_clauses,
-                associated_ty_values,
             })
         })?;
+
+        // lookup the ids for each of the "associated type values"
+        // within the impl, which should have already assigned and
+        // stored in the map
+        let associated_ty_value_ids = self
+            .assoc_ty_values
+            .iter()
+            .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str)])
+            .collect();
+
+        debug!("associated_ty_value_ids = {:?}", associated_ty_value_ids);
 
         Ok(rust_ir::ImplDatum {
             polarity,
             binders: binders,
             impl_type: self.impl_type.lower(),
+            associated_ty_value_ids,
         })
     }
 }
@@ -1064,50 +1164,17 @@ impl LowerClause for Clause {
     }
 }
 
-trait LowerAssocTyValue {
-    fn lower(
-        &self,
-        trait_id: chalk_ir::TraitId,
-        impl_id: chalk_ir::ImplId,
-        env: &Env,
-    ) -> Fallible<rust_ir::AssociatedTyValue>;
-}
-
-impl LowerAssocTyValue for AssocTyValue {
-    fn lower(
-        &self,
-        trait_id: chalk_ir::TraitId,
-        impl_id: chalk_ir::ImplId,
-        env: &Env,
-    ) -> Fallible<rust_ir::AssociatedTyValue> {
-        let info = &env.associated_ty_infos[&(trait_id, self.name.str)];
-        let value = env.in_binders(self.all_parameters(), |env| {
-            Ok(rust_ir::AssociatedTyValueBound {
-                ty: self.value.lower(env)?,
-            })
-        })?;
-        Ok(rust_ir::AssociatedTyValue {
-            impl_id,
-            associated_ty_id: info.id,
-            value: value,
-        })
-    }
-}
-
 trait LowerTrait {
     fn lower_trait(&self, trait_id: chalk_ir::TraitId, env: &Env) -> Fallible<rust_ir::TraitDatum>;
 }
 
 impl LowerTrait for TraitDefn {
     fn lower_trait(&self, trait_id: chalk_ir::TraitId, env: &Env) -> Fallible<rust_ir::TraitDatum> {
-        let binders = env.in_binders(self.all_parameters(), |env| {
-            let trait_ref = chalk_ir::TraitRef {
-                trait_id: trait_id,
-                parameters: self.parameter_refs(),
-            };
-
+        let all_parameters = self.all_parameters();
+        let all_parameters_len = all_parameters.len();
+        let binders = env.in_binders(all_parameters, |env| {
             if self.flags.auto {
-                if trait_ref.parameters.len() > 1 {
+                if all_parameters_len > 1 {
                     return Err(format_err!("auto trait cannot have parameters"));
                 }
                 if !self.where_clauses.is_empty() {
@@ -1115,22 +1182,22 @@ impl LowerTrait for TraitDefn {
                 }
             }
 
-            let associated_ty_ids: Vec<_> = self
-                .assoc_ty_defns
-                .iter()
-                .map(|defn| env.associated_ty_infos[&(trait_id, defn.name.str)].id)
-                .collect();
-
             Ok(rust_ir::TraitDatumBound {
-                trait_ref: trait_ref,
                 where_clauses: self.lower_where_clauses(env)?,
-                associated_ty_ids,
             })
         })?;
 
+        let associated_ty_ids: Vec<_> = self
+            .assoc_ty_defns
+            .iter()
+            .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str)].id)
+            .collect();
+
         Ok(rust_ir::TraitDatum {
+            id: trait_id,
             binders: binders,
             flags: self.flags.lower(),
+            associated_ty_ids,
         })
     }
 }
@@ -1141,26 +1208,26 @@ pub trait LowerGoal<A> {
 
 impl LowerGoal<LoweredProgram> for Goal {
     fn lower(&self, program: &LoweredProgram) -> Fallible<Box<chalk_ir::Goal<ChalkIr>>> {
-        let associated_ty_infos: BTreeMap<_, _> = program
+        let associated_ty_lookups: BTreeMap<_, _> = program
             .associated_ty_data
             .iter()
             .map(|(&associated_ty_id, datum)| {
                 let trait_datum = &program.trait_data[&datum.trait_id];
                 let num_trait_params = trait_datum.binders.len();
-                let num_addl_params = datum.parameter_kinds.len() - num_trait_params;
-                let addl_parameter_kinds = datum.parameter_kinds[..num_addl_params].to_owned();
-                let info = AssociatedTyInfo {
+                let num_addl_params = datum.binders.len() - num_trait_params;
+                let addl_parameter_kinds = datum.binders.binders[..num_addl_params].to_owned();
+                let lookup = AssociatedTyLookup {
                     id: associated_ty_id,
                     addl_parameter_kinds,
                 };
-                ((datum.trait_id, datum.name), info)
+                ((datum.trait_id, datum.name), lookup)
             })
             .collect();
 
         let env = Env {
             type_ids: &program.type_ids,
             type_kinds: &program.type_kinds,
-            associated_ty_infos: &associated_ty_infos,
+            associated_ty_lookups: &associated_ty_lookups,
             parameter_map: BTreeMap::new(),
         };
 

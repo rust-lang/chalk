@@ -1,4 +1,5 @@
 use super::program_clauses::ToProgramClauses;
+use crate::clauses::builder::ClauseBuilder;
 use crate::clauses::match_type_kind;
 use crate::DomainGoal;
 use crate::FromEnv;
@@ -21,45 +22,44 @@ pub(super) fn elaborate_env_clauses(
     in_clauses: &Vec<ProgramClause<ChalkIr>>,
     out: &mut FxHashSet<ProgramClause<ChalkIr>>,
 ) {
-    let mut visitor = EnvElaborator::new(db, out);
+    let mut this_round = vec![];
+    let mut visitor = EnvElaborator::new(db, &mut this_round);
     for clause in in_clauses {
         visitor.visit_program_clause(&clause);
     }
+    out.extend(this_round);
 }
 
-struct EnvElaborator<'db, 'set> {
-    db: &'db dyn RustIrDatabase,
-    round: &'set mut FxHashSet<ProgramClause<ChalkIr>>,
+struct EnvElaborator<'me> {
+    db: &'me dyn RustIrDatabase,
+    builder: ClauseBuilder<'me>,
 }
 
-impl<'db, 'set> EnvElaborator<'db, 'set> {
-    fn new(
-        db: &'db dyn RustIrDatabase,
-        round: &'set mut FxHashSet<ProgramClause<ChalkIr>>,
-    ) -> Self {
-        EnvElaborator { db, round }
+impl<'me> EnvElaborator<'me> {
+    fn new(db: &'me dyn RustIrDatabase, out: &'me mut Vec<ProgramClause<ChalkIr>>) -> Self {
+        EnvElaborator {
+            db,
+            builder: ClauseBuilder::new(db, out),
+        }
     }
 
     fn visit_projection_ty(&mut self, projection_ty: &ProjectionTy<ChalkIr>) {
-        let mut clauses = vec![];
         self.db
             .associated_ty_data(projection_ty.associated_ty_id)
-            .to_program_clauses(self.db, &mut clauses);
-        self.round.extend(clauses);
+            .to_program_clauses(&mut self.builder);
     }
 
     fn visit_ty(&mut self, ty: &Ty<ChalkIr>) {
-        let mut clauses = vec![];
         match ty {
             Ty::Apply(application_ty) => match application_ty.name {
                 TypeName::TypeKindId(type_kind_id) => {
-                    match_type_kind(self.db, type_kind_id, &mut clauses)
+                    match_type_kind(&mut self.builder, type_kind_id)
                 }
                 TypeName::Placeholder(_) | TypeName::Error => (),
                 TypeName::AssociatedType(type_id) => {
                     self.db
                         .associated_ty_data(type_id)
-                        .to_program_clauses(self.db, &mut clauses);
+                        .to_program_clauses(&mut self.builder);
                 }
             },
             Ty::Projection(projection_ty) => {
@@ -72,27 +72,23 @@ impl<'db, 'set> EnvElaborator<'db, 'set> {
 
             Ty::ForAll(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
         }
-        self.round.extend(clauses);
     }
 
     fn visit_from_env(&mut self, from_env: &FromEnv<ChalkIr>) {
         match from_env {
             FromEnv::Trait(trait_ref) => {
-                let mut clauses = vec![];
                 let trait_datum = self.db.trait_datum(trait_ref.trait_id);
 
-                trait_datum.to_program_clauses(self.db, &mut clauses);
+                trait_datum.to_program_clauses(&mut self.builder);
 
                 // If we know that `T: Iterator`, then we also know
                 // things about `<T as Iterator>::Item`, so push those
                 // implied bounds too:
-                for &associated_ty_id in &trait_datum.binders.value.associated_ty_ids {
+                for &associated_ty_id in &trait_datum.associated_ty_ids {
                     self.db
                         .associated_ty_data(associated_ty_id)
-                        .to_program_clauses(self.db, &mut clauses);
+                        .to_program_clauses(&mut self.builder);
                 }
-
-                self.round.extend(clauses);
             }
             FromEnv::Ty(ty) => self.visit_ty(ty),
         }

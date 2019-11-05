@@ -510,16 +510,8 @@ fn normalize_under_binder_multi() {
                 type Item;
             }
 
-            trait Id<'a> {
-                type Item;
-            }
-
             impl<'a, T> Deref<'a> for Ref<'a, T> {
                 type Item = T;
-            }
-
-            impl<'a, T> Id<'a> for Ref<'a, T> {
-                type Item = Ref<'a, T>;
             }
         }
 
@@ -530,8 +522,8 @@ fn normalize_under_binder_multi() {
                 }
             }
         } yields_all {
-            "for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0, I32>, '^1>], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }, InEnvironment { environment: Env([]), goal: '^1 == '!1_0 }] }",
-            "substitution [?0 := I32], lifetime constraints []"
+            "substitution [?0 := I32], lifetime constraints []",
+            "for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0, I32>, '^1>], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }, InEnvironment { environment: Env([]), goal: '^1 == '!1_0 }] }"
         }
 
         goal {
@@ -541,7 +533,7 @@ fn normalize_under_binder_multi() {
                 }
             }
         } yields_first {
-            "for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0, I32>, '^1>], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }, InEnvironment { environment: Env([]), goal: '^1 == '!1_0 }] }"
+            "substitution [?0 := I32], lifetime constraints []"
         }
     }
 }

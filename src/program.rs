@@ -1,11 +1,17 @@
+use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, TypeId,
-    TypeKindId,
+    Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, Ty, TypeId,
+    TypeKindId, TypeName,
 };
-use chalk_rust_ir::{AssociatedTyDatum, ImplDatum, ImplType, StructDatum, TraitDatum, TypeKind};
+use chalk_rust_ir::{
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
+    TraitDatum, TypeKind,
+};
+use chalk_solve::split::Split;
+use chalk_solve::RustIrDatabase;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
@@ -24,10 +30,13 @@ pub struct Program {
     /// For each impl:
     pub(crate) impl_data: BTreeMap<ImplId, Arc<ImplDatum>>,
 
+    /// For each associated ty value `type Foo = XXX` found in an impl:
+    pub(crate) associated_ty_values: BTreeMap<AssociatedTyValueId, Arc<AssociatedTyValue>>,
+
     /// For each trait:
     pub(crate) trait_data: BTreeMap<TraitId, Arc<TraitDatum>>,
 
-    /// For each associated ty:
+    /// For each associated ty declaration `type Foo` found in a trait:
     pub(crate) associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum>>,
 
     /// For each user-specified clause
@@ -35,33 +44,6 @@ pub struct Program {
 }
 
 impl Program {
-    /// Given a projection of an associated type, split the type parameters
-    /// into those that come from the *trait* and those that come from the
-    /// *associated type itself*. So e.g. if you have `(Iterator::Item)<F>`,
-    /// this would return `([F], [])`, since `Iterator::Item` is not generic
-    /// and hence doesn't have any type parameters itself.
-    ///
-    /// Used primarily for debugging output.
-    pub(crate) fn split_projection<'p>(
-        &self,
-        projection: &'p ProjectionTy<ChalkIr>,
-    ) -> (
-        Arc<AssociatedTyDatum>,
-        &'p [Parameter<ChalkIr>],
-        &'p [Parameter<ChalkIr>],
-    ) {
-        let ProjectionTy {
-            associated_ty_id,
-            ref parameters,
-        } = *projection;
-        let associated_ty_data = &self.associated_ty_data[&associated_ty_id];
-        let trait_datum = &self.trait_data[&associated_ty_data.trait_id];
-        let trait_num_params = trait_datum.binders.len();
-        let split_point = parameters.len() - trait_num_params;
-        let (other_params, trait_params) = parameters.split_at(split_point);
-        (associated_ty_data.clone(), trait_params, other_params)
-    }
-
     /// Returns the ids for all impls declared in this crate.
     pub(crate) fn local_impl_ids(&self) -> Vec<ImplId> {
         self.impl_data
@@ -112,5 +94,80 @@ impl tls::DebugContext for Program {
             associated_ty_data.name,
             Angle(&other_params)
         )
+    }
+}
+
+impl RustIrDatabase for Program {
+    fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
+        self.custom_clauses.clone()
+    }
+
+    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
+        self.associated_ty_data[&ty].clone()
+    }
+
+    fn trait_datum(&self, id: TraitId) -> Arc<TraitDatum> {
+        self.trait_data[&id].clone()
+    }
+
+    fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum> {
+        self.impl_data[&id].clone()
+    }
+
+    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue> {
+        self.associated_ty_values[&id].clone()
+    }
+
+    fn struct_datum(&self, id: StructId) -> Arc<StructDatum> {
+        self.struct_data[&id].clone()
+    }
+
+    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter<ChalkIr>]) -> Vec<ImplId> {
+        self.impl_data
+            .iter()
+            .filter(|(_, impl_datum)| {
+                let trait_ref = &impl_datum.binders.value.trait_ref;
+                trait_id == trait_ref.trait_id && {
+                    assert_eq!(trait_ref.parameters.len(), parameters.len());
+                    <[_] as CouldMatch<[_]>>::could_match(&parameters, &trait_ref.parameters)
+                }
+            })
+            .map(|(&impl_id, _)| impl_id)
+            .collect()
+    }
+
+    fn local_impls_to_coherence_check(&self, trait_id: TraitId) -> Vec<ImplId> {
+        self.impl_data
+            .iter()
+            .filter(|(_, impl_datum)| {
+                impl_datum.trait_id() == trait_id && impl_datum.impl_type == ImplType::Local
+            })
+            .map(|(&impl_id, _)| impl_id)
+            .collect()
+    }
+
+    fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool {
+        // Look for an impl like `impl Send for Foo` where `Foo` is
+        // the struct.  See `push_auto_trait_impls` for more.
+        let type_kind_id = TypeKindId::StructId(struct_id);
+        self.impl_data.values().any(|impl_datum| {
+            let impl_trait_ref = &impl_datum.binders.value.trait_ref;
+            impl_trait_ref.trait_id == auto_trait_id
+                && match impl_trait_ref.parameters[0].assert_ty_ref() {
+                    Ty::Apply(apply) => match apply.name {
+                        TypeName::TypeKindId(id) => id == type_kind_id,
+                        _ => false,
+                    },
+
+                    _ => false,
+                }
+        })
+    }
+
+    fn type_name(&self, id: TypeKindId) -> Identifier {
+        match self.type_kinds.get(&id) {
+            Some(v) => v.name,
+            None => panic!("no type with id `{:?}`", id),
+        }
     }
 }
