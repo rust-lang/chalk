@@ -314,7 +314,7 @@ where
 
         // Get the projection for this associated type:
         //
-        // * `projection`: `<Box<!T> as Foo>::Item<'!a`>
+        // * `projection`: `<Box<!T> as Foo>::Item<'!a>`
         let (_, projection) = self
             .db
             .impl_parameters_and_projection_from_associated_ty_value(&all_parameters, assoc_ty);
