@@ -21,10 +21,26 @@ type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usiz
 pub enum RustIrError {
     #[fail(display = "invalid type name `{}`", _0)]
     InvalidTypeName(Identifier),
+    #[fail(display = "invalid lifetime name `{}`", _0)]
+    InvalidLifetimeName(Identifier),
     #[fail(display = "duplicate lang item `{:?}`", _0)]
     DuplicateLangItem(rust_ir::LangItem),
     #[fail(display = "expected a trait, found `{}`, which is not a trait", _0)]
     NotTrait(Identifier),
+    #[fail(display = "duplicate or shadowed parameters")]
+    DuplicateOrShadowedParamters,
+    #[fail(display = "auto trait cannot define associated types")]
+    AutoTraitAssociatedTypes,
+    #[fail(display = "auto trait cannot have parameters")]
+    AutoTraitParameters,
+    #[fail(display = "auto trait cannot have where clauses")]
+    AutoTraitWhereClauses,
+    #[fail(display = "only fundamental types with a single parameter are supported")]
+    InvalidFundamentalTypesParameters,
+    #[fail(display = "negative impls cannot define associated values")]
+    NegativeImplAssociatedValues,
+    #[fail(display = "no associated type `{}` defined in trait", _0)]
+    MissingAssociatedType(Identifier),
     #[fail(
         display = "`{}` takes {} type parameters, not {}",
         identifier, expected, actual
@@ -33,6 +49,42 @@ pub enum RustIrError {
         identifier: Identifier,
         expected: usize,
         actual: usize,
+    },
+    #[fail(
+        display = "wrong number of parameters for associated type `{}` (expected {}, got {})",
+        identifier, expected, actual
+    )]
+    IncorrectNumberOfAssociatedTypeParameters {
+        identifier: Identifier,
+        expected: usize,
+        actual: usize,
+    },
+    #[fail(
+        display = "incorrect parameter kind for `{}`: expected {}, found {}",
+        identifier, expected, actual
+    )]
+    IncorrectParameterKind {
+        identifier: Identifier,
+        expected: Kind,
+        actual: Kind,
+    },
+    #[fail(
+        display = "incorrect parameter kind for trait `{}`: expected {}, found {}",
+        identifier, expected, actual
+    )]
+    IncorrectTraitParameterKind {
+        identifier: Identifier,
+        expected: Kind,
+        actual: Kind,
+    },
+    #[fail(
+        display = "incorrect associated type parameter kind for `{}`: expected {}, found {}",
+        identifier, expected, actual
+    )]
+    IncorrectAssociatedTypeParameterKind {
+        identifier: Identifier,
+        expected: Kind,
+        actual: Kind,
     },
     #[fail(display = "cannot apply type parameter `{}`", _0)]
     CannotApplyTypeParameter(Identifier),
@@ -103,7 +155,7 @@ impl<'k> Env<'k> {
             return Ok(LifetimeLookup::Parameter(*k));
         }
 
-        Err(format_err!("invalid lifetime name: {:?}", name.str))
+        Err(RustIrError::InvalidLifetimeName(name))?
     }
 
     fn type_kind(&self, id: chalk_ir::TypeKindId) -> &rust_ir::TypeKind {
@@ -127,7 +179,7 @@ impl<'k> Env<'k> {
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
-            return Err(format_err!("duplicate or shadowed parameters"));
+            Err(RustIrError::DuplicateOrShadowedParamters)?;
         }
         Ok(Env {
             parameter_map,
@@ -175,7 +227,7 @@ impl LowerProgram for Program {
             match item {
                 Item::TraitDefn(d) => {
                     if d.flags.auto && !d.assoc_ty_defns.is_empty() {
-                        return Err(format_err!("auto trait cannot define associated types"));
+                        Err(RustIrError::AutoTraitAssociatedTypes)?;
                     }
                     for defn in &d.assoc_ty_defns {
                         let addl_parameter_kinds = defn.all_parameters();
@@ -653,9 +705,7 @@ impl LowerStructDefn for StructDefn {
         env: &Env,
     ) -> Fallible<rust_ir::StructDatum> {
         if self.flags.fundamental && self.all_parameters().len() != 1 {
-            return Err(format_err!(
-                "Only fundamental types with a single parameter are supported"
-            ));
+            Err(RustIrError::InvalidFundamentalTypesParameters)?;
         }
 
         let binders = env.in_binders(self.all_parameters(), |env| {
@@ -678,21 +728,6 @@ impl LowerStructDefn for StructDefn {
             binders,
             flags,
         })
-    }
-}
-
-fn check_type_kinds<A: Kinded, B: Kinded>(msg: &str, expected: &A, actual: &B) -> Fallible<()> {
-    let expected_kind = expected.kind();
-    let actual_kind = actual.kind();
-    if expected_kind != actual_kind {
-        Err(format_err!(
-            "{}: expected {}, found {}",
-            msg,
-            expected_kind,
-            actual_kind
-        ))
-    } else {
-        Ok(())
     }
 }
 
@@ -738,15 +773,21 @@ impl LowerTraitBound for TraitBound {
             .collect::<Fallible<Vec<_>>>()?;
 
         if parameters.len() != k.binders.len() {
-            return Err(format_err!(
-                "wrong number of parameters, expected `{:?}`, got `{:?}`",
-                k.binders.len(),
-                parameters.len()
-            ));
+            Err(RustIrError::IncorrectNumberOfTypeParameters {
+                identifier: self.trait_name,
+                expected: k.binders.len(),
+                actual: parameters.len(),
+            })?;
         }
 
         for (binder, param) in k.binders.binders.iter().zip(parameters.iter()) {
-            check_type_kinds("incorrect kind for trait parameter", binder, param)?;
+            if binder.kind() != param.kind() {
+                Err(RustIrError::IncorrectTraitParameterKind {
+                    identifier: self.trait_name,
+                    expected: binder.kind(),
+                    actual: param.kind(),
+                })?;
+            }
         }
 
         Ok(rust_ir::TraitBound {
@@ -768,12 +809,7 @@ impl LowerProjectionEqBound for ProjectionEqBound {
             .get(&(trait_bound.trait_id, self.name.str))
         {
             Some(lookup) => lookup,
-            None => {
-                return Err(format_err!(
-                    "no associated type `{}` defined in trait",
-                    self.name.str
-                ));
-            }
+            None => Err(RustIrError::MissingAssociatedType(self.name))?,
         };
         let args: Vec<_> = self
             .args
@@ -782,15 +818,21 @@ impl LowerProjectionEqBound for ProjectionEqBound {
             .collect::<Fallible<_>>()?;
 
         if args.len() != lookup.addl_parameter_kinds.len() {
-            return Err(format_err!(
-                "wrong number of parameters for associated type (expected {}, got {})",
-                lookup.addl_parameter_kinds.len(),
-                args.len()
-            ));
+            Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
+                identifier: self.name,
+                expected: lookup.addl_parameter_kinds.len(),
+                actual: args.len(),
+            })?;
         }
 
         for (param, arg) in lookup.addl_parameter_kinds.iter().zip(args.iter()) {
-            check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
+            if param.kind() != arg.kind() {
+                Err(RustIrError::IncorrectAssociatedTypeParameterKind {
+                    identifier: self.name,
+                    expected: param.kind(),
+                    actual: arg.kind(),
+                })?;
+            }
         }
 
         Ok(rust_ir::ProjectionEqBound {
@@ -899,25 +941,26 @@ impl LowerProjectionTy for ProjectionTy {
         } = trait_ref.lower(env)?;
         let lookup = match env.associated_ty_lookups.get(&(trait_id.into(), name.str)) {
             Some(lookup) => lookup,
-            None => {
-                return Err(format_err!(
-                    "no associated type `{}` defined in trait",
-                    name.str
-                ));
-            }
+            None => Err(RustIrError::MissingAssociatedType(self.name))?,
         };
         let mut args: Vec<_> = args.iter().map(|a| a.lower(env)).collect::<Fallible<_>>()?;
 
         if args.len() != lookup.addl_parameter_kinds.len() {
-            return Err(format_err!(
-                "wrong number of parameters for associated type (expected {}, got {})",
-                lookup.addl_parameter_kinds.len(),
-                args.len()
-            ));
+            Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
+                identifier: self.name,
+                expected: lookup.addl_parameter_kinds.len(),
+                actual: args.len(),
+            })?;
         }
 
         for (param, arg) in lookup.addl_parameter_kinds.iter().zip(args.iter()) {
-            check_type_kinds("incorrect kind for associated type parameter", param, arg)?;
+            if param.kind() != arg.kind() {
+                Err(RustIrError::IncorrectAssociatedTypeParameterKind {
+                    identifier: self.name,
+                    expected: param.kind(),
+                    actual: arg.kind(),
+                })?;
+            }
         }
 
         args.extend(trait_parameters);
@@ -1000,7 +1043,13 @@ impl LowerTy for Ty {
                     .collect::<Fallible<Vec<_>>>()?;
 
                 for (param, arg) in k.binders.binders.iter().zip(args.iter()) {
-                    check_type_kinds("incorrect parameter kind", param, arg)?;
+                    if param.kind() != arg.kind() {
+                        Err(RustIrError::IncorrectParameterKind {
+                            identifier: name,
+                            expected: param.kind(),
+                            actual: arg.kind(),
+                        })?;
+                    }
                 }
 
                 Ok(chalk_ir::Ty::Apply(chalk_ir::ApplicationTy {
@@ -1083,9 +1132,7 @@ impl LowerImpl for Impl {
             debug!("trait_ref = {:?}", trait_ref);
 
             if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
-                return Err(format_err!(
-                    "negative impls cannot define associated values"
-                ));
+                Err(RustIrError::NegativeImplAssociatedValues)?;
             }
 
             let where_clauses = self.lower_where_clauses(&env)?;
@@ -1173,10 +1220,10 @@ impl LowerTrait for TraitDefn {
         let binders = env.in_binders(all_parameters, |env| {
             if self.flags.auto {
                 if all_parameters_len > 1 {
-                    return Err(format_err!("auto trait cannot have parameters"));
+                    Err(RustIrError::AutoTraitParameters)?;
                 }
                 if !self.where_clauses.is_empty() {
-                    return Err(format_err!("auto trait cannot have where clauses"));
+                    Err(RustIrError::AutoTraitWhereClauses)?;
                 }
             }
 
