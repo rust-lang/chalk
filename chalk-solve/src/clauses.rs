@@ -183,25 +183,32 @@ fn program_clauses_that_could_match(
             // })
             // ```
             //
-            // so what we wish to do is to generate program clauses of the form:
+            // so what we will do is to generate one program clause
+            // for each of the conditions. Thus we get two program
+            // clauses:
             //
             // ```
             // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
             // ```
             //
-            // or
+            // and
             //
             // ```
             // forall<'a> { ProjectionEq(<dyn Fn(&u8) as Fn<'a>>::Output, ()) },
             // ```
             //
             // FIXME. This is presently rather wasteful, in that we
-            // don't check that the `dyn Foo: Foo` trait is relevant
-            // to the goal `goal` that we are actually *trying* to
-            // prove (though there is some later code that will screen
-            // out irrelevant stuff). In other words, we might be
-            // trying to prove `dyn Foo: Bar`, in which case the clause
-            // for `dyn Foo: Foo` is not particularly relevant.
+            // don't check that the these program clauses we are
+            // generating are actually relevant to the goal `goal`
+            // that we are actually *trying* to prove (though there is
+            // some later code that will screen out irrelevant
+            // stuff).
+            //
+            // In other words, in our example, if we were trying to
+            // prove `Implemented(dyn Fn(&u8): Clone)`, we would have
+            // generated two clauses that are totally irrelevant to
+            // that goal, because they let us prove other things but
+            // not `Clone`.
             let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
             match &self_ty {
                 Ty::Opaque(exists_qwcs) | Ty::Dyn(exists_qwcs) => {

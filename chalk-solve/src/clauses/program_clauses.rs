@@ -72,7 +72,7 @@ impl ToProgramClauses for AssociatedTyValue {
             // Get the projection for this associated type:
             //
             // * `impl_params`: `[!T]`
-            // * `projection`: `<Vec<!T> as Iterable>::Iter<'!a`>
+            // * `projection`: `<Vec<!T> as Iterable>::Iter<'!a>`
             let (impl_params, projection) = builder
                 .db
                 .impl_parameters_and_projection_from_associated_ty_value(&all_parameters, self);
@@ -438,7 +438,7 @@ impl ToProgramClauses for TraitDatum {
                 // Impls for traits declared locally always pass the impl rules
                 builder.push_fact(DomainGoal::LocalImplAllowed(trait_ref.clone()));
             } else {
-                // Impls for remote traits must have a local type int he right place
+                // Impls for remote traits must have a local type in the right place
                 for i in 0..type_parameters.len() {
                     builder.push_clause(
                         DomainGoal::LocalImplAllowed(trait_ref.clone()),
