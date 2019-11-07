@@ -95,12 +95,16 @@ impl<C: Context> Table<C> {
         self.floundered
     }
 
-    /// Adds `answer` to our list of answers, unless it (or some
-    /// better answer) is already present. An answer A is better than
-    /// an answer B if their substitutions are the same, but A has a subset
-    /// of the delayed literals that B does.
+    /// Adds `answer` to our list of answers, unless it is already present.
     ///
     /// Returns true if `answer` was added.
+    ///
+    /// # Panics
+    /// This will panic if a previous answer with the same substitution
+    /// was marked as ambgiuous, but the new answer is not. No current
+    /// tests trigger this case, and assumptions upstream assume that when
+    /// `true` is returned here, that a *new* answer was added (instead of an)
+    /// existing answer replaced.
     pub(super) fn push_answer(&mut self, answer: Answer<C>) -> bool {
         assert!(!self.floundered);
 
@@ -116,14 +120,12 @@ impl<C: Context> Table<C> {
                 true
             }
 
-            Entry::Occupied(mut entry) => {
+            Entry::Occupied(entry) => {
                 let was_ambiguous = entry.get();
-                if !was_ambiguous || answer.ambiguous {
-                    false
-                } else {
-                    *entry.get_mut() = false;
-                    true
+                if *was_ambiguous && !answer.ambiguous {
+                    panic!("New answer was not ambiguous whereas previous answer was.");
                 }
+                false
             }
         };
 

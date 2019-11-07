@@ -67,8 +67,11 @@ impl<C: Context> Forest<C> {
         for i in 0..num_answers {
             let i = AnswerIndex::from(i);
             loop {
-                match self.ensure_root_answer(context, table, i) {
-                    Ok(()) => break,
+                match self.root_answer(context, table, i) {
+                    Ok(answer) => {
+                        answers.push(answer.clone());
+                        break;
+                    }
                     Err(RootSearchFail::Floundered) => return None,
                     Err(RootSearchFail::QuantumExceeded) => continue,
                     Err(RootSearchFail::NoMoreSolutions) => return Some(answers),
@@ -82,8 +85,6 @@ impl<C: Context> Forest<C> {
                     }
                 }
             }
-
-            answers.push(self.answer(table, i).clone());
         }
 
         Some(answers)
@@ -200,10 +201,9 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
         loop {
             match self
                 .forest
-                .ensure_root_answer(self.context, self.table, self.answer)
+                .root_answer(self.context, self.table, self.answer)
             {
-                Ok(()) => {
-                    let answer = self.forest.answer(self.table, self.answer);
+                Ok(answer) => {
                     return Some(answer.clone());
                 }
 

@@ -106,16 +106,16 @@ impl<C: Context> Forest<C> {
     /// given table. This may require activating a strand. Returns
     /// `Ok(())` if the answer is available and otherwise a
     /// `RootSearchFail` result.
-    pub(super) fn ensure_root_answer(
+    pub(super) fn root_answer(
         &mut self,
         context: &impl ContextOps<C>,
         table: TableIndex,
         answer: AnswerIndex,
-    ) -> RootSearchResult<()> {
+    ) -> RootSearchResult<&Answer<C>> {
         assert!(self.stack.is_empty());
 
         match self.ensure_answer_recursively(context, table, answer) {
-            Ok(EnsureSuccess::AnswerAvailable) => Ok(()),
+            Ok(EnsureSuccess::AnswerAvailable) => Ok(self.tables[table].answer(answer).unwrap()),
             Err(RecursiveSearchFail::Floundered) => Err(RootSearchFail::Floundered),
             Err(RecursiveSearchFail::NoMoreSolutions) => Err(RootSearchFail::NoMoreSolutions),
             Err(RecursiveSearchFail::QuantumExceeded) => Err(RootSearchFail::QuantumExceeded),
@@ -124,7 +124,7 @@ impl<C: Context> Forest<C> {
             // Things involving cycles should be impossible since our
             // stack was empty on entry:
             Ok(EnsureSuccess::Coinductive) | Err(RecursiveSearchFail::PositiveCycle(..)) => {
-                panic!("ensure_root_answer: nothing on the stack but cyclic result")
+                panic!("root_answer: nothing on the stack but cyclic result")
             }
         }
     }
