@@ -232,19 +232,19 @@ impl<C: Context> Forest<C> {
         // This is a bit complicated because this is where we handle cycles.
         let table = self.stack[depth].table;
 
-        // Strands that encountered a cyclic error.
-        let mut cyclic_strands = vec![];
+        // The work `TimeStamp` for this call
+        let work = self.increment_work();
 
         // The minimum of all cyclic strands.
         let mut cyclic_minimums = Minimums::MAX;
 
-        while let Some(strand) = self.tables[table].pop_next_strand() {
+        while let Some(mut strand) =
+            self.tables[table].pop_next_strand_if(|strand| strand.last_pursued_time < work)
+        {
+            strand.last_pursued_time = work;
             let result: StrandResult<C, ()> = self.pursue_strand(context, depth, strand);
             match result {
                 Ok(answer) => {
-                    // Now that we produced an answer, these
-                    // cyclic strands need to be retried.
-                    self.tables[table].extend_strands(cyclic_strands);
                     return Ok(answer);
                 }
 
@@ -256,11 +256,8 @@ impl<C: Context> Forest<C> {
 
                 Err(StrandFail::NoSolution) | Err(StrandFail::QuantumExceeded) => {
                     // This strand did not produce an answer,
-                    // but either it (or some other, pending
-                    // strands) may do so in the
-                    // future. Enqueue the cyclic strands to
-                    // be retried after that point.
-                    self.tables[table].extend_strands(cyclic_strands);
+                    // but some other pending strand may do
+                    // so in the future.
                     return Err(RecursiveSearchFail::QuantumExceeded);
                 }
 
@@ -273,7 +270,7 @@ impl<C: Context> Forest<C> {
                     // it for later and try the next one until
                     // we know that *all* available strands
                     // are hitting a cycle.
-                    cyclic_strands.push(strand);
+                    self.tables[table].push_strand(strand);
                     cyclic_minimums.take_minimums(&strand_minimums);
                 }
             }
@@ -282,7 +279,7 @@ impl<C: Context> Forest<C> {
         // No more strands left to try! That means either we started
         // with no strands, or all available strands encountered a cycle.
 
-        if cyclic_strands.is_empty() {
+        if self.tables[table].strands_mut().count() == 0 {
             // We started with no strands!
             return Err(RecursiveSearchFail::NoMoreSolutions);
         }
@@ -297,11 +294,10 @@ impl<C: Context> Forest<C> {
             // positive dependencies on things below us in the stack,
             // then no more answers are forthcoming. We can clear all
             // the strands for those things recursively.
+            let cyclic_strands = self.tables[table].take_strands();
             self.clear_strands_after_cycle(cyclic_strands);
             Err(RecursiveSearchFail::NoMoreSolutions)
         } else {
-            // This strand may produce more answers
-            self.tables[table].extend_strands(cyclic_strands);
             Err(RecursiveSearchFail::PositiveCycle(cyclic_minimums))
         }
     }
@@ -318,6 +314,7 @@ impl<C: Context> Forest<C> {
                 mut infer,
                 ex_clause,
                 selected_subgoal,
+                last_pursued_time: _,
             } = strand;
             let selected_subgoal = selected_subgoal.unwrap_or_else(|| {
                 panic!(
@@ -465,6 +462,7 @@ impl<C: Context> Forest<C> {
                     floundered_subgoals,
                 },
             selected_subgoal: _,
+            last_pursued_time: _,
         } = strand;
         assert!(subgoals.is_empty());
         assert!(floundered_subgoals.is_empty());
@@ -678,6 +676,7 @@ impl<C: Context> Forest<C> {
                                     infer,
                                     ex_clause: resolvent,
                                     selected_subgoal: None,
+                                    last_pursued_time: TimeStamp::default(),
                                 };
                                 table_ref.push_strand(strand);
                             }
@@ -710,6 +709,7 @@ impl<C: Context> Forest<C> {
                         infer,
                         ex_clause,
                         selected_subgoal: None,
+                        last_pursued_time: TimeStamp::default(),
                     };
                     table_ref.push_strand(strand);
                 }
@@ -906,6 +906,7 @@ impl<C: Context> Forest<C> {
                     infer: strand.infer.clone(),
                     ex_clause: strand.ex_clause.clone(),
                     selected_subgoal: Some(next_subgoal),
+                    last_pursued_time: strand.last_pursued_time.clone(),
                 };
                 self.tables[table].push_strand(next_strand);
 
@@ -937,17 +938,15 @@ impl<C: Context> Forest<C> {
                             infer,
                             ex_clause,
                             selected_subgoal: _,
+                            last_pursued_time: _,
                         } = strand;
 
                         // If the answer had delayed literals, we have to
                         // ensure that `ex_clause` is also delayed. This is
                         // the SLG FACTOR operation, though NFTD just makes it
                         // part of computing the SLG resolvent.
-                        {
-                            let answer = self.answer(subgoal_table, answer_index);
-                            if answer.ambiguous {
-                                ex_clause.ambiguous = true;
-                            }
+                        if self.answer(subgoal_table, answer_index).ambiguous {
+                            ex_clause.ambiguous = true;
                         }
 
                         // Increment time counter because we received a new answer.

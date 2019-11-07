@@ -60,10 +60,6 @@ impl<C: Context> Table<C> {
         self.strands.push_back(strand);
     }
 
-    pub(crate) fn extend_strands(&mut self, strands: impl IntoIterator<Item = Strand<C>>) {
-        self.strands.extend(strands);
-    }
-
     pub(crate) fn strands_mut(&mut self) -> impl Iterator<Item = &mut Strand<C>> {
         self.strands.iter_mut()
     }
@@ -72,8 +68,18 @@ impl<C: Context> Table<C> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
-    pub(crate) fn pop_next_strand(&mut self) -> Option<Strand<C>> {
-        self.strands.pop_front()
+    pub(crate) fn pop_next_strand_if(
+        &mut self,
+        test: impl Fn(&Strand<C>) -> bool,
+    ) -> Option<Strand<C>> {
+        let strand = self.strands.pop_front();
+        if let Some(strand) = strand {
+            if test(&strand) {
+                return Some(strand);
+            }
+            self.strands.push_front(strand);
+        }
+        None
     }
 
     /// Mark the table as floundered -- this also discards all pre-existing answers,

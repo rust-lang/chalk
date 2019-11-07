@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::table::AnswerIndex;
-use crate::{ExClause, TableIndex};
+use crate::{ExClause, TableIndex, TimeStamp};
 use std::fmt::{Debug, Error, Formatter};
 
 pub(crate) struct Strand<C: Context> {
@@ -10,6 +10,8 @@ pub(crate) struct Strand<C: Context> {
 
     /// Index into `ex_clause.subgoals`.
     pub(crate) selected_subgoal: Option<SelectedSubgoal<C>>,
+
+    pub(crate) last_pursued_time: TimeStamp,
 }
 
 #[derive(Clone, Debug)]

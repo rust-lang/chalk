@@ -4,8 +4,7 @@ use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
 use crate::table::AnswerIndex;
 use crate::tables::Tables;
-use crate::Answer;
-use crate::{DepthFirstNumber, TableIndex};
+use crate::{Answer, DepthFirstNumber, TableIndex, TimeStamp};
 
 pub struct Forest<C: Context> {
     context: C,
@@ -13,6 +12,7 @@ pub struct Forest<C: Context> {
     pub(crate) stack: Stack,
 
     dfn: DepthFirstNumber,
+    work: TimeStamp,
 }
 
 impl<C: Context> Forest<C> {
@@ -22,6 +22,7 @@ impl<C: Context> Forest<C> {
             tables: Tables::new(),
             stack: Stack::default(),
             dfn: DepthFirstNumber::MIN,
+            work: TimeStamp::default(),
         }
     }
 
@@ -38,6 +39,12 @@ impl<C: Context> Forest<C> {
     // Gets the next depth-first number. This number never decreases.
     pub(super) fn next_dfn(&mut self) -> DepthFirstNumber {
         self.dfn.next()
+    }
+
+    // Gets the next work TimeStamp. This will never decrease.
+    pub(super) fn increment_work(&mut self) -> TimeStamp {
+        self.work.increment();
+        self.work
     }
 
     /// Finds the first N answers, looping as much as needed to get
