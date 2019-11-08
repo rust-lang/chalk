@@ -52,6 +52,7 @@ pub(crate) struct SlgContextOps<'me, TF: TypeFamily> {
     max_size: usize,
 }
 
+#[derive(Clone)]
 pub struct TruncatingInferenceTable<TF: TypeFamily> {
     max_size: usize,
     infer: InferenceTable<TF>,
@@ -59,7 +60,6 @@ pub struct TruncatingInferenceTable<TF: TypeFamily> {
 
 impl<TF: TypeFamily> context::Context for SlgContext<TF> {
     type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal<TF>>>;
-    type CanonicalExClause = Canonical<ExClause<Self>>;
     type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal<TF>>>;
     type UniverseMap = UniverseMap;
     type InferenceNormalizedSubst = Substitution<TF>;
@@ -85,17 +85,11 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
         InEnvironment::new(environment, goal)
     }
 
-    fn inference_normalized_subst_from_ex_clause(
-        canon_ex_clause: &Canonical<ExClause<SlgContext<TF>>>,
-    ) -> &Substitution<TF> {
-        &canon_ex_clause.value.subst
-    }
-
     fn empty_constraints(ccs: &Canonical<ConstrainedSubst<TF>>) -> bool {
         ccs.value.constraints.is_empty()
     }
 
-    fn inference_normalized_subst_from_subst(
+    fn subst_from_canonical_subst(
         ccs: &Canonical<ConstrainedSubst<TF>>,
     ) -> &Substitution<TF> {
         &ccs.value.subst
@@ -112,10 +106,6 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
         canonical_subst: &Canonical<ConstrainedSubst<TF>>,
     ) -> bool {
         u_canon.is_trivial_substitution(canonical_subst)
-    }
-
-    fn num_universes(u_canon: &UCanonical<InEnvironment<Goal<TF>>>) -> usize {
-        u_canon.universes
     }
 
     fn map_goal_from_canonical(
@@ -206,18 +196,6 @@ impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<
             InferenceTable::from_canonical(arg.universes, &arg.canonical);
         let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
         op(infer_table, subst, environment, goal)
-    }
-
-    fn instantiate_ex_clause<R>(
-        &self,
-        num_universes: usize,
-        canonical_ex_clause: &Canonical<ExClause<SlgContext<TF>>>,
-        op: impl FnOnce(TruncatingInferenceTable<TF>, ExClause<SlgContext<TF>>) -> R,
-    ) -> R {
-        let (infer, _subst, ex_cluse) =
-            InferenceTable::from_canonical(num_universes, canonical_ex_clause);
-        let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
-        op(infer_table, ex_cluse)
     }
 
     fn constrained_subst_from_answer(
@@ -325,13 +303,6 @@ impl<TF: TypeFamily> context::UnificationOps<SlgContext<TF>> for TruncatingInfer
         (quantified, universes)
     }
 
-    fn canonicalize_ex_clause(
-        &mut self,
-        value: &ExClause<SlgContext<TF>>,
-    ) -> Canonical<ExClause<SlgContext<TF>>> {
-        self.infer.canonicalize(value).quantified
-    }
-
     fn canonicalize_constrained_subst(
         &mut self,
         subst: Substitution<TF>,
@@ -407,35 +378,27 @@ impl MayInvalidate {
     // Returns true if the two types could be unequal.
     fn aggregate_tys<TF: TypeFamily>(&mut self, new: &Ty<TF>, current: &Ty<TF>) -> bool {
         match (new.data(), current.data()) {
-            (_, TyData::BoundVar(_)) => {
+            (_, TyData::InferenceVar(_)) => {
                 // If the aggregate solution already has an inference
                 // variable here, then no matter what type we produce,
                 // the aggregate cannot get 'more generalized' than it
                 // already is. So return false, we cannot invalidate.
-                //
-                // (Note that "inference variables" show up as *bound
-                // variables* here, because we are looking at the
-                // canonical form.)
                 false
             }
 
-            (TyData::BoundVar(_), _) => {
+            (TyData::InferenceVar(_), _) => {
                 // If we see a type variable in the potential future
                 // solution, we have to be conservative. We don't know
                 // what type variable will wind up being! Remember
                 // that the future solution could be any instantiation
                 // of `ty0` -- or it could leave this variable
                 // unbound, if the result is true for all types.
-                //
-                // (Note that "inference variables" show up as *bound
-                // variables* here, because we are looking at the
-                // canonical form.)
                 true
             }
 
-            (TyData::InferenceVar(_), _) | (_, TyData::InferenceVar(_)) => {
+            (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => {
                 panic!(
-                    "unexpected free inference variable in may-invalidate: {:?} vs {:?}",
+                    "unexpected bound variable in may-invalidate: {:?} vs {:?}",
                     new, current,
                 );
             }

@@ -21,7 +21,7 @@ pub(crate) mod prelude;
 /// active. First, there is always the *global* context, but when we
 /// are in the midst of pursuing some particular strand, we will
 /// instantiate a second context just for that work, via the
-/// `instantiate_ucanonical_goal` and `instantiate_ex_clause` methods.
+/// `instantiate_ucanonical_goal` method.
 ///
 /// In the chalk implementation, these two contexts are mapped to the
 /// same type. But in the rustc implementation, this second context
@@ -33,8 +33,6 @@ pub(crate) mod prelude;
 /// FIXME: Clone and Debug bounds are just for easy derive, they are
 /// not actually necessary. But dang are they convenient.
 pub trait Context: Clone + Debug {
-    type CanonicalExClause: Debug;
-
     /// A map between universes. These are produced when
     /// u-canonicalizing something; they map canonical results back to
     /// the universes from the original.
@@ -69,17 +67,17 @@ pub trait Context: Clone + Debug {
 
     /// Represents a substitution from the "canonical variables" found
     /// in a canonical goal to specific values.
-    type Substitution: Debug;
+    type Substitution: Clone + Debug;
 
     /// Represents a region constraint that will be propagated back
     /// (but not verified).
-    type RegionConstraint: Debug;
+    type RegionConstraint: Clone + Debug;
 
     /// Represents a goal along with an environment.
     type GoalInEnvironment: Debug + Clone + Eq + Hash;
 
     /// Represents an inference table.
-    type InferenceTable: InferenceTable<Self>;
+    type InferenceTable: InferenceTable<Self> + Clone;
 
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Debug + Clone;
@@ -125,15 +123,10 @@ pub trait Context: Clone + Debug {
         goal: Self::Goal,
     ) -> Self::GoalInEnvironment;
 
-    /// Extracts the inner normalized substitution from a canonical ex-clause.
-    fn inference_normalized_subst_from_ex_clause(
-        canon_ex_clause: &Self::CanonicalExClause,
-    ) -> &Self::InferenceNormalizedSubst;
-
     /// Extracts the inner normalized substitution from a canonical constraint subst.
-    fn inference_normalized_subst_from_subst(
+    fn subst_from_canonical_subst(
         canon_ex_clause: &Self::CanonicalConstrainedSubst,
-    ) -> &Self::InferenceNormalizedSubst;
+    ) -> &Self::Substitution;
 
     /// True if this solution has no region constraints.
     fn empty_constraints(ccs: &Self::CanonicalConstrainedSubst) -> bool;
@@ -144,8 +137,6 @@ pub trait Context: Clone + Debug {
         u_canon: &Self::UCanonicalGoalInEnvironment,
         canonical_subst: &Self::CanonicalConstrainedSubst,
     ) -> bool;
-
-    fn num_universes(_: &Self::UCanonicalGoalInEnvironment) -> usize;
 
     /// Convert a goal G *from* the canonical universes *into* our
     /// local universes. This will yield a goal G' that is the same
@@ -205,13 +196,6 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         &self,
         arg: &C::UCanonicalGoalInEnvironment,
         op: impl FnOnce(C::InferenceTable, C::Substitution, C::Environment, C::Goal) -> R,
-    ) -> R;
-
-    fn instantiate_ex_clause<R>(
-        &self,
-        num_universes: usize,
-        canonical_ex_clause: &C::CanonicalExClause,
-        op: impl FnOnce(C::InferenceTable, ExClause<C>) -> R,
     ) -> R;
 
     /// returns unique solution from answer
@@ -274,9 +258,6 @@ pub trait UnificationOps<C: Context> {
     ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     // Used by: logic
-    fn canonicalize_ex_clause(&mut self, value: &ExClause<C>) -> C::CanonicalExClause;
-
-    // Used by: logic
     fn canonicalize_constrained_subst(
         &mut self,
         subst: C::Substitution,
@@ -337,7 +318,7 @@ pub trait ResolventOps<C: Context> {
         goal: &C::DomainGoal,
         subst: &C::Substitution,
         clause: &C::ProgramClause,
-    ) -> Fallible<C::CanonicalExClause>;
+    ) -> Fallible<ExClause<C>>;
 
     fn apply_answer_subst(
         &mut self,
@@ -354,6 +335,5 @@ pub trait AnswerStream<C: Context> {
 
     /// Invokes `test` with each possible future answer, returning true immediately
     /// if we find any answer for which `test` returns true.
-    fn any_future_answer(&mut self, test: impl FnMut(&C::InferenceNormalizedSubst) -> bool)
-        -> bool;
+    fn any_future_answer(&mut self, test: impl FnMut(&C::Substitution) -> bool) -> bool;
 }
