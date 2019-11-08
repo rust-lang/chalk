@@ -238,97 +238,71 @@ impl<C: Context> Forest<C> {
         // The minimum of all cyclic strands.
         let mut cyclic_minimums = Minimums::MAX;
 
-        loop {
-            match self.tables[table].pop_next_strand() {
-                Some(strand) => {
-                    let result: StrandResult<C, ()> = self.pursue_strand(context, depth, strand);
-                    match result {
-                        Ok(answer) => {
-                            // Now that we produced an answer, these
-                            // cyclic strands need to be retried.
-                            self.tables[table].extend_strands(cyclic_strands);
-                            return Ok(answer);
-                        }
-
-                        Err(StrandFail::Floundered) => {
-                            debug!("Marking table {:?} as floundered!", table);
-                            self.tables[table].mark_floundered();
-                            return Err(RecursiveSearchFail::Floundered);
-                        }
-
-                        Err(StrandFail::NoSolution) | Err(StrandFail::QuantumExceeded) => {
-                            // This strand did not produce an answer,
-                            // but either it (or some other, pending
-                            // strands) may do so in the
-                            // future. Enqueue the cyclic strands to
-                            // be retried after that point.
-                            self.tables[table].extend_strands(cyclic_strands);
-                            return Err(RecursiveSearchFail::QuantumExceeded);
-                        }
-
-                        Err(StrandFail::NegativeCycle) => {
-                            return Err(RecursiveSearchFail::NegativeCycle);
-                        }
-
-                        Err(StrandFail::PositiveCycle(strand, strand_minimums)) => {
-                            // This strand encountered a cycle. Stash
-                            // it for later and try the next one until
-                            // we know that *all* available strands
-                            // are hitting a cycle.
-                            cyclic_strands.push(strand);
-                            cyclic_minimums.take_minimums(&strand_minimums);
-                        }
-                    }
+        while let Some(strand) = self.tables[table].pop_next_strand() {
+            let result: StrandResult<C, ()> = self.pursue_strand(context, depth, strand);
+            match result {
+                Ok(answer) => {
+                    // Now that we produced an answer, these
+                    // cyclic strands need to be retried.
+                    self.tables[table].extend_strands(cyclic_strands);
+                    return Ok(answer);
                 }
 
-                None => {
-                    // No more strands left to try! That means either we started
-                    // with no strands, or all available strands encountered a cycle.
+                Err(StrandFail::Floundered) => {
+                    debug!("Marking table {:?} as floundered!", table);
+                    self.tables[table].mark_floundered();
+                    return Err(RecursiveSearchFail::Floundered);
+                }
 
-                    if cyclic_strands.is_empty() {
-                        // We started with no strands!
-                        return Err(RecursiveSearchFail::NoMoreSolutions);
-                    } else {
-                        let c = mem::replace(&mut cyclic_strands, vec![]);
-                        if let Some(err) = self.cycle(depth, c, cyclic_minimums) {
-                            return Err(err);
-                        }
-                    }
+                Err(StrandFail::NoSolution) | Err(StrandFail::QuantumExceeded) => {
+                    // This strand did not produce an answer,
+                    // but either it (or some other, pending
+                    // strands) may do so in the
+                    // future. Enqueue the cyclic strands to
+                    // be retried after that point.
+                    self.tables[table].extend_strands(cyclic_strands);
+                    return Err(RecursiveSearchFail::QuantumExceeded);
+                }
+
+                Err(StrandFail::NegativeCycle) => {
+                    return Err(RecursiveSearchFail::NegativeCycle);
+                }
+
+                Err(StrandFail::PositiveCycle(strand, strand_minimums)) => {
+                    // This strand encountered a cycle. Stash
+                    // it for later and try the next one until
+                    // we know that *all* available strands
+                    // are hitting a cycle.
+                    cyclic_strands.push(strand);
+                    cyclic_minimums.take_minimums(&strand_minimums);
                 }
             }
         }
-    }
 
-    /// Invoked when all available strands for a table have
-    /// encountered a cycle. In this case, the vector `strands` are
-    /// the set of strands that encountered cycles, and `minimums` is
-    /// the minimum stack depths that they were dependent on.
-    ///
-    /// Returns `None` if we have resolved the cycle and should try to
-    /// pick a strand again. Returns `Some(_)` if the cycle indicates
-    /// an error that we can propagate higher up.
-    fn cycle(
-        &mut self,
-        depth: StackIndex,
-        strands: Vec<Strand<C>>,
-        minimums: Minimums,
-    ) -> Option<RecursiveSearchFail> {
-        let table = self.stack[depth].table;
-        assert!(self.tables[table].pop_next_strand().is_none());
+        // No more strands left to try! That means either we started
+        // with no strands, or all available strands encountered a cycle.
+
+        if cyclic_strands.is_empty() {
+            // We started with no strands!
+            return Err(RecursiveSearchFail::NoMoreSolutions);
+        }
 
         let dfn = self.stack[depth].dfn;
-        if minimums.positive == dfn && minimums.negative == DepthFirstNumber::MAX {
+        if cyclic_minimums.positive >= dfn && cyclic_minimums.negative >= dfn {
+            if cyclic_minimums.negative < DepthFirstNumber::MAX {
+                return Err(RecursiveSearchFail::NegativeCycle);
+            }
+
             // If all the things that we recursively depend on have
             // positive dependencies on things below us in the stack,
             // then no more answers are forthcoming. We can clear all
             // the strands for those things recursively.
-            self.clear_strands_after_cycle(table, strands);
-            Some(RecursiveSearchFail::NoMoreSolutions)
-        } else if minimums.positive >= dfn && minimums.negative >= dfn {
-            Some(RecursiveSearchFail::NegativeCycle)
+            self.clear_strands_after_cycle(cyclic_strands);
+            Err(RecursiveSearchFail::NoMoreSolutions)
         } else {
-            self.tables[table].extend_strands(strands);
-            Some(RecursiveSearchFail::PositiveCycle(minimums))
+            // This strand may produce more answers
+            self.tables[table].extend_strands(cyclic_strands);
+            Err(RecursiveSearchFail::PositiveCycle(cyclic_minimums))
         }
     }
 
@@ -338,12 +312,7 @@ impl<C: Context> Forest<C> {
     /// recursively clears the active strands from the tables
     /// referenced in `strands`, since all of them must encounter
     /// cycles too.
-    fn clear_strands_after_cycle(
-        &mut self,
-        table: TableIndex,
-        strands: impl IntoIterator<Item = Strand<C>>,
-    ) {
-        assert!(self.tables[table].pop_next_strand().is_none());
+    fn clear_strands_after_cycle(&mut self, strands: impl IntoIterator<Item = Strand<C>>) {
         for strand in strands {
             let Strand {
                 mut infer,
@@ -352,16 +321,15 @@ impl<C: Context> Forest<C> {
             } = strand;
             let selected_subgoal = selected_subgoal.unwrap_or_else(|| {
                 panic!(
-                    "clear_strands_after_cycle invoked on strand in table {:?} \
+                    "clear_strands_after_cycle invoked on strand in table \
                      without a selected subgoal: {:?}",
-                    table,
                     infer.debug_ex_clause(&ex_clause),
                 )
             });
 
             let strand_table = selected_subgoal.subgoal_table;
             let strands = self.tables[strand_table].take_strands();
-            self.clear_strands_after_cycle(strand_table, strands);
+            self.clear_strands_after_cycle(strands);
         }
     }
 
