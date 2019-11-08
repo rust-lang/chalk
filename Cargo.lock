@@ -195,8 +195,6 @@ dependencies = [
  "chalk-parse 0.1.0",
  "chalk-rust-ir 0.1.0",
  "chalk-solve 0.1.0",
- "derive-new 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.7.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop-intern 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "salsa 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
