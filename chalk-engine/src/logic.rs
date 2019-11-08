@@ -126,6 +126,44 @@ impl<C: Context> Forest<C> {
             .any(|strand| test(&strand.ex_clause.subst))
     }
 
+    fn ensure_precheck(
+        &mut self,
+        table: TableIndex,
+        answer: AnswerIndex
+    ) -> Option<RecursiveSearchResult<EnsureSuccess>> {
+        // First, check if this table has floundered.
+        if self.tables[table].is_floundered() {
+            return Some(Err(RecursiveSearchFail::Floundered));
+        }
+
+        // Next, check for a tabled answer.
+        if self.tables[table].answer(answer).is_some() {
+            info!("answer cached = {:?}", self.tables[table].answer(answer));
+            return Some(Ok(EnsureSuccess::AnswerAvailable));
+        }
+
+        // If no tabled answer is present, we ought to be requesting
+        // the next available index.
+        assert_eq!(self.tables[table].next_answer_index(), answer);
+
+        // Next, check if the table is already active. If so, then we
+        // have a recursive attempt.
+        if let Some(depth) = self.stack.is_active(table) {
+            info!("ensure_answer: cycle detected at depth {:?}", depth);
+
+            if self.top_of_stack_is_coinductive_from(depth) {
+                return Some(Ok(EnsureSuccess::Coinductive));
+            }
+
+            return Some(Err(RecursiveSearchFail::PositiveCycle(Minimums {
+                positive: self.stack[depth].dfn,
+                negative: DepthFirstNumber::MAX,
+            })));
+        }
+
+        return None;
+    }
+
     /// Ensures that answer with the given index is available from the
     /// given table. Returns `Ok` if there is an answer:
     ///
@@ -157,38 +195,15 @@ impl<C: Context> Forest<C> {
         );
         info!("table goal = {:#?}", self.tables[table].table_goal);
 
-        // First, check if this table has floundered.
-        if self.tables[table].is_floundered() {
-            return Err(RecursiveSearchFail::Floundered);
-        }
-
-        // Next, check for a tabled answer.
-        if self.tables[table].answer(answer).is_some() {
-            info!("answer cached = {:?}", self.tables[table].answer(answer));
-            return Ok(EnsureSuccess::AnswerAvailable);
-        }
-
-        // If no tabled answer is present, we ought to be requesting
-        // the next available index.
-        assert_eq!(self.tables[table].next_answer_index(), answer);
-
-        // Next, check if the table is already active. If so, then we
-        // have a recursive attempt.
-        if let Some(depth) = self.stack.is_active(table) {
-            info!("ensure_answer: cycle detected at depth {:?}", depth);
-
-            if self.top_of_stack_is_coinductive_from(depth) {
-                return Ok(EnsureSuccess::Coinductive);
-            }
-
-            return Err(RecursiveSearchFail::PositiveCycle(Minimums {
-                positive: self.stack[depth].dfn,
-                negative: DepthFirstNumber::MAX,
-            }));
+        match self.ensure_precheck(table, answer) {
+            Some(res) => return res,
+            None => {}
         }
 
         let dfn = self.next_dfn();
-        let depth = self.stack.push(table, dfn);
+        let work = self.increment_work();
+        let cyclic_minimums = Minimums::MAX;
+        let depth = self.stack.push(table, dfn, work, cyclic_minimums);
         let result = crate::maybe_grow_stack(|| self.pursue_next_strand(context, depth));
         self.stack.pop(table, depth);
         info!("ensure_answer: result = {:?}", result);
@@ -214,10 +229,10 @@ impl<C: Context> Forest<C> {
         let table = self.stack[depth].table;
 
         // The work `TimeStamp` for this call
-        let work = self.increment_work();
-
+        let work = self.stack[depth].work;
+    
         // The minimum of all cyclic strands.
-        let mut cyclic_minimums = Minimums::MAX;
+        let mut cyclic_minimums =  self.stack[depth].cyclic_minimums;
 
         while let Some(mut strand) =
             self.tables[table].pop_next_strand_if(|strand| strand.last_pursued_time < work)

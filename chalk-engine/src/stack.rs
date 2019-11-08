@@ -1,4 +1,4 @@
-use crate::{DepthFirstNumber, TableIndex};
+use crate::{DepthFirstNumber, Minimums, TableIndex, TimeStamp};
 use std::ops::{Index, IndexMut, Range};
 
 /// See `Forest`.
@@ -24,6 +24,10 @@ pub(crate) struct StackEntry {
 
     /// The DFN of this computation.
     pub(super) dfn: DepthFirstNumber,
+
+    pub(super) work: TimeStamp,
+
+    pub(super) cyclic_minimums: Minimums,
 }
 
 impl Stack {
@@ -51,9 +55,9 @@ impl Stack {
         depth..StackIndex::from(self.stack.len())
     }
 
-    pub(super) fn push(&mut self, table: TableIndex, dfn: DepthFirstNumber) -> StackIndex {
+    pub(super) fn push(&mut self, table: TableIndex, dfn: DepthFirstNumber, work: TimeStamp, cyclic_minimums: Minimums) -> StackIndex {
         let old_len = self.stack.len();
-        self.stack.push(StackEntry { table, dfn });
+        self.stack.push(StackEntry { table, dfn, work, cyclic_minimums });
         StackIndex::from(old_len)
     }
 
