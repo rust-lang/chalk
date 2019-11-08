@@ -204,11 +204,11 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
 
     fn apply_answer_subst(
         &mut self,
-        ex_clause: ExClause<SlgContext>,
+        ex_clause: &mut ExClause<SlgContext>,
         selected_goal: &InEnvironment<Goal<ChalkIr>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<ChalkIr>>>,
         canonical_answer_subst: &Canonical<ConstrainedSubst<ChalkIr>>,
-    ) -> Fallible<ExClause<SlgContext>> {
+    ) -> Fallible<()> {
         debug_heading!("apply_answer_subst()");
         debug!("ex_clause={:?}", ex_clause);
         debug!(
@@ -230,7 +230,7 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
             constraints: answer_constraints,
         } = self.infer.instantiate_canonical(&canonical_answer_subst);
 
-        let mut ex_clause = AnswerSubstitutor::substitute(
+        AnswerSubstitutor::substitute(
             &mut self.infer,
             &selected_goal.environment,
             &answer_subst,
@@ -239,7 +239,7 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
             selected_goal,
         )?;
         ex_clause.constraints.extend(answer_constraints);
-        Ok(ex_clause)
+        Ok(())
     }
 }
 
@@ -249,7 +249,7 @@ struct AnswerSubstitutor<'t> {
     answer_subst: &'t Substitution<ChalkIr>,
     answer_binders: usize,
     pending_binders: usize,
-    ex_clause: ExClause<SlgContext>,
+    ex_clause: &'t mut ExClause<SlgContext>,
 }
 
 impl<'t> AnswerSubstitutor<'t> {
@@ -257,10 +257,10 @@ impl<'t> AnswerSubstitutor<'t> {
         table: &mut InferenceTable,
         environment: &Environment<ChalkIr>,
         answer_subst: &Substitution<ChalkIr>,
-        ex_clause: ExClause<SlgContext>,
+        ex_clause: &mut ExClause<SlgContext>,
         answer: &T,
         pending: &T,
-    ) -> Fallible<ExClause<SlgContext>> {
+    ) -> Fallible<()> {
         let mut this = AnswerSubstitutor {
             table,
             environment,
@@ -270,7 +270,7 @@ impl<'t> AnswerSubstitutor<'t> {
             pending_binders: 0,
         };
         Zip::zip_with(&mut this, answer, pending)?;
-        Ok(this.ex_clause)
+        Ok(())
     }
 
     fn unify_free_answer_var(
@@ -298,7 +298,7 @@ impl<'t> AnswerSubstitutor<'t> {
         slg::into_ex_clause(
             self.table
                 .unify(&self.environment, answer_param, &Parameter(pending_shifted))?,
-            &mut self.ex_clause,
+            self.ex_clause,
         );
 
         Ok(true)
