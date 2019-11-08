@@ -290,3 +290,25 @@ impl DepthFirstNumber {
         DepthFirstNumber { value }
     }
 }
+
+/// Because we recurse so deeply, we rely on stacker to
+/// avoid overflowing the stack.
+#[cfg(feature = "stack_protection")]
+fn maybe_grow_stack<F, R>(op: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    // These numbers are somewhat randomly chosen to make tests work
+    // well enough on my system. In particular, because we only test
+    // for growing the stack in `new_clause`, a red zone of 32K was
+    // insufficient to prevent stack overflow. - nikomatsakis
+    stacker::maybe_grow(256 * 1024, 2 * 1024 * 1024, op)
+}
+
+#[cfg(not(feature = "stack_protection"))]
+fn maybe_grow_stack<F, R>(op: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    op()
+}

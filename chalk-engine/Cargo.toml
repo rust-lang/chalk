@@ -10,9 +10,11 @@ keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
 [features]
-default = []
+default = ["stack_protection"]
+stack_protection = ["stacker"]
 
 [dependencies]
+stacker = { version = "0.1.2", optional = true }
 rustc-hash = { version = "1.0.0" }
 
 [dependencies.chalk-macros]

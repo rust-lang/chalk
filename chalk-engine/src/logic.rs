@@ -210,7 +210,7 @@ impl<C: Context> Forest<C> {
 
         let dfn = self.next_dfn();
         let depth = self.stack.push(table, dfn);
-        let result = self.pursue_next_strand(context, depth);
+        let result = crate::maybe_grow_stack(|| self.pursue_next_strand(context, depth));
         self.stack.pop(table, depth);
         info!("ensure_answer: result = {:?}", result);
         result.map(|()| EnsureSuccess::AnswerAvailable)
