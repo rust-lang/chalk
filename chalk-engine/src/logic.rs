@@ -466,15 +466,27 @@ impl<C: Context> Forest<C> {
             }
 
             // Find the selected subgoal and ask it for the next answer.
+            let SelectedSubgoal {
+                subgoal_index: _,
+                subgoal_table,
+                answer_index,
+                universe_map: _,
+            } = *strand.selected_subgoal.as_ref().unwrap();
+            let recursive_search_result =
+                self.ensure_answer_recursively(context, subgoal_table, answer_index);
             let incorporate_result = match strand.ex_clause.subgoals
                 [strand.selected_subgoal.as_ref().unwrap().subgoal_index]
             {
-                Literal::Positive(_) => {
-                    self.incorporate_result_from_positive_subgoal(context, depth, &mut strand)
-                }
-                Literal::Negative(_) => {
-                    self.incorporate_result_from_negative_subgoal(context, depth, &mut strand)
-                }
+                Literal::Positive(_) => self.incorporate_result_from_positive_subgoal(
+                    depth,
+                    &mut strand,
+                    recursive_search_result,
+                ),
+                Literal::Negative(_) => self.incorporate_result_from_negative_subgoal(
+                    depth,
+                    &mut strand,
+                    recursive_search_result,
+                ),
             };
 
             match incorporate_result {
@@ -939,9 +951,9 @@ impl<C: Context> Forest<C> {
     /// from the NFTD paper.
     fn incorporate_result_from_positive_subgoal(
         &mut self,
-        context: &impl ContextOps<C>,
         depth: StackIndex,
         strand: &mut Strand<C>,
+        recursive_search_result: RecursiveSearchResult<EnsureSuccess>,
     ) -> RecursiveSearchResult<()> {
         let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
         let SelectedSubgoal {
@@ -951,7 +963,7 @@ impl<C: Context> Forest<C> {
             ref universe_map,
         } = *selected_subgoal;
 
-        match self.ensure_answer_recursively(context, subgoal_table, answer_index) {
+        match recursive_search_result {
             Ok(EnsureSuccess::AnswerAvailable) => {
                 // Whichever way this particular answer turns out, there may
                 // yet be *more* answers. Enqueue that alternative for later.
@@ -1074,9 +1086,9 @@ impl<C: Context> Forest<C> {
 
     fn incorporate_result_from_negative_subgoal(
         &mut self,
-        context: &impl ContextOps<C>,
         depth: StackIndex,
         strand: &mut Strand<C>,
+        recursive_search_result: RecursiveSearchResult<EnsureSuccess>,
     ) -> RecursiveSearchResult<()> {
         let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
         let SelectedSubgoal {
@@ -1091,7 +1103,7 @@ impl<C: Context> Forest<C> {
         // further. We continue onward in the case where we either
         // proved that `answer_index` does not exist (in which case
         // the negative literal is true) or if we found an ambiguous answer.
-        match self.ensure_answer_recursively(context, subgoal_table, answer_index) {
+        match recursive_search_result {
             Ok(EnsureSuccess::AnswerAvailable) => {
                 if self.answer(subgoal_table, answer_index).is_unconditional() {
                     // We want to disproval the subgoal, but we
