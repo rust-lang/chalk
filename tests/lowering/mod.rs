@@ -34,7 +34,7 @@ fn auto_trait() {
             #[auto] trait Foo<T> { }
         }
         error_msg {
-            "auto trait cannot have parameters"
+            "auto trait `Foo` cannot have parameters"
         }
     }
 
@@ -44,7 +44,7 @@ fn auto_trait() {
             #[auto] trait Foo where Self: Bar { }
         }
         error_msg {
-            "auto trait cannot have where clauses"
+            "auto trait `Foo` cannot have where clauses"
         }
     }
 
@@ -55,7 +55,7 @@ fn auto_trait() {
             }
         }
         error_msg {
-            "auto trait cannot define associated types"
+            "auto trait `Foo` cannot define associated types"
         }
     }
 
@@ -81,7 +81,7 @@ fn negative_impl() {
             }
         }
         error_msg {
-            "negative impls cannot define associated values"
+            "negative impl for trait `Foo` cannot define associated values"
         }
     }
 
@@ -234,7 +234,7 @@ fn check_parameter_kinds() {
             impl Bar for Foo<i32> { }
         }
         error_msg {
-            "incorrect parameter kind: expected lifetime, found type"
+            "incorrect parameter kind for `Foo`: expected lifetime, found type"
         }
     };
 
@@ -245,7 +245,7 @@ fn check_parameter_kinds() {
             impl<'a> Bar for Foo<'a> { }
         }
         error_msg {
-            "incorrect parameter kind: expected type, found lifetime"
+            "incorrect parameter kind for `Foo`: expected type, found lifetime"
         }
     };
 
@@ -256,7 +256,7 @@ fn check_parameter_kinds() {
             impl<X, T> Foo for <X as Iterator>::Item<T> where X: Iterator { }
         }
         error_msg {
-            "incorrect kind for associated type parameter: expected lifetime, found type"
+            "incorrect associated type parameter kind for `Item`: expected lifetime, found type"
         }
     };
 
@@ -267,7 +267,7 @@ fn check_parameter_kinds() {
             impl<X, 'a> Foo for <X as Iterator>::Item<'a> where X: Iterator { }
         }
         error_msg {
-            "incorrect kind for associated type parameter: expected type, found lifetime"
+            "incorrect associated type parameter kind for `Item`: expected type, found lifetime"
         }
     };
 
@@ -278,7 +278,7 @@ fn check_parameter_kinds() {
             impl<'a> Into<'a> for Foo {}
         }
         error_msg {
-            "incorrect kind for trait parameter: expected type, found lifetime"
+            "incorrect parameter kind for trait `Into`: expected type, found lifetime"
         }
     }
 
@@ -289,7 +289,7 @@ fn check_parameter_kinds() {
             impl<T> IntoTime<T> for Foo {}
         }
         error_msg {
-            "incorrect kind for trait parameter: expected lifetime, found type"
+            "incorrect parameter kind for trait `IntoTime`: expected lifetime, found type"
         }
     }
 }
@@ -421,7 +421,7 @@ fn fundamental_multiple_type_parameters() {
         }
 
         error_msg {
-            "Only fundamental types with a single parameter are supported"
+            "only a single parameter supported for fundamental type `Boxes`"
         }
     }
 }

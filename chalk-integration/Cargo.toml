@@ -9,9 +9,7 @@ keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
 [dependencies]
-derive-new = "0.5.6"
 itertools = "0.7.8"
-failure = "0.1"
 lalrpop-intern = "0.15.1"
 salsa = "0.10.0"
 
