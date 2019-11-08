@@ -466,20 +466,38 @@ impl<C: Context> Forest<C> {
             }
 
             // Find the selected subgoal and ask it for the next answer.
-            let selected_subgoal = strand.selected_subgoal.clone().unwrap();
-            strand = match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
-                Literal::Positive(_) => self.incorporate_result_from_positive_subgoal(
-                    context,
-                    depth,
-                    strand,
-                    &selected_subgoal,
-                )?,
-                Literal::Negative(_) => self.incorporate_result_from_negative_subgoal(
-                    context,
-                    depth,
-                    strand,
-                    &selected_subgoal,
-                )?,
+            let incorporate_result = match strand.ex_clause.subgoals
+                [strand.selected_subgoal.as_ref().unwrap().subgoal_index]
+            {
+                Literal::Positive(_) => {
+                    self.incorporate_result_from_positive_subgoal(context, depth, &mut strand)
+                }
+                Literal::Negative(_) => {
+                    self.incorporate_result_from_negative_subgoal(context, depth, &mut strand)
+                }
+            };
+
+            match incorporate_result {
+                Ok(_) => {}
+                Err(RecursiveSearchFail::NoMoreSolutions) => {
+                    return Err(StrandFail::NoSolution);
+                }
+                Err(RecursiveSearchFail::Floundered) => {
+                    return Err(StrandFail::Floundered);
+                }
+                Err(RecursiveSearchFail::QuantumExceeded) => {
+                    let table = self.stack[depth].table;
+                    let canonical_strand = Self::canonicalize_strand(strand);
+                    self.tables[table].push_strand(canonical_strand);
+                    return Err(StrandFail::QuantumExceeded);
+                }
+                Err(RecursiveSearchFail::NegativeCycle) => {
+                    return Err(StrandFail::NegativeCycle);
+                }
+                Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
+                    let canonical_strand = Self::canonicalize_strand(strand);
+                    return Err(StrandFail::PositiveCycle(canonical_strand, minimums));
+                }
             }
         }
     }
@@ -923,10 +941,9 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        mut strand: Strand<C>,
-        selected_subgoal: &SelectedSubgoal<C>,
-    ) -> StrandResult<C, Strand<C>> {
-        let table = self.stack[depth].table;
+        strand: &mut Strand<C>,
+    ) -> RecursiveSearchResult<()> {
+        let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
         let SelectedSubgoal {
             subgoal_index,
             subgoal_table,
@@ -936,19 +953,19 @@ impl<C: Context> Forest<C> {
 
         match self.ensure_answer_recursively(context, subgoal_table, answer_index) {
             Ok(EnsureSuccess::AnswerAvailable) => {
-                // The given answer is available.
-
                 // Whichever way this particular answer turns out, there may
                 // yet be *more* answers. Enqueue that alternative for later.
-                self.push_strand_pursuing_next_answer(depth, &mut strand, selected_subgoal);
+                let mut next_subgoal = selected_subgoal.clone();
+                next_subgoal.answer_index.increment();
+                let table = self.stack[depth].table;
+                self.tables[table].push_strand(Self::canonicalize_strand_from(
+                    &mut strand.infer,
+                    &strand.ex_clause,
+                    Some(next_subgoal),
+                ));
 
                 // OK, let's follow *this* answer and see where it leads.
-                let Strand {
-                    infer,
-                    ex_clause,
-                    selected_subgoal: _,
-                } = &mut strand;
-                let subgoal = match ex_clause.subgoals.remove(subgoal_index) {
+                let subgoal = match strand.ex_clause.subgoals.remove(subgoal_index) {
                     Literal::Positive(g) => g,
                     Literal::Negative(g) => panic!(
                         "incorporate_result_from_positive_subgoal invoked with negative selected literal: {:?}",
@@ -964,8 +981,19 @@ impl<C: Context> Forest<C> {
                     &universe_map,
                     &self.answer(subgoal_table, answer_index).subst,
                 );
-                match infer.apply_answer_subst(ex_clause, &subgoal, table_goal, answer_subst) {
+                match strand.infer.apply_answer_subst(
+                    &mut strand.ex_clause,
+                    &subgoal,
+                    table_goal,
+                    answer_subst,
+                ) {
                     Ok(()) => {
+                        let Strand {
+                            infer,
+                            ex_clause,
+                            selected_subgoal: _,
+                        } = strand;
+
                         // If the answer had delayed literals, we have to
                         // ensure that `ex_clause` is also delayed. This is
                         // the SLG FACTOR operation, though NFTD just makes it
@@ -984,7 +1012,7 @@ impl<C: Context> Forest<C> {
                         self.truncate_returned(ex_clause, infer);
 
                         strand.selected_subgoal = None;
-                        return Ok(strand);
+                        return Ok(());
                     }
 
                     // This answer led nowhere. Give up for now, but of course
@@ -992,7 +1020,7 @@ impl<C: Context> Forest<C> {
                     // `QuantumExceeded`.
                     Err(NoSolution) => {
                         info!("incorporate_result_from_positive_subgoal: answer not unifiable -> NoSolution");
-                        Err(StrandFail::NoSolution)
+                        Err(RecursiveSearchFail::NoMoreSolutions)
                     }
                 }
             }
@@ -1002,17 +1030,18 @@ impl<C: Context> Forest<C> {
                 // recursively requested an answer for itself. That
                 // means that our subgoal is unconditionally true, so
                 // we can drop it and pursue the next thing.
+                let table = self.stack[depth].table;
                 assert!(
                     self.tables[table].coinductive_goal
                         && self.tables[subgoal_table].coinductive_goal
                 );
                 strand.ex_clause.subgoals.remove(subgoal_index);
                 strand.selected_subgoal = None;
-                return Ok(strand);
+                return Ok(());
             }
             Err(RecursiveSearchFail::NoMoreSolutions) => {
                 info!("incorporate_result_from_positive_subgoal: no more solutions");
-                return Err(StrandFail::NoSolution);
+                return Err(RecursiveSearchFail::NoMoreSolutions);
             }
             Err(RecursiveSearchFail::Floundered) => {
                 // If this subgoal floundered, push it onto the
@@ -1022,26 +1051,23 @@ impl<C: Context> Forest<C> {
                 info!("incorporate_result_from_positive_subgoal: floundered");
                 self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
                 strand.selected_subgoal = None;
-                self.tables[table].push_strand(Self::canonicalize_strand(strand));
-                return Err(StrandFail::QuantumExceeded);
+                return Err(RecursiveSearchFail::QuantumExceeded);
             }
             Err(RecursiveSearchFail::QuantumExceeded) => {
                 // We'll have to revisit this strand later
                 info!("incorporate_result_from_positive_subgoal: quantum exceeded");
-                self.tables[table].push_strand(Self::canonicalize_strand(strand));
-                return Err(StrandFail::QuantumExceeded);
+                return Err(RecursiveSearchFail::QuantumExceeded);
             }
             Err(RecursiveSearchFail::NegativeCycle) => {
                 info!("negative cycle detected");
-                return Err(StrandFail::NegativeCycle);
+                return Err(RecursiveSearchFail::NegativeCycle);
             }
             Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
                 info!(
                     "incorporate_result_from_positive_subgoal: cycle with minimums {:?}",
                     minimums
                 );
-                let canonical_strand = Self::canonicalize_strand(strand);
-                return Err(StrandFail::PositiveCycle(canonical_strand, minimums));
+                return Err(RecursiveSearchFail::PositiveCycle(minimums));
             }
         }
     }
@@ -1050,10 +1076,9 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
-        mut strand: Strand<C>,
-        selected_subgoal: &SelectedSubgoal<C>,
-    ) -> StrandResult<C, Strand<C>> {
-        let table = self.stack[depth].table;
+        strand: &mut Strand<C>,
+    ) -> RecursiveSearchResult<()> {
+        let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
         let SelectedSubgoal {
             subgoal_index: _,
             subgoal_table,
@@ -1073,7 +1098,7 @@ impl<C: Context> Forest<C> {
                     // have an unconditional answer for the subgoal,
                     // therefore we have failed to disprove it.
                     info!("incorporate_result_from_negative_subgoal: found unconditional answer to neg literal -> NoSolution");
-                    return Err(StrandFail::NoSolution);
+                    return Err(RecursiveSearchFail::NoMoreSolutions);
                 }
 
                 // Got back a conditional answer. We neither succeed
@@ -1100,7 +1125,7 @@ impl<C: Context> Forest<C> {
                     .remove(selected_subgoal.subgoal_index);
                 strand.selected_subgoal = None;
                 strand.ex_clause.ambiguous = true;
-                return Ok(strand);
+                return Ok(());
             }
 
             Ok(EnsureSuccess::Coinductive) => {
@@ -1110,7 +1135,7 @@ impl<C: Context> Forest<C> {
                 // means that our subgoal is unconditionally true, so
                 // our negative goal fails.
                 info!("incorporate_result_from_negative_subgoal: found coinductive answer to neg literal -> NoSolution");
-                return Err(StrandFail::NoSolution);
+                return Err(RecursiveSearchFail::NoMoreSolutions);
             }
 
             Err(RecursiveSearchFail::Floundered) => {
@@ -1129,11 +1154,11 @@ impl<C: Context> Forest<C> {
                 //
                 // Here, the table we will be searching for answers is
                 // `?T: Debug`, so it could well flounder.
-                return Err(StrandFail::Floundered);
+                return Err(RecursiveSearchFail::Floundered);
             }
 
             Err(RecursiveSearchFail::NegativeCycle) => {
-                return Err(StrandFail::NegativeCycle);
+                return Err(RecursiveSearchFail::NegativeCycle);
             }
 
             Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
@@ -1147,14 +1172,10 @@ impl<C: Context> Forest<C> {
                     "incorporate_result_from_negative_subgoal: found neg cycle at depth {:?}",
                     min
                 );
-                let canonical_strand = Self::canonicalize_strand(strand);
-                return Err(StrandFail::PositiveCycle(
-                    canonical_strand,
-                    Minimums {
-                        positive: self.stack[depth].dfn,
-                        negative: min,
-                    },
-                ));
+                return Err(RecursiveSearchFail::PositiveCycle(Minimums {
+                    positive: self.stack[depth].dfn,
+                    negative: min,
+                }));
             }
 
             Err(RecursiveSearchFail::NoMoreSolutions) => {
@@ -1166,14 +1187,13 @@ impl<C: Context> Forest<C> {
                     .subgoals
                     .remove(selected_subgoal.subgoal_index);
                 strand.selected_subgoal = None;
-                return Ok(strand);
+                return Ok(());
             }
 
             // Learned nothing yet. Have to try again some other time.
             Err(RecursiveSearchFail::QuantumExceeded) => {
                 info!("incorporate_result_from_negative_subgoal: quantum exceeded");
-                self.tables[table].push_strand(Self::canonicalize_strand(strand));
-                return Err(StrandFail::QuantumExceeded);
+                return Err(RecursiveSearchFail::QuantumExceeded);
             }
         }
     }
@@ -1239,24 +1259,5 @@ impl<C: Context> Forest<C> {
                 );
             }
         }
-    }
-
-    /// Invoked when we have found a successful answer to the given
-    /// table. Queues up a strand to look for the *next* answer from
-    /// that table.
-    fn push_strand_pursuing_next_answer(
-        &mut self,
-        depth: StackIndex,
-        strand: &mut Strand<C>,
-        selected_subgoal: &SelectedSubgoal<C>,
-    ) {
-        let table = self.stack[depth].table;
-        let mut selected_subgoal = selected_subgoal.clone();
-        selected_subgoal.answer_index.increment();
-        self.tables[table].push_strand(Self::canonicalize_strand_from(
-            &mut strand.infer,
-            &strand.ex_clause,
-            Some(selected_subgoal),
-        ));
     }
 }
