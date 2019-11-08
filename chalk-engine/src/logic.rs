@@ -944,10 +944,10 @@ impl<C: Context> Forest<C> {
 
                 // OK, let's follow *this* answer and see where it leads.
                 let Strand {
-                    mut infer,
-                    mut ex_clause,
+                    infer,
+                    ex_clause,
                     selected_subgoal: _,
-                } = strand;
+                } = &mut strand;
                 let subgoal = match ex_clause.subgoals.remove(subgoal_index) {
                     Literal::Positive(g) => g,
                     Literal::Negative(g) => panic!(
@@ -965,7 +965,7 @@ impl<C: Context> Forest<C> {
                     &self.answer(subgoal_table, answer_index).subst,
                 );
                 match infer.apply_answer_subst(ex_clause, &subgoal, table_goal, answer_subst) {
-                    Ok(mut ex_clause) => {
+                    Ok(()) => {
                         // If the answer had delayed literals, we have to
                         // ensure that `ex_clause` is also delayed. This is
                         // the SLG FACTOR operation, though NFTD just makes it
@@ -981,13 +981,10 @@ impl<C: Context> Forest<C> {
                         ex_clause.current_time.increment();
 
                         // Apply answer abstraction.
-                        let ex_clause = self.truncate_returned(ex_clause, &mut infer);
+                        self.truncate_returned(ex_clause, infer);
 
-                        return Ok(Strand {
-                            infer,
-                            ex_clause,
-                            selected_subgoal: None,
-                        });
+                        strand.selected_subgoal = None;
+                        return Ok(strand);
                     }
 
                     // This answer led nowhere. Give up for now, but of course
@@ -1202,11 +1199,7 @@ impl<C: Context> Forest<C> {
     /// Used whenever we process an answer (whether new or cached) on
     /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
     /// the resolvent (or factor) if it has grown too large.
-    fn truncate_returned(
-        &self,
-        ex_clause: ExClause<C>,
-        infer: &mut dyn InferenceTable<C>,
-    ) -> ExClause<C> {
+    fn truncate_returned(&self, ex_clause: &mut ExClause<C>, infer: &mut dyn InferenceTable<C>) {
         // DIVERGENCE
         //
         // In the original RR paper, truncation is only applied
@@ -1228,18 +1221,23 @@ impl<C: Context> Forest<C> {
         // ambiguous answer.
 
         match infer.truncate_answer(&ex_clause.subst) {
-            // No need to truncate? Just propagate the resolvent back.
-            None => ex_clause,
+            // No need to truncate
+            None => {}
 
             // Resolvent got too large. Have to introduce approximation.
-            Some(truncated_subst) => ExClause {
-                subst: truncated_subst,
-                ambiguous: true,
-                constraints: vec![],
-                subgoals: vec![],
-                current_time: TimeStamp::default(),
-                floundered_subgoals: vec![],
-            },
+            Some(truncated_subst) => {
+                mem::replace(
+                    ex_clause,
+                    ExClause {
+                        subst: truncated_subst,
+                        ambiguous: true,
+                        constraints: vec![],
+                        subgoals: vec![],
+                        current_time: TimeStamp::default(),
+                        floundered_subgoals: vec![],
+                    },
+                );
+            }
         }
     }
 

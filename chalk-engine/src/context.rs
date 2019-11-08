@@ -341,11 +341,11 @@ pub trait ResolventOps<C: Context> {
 
     fn apply_answer_subst(
         &mut self,
-        ex_clause: ExClause<C>,
+        ex_clause: &mut ExClause<C>,
         selected_goal: &C::GoalInEnvironment,
         answer_table_goal: &C::CanonicalGoalInEnvironment,
         canonical_answer_subst: &C::CanonicalConstrainedSubst,
-    ) -> Fallible<ExClause<C>>;
+    ) -> Fallible<()>;
 }
 
 pub trait AnswerStream<C: Context> {
