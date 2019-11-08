@@ -61,7 +61,7 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
         goal: &DomainGoal<ChalkIr>,
         subst: &Substitution<ChalkIr>,
         clause: &ProgramClause<ChalkIr>,
-    ) -> Fallible<Canonical<ExClause<SlgContext>>> {
+    ) -> Fallible<ExClause<SlgContext>> {
         // Relating the above description to our situation:
         //
         // - `goal` G, except with binders for any existential variables.
@@ -75,8 +75,6 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
             goal,
             clause,
         );
-
-        let snapshot = self.infer.snapshot();
 
         // C' in the description above is `consequence :- conditions`.
         //
@@ -117,11 +115,7 @@ impl context::ResolventOps<SlgContext> for TruncatingInferenceTable {
                 c => Literal::Positive(InEnvironment::new(environment, c)),
             }));
 
-        let canonical_ex_clause = self.infer.canonicalize(&ex_clause).quantified;
-
-        self.infer.rollback_to(snapshot);
-
-        Ok(canonical_ex_clause)
+        Ok(ex_clause)
     }
 
     ///////////////////////////////////////////////////////////////////////////
