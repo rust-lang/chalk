@@ -1,6 +1,5 @@
 //! Benchmarking tests.
 
-extern crate test;
 use self::test::Bencher;
 
 use chalk_ir;

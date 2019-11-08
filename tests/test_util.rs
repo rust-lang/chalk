@@ -1,4 +1,4 @@
-#![cfg(test)]
+#![allow(unused_macros)]
 
 use diff;
 use itertools::Itertools;
@@ -9,7 +9,7 @@ macro_rules! lowering_success {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let result = crate::db::ChalkDatabase::with(
+        let result = chalk_integration::db::ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
             chalk_solve::SolverChoice::default(),
         )
@@ -26,7 +26,7 @@ macro_rules! lowering_error {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let error = crate::db::ChalkDatabase::with(
+        let error = chalk_integration::db::ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
             chalk_solve::SolverChoice::default(),
         )
@@ -37,7 +37,7 @@ macro_rules! lowering_error {
     };
 }
 
-pub(crate) fn assert_test_result_eq(expected: &str, actual: &str) {
+pub fn assert_test_result_eq(expected: &str, actual: &str) {
     let expected_trimmed: String = expected
         .lines()
         .map(|l| l.trim())

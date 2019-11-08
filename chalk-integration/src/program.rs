@@ -19,28 +19,28 @@ use std::sync::Arc;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// From type-name to item-id. Used during lowering only.
-    pub(crate) type_ids: BTreeMap<Identifier, TypeKindId>,
+    pub type_ids: BTreeMap<Identifier, TypeKindId>,
 
     /// For each struct/trait:
-    pub(crate) type_kinds: BTreeMap<TypeKindId, TypeKind>,
+    pub type_kinds: BTreeMap<TypeKindId, TypeKind>,
 
     /// For each struct:
-    pub(crate) struct_data: BTreeMap<StructId, Arc<StructDatum>>,
+    pub struct_data: BTreeMap<StructId, Arc<StructDatum>>,
 
     /// For each impl:
-    pub(crate) impl_data: BTreeMap<ImplId, Arc<ImplDatum>>,
+    pub impl_data: BTreeMap<ImplId, Arc<ImplDatum>>,
 
     /// For each associated ty value `type Foo = XXX` found in an impl:
-    pub(crate) associated_ty_values: BTreeMap<AssociatedTyValueId, Arc<AssociatedTyValue>>,
+    pub associated_ty_values: BTreeMap<AssociatedTyValueId, Arc<AssociatedTyValue>>,
 
     /// For each trait:
-    pub(crate) trait_data: BTreeMap<TraitId, Arc<TraitDatum>>,
+    pub trait_data: BTreeMap<TraitId, Arc<TraitDatum>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
-    pub(crate) associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum>>,
+    pub associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum>>,
 
     /// For each user-specified clause
-    pub(crate) custom_clauses: Vec<ProgramClause<ChalkIr>>,
+    pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
 }
 
 impl Program {

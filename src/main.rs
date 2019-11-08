@@ -5,9 +5,9 @@ use std::fs::File;
 use std::io::Read;
 use std::process::exit;
 
-use chalk::db::ChalkDatabase;
-use chalk::lowering::*;
-use chalk::query::LoweringDatabase;
+use chalk_integration::db::ChalkDatabase;
+use chalk_integration::lowering::*;
+use chalk_integration::query::LoweringDatabase;
 use chalk_solve::ext::*;
 use chalk_solve::SolverChoice;
 use docopt::Docopt;
