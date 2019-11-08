@@ -101,6 +101,12 @@ enum EnsureSuccess {
     Coinductive,
 }
 
+enum SubGoalSelection<C: Context> {
+    Selected,
+    NoRemaingSubgoals,
+    Fail(StrandFail<C>),
+}
+
 impl<C: Context> Forest<C> {
     /// Ensures that answer with the given index is available from the
     /// given table. This may require activating a strand. Returns
@@ -330,6 +336,56 @@ impl<C: Context> Forest<C> {
         }
     }
 
+    fn select_subgoal(
+        &mut self,
+        context: &impl ContextOps<C>,
+        strand: &mut Strand<C>,
+    ) -> SubGoalSelection<C> {
+        while strand.selected_subgoal.is_none() {
+            if strand.ex_clause.subgoals.len() == 0 {
+                if strand.ex_clause.floundered_subgoals.is_empty() {
+                    return SubGoalSelection::NoRemaingSubgoals;
+                }
+
+                self.reconsider_floundered_subgoals(&mut strand.ex_clause);
+
+                if strand.ex_clause.subgoals.is_empty() {
+                    assert!(!strand.ex_clause.floundered_subgoals.is_empty());
+                    return SubGoalSelection::Fail(StrandFail::Floundered);
+                }
+
+                continue;
+            }
+
+            let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
+
+            // Get or create table for this subgoal.
+            match self.get_or_create_table_for_subgoal(
+                context,
+                &mut strand.infer,
+                &strand.ex_clause.subgoals[subgoal_index],
+            ) {
+                Some((subgoal_table, universe_map)) => {
+                    strand.selected_subgoal = Some(SelectedSubgoal {
+                        subgoal_index,
+                        subgoal_table,
+                        universe_map,
+                        answer_index: AnswerIndex::ZERO,
+                    });
+                }
+
+                None => {
+                    // If we failed to create a table for the subgoal,
+                    // that is because we have a floundered negative
+                    // literal.
+                    self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
+                }
+            }
+        }
+
+        SubGoalSelection::Selected
+    }
+
     /// Pursues `strand` to see if it leads us to a new answer, either
     /// by selecting a new subgoal or by checking to see if the
     /// selected subgoal has an answer. `strand` is associated with
@@ -350,49 +406,13 @@ impl<C: Context> Forest<C> {
             );
 
             // If no subgoal has yet been selected, select one.
-            while strand.selected_subgoal.is_none() {
-                if strand.ex_clause.subgoals.len() == 0 {
-                    if strand.ex_clause.floundered_subgoals.is_empty() {
-                        return self.pursue_answer(depth, strand);
-                    }
-
-                    self.reconsider_floundered_subgoals(&mut strand.ex_clause);
-
-                    if strand.ex_clause.subgoals.is_empty() {
-                        assert!(!strand.ex_clause.floundered_subgoals.is_empty());
-                        return Err(StrandFail::Floundered);
-                    }
-
-                    continue;
+            match self.select_subgoal(context, &mut strand) {
+                SubGoalSelection::Selected => {}
+                SubGoalSelection::NoRemaingSubgoals => {
+                    return self.pursue_answer(depth, strand);
                 }
-
-                let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
-
-                // Get or create table for this subgoal.
-                match self.get_or_create_table_for_subgoal(
-                    context,
-                    &mut strand.infer,
-                    &strand.ex_clause.subgoals[subgoal_index],
-                ) {
-                    Some((subgoal_table, universe_map)) => {
-                        strand.selected_subgoal = Some(SelectedSubgoal {
-                            subgoal_index,
-                            subgoal_table,
-                            universe_map,
-                            answer_index: AnswerIndex::ZERO,
-                        });
-                    }
-
-                    None => {
-                        // If we failed to create a table for the subgoal,
-                        // that is because we have a floundered negative
-                        // literal.
-                        self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
-                        continue;
-                    }
-                }
+                SubGoalSelection::Fail(fail) => return Err(fail),
             }
-
             // Find the selected subgoal and ask it for the next answer.
             let SelectedSubgoal {
                 subgoal_index: _,
