@@ -412,66 +412,74 @@ impl<C: Context> Forest<C> {
         depth: StackIndex,
         mut strand: Strand<C>,
     ) -> StrandResult<C, ()> {
-        info_heading!(
-            "pursue_strand(table={:?}, depth={:?}, ex_clause={:#?}, selected_subgoal={:?})",
-            self.stack[depth].table,
-            depth,
-            strand.infer.debug_ex_clause(&strand.ex_clause),
-            strand.selected_subgoal,
-        );
+        loop {
+            info_heading!(
+                "pursue_strand(table={:?}, depth={:?}, ex_clause={:#?}, selected_subgoal={:?})",
+                self.stack[depth].table,
+                depth,
+                strand.infer.debug_ex_clause(&strand.ex_clause),
+                strand.selected_subgoal,
+            );
 
-        // If no subgoal has yet been selected, select one.
-        while strand.selected_subgoal.is_none() {
-            if strand.ex_clause.subgoals.len() == 0 {
-                if strand.ex_clause.floundered_subgoals.is_empty() {
-                    return self.pursue_answer(depth, strand);
-                }
+            // If no subgoal has yet been selected, select one.
+            while strand.selected_subgoal.is_none() {
+                if strand.ex_clause.subgoals.len() == 0 {
+                    if strand.ex_clause.floundered_subgoals.is_empty() {
+                        return self.pursue_answer(depth, strand);
+                    }
 
-                self.reconsider_floundered_subgoals(&mut strand.ex_clause);
+                    self.reconsider_floundered_subgoals(&mut strand.ex_clause);
 
-                if strand.ex_clause.subgoals.is_empty() {
-                    assert!(!strand.ex_clause.floundered_subgoals.is_empty());
-                    return Err(StrandFail::Floundered);
-                }
+                    if strand.ex_clause.subgoals.is_empty() {
+                        assert!(!strand.ex_clause.floundered_subgoals.is_empty());
+                        return Err(StrandFail::Floundered);
+                    }
 
-                continue;
-            }
-
-            let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
-
-            // Get or create table for this subgoal.
-            match self.get_or_create_table_for_subgoal(
-                context,
-                &mut strand.infer,
-                &strand.ex_clause.subgoals[subgoal_index],
-            ) {
-                Some((subgoal_table, universe_map)) => {
-                    strand.selected_subgoal = Some(SelectedSubgoal {
-                        subgoal_index,
-                        subgoal_table,
-                        universe_map,
-                        answer_index: AnswerIndex::ZERO,
-                    });
-                }
-
-                None => {
-                    // If we failed to create a table for the subgoal,
-                    // that is because we have a floundered negative
-                    // literal.
-                    self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
                     continue;
                 }
-            }
-        }
 
-        // Find the selected subgoal and ask it for the next answer.
-        let selected_subgoal = strand.selected_subgoal.clone().unwrap();
-        match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
-            Literal::Positive(_) => {
-                self.pursue_positive_subgoal(context, depth, strand, &selected_subgoal)
+                let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
+
+                // Get or create table for this subgoal.
+                match self.get_or_create_table_for_subgoal(
+                    context,
+                    &mut strand.infer,
+                    &strand.ex_clause.subgoals[subgoal_index],
+                ) {
+                    Some((subgoal_table, universe_map)) => {
+                        strand.selected_subgoal = Some(SelectedSubgoal {
+                            subgoal_index,
+                            subgoal_table,
+                            universe_map,
+                            answer_index: AnswerIndex::ZERO,
+                        });
+                    }
+
+                    None => {
+                        // If we failed to create a table for the subgoal,
+                        // that is because we have a floundered negative
+                        // literal.
+                        self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
+                        continue;
+                    }
+                }
             }
-            Literal::Negative(_) => {
-                self.pursue_negative_subgoal(context, depth, strand, &selected_subgoal)
+
+            // Find the selected subgoal and ask it for the next answer.
+            let selected_subgoal = strand.selected_subgoal.clone().unwrap();
+            strand = match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+                Literal::Positive(_) => self.incorporate_result_from_positive_subgoal(
+                    context,
+                    depth,
+                    strand,
+                    &selected_subgoal,
+                )?,
+                Literal::Negative(_) => self.incorporate_result_from_negative_subgoal(
+                    context,
+                    depth,
+                    strand,
+                    &selected_subgoal,
+                )?,
             }
         }
     }
@@ -911,13 +919,13 @@ impl<C: Context> Forest<C> {
     ///
     /// When an answer is found, that corresponds to *Positive Return*
     /// from the NFTD paper.
-    fn pursue_positive_subgoal(
+    fn incorporate_result_from_positive_subgoal(
         &mut self,
         context: &impl ContextOps<C>,
         depth: StackIndex,
         mut strand: Strand<C>,
         selected_subgoal: &SelectedSubgoal<C>,
-    ) -> StrandResult<C, ()> {
+    ) -> StrandResult<C, Strand<C>> {
         let table = self.stack[depth].table;
         let SelectedSubgoal {
             subgoal_index,
@@ -928,7 +936,68 @@ impl<C: Context> Forest<C> {
 
         match self.ensure_answer_recursively(context, subgoal_table, answer_index) {
             Ok(EnsureSuccess::AnswerAvailable) => {
-                // The given answer is available; we'll process it below.
+                // The given answer is available.
+
+                // Whichever way this particular answer turns out, there may
+                // yet be *more* answers. Enqueue that alternative for later.
+                self.push_strand_pursuing_next_answer(depth, &mut strand, selected_subgoal);
+
+                // OK, let's follow *this* answer and see where it leads.
+                let Strand {
+                    mut infer,
+                    mut ex_clause,
+                    selected_subgoal: _,
+                } = strand;
+                let subgoal = match ex_clause.subgoals.remove(subgoal_index) {
+                    Literal::Positive(g) => g,
+                    Literal::Negative(g) => panic!(
+                        "incorporate_result_from_positive_subgoal invoked with negative selected literal: {:?}",
+                        g
+                    ),
+                };
+
+                let table_goal = &C::map_goal_from_canonical(
+                    &universe_map,
+                    &C::canonical(&self.tables[subgoal_table].table_goal),
+                );
+                let answer_subst = &C::map_subst_from_canonical(
+                    &universe_map,
+                    &self.answer(subgoal_table, answer_index).subst,
+                );
+                match infer.apply_answer_subst(ex_clause, &subgoal, table_goal, answer_subst) {
+                    Ok(mut ex_clause) => {
+                        // If the answer had delayed literals, we have to
+                        // ensure that `ex_clause` is also delayed. This is
+                        // the SLG FACTOR operation, though NFTD just makes it
+                        // part of computing the SLG resolvent.
+                        {
+                            let answer = self.answer(subgoal_table, answer_index);
+                            if answer.ambiguous {
+                                ex_clause.ambiguous = true;
+                            }
+                        }
+
+                        // Increment time counter because we received a new answer.
+                        ex_clause.current_time.increment();
+
+                        // Apply answer abstraction.
+                        let ex_clause = self.truncate_returned(ex_clause, &mut infer);
+
+                        return Ok(Strand {
+                            infer,
+                            ex_clause,
+                            selected_subgoal: None,
+                        });
+                    }
+
+                    // This answer led nowhere. Give up for now, but of course
+                    // there may still be other strands to pursue, so return
+                    // `QuantumExceeded`.
+                    Err(NoSolution) => {
+                        info!("incorporate_result_from_positive_subgoal: answer not unifiable -> NoSolution");
+                        Err(StrandFail::NoSolution)
+                    }
+                }
             }
             Ok(EnsureSuccess::Coinductive) => {
                 // This is a co-inductive cycle. That is, this table
@@ -940,24 +1009,12 @@ impl<C: Context> Forest<C> {
                     self.tables[table].coinductive_goal
                         && self.tables[subgoal_table].coinductive_goal
                 );
-                let Strand {
-                    infer,
-                    mut ex_clause,
-                    selected_subgoal: _,
-                } = strand;
-                ex_clause.subgoals.remove(subgoal_index);
-                return self.pursue_strand_recursively(
-                    context,
-                    depth,
-                    Strand {
-                        infer,
-                        ex_clause,
-                        selected_subgoal: None,
-                    },
-                );
+                strand.ex_clause.subgoals.remove(subgoal_index);
+                strand.selected_subgoal = None;
+                return Ok(strand);
             }
             Err(RecursiveSearchFail::NoMoreSolutions) => {
-                info!("pursue_positive_subgoal: no more solutions");
+                info!("incorporate_result_from_positive_subgoal: no more solutions");
                 return Err(StrandFail::NoSolution);
             }
             Err(RecursiveSearchFail::Floundered) => {
@@ -965,7 +1022,7 @@ impl<C: Context> Forest<C> {
                 // floundered list, along with the time that it
                 // floundered. We'll try to solve some other subgoals
                 // and maybe come back to it.
-                info!("pursue_positive_subgoal: floundered");
+                info!("incorporate_result_from_positive_subgoal: floundered");
                 self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
                 strand.selected_subgoal = None;
                 self.tables[table].push_strand(Self::canonicalize_strand(strand));
@@ -973,7 +1030,7 @@ impl<C: Context> Forest<C> {
             }
             Err(RecursiveSearchFail::QuantumExceeded) => {
                 // We'll have to revisit this strand later
-                info!("pursue_positive_subgoal: quantum exceeded");
+                info!("incorporate_result_from_positive_subgoal: quantum exceeded");
                 self.tables[table].push_strand(Self::canonicalize_strand(strand));
                 return Err(StrandFail::QuantumExceeded);
             }
@@ -983,76 +1040,143 @@ impl<C: Context> Forest<C> {
             }
             Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
                 info!(
-                    "pursue_positive_subgoal: cycle with minimums {:?}",
+                    "incorporate_result_from_positive_subgoal: cycle with minimums {:?}",
                     minimums
                 );
                 let canonical_strand = Self::canonicalize_strand(strand);
                 return Err(StrandFail::PositiveCycle(canonical_strand, minimums));
             }
         }
+    }
 
-        // Whichever way this particular answer turns out, there may
-        // yet be *more* answers. Enqueue that alternative for later.
-        self.push_strand_pursuing_next_answer(depth, &mut strand, selected_subgoal);
+    fn incorporate_result_from_negative_subgoal(
+        &mut self,
+        context: &impl ContextOps<C>,
+        depth: StackIndex,
+        mut strand: Strand<C>,
+        selected_subgoal: &SelectedSubgoal<C>,
+    ) -> StrandResult<C, Strand<C>> {
+        let table = self.stack[depth].table;
+        let SelectedSubgoal {
+            subgoal_index: _,
+            subgoal_table,
+            answer_index,
+            universe_map: _,
+        } = *selected_subgoal;
 
-        // OK, let's follow *this* answer and see where it leads.
-        let Strand {
-            mut infer,
-            mut ex_clause,
-            selected_subgoal: _,
-        } = strand;
-        let subgoal = match ex_clause.subgoals.remove(subgoal_index) {
-            Literal::Positive(g) => g,
-            Literal::Negative(g) => panic!(
-                "pursue_positive_subgoal invoked with negative selected literal: {:?}",
-                g
-            ),
-        };
-
-        let table_goal = &C::map_goal_from_canonical(
-            &universe_map,
-            &C::canonical(&self.tables[subgoal_table].table_goal),
-        );
-        let answer_subst = &C::map_subst_from_canonical(
-            &universe_map,
-            &self.answer(subgoal_table, answer_index).subst,
-        );
-        match infer.apply_answer_subst(ex_clause, &subgoal, table_goal, answer_subst) {
-            Ok(mut ex_clause) => {
-                // If the answer had delayed literals, we have to
-                // ensure that `ex_clause` is also delayed. This is
-                // the SLG FACTOR operation, though NFTD just makes it
-                // part of computing the SLG resolvent.
-                {
-                    let answer = self.answer(subgoal_table, answer_index);
-                    if answer.ambiguous {
-                        ex_clause.ambiguous = true;
-                    }
+        // In the match below, we will either (a) return early with an
+        // error or some kind or (b) continue on to pursue this strand
+        // further. We continue onward in the case where we either
+        // proved that `answer_index` does not exist (in which case
+        // the negative literal is true) or if we found an ambiguous answer.
+        match self.ensure_answer_recursively(context, subgoal_table, answer_index) {
+            Ok(EnsureSuccess::AnswerAvailable) => {
+                if self.answer(subgoal_table, answer_index).is_unconditional() {
+                    // We want to disproval the subgoal, but we
+                    // have an unconditional answer for the subgoal,
+                    // therefore we have failed to disprove it.
+                    info!("incorporate_result_from_negative_subgoal: found unconditional answer to neg literal -> NoSolution");
+                    return Err(StrandFail::NoSolution);
                 }
 
-                // Increment time counter because we received a new answer.
-                ex_clause.current_time.increment();
-
-                // Apply answer abstraction.
-                let ex_clause = self.truncate_returned(ex_clause, &mut infer);
-
-                self.pursue_strand_recursively(
-                    context,
-                    depth,
-                    Strand {
-                        infer,
-                        ex_clause,
-                        selected_subgoal: None,
-                    },
-                )
+                // Got back a conditional answer. We neither succeed
+                // nor fail yet, so just mark as ambiguous.
+                //
+                // This corresponds to the Delaying action in NFTD.
+                // It also interesting to compare this with the EWFS
+                // paper; there, when we encounter a delayed cached
+                // answer in `negative_subgoal`, we do not immediately
+                // convert to a delayed literal, but instead simply
+                // stop. However, in EWFS, we *do* add the strand to
+                // the table as a negative pending subgoal, and also
+                // update the link to depend negatively on the
+                // table. Then later, when all pending work from that
+                // table is completed, all negative links are
+                // converted to delays.
+                //
+                // Previously, this introduced a `delayed_literal` that
+                // we could follow and potentially resolve later. However,
+                // for simplicity, we now just mark the strand as ambiguous.
+                strand
+                    .ex_clause
+                    .subgoals
+                    .remove(selected_subgoal.subgoal_index);
+                strand.selected_subgoal = None;
+                strand.ex_clause.ambiguous = true;
+                return Ok(strand);
             }
 
-            // This answer led nowhere. Give up for now, but of course
-            // there may still be other strands to pursue, so return
-            // `QuantumExceeded`.
-            Err(NoSolution) => {
-                info!("pursue_positive_subgoal: answer not unifiable -> NoSolution");
-                Err(StrandFail::NoSolution)
+            Ok(EnsureSuccess::Coinductive) => {
+                // This is a co-inductive cycle. That is, this table
+                // appears somewhere higher on the stack, and has now
+                // recursively requested an answer for itself. That
+                // means that our subgoal is unconditionally true, so
+                // our negative goal fails.
+                info!("incorporate_result_from_negative_subgoal: found coinductive answer to neg literal -> NoSolution");
+                return Err(StrandFail::NoSolution);
+            }
+
+            Err(RecursiveSearchFail::Floundered) => {
+                // Floundering on a negative literal isn't like a
+                // positive search: we only pursue negative literals
+                // when we already know precisely the type we are
+                // looking for. So there's no point waiting for other
+                // subgoals, we'll never recover more information.
+                //
+                // In fact, floundering on negative searches shouldn't
+                // normally happen, since there are no uninferred
+                // variables in the goal, but it can with forall
+                // goals:
+                //
+                //     forall<T> { not { T: Debug } }
+                //
+                // Here, the table we will be searching for answers is
+                // `?T: Debug`, so it could well flounder.
+                return Err(StrandFail::Floundered);
+            }
+
+            Err(RecursiveSearchFail::NegativeCycle) => {
+                return Err(StrandFail::NegativeCycle);
+            }
+
+            Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
+                // We depend on `not(subgoal)`. For us to continue,
+                // `subgoal` must be completely evaluated. Therefore,
+                // we depend (negatively) on the minimum link of
+                // `subgoal` as a whole -- it doesn't matter whether
+                // it's pos or neg.
+                let min = minimums.minimum_of_pos_and_neg();
+                info!(
+                    "incorporate_result_from_negative_subgoal: found neg cycle at depth {:?}",
+                    min
+                );
+                let canonical_strand = Self::canonicalize_strand(strand);
+                return Err(StrandFail::PositiveCycle(
+                    canonical_strand,
+                    Minimums {
+                        positive: self.stack[depth].dfn,
+                        negative: min,
+                    },
+                ));
+            }
+
+            Err(RecursiveSearchFail::NoMoreSolutions) => {
+                // This answer does not exist. Huzzah, happy days are
+                // here again! =) We can just remove this subgoal and continue
+                // with no need for a delayed literal.
+                strand
+                    .ex_clause
+                    .subgoals
+                    .remove(selected_subgoal.subgoal_index);
+                strand.selected_subgoal = None;
+                return Ok(strand);
+            }
+
+            // Learned nothing yet. Have to try again some other time.
+            Err(RecursiveSearchFail::QuantumExceeded) => {
+                info!("incorporate_result_from_negative_subgoal: quantum exceeded");
+                self.tables[table].push_strand(Self::canonicalize_strand(strand));
+                return Err(StrandFail::QuantumExceeded);
             }
         }
     }
@@ -1119,17 +1243,6 @@ impl<C: Context> Forest<C> {
         }
     }
 
-    // We can recursive arbitrarily deep while pursuing a strand, so
-    // check in case we have to grow the stack.
-    fn pursue_strand_recursively(
-        &mut self,
-        context: &impl ContextOps<C>,
-        depth: StackIndex,
-        strand: Strand<C>,
-    ) -> StrandResult<C, ()> {
-        crate::maybe_grow_stack(|| self.pursue_strand(context, depth, strand))
-    }
-
     /// Invoked when we have found a successful answer to the given
     /// table. Queues up a strand to look for the *next* answer from
     /// that table.
@@ -1147,151 +1260,5 @@ impl<C: Context> Forest<C> {
             &strand.ex_clause,
             Some(selected_subgoal),
         ));
-    }
-
-    fn pursue_negative_subgoal(
-        &mut self,
-        context: &impl ContextOps<C>,
-        depth: StackIndex,
-        strand: Strand<C>,
-        selected_subgoal: &SelectedSubgoal<C>,
-    ) -> StrandResult<C, ()> {
-        let table = self.stack[depth].table;
-        let SelectedSubgoal {
-            subgoal_index: _,
-            subgoal_table,
-            answer_index,
-            universe_map: _,
-        } = *selected_subgoal;
-
-        // In the match below, we will either (a) return early with an
-        // error or some kind or (b) continue on to pursue this strand
-        // further. We continue onward in the case where we either
-        // proved that `answer_index` does not exist (in which case
-        // the negative literal is true) or if we found an ambiguous answer.
-        let ambiguous: bool;
-        match self.ensure_answer_recursively(context, subgoal_table, answer_index) {
-            Ok(EnsureSuccess::AnswerAvailable) => {
-                if self.answer(subgoal_table, answer_index).is_unconditional() {
-                    // We want to disproval the subgoal, but we
-                    // have an unconditional answer for the subgoal,
-                    // therefore we have failed to disprove it.
-                    info!("pursue_negative_subgoal: found unconditional answer to neg literal -> NoSolution");
-                    return Err(StrandFail::NoSolution);
-                }
-
-                // Got back a conditional answer. We neither succeed
-                // nor fail yet, so just mark as ambiguous.
-                //
-                // This corresponds to the Delaying action in NFTD.
-                // It also interesting to compare this with the EWFS
-                // paper; there, when we encounter a delayed cached
-                // answer in `negative_subgoal`, we do not immediately
-                // convert to a delayed literal, but instead simply
-                // stop. However, in EWFS, we *do* add the strand to
-                // the table as a negative pending subgoal, and also
-                // update the link to depend negatively on the
-                // table. Then later, when all pending work from that
-                // table is completed, all negative links are
-                // converted to delays.
-                //
-                // Previously, this introduced a `delayed_literal` that
-                // we could follow and potentially resolve later. However,
-                // for simplicity, we now just mark the strand as ambiguous.
-                ambiguous = true;
-            }
-
-            Ok(EnsureSuccess::Coinductive) => {
-                // This is a co-inductive cycle. That is, this table
-                // appears somewhere higher on the stack, and has now
-                // recursively requested an answer for itself. That
-                // means that our subgoal is unconditionally true, so
-                // our negative goal fails.
-                info!("pursue_negative_subgoal: found coinductive answer to neg literal -> NoSolution");
-                return Err(StrandFail::NoSolution);
-            }
-
-            Err(RecursiveSearchFail::Floundered) => {
-                // Floundering on a negative literal isn't like a
-                // positive search: we only pursue negative literals
-                // when we already know precisely the type we are
-                // looking for. So there's no point waiting for other
-                // subgoals, we'll never recover more information.
-                //
-                // In fact, floundering on negative searches shouldn't
-                // normally happen, since there are no uninferred
-                // variables in the goal, but it can with forall
-                // goals:
-                //
-                //     forall<T> { not { T: Debug } }
-                //
-                // Here, the table we will be searching for answers is
-                // `?T: Debug`, so it could well flounder.
-                return Err(StrandFail::Floundered);
-            }
-
-            Err(RecursiveSearchFail::NegativeCycle) => {
-                return Err(StrandFail::NegativeCycle);
-            }
-
-            Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
-                // We depend on `not(subgoal)`. For us to continue,
-                // `subgoal` must be completely evaluated. Therefore,
-                // we depend (negatively) on the minimum link of
-                // `subgoal` as a whole -- it doesn't matter whether
-                // it's pos or neg.
-                let min = minimums.minimum_of_pos_and_neg();
-                info!(
-                    "pursue_negative_subgoal: found neg cycle at depth {:?}",
-                    min
-                );
-                let canonical_strand = Self::canonicalize_strand(strand);
-                return Err(StrandFail::PositiveCycle(
-                    canonical_strand,
-                    Minimums {
-                        positive: self.stack[depth].dfn,
-                        negative: min,
-                    },
-                ));
-            }
-
-            Err(RecursiveSearchFail::NoMoreSolutions) => {
-                // This answer does not exist. Huzzah, happy days are
-                // here again! =) We can just remove this subgoal and continue
-                // with no need for a delayed literal.
-                ambiguous = false;
-            }
-
-            // Learned nothing yet. Have to try again some other time.
-            Err(RecursiveSearchFail::QuantumExceeded) => {
-                info!("pursue_negative_subgoal: quantum exceeded");
-                self.tables[table].push_strand(Self::canonicalize_strand(strand));
-                return Err(StrandFail::QuantumExceeded);
-            }
-        }
-
-        // We have found that there is at least a *chance* that
-        // `answer_index` of the subgoal is a failure, so let's keep
-        // going. We can just remove the subgoal from the list without
-        // any need to unify things, because the subgoal must be
-        // ground.
-        let Strand {
-            infer,
-            mut ex_clause,
-            selected_subgoal: _,
-        } = strand;
-        ex_clause.subgoals.remove(selected_subgoal.subgoal_index);
-        if ambiguous {
-            ex_clause.ambiguous = true;
-        }
-        self.pursue_strand_recursively(
-            context,
-            depth,
-            Strand {
-                infer,
-                ex_clause,
-                selected_subgoal: None,
-            },
-        )
     }
 }
