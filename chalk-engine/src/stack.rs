@@ -1,11 +1,20 @@
+use crate::context::Context;
+use crate::strand::Strand;
+use crate::table::AnswerIndex;
 use crate::{DepthFirstNumber, Minimums, TableIndex, TimeStamp};
 use std::ops::{Index, IndexMut, Range};
 
 /// See `Forest`.
-#[derive(Default)]
-pub(crate) struct Stack {
+#[derive(Debug)]
+pub(crate) struct Stack<C: Context> {
     /// Stack: as described above, stores the in-progress goals.
-    stack: Vec<StackEntry>,
+    stack: Vec<StackEntry<C>>,
+}
+
+impl<C: Context> Default for Stack<C> {
+    fn default() -> Self {
+        Stack { stack: vec![] }
+    }
 }
 
 index_struct! {
@@ -18,9 +27,12 @@ index_struct! {
     }
 }
 
-pub(crate) struct StackEntry {
+#[derive(Debug)]
+pub(crate) struct StackEntry<C: Context> {
     /// The goal G from the stack entry `A :- G` represented here.
     pub(super) table: TableIndex,
+
+    pub(super) answer: AnswerIndex,
 
     /// The DFN of this computation.
     pub(super) dfn: DepthFirstNumber,
@@ -28,9 +40,14 @@ pub(crate) struct StackEntry {
     pub(super) work: TimeStamp,
 
     pub(super) cyclic_minimums: Minimums,
+
+    // FIXME: should store this as an index.
+    // This would mean that if we unwind,
+    // we don't need to worry about losing a strand
+    pub(super) active_strand: Option<Strand<C>>,
 }
 
-impl Stack {
+impl<C: Context> Stack<C> {
     pub(super) fn is_empty(&self) -> bool {
         self.stack.is_empty()
     }
@@ -55,29 +72,47 @@ impl Stack {
         depth..StackIndex::from(self.stack.len())
     }
 
-    pub(super) fn push(&mut self, table: TableIndex, dfn: DepthFirstNumber, work: TimeStamp, cyclic_minimums: Minimums) -> StackIndex {
+    pub(super) fn push(
+        &mut self,
+        table: TableIndex,
+        answer: AnswerIndex,
+        dfn: DepthFirstNumber,
+        work: TimeStamp,
+        cyclic_minimums: Minimums,
+    ) -> StackIndex {
         let old_len = self.stack.len();
-        self.stack.push(StackEntry { table, dfn, work, cyclic_minimums });
+        self.stack.push(StackEntry {
+            table,
+            answer,
+            dfn,
+            work,
+            cyclic_minimums,
+            active_strand: None,
+        });
         StackIndex::from(old_len)
     }
 
-    pub(super) fn pop(&mut self, table: TableIndex, depth: StackIndex) {
+    pub(super) fn pop(&mut self, depth: StackIndex) -> Option<StackIndex> {
         assert_eq!(self.stack.len(), depth.value + 1);
-        assert_eq!(self[depth].table, table);
         self.stack.pop();
+        if !self.stack.is_empty() {
+            Some(StackIndex::from(self.stack.len() - 1))
+        } else {
+            None
+        }
     }
 }
 
-impl Index<StackIndex> for Stack {
-    type Output = StackEntry;
+impl<C: Context> Index<StackIndex> for Stack<C> {
+    type Output = StackEntry<C>;
 
-    fn index(&self, index: StackIndex) -> &StackEntry {
+    fn index(&self, index: StackIndex) -> &StackEntry<C> {
         &self.stack[index.value]
     }
 }
 
-impl IndexMut<StackIndex> for Stack {
-    fn index_mut(&mut self, index: StackIndex) -> &mut StackEntry {
+impl<C: Context> IndexMut<StackIndex> for Stack<C> {
+    fn index_mut(&mut self, index: StackIndex) -> &mut StackEntry<C> {
         &mut self.stack[index.value]
     }
 }
