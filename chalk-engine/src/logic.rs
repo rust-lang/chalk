@@ -164,11 +164,14 @@ impl<C: Context> Forest<C> {
         return None;
     }
 
-    fn check_answer(
+    /// Merges an answer into the provided `Strand`.
+    /// On success, `Ok` is returned and the `Strand` can be continued to process
+    /// On failure, `Err` is returned an the `Strand` should be discarded
+    fn merge_answer_into_strand(
         &mut self,
         strand: &mut Strand<C>,
         depth: &mut StackIndex,
-    ) -> Option<RecursiveSearchResult<EnsureSuccess>> {
+    ) -> RecursiveSearchResult<()> {
         // At this point, we know we have an answer for
         // the selected subgoal of the strand.
         // Now, we have to unify that answer onto the strand.
@@ -248,7 +251,7 @@ impl<C: Context> Forest<C> {
                         self.truncate_returned(ex_clause, infer);
 
                         // Ok, we've applied the answer to this Strand.
-                        return None;
+                        return Ok(());
                     }
 
                     // This answer led nowhere. Give up for now, but of course
@@ -260,19 +263,8 @@ impl<C: Context> Forest<C> {
                         // so it dropped at the end of this scope.
 
                         // Now we want to propogate back to the up with `QuantumExceeded`
-                        let mut depth = *depth;
-                        loop {
-                            let next_index = self.stack.pop(depth);
-                            if let Some(index) = next_index {
-                                depth = index;
-                            } else {
-                                return Some(Err(RecursiveSearchFail::QuantumExceeded));
-                            }
-
-                            let active_strand = self.stack[depth].active_strand.take().unwrap();
-                            let table = self.stack[depth].table;
-                            self.tables[table].push_strand(active_strand);
-                        }
+                        self.unwind_stack(*depth);
+                        return Err(RecursiveSearchFail::QuantumExceeded);
                     }
                 }
             }
@@ -289,22 +281,12 @@ impl<C: Context> Forest<C> {
                     // therefore we have failed to disprove it.
                     info!("found unconditional answer to neg literal -> NoSolution");
 
-                    // This strand as no solution. It is no longer active,
-                    // so it dropped at the end of this scope.
+                    // This strand as no solution. By returning an Err,
+                    // the caller should discard this `Strand`.
 
                     // Now we want to propogate back to the up with `QuantumExceeded`
-                    let mut depth = *depth;
-                    loop {
-                        let next_index = self.stack.pop(depth);
-                        if let Some(index) = next_index {
-                            depth = index;
-                        } else {
-                            return Some(Err(RecursiveSearchFail::QuantumExceeded));
-                        }
-                        let active_strand = self.stack[depth].active_strand.take().unwrap();
-                        let table = self.stack[depth].table;
-                        self.tables[table].push_strand(active_strand);
-                    }
+                    self.unwind_stack(*depth);
+                    return Err(RecursiveSearchFail::QuantumExceeded);
                 }
 
                 // Got back a conditional answer. We neither succeed
@@ -331,7 +313,7 @@ impl<C: Context> Forest<C> {
                 strand.ex_clause.ambiguous = true;
 
                 // Strand is ambigious.
-                return None;
+                return Ok(());
             }
         };
     }
@@ -345,8 +327,7 @@ impl<C: Context> Forest<C> {
                 return;
             }
 
-            let active_strand =
-                self.stack[depth].active_strand.take().unwrap();
+            let active_strand = self.stack[depth].active_strand.take().unwrap();
             let table = self.stack[depth].table;
             self.tables[table].push_strand(active_strand);
         }
@@ -388,23 +369,16 @@ impl<C: Context> Forest<C> {
         }
         let next_dfn = self.next_dfn();
         let next_work = self.increment_work();
-        let mut depth = self.stack.push(
-            initial_table,
-            initial_answer,
-            next_dfn,
-            next_work,
-            Minimums::MAX,
-        );
+        let mut depth = self
+            .stack
+            .push(initial_table, next_dfn, next_work, Minimums::MAX);
         loop {
             let work = self.stack[depth].work;
             // If we had an active strand, continue to pursue it
             let table = self.stack[depth].table;
-            let next_strand = match self.stack[depth].active_strand.take() {
-                None => {
-                    self.tables[table].pop_next_strand_if(|strand| strand.last_pursued_time < work)
-                }
-                Some(strand) => Some(strand),
-            };
+            let next_strand = self.stack[depth].active_strand.take().or_else(|| {
+                self.tables[table].pop_next_strand_if(|strand| strand.last_pursued_time < work)
+            });
             match next_strand {
                 Some(mut strand) => {
                     strand.last_pursued_time = work;
@@ -419,12 +393,17 @@ impl<C: Context> Forest<C> {
 
                             match self.ensure_precheck(subgoal_table, answer_index) {
                                 Some(Ok(EnsureSuccess::AnswerAvailable)) => {
-                                    match self.check_answer(&mut strand, &mut depth) {
-                                        Some(res) => return res,
-                                        None => {}
+                                    // There was a previous answer available for this table
+                                    // We need to check if 
+                                    match self.merge_answer_into_strand(&mut strand, &mut depth) {
+                                        Err(e) => {
+                                            return Err(e);
+                                        },
+                                        Ok(_) => {
+                                            self.stack[depth].active_strand = Some(strand);
+                                            continue;
+                                        }
                                     }
-                                    self.stack[depth].active_strand = Some(strand);
-                                    continue;
                                 }
                                 Some(Ok(EnsureSuccess::Coinductive)) => {
                                     // This is a co-inductive cycle. That is, this table
@@ -493,7 +472,6 @@ impl<C: Context> Forest<C> {
                                                 // Now we yield with `QuantumExceeded`
                                                 self.unwind_stack(depth);
                                                 return Err(RecursiveSearchFail::QuantumExceeded);
-                                                
                                             }
                                             Literal::Negative(_) => {
                                                 // Floundering on a negative literal isn't like a
@@ -581,13 +559,7 @@ impl<C: Context> Forest<C> {
                             let dfn = self.next_dfn();
                             let work = self.increment_work();
                             let cyclic_minimums = Minimums::MAX;
-                            depth = self.stack.push(
-                                subgoal_table,
-                                answer_index,
-                                dfn,
-                                work,
-                                cyclic_minimums,
-                            );
+                            depth = self.stack.push(subgoal_table, dfn, work, cyclic_minimums);
                             continue;
                         }
                         SubGoalSelection::NoRemaingSubgoals => {
@@ -610,15 +582,15 @@ impl<C: Context> Forest<C> {
                                         }
                                     };
 
-                                    match self.check_answer(&mut strand, &mut depth) {
-                                        Some(res) => return res,
-                                        None => {}
+                                    match self.merge_answer_into_strand(&mut strand, &mut depth) {
+                                        Err(e) => {
+                                            return Err(e);
+                                        },
+                                        Ok(_) => {
+                                            self.stack[depth].active_strand = Some(strand);
+                                            continue;
+                                        }
                                     }
-
-                                    // We still want it to be active though, but in the front
-                                    self.stack[depth].active_strand = Some(strand);
-
-                                    continue;
                                 }
                                 None => {
                                     // We were unable to find an answer to this strand
