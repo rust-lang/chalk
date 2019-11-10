@@ -16,9 +16,6 @@ type RootSearchResult<T> = Result<T, RootSearchFail>;
 /// The different ways that a *root* search (which potentially pursues
 /// many strands) can fail. A root search is one that begins with an
 /// empty stack.
-///
-/// (This is different from `RecursiveSearchFail` because nothing can
-/// be on the stack, so cycles are ruled out.)
 #[derive(Debug)]
 pub(super) enum RootSearchFail {
     /// The subgoal we were trying to solve cannot succeed.
@@ -39,35 +36,19 @@ pub(super) enum RootSearchFail {
     NegativeCycle,
 }
 
-type RecursiveSearchResult<T> = Result<T, RecursiveSearchFail>;
+type TableCheckResult<T> = Result<T, TableCheckFail>;
 
-/// The different ways that a recursive search (which potentially
-/// pursues many strands) can fail -- a "recursive" search is one that
-/// did not start with an empty stack.
+/// The different ways that a table check can fail
 #[derive(Debug)]
-enum RecursiveSearchFail {
-    /// The subgoal we were trying to solve cannot succeed.
-    NoMoreSolutions,
-
+enum TableCheckFail {
     /// The subgoal cannot be solved without more type information.
     Floundered,
-
-    /// A negative cycle was found. This is fail-fast, so even if there was
-    /// possibly a solution (ambiguous or not), it may not have been found.
-    NegativeCycle,
 
     /// **All** avenues to solve the subgoal we were trying solve
     /// encountered a cyclic dependency on something higher up in the
     /// stack. The `Minimums` encodes how high up (and whether
     /// positive or negative).
     PositiveCycle(Minimums),
-
-    /// We did not find a solution, but we still have things to try.
-    /// Repeat the request, and we'll give one of those a spin.
-    ///
-    /// (In a purely depth-first-based solver, like Prolog, this
-    /// doesn't appear.)
-    QuantumExceeded,
 }
 
 #[derive(Debug)]
@@ -95,18 +76,9 @@ impl<C: Context> Forest<C> {
     ) -> RootSearchResult<&Answer<C>> {
         assert!(self.stack.is_empty());
 
-        match self.ensure_answer_recursively(context, table, answer) {
-            Ok(EnsureSuccess::AnswerAvailable) => Ok(self.tables[table].answer(answer).unwrap()),
-            Err(RecursiveSearchFail::Floundered) => Err(RootSearchFail::Floundered),
-            Err(RecursiveSearchFail::NoMoreSolutions) => Err(RootSearchFail::NoMoreSolutions),
-            Err(RecursiveSearchFail::QuantumExceeded) => Err(RootSearchFail::QuantumExceeded),
-            Err(RecursiveSearchFail::NegativeCycle) => Err(RootSearchFail::NegativeCycle),
-
-            // Things involving cycles should be impossible since our
-            // stack was empty on entry:
-            Ok(EnsureSuccess::Coinductive) | Err(RecursiveSearchFail::PositiveCycle(..)) => {
-                panic!("root_answer: nothing on the stack but cyclic result")
-            }
+        match self.ensure_answer(context, table, answer) {
+            Ok(()) => Ok(self.tables[table].answer(answer).unwrap()),
+            Err(err) => Err(err),
         }
     }
 
@@ -126,14 +98,20 @@ impl<C: Context> Forest<C> {
             .any(|strand| test(&strand.ex_clause.subst))
     }
 
-    fn ensure_precheck(
+    /// Before we pursue a table, we need to check a couple things
+    /// - Has it floundered? -> `Some(Err(TableCheckFail::Floundered))`
+    /// - Does it have an answer? -> `Some(Ok(EnsureSuccess::AnswerAvailable))`
+    /// - Does it make a coinductive cycle? -> `Some(Ok(EnsureSuccess::Coinductive))`
+    /// - Does it make a non-coinductive cycle? -> `Some(Err(TableCheckFail::PositiveCycle`
+    /// - Otherwise, need to pursue -> `None`
+    fn check_table(
         &mut self,
         table: TableIndex,
         answer: AnswerIndex,
-    ) -> Option<RecursiveSearchResult<EnsureSuccess>> {
+    ) -> Option<TableCheckResult<EnsureSuccess>> {
         // First, check if this table has floundered.
         if self.tables[table].is_floundered() {
-            return Some(Err(RecursiveSearchFail::Floundered));
+            return Some(Err(TableCheckFail::Floundered));
         }
 
         // Next, check for a tabled answer.
@@ -155,7 +133,7 @@ impl<C: Context> Forest<C> {
                 return Some(Ok(EnsureSuccess::Coinductive));
             }
 
-            return Some(Err(RecursiveSearchFail::PositiveCycle(Minimums {
+            return Some(Err(TableCheckFail::PositiveCycle(Minimums {
                 positive: self.stack[depth].dfn,
                 negative: DepthFirstNumber::MAX,
             })));
@@ -171,7 +149,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         strand: &mut Strand<C>,
         depth: &mut StackIndex,
-    ) -> RecursiveSearchResult<()> {
+    ) -> RootSearchResult<()> {
         // At this point, we know we have an answer for
         // the selected subgoal of the strand.
         // Now, we have to unify that answer onto the strand.
@@ -264,7 +242,7 @@ impl<C: Context> Forest<C> {
 
                         // Now we want to propogate back to the up with `QuantumExceeded`
                         self.unwind_stack(*depth);
-                        return Err(RecursiveSearchFail::QuantumExceeded);
+                        return Err(RootSearchFail::QuantumExceeded);
                     }
                 }
             }
@@ -286,7 +264,7 @@ impl<C: Context> Forest<C> {
 
                     // Now we want to propogate back to the up with `QuantumExceeded`
                     self.unwind_stack(*depth);
-                    return Err(RecursiveSearchFail::QuantumExceeded);
+                    return Err(RootSearchFail::QuantumExceeded);
                 }
 
                 // Got back a conditional answer. We neither succeed
@@ -316,6 +294,74 @@ impl<C: Context> Forest<C> {
                 return Ok(());
             }
         };
+    }
+
+    /// This is call when the selected subgoal for a strand has floundered.
+    /// We have to decide what this means for the strand.
+    /// - If the strand was positively dependent on the subgoal, we flounder,
+    ///   the subgoal, push the strand back onto the table to be retried later,
+    ///   and then return `Some(TableCheckFail:QuantumExceeded`
+    /// - If the strand was negatively dependent on the subgoal, then strand
+    ///   has led nowhere of interest. We mark the table as floundered and
+    ///   discard the strand. We then return `None`
+    fn flounder_selected_subgoal(&mut self, depth: StackIndex, mut strand: Strand<C>) -> Option<RootSearchFail> {
+        // This subgoal selection for the strand is finished, so take it
+        let selected_subgoal =
+            strand.selected_subgoal.take().unwrap();
+        match strand.ex_clause.subgoals
+            [selected_subgoal.subgoal_index]
+        {
+            Literal::Positive(_) => {
+                // If this strand depends on this positively, then we can
+                // come back to it later. So, we mark that subgoal as
+                // floundered and yield `QuantumExceeded` up the stack
+
+                // If this subgoal floundered, push it onto the
+                // floundered list, along with the time that it
+                // floundered. We'll try to solve some other subgoals
+                // and maybe come back to it.
+                self.flounder_subgoal(
+                    &mut strand.ex_clause,
+                    selected_subgoal.subgoal_index,
+                );
+
+                // We want to maybe pursue this strand later
+                let table = self.stack[depth].table;
+                self.tables[table].push_strand(strand);
+
+                // Now we yield with `QuantumExceeded`
+                self.unwind_stack(depth);
+                return Some(RootSearchFail::QuantumExceeded);
+            }
+            Literal::Negative(_) => {
+                // Floundering on a negative literal isn't like a
+                // positive search: we only pursue negative literals
+                // when we already know precisely the type we are
+                // looking for. So there's no point waiting for other
+                // subgoals, we'll never recover more information.
+                //
+                // In fact, floundering on negative searches shouldn't
+                // normally happen, since there are no uninferred
+                // variables in the goal, but it can with forall
+                // goals:
+                //
+                //     forall<T> { not { T: Debug } }
+                //
+                // Here, the table we will be searching for answers is
+                // `?T: Debug`, so it could well flounder.
+
+                // This strand has no solution. It is no longer active,
+                // so it dropped at the end of this scope.
+
+                // Because a subgoal that we depended on negatively floundered,
+                // this table flounders
+                let table = self.stack[depth].table;
+                debug!("Marking table {:?} as floundered!", table);
+                self.tables[table].mark_floundered();
+
+                return None;
+            }
+        }
     }
 
     fn unwind_stack(&mut self, mut depth: StackIndex) {
@@ -351,20 +397,22 @@ impl<C: Context> Forest<C> {
     /// push the table onto the stack and select the next available
     /// strand -- if none are available, then no more answers are
     /// possible.
-    fn ensure_answer_recursively(
+    fn ensure_answer(
         &mut self,
         context: &impl ContextOps<C>,
         initial_table: TableIndex,
         initial_answer: AnswerIndex,
-    ) -> RecursiveSearchResult<EnsureSuccess> {
+    ) -> RootSearchResult<()> {
         info_heading!(
-            "ensure_answer_recursively(table={:?}, answer={:?})",
+            "ensure_answer(table={:?}, answer={:?})",
             initial_table,
             initial_answer
         );
         info!("table goal = {:#?}", self.tables[initial_table].table_goal);
-        match self.ensure_precheck(initial_table, initial_answer) {
-            Some(res) => return res,
+        match self.check_table(initial_table, initial_answer) {
+            Some(Ok(EnsureSuccess::AnswerAvailable)) => return Ok(()),
+            Some(Err(TableCheckFail::Floundered)) => return Err(RootSearchFail::Floundered),
+            Some(Ok(EnsureSuccess::Coinductive)) | Some(Err(TableCheckFail::PositiveCycle(..))) => panic!("cycle at root"),
             None => {}
         }
         let next_dfn = self.next_dfn();
@@ -384,6 +432,8 @@ impl<C: Context> Forest<C> {
                     strand.last_pursued_time = work;
                     match self.select_subgoal(context, &mut strand) {
                         SubGoalSelection::Selected => {
+                            // This may be a newly selected subgoal or an existing selected subgoal.
+
                             let SelectedSubgoal {
                                 subgoal_index: _,
                                 subgoal_table,
@@ -391,7 +441,7 @@ impl<C: Context> Forest<C> {
                                 universe_map: _,
                             } = *strand.selected_subgoal.as_ref().unwrap();
 
-                            match self.ensure_precheck(subgoal_table, answer_index) {
+                            match self.check_table(subgoal_table, answer_index) {
                                 Some(Ok(EnsureSuccess::AnswerAvailable)) => {
                                     // There was a previous answer available for this table
                                     // We need to check if 
@@ -437,72 +487,19 @@ impl<C: Context> Forest<C> {
 
                                             // Now we yield with `QuantumExceeded`
                                             self.unwind_stack(depth);
-                                            return Err(RecursiveSearchFail::QuantumExceeded);
+                                            return Err(RootSearchFail::QuantumExceeded);
                                         }
                                     }
                                 }
-                                Some(Err(RecursiveSearchFail::Floundered)) => {
+                                Some(Err(TableCheckFail::Floundered)) => {
+                                    // This table has previously floundered. What does
+                                    // this mean for the current strand?
+                                    match self.flounder_selected_subgoal(depth, strand) {
+                                        Some(err) => return Err(err),
+                                        None => {}
+                                    }
+
                                     loop {
-                                        // The subgoal floundered, what does this mean for the strand
-
-                                        // This subgoal selection for the strand is finished, so take it
-                                        let selected_subgoal =
-                                            strand.selected_subgoal.take().unwrap();
-                                        match strand.ex_clause.subgoals
-                                            [selected_subgoal.subgoal_index]
-                                        {
-                                            Literal::Positive(_) => {
-                                                // If this strand depends on this positively, then we can
-                                                // come back to it later. So, we mark that subgoal as
-                                                // floundered and yield `QuantumExceeded` up the stack
-
-                                                // If this subgoal floundered, push it onto the
-                                                // floundered list, along with the time that it
-                                                // floundered. We'll try to solve some other subgoals
-                                                // and maybe come back to it.
-                                                self.flounder_subgoal(
-                                                    &mut strand.ex_clause,
-                                                    selected_subgoal.subgoal_index,
-                                                );
-
-                                                // We want to maybe pursue this strand later
-                                                let table = self.stack[depth].table;
-                                                self.tables[table].push_strand(strand);
-
-                                                // Now we yield with `QuantumExceeded`
-                                                self.unwind_stack(depth);
-                                                return Err(RecursiveSearchFail::QuantumExceeded);
-                                            }
-                                            Literal::Negative(_) => {
-                                                // Floundering on a negative literal isn't like a
-                                                // positive search: we only pursue negative literals
-                                                // when we already know precisely the type we are
-                                                // looking for. So there's no point waiting for other
-                                                // subgoals, we'll never recover more information.
-                                                //
-                                                // In fact, floundering on negative searches shouldn't
-                                                // normally happen, since there are no uninferred
-                                                // variables in the goal, but it can with forall
-                                                // goals:
-                                                //
-                                                //     forall<T> { not { T: Debug } }
-                                                //
-                                                // Here, the table we will be searching for answers is
-                                                // `?T: Debug`, so it could well flounder.
-
-                                                // This strand has no solution. It is no longer active,
-                                                // so it dropped at the end of this scope.
-
-                                                // Because a subgoal that we depended on negatively floundered,
-                                                // this table flounders
-                                                let table = self.stack[depth].table;
-                                                debug!("Marking table {:?} as floundered!", table);
-                                                self.tables[table].mark_floundered();
-
-                                                // This subgoal floundered so continue to propogate up
-                                            }
-                                        }
-
                                         let prev_index = self.stack.pop(depth);
                                         if let Some(index) = prev_index {
                                             // The table was a subgoal for another strand,
@@ -511,12 +508,17 @@ impl<C: Context> Forest<C> {
                                             depth = index;
                                         } else {
                                             // That was the root table, so we are done.
-                                            return Err(RecursiveSearchFail::Floundered);
+                                            return Err(RootSearchFail::Floundered);
                                         }
                                         strand = self.stack[depth].active_strand.take().unwrap();
+
+                                        match self.flounder_selected_subgoal(depth, strand) {
+                                            Some(err) => return Err(err),
+                                            None => {}
+                                        }
                                     }
                                 }
-                                Some(Err(RecursiveSearchFail::PositiveCycle(minimums))) => {
+                                Some(Err(TableCheckFail::PositiveCycle(minimums))) => {
                                     // The selected subgoal causes a positive cycle
 
                                     // We can't take this because we might need it later to clear the cycle
@@ -550,7 +552,6 @@ impl<C: Context> Forest<C> {
                                     // The strand isn't active, but the table is, so just continue
                                     continue;
                                 }
-                                Some(Err(_)) => panic!("Invalid case"),
                                 None => {}
                             }
 
@@ -578,7 +579,7 @@ impl<C: Context> Forest<C> {
                                             self.stack[depth].active_strand.take().unwrap()
                                         } else {
                                             // That was the root table, so we are done.
-                                            return Ok(EnsureSuccess::AnswerAvailable);
+                                            return Ok(());
                                         }
                                     };
 
@@ -598,7 +599,7 @@ impl<C: Context> Forest<C> {
 
                                     // Now we yield with `QuantumExceeded`
                                     self.unwind_stack(depth);
-                                    return Err(RecursiveSearchFail::QuantumExceeded);
+                                    return Err(RootSearchFail::QuantumExceeded);
                                 }
                             };
                         }
@@ -611,10 +612,9 @@ impl<C: Context> Forest<C> {
                             debug!("Marking table {:?} as floundered!", table);
                             self.tables[table].mark_floundered();
 
-                            // Now we have to propogate up the flounder
+                            // We discard this strand because it led nowhere of interest
 
                             loop {
-                                // This subgoal floundered so continue to propogate up
                                 let prev_index = self.stack.pop(depth);
                                 if let Some(index) = prev_index {
                                     // The table was a subgoal for another strand,
@@ -623,57 +623,13 @@ impl<C: Context> Forest<C> {
                                     depth = index;
                                 } else {
                                     // That was the root table, so we are done.
-                                    return Err(RecursiveSearchFail::Floundered);
+                                    return Err(RootSearchFail::Floundered);
                                 }
-                                let mut strand = self.stack[depth].active_strand.take().unwrap();
+                                let strand = self.stack[depth].active_strand.take().unwrap();
 
-                                // This subgoal selection for the strand is finished, so take it
-                                let selected_subgoal = strand.selected_subgoal.take().unwrap();
-                                match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
-                                    Literal::Positive(_) => {
-                                        // If this subgoal floundered, push it onto the
-                                        // floundered list, along with the time that it
-                                        // floundered. We'll try to solve some other subgoals
-                                        // and maybe come back to it.
-                                        self.flounder_subgoal(
-                                            &mut strand.ex_clause,
-                                            selected_subgoal.subgoal_index,
-                                        );
-
-                                        // We want to maybe pursue this strand later
-                                        let table = self.stack[depth].table;
-                                        self.tables[table].push_strand(strand);
-
-                                        // Now we yield with `QuantumExceeded`
-                                        self.unwind_stack(depth);
-                                        return Err(RecursiveSearchFail::QuantumExceeded);
-                                    }
-                                    Literal::Negative(_) => {
-                                        // Floundering on a negative literal isn't like a
-                                        // positive search: we only pursue negative literals
-                                        // when we already know precisely the type we are
-                                        // looking for. So there's no point waiting for other
-                                        // subgoals, we'll never recover more information.
-                                        //
-                                        // In fact, floundering on negative searches shouldn't
-                                        // normally happen, since there are no uninferred
-                                        // variables in the goal, but it can with forall
-                                        // goals:
-                                        //
-                                        //     forall<T> { not { T: Debug } }
-                                        //
-                                        // Here, the table we will be searching for answers is
-                                        // `?T: Debug`, so it could well flounder.
-
-                                        // This strand has no solution. It is no longer active,
-                                        // so it dropped at the end of this scope.
-
-                                        // Because a subgoal that we depended on negatively floundered,
-                                        // this table flounders
-                                        let table = self.stack[depth].table;
-                                        debug!("Marking table {:?} as floundered!", table);
-                                        self.tables[table].mark_floundered();
-                                    }
+                                match self.flounder_selected_subgoal(depth, strand) {
+                                    Some(err) => return Err(err),
+                                    None => {}
                                 }
                             }
                         }
@@ -698,7 +654,7 @@ impl<C: Context> Forest<C> {
                                 self.stack[depth].active_strand.as_mut().unwrap()
                             } else {
                                 // That was the root table, so we are done.
-                                return Err(RecursiveSearchFail::NoMoreSolutions);
+                                return Err(RootSearchFail::NoMoreSolutions);
                             }
                         };
 
@@ -711,7 +667,7 @@ impl<C: Context> Forest<C> {
 
                                 // Now we yield with `QuantumExceeded`
                                 self.unwind_stack(depth);
-                                return Err(RecursiveSearchFail::QuantumExceeded);
+                                return Err(RootSearchFail::QuantumExceeded);
                             }
                             Literal::Negative(_) => {
                                 // There is no solution for this strand
@@ -733,10 +689,8 @@ impl<C: Context> Forest<C> {
                     if cyclic_minimums.positive >= dfn && cyclic_minimums.negative >= dfn {
                         if cyclic_minimums.negative < DepthFirstNumber::MAX {
                             // This is a negative cycle.
-                            // Discard the currently active strand and propogate up.
-                            self.stack[depth].active_strand.take();
                             self.unwind_stack(depth);
-                            return Err(RecursiveSearchFail::NegativeCycle);
+                            return Err(RootSearchFail::NegativeCycle);
                         }
 
                         // If all the things that we recursively depend on have
@@ -749,7 +703,7 @@ impl<C: Context> Forest<C> {
 
                         // Now we yield with `QuantumExceeded`
                         self.unwind_stack(depth);
-                        return Err(RecursiveSearchFail::QuantumExceeded);
+                        return Err(RootSearchFail::QuantumExceeded);
                     } else {
                         // This table resulted in a positive cycle, so we have
                         // to check what this means for the subgoal containing
@@ -880,6 +834,8 @@ impl<C: Context> Forest<C> {
                 }
             }
         }
+
+        // FIXME: we should just check if the selected subgoal has floundered here (probably)
 
         SubGoalSelection::Selected
     }
