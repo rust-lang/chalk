@@ -336,6 +336,22 @@ impl<C: Context> Forest<C> {
         };
     }
 
+    fn unwind_stack(&mut self, mut depth: StackIndex) {
+        loop {
+            let next_index = self.stack.pop(depth);
+            if let Some(index) = next_index {
+                depth = index;
+            } else {
+                return;
+            }
+
+            let active_strand =
+                self.stack[depth].active_strand.take().unwrap();
+            let table = self.stack[depth].table;
+            self.tables[table].push_strand(active_strand);
+        }
+    }
+
     /// Ensures that answer with the given index is available from the
     /// given table. Returns `Ok` if there is an answer:
     ///
@@ -441,21 +457,8 @@ impl<C: Context> Forest<C> {
                                             // We discard the current strand when it goes out of scope
 
                                             // Now we yield with `QuantumExceeded`
-                                            loop {
-                                                let next_index = self.stack.pop(depth);
-                                                if let Some(index) = next_index {
-                                                    depth = index;
-                                                } else {
-                                                    return Err(
-                                                        RecursiveSearchFail::QuantumExceeded,
-                                                    );
-                                                }
-
-                                                let active_strand =
-                                                    self.stack[depth].active_strand.take().unwrap();
-                                                let table = self.stack[depth].table;
-                                                self.tables[table].push_strand(active_strand);
-                                            }
+                                            self.unwind_stack(depth);
+                                            return Err(RecursiveSearchFail::QuantumExceeded);
                                         }
                                     }
                                 }
@@ -488,23 +491,9 @@ impl<C: Context> Forest<C> {
                                                 self.tables[table].push_strand(strand);
 
                                                 // Now we yield with `QuantumExceeded`
-                                                loop {
-                                                    let next_index = self.stack.pop(depth);
-                                                    if let Some(index) = next_index {
-                                                        depth = index;
-                                                    } else {
-                                                        return Err(
-                                                            RecursiveSearchFail::QuantumExceeded,
-                                                        );
-                                                    }
-
-                                                    let active_strand = self.stack[depth]
-                                                        .active_strand
-                                                        .take()
-                                                        .unwrap();
-                                                    let table = self.stack[depth].table;
-                                                    self.tables[table].push_strand(active_strand);
-                                                }
+                                                self.unwind_stack(depth);
+                                                return Err(RecursiveSearchFail::QuantumExceeded);
+                                                
                                             }
                                             Literal::Negative(_) => {
                                                 // Floundering on a negative literal isn't like a
@@ -636,19 +625,8 @@ impl<C: Context> Forest<C> {
                                     // Therefore we can just discard it
 
                                     // Now we yield with `QuantumExceeded`
-                                    loop {
-                                        let next_index = self.stack.pop(depth);
-                                        if let Some(index) = next_index {
-                                            depth = index;
-                                        } else {
-                                            return Err(RecursiveSearchFail::QuantumExceeded);
-                                        }
-
-                                        let active_strand =
-                                            self.stack[depth].active_strand.take().unwrap();
-                                        let table = self.stack[depth].table;
-                                        self.tables[table].push_strand(active_strand);
-                                    }
+                                    self.unwind_stack(depth);
+                                    return Err(RecursiveSearchFail::QuantumExceeded);
                                 }
                             };
                         }
@@ -662,6 +640,7 @@ impl<C: Context> Forest<C> {
                             self.tables[table].mark_floundered();
 
                             // Now we have to propogate up the flounder
+
                             loop {
                                 // This subgoal floundered so continue to propogate up
                                 let prev_index = self.stack.pop(depth);
@@ -674,7 +653,7 @@ impl<C: Context> Forest<C> {
                                     // That was the root table, so we are done.
                                     return Err(RecursiveSearchFail::Floundered);
                                 }
-                                strand = self.stack[depth].active_strand.take().unwrap();
+                                let mut strand = self.stack[depth].active_strand.take().unwrap();
 
                                 // This subgoal selection for the strand is finished, so take it
                                 let selected_subgoal = strand.selected_subgoal.take().unwrap();
@@ -694,19 +673,8 @@ impl<C: Context> Forest<C> {
                                         self.tables[table].push_strand(strand);
 
                                         // Now we yield with `QuantumExceeded`
-                                        loop {
-                                            let next_index = self.stack.pop(depth);
-                                            if let Some(index) = next_index {
-                                                depth = index;
-                                            } else {
-                                                return Err(RecursiveSearchFail::QuantumExceeded);
-                                            }
-
-                                            let active_strand =
-                                                self.stack[depth].active_strand.take().unwrap();
-                                            let table = self.stack[depth].table;
-                                            self.tables[table].push_strand(active_strand);
-                                        }
+                                        self.unwind_stack(depth);
+                                        return Err(RecursiveSearchFail::QuantumExceeded);
                                     }
                                     Literal::Negative(_) => {
                                         // Floundering on a negative literal isn't like a
@@ -770,19 +738,8 @@ impl<C: Context> Forest<C> {
                                 self.stack[depth].active_strand.take();
 
                                 // Now we yield with `QuantumExceeded`
-                                loop {
-                                    let next_index = self.stack.pop(depth);
-                                    if let Some(index) = next_index {
-                                        depth = index;
-                                    } else {
-                                        return Err(RecursiveSearchFail::QuantumExceeded);
-                                    }
-
-                                    let active_strand =
-                                        self.stack[depth].active_strand.take().unwrap();
-                                    let table = self.stack[depth].table;
-                                    self.tables[table].push_strand(active_strand);
-                                }
+                                self.unwind_stack(depth);
+                                return Err(RecursiveSearchFail::QuantumExceeded);
                             }
                             Literal::Negative(_) => {
                                 // There is no solution for this strand
@@ -806,18 +763,8 @@ impl<C: Context> Forest<C> {
                             // This is a negative cycle.
                             // Discard the currently active strand and propogate up.
                             self.stack[depth].active_strand.take();
-                            loop {
-                                let next_index = self.stack.pop(depth);
-                                if let Some(index) = next_index {
-                                    depth = index;
-                                } else {
-                                    return Err(RecursiveSearchFail::NegativeCycle);
-                                }
-
-                                let active_strand = self.stack[depth].active_strand.take().unwrap();
-                                let table = self.stack[depth].table;
-                                self.tables[table].push_strand(active_strand);
-                            }
+                            self.unwind_stack(depth);
+                            return Err(RecursiveSearchFail::NegativeCycle);
                         }
 
                         // If all the things that we recursively depend on have
@@ -829,18 +776,8 @@ impl<C: Context> Forest<C> {
                         self.clear_strands_after_cycle(cyclic_strands);
 
                         // Now we yield with `QuantumExceeded`
-                        loop {
-                            let next_index = self.stack.pop(depth);
-                            if let Some(index) = next_index {
-                                depth = index;
-                            } else {
-                                return Err(RecursiveSearchFail::QuantumExceeded);
-                            }
-
-                            let active_strand = self.stack[depth].active_strand.take().unwrap();
-                            let table = self.stack[depth].table;
-                            self.tables[table].push_strand(active_strand);
-                        }
+                        self.unwind_stack(depth);
+                        return Err(RecursiveSearchFail::QuantumExceeded);
                     } else {
                         // This table resulted in a positive cycle, so we have
                         // to check what this means for the subgoal containing

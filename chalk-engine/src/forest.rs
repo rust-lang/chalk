@@ -199,18 +199,15 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
     /// Panics if a negative cycle was detected.
     fn peek_answer(&mut self) -> Option<Answer<C>> {
         loop {
-            dbg!(&self.table, &self.answer);
             match self
                 .forest
                 .root_answer(self.context, self.table, self.answer)
             {
                 Ok(answer) => {
-                    dbg!(&answer);
                     return Some(answer.clone());
                 }
 
                 Err(RootSearchFail::Floundered) => {
-                    dbg!("Floundered");
                     let table_goal = &self.forest.tables[self.table].table_goal;
                     return Some(Answer {
                         subst: self.context.identity_constrained_subst(table_goal),
