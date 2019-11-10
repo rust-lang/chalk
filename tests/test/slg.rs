@@ -84,7 +84,7 @@ fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &s
 }
 
 #[test]
-fn basic1() {
+fn basic() {
     test! {
         program {
             trait Sized { }
