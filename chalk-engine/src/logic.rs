@@ -304,13 +304,14 @@ impl<C: Context> Forest<C> {
     /// - If the strand was negatively dependent on the subgoal, then strand
     ///   has led nowhere of interest. We mark the table as floundered and
     ///   discard the strand. We then return `None`
-    fn flounder_selected_subgoal(&mut self, depth: StackIndex, mut strand: Strand<C>) -> Option<RootSearchFail> {
+    fn flounder_selected_subgoal(
+        &mut self,
+        depth: StackIndex,
+        mut strand: Strand<C>,
+    ) -> Option<RootSearchFail> {
         // This subgoal selection for the strand is finished, so take it
-        let selected_subgoal =
-            strand.selected_subgoal.take().unwrap();
-        match strand.ex_clause.subgoals
-            [selected_subgoal.subgoal_index]
-        {
+        let selected_subgoal = strand.selected_subgoal.take().unwrap();
+        match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
             Literal::Positive(_) => {
                 // If this strand depends on this positively, then we can
                 // come back to it later. So, we mark that subgoal as
@@ -320,10 +321,7 @@ impl<C: Context> Forest<C> {
                 // floundered list, along with the time that it
                 // floundered. We'll try to solve some other subgoals
                 // and maybe come back to it.
-                self.flounder_subgoal(
-                    &mut strand.ex_clause,
-                    selected_subgoal.subgoal_index,
-                );
+                self.flounder_subgoal(&mut strand.ex_clause, selected_subgoal.subgoal_index);
 
                 // We want to maybe pursue this strand later
                 let table = self.stack[depth].table;
@@ -380,14 +378,7 @@ impl<C: Context> Forest<C> {
     }
 
     /// Ensures that answer with the given index is available from the
-    /// given table. Returns `Ok` if there is an answer:
-    ///
-    /// - `EnsureSuccess::AnswerAvailable` means that the answer is
-    ///   cached in the table (and can be fetched with e.g. `self.answer()`).
-    /// - `EnsureSuccess::Coinductive` means that this was a cyclic
-    ///   request of a coinductive goal and is thus considered true;
-    ///   in this case, the answer is not cached in the table (it is
-    ///   only true in this cyclic context).
+    /// given table. Returns `Ok` if there is an answer.
     ///
     /// This function first attempts to fetch answer that is cached in
     /// the table. If none is found, then we will if the table is on
@@ -403,16 +394,17 @@ impl<C: Context> Forest<C> {
         initial_table: TableIndex,
         initial_answer: AnswerIndex,
     ) -> RootSearchResult<()> {
-        info_heading!(
+        info!(
             "ensure_answer(table={:?}, answer={:?})",
-            initial_table,
-            initial_answer
+            initial_table, initial_answer
         );
         info!("table goal = {:#?}", self.tables[initial_table].table_goal);
         match self.check_table(initial_table, initial_answer) {
             Some(Ok(EnsureSuccess::AnswerAvailable)) => return Ok(()),
             Some(Err(TableCheckFail::Floundered)) => return Err(RootSearchFail::Floundered),
-            Some(Ok(EnsureSuccess::Coinductive)) | Some(Err(TableCheckFail::PositiveCycle(..))) => panic!("cycle at root"),
+            Some(Ok(EnsureSuccess::Coinductive)) | Some(Err(TableCheckFail::PositiveCycle(..))) => {
+                panic!("cycle at root")
+            }
             None => {}
         }
         let next_dfn = self.next_dfn();
@@ -421,6 +413,8 @@ impl<C: Context> Forest<C> {
             .stack
             .push(initial_table, next_dfn, next_work, Minimums::MAX);
         loop {
+            // FIXME: use depth for debug/info printing
+
             let work = self.stack[depth].work;
             // If we had an active strand, continue to pursue it
             let table = self.stack[depth].table;
@@ -429,6 +423,8 @@ impl<C: Context> Forest<C> {
             });
             match next_strand {
                 Some(mut strand) => {
+                    debug!("next strand: {:#?}", strand);
+
                     strand.last_pursued_time = work;
                     match self.select_subgoal(context, &mut strand) {
                         SubGoalSelection::Selected => {
@@ -441,21 +437,31 @@ impl<C: Context> Forest<C> {
                                 universe_map: _,
                             } = *strand.selected_subgoal.as_ref().unwrap();
 
+                            debug!(
+                                "table selection {:?} with goal: {:#?}",
+                                subgoal_table, self.tables[subgoal_table].table_goal
+                            );
+
                             match self.check_table(subgoal_table, answer_index) {
                                 Some(Ok(EnsureSuccess::AnswerAvailable)) => {
+                                    debug!("previous answer available");
                                     // There was a previous answer available for this table
-                                    // We need to check if 
+                                    // We need to check if
                                     match self.merge_answer_into_strand(&mut strand, &mut depth) {
                                         Err(e) => {
+                                            debug!("could not merge into current strand");
                                             return Err(e);
-                                        },
+                                        }
                                         Ok(_) => {
+                                            debug!("merged answer into current strand");
                                             self.stack[depth].active_strand = Some(strand);
                                             continue;
                                         }
                                     }
                                 }
                                 Some(Ok(EnsureSuccess::Coinductive)) => {
+                                    debug!("table is coinductive");
+
                                     // This is a co-inductive cycle. That is, this table
                                     // appears somewhere higher on the stack, and has now
                                     // recursively requested an answer for itself. That
@@ -492,6 +498,8 @@ impl<C: Context> Forest<C> {
                                     }
                                 }
                                 Some(Err(TableCheckFail::Floundered)) => {
+                                    debug!("table floundered");
+
                                     // This table has previously floundered. What does
                                     // this mean for the current strand?
                                     match self.flounder_selected_subgoal(depth, strand) {
@@ -519,6 +527,8 @@ impl<C: Context> Forest<C> {
                                     }
                                 }
                                 Some(Err(TableCheckFail::PositiveCycle(minimums))) => {
+                                    debug!("table encountered a positive cycle");
+
                                     // The selected subgoal causes a positive cycle
 
                                     // We can't take this because we might need it later to clear the cycle
@@ -552,20 +562,25 @@ impl<C: Context> Forest<C> {
                                     // The strand isn't active, but the table is, so just continue
                                     continue;
                                 }
-                                None => {}
+                                None => {
+                                    self.stack[depth].active_strand = Some(strand);
+
+                                    let dfn = self.next_dfn();
+                                    let work = self.increment_work();
+                                    let cyclic_minimums = Minimums::MAX;
+                                    depth =
+                                        self.stack.push(subgoal_table, dfn, work, cyclic_minimums);
+                                    continue;
+                                }
                             }
-
-                            self.stack[depth].active_strand = Some(strand);
-
-                            let dfn = self.next_dfn();
-                            let work = self.increment_work();
-                            let cyclic_minimums = Minimums::MAX;
-                            depth = self.stack.push(subgoal_table, dfn, work, cyclic_minimums);
-                            continue;
                         }
                         SubGoalSelection::NoRemaingSubgoals => {
+                            debug!("no remaining subgoals for the table");
+
                             match self.pursue_answer(depth, strand) {
                                 Some(()) => {
+                                    debug!("answer is available");
+
                                     // We found an answer for this strand, and therefore an
                                     // answer for this table. Now, this table was either a
                                     // subgoal for another strand, or was the root table.
@@ -586,7 +601,7 @@ impl<C: Context> Forest<C> {
                                     match self.merge_answer_into_strand(&mut strand, &mut depth) {
                                         Err(e) => {
                                             return Err(e);
-                                        },
+                                        }
                                         Ok(_) => {
                                             self.stack[depth].active_strand = Some(strand);
                                             continue;
@@ -594,6 +609,8 @@ impl<C: Context> Forest<C> {
                                     }
                                 }
                                 None => {
+                                    debug!("answer is not available (or not new)");
+
                                     // We were unable to find an answer to this strand
                                     // Therefore we can just discard it
 
@@ -604,6 +621,8 @@ impl<C: Context> Forest<C> {
                             };
                         }
                         SubGoalSelection::Floundered => {
+                            debug!("all subgoals floundered");
+
                             // We were unable to select a subgoal for this strand
                             // because all of them had floundered
 
@@ -636,11 +655,15 @@ impl<C: Context> Forest<C> {
                     }
                 }
                 None => {
+                    debug!("no more strands available (or all cycles)");
+
                     // No more strands left to try! That means either we started
                     // with no strands, or all available strands encountered a cycle.
 
                     let table = self.stack[depth].table;
                     if self.tables[table].strands_mut().count() == 0 {
+                        debug!("no more strands available");
+
                         // We started with no strands!
 
                         // This table has no solutions, so we have to check what
@@ -653,6 +676,8 @@ impl<C: Context> Forest<C> {
                                 depth = index;
                                 self.stack[depth].active_strand.as_mut().unwrap()
                             } else {
+                                debug!("no more solutions");
+
                                 // That was the root table, so we are done.
                                 return Err(RootSearchFail::NoMoreSolutions);
                             }
@@ -662,6 +687,8 @@ impl<C: Context> Forest<C> {
                         let selected_subgoal = strand.selected_subgoal.take().unwrap();
                         match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
                             Literal::Positive(_) => {
+                                debug!("discarding strand because positive literal");
+
                                 // There is no solution for this strand, so discard it
                                 self.stack[depth].active_strand.take();
 
@@ -670,6 +697,8 @@ impl<C: Context> Forest<C> {
                                 return Err(RootSearchFail::QuantumExceeded);
                             }
                             Literal::Negative(_) => {
+                                debug!("subgoal was proven because negative literal");
+
                                 // There is no solution for this strand
                                 // But, this is what we want, so can remove
                                 // this subgoal
@@ -687,6 +716,8 @@ impl<C: Context> Forest<C> {
                     let dfn = self.stack[depth].dfn;
                     let cyclic_minimums = self.stack[depth].cyclic_minimums;
                     if cyclic_minimums.positive >= dfn && cyclic_minimums.negative >= dfn {
+                        debug!("cycle with no new answers");
+
                         if cyclic_minimums.negative < DepthFirstNumber::MAX {
                             // This is a negative cycle.
                             self.unwind_stack(depth);
@@ -705,6 +736,8 @@ impl<C: Context> Forest<C> {
                         self.unwind_stack(depth);
                         return Err(RootSearchFail::QuantumExceeded);
                     } else {
+                        debug!("table part of a cycle");
+
                         // This table resulted in a positive cycle, so we have
                         // to check what this means for the subgoal containing
                         // this strand
