@@ -41,9 +41,6 @@ type TableCheckResult<T> = Result<T, TableCheckFail>;
 /// The different ways that a table check can fail
 #[derive(Debug)]
 enum TableCheckFail {
-    /// The subgoal cannot be solved without more type information.
-    Floundered,
-
     /// **All** avenues to solve the subgoal we were trying solve
     /// encountered a cyclic dependency on something higher up in the
     /// stack. The `Minimums` encodes how high up (and whether
@@ -99,7 +96,6 @@ impl<C: Context> Forest<C> {
     }
 
     /// Before we pursue a table, we need to check a couple things
-    /// - Has it floundered? -> `Some(Err(TableCheckFail::Floundered))`
     /// - Does it have an answer? -> `Some(Ok(EnsureSuccess::AnswerAvailable))`
     /// - Does it make a coinductive cycle? -> `Some(Ok(EnsureSuccess::Coinductive))`
     /// - Does it make a non-coinductive cycle? -> `Some(Err(TableCheckFail::PositiveCycle`
@@ -109,11 +105,6 @@ impl<C: Context> Forest<C> {
         table: TableIndex,
         answer: AnswerIndex,
     ) -> Option<TableCheckResult<EnsureSuccess>> {
-        // First, check if this table has floundered.
-        if self.tables[table].is_floundered() {
-            return Some(Err(TableCheckFail::Floundered));
-        }
-
         // Next, check for a tabled answer.
         if self.tables[table].answer(answer).is_some() {
             info!("answer cached = {:?}", self.tables[table].answer(answer));
@@ -299,16 +290,17 @@ impl<C: Context> Forest<C> {
     /// This is call when the selected subgoal for a strand has floundered.
     /// We have to decide what this means for the strand.
     /// - If the strand was positively dependent on the subgoal, we flounder,
-    ///   the subgoal, push the strand back onto the table to be retried later,
-    ///   and then return `Some(TableCheckFail:QuantumExceeded`
+    ///   the subgoal, then return `false`. This strand may be able to be
+    ///   retried later.
     /// - If the strand was negatively dependent on the subgoal, then strand
-    ///   has led nowhere of interest. We mark the table as floundered and
-    ///   discard the strand. We then return `None`
-    fn flounder_selected_subgoal(
+    ///   has led nowhere of interest and we return `true`. This strand should
+    ///   be discarded.
+    /// 
+    /// In other words, we return whether this strand flounders.
+    fn should_strand_flounder(
         &mut self,
-        depth: StackIndex,
-        mut strand: Strand<C>,
-    ) -> Option<RootSearchFail> {
+        strand: &mut Strand<C>,
+    ) -> bool {
         // This subgoal selection for the strand is finished, so take it
         let selected_subgoal = strand.selected_subgoal.take().unwrap();
         match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
@@ -323,13 +315,7 @@ impl<C: Context> Forest<C> {
                 // and maybe come back to it.
                 self.flounder_subgoal(&mut strand.ex_clause, selected_subgoal.subgoal_index);
 
-                // We want to maybe pursue this strand later
-                let table = self.stack[depth].table;
-                self.tables[table].push_strand(strand);
-
-                // Now we yield with `QuantumExceeded`
-                self.unwind_stack(depth);
-                return Some(RootSearchFail::QuantumExceeded);
+                return false;
             }
             Literal::Negative(_) => {
                 // Floundering on a negative literal isn't like a
@@ -351,13 +337,7 @@ impl<C: Context> Forest<C> {
                 // This strand has no solution. It is no longer active,
                 // so it dropped at the end of this scope.
 
-                // Because a subgoal that we depended on negatively floundered,
-                // this table flounders
-                let table = self.stack[depth].table;
-                debug!("Marking table {:?} as floundered!", table);
-                self.tables[table].mark_floundered();
-
-                return None;
+                return true;
             }
         }
     }
@@ -399,9 +379,12 @@ impl<C: Context> Forest<C> {
             initial_table, initial_answer
         );
         info!("table goal = {:#?}", self.tables[initial_table].table_goal);
+        // First, check if this table has floundered.
+        if self.tables[initial_table].is_floundered() {
+            return Err(RootSearchFail::Floundered);
+        }
         match self.check_table(initial_table, initial_answer) {
             Some(Ok(EnsureSuccess::AnswerAvailable)) => return Ok(()),
-            Some(Err(TableCheckFail::Floundered)) => return Err(RootSearchFail::Floundered),
             Some(Ok(EnsureSuccess::Coinductive)) | Some(Err(TableCheckFail::PositiveCycle(..))) => {
                 panic!("cycle at root")
             }
@@ -442,6 +425,10 @@ impl<C: Context> Forest<C> {
                                 subgoal_table, self.tables[subgoal_table].table_goal
                             );
 
+                            // This is checked inside_select_subgoal
+                            assert!(!self.tables[subgoal_table].is_floundered());
+
+                            // Now, let's check the table
                             match self.check_table(subgoal_table, answer_index) {
                                 Some(Ok(EnsureSuccess::AnswerAvailable)) => {
                                     debug!("previous answer available");
@@ -450,6 +437,7 @@ impl<C: Context> Forest<C> {
                                     match self.merge_answer_into_strand(&mut strand, &mut depth) {
                                         Err(e) => {
                                             debug!("could not merge into current strand");
+                                            drop(strand);
                                             return Err(e);
                                         }
                                         Ok(_) => {
@@ -489,40 +477,12 @@ impl<C: Context> Forest<C> {
                                         Literal::Negative(_) => {
                                             // Our negative goal fails
 
-                                            // We discard the current strand when it goes out of scope
+                                            // We discard the current strand
+                                            drop(strand);
 
                                             // Now we yield with `QuantumExceeded`
                                             self.unwind_stack(depth);
                                             return Err(RootSearchFail::QuantumExceeded);
-                                        }
-                                    }
-                                }
-                                Some(Err(TableCheckFail::Floundered)) => {
-                                    debug!("table floundered");
-
-                                    // This table has previously floundered. What does
-                                    // this mean for the current strand?
-                                    match self.flounder_selected_subgoal(depth, strand) {
-                                        Some(err) => return Err(err),
-                                        None => {}
-                                    }
-
-                                    loop {
-                                        let prev_index = self.stack.pop(depth);
-                                        if let Some(index) = prev_index {
-                                            // The table was a subgoal for another strand,
-                                            // which is still active.
-                                            // We need to decide what a floundered subgoal means
-                                            depth = index;
-                                        } else {
-                                            // That was the root table, so we are done.
-                                            return Err(RootSearchFail::Floundered);
-                                        }
-                                        strand = self.stack[depth].active_strand.take().unwrap();
-
-                                        match self.flounder_selected_subgoal(depth, strand) {
-                                            Some(err) => return Err(err),
-                                            None => {}
                                         }
                                     }
                                 }
@@ -611,8 +571,7 @@ impl<C: Context> Forest<C> {
                                 None => {
                                     debug!("answer is not available (or not new)");
 
-                                    // We were unable to find an answer to this strand
-                                    // Therefore we can just discard it
+                                    // This table ned nowhere of interest
 
                                     // Now we yield with `QuantumExceeded`
                                     self.unwind_stack(depth);
@@ -624,16 +583,18 @@ impl<C: Context> Forest<C> {
                             debug!("all subgoals floundered");
 
                             // We were unable to select a subgoal for this strand
-                            // because all of them had floundered
-
-                            // This table is marked as floundered
-                            let table = self.stack[depth].table;
-                            debug!("Marking table {:?} as floundered!", table);
-                            self.tables[table].mark_floundered();
+                            // because all of them had floundered or because any one
+                            // that we dependended on negatively floundered
 
                             // We discard this strand because it led nowhere of interest
+                            drop(strand);
 
                             loop {
+                                // This table is marked as floundered
+                                let table = self.stack[depth].table;
+                                debug!("Marking table {:?} as floundered!", table);
+                                self.tables[table].mark_floundered();
+
                                 let prev_index = self.stack.pop(depth);
                                 if let Some(index) = prev_index {
                                     // The table was a subgoal for another strand,
@@ -644,11 +605,25 @@ impl<C: Context> Forest<C> {
                                     // That was the root table, so we are done.
                                     return Err(RootSearchFail::Floundered);
                                 }
-                                let strand = self.stack[depth].active_strand.take().unwrap();
+                                let mut strand = self.stack[depth].active_strand.take().unwrap();
 
-                                match self.flounder_selected_subgoal(depth, strand) {
-                                    Some(err) => return Err(err),
-                                    None => {}
+                                match self.should_strand_flounder(&mut strand) {
+                                    false => {
+                                        // We want to maybe pursue this strand later
+                                        let table = self.stack[depth].table;
+                                        self.tables[table].push_strand(strand);
+
+                                        // Now we yield with `QuantumExceeded`
+                                        self.unwind_stack(depth);
+                                        return Err(RootSearchFail::QuantumExceeded);
+                                    },
+                                    true => {
+                                        // This strand will never lead anywhere of interest
+                                        drop(strand);
+
+                                        // Because a subgoal that we depended on negatively floundered,
+                                        // this table flounders (continue loop).
+                                    }
                                 }
                             }
                         }
@@ -826,51 +801,68 @@ impl<C: Context> Forest<C> {
         context: &impl ContextOps<C>,
         strand: &mut Strand<C>,
     ) -> SubGoalSelection {
-        while strand.selected_subgoal.is_none() {
-            if strand.ex_clause.subgoals.len() == 0 {
-                if strand.ex_clause.floundered_subgoals.is_empty() {
-                    return SubGoalSelection::NoRemaingSubgoals;
+        loop {
+            while strand.selected_subgoal.is_none() {
+                if strand.ex_clause.subgoals.len() == 0 {
+                    if strand.ex_clause.floundered_subgoals.is_empty() {
+                        return SubGoalSelection::NoRemaingSubgoals;
+                    }
+
+                    self.reconsider_floundered_subgoals(&mut strand.ex_clause);
+
+                    if strand.ex_clause.subgoals.is_empty() {
+                        assert!(!strand.ex_clause.floundered_subgoals.is_empty());
+                        return SubGoalSelection::Floundered;
+                    }
+
+                    continue;
                 }
 
-                self.reconsider_floundered_subgoals(&mut strand.ex_clause);
+                let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
 
-                if strand.ex_clause.subgoals.is_empty() {
-                    assert!(!strand.ex_clause.floundered_subgoals.is_empty());
-                    return SubGoalSelection::Floundered;
+                // Get or create table for this subgoal.
+                match self.get_or_create_table_for_subgoal(
+                    context,
+                    &mut strand.infer,
+                    &strand.ex_clause.subgoals[subgoal_index],
+                ) {
+                    Some((subgoal_table, universe_map)) => {
+                        strand.selected_subgoal = Some(SelectedSubgoal {
+                            subgoal_index,
+                            subgoal_table,
+                            universe_map,
+                            answer_index: AnswerIndex::ZERO,
+                        });
+                    }
+
+                    None => {
+                        // If we failed to create a table for the subgoal,
+                        // that is because we have a floundered negative
+                        // literal.
+                        self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
+                    }
                 }
-
-                continue;
             }
 
-            let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
-
-            // Get or create table for this subgoal.
-            match self.get_or_create_table_for_subgoal(
-                context,
-                &mut strand.infer,
-                &strand.ex_clause.subgoals[subgoal_index],
-            ) {
-                Some((subgoal_table, universe_map)) => {
-                    strand.selected_subgoal = Some(SelectedSubgoal {
-                        subgoal_index,
-                        subgoal_table,
-                        universe_map,
-                        answer_index: AnswerIndex::ZERO,
-                    });
+            if self.tables[strand.selected_subgoal.as_ref().unwrap().subgoal_table].is_floundered() {
+                match self.should_strand_flounder(strand) {
+                    false => {
+                        // This subgoal has floundered and has been marked.
+                        // We previously would immediately mark the table as
+                        // floundered too, and maybe come back to it. Now, we
+                        // try to see if any other subgoals can be pursued first.
+                        continue;
+                    },
+                    true => {
+                        // This strand will never lead anywhere of interest.
+                        return SubGoalSelection::Floundered;
+                    }
                 }
-
-                None => {
-                    // If we failed to create a table for the subgoal,
-                    // that is because we have a floundered negative
-                    // literal.
-                    self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
-                }
+            } else {
+                return SubGoalSelection::Selected;
             }
         }
 
-        // FIXME: we should just check if the selected subgoal has floundered here (probably)
-
-        SubGoalSelection::Selected
     }
 
     /// Invoked when a strand represents an **answer**. This means
