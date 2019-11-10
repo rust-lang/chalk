@@ -54,16 +54,25 @@ enum EnsureSuccess {
     Coinductive,
 }
 
+/// This is returned when we try to select a subgoal for a strand.
 enum SubGoalSelection {
+    /// A subgoal was successfully selected. It has already been checked
+    /// to not be floundering. However, it may have an answer already, be
+    /// coinductive, or create a cycle.
     Selected,
+
+    /// This strand has no remaining subgoals.
     NoRemaingSubgoals,
+
+    /// This strand has floundered. Either all the positive subgoals
+    /// have floundered or a single negative subgoal has floundered.
     Floundered,
 }
 
 impl<C: Context> Forest<C> {
-    /// Ensures that answer with the given index is available from the
-    /// given table. This may require activating a strand. Returns
-    /// `Ok(())` if the answer is available and otherwise a
+    /// Returns an answer with a given index for the given table. This
+    /// may require activating a strand and following it. It returns
+    /// `Ok(answer)` if they answer is available and otherwise a
     /// `RootSearchFail` result.
     pub(super) fn root_answer(
         &mut self,
@@ -135,7 +144,7 @@ impl<C: Context> Forest<C> {
 
     /// Merges an answer into the provided `Strand`.
     /// On success, `Ok` is returned and the `Strand` can be continued to process
-    /// On failure, `Err` is returned an the `Strand` should be discarded
+    /// On failure, `Err` is returned and the `Strand` should be discarded
     fn merge_answer_into_strand(
         &mut self,
         strand: &mut Strand<C>,
@@ -287,7 +296,7 @@ impl<C: Context> Forest<C> {
         };
     }
 
-    /// This is call when the selected subgoal for a strand has floundered.
+    /// This is called when the selected subgoal for a strand has floundered.
     /// We have to decide what this means for the strand.
     /// - If the strand was positively dependent on the subgoal, we flounder,
     ///   the subgoal, then return `false`. This strand may be able to be
@@ -361,13 +370,8 @@ impl<C: Context> Forest<C> {
     /// given table. Returns `Ok` if there is an answer.
     ///
     /// This function first attempts to fetch answer that is cached in
-    /// the table. If none is found, then we will if the table is on
-    /// the stack; if so, that constitutes a cycle (producing a new
-    /// result for the table X required producing a new result for the
-    /// table X), and we return a suitable result. Otherwise, we can
-    /// push the table onto the stack and select the next available
-    /// strand -- if none are available, then no more answers are
-    /// possible.
+    /// the table. If none is found, then it will recursively search
+    /// to find an answer.
     fn ensure_answer(
         &mut self,
         context: &impl ContextOps<C>,
@@ -560,6 +564,7 @@ impl<C: Context> Forest<C> {
 
                                     match self.merge_answer_into_strand(&mut strand, &mut depth) {
                                         Err(e) => {
+                                            drop(strand);
                                             return Err(e);
                                         }
                                         Ok(_) => {
