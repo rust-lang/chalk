@@ -1,3 +1,6 @@
+use super::var::*;
+use super::*;
+use crate::infer::instantiate::IntoBindersAndValue;
 use chalk_engine::fallible::*;
 use chalk_ir::cast::Cast;
 use chalk_ir::family::ChalkIr;
@@ -5,9 +8,7 @@ use chalk_ir::fold::{
     DefaultFreeVarFolder, DefaultTypeFolder, Fold, InferenceFolder, PlaceholderFolder,
 };
 use chalk_ir::zip::{Zip, Zipper};
-
-use super::var::*;
-use super::*;
+use std::fmt::Debug;
 
 impl InferenceTable {
     pub(crate) fn unify<T>(
@@ -131,7 +132,7 @@ impl<'t> Unifier<'t> {
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&TyData::ForAll(ref quantified_ty1), &TyData::ForAll(ref quantified_ty2)) => {
-                self.unify_forall_tys(quantified_ty1, quantified_ty2)
+                self.unify_foralls(&**quantified_ty1, &**quantified_ty2)
             }
 
             // Unifying `forall<X> { T }` with some other type `U`
@@ -200,11 +201,15 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    fn unify_forall_tys(
+    fn unify_foralls<T, R>(
         &mut self,
-        ty1: &QuantifiedTy<ChalkIr>,
-        ty2: &QuantifiedTy<ChalkIr>,
-    ) -> Fallible<()> {
+        a: impl IntoBindersAndValue<Value = T> + Copy + Debug,
+        b: impl IntoBindersAndValue<Value = T> + Copy + Debug,
+    ) -> Fallible<()>
+    where
+        T: Fold<ChalkIr, Result = R>,
+        R: Zip<ChalkIr> + Fold<ChalkIr, Result = R>,
+    {
         // for<'a...> T == for<'b...> U
         //
         // if:
@@ -215,28 +220,19 @@ impl<'t> Unifier<'t> {
         // Here we only check for<'a...> exists<'b...> T == U,
         // can someone smart comment why this is sufficient?
 
-        debug!("unify_forall_tys({:?}, {:?})", ty1, ty2);
+        debug!("unify_foralls({:?}, {:?})", a, b);
 
-        let ui = self.table.new_universe();
-        let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|idx| {
-                LifetimeData::Placeholder(PlaceholderIndex { ui, idx })
-                    .intern()
-                    .cast()
-            })
-            .collect();
+        {
+            let a_universal = self.table.instantiate_binders_universally(a);
+            let b_existential = self.table.instantiate_binders_existentially(b);
+            Zip::zip_with(self, &a_universal, &b_existential)?;
+        }
 
-        let max_universe = self.table.max_universe;
-        let lifetimes2: Vec<_> = (0..ty2.num_binders)
-            .map(|_| self.table.new_variable(max_universe).to_lifetime().cast())
-            .collect();
-
-        let ty1 = ty1.substitute(&lifetimes1);
-        let ty2 = ty2.substitute(&lifetimes2);
-        debug!("unify_forall_tys: ty1 = {:?}", ty1);
-        debug!("unify_forall_tys: ty2 = {:?}", ty2);
-
-        self.sub_unify(ty1, ty2)
+        {
+            let b_universal = self.table.instantiate_binders_universally(b);
+            let a_existential = self.table.instantiate_binders_existentially(a);
+            Zip::zip_with(self, &a_existential, &b_universal)
+        }
     }
 
     /// Unify an associated type projection `proj` like `<T as Trait>::Item` with some other
@@ -400,29 +396,8 @@ impl<'t> Zipper<ChalkIr> for Unifier<'t> {
     where
         T: Zip<ChalkIr> + Fold<ChalkIr, Result = T>,
     {
-        // for<'a...> T == for<'b...> U
-        //
-        // if:
-        //
-        // for<'a...> exists<'b...> T == U &&
-        // for<'b...> exists<'a...> T == U
-        //
-        // Here we only check for<'a...> exists<'b...> T == U,
-        // can someone smart comment why this is sufficient?
-
-        debug!("zip_binders({:?}, {:?})", a, b);
-
-        {
-            let a_universal = self.table.instantiate_binders_universally(a);
-            let b_existential = self.table.instantiate_binders_existentially(b);
-            Zip::zip_with(self, &a_universal, &b_existential)?;
-        }
-
-        {
-            let b_universal = self.table.instantiate_binders_universally(b);
-            let a_existential = self.table.instantiate_binders_existentially(a);
-            Zip::zip_with(self, &a_existential, &b_universal)
-        }
+        // All of the binders that appear in types are "forall" binders;
+        self.unify_foralls(a, b)
     }
 }
 
