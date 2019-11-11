@@ -304,12 +304,9 @@ impl<C: Context> Forest<C> {
     /// - If the strand was negatively dependent on the subgoal, then strand
     ///   has led nowhere of interest and we return `true`. This strand should
     ///   be discarded.
-    /// 
+    ///
     /// In other words, we return whether this strand flounders.
-    fn should_strand_flounder(
-        &mut self,
-        strand: &mut Strand<C>,
-    ) -> bool {
+    fn should_strand_flounder(&mut self, strand: &mut Strand<C>) -> bool {
         // This subgoal selection for the strand is finished, so take it
         let selected_subgoal = strand.selected_subgoal.take().unwrap();
         match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
@@ -621,7 +618,7 @@ impl<C: Context> Forest<C> {
                                         // Now we yield with `QuantumExceeded`
                                         self.unwind_stack(depth);
                                         return Err(RootSearchFail::QuantumExceeded);
-                                    },
+                                    }
                                     true => {
                                         // This strand will never lead anywhere of interest
                                         drop(strand);
@@ -849,7 +846,8 @@ impl<C: Context> Forest<C> {
                 }
             }
 
-            if self.tables[strand.selected_subgoal.as_ref().unwrap().subgoal_table].is_floundered() {
+            if self.tables[strand.selected_subgoal.as_ref().unwrap().subgoal_table].is_floundered()
+            {
                 match self.should_strand_flounder(strand) {
                     false => {
                         // This subgoal has floundered and has been marked.
@@ -857,7 +855,7 @@ impl<C: Context> Forest<C> {
                         // floundered too, and maybe come back to it. Now, we
                         // try to see if any other subgoals can be pursued first.
                         continue;
-                    },
+                    }
                     true => {
                         // This strand will never lead anywhere of interest.
                         return SubGoalSelection::Floundered;
@@ -867,7 +865,6 @@ impl<C: Context> Forest<C> {
                 return SubGoalSelection::Selected;
             }
         }
-
     }
 
     /// Invoked when a strand represents an **answer**. This means
