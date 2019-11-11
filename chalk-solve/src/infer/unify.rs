@@ -396,11 +396,33 @@ impl<'t> Zipper<ChalkIr> for Unifier<'t> {
         self.unify_lifetime_lifetime(a, b)
     }
 
-    fn zip_binders<T>(&mut self, _: &Binders<T>, _: &Binders<T>) -> Fallible<()>
+    fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
         T: Zip<ChalkIr> + Fold<ChalkIr, Result = T>,
     {
-        panic!("cannot unify things with binders (other than types)")
+        // for<'a...> T == for<'b...> U
+        //
+        // if:
+        //
+        // for<'a...> exists<'b...> T == U &&
+        // for<'b...> exists<'a...> T == U
+        //
+        // Here we only check for<'a...> exists<'b...> T == U,
+        // can someone smart comment why this is sufficient?
+
+        debug!("zip_binders({:?}, {:?})", a, b);
+
+        {
+            let a_universal = self.table.instantiate_binders_universally(a);
+            let b_existential = self.table.instantiate_binders_existentially(b);
+            Zip::zip_with(self, &a_universal, &b_existential)?;
+        }
+
+        {
+            let b_universal = self.table.instantiate_binders_universally(b);
+            let a_existential = self.table.instantiate_binders_existentially(a);
+            Zip::zip_with(self, &a_existential, &b_universal)
+        }
     }
 }
 

@@ -145,6 +145,27 @@ fn equality_binder() {
 }
 
 #[test]
+fn equality_binder2() {
+    test! {
+        program {
+            struct Ref<'a, 'b> { }
+        }
+
+        goal {
+            for<'b, 'c> Ref<'b, 'c> = for<'a> Ref<'a, 'a>
+        } yields {
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }]"
+        }
+
+        goal {
+            for<'a> Ref<'a, 'a> = for<'b, 'c> Ref<'b, 'c>
+        } yields {
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }]"
+        }
+    }
+}
+
+#[test]
 fn mixed_indices_unify() {
     test! {
         program {
