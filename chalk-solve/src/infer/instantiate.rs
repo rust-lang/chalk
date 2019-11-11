@@ -58,35 +58,33 @@ impl InferenceTable {
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
-    #[allow(non_camel_case_types)]
     pub(crate) fn instantiate_binders_existentially<T>(
         &mut self,
-        arg: &impl BindersAndValue<Output = T>,
+        arg: impl IntoBindersAndValue<Value = T>,
     ) -> T::Result
     where
         T: Fold<ChalkIr>,
     {
-        let (binders, value) = arg.split();
+        let (binders, value) = arg.into_binders_and_value();
         let max_universe = self.max_universe;
-        self.instantiate_in(max_universe, binders.iter().cloned(), value)
+        self.instantiate_in(max_universe, binders, &value)
     }
 
-    #[allow(non_camel_case_types)]
     pub(crate) fn instantiate_binders_universally<T>(
         &mut self,
-        arg: &impl BindersAndValue<Output = T>,
+        arg: impl IntoBindersAndValue<Value = T>,
     ) -> T::Result
     where
         T: Fold<ChalkIr>,
     {
-        let (binders, value) = arg.split();
+        let (binders, value) = arg.into_binders_and_value();
         let ui = self.new_universe();
         let parameters: Vec<_> = binders
-            .iter()
+            .into_iter()
             .enumerate()
             .map(|(idx, pk)| {
                 let placeholder_idx = PlaceholderIndex { ui, idx };
-                match *pk {
+                match pk {
                     ParameterKind::Lifetime(()) => {
                         let lt = placeholder_idx.to_lifetime::<ChalkIr>();
                         lt.cast()
@@ -95,28 +93,45 @@ impl InferenceTable {
                 }
             })
             .collect();
-        Subst::apply(&parameters, value)
+        Subst::apply(&parameters, &value)
     }
 }
 
-pub(crate) trait BindersAndValue {
-    type Output;
+pub(crate) trait IntoBindersAndValue {
+    type Binders: IntoIterator<Item = ParameterKind<()>>;
+    type Value;
 
-    fn split(&self) -> (&[ParameterKind<()>], &Self::Output);
+    fn into_binders_and_value(self) -> (Self::Binders, Self::Value);
 }
 
-impl<T> BindersAndValue for Binders<T> {
-    type Output = T;
+impl<'a, T> IntoBindersAndValue for &'a Binders<T> {
+    type Binders = std::iter::Cloned<std::slice::Iter<'a, ParameterKind<()>>>;
+    type Value = &'a T;
 
-    fn split(&self) -> (&[ParameterKind<()>], &Self::Output) {
-        (&self.binders, &self.value)
+    fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
+        (self.binders.iter().cloned(), &self.value)
     }
 }
 
-impl<'a, T> BindersAndValue for (&'a Vec<ParameterKind<()>>, &'a T) {
-    type Output = T;
+impl<'a> IntoBindersAndValue for &'a QuantifiedTy<ChalkIr> {
+    type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::ParameterKind<()>>;
+    type Value = &'a Ty<ChalkIr>;
 
-    fn split(&self) -> (&[ParameterKind<()>], &Self::Output) {
-        (&self.0, &self.1)
+    fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
+        fn make_lifetime(_: usize) -> ParameterKind<()> {
+            ParameterKind::Lifetime(())
+        }
+
+        let p: fn(usize) -> ParameterKind<()> = make_lifetime;
+        ((0..self.num_binders).map(p), &self.ty)
+    }
+}
+
+impl<'a, T> IntoBindersAndValue for (&'a Vec<ParameterKind<()>>, &'a T) {
+    type Binders = std::iter::Cloned<std::slice::Iter<'a, ParameterKind<()>>>;
+    type Value = &'a T;
+
+    fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
+        (self.0.iter().cloned(), &self.1)
     }
 }
