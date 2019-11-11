@@ -276,6 +276,10 @@ impl context::InferenceTable<SlgContext> for TruncatingInferenceTable {
         // to pick things like `?T: Sized` if we can help it.
         ex_clause.subgoals.len() - 1
     }
+
+    fn normalize_subst(&mut self, subst: &Substitution<ChalkIr>) -> Substitution<ChalkIr> {
+        self.infer.normalize_deep(subst)
+    }
 }
 
 impl context::UnificationOps<SlgContext> for TruncatingInferenceTable {
@@ -352,11 +356,28 @@ trait SubstitutionExt {
 }
 
 impl SubstitutionExt for Substitution<ChalkIr> {
+    /// Used to test whether the answer reflected in this substitution
+    /// could invalidate the accumulated answer found in `subst`. For
+    /// context, when we are driving the solver, we get back a stream
+    /// of single answers; we anti-unify those to form a general
+    /// answer. The goal is to stop pursuing answers once it's clear
+    /// that no remaining strand will be very useful to us.
+    ///
+    /// The argument `subst` here represents the accumulted answer
+    /// thus far.  The `self` argument represents one of the answers
+    /// from an in-progress strand.
     fn may_invalidate(&self, subst: &Canonical<Substitution<ChalkIr>>) -> bool {
-        self.parameters
+        debug_heading!("may_invalidate(subst={:?})", subst);
+        debug!("self.parameters = {:?}", self.parameters);
+
+        let result = self
+            .parameters
             .iter()
             .zip(&subst.value.parameters)
-            .any(|(new, current)| MayInvalidate.aggregate_parameters(new, current))
+            .any(|(new, current)| MayInvalidate.aggregate_parameters(new, current));
+
+        debug!("result: {:?}", result);
+        result
     }
 }
 
@@ -383,16 +404,30 @@ impl MayInvalidate {
 
     // Returns true if the two types could be unequal.
     fn aggregate_tys(&mut self, new: &Ty<ChalkIr>, current: &Ty<ChalkIr>) -> bool {
+        debug!(
+            "MayInvalidate::aggregate_tys(new={:?}, current={:?})",
+            new, current
+        );
+
+        // In the code below, the substitutions sometimes come from
+        // canonicalized things and sometimes from inference
+        // tables. Therefore, bound variables are taken to represent
+        // either inference variables *or* canonical values.  This
+        // mixing is a bit sloppy.
+
         match (new, current) {
-            (_, Ty::InferenceVar(_)) => {
+            (_, Ty::InferenceVar(_)) | (_, Ty::BoundVar(_)) => {
                 // If the aggregate solution already has an inference
                 // variable here, then no matter what type we produce,
                 // the aggregate cannot get 'more generalized' than it
                 // already is. So return false, we cannot invalidate.
+                //
+                // The same is true for bound variables -- note that the aggregate solution
+                // sometimes
                 false
             }
 
-            (Ty::InferenceVar(_), _) => {
+            (Ty::BoundVar(_), _) | (Ty::InferenceVar(_), _) => {
                 // If we see a type variable in the potential future
                 // solution, we have to be conservative. We don't know
                 // what type variable will wind up being! Remember
@@ -400,13 +435,6 @@ impl MayInvalidate {
                 // of `ty0` -- or it could leave this variable
                 // unbound, if the result is true for all types.
                 true
-            }
-
-            (Ty::BoundVar(_), _) | (_, Ty::BoundVar(_)) => {
-                panic!(
-                    "unexpected bound variable in may-invalidate: {:?} vs {:?}",
-                    new, current,
-                );
             }
 
             (Ty::Apply(apply1), Ty::Apply(apply2)) => {

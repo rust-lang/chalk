@@ -140,9 +140,10 @@ impl<C: Context> Forest<C> {
             return test(C::subst_from_canonical_subst(&answer.subst));
         }
 
-        self.tables[table]
-            .strands_mut()
-            .any(|strand| test(&strand.ex_clause.subst))
+        self.tables[table].strands_mut().any(|strand| {
+            let subst = strand.infer.normalize_subst(&strand.ex_clause.subst);
+            test(&subst)
+        })
     }
 
     /// Ensures that answer with the given index is available from the

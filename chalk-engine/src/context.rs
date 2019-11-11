@@ -233,6 +233,13 @@ pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> + Unifica
     /// Selects the next appropriate subgoal index for evaluation.
     /// Used by: logic
     fn next_subgoal_index(&mut self, ex_clause: &ExClause<C>) -> usize;
+
+    /// Normalize any inference variables appearing in subst to the
+    /// values they are bound to, or to their root inference
+    /// variables.
+    ///
+    /// This is used in limited places.
+    fn normalize_subst(&mut self, subst: &C::Substitution) -> C::Substitution;
 }
 
 /// Error type for the `UnificationOps::program_clauses` method --
