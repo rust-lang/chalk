@@ -348,6 +348,129 @@ impl<C: Context> Forest<C> {
         }
     }
 
+    fn on_subgoal_selected(
+        &mut self,
+        mut depth: StackIndex,
+        mut strand: Strand<C>,
+    ) -> Result<StackIndex, RootSearchFail> {
+        // This may be a newly selected subgoal or an existing selected subgoal.
+
+        let SelectedSubgoal {
+            subgoal_index: _,
+            subgoal_table,
+            answer_index,
+            universe_map: _,
+        } = *strand.selected_subgoal.as_ref().unwrap();
+
+        debug!(
+            "table selection {:?} with goal: {:#?}",
+            subgoal_table, self.tables[subgoal_table].table_goal
+        );
+
+        // This is checked inside_select_subgoal
+        assert!(!self.tables[subgoal_table].is_floundered());
+
+        // Now, let's check the table
+        match self.check_table(subgoal_table, answer_index) {
+            Some(Ok(EnsureSuccess::AnswerAvailable)) => {
+                debug!("previous answer available");
+                // There was a previous answer available for this table
+                // We need to check if
+                match self.merge_answer_into_strand(&mut strand, &mut depth) {
+                    Err(e) => {
+                        debug!("could not merge into current strand");
+                        drop(strand);
+                        return Err(e);
+                    }
+                    Ok(_) => {
+                        debug!("merged answer into current strand");
+                        self.stack[depth].active_strand = Some(strand);
+                        return Ok(depth);
+                    }
+                }
+            }
+            Some(Ok(EnsureSuccess::Coinductive)) => {
+                debug!("table is coinductive");
+
+                // This is a co-inductive cycle. That is, this table
+                // appears somewhere higher on the stack, and has now
+                // recursively requested an answer for itself. That
+                // means that our subgoal is unconditionally true.
+
+                // This subgoal selection for the strand is finished, so take it
+                let selected_subgoal = strand.selected_subgoal.take().unwrap();
+                match strand
+                    .ex_clause
+                    .subgoals
+                    .remove(selected_subgoal.subgoal_index)
+                {
+                    Literal::Positive(_) => {
+                        // We can drop this subgoal and pursue the next thing.
+                        let table = self.stack[depth].table;
+                        assert!(
+                            self.tables[table].coinductive_goal
+                                && self.tables[selected_subgoal.subgoal_table].coinductive_goal
+                        );
+
+                        self.stack[depth].active_strand = Some(strand);
+                        return Ok(depth);
+                    }
+                    Literal::Negative(_) => {
+                        // Our negative goal fails
+
+                        // We discard the current strand
+                        drop(strand);
+
+                        // Now we yield with `QuantumExceeded`
+                        self.unwind_stack(depth);
+                        return Err(RootSearchFail::QuantumExceeded);
+                    }
+                }
+            }
+            Some(Err(TableCheckFail::PositiveCycle(minimums))) => {
+                debug!("table encountered a positive cycle");
+
+                // The selected subgoal causes a positive cycle
+
+                // We can't take this because we might need it later to clear the cycle
+                let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
+
+                match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+                    Literal::Positive(_) => {
+                        self.stack[depth].cyclic_minimums.take_minimums(&minimums);
+                    }
+                    Literal::Negative(_) => {
+                        // We depend on `not(subgoal)`. For us to continue,
+                        // `subgoal` must be completely evaluated. Therefore,
+                        // we depend (negatively) on the minimum link of
+                        // `subgoal` as a whole -- it doesn't matter whether
+                        // it's pos or neg.
+                        let mins = Minimums {
+                            positive: self.stack[depth].dfn,
+                            negative: minimums.minimum_of_pos_and_neg(),
+                        };
+                        self.stack[depth].cyclic_minimums.take_minimums(&mins);
+                    }
+                }
+
+                let table = self.stack[depth].table;
+                self.tables[table].push_strand(strand);
+
+                // The strand isn't active, but the table is, so just continue
+                return Ok(depth);
+            }
+            None => {
+                self.stack[depth].active_strand = Some(strand);
+
+                let dfn = self.next_dfn();
+                let work = self.increment_work();
+                let cyclic_minimums = Minimums::MAX;
+                depth = self.stack.push(subgoal_table, dfn, work, cyclic_minimums);
+                return Ok(depth);
+            }
+        }
+    }
+
     fn unwind_stack(&mut self, mut depth: StackIndex) {
         loop {
             let next_index = self.stack.pop(depth);
@@ -412,128 +535,7 @@ impl<C: Context> Forest<C> {
                     strand.last_pursued_time = work;
                     match self.select_subgoal(context, &mut strand) {
                         SubGoalSelection::Selected => {
-                            // This may be a newly selected subgoal or an existing selected subgoal.
-
-                            let SelectedSubgoal {
-                                subgoal_index: _,
-                                subgoal_table,
-                                answer_index,
-                                universe_map: _,
-                            } = *strand.selected_subgoal.as_ref().unwrap();
-
-                            debug!(
-                                "table selection {:?} with goal: {:#?}",
-                                subgoal_table, self.tables[subgoal_table].table_goal
-                            );
-
-                            // This is checked inside_select_subgoal
-                            assert!(!self.tables[subgoal_table].is_floundered());
-
-                            // Now, let's check the table
-                            match self.check_table(subgoal_table, answer_index) {
-                                Some(Ok(EnsureSuccess::AnswerAvailable)) => {
-                                    debug!("previous answer available");
-                                    // There was a previous answer available for this table
-                                    // We need to check if
-                                    match self.merge_answer_into_strand(&mut strand, &mut depth) {
-                                        Err(e) => {
-                                            debug!("could not merge into current strand");
-                                            drop(strand);
-                                            return Err(e);
-                                        }
-                                        Ok(_) => {
-                                            debug!("merged answer into current strand");
-                                            self.stack[depth].active_strand = Some(strand);
-                                            continue;
-                                        }
-                                    }
-                                }
-                                Some(Ok(EnsureSuccess::Coinductive)) => {
-                                    debug!("table is coinductive");
-
-                                    // This is a co-inductive cycle. That is, this table
-                                    // appears somewhere higher on the stack, and has now
-                                    // recursively requested an answer for itself. That
-                                    // means that our subgoal is unconditionally true.
-
-                                    // This subgoal selection for the strand is finished, so take it
-                                    let selected_subgoal = strand.selected_subgoal.take().unwrap();
-                                    match strand
-                                        .ex_clause
-                                        .subgoals
-                                        .remove(selected_subgoal.subgoal_index)
-                                    {
-                                        Literal::Positive(_) => {
-                                            // We can drop this subgoal and pursue the next thing.
-                                            let table = self.stack[depth].table;
-                                            assert!(
-                                                self.tables[table].coinductive_goal
-                                                    && self.tables[selected_subgoal.subgoal_table]
-                                                        .coinductive_goal
-                                            );
-
-                                            self.stack[depth].active_strand = Some(strand);
-                                            continue;
-                                        }
-                                        Literal::Negative(_) => {
-                                            // Our negative goal fails
-
-                                            // We discard the current strand
-                                            drop(strand);
-
-                                            // Now we yield with `QuantumExceeded`
-                                            self.unwind_stack(depth);
-                                            return Err(RootSearchFail::QuantumExceeded);
-                                        }
-                                    }
-                                }
-                                Some(Err(TableCheckFail::PositiveCycle(minimums))) => {
-                                    debug!("table encountered a positive cycle");
-
-                                    // The selected subgoal causes a positive cycle
-
-                                    // We can't take this because we might need it later to clear the cycle
-                                    let selected_subgoal =
-                                        strand.selected_subgoal.as_ref().unwrap();
-
-                                    match strand.ex_clause.subgoals[selected_subgoal.subgoal_index]
-                                    {
-                                        Literal::Positive(_) => {
-                                            self.stack[depth]
-                                                .cyclic_minimums
-                                                .take_minimums(&minimums);
-                                        }
-                                        Literal::Negative(_) => {
-                                            // We depend on `not(subgoal)`. For us to continue,
-                                            // `subgoal` must be completely evaluated. Therefore,
-                                            // we depend (negatively) on the minimum link of
-                                            // `subgoal` as a whole -- it doesn't matter whether
-                                            // it's pos or neg.
-                                            let mins = Minimums {
-                                                positive: self.stack[depth].dfn,
-                                                negative: minimums.minimum_of_pos_and_neg(),
-                                            };
-                                            self.stack[depth].cyclic_minimums.take_minimums(&mins);
-                                        }
-                                    }
-
-                                    let table = self.stack[depth].table;
-                                    self.tables[table].push_strand(strand);
-
-                                    // The strand isn't active, but the table is, so just continue
-                                    continue;
-                                }
-                                None => {
-                                    self.stack[depth].active_strand = Some(strand);
-
-                                    let dfn = self.next_dfn();
-                                    let work = self.increment_work();
-                                    let cyclic_minimums = Minimums::MAX;
-                                    depth =
-                                        self.stack.push(subgoal_table, dfn, work, cyclic_minimums);
-                                    continue;
-                                }
-                            }
+                            depth = self.on_subgoal_selected(depth, strand)?;
                         }
                         SubGoalSelection::NoRemaingSubgoals => {
                             debug!("no remaining subgoals for the table");
