@@ -40,15 +40,18 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
         fmt: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
 
-    /// Create an "interned" type from `ty`. You can also use the
-    /// `TyData::intern` method, which is preferred.
+    /// Create an "interned" type from `ty`. This is not normally
+    /// invoked directly; instead, you invoke `TyData::intern` (which
+    /// will ultimately call this method).
     fn intern_ty(ty: TyData<Self>) -> Self::InternedType;
 
     /// Lookup the `TyData` from an interned type.
     fn ty_data(ty: &Self::InternedType) -> &TyData<Self>;
 
-    /// Create an "interned" type from `lifetime`. You can also use
-    /// the `Lifetime::intern` method, which is preferred.
+    /// Create an "interned" lifetime from `lifetime`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `LifetimeData::intern` (which will ultimately call this
+    /// method).
     fn intern_lifetime(lifetime: LifetimeData<Self>) -> Self::InternedLifetime;
 
     fn lifetime_data(lifetime: &Self::InternedLifetime) -> &LifetimeData<Self>;
