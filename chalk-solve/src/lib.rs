@@ -22,19 +22,19 @@ pub trait RustIrDatabase: Debug {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>>;
 
     /// Returns the datum for the associated type with the given id.
-    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
+    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum<ChalkIr>>;
 
     /// Returns the datum for the impl with the given id.
-    fn trait_datum(&self, trait_id: TraitId) -> Arc<TraitDatum>;
+    fn trait_datum(&self, trait_id: TraitId) -> Arc<TraitDatum<ChalkIr>>;
 
     /// Returns the datum for the impl with the given id.
-    fn struct_datum(&self, struct_id: StructId) -> Arc<StructDatum>;
+    fn struct_datum(&self, struct_id: StructId) -> Arc<StructDatum<ChalkIr>>;
 
     /// Returns the datum for the impl with the given id.
-    fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum>;
+    fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum<ChalkIr>>;
 
     /// Returns the `AssociatedTyValue` with the given id.
-    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue>;
+    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue<ChalkIr>>;
 
     /// Returns a list of potentially relevant impls for a given
     /// trait-id; we also supply the type parameters that we are

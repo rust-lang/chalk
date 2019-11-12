@@ -1,6 +1,7 @@
 use crate::clauses::builder::ClauseBuilder;
 use crate::split::Split;
 use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::family::ChalkIr;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::iter;
@@ -12,7 +13,7 @@ pub trait ToProgramClauses {
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_>);
 }
 
-impl ToProgramClauses for ImplDatum {
+impl ToProgramClauses for ImplDatum<ChalkIr> {
     /// Given `impl<T: Clone> Clone for Vec<T> { ... }`, generate:
     ///
     /// ```notrust
@@ -36,7 +37,7 @@ impl ToProgramClauses for ImplDatum {
     }
 }
 
-impl ToProgramClauses for AssociatedTyValue {
+impl ToProgramClauses for AssociatedTyValue<ChalkIr> {
     /// Given the following trait:
     ///
     /// ```notrust
@@ -116,7 +117,7 @@ impl ToProgramClauses for AssociatedTyValue {
     }
 }
 
-impl ToProgramClauses for StructDatum {
+impl ToProgramClauses for StructDatum<ChalkIr> {
     /// Given the following type definition: `struct Foo<T: Eq> { }`, generate:
     ///
     /// ```notrust
@@ -269,7 +270,7 @@ impl ToProgramClauses for StructDatum {
     }
 }
 
-impl ToProgramClauses for TraitDatum {
+impl ToProgramClauses for TraitDatum<ChalkIr> {
     /// Given the following trait declaration: `trait Ord<T> where Self: Eq<T> { ... }`, generate:
     ///
     /// ```notrust
@@ -495,7 +496,7 @@ impl ToProgramClauses for TraitDatum {
     }
 }
 
-impl ToProgramClauses for AssociatedTyDatum {
+impl ToProgramClauses for AssociatedTyDatum<ChalkIr> {
     /// For each associated type, we define the "projection
     /// equality" rules. There are always two; one for a successful normalization,
     /// and one for the "fallback" notion of equality.

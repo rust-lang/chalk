@@ -25,19 +25,19 @@ pub struct Program {
     pub type_kinds: BTreeMap<TypeKindId, TypeKind>,
 
     /// For each struct:
-    pub struct_data: BTreeMap<StructId, Arc<StructDatum>>,
+    pub struct_data: BTreeMap<StructId, Arc<StructDatum<ChalkIr>>>,
 
     /// For each impl:
-    pub impl_data: BTreeMap<ImplId, Arc<ImplDatum>>,
+    pub impl_data: BTreeMap<ImplId, Arc<ImplDatum<ChalkIr>>>,
 
     /// For each associated ty value `type Foo = XXX` found in an impl:
-    pub associated_ty_values: BTreeMap<AssociatedTyValueId, Arc<AssociatedTyValue>>,
+    pub associated_ty_values: BTreeMap<AssociatedTyValueId, Arc<AssociatedTyValue<ChalkIr>>>,
 
     /// For each trait:
-    pub trait_data: BTreeMap<TraitId, Arc<TraitDatum>>,
+    pub trait_data: BTreeMap<TraitId, Arc<TraitDatum<ChalkIr>>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
-    pub associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum>>,
+    pub associated_ty_data: BTreeMap<TypeId, Arc<AssociatedTyDatum<ChalkIr>>>,
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
@@ -102,23 +102,23 @@ impl RustIrDatabase for Program {
         self.custom_clauses.clone()
     }
 
-    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
+    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.associated_ty_data[&ty].clone()
     }
 
-    fn trait_datum(&self, id: TraitId) -> Arc<TraitDatum> {
+    fn trait_datum(&self, id: TraitId) -> Arc<TraitDatum<ChalkIr>> {
         self.trait_data[&id].clone()
     }
 
-    fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum> {
+    fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum<ChalkIr>> {
         self.impl_data[&id].clone()
     }
 
-    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue> {
+    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue<ChalkIr>> {
         self.associated_ty_values[&id].clone()
     }
 
-    fn struct_datum(&self, id: StructId) -> Arc<StructDatum> {
+    fn struct_datum(&self, id: StructId) -> Arc<StructDatum<ChalkIr>> {
         self.struct_data[&id].clone()
     }
 

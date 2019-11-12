@@ -85,7 +85,7 @@ where
     //  Generates:
     //      not { compatible { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } }
     //
-    fn disjoint(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
+    fn disjoint(&self, lhs: &ImplDatum<ChalkIr>, rhs: &ImplDatum<ChalkIr>) -> bool {
         debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
 
         let lhs_len = lhs.binders.len();
@@ -162,7 +162,11 @@ where
     //    }
     //  }
     // }
-    fn specializes(&self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
+    fn specializes(
+        &self,
+        less_special: &ImplDatum<ChalkIr>,
+        more_special: &ImplDatum<ChalkIr>,
+    ) -> bool {
         debug_heading!(
             "specializes(less_special={:#?}, more_special={:#?})",
             less_special,
@@ -224,6 +228,6 @@ where
     }
 }
 
-fn params(impl_datum: &ImplDatum) -> &[Parameter<ChalkIr>] {
+fn params(impl_datum: &ImplDatum<ChalkIr>) -> &[Parameter<ChalkIr>] {
     &impl_datum.binders.value.trait_ref.parameters
 }

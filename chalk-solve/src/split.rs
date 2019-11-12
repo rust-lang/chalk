@@ -17,7 +17,7 @@ pub trait Split: RustIrDatabase {
         &self,
         projection: &'p ProjectionTy<ChalkIr>,
     ) -> (
-        Arc<AssociatedTyDatum>,
+        Arc<AssociatedTyDatum<ChalkIr>>,
         &'p [Parameter<ChalkIr>],
         &'p [Parameter<ChalkIr>],
     ) {
@@ -84,7 +84,7 @@ pub trait Split: RustIrDatabase {
     fn split_associated_ty_value_parameters<'p, P>(
         &self,
         parameters: &'p [P],
-        associated_ty_value: &AssociatedTyValue,
+        associated_ty_value: &AssociatedTyValue<ChalkIr>,
     ) -> (&'p [P], &'p [P]) {
         let impl_datum = self.impl_datum(associated_ty_value.impl_id);
         let impl_params_len = impl_datum.binders.len();
@@ -122,7 +122,7 @@ pub trait Split: RustIrDatabase {
     fn impl_parameters_and_projection_from_associated_ty_value<'p>(
         &self,
         parameters: &'p [Parameter<ChalkIr>],
-        associated_ty_value: &AssociatedTyValue,
+        associated_ty_value: &AssociatedTyValue<ChalkIr>,
     ) -> (&'p [Parameter<ChalkIr>], ProjectionTy<ChalkIr>) {
         debug_heading!(
             "impl_parameters_and_projection_from_associated_ty_value(parameters={:?})",
