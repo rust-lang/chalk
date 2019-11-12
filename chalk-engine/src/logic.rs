@@ -463,6 +463,13 @@ impl<C: Context> Forest<C> {
                     }
                 }
 
+                // Ok, we've taken the minimums from this cycle above. Now,
+                // we just return the strand to the table. The table only
+                // pulls strands if they have not been checked this at this
+                // depth.
+                //
+                // We also can't mark these and return early from this
+                // because the stack above us might change.
                 let table = self.stack[depth].table;
                 self.tables[table].push_strand(strand);
 
@@ -470,6 +477,8 @@ impl<C: Context> Forest<C> {
                 return Ok(depth);
             }
             None => {
+                // We don't know anything about the selected subgoal table.
+                // Set this strand as active and push it onto the stack.
                 self.stack[depth].active_strand = Some(strand);
 
                 let clock = self.increment_clock();
@@ -767,6 +776,12 @@ impl<C: Context> Forest<C> {
             let clock = self.stack[depth].clock;
             // If we had an active strand, continue to pursue it
             let table = self.stack[depth].table;
+
+            // We track when we last pursued each strand. If all the strands have been
+            // pursued at this depth, then that means they all encountered a cycle.
+            // We also know that if the first strand has been pursued at this depth,
+            // then all have. Otherwise, an answer to any strand would have provided an
+            // answer for the table.
             let next_strand = self.stack[depth].active_strand.take().or_else(|| {
                 self.tables[table].pop_next_strand_if(|strand| strand.last_pursued_time < clock)
             });
