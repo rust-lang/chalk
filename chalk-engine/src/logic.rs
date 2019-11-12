@@ -587,6 +587,138 @@ impl<C: Context> Forest<C> {
         }
     }
 
+    fn on_no_strands_left(&mut self, mut depth: StackIndex) -> Result<StackIndex, RootSearchFail> {
+        debug!("no more strands available (or all cycles)");
+
+        // No more strands left to try! That means either we started
+        // with no strands, or all available strands encountered a cycle.
+
+        let table = self.stack[depth].table;
+        if self.tables[table].strands_mut().count() == 0 {
+            debug!("no more strands available");
+
+            // We started with no strands!
+
+            // This table has no solutions, so we have to check what
+            // this means for the subgoal containing this strand
+            let strand = {
+                let prev_index = self.stack.pop(depth);
+                if let Some(index) = prev_index {
+                    // The table was a subgoal for another strand,
+                    // which is still active.
+                    depth = index;
+                    self.stack[depth].active_strand.as_mut().unwrap()
+                } else {
+                    debug!("no more solutions");
+
+                    // That was the root table, so we are done.
+                    return Err(RootSearchFail::NoMoreSolutions);
+                }
+            };
+
+            // This subgoal selection for the strand is finished, so take it
+            let selected_subgoal = strand.selected_subgoal.take().unwrap();
+            match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+                Literal::Positive(_) => {
+                    debug!("discarding strand because positive literal");
+
+                    // There is no solution for this strand, so discard it
+                    self.stack[depth].active_strand.take();
+
+                    // Now we yield with `QuantumExceeded`
+                    self.unwind_stack(depth);
+                    return Err(RootSearchFail::QuantumExceeded);
+                }
+                Literal::Negative(_) => {
+                    debug!("subgoal was proven because negative literal");
+
+                    // There is no solution for this strand
+                    // But, this is what we want, so can remove
+                    // this subgoal
+                    strand
+                        .ex_clause
+                        .subgoals
+                        .remove(selected_subgoal.subgoal_index);
+
+                    // This strand is still active, so continue
+                    return Ok(depth);
+                }
+            }
+        }
+
+        let dfn = self.stack[depth].dfn;
+        let cyclic_minimums = self.stack[depth].cyclic_minimums;
+        if cyclic_minimums.positive >= dfn && cyclic_minimums.negative >= dfn {
+            debug!("cycle with no new answers");
+
+            if cyclic_minimums.negative < DepthFirstNumber::MAX {
+                // This is a negative cycle.
+                self.unwind_stack(depth);
+                return Err(RootSearchFail::NegativeCycle);
+            }
+
+            // If all the things that we recursively depend on have
+            // positive dependencies on things below us in the stack,
+            // then no more answers are forthcoming. We can clear all
+            // the strands for those things recursively.
+            let table = self.stack[depth].table;
+            let cyclic_strands = self.tables[table].take_strands();
+            self.clear_strands_after_cycle(cyclic_strands);
+
+            // Now we yield with `QuantumExceeded`
+            self.unwind_stack(depth);
+            return Err(RootSearchFail::QuantumExceeded);
+        } else {
+            debug!("table part of a cycle");
+
+            // This table resulted in a positive cycle, so we have
+            // to check what this means for the subgoal containing
+            // this strand
+            let strand = {
+                let prev_index = self.stack.pop(depth);
+                if let Some(index) = prev_index {
+                    // The table was a subgoal for another strand,
+                    // which is still active.
+                    // We need to merge the answer into it.
+                    depth = index;
+                    self.stack[depth].active_strand.as_mut().unwrap()
+                } else {
+                    panic!("nothing on the stack but cyclic result");
+                }
+            };
+
+            // We can't take this because we might need it later to clear the cycle
+            let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
+            match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+                Literal::Positive(_) => {
+                    self.stack[depth]
+                        .cyclic_minimums
+                        .take_minimums(&cyclic_minimums);
+                }
+                Literal::Negative(_) => {
+                    // We depend on `not(subgoal)`. For us to continue,
+                    // `subgoal` must be completely evaluated. Therefore,
+                    // we depend (negatively) on the minimum link of
+                    // `subgoal` as a whole -- it doesn't matter whether
+                    // it's pos or neg.
+                    let mins = Minimums {
+                        positive: self.stack[depth].dfn,
+                        negative: cyclic_minimums.minimum_of_pos_and_neg(),
+                    };
+                    self.stack[depth].cyclic_minimums.take_minimums(&mins);
+                }
+            }
+
+            // We can't pursue this strand anymore, so push it back onto the table
+            let active_strand = self.stack[depth].active_strand.take().unwrap();
+            let table = self.stack[depth].table;
+            self.tables[table].push_strand(active_strand);
+
+            // The strand isn't active, but the table is, so just continue
+            return Ok(depth);
+        }
+    }
+
     fn unwind_stack(&mut self, mut depth: StackIndex) {
         loop {
             let next_index = self.stack.pop(depth);
@@ -675,135 +807,8 @@ impl<C: Context> Forest<C> {
                     }
                 }
                 None => {
-                    debug!("no more strands available (or all cycles)");
-
-                    // No more strands left to try! That means either we started
-                    // with no strands, or all available strands encountered a cycle.
-
-                    let table = self.stack[depth].table;
-                    if self.tables[table].strands_mut().count() == 0 {
-                        debug!("no more strands available");
-
-                        // We started with no strands!
-
-                        // This table has no solutions, so we have to check what
-                        // this means for the subgoal containing this strand
-                        let strand = {
-                            let prev_index = self.stack.pop(depth);
-                            if let Some(index) = prev_index {
-                                // The table was a subgoal for another strand,
-                                // which is still active.
-                                depth = index;
-                                self.stack[depth].active_strand.as_mut().unwrap()
-                            } else {
-                                debug!("no more solutions");
-
-                                // That was the root table, so we are done.
-                                return Err(RootSearchFail::NoMoreSolutions);
-                            }
-                        };
-
-                        // This subgoal selection for the strand is finished, so take it
-                        let selected_subgoal = strand.selected_subgoal.take().unwrap();
-                        match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
-                            Literal::Positive(_) => {
-                                debug!("discarding strand because positive literal");
-
-                                // There is no solution for this strand, so discard it
-                                self.stack[depth].active_strand.take();
-
-                                // Now we yield with `QuantumExceeded`
-                                self.unwind_stack(depth);
-                                return Err(RootSearchFail::QuantumExceeded);
-                            }
-                            Literal::Negative(_) => {
-                                debug!("subgoal was proven because negative literal");
-
-                                // There is no solution for this strand
-                                // But, this is what we want, so can remove
-                                // this subgoal
-                                strand
-                                    .ex_clause
-                                    .subgoals
-                                    .remove(selected_subgoal.subgoal_index);
-
-                                // This strand is still active, so continue
-                                continue;
-                            }
-                        }
-                    }
-
-                    let dfn = self.stack[depth].dfn;
-                    let cyclic_minimums = self.stack[depth].cyclic_minimums;
-                    if cyclic_minimums.positive >= dfn && cyclic_minimums.negative >= dfn {
-                        debug!("cycle with no new answers");
-
-                        if cyclic_minimums.negative < DepthFirstNumber::MAX {
-                            // This is a negative cycle.
-                            self.unwind_stack(depth);
-                            return Err(RootSearchFail::NegativeCycle);
-                        }
-
-                        // If all the things that we recursively depend on have
-                        // positive dependencies on things below us in the stack,
-                        // then no more answers are forthcoming. We can clear all
-                        // the strands for those things recursively.
-                        let table = self.stack[depth].table;
-                        let cyclic_strands = self.tables[table].take_strands();
-                        self.clear_strands_after_cycle(cyclic_strands);
-
-                        // Now we yield with `QuantumExceeded`
-                        self.unwind_stack(depth);
-                        return Err(RootSearchFail::QuantumExceeded);
-                    } else {
-                        debug!("table part of a cycle");
-
-                        // This table resulted in a positive cycle, so we have
-                        // to check what this means for the subgoal containing
-                        // this strand
-                        let strand = {
-                            let prev_index = self.stack.pop(depth);
-                            if let Some(index) = prev_index {
-                                // The table was a subgoal for another strand,
-                                // which is still active.
-                                // We need to merge the answer into it.
-                                depth = index;
-                                self.stack[depth].active_strand.as_mut().unwrap()
-                            } else {
-                                panic!("nothing on the stack but cyclic result");
-                            }
-                        };
-
-                        // We can't take this because we might need it later to clear the cycle
-                        let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
-                        match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
-                            Literal::Positive(_) => {
-                                self.stack[depth]
-                                    .cyclic_minimums
-                                    .take_minimums(&cyclic_minimums);
-                            }
-                            Literal::Negative(_) => {
-                                // We depend on `not(subgoal)`. For us to continue,
-                                // `subgoal` must be completely evaluated. Therefore,
-                                // we depend (negatively) on the minimum link of
-                                // `subgoal` as a whole -- it doesn't matter whether
-                                // it's pos or neg.
-                                let mins = Minimums {
-                                    positive: self.stack[depth].dfn,
-                                    negative: cyclic_minimums.minimum_of_pos_and_neg(),
-                                };
-                                self.stack[depth].cyclic_minimums.take_minimums(&mins);
-                            }
-                        }
-
-                        // We can't pursue this strand anymore, so push it back onto the table
-                        let active_strand = self.stack[depth].active_strand.take().unwrap();
-                        let table = self.stack[depth].table;
-                        self.tables[table].push_strand(active_strand);
-
-                        // The strand isn't active, but the table is, so just continue
-                        continue;
-                    }
+                    depth = self.on_no_strands_left(depth)?;
+                    continue;
                 }
             }
         }
