@@ -642,17 +642,21 @@ where
     }
 }
 
-impl<C: Context, TF: TypeFamily> Fold<TF, TF> for ExClause<C>
+impl<C: Context, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for ExClause<C>
 where
     C: Context,
-    C::Substitution: Fold<TF, TF, Result = C::Substitution>,
-    C::RegionConstraint: Fold<TF, TF, Result = C::RegionConstraint>,
-    C::CanonicalConstrainedSubst: Fold<TF, TF, Result = C::CanonicalConstrainedSubst>,
-    C::GoalInEnvironment: Fold<TF, TF, Result = C::GoalInEnvironment>,
+    C::Substitution: Fold<TF, TTF, Result = C::Substitution>,
+    C::RegionConstraint: Fold<TF, TTF, Result = C::RegionConstraint>,
+    C::CanonicalConstrainedSubst: Fold<TF, TTF, Result = C::CanonicalConstrainedSubst>,
+    C::GoalInEnvironment: Fold<TF, TTF, Result = C::GoalInEnvironment>,
 {
     type Result = ExClause<C>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<TF, TF>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
         let ExClause {
             subst,
             ambiguous,
@@ -672,17 +676,21 @@ where
     }
 }
 
-impl<C: Context, TF: TypeFamily> Fold<TF, TF> for FlounderedSubgoal<C>
+impl<C: Context, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for FlounderedSubgoal<C>
 where
     C: Context,
-    C::Substitution: Fold<TF, TF, Result = C::Substitution>,
-    C::RegionConstraint: Fold<TF, TF, Result = C::RegionConstraint>,
-    C::CanonicalConstrainedSubst: Fold<TF, TF, Result = C::CanonicalConstrainedSubst>,
-    C::GoalInEnvironment: Fold<TF, TF, Result = C::GoalInEnvironment>,
+    C::Substitution: Fold<TF, TTF, Result = C::Substitution>,
+    C::RegionConstraint: Fold<TF, TTF, Result = C::RegionConstraint>,
+    C::CanonicalConstrainedSubst: Fold<TF, TTF, Result = C::CanonicalConstrainedSubst>,
+    C::GoalInEnvironment: Fold<TF, TTF, Result = C::GoalInEnvironment>,
 {
     type Result = FlounderedSubgoal<C>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<TF, TF>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
         let FlounderedSubgoal {
             floundered_literal,
             floundered_time,
@@ -694,14 +702,18 @@ where
     }
 }
 
-impl<C: Context, TF: TypeFamily> Fold<TF, TF> for Literal<C>
+impl<C: Context, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Literal<C>
 where
     C: Context,
-    C::GoalInEnvironment: Fold<TF, TF, Result = C::GoalInEnvironment>,
+    C::GoalInEnvironment: Fold<TF, TTF, Result = C::GoalInEnvironment>,
 {
     type Result = Literal<C>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<TF, TF>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
         match self {
             Literal::Positive(goal) => Ok(Literal::Positive(goal.fold_with(folder, binders)?)),
             Literal::Negative(goal) => Ok(Literal::Negative(goal.fold_with(folder, binders)?)),
