@@ -185,27 +185,16 @@ fn derive_fold_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream {
 
 /// Checks whether a generic parameter has a `: HasTypeFamily` bound
 fn has_type_family(param: &GenericParam) -> Option<&Ident> {
-    match param {
-        GenericParam::Type(ref t) => t.bounds.iter().find_map(|b| {
-            if let TypeParamBound::Trait(trait_bound) = b {
-                if trait_bound
-                    .path
-                    .segments
-                    .last()
-                    .map(|s| s.ident.to_string())
-                    == Some(String::from("HasTypeFamily"))
-                {
-                    return Some(&t.ident);
-                }
-            }
-            None
-        }),
-        _ => None,
-    }
+    bounded_by_trait(param, "HasTypeFamily")
 }
 
 /// Checks whether a generic parameter has a `: TypeFamily` bound
 fn is_type_family(param: &GenericParam) -> Option<&Ident> {
+    bounded_by_trait(param, "TypeFamily")
+}
+
+fn bounded_by_trait<'p>(param: &'p GenericParam, name: &str) -> Option<&'p Ident> {
+    let name = Some(String::from(name));
     match param {
         GenericParam::Type(ref t) => t.bounds.iter().find_map(|b| {
             if let TypeParamBound::Trait(trait_bound) = b {
@@ -214,7 +203,7 @@ fn is_type_family(param: &GenericParam) -> Option<&Ident> {
                     .segments
                     .last()
                     .map(|s| s.ident.to_string())
-                    == Some(String::from("TypeFamily"))
+                    == name
                 {
                     return Some(&t.ident);
                 }
