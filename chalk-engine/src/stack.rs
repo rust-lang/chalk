@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::strand::Strand;
-use crate::{DepthFirstNumber, Minimums, TableIndex, TimeStamp};
+use crate::{Minimums, TableIndex, TimeStamp};
 use std::ops::{Index, IndexMut, Range};
 
 /// See `Forest`.
@@ -31,10 +31,8 @@ pub(crate) struct StackEntry<C: Context> {
     /// The goal G from the stack entry `A :- G` represented here.
     pub(super) table: TableIndex,
 
-    /// The DFN of this computation.
-    pub(super) dfn: DepthFirstNumber,
-
-    pub(super) work: TimeStamp,
+    /// The clock TimeStamp of this stack entry.
+    pub(super) clock: TimeStamp,
 
     pub(super) cyclic_minimums: Minimums,
 
@@ -72,15 +70,13 @@ impl<C: Context> Stack<C> {
     pub(super) fn push(
         &mut self,
         table: TableIndex,
-        dfn: DepthFirstNumber,
-        work: TimeStamp,
+        clock: TimeStamp,
         cyclic_minimums: Minimums,
     ) -> StackIndex {
         let old_len = self.stack.len();
         self.stack.push(StackEntry {
             table,
-            dfn,
-            work,
+            clock,
             cyclic_minimums,
             active_strand: None,
         });

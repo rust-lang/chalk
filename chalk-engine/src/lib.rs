@@ -94,16 +94,6 @@ index_struct! {
     }
 }
 
-/// The `DepthFirstNumber` (DFN) is a sequential number assigned to
-/// each goal when it is first encountered. The naming (taken from
-/// EWFS) refers to the idea that this number tracks the index of when
-/// we encounter the goal during a depth-first traversal of the proof
-/// tree.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-struct DepthFirstNumber {
-    value: u64,
-}
-
 /// The paper describes these as `A :- D | G`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExClause<C: Context> {
@@ -146,6 +136,10 @@ pub struct TimeStamp {
 }
 
 impl TimeStamp {
+    const MAX: TimeStamp = TimeStamp {
+        clock: ::std::u64::MAX,
+    };
+
     fn increment(&mut self) {
         self.clock += 1;
     }
@@ -255,14 +249,14 @@ pub enum Literal<C: Context> {
 /// however, this value must be updated.
 #[derive(Copy, Clone, Debug)]
 struct Minimums {
-    positive: DepthFirstNumber,
-    negative: DepthFirstNumber,
+    positive: TimeStamp,
+    negative: TimeStamp,
 }
 
 impl Minimums {
     const MAX: Minimums = Minimums {
-        positive: DepthFirstNumber::MAX,
-        negative: DepthFirstNumber::MAX,
+        positive: TimeStamp::MAX,
+        negative: TimeStamp::MAX,
     };
 
     /// Update our fields to be the minimum of our current value
@@ -272,21 +266,7 @@ impl Minimums {
         self.negative = min(self.negative, other.negative);
     }
 
-    fn minimum_of_pos_and_neg(&self) -> DepthFirstNumber {
+    fn minimum_of_pos_and_neg(&self) -> TimeStamp {
         min(self.positive, self.negative)
-    }
-}
-
-impl DepthFirstNumber {
-    const MIN: DepthFirstNumber = DepthFirstNumber { value: 0 };
-    const MAX: DepthFirstNumber = DepthFirstNumber {
-        value: ::std::u64::MAX,
-    };
-
-    fn next(&mut self) -> DepthFirstNumber {
-        let value = self.value;
-        assert!(value < ::std::u64::MAX);
-        self.value += 1;
-        DepthFirstNumber { value }
     }
 }

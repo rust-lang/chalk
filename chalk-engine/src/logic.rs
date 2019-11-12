@@ -6,9 +6,7 @@ use crate::stack::StackIndex;
 use crate::strand::{SelectedSubgoal, Strand};
 use crate::table::AnswerIndex;
 use crate::Answer;
-use crate::{
-    DepthFirstNumber, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
-};
+use crate::{ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp};
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -146,8 +144,8 @@ impl<C: Context> Forest<C> {
             }
 
             return Some(Err(TableCheckFail::PositiveCycle(Minimums {
-                positive: self.stack[depth].dfn,
-                negative: DepthFirstNumber::MAX,
+                positive: self.stack[depth].clock,
+                negative: TimeStamp::MAX,
             })));
         }
 
@@ -458,7 +456,7 @@ impl<C: Context> Forest<C> {
                         // `subgoal` as a whole -- it doesn't matter whether
                         // it's pos or neg.
                         let mins = Minimums {
-                            positive: self.stack[depth].dfn,
+                            positive: self.stack[depth].clock,
                             negative: minimums.minimum_of_pos_and_neg(),
                         };
                         self.stack[depth].cyclic_minimums.take_minimums(&mins);
@@ -474,10 +472,9 @@ impl<C: Context> Forest<C> {
             None => {
                 self.stack[depth].active_strand = Some(strand);
 
-                let dfn = self.next_dfn();
-                let work = self.increment_work();
+                let clock = self.increment_clock();
                 let cyclic_minimums = Minimums::MAX;
-                depth = self.stack.push(subgoal_table, dfn, work, cyclic_minimums);
+                depth = self.stack.push(subgoal_table, clock, cyclic_minimums);
                 return Ok(depth);
             }
         }
@@ -646,12 +643,12 @@ impl<C: Context> Forest<C> {
             }
         }
 
-        let dfn = self.stack[depth].dfn;
+        let clock = self.stack[depth].clock;
         let cyclic_minimums = self.stack[depth].cyclic_minimums;
-        if cyclic_minimums.positive >= dfn && cyclic_minimums.negative >= dfn {
+        if cyclic_minimums.positive >= clock && cyclic_minimums.negative >= clock {
             debug!("cycle with no new answers");
 
-            if cyclic_minimums.negative < DepthFirstNumber::MAX {
+            if cyclic_minimums.negative < TimeStamp::MAX {
                 // This is a negative cycle.
                 self.unwind_stack(depth);
                 return Err(RootSearchFail::NegativeCycle);
@@ -702,7 +699,7 @@ impl<C: Context> Forest<C> {
                     // `subgoal` as a whole -- it doesn't matter whether
                     // it's pos or neg.
                     let mins = Minimums {
-                        positive: self.stack[depth].dfn,
+                        positive: self.stack[depth].clock,
                         negative: cyclic_minimums.minimum_of_pos_and_neg(),
                     };
                     self.stack[depth].cyclic_minimums.take_minimums(&mins);
@@ -762,25 +759,22 @@ impl<C: Context> Forest<C> {
             }
             None => {}
         }
-        let next_dfn = self.next_dfn();
-        let next_work = self.increment_work();
-        let mut depth = self
-            .stack
-            .push(initial_table, next_dfn, next_work, Minimums::MAX);
+        let next_clock = self.increment_clock();
+        let mut depth = self.stack.push(initial_table, next_clock, Minimums::MAX);
         loop {
             // FIXME: use depth for debug/info printing
 
-            let work = self.stack[depth].work;
+            let clock = self.stack[depth].clock;
             // If we had an active strand, continue to pursue it
             let table = self.stack[depth].table;
             let next_strand = self.stack[depth].active_strand.take().or_else(|| {
-                self.tables[table].pop_next_strand_if(|strand| strand.last_pursued_time < work)
+                self.tables[table].pop_next_strand_if(|strand| strand.last_pursued_time < clock)
             });
             match next_strand {
                 Some(mut strand) => {
                     debug!("next strand: {:#?}", strand);
 
-                    strand.last_pursued_time = work;
+                    strand.last_pursued_time = clock;
                     match self.select_subgoal(context, &mut strand) {
                         SubGoalSelection::Selected => {
                             // A subgoal has been selected. We now check this subgoal
