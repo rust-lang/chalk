@@ -28,7 +28,7 @@ impl InferenceTable {
     /// Variant on `instantiate` that takes a `Canonical<T>`.
     pub(crate) fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
     where
-        T: Fold<ChalkIr, ChalkIr> + Debug,
+        T: Fold<ChalkIr> + Debug,
     {
         let subst = self.fresh_subst(&bound.binders);
         bound.value.fold_with(&mut &subst, 0).unwrap()
@@ -46,7 +46,7 @@ impl InferenceTable {
         arg: &T,
     ) -> T::Result
     where
-        T: Fold<ChalkIr, ChalkIr>,
+        T: Fold<ChalkIr>,
         U: IntoIterator<Item = ParameterKind<()>>,
     {
         let binders: Vec<_> = binders
@@ -64,7 +64,7 @@ impl InferenceTable {
         arg: &impl BindersAndValue<Output = T>,
     ) -> T::Result
     where
-        T: Fold<ChalkIr, ChalkIr>,
+        T: Fold<ChalkIr>,
     {
         let (binders, value) = arg.split();
         let max_universe = self.max_universe;
@@ -77,7 +77,7 @@ impl InferenceTable {
         arg: &impl BindersAndValue<Output = T>,
     ) -> T::Result
     where
-        T: Fold<ChalkIr, ChalkIr>,
+        T: Fold<ChalkIr>,
     {
         let (binders, value) = arg.split();
         let ui = self.new_universe();

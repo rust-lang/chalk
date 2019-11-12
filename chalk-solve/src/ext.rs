@@ -7,8 +7,8 @@ pub trait CanonicalExt<T> {
     fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
-        T: Fold<ChalkIr, ChalkIr>,
-        U: Fold<ChalkIr, ChalkIr>;
+        T: Fold<ChalkIr>,
+        U: Fold<ChalkIr>;
 }
 
 impl<T> CanonicalExt<T> for Canonical<T> {
@@ -22,8 +22,8 @@ impl<T> CanonicalExt<T> for Canonical<T> {
     fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
-        T: Fold<ChalkIr, ChalkIr>,
-        U: Fold<ChalkIr, ChalkIr>,
+        T: Fold<ChalkIr>,
+        U: Fold<ChalkIr>,
     {
         // Subtle: It is only quite rarely correct to apply `op` and
         // just re-use our existing binders. For that to be valid, the

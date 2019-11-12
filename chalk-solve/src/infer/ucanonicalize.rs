@@ -8,7 +8,7 @@ use chalk_ir::*;
 use super::InferenceTable;
 
 impl InferenceTable {
-    pub(crate) fn u_canonicalize<T: Fold<ChalkIr, ChalkIr>>(
+    pub(crate) fn u_canonicalize<T: Fold<ChalkIr>>(
         &mut self,
         value0: &Canonical<T>,
     ) -> UCanonicalized<T::Result> {
@@ -212,7 +212,7 @@ impl UniverseMap {
     /// of universes, since that determines visibility, and (b) that
     /// the universe we produce does not correspond to any of the
     /// other original universes.
-    pub(crate) fn map_from_canonical<T: Fold<ChalkIr, ChalkIr>>(&self, value: &T) -> T::Result {
+    pub(crate) fn map_from_canonical<T: Fold<ChalkIr>>(&self, value: &T) -> T::Result {
         debug!("map_from_canonical(value={:?})", value);
         debug!("map_from_canonical: universes = {:?}", self.universes);
         value

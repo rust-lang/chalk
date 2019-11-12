@@ -50,7 +50,7 @@ impl InferenceTable {
         canonical: &Canonical<T>,
     ) -> (Self, Substitution<ChalkIr>, T)
     where
-        T: Fold<ChalkIr, ChalkIr, Result = T> + Clone,
+        T: Fold<ChalkIr, Result = T> + Clone,
     {
         let mut table = InferenceTable::new();
 

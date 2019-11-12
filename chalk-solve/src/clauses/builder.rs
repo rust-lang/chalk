@@ -75,7 +75,7 @@ impl<'me> ClauseBuilder<'me> {
     /// created referencing the *old* list of binders are still valid.
     pub fn push_binders<V>(&mut self, binders: &Binders<V>, op: impl FnOnce(&mut Self, V::Result))
     where
-        V: Fold<ChalkIr, ChalkIr> + HasTypeFamily<TypeFamily = ChalkIr>,
+        V: Fold<ChalkIr> + HasTypeFamily<TypeFamily = ChalkIr>,
     {
         let old_len = self.binders.len();
         self.binders.extend(binders.binders.clone());

@@ -422,7 +422,7 @@ impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
 
     fn zip_binders<T>(&mut self, answer: &Binders<T>, pending: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<ChalkIr> + Fold<ChalkIr, ChalkIr, Result = T>,
+        T: Zip<ChalkIr> + Fold<ChalkIr, Result = T>,
     {
         self.answer_binders += answer.binders.len();
         self.pending_binders += pending.binders.len();

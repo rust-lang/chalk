@@ -75,7 +75,7 @@ impl InferenceTable {
     /// `None`) until the second unification has occurred.)
     pub(crate) fn invert<T>(&mut self, value: &T) -> Option<T::Result>
     where
-        T: Fold<ChalkIr, ChalkIr, Result = T>,
+        T: Fold<ChalkIr, Result = T>,
     {
         let Canonicalized {
             free_vars,

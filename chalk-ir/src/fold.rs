@@ -69,7 +69,7 @@ pub trait Folder<TF: TypeFamily, TTF: TypeFamily>:
 {
 }
 
-pub trait TypeFolder<TF: TypeFamily, TTF: TypeFamily> {
+pub trait TypeFolder<TF: TypeFamily, TTF: TypeFamily = TF> {
     fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TTF>>;
     fn fold_lifetime(&mut self, lifetime: &Lifetime<TF>, binders: usize)
         -> Fallible<Lifetime<TTF>>;
@@ -294,7 +294,7 @@ where
 /// * `TTF` is the "target type family" that we are folding *into*
 ///
 /// Often, both are the same.
-pub trait Fold<TF: TypeFamily, TTF: TypeFamily>: Debug {
+pub trait Fold<TF: TypeFamily, TTF: TypeFamily = TF>: Debug {
     /// The type of value that will be produced once folding is done.
     /// Typically this is `Self`, unless `Self` contains borrowed
     /// values, in which case owned values are produced (for example,
