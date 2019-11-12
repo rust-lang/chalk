@@ -3,32 +3,32 @@
 #[macro_export]
 macro_rules! ty {
     (apply $n:tt $($arg:tt)*) => {
-        $crate::Ty::Apply(ApplicationTy {
+        $crate::TyData::Apply(ApplicationTy {
             name: ty_name!($n),
             parameters: vec![$(arg!($arg)),*],
-        })
+        }).intern()
     };
 
     (for_all $n:tt $t:tt) => {
-        $crate::Ty::ForAll(Box::new(QuantifiedTy {
+        $crate::TyData::ForAll(Box::new(QuantifiedTy {
             num_binders: $n,
             ty: ty!($t),
-        }))
+        })).intern()
     };
 
     (projection (item $n:tt) $($arg:tt)*) => {
-        $crate::Ty::Projection(ProjectionTy {
+        $crate::TyData::Projection(ProjectionTy {
             associated_ty_id: TypeId(RawId { index: $n }),
             parameters: vec![$(arg!($arg)),*],
-        })
+        }).intern()
     };
 
     (infer $b:expr) => {
-        $crate::Ty::InferenceVar($crate::InferenceVar::from($b))
+        $crate::TyData::InferenceVar($crate::InferenceVar::from($b)).intern()
     };
 
     (bound $b:expr) => {
-        $crate::Ty::BoundVar($b)
+        $crate::TyData::BoundVar($b).intern()
     };
 
     (expr $b:expr) => {
@@ -54,15 +54,15 @@ macro_rules! arg {
 #[macro_export]
 macro_rules! lifetime {
     (infer $b:expr) => {
-        $crate::Lifetime::InferenceVar($crate::InferenceVar::from($b))
+        $crate::LifetimeData::InferenceVar($crate::InferenceVar::from($b)).intern()
     };
 
     (bound $b:expr) => {
-        $crate::Lifetime::BoundVar($b)
+        $crate::LifetimeData::BoundVar($b).intern()
     };
 
     (placeholder $b:expr) => {
-        $crate::Lifetime::Placeholder(PlaceholderIndex { ui: UniverseIndex { counter: $b }, idx: 0})
+        $crate::LifetimeData::Placeholder(PlaceholderIndex { ui: UniverseIndex { counter: $b }, idx: 0}).intern()
     };
 
     (expr $b:expr) => {

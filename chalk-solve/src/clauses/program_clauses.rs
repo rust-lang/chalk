@@ -170,16 +170,17 @@ impl ToProgramClauses for StructDatum {
 
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         builder.push_binders(&binders, |builder, where_clauses| {
-            let self_ty = &ApplicationTy {
+            let self_appl_ty = &ApplicationTy {
                 name: self.id.cast(),
                 parameters: builder.placeholders_in_scope().to_vec(),
             };
+            let self_ty = self_appl_ty.clone().intern();
 
             // forall<T> {
             //     WF(Foo<T>) :- WF(T: Eq).
             // }
             builder.push_clause(
-                WellFormed::Ty(self_ty.clone().cast()),
+                WellFormed::Ty(self_ty.clone()),
                 where_clauses
                     .iter()
                     .cloned()
@@ -190,8 +191,8 @@ impl ToProgramClauses for StructDatum {
             //     IsFullyVisible(Foo<T>) :- IsFullyVisible(T).
             // }
             builder.push_clause(
-                DomainGoal::IsFullyVisible(self_ty.clone().cast()),
-                self_ty
+                DomainGoal::IsFullyVisible(self_ty.clone()),
+                self_appl_ty
                     .type_parameters()
                     .map(|ty| DomainGoal::IsFullyVisible(ty).cast::<Goal<_>>()),
             );
@@ -211,18 +212,18 @@ impl ToProgramClauses for StructDatum {
                     // until the day when someone makes a decision
                     // about how that should behave.
                     assert_eq!(
-                        self_ty.len_type_parameters(),
+                        self_appl_ty.len_type_parameters(),
                         1,
                         "Only fundamental types with a single parameter are supported"
                     );
 
                     builder.push_clause(
-                        DomainGoal::$goal(self_ty.clone().cast()),
+                        DomainGoal::$goal(self_ty.clone()),
                         Some(DomainGoal::$goal(
                             // This unwrap is safe because we asserted
                             // above for the presence of a type
                             // parameter
-                            self_ty.first_type_parameter().unwrap(),
+                            self_appl_ty.first_type_parameter().unwrap(),
                         )),
                     );
                 };
@@ -232,7 +233,7 @@ impl ToProgramClauses for StructDatum {
             if !self.flags.upstream {
                 // `IsLocalTy(Ty)` depends *only* on whether the type
                 // is marked #[upstream] and nothing else
-                builder.push_fact(DomainGoal::IsLocal(self_ty.clone().cast()));
+                builder.push_fact(DomainGoal::IsLocal(self_ty.clone()));
             } else if self.flags.fundamental {
                 // If a type is `#[upstream]`, but is also
                 // `#[fundamental]`, it satisfies IsLocal if and only
@@ -241,7 +242,7 @@ impl ToProgramClauses for StructDatum {
                 fundamental_rule!(IsUpstream);
             } else {
                 // The type is just upstream and not fundamental
-                builder.push_fact(DomainGoal::IsUpstream(self_ty.clone().cast()));
+                builder.push_fact(DomainGoal::IsUpstream(self_ty.clone()));
             }
 
             if self.flags.fundamental {
@@ -261,10 +262,7 @@ impl ToProgramClauses for StructDatum {
                 // for any `'a` *if* you are assuming that `Foo<T>` is
                 // well formed.
                 builder.push_binders(&qwc, |builder, wc| {
-                    builder.push_clause(
-                        wc.into_from_env_goal(),
-                        Some(FromEnv::Ty(self_ty.clone().cast())),
-                    );
+                    builder.push_clause(wc.into_from_env_goal(), Some(self_ty.clone().from_env()));
                 });
             }
         });
@@ -575,6 +573,7 @@ impl ToProgramClauses for AssociatedTyDatum {
                 associated_ty_id: self.id,
                 parameters: parameters.clone(),
             };
+            let projection_ty = projection.clone().intern();
 
             // Retrieve the trait ref embedding the associated type
             let trait_ref = builder.db.trait_ref_from_projection(&projection);
@@ -585,7 +584,7 @@ impl ToProgramClauses for AssociatedTyDatum {
                 name: TypeName::AssociatedType(self.id),
                 parameters,
             }
-            .cast();
+            .intern();
 
             let projection_eq = ProjectionEq {
                 projection: projection.clone(),
@@ -622,10 +621,7 @@ impl ToProgramClauses for AssociatedTyDatum {
             //    forall<Self> {
             //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).
             //    }
-            builder.push_clause(
-                FromEnv::Trait(trait_ref.clone()),
-                Some(FromEnv::Ty(app_ty.clone())),
-            );
+            builder.push_clause(FromEnv::Trait(trait_ref.clone()), Some(app_ty.from_env()));
 
             // Reverse rule for where clauses.
             //
@@ -647,7 +643,7 @@ impl ToProgramClauses for AssociatedTyDatum {
             //    }
             for quantified_bound in &bounds {
                 builder.push_binders(quantified_bound, |builder, bound| {
-                    for wc in bound.into_where_clauses(projection.clone().cast()) {
+                    for wc in bound.into_where_clauses(projection_ty.clone()) {
                         builder.push_clause(
                             wc.into_from_env_goal(),
                             iter::once(FromEnv::Trait(trait_ref.clone()).cast::<Goal<_>>())

@@ -7,8 +7,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::family::{ChalkIr, HasTypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
-    Binders, Identifier, ImplId, Lifetime, Parameter, ParameterKind, ProjectionEq, ProjectionTy,
-    QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TypeId, TypeName, WhereClause,
+    Binders, Identifier, ImplId, LifetimeData, Parameter, ParameterKind, ProjectionEq,
+    ProjectionTy, QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TyData, TypeId,
+    TypeName, WhereClause,
 };
 use std::iter;
 
@@ -206,6 +207,7 @@ impl TraitBound {
         }
     }
 }
+
 /// Represents a projection equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
@@ -265,8 +267,8 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
     fn to_parameter(&self) -> Parameter<ChalkIr> {
         let &(binder, index) = self;
         match *binder {
-            ParameterKind::Lifetime(_) => Lifetime::BoundVar(index).cast(),
-            ParameterKind::Ty(_) => Ty::BoundVar(index).cast(),
+            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(index).intern().cast(),
+            ParameterKind::Ty(_) => TyData::BoundVar(index).intern().cast(),
         }
     }
 }
@@ -342,10 +344,11 @@ impl AssociatedTyDatum {
         let parameters = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
-        let self_ty = Ty::Projection(ProjectionTy {
+        let self_ty = TyData::Projection(ProjectionTy {
             associated_ty_id: self.id,
             parameters,
-        });
+        })
+        .intern();
 
         // Now use that as the self type for the bounds, transforming
         // something like `type Bar<Pn..Pm>: Debug` into

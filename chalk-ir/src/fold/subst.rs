@@ -9,13 +9,13 @@ pub struct Subst<'s, TF: TypeFamily> {
 }
 
 impl<'s, TF: TypeFamily> Subst<'s, TF> {
-    pub fn apply<T: Fold<TF>>(parameters: &[Parameter<TF>], value: &T) -> T::Result {
+    pub fn apply<T: Fold<TF, TF>>(parameters: &[Parameter<TF>], value: &T) -> T::Result {
         value.fold_with(&mut Subst { parameters }, 0).unwrap()
     }
 }
 
 impl<TF: TypeFamily> QuantifiedTy<TF> {
-    pub fn substitute(&self, parameters: &[Parameter<TF>]) -> TF::Type {
+    pub fn substitute(&self, parameters: &[Parameter<TF>]) -> Ty<TF> {
         assert_eq!(self.num_binders, parameters.len());
         Subst::apply(parameters, &self.ty)
     }
@@ -24,9 +24,9 @@ impl<TF: TypeFamily> QuantifiedTy<TF> {
 impl<'b, TF: TypeFamily> DefaultTypeFolder for Subst<'b, TF> {}
 
 impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         if depth >= self.parameters.len() {
-            Ok(Ty::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
+            Ok(TyData::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
         } else {
             match self.parameters[depth].0 {
                 ParameterKind::Ty(ref t) => Ok(t.shifted_in(binders)),
@@ -35,9 +35,9 @@ impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
         }
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<TF::Lifetime> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
         if depth >= self.parameters.len() {
-            Ok(Lifetime::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
+            Ok(LifetimeData::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
         } else {
             match self.parameters[depth].0 {
                 ParameterKind::Lifetime(ref l) => Ok(l.shifted_in(binders)),

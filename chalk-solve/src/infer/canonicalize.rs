@@ -139,7 +139,7 @@ impl<'q> InferenceFolder<ChalkIr> for Canonicalizer<'q> {
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(Ty::BoundVar(position + binders))
+                Ok(TyData::BoundVar(position + binders).intern())
             }
         }
     }
@@ -164,7 +164,7 @@ impl<'q> InferenceFolder<ChalkIr> for Canonicalizer<'q> {
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(Lifetime::BoundVar(position + binders))
+                Ok(LifetimeData::BoundVar(position + binders).intern())
             }
         }
     }

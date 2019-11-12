@@ -104,10 +104,10 @@ impl<'t> Unifier<'t> {
             b
         );
 
-        match (a, b) {
+        match (a.data(), b.data()) {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
-            (&Ty::InferenceVar(var1), &Ty::InferenceVar(var2)) => {
+            (&TyData::InferenceVar(var1), &TyData::InferenceVar(var2)) => {
                 debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
                 let var1 = EnaVariable::from(var1);
                 let var2 = EnaVariable::from(var2);
@@ -119,31 +119,35 @@ impl<'t> Unifier<'t> {
             }
 
             // Unifying an inference variables with a non-inference variable.
-            (&Ty::InferenceVar(var), ty @ &Ty::Apply(_))
-            | (ty @ &Ty::Apply(_), &Ty::InferenceVar(var))
-            | (&Ty::InferenceVar(var), ty @ &Ty::Opaque(_))
-            | (ty @ Ty::Opaque(_), &Ty::InferenceVar(var))
-            | (&Ty::InferenceVar(var), ty @ &Ty::Dyn(_))
-            | (ty @ &Ty::Dyn(_), &Ty::InferenceVar(var))
-            | (&Ty::InferenceVar(var), ty @ &Ty::ForAll(_))
-            | (ty @ &Ty::ForAll(_), &Ty::InferenceVar(var)) => self.unify_var_ty(var, ty),
+            (&TyData::InferenceVar(var), &TyData::Apply(_))
+            | (&TyData::InferenceVar(var), &TyData::Opaque(_))
+            | (&TyData::InferenceVar(var), &TyData::Dyn(_))
+            | (&TyData::InferenceVar(var), &TyData::ForAll(_)) => self.unify_var_ty(var, b),
+
+            (&TyData::Apply(_), &TyData::InferenceVar(var))
+            | (TyData::Opaque(_), &TyData::InferenceVar(var))
+            | (&TyData::Dyn(_), &TyData::InferenceVar(var))
+            | (&TyData::ForAll(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, a),
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
-            (&Ty::ForAll(ref quantified_ty1), &Ty::ForAll(ref quantified_ty2)) => {
+            (&TyData::ForAll(ref quantified_ty1), &TyData::ForAll(ref quantified_ty2)) => {
                 self.unify_forall_tys(quantified_ty1, quantified_ty2)
             }
 
             // Unifying `forall<X> { T }` with some other type `U`
-            (&Ty::ForAll(ref quantified_ty), other_ty @ &Ty::Apply(_))
-            | (&Ty::ForAll(ref quantified_ty), other_ty @ &Ty::Dyn(_))
-            | (&Ty::ForAll(ref quantified_ty), other_ty @ &Ty::Opaque(_))
-            | (other_ty @ &Ty::Apply(_), &Ty::ForAll(ref quantified_ty))
-            | (other_ty @ &Ty::Dyn(_), &Ty::ForAll(ref quantified_ty))
-            | (other_ty @ &Ty::Opaque(_), &Ty::ForAll(ref quantified_ty)) => {
-                self.unify_forall_other(quantified_ty, other_ty)
+            (&TyData::ForAll(ref quantified_ty), &TyData::Apply(_))
+            | (&TyData::ForAll(ref quantified_ty), &TyData::Dyn(_))
+            | (&TyData::ForAll(ref quantified_ty), &TyData::Opaque(_)) => {
+                self.unify_forall_other(quantified_ty, b)
             }
 
-            (&Ty::Apply(ref apply1), &Ty::Apply(ref apply2)) => {
+            (&TyData::Apply(_), &TyData::ForAll(ref quantified_ty))
+            | (&TyData::Dyn(_), &TyData::ForAll(ref quantified_ty))
+            | (&TyData::Opaque(_), &TyData::ForAll(ref quantified_ty)) => {
+                self.unify_forall_other(quantified_ty, a)
+            }
+
+            (&TyData::Apply(ref apply1), &TyData::Apply(ref apply2)) => {
                 // Cannot unify (e.g.) some struct type `Foo` and some struct type `Bar`
                 if apply1.name != apply2.name {
                     return Err(NoSolution);
@@ -153,40 +157,43 @@ impl<'t> Unifier<'t> {
             }
 
             // Cannot unify (e.g.) some struct type `Foo` and an `impl Trait` type
-            (&Ty::Apply(_), &Ty::Opaque(_)) | (&Ty::Opaque(_), &Ty::Apply(_)) => {
+            (&TyData::Apply(_), &TyData::Opaque(_)) | (&TyData::Opaque(_), &TyData::Apply(_)) => {
                 return Err(NoSolution);
             }
 
             // Cannot unify (e.g.) some struct type `Foo` and a `dyn Trait` type
-            (&Ty::Apply(_), &Ty::Dyn(_)) | (&Ty::Dyn(_), &Ty::Apply(_)) => {
+            (&TyData::Apply(_), &TyData::Dyn(_)) | (&TyData::Dyn(_), &TyData::Apply(_)) => {
                 return Err(NoSolution);
             }
 
             // Cannot unify (e.g.) some `dyn Trait` and some `impl Trait` type
-            (&Ty::Dyn(..), &Ty::Opaque(..)) | (&Ty::Opaque(..), &Ty::Dyn(..)) => {
+            (&TyData::Dyn(..), &TyData::Opaque(..)) | (&TyData::Opaque(..), &TyData::Dyn(..)) => {
                 return Err(NoSolution);
             }
 
-            (&Ty::Opaque(ref qwc1), &Ty::Opaque(ref qwc2))
-            | (&Ty::Dyn(ref qwc1), &Ty::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
+            (&TyData::Opaque(ref qwc1), &TyData::Opaque(ref qwc2))
+            | (&TyData::Dyn(ref qwc1), &TyData::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
 
             // Unifying an associated type projection `<T as
             // Trait>::Item` with some other type `U`.
-            (ty @ &Ty::Apply(_), &Ty::Projection(ref proj))
-            | (ty @ &Ty::ForAll(_), &Ty::Projection(ref proj))
-            | (ty @ &Ty::InferenceVar(_), &Ty::Projection(ref proj))
-            | (ty @ &Ty::Dyn(_), &Ty::Projection(ref proj))
-            | (ty @ &Ty::Opaque(_), &Ty::Projection(ref proj))
-            | (&Ty::Projection(ref proj), ty @ &Ty::Projection(_))
-            | (&Ty::Projection(ref proj), ty @ &Ty::Apply(_))
-            | (&Ty::Projection(ref proj), ty @ &Ty::ForAll(_))
-            | (&Ty::Projection(ref proj), ty @ &Ty::InferenceVar(_))
-            | (&Ty::Projection(ref proj), ty @ &Ty::Dyn(_))
-            | (&Ty::Projection(ref proj), ty @ &Ty::Opaque(_)) => {
-                self.unify_projection_ty(proj, ty)
+            (&TyData::Apply(_), &TyData::Projection(ref proj))
+            | (&TyData::ForAll(_), &TyData::Projection(ref proj))
+            | (&TyData::InferenceVar(_), &TyData::Projection(ref proj))
+            | (&TyData::Dyn(_), &TyData::Projection(ref proj))
+            | (&TyData::Opaque(_), &TyData::Projection(ref proj)) => {
+                self.unify_projection_ty(proj, a)
             }
 
-            (Ty::BoundVar(_), _) | (_, Ty::BoundVar(_)) => panic!(
+            (&TyData::Projection(ref proj), &TyData::Projection(_))
+            | (&TyData::Projection(ref proj), &TyData::Apply(_))
+            | (&TyData::Projection(ref proj), &TyData::ForAll(_))
+            | (&TyData::Projection(ref proj), &TyData::InferenceVar(_))
+            | (&TyData::Projection(ref proj), &TyData::Dyn(_))
+            | (&TyData::Projection(ref proj), &TyData::Opaque(_)) => {
+                self.unify_projection_ty(proj, b)
+            }
+
+            (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
                 a, b
             ),
@@ -212,7 +219,11 @@ impl<'t> Unifier<'t> {
 
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|idx| Lifetime::Placeholder(PlaceholderIndex { ui, idx }).cast())
+            .map(|idx| {
+                LifetimeData::Placeholder(PlaceholderIndex { ui, idx })
+                    .intern()
+                    .cast()
+            })
             .collect();
 
         let max_universe = self.table.max_universe;
@@ -260,7 +271,11 @@ impl<'t> Unifier<'t> {
     ) -> Fallible<()> {
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|idx| Lifetime::Placeholder(PlaceholderIndex { ui, idx }).cast())
+            .map(|idx| {
+                LifetimeData::Placeholder(PlaceholderIndex { ui, idx })
+                    .intern()
+                    .cast()
+            })
             .collect();
 
         let ty1 = ty1.substitute(&lifetimes1);
@@ -311,8 +326,8 @@ impl<'t> Unifier<'t> {
 
         debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
 
-        match (a, b) {
-            (&Lifetime::InferenceVar(var_a), &Lifetime::InferenceVar(var_b)) => {
+        match (a.data(), b.data()) {
+            (&LifetimeData::InferenceVar(var_a), &LifetimeData::InferenceVar(var_b)) => {
                 let var_a = EnaVariable::from(var_a);
                 let var_b = EnaVariable::from(var_b);
                 debug!(
@@ -323,8 +338,8 @@ impl<'t> Unifier<'t> {
                 Ok(())
             }
 
-            (&Lifetime::InferenceVar(var), &Lifetime::Placeholder(idx))
-            | (&Lifetime::Placeholder(idx), &Lifetime::InferenceVar(var)) => {
+            (&LifetimeData::InferenceVar(var), &LifetimeData::Placeholder(idx))
+            | (&LifetimeData::Placeholder(idx), &LifetimeData::InferenceVar(var)) => {
                 let var = EnaVariable::from(var);
                 let var_ui = self.table.universe_of_unbound_var(var);
                 if var_ui.can_see(idx.ui) {
@@ -332,7 +347,7 @@ impl<'t> Unifier<'t> {
                         "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
                         var, var_ui, idx.ui
                     );
-                    let v = Lifetime::Placeholder(idx);
+                    let v = LifetimeData::Placeholder(idx).intern();
                     self.table
                         .unify
                         .unify_var_value(var, InferenceValue::from(v))
@@ -347,7 +362,7 @@ impl<'t> Unifier<'t> {
                 }
             }
 
-            (&Lifetime::Placeholder(_), &Lifetime::Placeholder(_)) => {
+            (&LifetimeData::Placeholder(_), &LifetimeData::Placeholder(_)) => {
                 if a != b {
                     Ok(self.push_lifetime_eq_constraint(*a, *b))
                 } else {
@@ -355,12 +370,12 @@ impl<'t> Unifier<'t> {
                 }
             }
 
-            (Lifetime::BoundVar(_), _) | (_, Lifetime::BoundVar(_)) => panic!(
+            (LifetimeData::BoundVar(_), _) | (_, LifetimeData::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
                 a, b
             ),
 
-            (Lifetime::Phantom(..), _) | (_, Lifetime::Phantom(..)) => unreachable!(),
+            (LifetimeData::Phantom(..), _) | (_, LifetimeData::Phantom(..)) => unreachable!(),
         }
     }
 

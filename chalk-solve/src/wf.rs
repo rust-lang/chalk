@@ -63,31 +63,33 @@ impl FoldInputTypes for Parameter<ChalkIr> {
 
 impl FoldInputTypes for Ty<ChalkIr> {
     fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
-        match self {
-            Ty::Apply(app) => {
+        match self.data() {
+            TyData::Apply(app) => {
                 accumulator.push(self.clone());
                 app.parameters.fold(accumulator);
             }
-            Ty::Dyn(qwc) | Ty::Opaque(qwc) => {
+            TyData::Dyn(qwc) | TyData::Opaque(qwc) => {
                 accumulator.push(self.clone());
                 qwc.fold(accumulator);
             }
-            Ty::Projection(proj) => {
+            TyData::Projection(proj) => {
                 accumulator.push(self.clone());
                 proj.parameters.fold(accumulator);
             }
 
             // Type parameters do not carry any input types (so we can sort of assume they are
             // always WF).
-            Ty::BoundVar(..) => (),
+            TyData::BoundVar(..) => (),
 
             // Higher-kinded types such as `for<'a> fn(&'a u32)` introduce their own implied
             // bounds, and these bounds will be enforced upon calling such a function. In some
             // sense, well-formedness requirements for the input types of an HKT will be enforced
             // lazily, so no need to include them here.
-            Ty::ForAll(..) => (),
+            TyData::ForAll(..) => (),
 
-            Ty::InferenceVar(..) => panic!("unexpected inference variable in wf rules: {:?}", self),
+            TyData::InferenceVar(..) => {
+                panic!("unexpected inference variable in wf rules: {:?}", self)
+            }
         }
     }
 }
@@ -100,7 +102,9 @@ impl FoldInputTypes for TraitRef<ChalkIr> {
 
 impl FoldInputTypes for ProjectionEq<ChalkIr> {
     fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
-        Ty::Projection(self.projection.clone()).fold(accumulator);
+        TyData::Projection(self.projection.clone())
+            .intern()
+            .fold(accumulator);
         self.ty.fold(accumulator);
     }
 }

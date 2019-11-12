@@ -1,5 +1,4 @@
-use crate::cast::Cast;
-use crate::family::Lookup;
+use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{
     DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, Folder,
@@ -212,7 +211,69 @@ pub enum TypeSort {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Ty<TF: TypeFamily> {
+pub struct Ty<TF: TypeFamily> {
+    interned: TF::InternedType,
+}
+
+impl<TF: TypeFamily> HasTypeFamily for Ty<TF> {
+    type TypeFamily = TF;
+}
+
+impl<TF: TypeFamily> Ty<TF> {
+    pub fn new(data: impl CastTo<TyData<TF>>) -> Self {
+        Ty {
+            interned: TF::intern_ty(data.cast()),
+        }
+    }
+
+    pub fn data(&self) -> &TyData<TF> {
+        TF::ty_data(&self.interned)
+    }
+
+    pub fn from_env(&self) -> FromEnv<TF> {
+        FromEnv::Ty(self.clone())
+    }
+
+    pub fn well_formed(&self) -> WellFormed<TF> {
+        WellFormed::Ty(self.clone())
+    }
+
+    /// If this is a `TyData::BoundVar(d)`, returns `Some(d)` else `None`.
+    pub fn bound(&self) -> Option<usize> {
+        if let TyData::BoundVar(depth) = self.data() {
+            Some(*depth)
+        } else {
+            None
+        }
+    }
+
+    /// If this is a `TyData::InferenceVar(d)`, returns `Some(d)` else `None`.
+    pub fn inference_var(&self) -> Option<InferenceVar> {
+        if let TyData::InferenceVar(depth) = self.data() {
+            Some(*depth)
+        } else {
+            None
+        }
+    }
+
+    pub fn is_projection(&self) -> bool {
+        match self.data() {
+            TyData::Projection(..) => true,
+            _ => false,
+        }
+    }
+
+    /// True if this type contains "bound" types/lifetimes, and hence
+    /// needs to be shifted across binders. This is a very inefficient
+    /// check, intended only for debug assertions, because I am lazy.
+    pub fn needs_shift(&self) -> bool {
+        let ty = self.clone();
+        ty != ty.shifted_in(1)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum TyData<TF: TypeFamily> {
     /// An "application" type is one that applies the set of type
     /// arguments to some base type. For example, `Vec<u32>` would be
     /// "applying" the parameters `[u32]` to the code type `Vec`.
@@ -283,46 +344,13 @@ pub enum Ty<TF: TypeFamily> {
     InferenceVar(InferenceVar),
 }
 
-impl<TF: TypeFamily> HasTypeFamily for Ty<TF> {
+impl<TF: TypeFamily> HasTypeFamily for TyData<TF> {
     type TypeFamily = TF;
 }
 
-impl<TF: TypeFamily> Ty<TF> {
-    fn intern(self) -> TF::Type {
-        TF::intern_ty(self)
-    }
-
-    /// If this is a `Ty::BoundVar(d)`, returns `Some(d)` else `None`.
-    pub fn bound(&self) -> Option<usize> {
-        if let Ty::BoundVar(depth) = *self {
-            Some(depth)
-        } else {
-            None
-        }
-    }
-
-    /// If this is a `Ty::InferenceVar(d)`, returns `Some(d)` else `None`.
-    pub fn inference_var(&self) -> Option<InferenceVar> {
-        if let Ty::InferenceVar(depth) = *self {
-            Some(depth)
-        } else {
-            None
-        }
-    }
-
-    pub fn is_projection(&self) -> bool {
-        match *self {
-            Ty::Projection(..) => true,
-            _ => false,
-        }
-    }
-
-    /// True if this type contains "bound" types/lifetimes, and hence
-    /// needs to be shifted across binders. This is a very inefficient
-    /// check, intended only for debug assertions, because I am lazy.
-    pub fn needs_shift(&self) -> bool {
-        let ty = self.clone().intern();
-        ty != ty.shifted_in(1)
+impl<TF: TypeFamily> TyData<TF> {
+    pub fn intern(self) -> Ty<TF> {
+        Ty::new(self)
     }
 }
 
@@ -342,12 +370,12 @@ impl InferenceVar {
         self.index
     }
 
-    pub fn to_ty<TF: TypeFamily>(self) -> TF::Type {
-        Ty::<TF>::InferenceVar(self).intern()
+    pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
+        TyData::<TF>::InferenceVar(self).intern()
     }
 
-    pub fn to_lifetime<TF: TypeFamily>(self) -> TF::Lifetime {
-        Lifetime::<TF>::InferenceVar(self).intern()
+    pub fn to_lifetime<TF: TypeFamily>(self) -> Lifetime<TF> {
+        LifetimeData::<TF>::InferenceVar(self).intern()
     }
 }
 
@@ -356,7 +384,7 @@ impl InferenceVar {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct QuantifiedTy<TF: TypeFamily> {
     pub num_binders: usize,
-    pub ty: TF::Type,
+    pub ty: Ty<TF>,
 }
 
 impl<TF: TypeFamily> HasTypeFamily for QuantifiedTy<TF> {
@@ -364,23 +392,29 @@ impl<TF: TypeFamily> HasTypeFamily for QuantifiedTy<TF> {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Lifetime<TF: TypeFamily> {
-    /// See Ty::Var(_).
-    BoundVar(usize),
-    InferenceVar(InferenceVar),
-    Placeholder(PlaceholderIndex),
-    Phantom(Void, PhantomData<TF>),
+pub struct Lifetime<TF: TypeFamily> {
+    interned: TF::InternedLifetime,
+}
+
+impl<TF: TypeFamily> HasTypeFamily for Lifetime<TF> {
+    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> Lifetime<TF> {
-    fn intern(self) -> TF::Lifetime {
-        TF::intern_lifetime(self)
+    pub fn new(data: impl CastTo<LifetimeData<TF>>) -> Self {
+        Lifetime {
+            interned: TF::intern_lifetime(data.cast()),
+        }
+    }
+
+    pub fn data(&self) -> &LifetimeData<TF> {
+        TF::lifetime_data(&self.interned)
     }
 
     /// If this is a `Lifetime::InferenceVar(d)`, returns `Some(d)` else `None`.
     pub fn inference_var(&self) -> Option<InferenceVar> {
-        if let Lifetime::InferenceVar(depth) = *self {
-            Some(depth)
+        if let LifetimeData::InferenceVar(depth) = self.data() {
+            Some(*depth)
         } else {
             None
         }
@@ -389,12 +423,27 @@ impl<TF: TypeFamily> Lifetime<TF> {
     /// True if this lifetime is a "bound" lifetime, and hence
     /// needs to be shifted across binders. Meant for debug assertions.
     pub fn needs_shift(&self) -> bool {
-        match self {
-            Lifetime::BoundVar(_) => true,
-            Lifetime::InferenceVar(_) => false,
-            Lifetime::Placeholder(_) => false,
-            Lifetime::Phantom(..) => unreachable!(),
+        match self.data() {
+            LifetimeData::BoundVar(_) => true,
+            LifetimeData::InferenceVar(_) => false,
+            LifetimeData::Placeholder(_) => false,
+            LifetimeData::Phantom(..) => unreachable!(),
         }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum LifetimeData<TF: TypeFamily> {
+    /// See TyData::Var(_).
+    BoundVar(usize),
+    InferenceVar(InferenceVar),
+    Placeholder(PlaceholderIndex),
+    Phantom(Void, PhantomData<TF>),
+}
+
+impl<TF: TypeFamily> LifetimeData<TF> {
+    pub fn intern(self) -> Lifetime<TF> {
+        Lifetime::new(self)
     }
 }
 
@@ -410,12 +459,12 @@ pub struct PlaceholderIndex {
 }
 
 impl PlaceholderIndex {
-    pub fn to_lifetime<TF: TypeFamily>(self) -> TF::Lifetime {
-        Lifetime::<TF>::Placeholder(self).intern()
+    pub fn to_lifetime<TF: TypeFamily>(self) -> Lifetime<TF> {
+        LifetimeData::<TF>::Placeholder(self).intern()
     }
 
-    pub fn to_ty<TF: TypeFamily>(self) -> TF::Type {
-        Ty::Apply(ApplicationTy::<TF> {
+    pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
+        TyData::Apply(ApplicationTy::<TF> {
             name: TypeName::Placeholder(self),
             parameters: vec![],
         })
@@ -435,11 +484,15 @@ impl<TF: TypeFamily> HasTypeFamily for ApplicationTy<TF> {
 }
 
 impl<TF: TypeFamily> ApplicationTy<TF> {
-    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = TF::Type> + 'a {
+    pub fn intern(self) -> Ty<TF> {
+        Ty::new(self)
+    }
+
+    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
         self.parameters.iter().cloned().filter_map(|p| p.ty())
     }
 
-    pub fn first_type_parameter(&self) -> Option<TF::Type> {
+    pub fn first_type_parameter(&self) -> Option<Ty<TF>> {
         self.type_parameters().next()
     }
 
@@ -512,22 +565,22 @@ impl<T, L> ParameterKind<T, L> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Parameter<TF: TypeFamily>(pub ParameterKind<TF::Type, TF::Lifetime>);
+pub struct Parameter<TF: TypeFamily>(pub ParameterKind<Ty<TF>, Lifetime<TF>>);
 
 impl<TF: TypeFamily> HasTypeFamily for Parameter<TF> {
     type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> Parameter<TF> {
-    pub fn assert_ty_ref(&self) -> &TF::Type {
+    pub fn assert_ty_ref(&self) -> &Ty<TF> {
         self.as_ref().ty().unwrap()
     }
 
-    pub fn assert_lifetime_ref(&self) -> &TF::Lifetime {
+    pub fn assert_lifetime_ref(&self) -> &Lifetime<TF> {
         self.as_ref().lifetime().unwrap()
     }
 
-    pub fn as_ref(&self) -> ParameterKind<&TF::Type, &TF::Lifetime> {
+    pub fn as_ref(&self) -> ParameterKind<&Ty<TF>, &Lifetime<TF>> {
         match &self.0 {
             ParameterKind::Ty(t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(l) => ParameterKind::Lifetime(l),
@@ -541,14 +594,14 @@ impl<TF: TypeFamily> Parameter<TF> {
         }
     }
 
-    pub fn ty(self) -> Option<TF::Type> {
+    pub fn ty(self) -> Option<Ty<TF>> {
         match self.0 {
             ParameterKind::Ty(t) => Some(t),
             _ => None,
         }
     }
 
-    pub fn lifetime(self) -> Option<TF::Lifetime> {
+    pub fn lifetime(self) -> Option<Lifetime<TF>> {
         match self.0 {
             ParameterKind::Lifetime(t) => Some(t),
             _ => None,
@@ -566,6 +619,12 @@ impl<TF: TypeFamily> HasTypeFamily for ProjectionTy<TF> {
     type TypeFamily = TF;
 }
 
+impl<TF: TypeFamily> ProjectionTy<TF> {
+    pub fn intern(self) -> Ty<TF> {
+        Ty::new(self)
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct TraitRef<TF: TypeFamily> {
     pub trait_id: TraitId,
@@ -577,11 +636,11 @@ impl<TF: TypeFamily> HasTypeFamily for TraitRef<TF> {
 }
 
 impl<TF: TypeFamily> TraitRef<TF> {
-    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = TF::Type> + 'a {
+    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
         self.parameters.iter().cloned().filter_map(|p| p.ty())
     }
 
-    pub fn self_type_parameter(&self) -> Option<TF::Type> {
+    pub fn self_type_parameter(&self) -> Option<Ty<TF>> {
         self.type_parameters().next()
     }
 
@@ -628,7 +687,7 @@ pub enum WellFormed<TF: TypeFamily> {
     /// ```
     ///
     /// then we have the following rule: `WellFormedTy(Set<K>) :- Implemented(K: Hash)`.
-    Ty(TF::Type),
+    Ty(Ty<TF>),
 }
 
 impl<TF: TypeFamily> HasTypeFamily for WellFormed<TF> {
@@ -661,7 +720,7 @@ pub enum FromEnv<TF: TypeFamily> {
     ///     }
     /// }
     /// ```
-    Ty(TF::Type),
+    Ty(Ty<TF>),
 }
 
 impl<TF: TypeFamily> HasTypeFamily for FromEnv<TF> {
@@ -684,12 +743,12 @@ pub enum DomainGoal<TF: TypeFamily> {
     /// True if a type is considered to have been "defined" by the current crate. This is true for
     /// a `struct Foo { }` but false for a `#[upstream] struct Foo { }`. However, for fundamental types
     /// like `Box<T>`, it is true if `T` is local.
-    IsLocal(TF::Type),
+    IsLocal(Ty<TF>),
 
     /// True if a type is *not* considered to have been "defined" by the current crate. This is
     /// false for a `struct Foo { }` but true for a `#[upstream] struct Foo { }`. However, for
     /// fundamental types like `Box<T>`, it is true if `T` is upstream.
-    IsUpstream(TF::Type),
+    IsUpstream(Ty<TF>),
 
     /// True if a type and its input types are fully visible, known types. That is, there are no
     /// unknown type parameters anywhere in this type.
@@ -704,7 +763,7 @@ pub enum DomainGoal<TF: TypeFamily> {
     ///
     /// Note that any of these types can have lifetimes in their parameters too, but we only
     /// consider type parameters.
-    IsFullyVisible(TF::Type),
+    IsFullyVisible(Ty<TF>),
 
     /// Used to dictate when trait impls are allowed in the current (local) crate based on the
     /// orphan rules.
@@ -731,7 +790,7 @@ pub enum DomainGoal<TF: TypeFamily> {
     /// forall<T> { if (DownstreamType(T)) { /* ... */ } }
     ///
     /// This makes a new type `T` available and makes `DownstreamType(T)` provable for that type.
-    DownstreamType(TF::Type),
+    DownstreamType(Ty<TF>),
 }
 
 pub type QuantifiedWhereClause<TF> = Binders<WhereClause<TF>>;
@@ -816,7 +875,7 @@ pub struct EqGoal<TF: TypeFamily> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct Normalize<TF: TypeFamily> {
     pub projection: ProjectionTy<TF>,
-    pub ty: TF::Type,
+    pub ty: Ty<TF>,
 }
 
 /// Proves **equality** between a projection `T::Foo` and a type
@@ -825,7 +884,7 @@ pub struct Normalize<TF: TypeFamily> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct ProjectionEq<TF: TypeFamily> {
     pub projection: ProjectionTy<TF>,
-    pub ty: TF::Type,
+    pub ty: Ty<TF>,
 }
 
 /// Indicates that the `value` is universally quantified over `N`
@@ -874,14 +933,14 @@ impl<T> Binders<T> {
     /// forall<?0, ?1> will become forall<?0, ?1, ?2> where ?0 is the fresh variable
     pub fn with_fresh_type_var<U, TF>(
         self,
-        op: impl FnOnce(<T as Fold<TF>>::Result, TF::Type) -> U,
+        op: impl FnOnce(<T as Fold<TF, TF>>::Result, Ty<TF>) -> U,
     ) -> Binders<U>
     where
         TF: TypeFamily,
         T: Shift<TF>,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
-        let new_var = Ty::<TF>::BoundVar(0).intern();
+        let new_var = TyData::<TF>::BoundVar(0).intern();
         let value = op(self.value.shifted_in(1), new_var);
         Binders {
             binders: iter::once(ParameterKind::Ty(()))
@@ -898,7 +957,7 @@ impl<T> Binders<T> {
 
 impl<T, TF> Binders<T>
 where
-    T: Fold<TF> + HasTypeFamily<TypeFamily = TF>,
+    T: Fold<TF, TF> + HasTypeFamily<TypeFamily = TF>,
     TF: TypeFamily,
 {
     /// Substitute `parameters` for the variables introduced by these
@@ -1105,7 +1164,7 @@ pub enum QuantifierKind {
 /// checking in the compiler.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub enum Constraint<TF: TypeFamily> {
-    LifetimeEq(TF::Lifetime, TF::Lifetime),
+    LifetimeEq(Lifetime<TF>, Lifetime<TF>),
 }
 
 impl<TF: TypeFamily> HasTypeFamily for Constraint<TF> {
@@ -1143,12 +1202,12 @@ impl<TF: TypeFamily> Substitution<TF> {
             .iter()
             .zip(0..)
             .all(|(parameter, index)| match &parameter.0 {
-                ParameterKind::Ty(ty) => match ty.lookup_ref() {
-                    Ty::BoundVar(depth) => index == *depth,
+                ParameterKind::Ty(ty) => match ty.data() {
+                    TyData::BoundVar(depth) => index == *depth,
                     _ => false,
                 },
-                ParameterKind::Lifetime(lifetime) => match lifetime.lookup_ref() {
-                    Lifetime::BoundVar(depth) => index == *depth,
+                ParameterKind::Lifetime(lifetime) => match lifetime.data() {
+                    LifetimeData::BoundVar(depth) => index == *depth,
                     _ => false,
                 },
             })
@@ -1160,13 +1219,13 @@ impl<'a, TF: TypeFamily> DefaultTypeFolder for &'a Substitution<TF> {}
 impl<'a, TF: TypeFamily> DefaultInferenceFolder for &'a Substitution<TF> {}
 
 impl<'a, TF: TypeFamily> FreeVarFolder<TF> for &'a Substitution<TF> {
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<TF::Type> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         let ty = &self.parameters[depth];
         let ty = ty.assert_ty_ref();
         Ok(ty.shifted_in(binders))
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<TF::Lifetime> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
         let l = &self.parameters[depth];
         let l = l.assert_lifetime_ref();
         Ok(l.shifted_in(binders))

@@ -69,17 +69,22 @@ impl Debug for TypeName {
         }
     }
 }
-
 impl<TF: TypeFamily> Debug for Ty<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{:?}", self.data())
+    }
+}
+
+impl<TF: TypeFamily> Debug for TyData<TF> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            Ty::BoundVar(depth) => write!(fmt, "^{}", depth),
-            Ty::Dyn(clauses) => write!(fmt, "{:?}", clauses),
-            Ty::Opaque(clauses) => write!(fmt, "{:?}", clauses),
-            Ty::InferenceVar(var) => write!(fmt, "{:?}", var),
-            Ty::Apply(apply) => write!(fmt, "{:?}", apply),
-            Ty::Projection(proj) => write!(fmt, "{:?}", proj),
-            Ty::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
+            TyData::BoundVar(depth) => write!(fmt, "^{}", depth),
+            TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
+            TyData::Opaque(clauses) => write!(fmt, "{:?}", clauses),
+            TyData::InferenceVar(var) => write!(fmt, "{:?}", var),
+            TyData::Apply(apply) => write!(fmt, "{:?}", apply),
+            TyData::Projection(proj) => write!(fmt, "{:?}", proj),
+            TyData::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
         }
     }
 }
@@ -100,11 +105,17 @@ impl<TF: TypeFamily> Debug for QuantifiedTy<TF> {
 
 impl<TF: TypeFamily> Debug for Lifetime<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "{:?}", self.data())
+    }
+}
+
+impl<TF: TypeFamily> Debug for LifetimeData<TF> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            Lifetime::BoundVar(depth) => write!(fmt, "'^{}", depth),
-            Lifetime::InferenceVar(var) => write!(fmt, "'{:?}", var),
-            Lifetime::Placeholder(index) => write!(fmt, "'{:?}", index),
-            Lifetime::Phantom(..) => unreachable!(),
+            LifetimeData::BoundVar(depth) => write!(fmt, "'^{}", depth),
+            LifetimeData::InferenceVar(var) => write!(fmt, "'{:?}", var),
+            LifetimeData::Placeholder(index) => write!(fmt, "'{:?}", index),
+            LifetimeData::Phantom(..) => unreachable!(),
         }
     }
 }

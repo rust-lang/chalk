@@ -31,7 +31,7 @@ pub trait Zipper<TF: TypeFamily> {
     /// Zips two values appearing beneath binders.
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<TF> + Fold<TF, Result = T>;
+        T: Zip<TF> + Fold<TF, TF, Result = T>;
 }
 
 impl<'f, Z, TF> Zipper<TF> for &'f mut Z
@@ -49,7 +49,7 @@ where
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<TF> + Fold<TF, Result = T>,
+        T: Zip<TF> + Fold<TF, TF, Result = T>,
     {
         (**self).zip_binders(a, b)
     }
@@ -133,7 +133,7 @@ impl<TF: TypeFamily> Zip<TF> for Lifetime<TF> {
     }
 }
 
-impl<TF: TypeFamily, T: Zip<TF> + Fold<TF, Result = T>> Zip<TF> for Binders<T> {
+impl<TF: TypeFamily, T: Zip<TF> + Fold<TF, TF, Result = T>> Zip<TF> for Binders<T> {
     fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         zipper.zip_binders(a, b)
     }

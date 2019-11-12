@@ -331,7 +331,7 @@ impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
         // "inputs" to the subgoal table. We need to extract the
         // resulting answer that the subgoal found and unify it with
         // the value from our "pending subgoal".
-        if let Ty::BoundVar(answer_depth) = answer {
+        if let TyData::BoundVar(answer_depth) = answer.data() {
             if self.unify_free_answer_var(*answer_depth, ParameterKind::Ty(pending))? {
                 return Ok(());
             }
@@ -339,22 +339,23 @@ impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
 
         // Otherwise, the answer and the selected subgoal ought to be a perfect match for
         // one another.
-        match (answer, pending) {
-            (Ty::BoundVar(answer_depth), Ty::BoundVar(pending_depth)) => {
+        match (answer.data(), pending.data()) {
+            (TyData::BoundVar(answer_depth), TyData::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (Ty::Apply(answer), Ty::Apply(pending)) => Zip::zip_with(self, answer, pending),
+            (TyData::Apply(answer), TyData::Apply(pending)) => Zip::zip_with(self, answer, pending),
 
-            (Ty::Dyn(answer), Ty::Dyn(pending)) | (Ty::Opaque(answer), Ty::Opaque(pending)) => {
+            (TyData::Dyn(answer), TyData::Dyn(pending))
+            | (TyData::Opaque(answer), TyData::Opaque(pending)) => {
                 Zip::zip_with(self, answer, pending)
             }
 
-            (Ty::Projection(answer), Ty::Projection(pending)) => {
+            (TyData::Projection(answer), TyData::Projection(pending)) => {
                 Zip::zip_with(self, answer, pending)
             }
 
-            (Ty::ForAll(answer), Ty::ForAll(pending)) => {
+            (TyData::ForAll(answer), TyData::ForAll(pending)) => {
                 self.answer_binders += answer.num_binders;
                 self.pending_binders += pending.num_binders;
                 Zip::zip_with(self, &answer.ty, &pending.ty)?;
@@ -363,17 +364,17 @@ impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
                 Ok(())
             }
 
-            (Ty::InferenceVar(_), _) | (_, Ty::InferenceVar(_)) => panic!(
+            (TyData::InferenceVar(_), _) | (_, TyData::InferenceVar(_)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
                 answer, pending,
             ),
 
-            (Ty::BoundVar(_), _)
-            | (Ty::Apply(_), _)
-            | (Ty::Dyn(_), _)
-            | (Ty::Opaque(_), _)
-            | (Ty::Projection(_), _)
-            | (Ty::ForAll(_), _) => panic!(
+            (TyData::BoundVar(_), _)
+            | (TyData::Apply(_), _)
+            | (TyData::Dyn(_), _)
+            | (TyData::Opaque(_), _)
+            | (TyData::Projection(_), _)
+            | (TyData::ForAll(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),
@@ -389,33 +390,33 @@ impl<'t> Zipper<ChalkIr> for AnswerSubstitutor<'t> {
             return Zip::zip_with(self, answer, &pending);
         }
 
-        if let Lifetime::BoundVar(answer_depth) = answer {
+        if let LifetimeData::BoundVar(answer_depth) = answer.data() {
             if self.unify_free_answer_var(*answer_depth, ParameterKind::Lifetime(pending))? {
                 return Ok(());
             }
         }
 
-        match (answer, pending) {
-            (Lifetime::BoundVar(answer_depth), Lifetime::BoundVar(pending_depth)) => {
+        match (answer.data(), pending.data()) {
+            (LifetimeData::BoundVar(answer_depth), LifetimeData::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (Lifetime::Placeholder(_), Lifetime::Placeholder(_)) => {
+            (LifetimeData::Placeholder(_), LifetimeData::Placeholder(_)) => {
                 assert_eq!(answer, pending);
                 Ok(())
             }
 
-            (Lifetime::InferenceVar(_), _) | (_, Lifetime::InferenceVar(_)) => panic!(
+            (LifetimeData::InferenceVar(_), _) | (_, LifetimeData::InferenceVar(_)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
                 answer, pending,
             ),
 
-            (Lifetime::BoundVar(_), _) | (Lifetime::Placeholder(_), _) => panic!(
+            (LifetimeData::BoundVar(_), _) | (LifetimeData::Placeholder(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),
 
-            (Lifetime::Phantom(..), _) => unreachable!(),
+            (LifetimeData::Phantom(..), _) => unreachable!(),
         }
     }
 

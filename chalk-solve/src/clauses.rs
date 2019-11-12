@@ -76,7 +76,7 @@ pub fn push_auto_trait_impls(
             name: struct_id.cast(),
             parameters: builder.placeholders_in_scope().to_vec(),
         }
-        .cast();
+        .intern();
 
         // trait_ref = `MyStruct<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
@@ -155,13 +155,13 @@ fn program_clauses_that_could_match(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                match trait_ref.parameters[0].assert_ty_ref() {
-                    Ty::Apply(apply) => {
+                match trait_ref.parameters[0].assert_ty_ref().data() {
+                    TyData::Apply(apply) => {
                         if let TypeName::TypeKindId(TypeKindId::StructId(struct_id)) = apply.name {
                             push_auto_trait_impls(builder, trait_id, struct_id);
                         }
                     }
-                    Ty::InferenceVar(_) => {
+                    TyData::InferenceVar(_) => {
                         panic!("auto-traits should flounder if nothing is known")
                     }
                     _ => {}
@@ -210,8 +210,8 @@ fn program_clauses_that_could_match(
             // that goal, because they let us prove other things but
             // not `Clone`.
             let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
-            match &self_ty {
-                Ty::Opaque(exists_qwcs) | Ty::Dyn(exists_qwcs) => {
+            match self_ty.data() {
+                TyData::Opaque(exists_qwcs) | TyData::Dyn(exists_qwcs) => {
                     // In this arm, `self_ty` is the `dyn Fn(&u8)`,
                     // and `exists_qwcs` is the `exists<T> { .. }`
                     // clauses shown above.
@@ -333,8 +333,8 @@ fn push_program_clauses_for_associated_type_values_in_impls_of(
 /// Note that the type `T` must not be an unbound inference variable;
 /// earlier parts of the logic should "flounder" in that case.
 fn match_ty(builder: &mut ClauseBuilder<'_>, environment: &Environment<ChalkIr>, ty: &Ty<ChalkIr>) {
-    match ty {
-        Ty::Apply(application_ty) => match application_ty.name {
+    match ty.data() {
+        TyData::Apply(application_ty) => match application_ty.name {
             TypeName::TypeKindId(type_kind_id) => match_type_kind(builder, type_kind_id),
             TypeName::Placeholder(_) | TypeName::Error => {}
             TypeName::AssociatedType(type_id) => builder
@@ -342,14 +342,14 @@ fn match_ty(builder: &mut ClauseBuilder<'_>, environment: &Environment<ChalkIr>,
                 .associated_ty_data(type_id)
                 .to_program_clauses(builder),
         },
-        Ty::Projection(projection_ty) => builder
+        TyData::Projection(projection_ty) => builder
             .db
             .associated_ty_data(projection_ty.associated_ty_id)
             .to_program_clauses(builder),
-        Ty::ForAll(quantified_ty) => match_ty(builder, environment, &quantified_ty.ty),
-        Ty::BoundVar(_) => {}
-        Ty::InferenceVar(_) => panic!("should have floundered"),
-        Ty::Dyn(_) | Ty::Opaque(_) => {}
+        TyData::ForAll(quantified_ty) => match_ty(builder, environment, &quantified_ty.ty),
+        TyData::BoundVar(_) => {}
+        TyData::InferenceVar(_) => panic!("should have floundered"),
+        TyData::Dyn(_) | TyData::Opaque(_) => {}
     }
 }
 

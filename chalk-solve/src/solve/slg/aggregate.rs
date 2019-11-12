@@ -167,39 +167,39 @@ struct AntiUnifier<'infer> {
 
 impl<'infer> AntiUnifier<'infer> {
     fn aggregate_tys(&mut self, ty0: &Ty<ChalkIr>, ty1: &Ty<ChalkIr>) -> Ty<ChalkIr> {
-        match (ty0, ty1) {
+        match (ty0.data(), ty1.data()) {
             // If we see bound things on either side, just drop in a
             // fresh variable. This means we will sometimes
             // overgeneralize.  So for example if we have two
             // solutions that are both `(X, X)`, we just produce `(Y,
             // Z)` in all cases.
-            (Ty::InferenceVar(_), Ty::InferenceVar(_)) => self.new_variable(),
+            (TyData::InferenceVar(_), TyData::InferenceVar(_)) => self.new_variable(),
 
             // Ugh. Aggregating two types like `for<'a> fn(&'a u32,
             // &'a u32)` and `for<'a, 'b> fn(&'a u32, &'b u32)` seems
             // kinda hard. Don't try to be smart for now, just plop a
             // variable in there and be done with it.
-            (Ty::BoundVar(_), Ty::BoundVar(_))
-            | (Ty::ForAll(_), Ty::ForAll(_))
-            | (Ty::Dyn(_), Ty::Dyn(_))
-            | (Ty::Opaque(_), Ty::Opaque(_)) => self.new_variable(),
+            (TyData::BoundVar(_), TyData::BoundVar(_))
+            | (TyData::ForAll(_), TyData::ForAll(_))
+            | (TyData::Dyn(_), TyData::Dyn(_))
+            | (TyData::Opaque(_), TyData::Opaque(_)) => self.new_variable(),
 
-            (Ty::Apply(apply1), Ty::Apply(apply2)) => {
+            (TyData::Apply(apply1), TyData::Apply(apply2)) => {
                 self.aggregate_application_tys(apply1, apply2)
             }
 
-            (Ty::Projection(apply1), Ty::Projection(apply2)) => {
+            (TyData::Projection(apply1), TyData::Projection(apply2)) => {
                 self.aggregate_projection_tys(apply1, apply2)
             }
 
             // Mismatched base kinds.
-            (Ty::InferenceVar(_), _)
-            | (Ty::BoundVar(_), _)
-            | (Ty::Dyn(_), _)
-            | (Ty::Opaque(_), _)
-            | (Ty::ForAll(_), _)
-            | (Ty::Apply(_), _)
-            | (Ty::Projection(_), _) => self.new_variable(),
+            (TyData::InferenceVar(_), _)
+            | (TyData::BoundVar(_), _)
+            | (TyData::Dyn(_), _)
+            | (TyData::Opaque(_), _)
+            | (TyData::ForAll(_), _)
+            | (TyData::Apply(_), _)
+            | (TyData::Projection(_), _) => self.new_variable(),
         }
     }
 
@@ -218,7 +218,7 @@ impl<'infer> AntiUnifier<'infer> {
         } = apply2;
 
         self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
-            .map(|(&name, parameters)| Ty::Apply(ApplicationTy { name, parameters }))
+            .map(|(&name, parameters)| TyData::Apply(ApplicationTy { name, parameters }).intern())
             .unwrap_or_else(|| self.new_variable())
     }
 
@@ -238,10 +238,11 @@ impl<'infer> AntiUnifier<'infer> {
 
         self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
             .map(|(&associated_ty_id, parameters)| {
-                Ty::Projection(ProjectionTy {
+                TyData::Projection(ProjectionTy {
                     associated_ty_id,
                     parameters,
                 })
+                .intern()
             })
             .unwrap_or_else(|| self.new_variable())
     }
@@ -301,14 +302,16 @@ impl<'infer> AntiUnifier<'infer> {
         l1: &Lifetime<ChalkIr>,
         l2: &Lifetime<ChalkIr>,
     ) -> Lifetime<ChalkIr> {
-        match (l1, l2) {
-            (Lifetime::InferenceVar(_), _) | (_, Lifetime::InferenceVar(_)) => {
+        match (l1.data(), l2.data()) {
+            (LifetimeData::InferenceVar(_), _) | (_, LifetimeData::InferenceVar(_)) => {
                 self.new_lifetime_variable()
             }
 
-            (Lifetime::BoundVar(_), _) | (_, Lifetime::BoundVar(_)) => self.new_lifetime_variable(),
+            (LifetimeData::BoundVar(_), _) | (_, LifetimeData::BoundVar(_)) => {
+                self.new_lifetime_variable()
+            }
 
-            (Lifetime::Placeholder(_), Lifetime::Placeholder(_)) => {
+            (LifetimeData::Placeholder(_), LifetimeData::Placeholder(_)) => {
                 if l1 == l2 {
                     *l1
                 } else {
@@ -316,7 +319,7 @@ impl<'infer> AntiUnifier<'infer> {
                 }
             }
 
-            (Lifetime::Phantom(..), _) | (_, Lifetime::Phantom(..)) => unreachable!(),
+            (LifetimeData::Phantom(..), _) | (_, LifetimeData::Phantom(..)) => unreachable!(),
         }
     }
 

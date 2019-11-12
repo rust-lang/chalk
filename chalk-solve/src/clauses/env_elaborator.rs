@@ -6,6 +6,7 @@ use crate::FromEnv;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
+use crate::TyData;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::ProjectionTy;
 use chalk_ir::TypeName;
@@ -50,8 +51,8 @@ impl<'me> EnvElaborator<'me> {
     }
 
     fn visit_ty(&mut self, ty: &Ty<ChalkIr>) {
-        match ty {
-            Ty::Apply(application_ty) => match application_ty.name {
+        match ty.data() {
+            TyData::Apply(application_ty) => match application_ty.name {
                 TypeName::TypeKindId(type_kind_id) => {
                     match_type_kind(&mut self.builder, type_kind_id)
                 }
@@ -62,15 +63,15 @@ impl<'me> EnvElaborator<'me> {
                         .to_program_clauses(&mut self.builder);
                 }
             },
-            Ty::Projection(projection_ty) => {
+            TyData::Projection(projection_ty) => {
                 self.visit_projection_ty(projection_ty);
             }
 
             // FIXME(#203) -- We haven't fully figured out the implied
             // bounds story around object and impl trait types.
-            Ty::Dyn(_) | Ty::Opaque(_) => (),
+            TyData::Dyn(_) | TyData::Opaque(_) => (),
 
-            Ty::ForAll(_) | Ty::BoundVar(_) | Ty::InferenceVar(_) => (),
+            TyData::ForAll(_) | TyData::BoundVar(_) | TyData::InferenceVar(_) => (),
         }
     }
 

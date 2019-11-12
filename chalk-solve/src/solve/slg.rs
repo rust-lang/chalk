@@ -171,8 +171,8 @@ impl<'me> context::ContextOps<SlgContext> for SlgContextOps<'me> {
             | DomainGoal::IsUpstream(ty)
             | DomainGoal::DownstreamType(ty)
             | DomainGoal::IsFullyVisible(ty)
-            | DomainGoal::IsLocal(ty) => match ty {
-                Ty::InferenceVar(_) => return Err(Floundered),
+            | DomainGoal::IsLocal(ty) => match ty.data() {
+                TyData::InferenceVar(_) => return Err(Floundered),
                 _ => {}
             },
 
@@ -412,8 +412,8 @@ impl MayInvalidate {
 
     // Returns true if the two types could be unequal.
     fn aggregate_tys(&mut self, new: &Ty<ChalkIr>, current: &Ty<ChalkIr>) -> bool {
-        match (new, current) {
-            (_, Ty::BoundVar(_)) => {
+        match (new.data(), current.data()) {
+            (_, TyData::BoundVar(_)) => {
                 // If the aggregate solution already has an inference
                 // variable here, then no matter what type we produce,
                 // the aggregate cannot get 'more generalized' than it
@@ -425,7 +425,7 @@ impl MayInvalidate {
                 false
             }
 
-            (Ty::BoundVar(_), _) => {
+            (TyData::BoundVar(_), _) => {
                 // If we see a type variable in the potential future
                 // solution, we have to be conservative. We don't know
                 // what type variable will wind up being! Remember
@@ -439,27 +439,27 @@ impl MayInvalidate {
                 true
             }
 
-            (Ty::InferenceVar(_), _) | (_, Ty::InferenceVar(_)) => {
+            (TyData::InferenceVar(_), _) | (_, TyData::InferenceVar(_)) => {
                 panic!(
                     "unexpected free inference variable in may-invalidate: {:?} vs {:?}",
                     new, current,
                 );
             }
 
-            (Ty::Apply(apply1), Ty::Apply(apply2)) => {
+            (TyData::Apply(apply1), TyData::Apply(apply2)) => {
                 self.aggregate_application_tys(apply1, apply2)
             }
 
-            (Ty::Projection(apply1), Ty::Projection(apply2)) => {
+            (TyData::Projection(apply1), TyData::Projection(apply2)) => {
                 self.aggregate_projection_tys(apply1, apply2)
             }
 
             // For everything else, be conservative here and just say we may invalidate.
-            (Ty::ForAll(_), _)
-            | (Ty::Dyn(_), _)
-            | (Ty::Opaque(_), _)
-            | (Ty::Apply(_), _)
-            | (Ty::Projection(_), _) => true,
+            (TyData::ForAll(_), _)
+            | (TyData::Dyn(_), _)
+            | (TyData::Opaque(_), _)
+            | (TyData::Apply(_), _)
+            | (TyData::Projection(_), _) => true,
         }
     }
 
