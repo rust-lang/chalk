@@ -69,6 +69,18 @@ enum SubGoalSelection {
     Floundered,
 }
 
+/// This is returned `on_no_remaining_subgoals`
+enum NoRemainingSubgoalsResult {
+    /// There is an answer available for the root table
+    RootAnswerAvailable,
+
+    /// There was a `RootSearchFail`
+    RootSearchFail(RootSearchFail),
+
+    // This was a success and the new depth is returned
+    Success(StackIndex),
+}
+
 impl<C: Context> Forest<C> {
     /// Returns an answer with a given index for the given table. This
     /// may require activating a strand and following it. It returns
@@ -471,6 +483,110 @@ impl<C: Context> Forest<C> {
         }
     }
 
+    fn on_no_remaining_subgoals(
+        &mut self,
+        mut depth: StackIndex,
+        strand: Strand<C>,
+    ) -> NoRemainingSubgoalsResult {
+        debug!("no remaining subgoals for the table");
+
+        match self.pursue_answer(depth, strand) {
+            Some(()) => {
+                debug!("answer is available");
+
+                // We found an answer for this strand, and therefore an
+                // answer for this table. Now, this table was either a
+                // subgoal for another strand, or was the root table.
+                let mut strand = {
+                    let prev_index = self.stack.pop(depth);
+                    if let Some(index) = prev_index {
+                        // The table was a subgoal for another strand,
+                        // which is still active.
+                        // We need to merge the answer into it.
+                        depth = index;
+                        self.stack[depth].active_strand.take().unwrap()
+                    } else {
+                        // That was the root table, so we are done.
+                        return NoRemainingSubgoalsResult::RootAnswerAvailable;
+                    }
+                };
+
+                match self.merge_answer_into_strand(&mut strand, &mut depth) {
+                    Err(e) => {
+                        drop(strand);
+                        return NoRemainingSubgoalsResult::RootSearchFail(e);
+                    }
+                    Ok(_) => {
+                        self.stack[depth].active_strand = Some(strand);
+                        return NoRemainingSubgoalsResult::Success(depth);
+                    }
+                }
+            }
+            None => {
+                debug!("answer is not available (or not new)");
+
+                // This table ned nowhere of interest
+
+                // Now we yield with `QuantumExceeded`
+                self.unwind_stack(depth);
+                return NoRemainingSubgoalsResult::RootSearchFail(RootSearchFail::QuantumExceeded);
+            }
+        };
+    }
+
+    fn on_subgoal_selection_flounder(
+        &mut self,
+        mut depth: StackIndex,
+        strand: Strand<C>,
+    ) -> RootSearchFail {
+        debug!("all subgoals floundered");
+
+        // We were unable to select a subgoal for this strand
+        // because all of them had floundered or because any one
+        // that we dependended on negatively floundered
+
+        // We discard this strand because it led nowhere of interest
+        drop(strand);
+
+        loop {
+            // This table is marked as floundered
+            let table = self.stack[depth].table;
+            debug!("Marking table {:?} as floundered!", table);
+            self.tables[table].mark_floundered();
+
+            let prev_index = self.stack.pop(depth);
+            if let Some(index) = prev_index {
+                // The table was a subgoal for another strand,
+                // which is still active.
+                // We need to decide what a floundered subgoal means
+                depth = index;
+            } else {
+                // That was the root table, so we are done.
+                return RootSearchFail::Floundered;
+            }
+            let mut strand = self.stack[depth].active_strand.take().unwrap();
+
+            match self.should_strand_flounder(&mut strand) {
+                false => {
+                    // We want to maybe pursue this strand later
+                    let table = self.stack[depth].table;
+                    self.tables[table].push_strand(strand);
+
+                    // Now we yield with `QuantumExceeded`
+                    self.unwind_stack(depth);
+                    return RootSearchFail::QuantumExceeded;
+                }
+                true => {
+                    // This strand will never lead anywhere of interest
+                    drop(strand);
+
+                    // Because a subgoal that we depended on negatively floundered,
+                    // this table flounders (continue loop).
+                }
+            }
+        }
+    }
+
     fn unwind_stack(&mut self, mut depth: StackIndex) {
         loop {
             let next_index = self.stack.pop(depth);
@@ -535,101 +651,26 @@ impl<C: Context> Forest<C> {
                     strand.last_pursued_time = work;
                     match self.select_subgoal(context, &mut strand) {
                         SubGoalSelection::Selected => {
+                            // A subgoal has been selected. We now check this subgoal
+                            // table for an existing answer or if it's in a cycle.
+                            // If neither of those are the case, a strand is selected
+                            // and the next loop iteration happens.
                             depth = self.on_subgoal_selected(depth, strand)?;
+                            continue;
                         }
                         SubGoalSelection::NoRemaingSubgoals => {
-                            debug!("no remaining subgoals for the table");
-
-                            match self.pursue_answer(depth, strand) {
-                                Some(()) => {
-                                    debug!("answer is available");
-
-                                    // We found an answer for this strand, and therefore an
-                                    // answer for this table. Now, this table was either a
-                                    // subgoal for another strand, or was the root table.
-                                    let mut strand = {
-                                        let prev_index = self.stack.pop(depth);
-                                        if let Some(index) = prev_index {
-                                            // The table was a subgoal for another strand,
-                                            // which is still active.
-                                            // We need to merge the answer into it.
-                                            depth = index;
-                                            self.stack[depth].active_strand.take().unwrap()
-                                        } else {
-                                            // That was the root table, so we are done.
-                                            return Ok(());
-                                        }
-                                    };
-
-                                    match self.merge_answer_into_strand(&mut strand, &mut depth) {
-                                        Err(e) => {
-                                            drop(strand);
-                                            return Err(e);
-                                        }
-                                        Ok(_) => {
-                                            self.stack[depth].active_strand = Some(strand);
-                                            continue;
-                                        }
-                                    }
-                                }
-                                None => {
-                                    debug!("answer is not available (or not new)");
-
-                                    // This table ned nowhere of interest
-
-                                    // Now we yield with `QuantumExceeded`
-                                    self.unwind_stack(depth);
-                                    return Err(RootSearchFail::QuantumExceeded);
-                                }
+                            depth = match self.on_no_remaining_subgoals(depth, strand) {
+                                NoRemainingSubgoalsResult::RootAnswerAvailable => return Ok(()),
+                                NoRemainingSubgoalsResult::RootSearchFail(e) => return Err(e),
+                                NoRemainingSubgoalsResult::Success(depth) => depth,
                             };
+                            continue;
                         }
                         SubGoalSelection::Floundered => {
-                            debug!("all subgoals floundered");
-
-                            // We were unable to select a subgoal for this strand
-                            // because all of them had floundered or because any one
-                            // that we dependended on negatively floundered
-
-                            // We discard this strand because it led nowhere of interest
-                            drop(strand);
-
-                            loop {
-                                // This table is marked as floundered
-                                let table = self.stack[depth].table;
-                                debug!("Marking table {:?} as floundered!", table);
-                                self.tables[table].mark_floundered();
-
-                                let prev_index = self.stack.pop(depth);
-                                if let Some(index) = prev_index {
-                                    // The table was a subgoal for another strand,
-                                    // which is still active.
-                                    // We need to decide what a floundered subgoal means
-                                    depth = index;
-                                } else {
-                                    // That was the root table, so we are done.
-                                    return Err(RootSearchFail::Floundered);
-                                }
-                                let mut strand = self.stack[depth].active_strand.take().unwrap();
-
-                                match self.should_strand_flounder(&mut strand) {
-                                    false => {
-                                        // We want to maybe pursue this strand later
-                                        let table = self.stack[depth].table;
-                                        self.tables[table].push_strand(strand);
-
-                                        // Now we yield with `QuantumExceeded`
-                                        self.unwind_stack(depth);
-                                        return Err(RootSearchFail::QuantumExceeded);
-                                    }
-                                    true => {
-                                        // This strand will never lead anywhere of interest
-                                        drop(strand);
-
-                                        // Because a subgoal that we depended on negatively floundered,
-                                        // this table flounders (continue loop).
-                                    }
-                                }
-                            }
+                            // The strand floundered when trying to select a subgoal.
+                            // This will always return a `RootSearchFail`, either because the
+                            // root table floundered or we yield with `QuantumExceeded`.
+                            return Err(self.on_subgoal_selection_flounder(depth, strand));
                         }
                     }
                 }
