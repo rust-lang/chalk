@@ -59,7 +59,10 @@ impl ChalkDatabase {
         Ok(chalk_parse::parse_goal(text)?.lower(&*program)?)
     }
 
-    pub fn solve(&self, goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>) -> Option<Solution> {
+    pub fn solve(
+        &self,
+        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
+    ) -> Option<Solution<ChalkIr>> {
         let solver = self.solver();
         let solution = solver.lock().unwrap().solve(self, goal);
         solution
@@ -76,7 +79,7 @@ impl ChalkDatabase {
     }
 }
 
-impl RustIrDatabase for ChalkDatabase {
+impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
         self.program_ir().unwrap().custom_clauses()
     }

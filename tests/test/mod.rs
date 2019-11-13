@@ -3,6 +3,7 @@
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::query::LoweringDatabase;
 use chalk_ir;
+use chalk_ir::family::ChalkIr;
 use chalk_solve::ext::*;
 use chalk_solve::{Solution, SolverChoice};
 
@@ -12,7 +13,7 @@ mod coherence;
 mod slg;
 mod wf_lowering;
 
-fn assert_result(result: &Option<Solution>, expected: &str) {
+fn assert_result(result: &Option<Solution<ChalkIr>>, expected: &str) {
     let result = match result {
         Some(v) => format!("{}", v),
         None => format!("No possible solution"),

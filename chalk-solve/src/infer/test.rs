@@ -2,10 +2,11 @@
 
 use super::unify::UnificationResult;
 use super::*;
+use chalk_ir::family::ChalkIr;
 
 #[test]
 fn infer() {
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     let b = table.new_variable(U0).to_ty();
@@ -25,7 +26,7 @@ fn infer() {
 #[test]
 fn universe_error() {
     // exists(A -> forall(X -> A = X)) ---> error
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     table
@@ -36,7 +37,7 @@ fn universe_error() {
 #[test]
 fn cycle_error() {
     // exists(A -> A = foo A) ---> error
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     table
@@ -52,7 +53,7 @@ fn cycle_error() {
 #[test]
 fn cycle_indirect() {
     // exists(A -> A = foo B, A = B) ---> error
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     let b = table.new_variable(U0).to_ty();
@@ -65,7 +66,7 @@ fn cycle_indirect() {
 #[test]
 fn universe_error_indirect_1() {
     // exists(A -> forall(X -> exists(B -> B = X, A = B))) ---> error
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     let b = table.new_variable(U1).to_ty();
@@ -78,7 +79,7 @@ fn universe_error_indirect_1() {
 #[test]
 fn universe_error_indirect_2() {
     // exists(A -> forall(X -> exists(B -> B = A, B = X))) ---> error
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     let b = table.new_variable(U1).to_ty();
@@ -91,7 +92,7 @@ fn universe_error_indirect_2() {
 #[test]
 fn universe_promote() {
     // exists(A -> forall(X -> exists(B -> A = foo(B), A = foo(i32)))) ---> OK
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     let b = table.new_variable(U1).to_ty();
@@ -106,7 +107,7 @@ fn universe_promote() {
 #[test]
 fn universe_promote_bad() {
     // exists(A -> forall(X -> exists(B -> A = foo(B), B = X))) ---> error
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     let b = table.new_variable(U1).to_ty();
@@ -123,7 +124,7 @@ fn projection_eq() {
     // exists(A -> A = Item0<<A as Item1>::foo>)
     //                       ^^^^^^^^^^^^ Can A repeat here? For now,
     //                       we say no, but it's an interesting question.
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
 
@@ -141,8 +142,8 @@ const U0: UniverseIndex = UniverseIndex { counter: 0 };
 const U1: UniverseIndex = UniverseIndex { counter: 1 };
 const U2: UniverseIndex = UniverseIndex { counter: 2 };
 
-fn make_table() -> InferenceTable {
-    let mut table = InferenceTable::new();
+fn make_table() -> InferenceTable<ChalkIr> {
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let _ = table.new_universe(); // U1
     let _ = table.new_universe(); // U2
     table
@@ -235,7 +236,7 @@ fn quantify_ty_under_binder() {
 
 #[test]
 fn lifetime_constraint_indirect() {
-    let mut table = InferenceTable::new();
+    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let _ = table.new_universe(); // U1
 
     let _t_0 = table.new_variable(U0);

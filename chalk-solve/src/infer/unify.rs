@@ -3,22 +3,22 @@ use super::*;
 use crate::infer::instantiate::IntoBindersAndValue;
 use chalk_engine::fallible::*;
 use chalk_ir::cast::Cast;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::{
     DefaultFreeVarFolder, DefaultTypeFolder, Fold, InferenceFolder, PlaceholderFolder,
 };
 use chalk_ir::zip::{Zip, Zipper};
 use std::fmt::Debug;
 
-impl InferenceTable {
+impl<TF: TypeFamily> InferenceTable<TF> {
     pub(crate) fn unify<T>(
         &mut self,
-        environment: &Environment<ChalkIr>,
+        environment: &Environment<TF>,
         a: &T,
         b: &T,
-    ) -> Fallible<UnificationResult>
+    ) -> Fallible<UnificationResult<TF>>
     where
-        T: ?Sized + Zip<ChalkIr>,
+        T: ?Sized + Zip<TF>,
     {
         debug_heading!(
             "unify(a={:?}\
@@ -40,21 +40,21 @@ impl InferenceTable {
     }
 }
 
-struct Unifier<'t> {
-    table: &'t mut InferenceTable,
-    environment: &'t Environment<ChalkIr>,
-    goals: Vec<InEnvironment<DomainGoal<ChalkIr>>>,
-    constraints: Vec<InEnvironment<Constraint<ChalkIr>>>,
+struct Unifier<'t, TF: TypeFamily> {
+    table: &'t mut InferenceTable<TF>,
+    environment: &'t Environment<TF>,
+    goals: Vec<InEnvironment<DomainGoal<TF>>>,
+    constraints: Vec<InEnvironment<Constraint<TF>>>,
 }
 
 #[derive(Debug)]
-pub(crate) struct UnificationResult {
-    pub(crate) goals: Vec<InEnvironment<DomainGoal<ChalkIr>>>,
-    pub(crate) constraints: Vec<InEnvironment<Constraint<ChalkIr>>>,
+pub(crate) struct UnificationResult<TF: TypeFamily> {
+    pub(crate) goals: Vec<InEnvironment<DomainGoal<TF>>>,
+    pub(crate) constraints: Vec<InEnvironment<Constraint<TF>>>,
 }
 
-impl<'t> Unifier<'t> {
-    fn new(table: &'t mut InferenceTable, environment: &'t Environment<ChalkIr>) -> Self {
+impl<'t, TF: TypeFamily> Unifier<'t, TF> {
+    fn new(table: &'t mut InferenceTable<TF>, environment: &'t Environment<TF>) -> Self {
         Unifier {
             environment: environment,
             table: table,
@@ -66,9 +66,9 @@ impl<'t> Unifier<'t> {
     /// The main entry point for the `Unifier` type and really the
     /// only type meant to be called externally. Performs a
     /// unification of `a` and `b` and returns the Unification Result.
-    fn unify<T>(mut self, a: &T, b: &T) -> Fallible<UnificationResult>
+    fn unify<T>(mut self, a: &T, b: &T) -> Fallible<UnificationResult<TF>>
     where
-        T: ?Sized + Zip<ChalkIr>,
+        T: ?Sized + Zip<TF>,
     {
         Zip::zip_with(&mut self, a, b)?;
         Ok(UnificationResult {
@@ -81,7 +81,7 @@ impl<'t> Unifier<'t> {
     /// environment, we invoke this routine.
     fn sub_unify<T>(&mut self, ty1: T, ty2: T) -> Fallible<()>
     where
-        T: Zip<ChalkIr> + Fold<ChalkIr>,
+        T: Zip<TF> + Fold<TF>,
     {
         let sub_unifier = Unifier::new(self.table, &self.environment);
         let UnificationResult { goals, constraints } = sub_unifier.unify(&ty1, &ty2)?;
@@ -90,7 +90,7 @@ impl<'t> Unifier<'t> {
         Ok(())
     }
 
-    fn unify_ty_ty<'a>(&mut self, a: &'a Ty<ChalkIr>, b: &'a Ty<ChalkIr>) -> Fallible<()> {
+    fn unify_ty_ty<'a>(&mut self, a: &'a Ty<TF>, b: &'a Ty<TF>) -> Fallible<()> {
         //         ^^                 ^^         ^^ FIXME rustc bug
         if let Some(n_a) = self.table.normalize_shallow(a) {
             return self.unify_ty_ty(&n_a, b);
@@ -207,8 +207,8 @@ impl<'t> Unifier<'t> {
         b: impl IntoBindersAndValue<Value = T> + Copy + Debug,
     ) -> Fallible<()>
     where
-        T: Fold<ChalkIr, Result = R>,
-        R: Zip<ChalkIr> + Fold<ChalkIr, Result = R>,
+        T: Fold<TF, Result = R>,
+        R: Zip<TF> + Fold<TF, Result = R>,
     {
         // for<'a...> T == for<'b...> U
         //
@@ -238,11 +238,7 @@ impl<'t> Unifier<'t> {
     /// ```notrust
     /// ProjectionEq(<T as Trait>::Item = U)
     /// ```
-    fn unify_projection_ty(
-        &mut self,
-        proj: &ProjectionTy<ChalkIr>,
-        ty: &Ty<ChalkIr>,
-    ) -> Fallible<()> {
+    fn unify_projection_ty(&mut self, proj: &ProjectionTy<TF>, ty: &Ty<TF>) -> Fallible<()> {
         Ok(self.goals.push(InEnvironment::new(
             self.environment,
             ProjectionEq {
@@ -257,11 +253,7 @@ impl<'t> Unifier<'t> {
     /// to do so, we create a fresh placeholder `P` for `X` and
     /// see if `[X/Px] T` can be unified with `U`. This should
     /// almost never be true, actually, unless `X` is unused.
-    fn unify_forall_other(
-        &mut self,
-        ty1: &QuantifiedTy<ChalkIr>,
-        ty2: &Ty<ChalkIr>,
-    ) -> Fallible<()> {
+    fn unify_forall_other(&mut self, ty1: &QuantifiedTy<TF>, ty2: &Ty<TF>) -> Fallible<()> {
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|idx| {
@@ -283,7 +275,7 @@ impl<'t> Unifier<'t> {
     /// - `var` does not appear inside of `ty` (the standard `OccursCheck`)
     /// - `ty` does not reference anything in a lifetime that could not be named in `var`
     ///   (the extended `OccursCheck` created to handle universes)
-    fn unify_var_ty(&mut self, var: InferenceVar, ty: &Ty<ChalkIr>) -> Fallible<()> {
+    fn unify_var_ty(&mut self, var: InferenceVar, ty: &Ty<TF>) -> Fallible<()> {
         debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
 
         let var = EnaVariable::from(var);
@@ -306,11 +298,7 @@ impl<'t> Unifier<'t> {
         Ok(())
     }
 
-    fn unify_lifetime_lifetime(
-        &mut self,
-        a: &Lifetime<ChalkIr>,
-        b: &Lifetime<ChalkIr>,
-    ) -> Fallible<()> {
+    fn unify_lifetime_lifetime(&mut self, a: &Lifetime<TF>, b: &Lifetime<TF>) -> Fallible<()> {
         if let Some(n_a) = self.table.normalize_lifetime(a) {
             return self.unify_lifetime_lifetime(&n_a, b);
         } else if let Some(n_b) = self.table.normalize_lifetime(b) {
@@ -351,13 +339,13 @@ impl<'t> Unifier<'t> {
                         "unify_lifetime_lifetime: {:?} in {:?} cannot see {:?}; pushing constraint",
                         var, var_ui, idx.ui
                     );
-                    Ok(self.push_lifetime_eq_constraint(*a, *b))
+                    Ok(self.push_lifetime_eq_constraint(a.clone(), b.clone()))
                 }
             }
 
             (&LifetimeData::Placeholder(_), &LifetimeData::Placeholder(_)) => {
                 if a != b {
-                    Ok(self.push_lifetime_eq_constraint(*a, *b))
+                    Ok(self.push_lifetime_eq_constraint(a.clone(), b.clone()))
                 } else {
                     Ok(())
                 }
@@ -372,7 +360,7 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    fn push_lifetime_eq_constraint(&mut self, a: Lifetime<ChalkIr>, b: Lifetime<ChalkIr>) {
+    fn push_lifetime_eq_constraint(&mut self, a: Lifetime<TF>, b: Lifetime<TF>) {
         self.constraints.push(InEnvironment::new(
             self.environment,
             Constraint::LifetimeEq(a, b),
@@ -380,18 +368,18 @@ impl<'t> Unifier<'t> {
     }
 }
 
-impl<'t> Zipper<ChalkIr> for Unifier<'t> {
-    fn zip_tys(&mut self, a: &Ty<ChalkIr>, b: &Ty<ChalkIr>) -> Fallible<()> {
+impl<TF: TypeFamily> Zipper<TF> for Unifier<'_, TF> {
+    fn zip_tys(&mut self, a: &Ty<TF>, b: &Ty<TF>) -> Fallible<()> {
         self.unify_ty_ty(a, b)
     }
 
-    fn zip_lifetimes(&mut self, a: &Lifetime<ChalkIr>, b: &Lifetime<ChalkIr>) -> Fallible<()> {
+    fn zip_lifetimes(&mut self, a: &Lifetime<TF>, b: &Lifetime<TF>) -> Fallible<()> {
         self.unify_lifetime_lifetime(a, b)
     }
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<ChalkIr> + Fold<ChalkIr, Result = T>,
+        T: Zip<TF> + Fold<TF, Result = T>,
     {
         // The binders that appear in types (apart from quantified types, which are
         // handled in `unify_ty`) appear as part of `dyn Trait` and `impl Trait` types.
@@ -408,14 +396,18 @@ impl<'t> Zipper<ChalkIr> for Unifier<'t> {
     }
 }
 
-struct OccursCheck<'u, 't: 'u> {
-    unifier: &'u mut Unifier<'t>,
-    var: EnaVariable,
+struct OccursCheck<'u, 't, TF: TypeFamily> {
+    unifier: &'u mut Unifier<'t, TF>,
+    var: EnaVariable<TF>,
     universe_index: UniverseIndex,
 }
 
-impl<'u, 't> OccursCheck<'u, 't> {
-    fn new(unifier: &'u mut Unifier<'t>, var: EnaVariable, universe_index: UniverseIndex) -> Self {
+impl<'u, 't, TF: TypeFamily> OccursCheck<'u, 't, TF> {
+    fn new(
+        unifier: &'u mut Unifier<'t, TF>,
+        var: EnaVariable<TF>,
+        universe_index: UniverseIndex,
+    ) -> Self {
         OccursCheck {
             unifier,
             var,
@@ -424,18 +416,18 @@ impl<'u, 't> OccursCheck<'u, 't> {
     }
 }
 
-impl<'u, 't> DefaultTypeFolder for OccursCheck<'u, 't> {}
+impl<TF: TypeFamily> DefaultTypeFolder for OccursCheck<'_, '_, TF> {}
 
-impl<'u, 't> PlaceholderFolder<ChalkIr> for OccursCheck<'u, 't> {
+impl<TF: TypeFamily> PlaceholderFolder<TF> for OccursCheck<'_, '_, TF> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty<ChalkIr>> {
+    ) -> Fallible<Ty<TF>> {
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
-            Ok(universe.to_ty::<ChalkIr>()) // no need to shift, not relative to depth
+            Ok(universe.to_ty::<TF>()) // no need to shift, not relative to depth
         }
     }
 
@@ -443,7 +435,7 @@ impl<'u, 't> PlaceholderFolder<ChalkIr> for OccursCheck<'u, 't> {
         &mut self,
         ui: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Lifetime<ChalkIr>> {
+    ) -> Fallible<Lifetime<TF>> {
         if self.universe_index < ui.ui {
             // Scenario is like:
             //
@@ -460,18 +452,18 @@ impl<'u, 't> PlaceholderFolder<ChalkIr> for OccursCheck<'u, 't> {
 
             let tick_x = self.unifier.table.new_variable(self.universe_index);
             self.unifier
-                .push_lifetime_eq_constraint(tick_x.to_lifetime(), ui.to_lifetime::<ChalkIr>());
+                .push_lifetime_eq_constraint(tick_x.to_lifetime(), ui.to_lifetime::<TF>());
             Ok(tick_x.to_lifetime())
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name
             // this lifetime, no problem.
-            Ok(ui.to_lifetime::<ChalkIr>()) // no need to shift, not relative to depth
+            Ok(ui.to_lifetime::<TF>()) // no need to shift, not relative to depth
         }
     }
 }
 
-impl<'u, 't> InferenceFolder<ChalkIr> for OccursCheck<'u, 't> {
-    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<ChalkIr>> {
+impl<TF: TypeFamily> InferenceFolder<TF> for OccursCheck<'_, '_, TF> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TF>> {
         let var = EnaVariable::from(var);
         match self.unifier.table.unify.probe_value(var) {
             // If this variable already has a value, fold over that value instead.
@@ -513,7 +505,7 @@ impl<'u, 't> InferenceFolder<ChalkIr> for OccursCheck<'u, 't> {
         &mut self,
         var: InferenceVar,
         binders: usize,
-    ) -> Fallible<Lifetime<ChalkIr>> {
+    ) -> Fallible<Lifetime<TF>> {
         // a free existentially bound region; find the
         // inference variable it corresponds to
         let var = EnaVariable::from(var);
@@ -545,7 +537,7 @@ impl<'u, 't> InferenceFolder<ChalkIr> for OccursCheck<'u, 't> {
     }
 }
 
-impl<'u, 't> DefaultFreeVarFolder for OccursCheck<'u, 't> {
+impl<TF: TypeFamily> DefaultFreeVarFolder for OccursCheck<'_, '_, TF> {
     fn forbid() -> bool {
         true
     }

@@ -2,6 +2,7 @@ use petgraph::prelude::*;
 
 use crate::solve::SolverChoice;
 use crate::RustIrDatabase;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::{self, Identifier, ImplId, TraitId};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -10,11 +11,8 @@ use std::sync::Arc;
 pub mod orphan;
 mod solve;
 
-pub struct CoherenceSolver<'db, DB>
-where
-    DB: RustIrDatabase,
-{
-    db: &'db DB,
+pub struct CoherenceSolver<'db, TF: TypeFamily> {
+    db: &'db dyn RustIrDatabase<TF>,
     solver_choice: SolverChoice,
     trait_id: TraitId,
 }
@@ -67,12 +65,16 @@ impl SpecializationPriorities {
 #[derive(Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub struct SpecializationPriority(usize);
 
-impl<'db, DB> CoherenceSolver<'db, DB>
+impl<'db, TF> CoherenceSolver<'db, TF>
 where
-    DB: RustIrDatabase,
+    TF: TypeFamily,
 {
     /// Constructs a new `CoherenceSolver`.
-    pub fn new(db: &'db DB, solver_choice: SolverChoice, trait_id: TraitId) -> Self {
+    pub fn new(
+        db: &'db dyn RustIrDatabase<TF>,
+        solver_choice: SolverChoice,
+        trait_id: TraitId,
+    ) -> Self {
         Self {
             db,
             solver_choice,

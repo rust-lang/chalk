@@ -3,6 +3,8 @@ use crate::tls;
 use crate::LifetimeData;
 use crate::ProjectionTy;
 use crate::TyData;
+use chalk_engine::context::Context;
+use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -140,4 +142,8 @@ where
     TF: TypeFamily,
 {
     type TypeFamily = TF;
+}
+
+impl<C: HasTypeFamily + Context> HasTypeFamily for ExClause<C> {
+    type TypeFamily = C::TypeFamily;
 }

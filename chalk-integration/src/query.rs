@@ -5,6 +5,7 @@ use crate::error::ChalkError;
 use crate::lowering::LowerProgram;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
+use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::TraitId;
 use chalk_solve::clauses::builder::ClauseBuilder;
@@ -20,7 +21,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 #[salsa::query_group(Lowering)]
-pub trait LoweringDatabase: RustIrDatabase {
+pub trait LoweringDatabase: RustIrDatabase<ChalkIr> {
     #[salsa::input]
     fn program_text(&self) -> Arc<String>;
 
@@ -48,7 +49,7 @@ pub trait LoweringDatabase: RustIrDatabase {
     /// volatile, thus ensuring that the solver is recreated in every
     /// revision (i.e., each time source program changes).
     #[salsa::volatile]
-    fn solver(&self) -> Arc<Mutex<Solver>>;
+    fn solver(&self) -> Arc<Mutex<Solver<ChalkIr>>>;
 }
 
 fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
@@ -163,7 +164,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
     Ok(Arc::new(ProgramEnvironment::new(program_clauses)))
 }
 
-fn solver(db: &impl LoweringDatabase) -> Arc<Mutex<Solver>> {
+fn solver(db: &impl LoweringDatabase) -> Arc<Mutex<Solver<ChalkIr>>> {
     let choice = db.solver_choice();
     Arc::new(Mutex::new(choice.into_solver()))
 }

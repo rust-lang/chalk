@@ -97,7 +97,7 @@ impl tls::DebugContext for Program {
     }
 }
 
-impl RustIrDatabase for Program {
+impl RustIrDatabase<ChalkIr> for Program {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
         self.custom_clauses.clone()
     }

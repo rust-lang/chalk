@@ -110,6 +110,10 @@ impl<G: HasTypeFamily> InEnvironment<G> {
     }
 }
 
+impl<G: HasTypeFamily> HasTypeFamily for InEnvironment<G> {
+    type TypeFamily = G::TypeFamily;
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeName {
     /// a type like `Vec<T>`
@@ -835,6 +839,10 @@ pub struct ProjectionEq<TF: TypeFamily> {
     pub ty: Ty<TF>,
 }
 
+impl<TF: TypeFamily> HasTypeFamily for ProjectionEq<TF> {
+    type TypeFamily = TF;
+}
+
 /// Indicates that the `value` is universally quantified over `N`
 /// parameters of the given kinds, where `N == self.binders.len()`. A
 /// variable with depth `i < N` refers to the value at
@@ -1113,7 +1121,7 @@ pub enum Constraint<TF: TypeFamily> {
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, HasTypeFamily)]
 pub struct Substitution<TF: TypeFamily> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
@@ -1180,7 +1188,7 @@ impl<'a, TF: TypeFamily> DefaultPlaceholderFolder for &'a Substitution<TF> {}
 /// substitution stores the values for the query's unknown variables,
 /// and the constraints represents any region constraints that must
 /// additionally be solved.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasTypeFamily)]
 pub struct ConstrainedSubst<TF: TypeFamily> {
     pub subst: Substitution<TF>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
     pub constraints: Vec<InEnvironment<Constraint<TF>>>,

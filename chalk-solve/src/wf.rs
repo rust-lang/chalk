@@ -5,7 +5,7 @@ use crate::solve::SolverChoice;
 use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::*;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::{HasTypeFamily, TypeFamily};
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use itertools::Itertools;
@@ -35,34 +35,34 @@ impl fmt::Display for WfError {
 
 impl std::error::Error for WfError {}
 
-pub struct WfSolver<'db, DB: RustIrDatabase> {
-    db: &'db DB,
+pub struct WfSolver<'db, TF: TypeFamily> {
+    db: &'db dyn RustIrDatabase<TF>,
     solver_choice: SolverChoice,
 }
 
 /// A trait for retrieving all types appearing in some Chalk construction.
-trait FoldInputTypes {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>);
+trait FoldInputTypes: HasTypeFamily {
+    fn fold(&self, accumulator: &mut Vec<Ty<Self::TypeFamily>>);
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+    fn fold(&self, accumulator: &mut Vec<Ty<T::TypeFamily>>) {
         for f in self {
             f.fold(accumulator);
         }
     }
 }
 
-impl FoldInputTypes for Parameter<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+impl<TF: TypeFamily> FoldInputTypes for Parameter<TF> {
+    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
         if let ParameterKind::Ty(ty) = &self.0 {
             ty.fold(accumulator)
         }
     }
 }
 
-impl FoldInputTypes for Ty<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
+    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
         match self.data() {
             TyData::Apply(app) => {
                 accumulator.push(self.clone());
@@ -94,14 +94,14 @@ impl FoldInputTypes for Ty<ChalkIr> {
     }
 }
 
-impl FoldInputTypes for TraitRef<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+impl<TF: TypeFamily> FoldInputTypes for TraitRef<TF> {
+    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
         self.parameters.fold(accumulator);
     }
 }
 
-impl FoldInputTypes for ProjectionEq<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+impl<TF: TypeFamily> FoldInputTypes for ProjectionEq<TF> {
+    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
         TyData::Projection(self.projection.clone())
             .intern()
             .fold(accumulator);
@@ -109,8 +109,8 @@ impl FoldInputTypes for ProjectionEq<ChalkIr> {
     }
 }
 
-impl FoldInputTypes for WhereClause<ChalkIr> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+impl<TF: TypeFamily> FoldInputTypes for WhereClause<TF> {
+    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
         match self {
             WhereClause::Implemented(tr) => tr.fold(accumulator),
             WhereClause::ProjectionEq(p) => p.fold(accumulator),
@@ -119,17 +119,17 @@ impl FoldInputTypes for WhereClause<ChalkIr> {
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty<ChalkIr>>) {
+    fn fold(&self, accumulator: &mut Vec<Ty<T::TypeFamily>>) {
         self.value.fold(accumulator);
     }
 }
 
-impl<'db, DB> WfSolver<'db, DB>
+impl<'db, TF> WfSolver<'db, TF>
 where
-    DB: RustIrDatabase,
+    TF: TypeFamily,
 {
     /// Constructs a new `WfSolver`.
-    pub fn new(db: &'db DB, solver_choice: SolverChoice) -> Self {
+    pub fn new(db: &'db dyn RustIrDatabase<TF>, solver_choice: SolverChoice) -> Self {
         Self { db, solver_choice }
     }
 
@@ -314,7 +314,7 @@ where
     ///     forall<'a> { WellFormed(Box<&'a T>) },
     /// }
     /// ```
-    fn compute_assoc_ty_goal(&self, assoc_ty_id: AssociatedTyValueId) -> Option<Goal<ChalkIr>> {
+    fn compute_assoc_ty_goal(&self, assoc_ty_id: AssociatedTyValueId) -> Option<Goal<TF>> {
         let assoc_ty = &self.db.associated_ty_value(assoc_ty_id);
 
         // The substitutions for the binders on this associated type

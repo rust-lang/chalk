@@ -3,7 +3,7 @@ use crate::ext::GoalExt;
 use crate::solve::SolverChoice;
 use crate::RustIrDatabase;
 use chalk_ir::cast::*;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::*;
 
 // Test if a local impl violates the orphan rules.
@@ -13,8 +13,8 @@ use chalk_ir::*;
 //     forall<T> { LocalImplAllowed(MyType<T>: Trait) }
 //
 // This must be provable in order to pass the orphan check.
-pub fn perform_orphan_check(
-    db: &dyn RustIrDatabase,
+pub fn perform_orphan_check<TF: TypeFamily>(
+    db: &dyn RustIrDatabase<TF>,
     solver_choice: SolverChoice,
     impl_id: ImplId,
 ) -> Result<(), CoherenceError> {
@@ -23,7 +23,7 @@ pub fn perform_orphan_check(
     let impl_datum = db.impl_datum(impl_id);
     debug!("impl_datum={:#?}", impl_datum);
 
-    let impl_allowed: Goal<ChalkIr> = impl_datum
+    let impl_allowed: Goal<TF> = impl_datum
         .binders
         .map_ref(|bound_impl| {
             // Ignoring the polarization of the impl's polarized trait ref
