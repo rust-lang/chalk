@@ -121,6 +121,10 @@ impl<T: HasTypeFamily> HasTypeFamily for Vec<T> {
     type TypeFamily = T::TypeFamily;
 }
 
+impl<T: HasTypeFamily> HasTypeFamily for Box<T> {
+    type TypeFamily = T::TypeFamily;
+}
+
 impl<T: HasTypeFamily + ?Sized> HasTypeFamily for &T {
     type TypeFamily = T::TypeFamily;
 }

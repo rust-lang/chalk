@@ -2,7 +2,7 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
-use chalk_derive::Fold;
+use chalk_derive::{Fold, HasTypeFamily};
 use chalk_ir::cast::Cast;
 use chalk_ir::family::{HasTypeFamily, TypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
@@ -132,14 +132,10 @@ pub struct TraitFlags {
 }
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasTypeFamily)]
 pub enum InlineBound<TF: TypeFamily> {
     TraitBound(TraitBound<TF>),
     ProjectionEqBound(ProjectionEqBound<TF>),
-}
-
-impl<TF: TypeFamily> HasTypeFamily for InlineBound<TF> {
-    type TypeFamily = TF;
 }
 
 #[allow(type_alias_bounds)]
@@ -308,7 +304,7 @@ pub struct AssociatedTyDatum<TF: TypeFamily> {
 
 /// Encodes the parts of `AssociatedTyDatum` where the parameters
 /// `P0..Pm` are in scope (`bounds` and `where_clauses`).
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasTypeFamily)]
 pub struct AssociatedTyDatumBound<TF: TypeFamily> {
     /// Bounds on the associated type itself.
     ///
@@ -318,10 +314,6 @@ pub struct AssociatedTyDatumBound<TF: TypeFamily> {
 
     /// Where clauses that must hold for the projection to be well-formed.
     pub where_clauses: Vec<QuantifiedWhereClause<TF>>,
-}
-
-impl<TF: TypeFamily> HasTypeFamily for AssociatedTyDatumBound<TF> {
-    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> AssociatedTyDatum<TF> {
@@ -408,14 +400,10 @@ pub struct AssociatedTyValue<TF: TypeFamily> {
     pub value: Binders<AssociatedTyValueBound<TF>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasTypeFamily)]
 pub struct AssociatedTyValueBound<TF: TypeFamily> {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<TF>,
-}
-
-impl<TF: TypeFamily> HasTypeFamily for AssociatedTyValueBound<TF> {
-    type TypeFamily = TF;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
