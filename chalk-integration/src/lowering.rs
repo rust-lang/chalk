@@ -850,6 +850,7 @@ impl LowerTraitFlags for TraitFlags {
             upstream: self.upstream,
             fundamental: self.fundamental,
             non_enumerable: self.non_enumerable,
+            coinductive: self.coinductive,
         }
     }
 }

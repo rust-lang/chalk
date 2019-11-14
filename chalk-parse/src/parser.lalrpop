@@ -41,6 +41,7 @@ AutoKeyword: () = "#" "[" "auto" "]";
 MarkerKeyword: () = "#" "[" "marker" "]";
 FundamentalKeyword: () = "#" "[" "fundamental" "]";
 NonEnumerableKeyword: () = "#" "[" "non_enumerable" "]";
+CoinductiveKeyword: () = "#" "[" "coinductive" "]";
 
 StructDefn: StructDefn = {
     <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
@@ -58,7 +59,7 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> "trait" <n:Id><p:Angle<ParameterKind>>
+    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> "trait" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
     {
         name: n,
@@ -71,6 +72,7 @@ TraitDefn: TraitDefn = {
             upstream: upstream.is_some(),
             fundamental: fundamental.is_some(),
             non_enumerable: non_enumerable.is_some(),
+            coinductive: coinductive.is_some(),
         },
     }
 };

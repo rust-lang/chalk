@@ -57,6 +57,7 @@ pub struct TraitFlags {
     pub upstream: bool,
     pub fundamental: bool,
     pub non_enumerable: bool,
+    pub coinductive: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
