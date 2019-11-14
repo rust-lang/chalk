@@ -82,7 +82,7 @@ fn dyn_Foo_Bar() {
 }
 
 #[test]
-fn dyn_hr_Foo() {
+fn dyn_higher_ranked_type_arguments() {
     test! {
         program {
             trait Foo<T> { }
@@ -116,6 +116,14 @@ fn dyn_hr_Foo() {
         }
 
         goal {
+            forall<'static> {
+                impl forall<'a> Foo<Ref<'a>> + Bar: Foo<Ref<'static>>
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
             dyn forall<'a> Foo<Ref<'a>> + Bar: Bar
         } yields {
             "Unique; substitution [], lifetime constraints []"
@@ -128,6 +136,7 @@ fn dyn_hr_Foo() {
                 }
             }
         } yields {
+            // Note that this requires 'a == 'static, so it would be resolveable later on.
             "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '!1_0 }]"
         }
 
@@ -138,6 +147,7 @@ fn dyn_hr_Foo() {
                 }
             }
         } yields {
+            // Note that this requires 'a == 'static, so it would be resolveable later on.
             "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '!1_0 }]"
         }
     }

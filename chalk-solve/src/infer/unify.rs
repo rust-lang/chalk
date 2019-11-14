@@ -132,7 +132,7 @@ impl<'t> Unifier<'t> {
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&TyData::ForAll(ref quantified_ty1), &TyData::ForAll(ref quantified_ty2)) => {
-                self.unify_foralls(&**quantified_ty1, &**quantified_ty2)
+                self.unify_binders(&**quantified_ty1, &**quantified_ty2)
             }
 
             // Unifying `forall<X> { T }` with some other type `U`
@@ -201,7 +201,7 @@ impl<'t> Unifier<'t> {
         }
     }
 
-    fn unify_foralls<T, R>(
+    fn unify_binders<T, R>(
         &mut self,
         a: impl IntoBindersAndValue<Value = T> + Copy + Debug,
         b: impl IntoBindersAndValue<Value = T> + Copy + Debug,
@@ -216,11 +216,8 @@ impl<'t> Unifier<'t> {
         //
         // for<'a...> exists<'b...> T == U &&
         // for<'b...> exists<'a...> T == U
-        //
-        // Here we only check for<'a...> exists<'b...> T == U,
-        // can someone smart comment why this is sufficient?
 
-        debug!("unify_foralls({:?}, {:?})", a, b);
+        debug!("unify_binders({:?}, {:?})", a, b);
 
         {
             let a_universal = self.table.instantiate_binders_universally(a);
@@ -396,8 +393,18 @@ impl<'t> Zipper<ChalkIr> for Unifier<'t> {
     where
         T: Zip<ChalkIr> + Fold<ChalkIr, Result = T>,
     {
-        // All of the binders that appear in types are "forall" binders;
-        self.unify_foralls(a, b)
+        // The binders that appear in types (apart from quantified types, which are
+        // handled in `unify_ty`) appear as part of `dyn Trait` and `impl Trait` types.
+        //
+        // They come in two varieties:
+        //
+        // * The existential binder from `dyn Trait` / `impl Trait`
+        //   (representing the hidden "self" type)
+        // * The `for<..>` binders from higher-ranked traits.
+        //
+        // In both cases we can use the same `unify_binders` routine.
+
+        self.unify_binders(a, b)
     }
 }
 
