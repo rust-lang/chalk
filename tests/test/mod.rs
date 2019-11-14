@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::query::LoweringDatabase;
 use chalk_ir;
@@ -200,6 +202,7 @@ mod auto_traits;
 mod coherence_goals;
 mod coinduction;
 mod cycle;
+mod existential_types;
 mod implied_bounds;
 mod impls;
 mod negation;

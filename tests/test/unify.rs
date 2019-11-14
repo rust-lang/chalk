@@ -71,9 +71,7 @@ fn forall_equality() {
             for<'a, 'b> Ref<'a, Ref<'b, Ref<'a, Unit>>>: Eq<
                 for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
         } yields {
-            "Unique; substitution [], lifetime constraints [
-                 InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }
-             ]"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }, InEnvironment { environment: Env([]), goal: '!2_1 == '!2_0 }]"
         }
     }
 }
@@ -140,6 +138,27 @@ fn equality_binder() {
                  substitution [?0 := '^0], \
                  lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '^0 }] \
              }"
+        }
+    }
+}
+
+#[test]
+fn equality_binder2() {
+    test! {
+        program {
+            struct Ref<'a, 'b> { }
+        }
+
+        goal {
+            for<'b, 'c> Ref<'b, 'c> = for<'a> Ref<'a, 'a>
+        } yields {
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }]"
+        }
+
+        goal {
+            for<'a> Ref<'a, 'a> = for<'b, 'c> Ref<'b, 'c>
+        } yields {
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '!2_1 }]"
         }
     }
 }
