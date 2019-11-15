@@ -1209,13 +1209,13 @@ fn coinductive_unsound1() {
         program {
             trait C1orC2 { }
 
-            #[auto]
+            #[coinductive]
             trait C1 { }
 
-            #[auto]
+            #[coinductive]
             trait C2 { }
 
-            #[auto]
+            #[coinductive]
             trait C3 { }
 
             forall<T> {
@@ -1263,13 +1263,13 @@ fn coinductive_unsound2() {
         program {
             trait C1orC2 { }
 
-            #[auto]
+            #[coinductive]
             trait C1 { }
 
-            #[auto]
+            #[coinductive]
             trait C2 { }
 
-            #[auto]
+            #[coinductive]
             trait C3 { }
 
             forall<T> {

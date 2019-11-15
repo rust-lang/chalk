@@ -3,6 +3,56 @@
 use super::*;
 
 #[test]
+fn auto_semantics() {
+    test! {
+        program {
+            #[auto] trait Send { }
+
+            struct i32 { }
+
+            struct Ptr<T> { }
+            impl<T> Send for Ptr<T> where T: Send { }
+
+            struct List<T> {
+                data: T,
+                next: Ptr<List<T>>
+            }
+        }
+
+        goal {
+            forall<T> {
+                List<T>: Send
+            }
+        } yields {
+            "No possible solution"
+        }
+        goal {
+            forall<T> {
+                if (T: Send) {
+                    List<T>: Send
+                }
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            List<i32>: Send
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            exists<T> {
+                T: Send
+            }
+        } yields {
+            "Ambiguous"
+        }
+    }
+}
+
+#[test]
 fn auto_trait_without_impls() {
     test! {
         program {

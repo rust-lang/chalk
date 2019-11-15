@@ -109,6 +109,10 @@ impl TraitDatum {
     pub fn is_non_enumerable_trait(&self) -> bool {
         self.flags.non_enumerable
     }
+
+    pub fn is_coinductive_trait(&self) -> bool {
+        self.flags.coinductive
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -129,6 +133,7 @@ pub struct TraitFlags {
     pub upstream: bool,
     pub fundamental: bool,
     pub non_enumerable: bool,
+    pub coinductive: bool,
 }
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.

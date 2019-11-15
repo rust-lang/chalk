@@ -18,7 +18,10 @@ impl IsCoinductive for Goal<ChalkIr> {
     fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool {
         match self {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => match wca {
-                WhereClause::Implemented(tr) => db.trait_datum(tr.trait_id).is_auto_trait(),
+                WhereClause::Implemented(tr) => {
+                    db.trait_datum(tr.trait_id).is_auto_trait()
+                        || db.trait_datum(tr.trait_id).is_coinductive_trait()
+                }
                 WhereClause::ProjectionEq(..) => false,
             },
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..)))) => true,
