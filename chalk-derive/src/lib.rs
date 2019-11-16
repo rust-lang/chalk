@@ -183,6 +183,110 @@ fn derive_fold_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream {
     }
 }
 
+#[proc_macro_derive(HasTypeFamily, attributes(has_type_family))]
+pub fn derive_has_type_family(item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as DeriveInput);
+    let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
+
+    let type_name = input.ident;
+
+    if let Some(attr) = input
+        .attrs
+        .iter()
+        .find(|a| a.path.is_ident("has_type_family"))
+    {
+        // Hardcoded type-family:
+        //
+        // impl HasTypeFamily for Type {
+        //     type Result = XXX;
+        // }
+        let arg = attr
+            .parse_args::<proc_macro2::TokenStream>()
+            .expect("Expected has_type_family argument");
+
+        return TokenStream::from(quote! {
+            impl #impl_generics HasTypeFamily for #type_name #ty_generics #where_clause_ref {
+                type TypeFamily = #arg;
+            }
+        });
+    }
+
+    match input.generics.params.len() {
+        1 => {}
+
+        0 => {
+            panic!(
+                "TypeFamily derive requires a single type parameter or a `#[has_type_family]` attr"
+            );
+        }
+
+        _ => {
+            panic!("TypeFamily derive only works with a single type parameter");
+        }
+    };
+
+    let generic_param0 = &input.generics.params[0];
+
+    if let Some(param) = has_type_family(&generic_param0) {
+        // HasTypeFamily bound:
+        //
+        // Example:
+        //
+        // impl<T, _TF> HasTypeFamily for Binders<T>
+        // where
+        //     T: HasTypeFamily<TypeFamily = _TF>,
+        //     _TF: TypeFamily,
+        // {
+        //     type Result = _TF;
+        // }
+
+        let mut impl_generics = input.generics.clone();
+        impl_generics.params.extend(vec![GenericParam::Type(
+            syn::parse(quote! { _TF: TypeFamily }.into()).unwrap(),
+        )]);
+
+        let mut where_clause = where_clause_ref
+            .cloned()
+            .unwrap_or_else(|| syn::parse2(quote![where]).unwrap());
+        where_clause
+            .predicates
+            .push(syn::parse2(quote! { #param: HasTypeFamily<TypeFamily = _TF> }).unwrap());
+
+        return TokenStream::from(quote! {
+            impl #impl_generics HasTypeFamily for #type_name < #param >
+                #where_clause
+            {
+                type TypeFamily = _TF;
+            }
+        });
+    }
+
+    // TypeFamily bound:
+    //
+    // Example:
+    //
+    // impl<TF> HasTypeFamily for Foo<TF>
+    // where
+    //     TF: TypeFamily,
+    // {
+    //     type TypeFamily = TF;
+    // }
+
+    if let Some(tf) = is_type_family(&generic_param0) {
+        let impl_generics = &input.generics;
+
+        return TokenStream::from(quote! {
+            impl #impl_generics HasTypeFamily for #type_name < #tf >
+                #where_clause_ref
+            {
+                type TypeFamily = #tf;
+            }
+        });
+    }
+
+    panic!("derive(TypeFamily) requires a parameter that implements HasTypeFamily or TypeFamily");
+}
+
 /// Checks whether a generic parameter has a `: HasTypeFamily` bound
 fn has_type_family(param: &GenericParam) -> Option<&Ident> {
     bounded_by_trait(param, "HasTypeFamily")

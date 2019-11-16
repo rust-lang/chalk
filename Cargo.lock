@@ -241,6 +241,7 @@ dependencies = [
 name = "chalk-solve"
 version = "0.1.0"
 dependencies = [
+ "chalk-derive 0.1.0",
  "chalk-engine 0.9.0",
  "chalk-ir 0.1.0",
  "chalk-macros 0.1.1",

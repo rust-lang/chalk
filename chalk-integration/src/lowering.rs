@@ -625,7 +625,7 @@ trait LowerStructDefn {
         &self,
         struct_id: chalk_ir::StructId,
         env: &Env,
-    ) -> LowerResult<rust_ir::StructDatum>;
+    ) -> LowerResult<rust_ir::StructDatum<ChalkIr>>;
 }
 
 impl LowerStructDefn for StructDefn {
@@ -633,7 +633,7 @@ impl LowerStructDefn for StructDefn {
         &self,
         struct_id: chalk_ir::StructId,
         env: &Env,
-    ) -> LowerResult<rust_ir::StructDatum> {
+    ) -> LowerResult<rust_ir::StructDatum<ChalkIr>> {
         if self.flags.fundamental && self.all_parameters().len() != 1 {
             Err(RustIrError::InvalidFundamentalTypesParameters(self.name))?;
         }
@@ -679,11 +679,11 @@ impl LowerTraitRef for TraitRef {
 }
 
 trait LowerTraitBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound>;
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound<ChalkIr>>;
 }
 
 impl LowerTraitBound for TraitBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound> {
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound<ChalkIr>> {
         let trait_id = match env.lookup(self.trait_name)? {
             NameLookup::Type(TypeKindId::TraitId(trait_id)) => trait_id,
             NameLookup::Type(_) | NameLookup::Parameter(_) => {
@@ -728,11 +728,11 @@ impl LowerTraitBound for TraitBound {
 }
 
 trait LowerProjectionEqBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::ProjectionEqBound>;
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::ProjectionEqBound<ChalkIr>>;
 }
 
 impl LowerProjectionEqBound for ProjectionEqBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::ProjectionEqBound> {
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::ProjectionEqBound<ChalkIr>> {
         let trait_bound = self.trait_bound.lower(env)?;
         let lookup = match env
             .associated_ty_lookups
@@ -775,11 +775,11 @@ impl LowerProjectionEqBound for ProjectionEqBound {
 }
 
 trait LowerInlineBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::InlineBound>;
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::InlineBound<ChalkIr>>;
 }
 
 impl LowerInlineBound for InlineBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::InlineBound> {
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::InlineBound<ChalkIr>> {
         let bound = match self {
             InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(b.lower(&env)?),
             InlineBound::ProjectionEqBound(b) => {
@@ -791,11 +791,11 @@ impl LowerInlineBound for InlineBound {
 }
 
 trait LowerQuantifiedInlineBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::QuantifiedInlineBound>;
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::QuantifiedInlineBound<ChalkIr>>;
 }
 
 impl LowerQuantifiedInlineBound for QuantifiedInlineBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::QuantifiedInlineBound> {
+    fn lower(&self, env: &Env) -> LowerResult<rust_ir::QuantifiedInlineBound<ChalkIr>> {
         let parameter_kinds = self.parameter_kinds.iter().map(|pk| pk.lower());
         let binders = env.in_binders(parameter_kinds, |env| Ok(self.bound.lower(env)?))?;
         Ok(binders)
@@ -803,11 +803,11 @@ impl LowerQuantifiedInlineBound for QuantifiedInlineBound {
 }
 
 trait LowerQuantifiedInlineBoundVec {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound>>;
+    fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound<ChalkIr>>>;
 }
 
 impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound>> {
+    fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound<ChalkIr>>> {
         self.iter().map(|b| b.lower(env)).collect()
     }
 }
@@ -1058,7 +1058,7 @@ trait LowerImpl {
         empty_env: &Env,
         impl_id: ImplId,
         associated_ty_value_ids: &AssociatedTyValueIds,
-    ) -> LowerResult<rust_ir::ImplDatum>;
+    ) -> LowerResult<rust_ir::ImplDatum<ChalkIr>>;
 }
 
 impl LowerImpl for Impl {
@@ -1067,7 +1067,7 @@ impl LowerImpl for Impl {
         empty_env: &Env,
         impl_id: ImplId,
         associated_ty_value_ids: &AssociatedTyValueIds,
-    ) -> LowerResult<rust_ir::ImplDatum> {
+    ) -> LowerResult<rust_ir::ImplDatum<ChalkIr>> {
         debug_heading!("LowerImpl::lower_impl(impl_id={:?})", impl_id);
 
         let polarity = self.polarity.lower();
@@ -1160,7 +1160,7 @@ trait LowerTrait {
         &self,
         trait_id: chalk_ir::TraitId,
         env: &Env,
-    ) -> LowerResult<rust_ir::TraitDatum>;
+    ) -> LowerResult<rust_ir::TraitDatum<ChalkIr>>;
 }
 
 impl LowerTrait for TraitDefn {
@@ -1168,7 +1168,7 @@ impl LowerTrait for TraitDefn {
         &self,
         trait_id: chalk_ir::TraitId,
         env: &Env,
-    ) -> LowerResult<rust_ir::TraitDatum> {
+    ) -> LowerResult<rust_ir::TraitDatum<ChalkIr>> {
         let all_parameters = self.all_parameters();
         let all_parameters_len = all_parameters.len();
         let binders = env.in_binders(all_parameters, |env| {

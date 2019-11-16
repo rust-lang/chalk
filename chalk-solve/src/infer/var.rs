@@ -1,9 +1,10 @@
 use chalk_ir::cast::Cast;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::*;
 use ena::unify::{UnifyKey, UnifyValue};
 use std::cmp::min;
 use std::fmt;
+use std::marker::PhantomData;
 use std::u32;
 
 /// Wrapper around `chalk_ir::InferenceVar` for coherence purposes.
@@ -35,35 +36,41 @@ use std::u32;
 ///     "downcast" the resulting variable using
 ///     e.g. `value.ty().unwrap()`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) struct EnaVariable(InferenceVar);
+pub(crate) struct EnaVariable<TF: TypeFamily> {
+    var: InferenceVar,
+    phantom: PhantomData<TF>,
+}
 
-impl From<InferenceVar> for EnaVariable {
-    fn from(var: InferenceVar) -> EnaVariable {
-        EnaVariable(var)
+impl<TF: TypeFamily> From<InferenceVar> for EnaVariable<TF> {
+    fn from(var: InferenceVar) -> EnaVariable<TF> {
+        EnaVariable {
+            var,
+            phantom: PhantomData,
+        }
     }
 }
 
-impl EnaVariable {
+impl<TF: TypeFamily> EnaVariable<TF> {
     /// Convert this inference variable into a type. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a type (we can't check it).
-    pub(crate) fn to_ty(self) -> Ty<ChalkIr> {
-        self.0.to_ty::<ChalkIr>()
+    pub(crate) fn to_ty(self) -> Ty<TF> {
+        self.var.to_ty::<TF>()
     }
 
     /// Convert this inference variable into a lifetime. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a lifetime (we can't check it).
-    pub(crate) fn to_lifetime(self) -> Lifetime<ChalkIr> {
-        self.0.to_lifetime::<ChalkIr>()
+    pub(crate) fn to_lifetime(self) -> Lifetime<TF> {
+        self.var.to_lifetime::<TF>()
     }
 }
 
-impl UnifyKey for EnaVariable {
-    type Value = InferenceValue;
+impl<TF: TypeFamily> UnifyKey for EnaVariable<TF> {
+    type Value = InferenceValue<TF>;
 
     fn index(&self) -> u32 {
-        self.0.index()
+        self.var.index()
     }
 
     fn from_index(u: u32) -> Self {
@@ -79,30 +86,30 @@ impl UnifyKey for EnaVariable {
 /// universe index; when the inference variable is assigned a value, it becomes
 /// bound and records that value. See `EnaVariable` for more details.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum InferenceValue {
+pub(crate) enum InferenceValue<TF: TypeFamily> {
     Unbound(UniverseIndex),
-    Bound(Parameter<ChalkIr>),
+    Bound(Parameter<TF>),
 }
 
-impl From<Ty<ChalkIr>> for InferenceValue {
-    fn from(ty: Ty<ChalkIr>) -> Self {
+impl<TF: TypeFamily> From<Ty<TF>> for InferenceValue<TF> {
+    fn from(ty: Ty<TF>) -> Self {
         InferenceValue::Bound(ty.cast())
     }
 }
 
-impl From<Lifetime<ChalkIr>> for InferenceValue {
-    fn from(lifetime: Lifetime<ChalkIr>) -> Self {
+impl<TF: TypeFamily> From<Lifetime<TF>> for InferenceValue<TF> {
+    fn from(lifetime: Lifetime<TF>) -> Self {
         InferenceValue::Bound(lifetime.cast())
     }
 }
 
-impl UnifyValue for InferenceValue {
-    type Error = (InferenceValue, InferenceValue);
+impl<TF: TypeFamily> UnifyValue for InferenceValue<TF> {
+    type Error = (InferenceValue<TF>, InferenceValue<TF>);
 
     fn unify_values(
-        a: &InferenceValue,
-        b: &InferenceValue,
-    ) -> Result<InferenceValue, (InferenceValue, InferenceValue)> {
+        a: &InferenceValue<TF>,
+        b: &InferenceValue<TF>,
+    ) -> Result<InferenceValue<TF>, (InferenceValue<TF>, InferenceValue<TF>)> {
         match (a, b) {
             (&InferenceValue::Unbound(ui_a), &InferenceValue::Unbound(ui_b)) => {
                 Ok(InferenceValue::Unbound(min(ui_a, ui_b)))
@@ -116,8 +123,8 @@ impl UnifyValue for InferenceValue {
     }
 }
 
-impl fmt::Debug for EnaVariable {
+impl<TF: TypeFamily> fmt::Debug for EnaVariable<TF> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "{:?}", self.0)
+        write!(fmt, "{:?}", self.var)
     }
 }

@@ -1,8 +1,8 @@
 use crate::RustIrDatabase;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::*;
 
-pub trait IsCoinductive {
+pub trait IsCoinductive<TF: TypeFamily> {
     /// A goal G has coinductive semantics if proving G is allowed to
     /// assume G is true (very roughly speaking). In the case of
     /// chalk-ir, this is true for goals of the form `T: AutoTrait`,
@@ -11,11 +11,11 @@ pub trait IsCoinductive {
     /// requirements and cyclic traits, which generates cycles in the
     /// proof tree which must not be rejected but instead must be
     /// treated as a success.
-    fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool;
+    fn is_coinductive(&self, db: &dyn RustIrDatabase<TF>) -> bool;
 }
 
-impl IsCoinductive for Goal<ChalkIr> {
-    fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool {
+impl<TF: TypeFamily> IsCoinductive<TF> for Goal<TF> {
+    fn is_coinductive(&self, db: &dyn RustIrDatabase<TF>) -> bool {
         match self {
             Goal::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => match wca {
                 WhereClause::Implemented(tr) => {
@@ -31,8 +31,8 @@ impl IsCoinductive for Goal<ChalkIr> {
     }
 }
 
-impl IsCoinductive for UCanonical<InEnvironment<Goal<ChalkIr>>> {
-    fn is_coinductive(&self, db: &dyn RustIrDatabase) -> bool {
+impl<TF: TypeFamily> IsCoinductive<TF> for UCanonical<InEnvironment<Goal<TF>>> {
+    fn is_coinductive(&self, db: &dyn RustIrDatabase<TF>) -> bool {
         self.canonical.value.goal.is_coinductive(db)
     }
 }

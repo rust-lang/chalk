@@ -3,6 +3,8 @@ use crate::tls;
 use crate::LifetimeData;
 use crate::ProjectionTy;
 use crate::TyData;
+use chalk_engine::context::Context;
+use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -121,6 +123,10 @@ impl<T: HasTypeFamily> HasTypeFamily for Vec<T> {
     type TypeFamily = T::TypeFamily;
 }
 
+impl<T: HasTypeFamily> HasTypeFamily for Box<T> {
+    type TypeFamily = T::TypeFamily;
+}
+
 impl<T: HasTypeFamily + ?Sized> HasTypeFamily for &T {
     type TypeFamily = T::TypeFamily;
 }
@@ -136,4 +142,8 @@ where
     TF: TypeFamily,
 {
     type TypeFamily = TF;
+}
+
+impl<C: HasTypeFamily + Context> HasTypeFamily for ExClause<C> {
+    type TypeFamily = C::TypeFamily;
 }

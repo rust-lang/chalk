@@ -1,5 +1,6 @@
 use chalk_engine::fallible::*;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::HasTypeFamily;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{
     DefaultFreeVarFolder, DefaultInferenceFolder, DefaultTypeFolder, Fold, PlaceholderFolder,
@@ -10,7 +11,7 @@ use std::collections::HashMap;
 use super::canonicalize::Canonicalized;
 use super::{EnaVariable, InferenceTable};
 
-impl InferenceTable {
+impl<TF: TypeFamily> InferenceTable<TF> {
     /// Converts `value` into a "negation" value -- meaning one that,
     /// if we can find any answer to it, then the negation fails. For
     /// goals that do not contain any free variables, then this is a
@@ -75,7 +76,7 @@ impl InferenceTable {
     /// `None`) until the second unification has occurred.)
     pub(crate) fn invert<T>(&mut self, value: &T) -> Option<T::Result>
     where
-        T: Fold<ChalkIr, Result = T>,
+        T: Fold<TF, Result = T> + HasTypeFamily<TypeFamily = TF>,
     {
         let Canonicalized {
             free_vars,
@@ -98,14 +99,14 @@ impl InferenceTable {
     }
 }
 
-struct Inverter<'q> {
-    table: &'q mut InferenceTable,
-    inverted_ty: HashMap<PlaceholderIndex, EnaVariable>,
-    inverted_lifetime: HashMap<PlaceholderIndex, EnaVariable>,
+struct Inverter<'q, TF: TypeFamily> {
+    table: &'q mut InferenceTable<TF>,
+    inverted_ty: HashMap<PlaceholderIndex, EnaVariable<TF>>,
+    inverted_lifetime: HashMap<PlaceholderIndex, EnaVariable<TF>>,
 }
 
-impl<'q> Inverter<'q> {
-    fn new(table: &'q mut InferenceTable) -> Self {
+impl<'q, TF: TypeFamily> Inverter<'q, TF> {
+    fn new(table: &'q mut InferenceTable<TF>) -> Self {
         Inverter {
             table,
             inverted_ty: HashMap::new(),
@@ -114,14 +115,14 @@ impl<'q> Inverter<'q> {
     }
 }
 
-impl<'q> DefaultTypeFolder for Inverter<'q> {}
+impl<TF: TypeFamily> DefaultTypeFolder for Inverter<'_, TF> {}
 
-impl<'q> PlaceholderFolder<ChalkIr> for Inverter<'q> {
+impl<TF: TypeFamily> PlaceholderFolder<TF> for Inverter<'_, TF> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Ty<ChalkIr>> {
+    ) -> Fallible<Ty<TF>> {
         let table = &mut self.table;
         Ok(self
             .inverted_ty
@@ -135,7 +136,7 @@ impl<'q> PlaceholderFolder<ChalkIr> for Inverter<'q> {
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Lifetime<ChalkIr>> {
+    ) -> Fallible<Lifetime<TF>> {
         let table = &mut self.table;
         Ok(self
             .inverted_lifetime
@@ -146,13 +147,13 @@ impl<'q> PlaceholderFolder<ChalkIr> for Inverter<'q> {
     }
 }
 
-impl<'q> DefaultFreeVarFolder for Inverter<'q> {
+impl<TF: TypeFamily> DefaultFreeVarFolder for Inverter<'_, TF> {
     fn forbid() -> bool {
         true
     }
 }
 
-impl<'q> DefaultInferenceFolder for Inverter<'q> {
+impl<TF: TypeFamily> DefaultInferenceFolder for Inverter<'_, TF> {
     fn forbid() -> bool {
         true
     }

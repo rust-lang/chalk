@@ -4,7 +4,7 @@ use crate::fold::{
     DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, Folder,
     FreeVarFolder, Subst,
 };
-use chalk_derive::Fold;
+use chalk_derive::{Fold, HasTypeFamily};
 use chalk_engine::fallible::*;
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
@@ -61,15 +61,11 @@ pub mod tls;
 
 pub type Identifier = InternedString;
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment<TF: TypeFamily> {
     pub clauses: Vec<ProgramClause<TF>>,
-}
-
-impl<TF: TypeFamily> HasTypeFamily for Environment<TF> {
-    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> Environment<TF> {
@@ -112,6 +108,10 @@ impl<G: HasTypeFamily> InEnvironment<G> {
             goal: op(self.goal),
         }
     }
+}
+
+impl<G: HasTypeFamily> HasTypeFamily for InEnvironment<G> {
+    type TypeFamily = G::TypeFamily;
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -210,13 +210,9 @@ pub enum TypeSort {
     Trait,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
 pub struct Ty<TF: TypeFamily> {
     interned: TF::InternedType,
-}
-
-impl<TF: TypeFamily> HasTypeFamily for Ty<TF> {
-    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> Ty<TF> {
@@ -272,7 +268,7 @@ impl<TF: TypeFamily> Ty<TF> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
 pub enum TyData<TF: TypeFamily> {
     /// An "application" type is one that applies the set of type
     /// arguments to some base type. For example, `Vec<u32>` would be
@@ -344,10 +340,6 @@ pub enum TyData<TF: TypeFamily> {
     InferenceVar(InferenceVar),
 }
 
-impl<TF: TypeFamily> HasTypeFamily for TyData<TF> {
-    type TypeFamily = TF;
-}
-
 impl<TF: TypeFamily> TyData<TF> {
     pub fn intern(self) -> Ty<TF> {
         Ty::new(self)
@@ -381,23 +373,15 @@ impl InferenceVar {
 
 /// for<'a...'z> X -- all binders are instantiated at once,
 /// and we use deBruijn indices within `self.ty`
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
 pub struct QuantifiedTy<TF: TypeFamily> {
     pub num_binders: usize,
     pub ty: Ty<TF>,
 }
 
-impl<TF: TypeFamily> HasTypeFamily for QuantifiedTy<TF> {
-    type TypeFamily = TF;
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
 pub struct Lifetime<TF: TypeFamily> {
     interned: TF::InternedLifetime,
-}
-
-impl<TF: TypeFamily> HasTypeFamily for Lifetime<TF> {
-    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> Lifetime<TF> {
@@ -473,14 +457,10 @@ impl PlaceholderIndex {
 }
 
 // Fold derive intentionally omitted, folded through Ty
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
 pub struct ApplicationTy<TF: TypeFamily> {
     pub name: TypeName,
     pub parameters: Vec<Parameter<TF>>,
-}
-
-impl<TF: TypeFamily> HasTypeFamily for ApplicationTy<TF> {
-    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> ApplicationTy<TF> {
@@ -564,12 +544,8 @@ impl<T, L> ParameterKind<T, L> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
 pub struct Parameter<TF: TypeFamily>(pub ParameterKind<Ty<TF>, Lifetime<TF>>);
-
-impl<TF: TypeFamily> HasTypeFamily for Parameter<TF> {
-    type TypeFamily = TF;
-}
 
 impl<TF: TypeFamily> Parameter<TF> {
     pub fn assert_ty_ref(&self) -> &Ty<TF> {
@@ -609,14 +585,10 @@ impl<TF: TypeFamily> Parameter<TF> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct ProjectionTy<TF: TypeFamily> {
     pub associated_ty_id: TypeId,
     pub parameters: Vec<Parameter<TF>>,
-}
-
-impl<TF: TypeFamily> HasTypeFamily for ProjectionTy<TF> {
-    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> ProjectionTy<TF> {
@@ -625,14 +597,10 @@ impl<TF: TypeFamily> ProjectionTy<TF> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct TraitRef<TF: TypeFamily> {
     pub trait_id: TraitId,
     pub parameters: Vec<Parameter<TF>>,
-}
-
-impl<TF: TypeFamily> HasTypeFamily for TraitRef<TF> {
-    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> TraitRef<TF> {
@@ -654,13 +622,13 @@ impl<TF: TypeFamily> TraitRef<TF> {
 }
 
 /// Where clauses that can be written by a Rust programmer.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub enum WhereClause<TF: TypeFamily> {
     Implemented(TraitRef<TF>),
     ProjectionEq(ProjectionEq<TF>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub enum WellFormed<TF: TypeFamily> {
     /// A predicate which is true is some trait ref is well-formed.
     /// For example, given the following trait definitions:
@@ -690,11 +658,7 @@ pub enum WellFormed<TF: TypeFamily> {
     Ty(Ty<TF>),
 }
 
-impl<TF: TypeFamily> HasTypeFamily for WellFormed<TF> {
-    type TypeFamily = TF;
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub enum FromEnv<TF: TypeFamily> {
     /// A predicate which enables deriving everything which should be true if we *know* that
     /// some trait ref is well-formed. For example given the above trait definitions, we can use
@@ -723,14 +687,10 @@ pub enum FromEnv<TF: TypeFamily> {
     Ty(Ty<TF>),
 }
 
-impl<TF: TypeFamily> HasTypeFamily for FromEnv<TF> {
-    type TypeFamily = TF;
-}
-
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub enum DomainGoal<TF: TypeFamily> {
     Holds(WhereClause<TF>),
 
@@ -816,10 +776,6 @@ impl<TF: TypeFamily> WhereClause<TF> {
     }
 }
 
-impl<TF: TypeFamily> HasTypeFamily for WhereClause<TF> {
-    type TypeFamily = TF;
-}
-
 impl<TF: TypeFamily> QuantifiedWhereClause<TF> {
     /// As with `WhereClause::into_well_formed_goal`, but for a
     /// quantified where clause. For example, `forall<T> {
@@ -836,10 +792,6 @@ impl<TF: TypeFamily> QuantifiedWhereClause<TF> {
     pub fn into_from_env_goal(self) -> Binders<DomainGoal<TF>> {
         self.map(|wc| wc.into_from_env_goal())
     }
-}
-
-impl<TF: TypeFamily> HasTypeFamily for DomainGoal<TF> {
-    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> DomainGoal<TF> {
@@ -885,6 +837,10 @@ pub struct Normalize<TF: TypeFamily> {
 pub struct ProjectionEq<TF: TypeFamily> {
     pub projection: ProjectionTy<TF>,
     pub ty: Ty<TF>,
+}
+
+impl<TF: TypeFamily> HasTypeFamily for ProjectionEq<TF> {
+    type TypeFamily = TF;
 }
 
 /// Indicates that the `value` is universally quantified over `N`
@@ -974,6 +930,7 @@ where
 /// element will be a `Binders<&T>`.
 impl<'a, V> IntoIterator for &'a Binders<V>
 where
+    V: HasTypeFamily,
     &'a V: IntoIterator,
 {
     type Item = Binders<<&'a V as IntoIterator>::Item>;
@@ -1016,7 +973,7 @@ impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasTypeFamily)]
 pub struct ProgramClauseImplication<TF: TypeFamily> {
     pub consequence: DomainGoal<TF>,
     pub conditions: Vec<Goal<TF>>,
@@ -1080,7 +1037,7 @@ impl<T> UCanonical<T> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum Goal<TF: TypeFamily> {
     /// Introduces a binding at depth 0, shifting other bindings up
@@ -1101,10 +1058,6 @@ pub enum Goal<TF: TypeFamily> {
     ///
     /// (TOTAL HACK: Having a unit result makes some of our macros work better.)
     CannotProve(()),
-}
-
-impl<TF: TypeFamily> HasTypeFamily for Goal<TF> {
-    type TypeFamily = TF;
 }
 
 impl<TF: TypeFamily> Goal<TF> {
@@ -1162,17 +1115,13 @@ pub enum QuantifierKind {
 /// lifetime constraints, instead gathering them up to return with our solution
 /// for later checking. This allows for decoupling between type and region
 /// checking in the compiler.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub enum Constraint<TF: TypeFamily> {
     LifetimeEq(Lifetime<TF>, Lifetime<TF>),
 }
 
-impl<TF: TypeFamily> HasTypeFamily for Constraint<TF> {
-    type TypeFamily = TF;
-}
-
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, HasTypeFamily)]
 pub struct Substitution<TF: TypeFamily> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
@@ -1239,7 +1188,7 @@ impl<'a, TF: TypeFamily> DefaultPlaceholderFolder for &'a Substitution<TF> {}
 /// substitution stores the values for the query's unknown variables,
 /// and the constraints represents any region constraints that must
 /// additionally be solved.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasTypeFamily)]
 pub struct ConstrainedSubst<TF: TypeFamily> {
     pub subst: Substitution<TF>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
     pub constraints: Vec<InEnvironment<Constraint<TF>>>,

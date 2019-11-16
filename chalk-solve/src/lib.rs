@@ -1,4 +1,4 @@
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::fmt::Debug;
@@ -16,25 +16,25 @@ mod solve;
 pub mod split;
 pub mod wf;
 
-pub trait RustIrDatabase: Debug {
+pub trait RustIrDatabase<TF: TypeFamily>: Debug {
     /// Returns any "custom program clauses" that do not derive from
     /// Rust IR. Used only in testing the underlying solver.
-    fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>>;
+    fn custom_clauses(&self) -> Vec<ProgramClause<TF>>;
 
     /// Returns the datum for the associated type with the given id.
-    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum>;
+    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum<TF>>;
 
     /// Returns the datum for the impl with the given id.
-    fn trait_datum(&self, trait_id: TraitId) -> Arc<TraitDatum>;
+    fn trait_datum(&self, trait_id: TraitId) -> Arc<TraitDatum<TF>>;
 
     /// Returns the datum for the impl with the given id.
-    fn struct_datum(&self, struct_id: StructId) -> Arc<StructDatum>;
+    fn struct_datum(&self, struct_id: StructId) -> Arc<StructDatum<TF>>;
 
     /// Returns the datum for the impl with the given id.
-    fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum>;
+    fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum<TF>>;
 
     /// Returns the `AssociatedTyValue` with the given id.
-    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue>;
+    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue<TF>>;
 
     /// Returns a list of potentially relevant impls for a given
     /// trait-id; we also supply the type parameters that we are
@@ -45,7 +45,7 @@ pub trait RustIrDatabase: Debug {
     /// apply. The parameters are provided as a "hint" to help the
     /// implementor do less work, but can be completely ignored if
     /// desired.
-    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter<ChalkIr>]) -> Vec<ImplId>;
+    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter<TF>]) -> Vec<ImplId>;
 
     /// Returns the impls that require coherence checking. This is not the
     /// full set of impls that exist:

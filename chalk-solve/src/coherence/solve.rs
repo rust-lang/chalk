@@ -1,18 +1,14 @@
 use crate::coherence::{CoherenceError, CoherenceSolver};
 use crate::ext::*;
-use crate::RustIrDatabase;
 use crate::Solution;
 use chalk_ir::cast::*;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use itertools::Itertools;
 
-impl<'db, DB> CoherenceSolver<'db, DB>
-where
-    DB: RustIrDatabase,
-{
+impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
     pub(super) fn visit_specializations_of_trait(
         &self,
         mut record_specialization: impl FnMut(ImplId, ImplId),
@@ -85,7 +81,7 @@ where
     //  Generates:
     //      not { compatible { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } }
     //
-    fn disjoint(&self, lhs: &ImplDatum, rhs: &ImplDatum) -> bool {
+    fn disjoint(&self, lhs: &ImplDatum<TF>, rhs: &ImplDatum<TF>) -> bool {
         debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
 
         let lhs_len = lhs.binders.len();
@@ -162,7 +158,7 @@ where
     //    }
     //  }
     // }
-    fn specializes(&self, less_special: &ImplDatum, more_special: &ImplDatum) -> bool {
+    fn specializes(&self, less_special: &ImplDatum<TF>, more_special: &ImplDatum<TF>) -> bool {
         debug_heading!(
             "specializes(less_special={:#?}, more_special={:#?})",
             less_special,
@@ -224,6 +220,6 @@ where
     }
 }
 
-fn params(impl_datum: &ImplDatum) -> &[Parameter<ChalkIr>] {
+fn params<TF: TypeFamily>(impl_datum: &ImplDatum<TF>) -> &[Parameter<TF>] {
     &impl_datum.binders.value.trait_ref.parameters
 }

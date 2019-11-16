@@ -5,7 +5,7 @@ use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::Cast;
 use chalk_ir::could_match::CouldMatch;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
 
@@ -43,8 +43,8 @@ pub mod program_clauses;
 ///         Implemented(Box<Option<MyList<T>>>: Send).
 /// }
 /// ```
-pub fn push_auto_trait_impls(
-    builder: &mut ClauseBuilder<'_>,
+pub fn push_auto_trait_impls<TF: TypeFamily>(
+    builder: &mut ClauseBuilder<'_, TF>,
     auto_trait_id: TraitId,
     struct_id: StructId,
 ) {
@@ -105,11 +105,11 @@ pub fn push_auto_trait_impls(
 /// to this goal from the Rust program. So for example if the goal
 /// is `Implemented(T: Clone)`, then this function might return clauses
 /// derived from the trait `Clone` and its impls.
-pub(crate) fn program_clauses_for_goal<'db>(
-    db: &'db dyn RustIrDatabase,
-    environment: &Environment<ChalkIr>,
-    goal: &DomainGoal<ChalkIr>,
-) -> Vec<ProgramClause<ChalkIr>> {
+pub(crate) fn program_clauses_for_goal<'db, TF: TypeFamily>(
+    db: &'db dyn RustIrDatabase<TF>,
+    environment: &Environment<TF>,
+    goal: &DomainGoal<TF>,
+) -> Vec<ProgramClause<TF>> {
     debug_heading!(
         "program_clauses_for_goal(goal={:?}, environment={:?})",
         goal,
@@ -131,11 +131,11 @@ pub(crate) fn program_clauses_for_goal<'db>(
 /// `goal`. This can be any superset of the correct set, but the
 /// more precise you can make it, the more efficient solving will
 /// be.
-fn program_clauses_that_could_match(
-    db: &dyn RustIrDatabase,
-    environment: &Environment<ChalkIr>,
-    goal: &DomainGoal<ChalkIr>,
-    clauses: &mut Vec<ProgramClause<ChalkIr>>,
+fn program_clauses_that_could_match<TF: TypeFamily>(
+    db: &dyn RustIrDatabase<TF>,
+    environment: &Environment<TF>,
+    goal: &DomainGoal<TF>,
+    clauses: &mut Vec<ProgramClause<TF>>,
 ) {
     let builder = &mut ClauseBuilder::new(db, clauses);
 
@@ -292,10 +292,10 @@ fn program_clauses_that_could_match(
 ///     type Item = Bar; // <-- associated type value
 /// }
 /// ```
-fn push_program_clauses_for_associated_type_values_in_impls_of(
-    builder: &mut ClauseBuilder<'_>,
+fn push_program_clauses_for_associated_type_values_in_impls_of<TF: TypeFamily>(
+    builder: &mut ClauseBuilder<'_, TF>,
     trait_id: TraitId,
-    trait_parameters: &[Parameter<ChalkIr>],
+    trait_parameters: &[Parameter<TF>],
 ) {
     debug_heading!(
         "push_program_clauses_for_associated_type_values_in_impls_of(\
@@ -332,7 +332,11 @@ fn push_program_clauses_for_associated_type_values_in_impls_of(
 ///
 /// Note that the type `T` must not be an unbound inference variable;
 /// earlier parts of the logic should "flounder" in that case.
-fn match_ty(builder: &mut ClauseBuilder<'_>, environment: &Environment<ChalkIr>, ty: &Ty<ChalkIr>) {
+fn match_ty<TF: TypeFamily>(
+    builder: &mut ClauseBuilder<'_, TF>,
+    environment: &Environment<TF>,
+    ty: &Ty<TF>,
+) {
     match ty.data() {
         TyData::Apply(application_ty) => match application_ty.name {
             TypeName::TypeKindId(type_kind_id) => match_type_kind(builder, type_kind_id),
@@ -353,7 +357,7 @@ fn match_ty(builder: &mut ClauseBuilder<'_>, environment: &Environment<ChalkIr>,
     }
 }
 
-fn match_type_kind(builder: &mut ClauseBuilder<'_>, type_kind_id: TypeKindId) {
+fn match_type_kind<TF: TypeFamily>(builder: &mut ClauseBuilder<'_, TF>, type_kind_id: TypeKindId) {
     match type_kind_id {
         TypeKindId::TypeId(type_id) => builder
             .db
@@ -369,10 +373,10 @@ fn match_type_kind(builder: &mut ClauseBuilder<'_>, type_kind_id: TypeKindId) {
     }
 }
 
-fn program_clauses_for_env<'db>(
-    db: &'db dyn RustIrDatabase,
-    environment: &Environment<ChalkIr>,
-    clauses: &mut Vec<ProgramClause<ChalkIr>>,
+fn program_clauses_for_env<'db, TF: TypeFamily>(
+    db: &'db dyn RustIrDatabase<TF>,
+    environment: &Environment<TF>,
+    clauses: &mut Vec<ProgramClause<TF>>,
 ) {
     let mut last_round = FxHashSet::default();
     elaborate_env_clauses(db, &environment.clauses, &mut last_round);

@@ -1,12 +1,12 @@
 use crate::RustIrDatabase;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::family::TypeFamily;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::sync::Arc;
 
 /// Methods for splitting up the projections for associated types from
 /// the surrounding context.
-pub trait Split: RustIrDatabase {
+pub trait Split<TF: TypeFamily>: RustIrDatabase<TF> {
     /// Given a projection of an associated type, split the type
     /// parameters into those that come from the *trait* and those
     /// that come from the *associated type itself*. So e.g. if you
@@ -15,11 +15,11 @@ pub trait Split: RustIrDatabase {
     /// any type parameters itself.
     fn split_projection<'p>(
         &self,
-        projection: &'p ProjectionTy<ChalkIr>,
+        projection: &'p ProjectionTy<TF>,
     ) -> (
-        Arc<AssociatedTyDatum>,
-        &'p [Parameter<ChalkIr>],
-        &'p [Parameter<ChalkIr>],
+        Arc<AssociatedTyDatum<TF>>,
+        &'p [Parameter<TF>],
+        &'p [Parameter<TF>],
     ) {
         let ProjectionTy {
             associated_ty_id,
@@ -38,8 +38,8 @@ pub trait Split: RustIrDatabase {
     /// `split_projection`).
     fn trait_parameters_from_projection<'p>(
         &self,
-        projection: &'p ProjectionTy<ChalkIr>,
-    ) -> &'p [Parameter<ChalkIr>] {
+        projection: &'p ProjectionTy<TF>,
+    ) -> &'p [Parameter<TF>] {
         let (_, trait_params, _) = self.split_projection(projection);
         trait_params
     }
@@ -47,10 +47,7 @@ pub trait Split: RustIrDatabase {
     /// Given a projection `<P0 as Trait<P1..Pn>>::Item<Pn..Pm>`,
     /// returns the trait parameters `[P0..Pn]` (see
     /// `split_projection`).
-    fn trait_ref_from_projection<'p>(
-        &self,
-        projection: &'p ProjectionTy<ChalkIr>,
-    ) -> TraitRef<ChalkIr> {
+    fn trait_ref_from_projection<'p>(&self, projection: &'p ProjectionTy<TF>) -> TraitRef<TF> {
         let (associated_ty_data, trait_params, _) = self.split_projection(&projection);
         TraitRef {
             trait_id: associated_ty_data.trait_id,
@@ -84,7 +81,7 @@ pub trait Split: RustIrDatabase {
     fn split_associated_ty_value_parameters<'p, P>(
         &self,
         parameters: &'p [P],
-        associated_ty_value: &AssociatedTyValue,
+        associated_ty_value: &AssociatedTyValue<TF>,
     ) -> (&'p [P], &'p [P]) {
         let impl_datum = self.impl_datum(associated_ty_value.impl_id);
         let impl_params_len = impl_datum.binders.len();
@@ -121,9 +118,9 @@ pub trait Split: RustIrDatabase {
     /// * the projection `<Vec<Y> as Iterable>::Iter<'x>`
     fn impl_parameters_and_projection_from_associated_ty_value<'p>(
         &self,
-        parameters: &'p [Parameter<ChalkIr>],
-        associated_ty_value: &AssociatedTyValue,
-    ) -> (&'p [Parameter<ChalkIr>], ProjectionTy<ChalkIr>) {
+        parameters: &'p [Parameter<TF>],
+        associated_ty_value: &AssociatedTyValue<TF>,
+    ) -> (&'p [Parameter<TF>], ProjectionTy<TF>) {
         debug_heading!(
             "impl_parameters_and_projection_from_associated_ty_value(parameters={:?})",
             parameters,
@@ -163,4 +160,4 @@ pub trait Split: RustIrDatabase {
     }
 }
 
-impl<DB: RustIrDatabase + ?Sized> Split for DB {}
+impl<DB: RustIrDatabase<TF> + ?Sized, TF: TypeFamily> Split<TF> for DB {}

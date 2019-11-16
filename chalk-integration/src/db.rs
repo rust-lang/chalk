@@ -59,7 +59,10 @@ impl ChalkDatabase {
         Ok(chalk_parse::parse_goal(text)?.lower(&*program)?)
     }
 
-    pub fn solve(&self, goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>) -> Option<Solution> {
+    pub fn solve(
+        &self,
+        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
+    ) -> Option<Solution<ChalkIr>> {
         let solver = self.solver();
         let solution = solver.lock().unwrap().solve(self, goal);
         solution
@@ -76,28 +79,28 @@ impl ChalkDatabase {
     }
 }
 
-impl RustIrDatabase for ChalkDatabase {
+impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
         self.program_ir().unwrap().custom_clauses()
     }
 
-    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum> {
+    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.program_ir().unwrap().associated_ty_data(ty)
     }
 
-    fn trait_datum(&self, id: TraitId) -> Arc<TraitDatum> {
+    fn trait_datum(&self, id: TraitId) -> Arc<TraitDatum<ChalkIr>> {
         self.program_ir().unwrap().trait_datum(id)
     }
 
-    fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum> {
+    fn impl_datum(&self, id: ImplId) -> Arc<ImplDatum<ChalkIr>> {
         self.program_ir().unwrap().impl_datum(id)
     }
 
-    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue> {
+    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue<ChalkIr>> {
         self.program_ir().unwrap().associated_ty_values[&id].clone()
     }
 
-    fn struct_datum(&self, id: StructId) -> Arc<StructDatum> {
+    fn struct_datum(&self, id: StructId) -> Arc<StructDatum<ChalkIr>> {
         self.program_ir().unwrap().struct_datum(id)
     }
 

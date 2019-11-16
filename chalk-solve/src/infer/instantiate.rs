@@ -1,10 +1,9 @@
-use chalk_ir::family::ChalkIr;
 use chalk_ir::fold::*;
 use std::fmt::Debug;
 
 use super::*;
 
-impl InferenceTable {
+impl<TF: TypeFamily> InferenceTable<TF> {
     /// Given the binders from a canonicalized value C, returns a
     /// substitution S mapping each free variable in C to a fresh
     /// inference variable. This substitution can then be applied to
@@ -13,7 +12,7 @@ impl InferenceTable {
     pub(crate) fn fresh_subst(
         &mut self,
         binders: &[ParameterKind<UniverseIndex>],
-    ) -> Substitution<ChalkIr> {
+    ) -> Substitution<TF> {
         Substitution {
             parameters: binders
                 .iter()
@@ -28,7 +27,7 @@ impl InferenceTable {
     /// Variant on `instantiate` that takes a `Canonical<T>`.
     pub(crate) fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
     where
-        T: Fold<ChalkIr> + Debug,
+        T: Fold<TF> + Debug,
     {
         let subst = self.fresh_subst(&bound.binders);
         bound.value.fold_with(&mut &subst, 0).unwrap()
@@ -46,7 +45,7 @@ impl InferenceTable {
         arg: &T,
     ) -> T::Result
     where
-        T: Fold<ChalkIr>,
+        T: Fold<TF>,
         U: IntoIterator<Item = ParameterKind<()>>,
     {
         let binders: Vec<_> = binders
@@ -63,7 +62,7 @@ impl InferenceTable {
         arg: impl IntoBindersAndValue<Value = T>,
     ) -> T::Result
     where
-        T: Fold<ChalkIr>,
+        T: Fold<TF>,
     {
         let (binders, value) = arg.into_binders_and_value();
         let max_universe = self.max_universe;
@@ -75,7 +74,7 @@ impl InferenceTable {
         arg: impl IntoBindersAndValue<Value = T>,
     ) -> T::Result
     where
-        T: Fold<ChalkIr>,
+        T: Fold<TF>,
     {
         let (binders, value) = arg.into_binders_and_value();
         let ui = self.new_universe();
@@ -86,10 +85,10 @@ impl InferenceTable {
                 let placeholder_idx = PlaceholderIndex { ui, idx };
                 match pk {
                     ParameterKind::Lifetime(()) => {
-                        let lt = placeholder_idx.to_lifetime::<ChalkIr>();
+                        let lt = placeholder_idx.to_lifetime::<TF>();
                         lt.cast()
                     }
-                    ParameterKind::Ty(()) => placeholder_idx.to_ty::<ChalkIr>().cast(),
+                    ParameterKind::Ty(()) => placeholder_idx.to_ty::<TF>().cast(),
                 }
             })
             .collect();
@@ -113,9 +112,12 @@ impl<'a, T> IntoBindersAndValue for &'a Binders<T> {
     }
 }
 
-impl<'a> IntoBindersAndValue for &'a QuantifiedTy<ChalkIr> {
+impl<'a, TF> IntoBindersAndValue for &'a QuantifiedTy<TF>
+where
+    TF: TypeFamily,
+{
     type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::ParameterKind<()>>;
-    type Value = &'a Ty<ChalkIr>;
+    type Value = &'a Ty<TF>;
 
     fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
         fn make_lifetime(_: usize) -> ParameterKind<()> {
