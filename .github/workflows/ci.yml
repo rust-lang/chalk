@@ -1,0 +1,64 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable, nightly]
+    steps:
+      - name: Checkout the source code
+        uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+
+      - name: Setup Rust ${{ matrix.rust }}
+        run: rustup set profile minimal && rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
+
+      - name: Build chalk-engine without default features
+        run: cd chalk-engine && cargo build --no-default-features
+
+      - name: Build chalk-engine with all features
+        run: cd chalk-engine && cargo build --all-features
+
+      - name: Execute tests for all crates in the workspace
+        run: cargo test --all
+
+      - name: Build documentation for all crates in the workspace
+        run: cargo doc --all --document-private-items --no-deps
+
+      - name: Upload documentation to GitHub Pages
+        run:
+          touch target/doc/.nojekyll
+          curl -LsSf https://raw.githubusercontent.com/rust-lang/simpleinfra/master/setup-deploy-keys/src/deploy.rs | rustc - -o /tmp/deploy
+          (cd target/doc && /tmp/deploy)
+        env:
+          GITHUB_DEPLOY_KEY: ${{ secrets.GITHUB_DEPLOY_KEY }}
+        if: matrix.rust == 'stable' && github.ref == 'refs/heads/master'
+
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the source code
+        uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+
+      - name: Setup Rust stable with rustfmt
+        run: |
+          rustup set profile minimal
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup component add rustfmt
+
+      - name: Check formatting of all crates in the workspace
+        run: cargo fmt --all -- --check
