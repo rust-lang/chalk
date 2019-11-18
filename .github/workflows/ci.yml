@@ -36,7 +36,7 @@ jobs:
         run: cargo doc --all --document-private-items --no-deps
 
       - name: Upload documentation to GitHub Pages
-        run:
+        run: |
           touch target/doc/.nojekyll
           curl -LsSf https://raw.githubusercontent.com/rust-lang/simpleinfra/master/setup-deploy-keys/src/deploy.rs | rustc - -o /tmp/deploy
           (cd target/doc && /tmp/deploy)
