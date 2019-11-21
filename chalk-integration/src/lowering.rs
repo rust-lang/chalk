@@ -74,7 +74,7 @@ impl<'k> Env<'k> {
             return Ok(NameLookup::Type(*id));
         }
 
-        Err(RustIrError::InvalidTypeName(name))?
+        Err(RustIrError::InvalidTypeName(name))
     }
 
     fn lookup_lifetime(&self, name: Identifier) -> LowerResult<LifetimeLookup> {
@@ -85,7 +85,7 @@ impl<'k> Env<'k> {
             return Ok(LifetimeLookup::Parameter(*k));
         }
 
-        Err(RustIrError::InvalidLifetimeName(name))?
+        Err(RustIrError::InvalidLifetimeName(name))
     }
 
     fn type_kind(&self, id: chalk_ir::TypeKindId) -> &rust_ir::TypeKind {
