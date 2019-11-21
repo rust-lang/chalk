@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/rust-lang/chalk.svg?branch=master)](https://travis-ci.com/rust-lang/chalk)
+[![Build Status](https://github.com/rust-lang/chalk/workflows/CI/badge.svg)](https://github.com/rust-lang/chalk/actions?workflow=CI)
 
 # chalk
 
