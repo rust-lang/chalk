@@ -206,6 +206,7 @@ mod cycle;
 mod existential_types;
 mod implied_bounds;
 mod impls;
+mod misc;
 mod negation;
 mod projection;
 mod unify;
