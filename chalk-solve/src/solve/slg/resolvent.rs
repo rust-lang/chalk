@@ -375,7 +375,7 @@ impl<TF: TypeFamily> Zipper<TF> for AnswerSubstitutor<'_, TF> {
             (TyData::ForAll(answer), TyData::ForAll(pending)) => {
                 self.answer_binders += answer.num_binders;
                 self.pending_binders += pending.num_binders;
-                Zip::zip_with(self, &answer.ty, &pending.ty)?;
+                Zip::zip_with(self, &answer.parameters, &pending.parameters)?;
                 self.answer_binders -= answer.num_binders;
                 self.pending_binders -= pending.num_binders;
                 Ok(())

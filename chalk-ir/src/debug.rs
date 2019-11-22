@@ -81,11 +81,14 @@ impl Debug for InferenceVar {
     }
 }
 
-impl<TF: TypeFamily> Debug for QuantifiedTy<TF> {
+impl<TF: TypeFamily> Debug for QuantifiedApply<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         // FIXME -- we should introduce some names or something here
-        let QuantifiedTy { num_binders, ty } = self;
-        write!(fmt, "for<{}> {:?}", num_binders, ty)
+        let QuantifiedApply {
+            num_binders,
+            parameters,
+        } = self;
+        write!(fmt, "for<{}> {:?}", num_binders, parameters)
     }
 }
 

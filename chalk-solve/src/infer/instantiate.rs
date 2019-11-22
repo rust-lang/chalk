@@ -112,12 +112,12 @@ impl<'a, T> IntoBindersAndValue for &'a Binders<T> {
     }
 }
 
-impl<'a, TF> IntoBindersAndValue for &'a QuantifiedTy<TF>
+impl<'a, TF> IntoBindersAndValue for &'a QuantifiedApply<TF>
 where
     TF: TypeFamily,
 {
     type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::ParameterKind<()>>;
-    type Value = &'a Ty<TF>;
+    type Value = &'a Vec<Parameter<TF>>;
 
     fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
         fn make_lifetime(_: usize) -> ParameterKind<()> {
@@ -125,7 +125,7 @@ where
         }
 
         let p: fn(usize) -> ParameterKind<()> = make_lifetime;
-        ((0..self.num_binders).map(p), &self.ty)
+        ((0..self.num_binders).map(p), &self.parameters)
     }
 }
 

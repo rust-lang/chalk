@@ -345,7 +345,7 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
     }
 }
 
-pub fn super_fold_lifetime<TF: TypeFamily, TTF: TargetTypeFamily<TF>>(
+pub fn super_fold_lifetime<TF: TypeFamily, TTF: TypeFamily>(
     folder: &mut dyn Folder<TF, TTF>,
     lifetime: &Lifetime<TF>,
     binders: usize,

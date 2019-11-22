@@ -9,9 +9,10 @@ macro_rules! ty {
         }).intern()
     };
 
-    (for_all $n:tt $t:tt) => {
-        $crate::TyData::ForAll(QuantifiedTy {
+    (for_all $n:tt ($arg:tt)*) => {
+        $crate::TyData::ForAll(Fn {
             num_binders: $n,
+            parameters: vec![$(arg!($arg)),*],
             ty: ty!($t),
         }).intern()
     };

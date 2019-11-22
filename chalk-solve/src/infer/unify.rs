@@ -247,7 +247,7 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
     /// to do so, we create a fresh placeholder `P` for `X` and
     /// see if `[X/Px] T` can be unified with `U`. This should
     /// almost never be true, actually, unless `X` is unused.
-    fn unify_forall_other(&mut self, ty1: &QuantifiedTy<TF>, ty2: &Ty<TF>) -> Fallible<()> {
+    fn unify_forall_other(&mut self, ty1: &QuantifiedApply<TF>, ty2: &Ty<TF>) -> Fallible<()> {
         let ui = self.table.new_universe();
         let lifetimes1: Vec<_> = (0..ty1.num_binders)
             .map(|idx| {

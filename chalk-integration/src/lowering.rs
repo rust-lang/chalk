@@ -1037,10 +1037,9 @@ impl LowerTy for Ty {
                         .map(|id| chalk_ir::ParameterKind::Lifetime(id.str)),
                 )?;
 
-                let ty = ty.lower(&quantified_env)?;
-                let quantified_ty = chalk_ir::QuantifiedTy {
+                let quantified_ty = chalk_ir::QuantifiedApply {
                     num_binders: lifetime_names.len(),
-                    ty,
+                    parameters: vec![ty.lower(&quantified_env)?.cast()],
                 };
                 Ok(chalk_ir::TyData::ForAll(quantified_ty).intern())
             }
