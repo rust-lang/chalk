@@ -240,10 +240,16 @@ impl<TF: TypeFamily> context::TruncateOps<SlgContext<TF>> for TruncatingInferenc
         &mut self,
         subgoal: &InEnvironment<Goal<TF>>,
     ) -> Option<InEnvironment<Goal<TF>>> {
+        // We only want to truncate the goal itself. We keep the environment intact.
+        // See rust-lang/chalk#280
+        let InEnvironment { environment, goal } = subgoal;
         let Truncated { overflow, value } =
-            truncate::truncate(&mut self.infer, self.max_size, subgoal);
+            truncate::truncate(&mut self.infer, self.max_size, goal);
         if overflow {
-            Some(value)
+            Some(InEnvironment {
+                environment: environment.clone(),
+                goal: value,
+            })
         } else {
             None
         }
