@@ -6,10 +6,10 @@ use crate::fold::{
 };
 use chalk_derive::{Fold, HasTypeFamily};
 use chalk_engine::fallible::*;
-use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
 use std::iter;
 use std::marker::PhantomData;
+use string_cache::DefaultAtom;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Void {}
@@ -39,7 +39,6 @@ macro_rules! impl_debugs {
 }
 
 extern crate chalk_engine;
-extern crate lalrpop_intern;
 
 #[macro_use]
 mod macros;
@@ -59,7 +58,7 @@ pub mod could_match;
 pub mod debug;
 pub mod tls;
 
-pub type Identifier = InternedString;
+pub type Identifier = DefaultAtom;
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 /// The set of assumptions we've made so far, and the current number of

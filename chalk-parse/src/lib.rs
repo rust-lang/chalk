@@ -2,7 +2,6 @@
 
 #[macro_use]
 extern crate lalrpop_util;
-extern crate lalrpop_intern;
 
 pub mod ast;
 #[rustfmt::skip]

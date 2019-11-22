@@ -1,5 +1,5 @@
-use lalrpop_intern::InternedString;
 use std::fmt;
+use string_cache::DefaultAtom;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Span {
@@ -68,7 +68,7 @@ pub struct AssocTyDefn {
     pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ParameterKind {
     Ty(Identifier),
     Lifetime(Identifier),
@@ -174,7 +174,7 @@ pub enum Ty {
     },
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Lifetime {
     Id { name: Identifier },
 }
@@ -211,9 +211,9 @@ impl Polarity {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Identifier {
-    pub str: InternedString,
+    pub str: DefaultAtom,
     pub span: Span,
 }
 

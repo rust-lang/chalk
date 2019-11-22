@@ -27,10 +27,10 @@ impl fmt::Display for CoherenceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CoherenceError::OverlappingImpls(id) => {
-                write!(f, "overlapping impls of trait {:?}", id)
+                write!(f, "overlapping impls of trait \"{}\"", id)
             }
             CoherenceError::FailedOrphanCheck(id) => {
-                write!(f, "impl for trait {:?} violates the orphan rules", id)
+                write!(f, "impl for trait \"{}\" violates the orphan rules", id)
             }
         }
     }

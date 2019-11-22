@@ -21,12 +21,12 @@ impl fmt::Display for WfError {
         match self {
             WfError::IllFormedTypeDecl(id) => write!(
                 f,
-                "type declaration {:?} does not meet well-formedness requirements",
+                "type declaration \"{}\" does not meet well-formedness requirements",
                 id
             ),
             WfError::IllFormedTraitImpl(id) => write!(
                 f,
-                "trait impl for {:?} does not meet well-formedness requirements",
+                "trait impl for \"{}\" does not meet well-formedness requirements",
                 id
             ),
         }

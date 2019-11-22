@@ -166,7 +166,7 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn type_name(&self, id: TypeKindId) -> Identifier {
         match self.type_kinds.get(&id) {
-            Some(v) => v.name,
+            Some(v) => v.name.clone(),
             None => panic!("no type with id `{:?}`", id),
         }
     }

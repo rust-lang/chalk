@@ -1,5 +1,5 @@
 use crate::ast::*;
-use lalrpop_intern::intern;
+use string_cache::DefaultAtom;
 
 grammar;
 
@@ -359,14 +359,14 @@ Angle<T>: Vec<T> = {
 
 Id: Identifier = {
     <l:@L> <s:r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
-        str: intern(s),
+        str: DefaultAtom::from(s),
         span: Span::new(l, r),
     }
 };
 
 LifetimeId: Identifier = {
     <l:@L> <s:r"'([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
-        str: intern(s),
+        str: DefaultAtom::from(s),
         span: Span::new(l, r),
     }
 };

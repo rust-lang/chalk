@@ -10,7 +10,7 @@ edition = "2018"
 
 [dependencies]
 itertools = "0.7.8"
-lalrpop-intern = "0.15.1"
+string_cache = "0.8.0"
 salsa = "0.10.0"
 
 [dependencies.chalk-solve]

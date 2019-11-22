@@ -18,5 +18,5 @@ version = "0.17"
 version = "0.17"
 
 [dependencies]
-lalrpop-intern = "0.15.1"
 regex = "1.0.5"
+string_cache = "0.8.0"

@@ -16,12 +16,12 @@ bench = []
 diff = "0.1.11"
 docopt = "1.0.0"
 itertools = "0.8.0"
-lalrpop-intern = "0.15.1"
 rustyline = "1.0"
 salsa = "0.10.0"
 serde = "1.0"
 serde_derive = "1.0"
 stacker = "0.1.5"
+string_cache = "0.8.0"
 
 [dependencies.chalk-parse]
 version = "0.1.0"

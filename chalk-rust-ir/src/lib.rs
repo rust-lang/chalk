@@ -249,7 +249,7 @@ pub trait Anonymize {
 
 impl Anonymize for [ParameterKind<Identifier>] {
     fn anonymize(&self) -> Vec<ParameterKind<()>> {
-        self.iter().map(|pk| pk.map(|_| ())).collect()
+        self.iter().cloned().map(|pk| pk.map(|_| ())).collect()
     }
 }
 
