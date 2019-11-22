@@ -294,8 +294,7 @@ fn only_draw_so_many_blow_up() {
 
         goal {
             exists<T> { T: Foo }
-        } fixed 767 with max 10 {
-            // FIXME: should be 2?
+        } fixed 2 with max 10 {
             "Some(Ambig(Definite(Canonical { value: [?0 := Vec<^0>], binders: [Ty(U0)] })))"
         }
     }

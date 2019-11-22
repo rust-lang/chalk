@@ -237,7 +237,10 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
         })
     }
 
-    fn any_future_answer(&mut self, test: impl FnMut(&C::Substitution) -> bool) -> bool {
+    fn any_future_answer(
+        &mut self,
+        test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
+    ) -> bool {
         self.forest.any_future_answer(self.table, self.answer, test)
     }
 }

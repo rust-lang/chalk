@@ -1,5 +1,5 @@
 use crate::context::prelude::*;
-use crate::strand::Strand;
+use crate::strand::CanonicalStrand;
 use crate::Answer;
 use rustc_hash::FxHashMap;
 use std::collections::hash_map::Entry;
@@ -32,7 +32,7 @@ pub(crate) struct Table<C: Context> {
 
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
-    strands: VecDeque<Strand<C>>,
+    strands: VecDeque<CanonicalStrand<C>>,
 }
 
 index_struct! {
@@ -56,22 +56,22 @@ impl<C: Context> Table<C> {
         }
     }
 
-    pub(crate) fn push_strand(&mut self, strand: Strand<C>) {
+    pub(crate) fn push_strand(&mut self, strand: CanonicalStrand<C>) {
         self.strands.push_back(strand);
     }
 
-    pub(crate) fn strands_mut(&mut self) -> impl Iterator<Item = &mut Strand<C>> {
+    pub(crate) fn strands_mut(&mut self) -> impl Iterator<Item = &mut CanonicalStrand<C>> {
         self.strands.iter_mut()
     }
 
-    pub(crate) fn take_strands(&mut self) -> VecDeque<Strand<C>> {
+    pub(crate) fn take_strands(&mut self) -> VecDeque<CanonicalStrand<C>> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
     pub(crate) fn pop_next_strand_if(
         &mut self,
-        test: impl Fn(&Strand<C>) -> bool,
-    ) -> Option<Strand<C>> {
+        test: impl Fn(&CanonicalStrand<C>) -> bool,
+    ) -> Option<CanonicalStrand<C>> {
         let strand = self.strands.pop_front();
         if let Some(strand) = strand {
             if test(&strand) {

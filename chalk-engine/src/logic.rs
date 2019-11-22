@@ -3,7 +3,7 @@ use crate::fallible::NoSolution;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::stack::StackIndex;
-use crate::strand::{SelectedSubgoal, Strand};
+use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::AnswerIndex;
 use crate::Answer;
 use crate::{ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp};
@@ -102,16 +102,18 @@ impl<C: Context> Forest<C> {
         &mut self,
         table: TableIndex,
         answer: AnswerIndex,
-        mut test: impl FnMut(&C::Substitution) -> bool,
+        mut test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
     ) -> bool {
         if let Some(answer) = self.tables[table].answer(answer) {
             info!("answer cached = {:?}", answer);
-            return test(C::subst_from_canonical_subst(&answer.subst));
+            return test(C::inference_normalized_subst_from_subst(&answer.subst));
         }
 
-        self.tables[table]
-            .strands_mut()
-            .any(|strand| test(&strand.ex_clause.subst))
+        self.tables[table].strands_mut().any(|strand| {
+            test(C::inference_normalized_subst_from_ex_clause(
+                &strand.canonical_ex_clause,
+            ))
+        })
     }
 
     /// Before we pursue a table, we need to check a couple things
@@ -177,7 +179,8 @@ impl<C: Context> Forest<C> {
                 last_pursued_time: strand.last_pursued_time.clone(),
             };
             let table = self.stack[*depth].table;
-            self.tables[table].push_strand(next_strand);
+            let canonical_next_strand = Self::canonicalize_strand(next_strand);
+            self.tables[table].push_strand(canonical_next_strand);
         }
 
         // We got an answer for this goal. Now it matters if this
@@ -471,7 +474,8 @@ impl<C: Context> Forest<C> {
                 // We also can't mark these and return early from this
                 // because the stack above us might change.
                 let table = self.stack[depth].table;
-                self.tables[table].push_strand(strand);
+                let canonical_strand = Self::canonicalize_strand(strand);
+                self.tables[table].push_strand(canonical_strand);
 
                 // The strand isn't active, but the table is, so just continue
                 return Ok(depth);
@@ -576,7 +580,8 @@ impl<C: Context> Forest<C> {
                 false => {
                     // We want to maybe pursue this strand later
                     let table = self.stack[depth].table;
-                    self.tables[table].push_strand(strand);
+                    let canonical_strand = Self::canonicalize_strand(strand);
+                    self.tables[table].push_strand(canonical_strand);
 
                     // Now we yield with `QuantumExceeded`
                     self.unwind_stack(depth);
@@ -718,7 +723,8 @@ impl<C: Context> Forest<C> {
             // We can't pursue this strand anymore, so push it back onto the table
             let active_strand = self.stack[depth].active_strand.take().unwrap();
             let table = self.stack[depth].table;
-            self.tables[table].push_strand(active_strand);
+            let canonical_active_strand = Self::canonicalize_strand(active_strand);
+            self.tables[table].push_strand(canonical_active_strand);
 
             // The strand isn't active, but the table is, so just continue
             return Ok(depth);
@@ -736,7 +742,8 @@ impl<C: Context> Forest<C> {
 
             let active_strand = self.stack[depth].active_strand.take().unwrap();
             let table = self.stack[depth].table;
-            self.tables[table].push_strand(active_strand);
+            let canonical_active_strand = Self::canonicalize_strand(active_strand);
+            self.tables[table].push_strand(canonical_active_strand);
         }
     }
 
@@ -783,7 +790,25 @@ impl<C: Context> Forest<C> {
             // then all have. Otherwise, an answer to any strand would have provided an
             // answer for the table.
             let next_strand = self.stack[depth].active_strand.take().or_else(|| {
-                self.tables[table].pop_next_strand_if(|strand| strand.last_pursued_time < clock)
+                self.tables[table]
+                    .pop_next_strand_if(|strand| strand.last_pursued_time < clock)
+                    .map(|canonical_strand| {
+                        let num_universes = C::num_universes(&self.tables[table].table_goal);
+                        let CanonicalStrand {
+                            canonical_ex_clause,
+                            selected_subgoal,
+                            last_pursued_time,
+                        } = canonical_strand;
+                        let (infer, ex_clause) =
+                            context.instantiate_ex_clause(num_universes, &canonical_ex_clause);
+                        let strand = Strand {
+                            infer,
+                            ex_clause,
+                            selected_subgoal: selected_subgoal.clone(),
+                            last_pursued_time,
+                        };
+                        strand
+                    })
             });
             match next_strand {
                 Some(mut strand) => {
@@ -827,17 +852,40 @@ impl<C: Context> Forest<C> {
         self.tables[table].answer(answer).unwrap()
     }
 
+    fn canonicalize_strand(strand: Strand<C>) -> CanonicalStrand<C> {
+        let Strand {
+            mut infer,
+            ex_clause,
+            selected_subgoal,
+            last_pursued_time,
+        } = strand;
+        Self::canonicalize_strand_from(&mut infer, &ex_clause, selected_subgoal, last_pursued_time)
+    }
+
+    fn canonicalize_strand_from(
+        infer: &mut dyn InferenceTable<C>,
+        ex_clause: &ExClause<C>,
+        selected_subgoal: Option<SelectedSubgoal<C>>,
+        last_pursued_time: TimeStamp,
+    ) -> CanonicalStrand<C> {
+        let canonical_ex_clause = infer.canonicalize_ex_clause(&ex_clause);
+        CanonicalStrand {
+            canonical_ex_clause,
+            selected_subgoal,
+            last_pursued_time,
+        }
+    }
+
     /// Invoked after we have determined that every strand in `table`
     /// encounters a cycle; `strands` is the set of strands (which
     /// have been moved out of the table). This method then
     /// recursively clears the active strands from the tables
     /// referenced in `strands`, since all of them must encounter
     /// cycles too.
-    fn clear_strands_after_cycle(&mut self, strands: impl IntoIterator<Item = Strand<C>>) {
+    fn clear_strands_after_cycle(&mut self, strands: impl IntoIterator<Item = CanonicalStrand<C>>) {
         for strand in strands {
-            let Strand {
-                mut infer,
-                ex_clause,
+            let CanonicalStrand {
+                canonical_ex_clause,
                 selected_subgoal,
                 last_pursued_time: _,
             } = strand;
@@ -845,7 +893,7 @@ impl<C: Context> Forest<C> {
                 panic!(
                     "clear_strands_after_cycle invoked on strand in table \
                      without a selected subgoal: {:?}",
-                    infer.debug_ex_clause(&ex_clause),
+                    canonical_ex_clause,
                 )
             });
 
@@ -1162,7 +1210,8 @@ impl<C: Context> Forest<C> {
                                     selected_subgoal: None,
                                     last_pursued_time: TimeStamp::default(),
                                 };
-                                table_ref.push_strand(strand);
+                                let canonical_strand = Self::canonicalize_strand(strand);
+                                table_ref.push_strand(canonical_strand);
                             }
                         }
                     }
@@ -1195,7 +1244,8 @@ impl<C: Context> Forest<C> {
                         selected_subgoal: None,
                         last_pursued_time: TimeStamp::default(),
                     };
-                    table_ref.push_strand(strand);
+                    let canonical_strand = Self::canonicalize_strand(strand);
+                    table_ref.push_strand(canonical_strand);
                 }
             }
         }

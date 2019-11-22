@@ -3,6 +3,16 @@ use crate::table::AnswerIndex;
 use crate::{ExClause, TableIndex, TimeStamp};
 use std::fmt::{Debug, Error, Formatter};
 
+#[derive(Debug)]
+pub(crate) struct CanonicalStrand<C: Context> {
+    pub(super) canonical_ex_clause: C::CanonicalExClause,
+
+    /// Index into `ex_clause.subgoals`.
+    pub(crate) selected_subgoal: Option<SelectedSubgoal<C>>,
+
+    pub(crate) last_pursued_time: TimeStamp,
+}
+
 pub(crate) struct Strand<C: Context> {
     pub(super) infer: C::InferenceTable,
 
