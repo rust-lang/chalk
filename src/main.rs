@@ -19,15 +19,15 @@ const USAGE: &'static str = "
 chalk repl
 
 Usage:
-  chalki [options]
-  chalki (-h | --help)
+  chalk [options]
+  chalk (-h | --help)
 
 Options:
   --help              Show this screen.
   --program=PATH      Specifies the path to the `.chalk` file containing traits/impls.
   --goal=GOAL         Specifies a goal to evaluate (may be given more than once).
   --overflow-depth=N  Specifies the overflow depth [default: 10].
-  --multiple          Ouput multiple answers instead of ambiguous solution.
+  --multiple          Output multiple answers instead of ambiguous solution.
 ";
 
 /// This struct represents the various command line options available.
