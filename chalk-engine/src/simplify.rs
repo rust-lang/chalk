@@ -19,7 +19,7 @@ impl<C: Context> Forest<C> {
             ambiguous: false,
             constraints: vec![],
             subgoals: vec![],
-            current_time: TimeStamp::default(),
+            answer_time: TimeStamp::default(),
             floundered_subgoals: vec![],
         };
 

@@ -118,8 +118,9 @@ pub struct ExClause<C: Context> {
     /// floundered subgoals may no longer be floundered: we record the
     /// current time when we add something to the list of floundered
     /// subgoals, and then we can compare whether its value has
-    /// changed since then.
-    pub current_time: TimeStamp,
+    /// changed since then. This is not the same `TimeStamp` of
+    /// `Forest`'s clock.
+    pub answer_time: TimeStamp,
 
     /// List of subgoals that have floundered. See `FlounderedSubgoal`
     /// for more information.

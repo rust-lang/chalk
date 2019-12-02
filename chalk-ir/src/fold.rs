@@ -662,7 +662,7 @@ where
             ambiguous,
             constraints,
             subgoals,
-            current_time,
+            answer_time,
             floundered_subgoals,
         } = self;
         Ok(ExClause {
@@ -670,7 +670,7 @@ where
             ambiguous: *ambiguous,
             constraints: constraints.fold_with(folder, binders)?,
             subgoals: subgoals.fold_with(folder, binders)?,
-            current_time: current_time.fold_with(folder, binders)?,
+            answer_time: answer_time.fold_with(folder, binders)?,
             floundered_subgoals: floundered_subgoals.fold_with(folder, binders)?,
         })
     }

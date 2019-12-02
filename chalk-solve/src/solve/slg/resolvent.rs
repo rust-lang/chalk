@@ -100,7 +100,7 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
             ambiguous: false,
             constraints: vec![],
             subgoals: vec![],
-            current_time: TimeStamp::default(),
+            answer_time: TimeStamp::default(),
             floundered_subgoals: vec![],
         };
 

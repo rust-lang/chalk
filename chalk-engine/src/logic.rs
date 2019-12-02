@@ -177,8 +177,9 @@ impl<C: Context> Forest<C> {
                             ex_clause.ambiguous = true;
                         }
 
-                        // Increment time counter because we received a new answer.
-                        ex_clause.current_time.increment();
+                        // Increment the answer time for the `ex_clause`. Floundered
+                        // subgoals may be eligble to be pursued again.
+                        ex_clause.answer_time.increment();
 
                         // Apply answer abstraction.
                         self.truncate_returned(ex_clause, infer);
@@ -967,7 +968,7 @@ impl<C: Context> Forest<C> {
                     constraints,
                     ambiguous,
                     subgoals,
-                    current_time: _,
+                    answer_time: _,
                     floundered_subgoals,
                 },
             selected_subgoal: _,
@@ -1063,13 +1064,13 @@ impl<C: Context> Forest<C> {
     fn reconsider_floundered_subgoals(&mut self, ex_clause: &mut ExClause<impl Context>) {
         info!("reconsider_floundered_subgoals(ex_clause={:#?})", ex_clause,);
         let ExClause {
-            current_time,
+            answer_time,
             subgoals,
             floundered_subgoals,
             ..
         } = ex_clause;
         for i in (0..floundered_subgoals.len()).rev() {
-            if floundered_subgoals[i].floundered_time < *current_time {
+            if floundered_subgoals[i].floundered_time < *answer_time {
                 let floundered_subgoal = floundered_subgoals.swap_remove(i);
                 subgoals.push(floundered_subgoal.floundered_literal);
             }
@@ -1386,11 +1387,11 @@ impl<C: Context> Forest<C> {
     /// list.
     fn flounder_subgoal(&self, ex_clause: &mut ExClause<impl Context>, subgoal_index: usize) {
         info_heading!(
-            "flounder_subgoal(current_time={:?}, subgoal={:?})",
-            ex_clause.current_time,
+            "flounder_subgoal(answer_time={:?}, subgoal={:?})",
+            ex_clause.answer_time,
             ex_clause.subgoals[subgoal_index],
         );
-        let floundered_time = ex_clause.current_time;
+        let floundered_time = ex_clause.answer_time;
         let floundered_literal = ex_clause.subgoals.remove(subgoal_index);
         ex_clause.floundered_subgoals.push(FlounderedSubgoal {
             floundered_literal,
@@ -1436,7 +1437,7 @@ impl<C: Context> Forest<C> {
                         ambiguous: true,
                         constraints: vec![],
                         subgoals: vec![],
-                        current_time: TimeStamp::default(),
+                        answer_time: TimeStamp::default(),
                         floundered_subgoals: vec![],
                     },
                 );
