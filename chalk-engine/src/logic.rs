@@ -34,24 +34,6 @@ pub(super) enum RootSearchFail {
     NegativeCycle,
 }
 
-type TableCheckResult<T> = Result<T, TableCheckFail>;
-
-/// The different ways that a table check can fail
-#[derive(Debug)]
-enum TableCheckFail {
-    /// **All** avenues to solve the subgoal we were trying solve
-    /// encountered a cyclic dependency on something higher up in the
-    /// stack. The `Minimums` encodes how high up (and whether
-    /// positive or negative).
-    PositiveCycle(Minimums),
-}
-
-#[derive(Debug)]
-enum EnsureSuccess {
-    AnswerAvailable,
-    Coinductive,
-}
-
 /// This is returned when we try to select a subgoal for a strand.
 enum SubGoalSelection {
     /// A subgoal was successfully selected. It has already been checked
@@ -60,7 +42,7 @@ enum SubGoalSelection {
     Selected,
 
     /// This strand has no remaining subgoals.
-    NoRemaingSubgoals,
+    NoRemainingSubgoals,
 
     /// This strand has floundered. Either all the positive subgoals
     /// have floundered or a single negative subgoal has floundered.
@@ -116,45 +98,10 @@ impl<C: Context> Forest<C> {
         })
     }
 
-    /// Before we pursue a table, we need to check a couple things
-    /// - Does it have an answer? -> `Some(Ok(EnsureSuccess::AnswerAvailable))`
-    /// - Does it make a coinductive cycle? -> `Some(Ok(EnsureSuccess::Coinductive))`
-    /// - Does it make a non-coinductive cycle? -> `Some(Err(TableCheckFail::PositiveCycle`
-    /// - Otherwise, need to pursue -> `None`
-    fn check_table(
-        &mut self,
-        table: TableIndex,
-        answer: AnswerIndex,
-    ) -> Option<TableCheckResult<EnsureSuccess>> {
-        // Next, check for a tabled answer.
-        if self.tables[table].answer(answer).is_some() {
-            info!("answer cached = {:?}", self.tables[table].answer(answer));
-            return Some(Ok(EnsureSuccess::AnswerAvailable));
-        }
-
-        // If no tabled answer is present, we ought to be requesting
-        // the next available index.
-        assert_eq!(self.tables[table].next_answer_index(), answer);
-
-        // Next, check if the table is already active. If so, then we
-        // have a recursive attempt.
-        if let Some(depth) = self.stack.is_active(table) {
-            info!("ensure_answer: cycle detected at depth {:?}", depth);
-
-            if self.top_of_stack_is_coinductive_from(depth) {
-                return Some(Ok(EnsureSuccess::Coinductive));
-            }
-
-            return Some(Err(TableCheckFail::PositiveCycle(Minimums {
-                positive: self.stack[depth].clock,
-                negative: TimeStamp::MAX,
-            })));
-        }
-
-        return None;
-    }
-
-    /// Merges an answer into the provided `Strand`.
+    /// This is called when an answer is available for the selected subgoal
+    /// of the strand. First, if the selected subgoal is a `Positive` subgoal,
+    /// it first clones the strand pursuing the next answer. Then, it merges the
+    /// answer into the provided `Strand`.
     /// On success, `Ok` is returned and the `Strand` can be continued to process
     /// On failure, `Err` is returned and the `Strand` should be discarded
     fn merge_answer_into_strand(
@@ -166,10 +113,13 @@ impl<C: Context> Forest<C> {
         // the selected subgoal of the strand.
         // Now, we have to unify that answer onto the strand.
 
+        // If this subgoal was a `Positive` one, whichever way this
+        // particular answer turns out, there may yet be *more* answers.
+        // Enqueue that alternative for later.
+        // NOTE: this is separate from the match below because we `take` the selected_subgoal
+        // below, but here we keep it for the new `Strand`.
         let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
         if let Literal::Positive(_) = strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
-            // Whichever way this particular answer turns out, there may
-            // yet be *more* answers. Enqueue that alternative for later.
             let mut next_subgoal = selected_subgoal.clone();
             next_subgoal.answer_index.increment();
             let next_strand = Strand {
@@ -183,22 +133,14 @@ impl<C: Context> Forest<C> {
             self.tables[table].push_strand(canonical_next_strand);
         }
 
-        // We got an answer for this goal. Now it matters if this
-        // was a positive or negative subgoal.
-
-        // We are done with this subgoal selection, so we can take it
+        // Deselect and remove the selected subgoal, now that we have an answer for it.
         let selected_subgoal = strand.selected_subgoal.take().unwrap();
-        // We've already taken care of the case where we might be able
-        // to pursue this subgoal later (in a different strand). For
-        // this strand, we have an answer to this subgoal
-        match strand
+        let subgoal = strand
             .ex_clause
             .subgoals
-            .remove(selected_subgoal.subgoal_index)
-        {
+            .remove(selected_subgoal.subgoal_index);
+        match subgoal {
             Literal::Positive(subgoal) => {
-                // OK, let's follow *this* answer and see where it leads.
-
                 let SelectedSubgoal {
                     subgoal_index: _,
                     subgoal_table,
@@ -361,6 +303,93 @@ impl<C: Context> Forest<C> {
         }
     }
 
+    /// This is called if the selected subgoal for a `Strand` is
+    /// a coinductive cycle.
+    fn on_coinductive_subgoal(
+        &mut self,
+        depth: StackIndex,
+        mut strand: Strand<C>,
+    ) -> Result<StackIndex, RootSearchFail> {
+        // This is a co-inductive cycle. That is, this table
+        // appears somewhere higher on the stack, and has now
+        // recursively requested an answer for itself. That
+        // means that our subgoal is unconditionally true.
+
+        // This subgoal selection for the strand is finished, so take it
+        let selected_subgoal = strand.selected_subgoal.take().unwrap();
+        match strand
+            .ex_clause
+            .subgoals
+            .remove(selected_subgoal.subgoal_index)
+        {
+            Literal::Positive(_) => {
+                // We can drop this subgoal and pursue the next thing.
+                let table = self.stack[depth].table;
+                assert!(
+                    self.tables[table].coinductive_goal
+                        && self.tables[selected_subgoal.subgoal_table].coinductive_goal
+                );
+
+                self.stack[depth].active_strand = Some(strand);
+                return Ok(depth);
+            }
+            Literal::Negative(_) => {
+                // Our negative goal fails
+
+                // We discard the current strand
+                drop(strand);
+
+                // Now we yield with `QuantumExceeded`
+                self.unwind_stack(depth);
+                return Err(RootSearchFail::QuantumExceeded);
+            }
+        }
+    }
+
+    /// This is called if the selected subgoal for a `Strand` is
+    /// a positive, non-coinductive cycle.
+    fn on_positive_cycle(
+        &mut self,
+        depth: StackIndex,
+        strand: Strand<C>,
+        minimums: Minimums,
+    ) -> Result<StackIndex, RootSearchFail> {
+        // We can't take this because we might need it later to clear the cycle
+        let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
+
+        match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+            Literal::Positive(_) => {
+                self.stack[depth].cyclic_minimums.take_minimums(&minimums);
+            }
+            Literal::Negative(_) => {
+                // We depend on `not(subgoal)`. For us to continue,
+                // `subgoal` must be completely evaluated. Therefore,
+                // we depend (negatively) on the minimum link of
+                // `subgoal` as a whole -- it doesn't matter whether
+                // it's pos or neg.
+                let mins = Minimums {
+                    positive: self.stack[depth].clock,
+                    negative: minimums.minimum_of_pos_and_neg(),
+                };
+                self.stack[depth].cyclic_minimums.take_minimums(&mins);
+            }
+        }
+
+        // Ok, we've taken the minimums from this cycle above. Now,
+        // we just return the strand to the table. The table only
+        // pulls strands if they have not been checked at this
+        // depth.
+        //
+        // We also can't mark these and return early from this
+        // because the stack above us might change.
+        let table = self.stack[depth].table;
+        let canonical_strand = Self::canonicalize_strand(strand);
+        self.tables[table].push_strand(canonical_strand);
+
+        // The strand isn't active, but the table is, so just continue
+        Ok(depth)
+    }
+
     fn on_subgoal_selected(
         &mut self,
         mut depth: StackIndex,
@@ -380,117 +409,59 @@ impl<C: Context> Forest<C> {
             subgoal_table, self.tables[subgoal_table].table_goal
         );
 
-        // This is checked inside_select_subgoal
+        // This is checked inside select_subgoal
         assert!(!self.tables[subgoal_table].is_floundered());
 
-        // Now, let's check the table
-        match self.check_table(subgoal_table, answer_index) {
-            Some(Ok(EnsureSuccess::AnswerAvailable)) => {
-                debug!("previous answer available");
-                // There was a previous answer available for this table
-                // We need to check if
-                match self.merge_answer_into_strand(&mut strand, &mut depth) {
-                    Err(e) => {
-                        debug!("could not merge into current strand");
-                        drop(strand);
-                        return Err(e);
-                    }
-                    Ok(_) => {
-                        debug!("merged answer into current strand");
-                        self.stack[depth].active_strand = Some(strand);
-                        return Ok(depth);
-                    }
+        // Check for a tabled answer.
+        if let Some(answer) = self.tables[subgoal_table].answer(answer_index) {
+            info!("answer cached = {:?}", answer);
+
+            // There was a previous answer available for this table
+            // We need to check if we can merge it into the current `Strand`.
+            match self.merge_answer_into_strand(&mut strand, &mut depth) {
+                Err(e) => {
+                    debug!("could not merge into current strand");
+                    drop(strand);
+                    return Err(e);
                 }
-            }
-            Some(Ok(EnsureSuccess::Coinductive)) => {
-                debug!("table is coinductive");
-
-                // This is a co-inductive cycle. That is, this table
-                // appears somewhere higher on the stack, and has now
-                // recursively requested an answer for itself. That
-                // means that our subgoal is unconditionally true.
-
-                // This subgoal selection for the strand is finished, so take it
-                let selected_subgoal = strand.selected_subgoal.take().unwrap();
-                match strand
-                    .ex_clause
-                    .subgoals
-                    .remove(selected_subgoal.subgoal_index)
-                {
-                    Literal::Positive(_) => {
-                        // We can drop this subgoal and pursue the next thing.
-                        let table = self.stack[depth].table;
-                        assert!(
-                            self.tables[table].coinductive_goal
-                                && self.tables[selected_subgoal.subgoal_table].coinductive_goal
-                        );
-
-                        self.stack[depth].active_strand = Some(strand);
-                        return Ok(depth);
-                    }
-                    Literal::Negative(_) => {
-                        // Our negative goal fails
-
-                        // We discard the current strand
-                        drop(strand);
-
-                        // Now we yield with `QuantumExceeded`
-                        self.unwind_stack(depth);
-                        return Err(RootSearchFail::QuantumExceeded);
-                    }
+                Ok(_) => {
+                    debug!("merged answer into current strand");
+                    self.stack[depth].active_strand = Some(strand);
+                    return Ok(depth);
                 }
-            }
-            Some(Err(TableCheckFail::PositiveCycle(minimums))) => {
-                debug!("table encountered a positive cycle");
-
-                // The selected subgoal causes a positive cycle
-
-                // We can't take this because we might need it later to clear the cycle
-                let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
-
-                match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
-                    Literal::Positive(_) => {
-                        self.stack[depth].cyclic_minimums.take_minimums(&minimums);
-                    }
-                    Literal::Negative(_) => {
-                        // We depend on `not(subgoal)`. For us to continue,
-                        // `subgoal` must be completely evaluated. Therefore,
-                        // we depend (negatively) on the minimum link of
-                        // `subgoal` as a whole -- it doesn't matter whether
-                        // it's pos or neg.
-                        let mins = Minimums {
-                            positive: self.stack[depth].clock,
-                            negative: minimums.minimum_of_pos_and_neg(),
-                        };
-                        self.stack[depth].cyclic_minimums.take_minimums(&mins);
-                    }
-                }
-
-                // Ok, we've taken the minimums from this cycle above. Now,
-                // we just return the strand to the table. The table only
-                // pulls strands if they have not been checked this at this
-                // depth.
-                //
-                // We also can't mark these and return early from this
-                // because the stack above us might change.
-                let table = self.stack[depth].table;
-                let canonical_strand = Self::canonicalize_strand(strand);
-                self.tables[table].push_strand(canonical_strand);
-
-                // The strand isn't active, but the table is, so just continue
-                return Ok(depth);
-            }
-            None => {
-                // We don't know anything about the selected subgoal table.
-                // Set this strand as active and push it onto the stack.
-                self.stack[depth].active_strand = Some(strand);
-
-                let clock = self.increment_clock();
-                let cyclic_minimums = Minimums::MAX;
-                depth = self.stack.push(subgoal_table, clock, cyclic_minimums);
-                return Ok(depth);
             }
         }
+
+        // If no tabled answer is present, we ought to be requesting
+        // the next available index.
+        assert_eq!(self.tables[subgoal_table].next_answer_index(), answer_index);
+
+        // Next, check if the table is already active. If so, then we
+        // have a recursive attempt.
+        if let Some(cyclic_depth) = self.stack.is_active(subgoal_table) {
+            info!("cycle detected at depth {:?}", cyclic_depth);
+            let minimums = Minimums {
+                positive: self.stack[cyclic_depth].clock,
+                negative: TimeStamp::MAX,
+            };
+
+            if self.top_of_stack_is_coinductive_from(cyclic_depth) {
+                debug!("table is coinductive");
+                return self.on_coinductive_subgoal(depth, strand);
+            }
+
+            debug!("table encountered a positive cycle");
+            return self.on_positive_cycle(depth, strand, minimums);
+        }
+
+        // We don't know anything about the selected subgoal table.
+        // Set this strand as active and push it onto the stack.
+        self.stack[depth].active_strand = Some(strand);
+
+        let clock = self.increment_clock();
+        let cyclic_minimums = Minimums::MAX;
+        depth = self.stack.push(subgoal_table, clock, cyclic_minimums);
+        Ok(depth)
     }
 
     fn on_no_remaining_subgoals(
@@ -764,17 +735,23 @@ impl<C: Context> Forest<C> {
             initial_table, initial_answer
         );
         info!("table goal = {:#?}", self.tables[initial_table].table_goal);
-        // First, check if this table has floundered.
+        // Check if this table has floundered.
         if self.tables[initial_table].is_floundered() {
             return Err(RootSearchFail::Floundered);
         }
-        match self.check_table(initial_table, initial_answer) {
-            Some(Ok(EnsureSuccess::AnswerAvailable)) => return Ok(()),
-            Some(Ok(EnsureSuccess::Coinductive)) | Some(Err(TableCheckFail::PositiveCycle(..))) => {
-                panic!("cycle at root")
-            }
-            None => {}
+        // Check for a tabled answer.
+        if let Some(answer) = self.tables[initial_table].answer(initial_answer) {
+            info!("answer cached = {:?}", answer);
+            return Ok(());
         }
+
+        // If no tabled answer is present, we ought to be requesting
+        // the next available index.
+        assert_eq!(
+            self.tables[initial_table].next_answer_index(),
+            initial_answer
+        );
+
         let next_clock = self.increment_clock();
         let mut depth = self.stack.push(initial_table, next_clock, Minimums::MAX);
         loop {
@@ -824,7 +801,7 @@ impl<C: Context> Forest<C> {
                             depth = self.on_subgoal_selected(depth, strand)?;
                             continue;
                         }
-                        SubGoalSelection::NoRemaingSubgoals => {
+                        SubGoalSelection::NoRemainingSubgoals => {
                             depth = match self.on_no_remaining_subgoals(depth, strand) {
                                 NoRemainingSubgoalsResult::RootAnswerAvailable => return Ok(()),
                                 NoRemainingSubgoalsResult::RootSearchFail(e) => return Err(e),
@@ -912,7 +889,7 @@ impl<C: Context> Forest<C> {
             while strand.selected_subgoal.is_none() {
                 if strand.ex_clause.subgoals.len() == 0 {
                     if strand.ex_clause.floundered_subgoals.is_empty() {
-                        return SubGoalSelection::NoRemaingSubgoals;
+                        return SubGoalSelection::NoRemainingSubgoals;
                     }
 
                     self.reconsider_floundered_subgoals(&mut strand.ex_clause);
