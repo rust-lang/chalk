@@ -36,8 +36,21 @@ Here are some blog posts talking about chalk:
 
 ## REPL
 
-There is a repl mainly for debugging purposes which can be run by `cargo run`. Some basic examples are in [libstd.chalk](libstd.chalk).
+There is a repl mainly for debugging purposes which can be run by `cargo run`. Some basic examples are in [libstd.chalk](libstd.chalk):
+```bash
+$ cargo run
+?- load libstd.chalk
+?- Vec<Box<i32>>: Clone
+Unique; substitution [], lifetime constraints []
+```
 
 ## Contributing
 
-If you're like to contribute, consider joining the [Traits Working Group](https://rust-lang.github.io/compiler-team/working-groups/traits/). We hang out on the [rust-lang zulip](https://rust-lang.zulipchat.com) in the [#wg-traits](https://rust-lang.zulipchat.com/#narrow/stream/144729-wg-traits) and [#wg-rls-2.0/chalk](https://rust-lang.zulipchat.com/#narrow/stream/191167-t-compiler.2Fwg-rls-2.2E0.2Fchalk) streams.
+If you'd like to contribute, consider joining the [Traits Working Group][working-group].
+We hang out on the [rust-lang zulip][rust-lang-zulip] in the [#wg-traits][wg-traits-stream] stream.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more info.
+
+[working-group]: https://rust-lang.github.io/compiler-team/working-groups/traits/
+[rust-lang-zulip]:https://rust-lang.zulipchat.com
+[wg-traits-stream]: https://rust-lang.zulipchat.com/#narrow/stream/144729-wg-traits

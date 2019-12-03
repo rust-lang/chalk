@@ -1,34 +1,23 @@
-*Note that this `Contribution.md` document is more or less a copy of the file
-with the same name of the [Rust compiler](https://github.com/rust-lang/rust)
-project.*
-
 # Contributing to chalk
 
 Thank you for your interest in contributing to chalk! There are many ways to
 contribute, and we appreciate all of them.
 
-* [Feature Requests](#feature-requests)
 * [Bug Reports](#bug-reports)
+* [Running and Debugging](#running-and-debugging)
 * [Pull Requests](#pull-requests)
 * [Writing Documentation](#writing-documentation)
-* [Issue Triage](#issue-triage)
 * [Helpful Links and Information](#helpful-links-and-information)
 
-If you have questions, please join [our gitter channel](https://gitter.im/chalk-rs/Lobby).
+If you'd like to contribute, consider joining the [Traits Working Group][traits-working-group].
+We hang out on the [rust-lang zulip][rust-lang-zulip] in the [#wg-traits][wg-traits-stream] stream.
 
 As a reminder, all contributors are expected to follow our [Code of Conduct][coc].
 
-[pound-rust-internals]: https://chat.mibbit.com/?server=irc.mozilla.org&channel=%23rust-internals
-[internals]: https://internals.rust-lang.org
+[traits-working-group]: https://rust-lang.github.io/compiler-team/working-groups/traits/
+[rust-lang-zulip]:https://rust-lang.zulipchat.com
+[wg-traits-stream]: https://rust-lang.zulipchat.com/#narrow/stream/144729-wg-traits
 [coc]: https://www.rust-lang.org/conduct.html
-
-## Feature Requests
-[feature-requests]: #feature-requests
-
-To request a change to the way that the Rust language works, please open an
-issue in the [RFCs repository](https://github.com/rust-lang/rfcs/issues/new)
-rather than this one. New features and other significant language changes
-must go through the RFC process.
 
 ## Bug Reports
 [bug-reports]: #bug-reports
@@ -50,24 +39,31 @@ other than `0`. The easiest way to do this is to invoke `chalk` like this:
 $ RUST_BACKTRACE=1 chalk ...
 ```
 
-### Building
-[building]: #building
+## Running and Debugging
+[running-and-debugging]: #running-and-debugging
+There is a repl mainly for debugging purposes which can be run by `cargo run`. Some basic examples are in [libstd.chalk](libstd.chalk):
+```bash
+$ cargo run
+?- load libstd.chalk
+?- Vec<Box<i32>>: Clone
+Unique; substitution [], lifetime constraints []
+```
 
-Chalk has to be build with the nightly version of the rust compiler.
+More logging can be enabled by setting the `CHALK_DEBUG` environment variable. Set `CHALK_DEBUG=1` to see `info!(...)` output, and `CHALK_DEBUG=2` to see `debug!(...)` output as well.
 
 ## Pull Requests
 [pull-requests]: #pull-requests
 
 Pull requests are the primary mechanism we use to change Rust. GitHub itself
-has some [great documentation][pull-requests] on using the Pull Request feature.
+has some [great documentation][pull-request-documentation] on using the Pull Request feature.
 We use the "fork and pull" model [described here][development-models], where
 contributors push changes to their personal fork and create pull requests to
 bring those changes into the source repository.
 
-[pull-requests]: https://help.github.com/articles/about-pull-requests/
-[development-models]: https://help.github.com/articles/about-collaborative-development-models/
-
 Please make pull requests against the `master` branch.
+
+[pull-request-documentation]: https://help.github.com/articles/about-pull-requests/
+[development-models]: https://help.github.com/articles/about-collaborative-development-models/
 
 ## Writing Documentation
 [writing-documentation]: #writing-documentation
@@ -79,16 +75,16 @@ You can find documentation style guidelines in [RFC 1574][rfc1574].
 
 [rfc1574]: https://github.com/rust-lang/rfcs/blob/master/text/1574-more-api-documentation-conventions.md#appendix-a-full-conventions-text
 
-# Helpful Links and Information
+## Helpful Links and Information
 [Helpful Links and Information]: #helpful-links-and-information
 
-## Blog posts
+### Blog posts
 There are several [blog posts][blog-posts] which describe the ideas and
 machinery inside of chalk.
 
 [blog-posts]: README.md#blog-posts
 
-## Glossary
+### Glossary
 
 In addition to the blog posts there is a [glossary](GLOSSARY.md) explaining some
 of the terminology used in chalk.
