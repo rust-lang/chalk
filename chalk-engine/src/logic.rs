@@ -74,9 +74,116 @@ impl<C: Context> Forest<C> {
     ) -> RootSearchResult<&Answer<C>> {
         assert!(self.stack.is_empty());
 
-        match self.ensure_answer(context, table, answer) {
+        match self.ensure_root_answer(context, table, answer) {
             Ok(()) => Ok(self.tables[table].answer(answer).unwrap()),
             Err(err) => Err(err),
+        }
+    }
+
+    /// Ensures that answer with the given index is available from the
+    /// given table. Returns `Ok` if there is an answer.
+    ///
+    /// This function first attempts to fetch answer that is cached in
+    /// the table. If none is found, then it will recursively search
+    /// to find an answer.
+    fn ensure_root_answer(
+        &mut self,
+        context: &impl ContextOps<C>,
+        initial_table: TableIndex,
+        initial_answer: AnswerIndex,
+    ) -> RootSearchResult<()> {
+        info!(
+            "ensure_answer(table={:?}, answer={:?})",
+            initial_table, initial_answer
+        );
+        info!("table goal = {:#?}", self.tables[initial_table].table_goal);
+        // Check if this table has floundered.
+        if self.tables[initial_table].is_floundered() {
+            return Err(RootSearchFail::Floundered);
+        }
+        // Check for a tabled answer.
+        if let Some(answer) = self.tables[initial_table].answer(initial_answer) {
+            info!("answer cached = {:?}", answer);
+            return Ok(());
+        }
+
+        // If no tabled answer is present, we ought to be requesting
+        // the next available index.
+        assert_eq!(
+            self.tables[initial_table].next_answer_index(),
+            initial_answer
+        );
+
+        let next_clock = self.increment_clock();
+        let mut depth = self.stack.push(initial_table, next_clock, Minimums::MAX);
+        loop {
+            // FIXME: use depth for debug/info printing
+
+            let clock = self.stack[depth].clock;
+            // If we had an active strand, continue to pursue it
+            let table = self.stack[depth].table;
+
+            // We track when we last pursued each strand. If all the strands have been
+            // pursued at this depth, then that means they all encountered a cycle.
+            // We also know that if the first strand has been pursued at this depth,
+            // then all have. Otherwise, an answer to any strand would have provided an
+            // answer for the table.
+            let next_strand = self.stack[depth].active_strand.take().or_else(|| {
+                self.tables[table]
+                    .dequeue_next_strand_if(|strand| strand.last_pursued_time < clock)
+                    .map(|canonical_strand| {
+                        let num_universes = C::num_universes(&self.tables[table].table_goal);
+                        let CanonicalStrand {
+                            canonical_ex_clause,
+                            selected_subgoal,
+                            last_pursued_time,
+                        } = canonical_strand;
+                        let (infer, ex_clause) =
+                            context.instantiate_ex_clause(num_universes, &canonical_ex_clause);
+                        let strand = Strand {
+                            infer,
+                            ex_clause,
+                            selected_subgoal: selected_subgoal.clone(),
+                            last_pursued_time,
+                        };
+                        strand
+                    })
+            });
+            match next_strand {
+                Some(mut strand) => {
+                    debug!("next strand: {:#?}", strand);
+
+                    strand.last_pursued_time = clock;
+                    match self.select_subgoal(context, &mut strand) {
+                        SubGoalSelection::Selected => {
+                            // A subgoal has been selected. We now check this subgoal
+                            // table for an existing answer or if it's in a cycle.
+                            // If neither of those are the case, a strand is selected
+                            // and the next loop iteration happens.
+                            depth = self.on_subgoal_selected(depth, strand)?;
+                            continue;
+                        }
+                        SubGoalSelection::NoRemainingSubgoals => {
+                            depth = match self.on_no_remaining_subgoals(depth, strand) {
+                                NoRemainingSubgoalsResult::RootAnswerAvailable => return Ok(()),
+                                NoRemainingSubgoalsResult::RootSearchFail(e) => return Err(e),
+                                NoRemainingSubgoalsResult::Success(depth) => depth,
+                            };
+                            continue;
+                        }
+                        SubGoalSelection::Floundered => {
+                            // The strand floundered when trying to select a subgoal.
+                            // This will always return a `RootSearchFail`, either because the
+                            // root table floundered or we yield with `QuantumExceeded`.
+                            return Err(self.on_subgoal_selection_flounder(depth, strand));
+                        }
+                    }
+                }
+                None => {
+                    depth = self.on_no_strands_left(depth)?;
+                    continue;
+                }
+            }
         }
     }
 
@@ -711,113 +818,6 @@ impl<C: Context> Forest<C> {
             let table = self.stack[depth].table;
             let canonical_active_strand = Self::canonicalize_strand(active_strand);
             self.tables[table].enqueue_strand(canonical_active_strand);
-        }
-    }
-
-    /// Ensures that answer with the given index is available from the
-    /// given table. Returns `Ok` if there is an answer.
-    ///
-    /// This function first attempts to fetch answer that is cached in
-    /// the table. If none is found, then it will recursively search
-    /// to find an answer.
-    fn ensure_answer(
-        &mut self,
-        context: &impl ContextOps<C>,
-        initial_table: TableIndex,
-        initial_answer: AnswerIndex,
-    ) -> RootSearchResult<()> {
-        info!(
-            "ensure_answer(table={:?}, answer={:?})",
-            initial_table, initial_answer
-        );
-        info!("table goal = {:#?}", self.tables[initial_table].table_goal);
-        // Check if this table has floundered.
-        if self.tables[initial_table].is_floundered() {
-            return Err(RootSearchFail::Floundered);
-        }
-        // Check for a tabled answer.
-        if let Some(answer) = self.tables[initial_table].answer(initial_answer) {
-            info!("answer cached = {:?}", answer);
-            return Ok(());
-        }
-
-        // If no tabled answer is present, we ought to be requesting
-        // the next available index.
-        assert_eq!(
-            self.tables[initial_table].next_answer_index(),
-            initial_answer
-        );
-
-        let next_clock = self.increment_clock();
-        let mut depth = self.stack.push(initial_table, next_clock, Minimums::MAX);
-        loop {
-            // FIXME: use depth for debug/info printing
-
-            let clock = self.stack[depth].clock;
-            // If we had an active strand, continue to pursue it
-            let table = self.stack[depth].table;
-
-            // We track when we last pursued each strand. If all the strands have been
-            // pursued at this depth, then that means they all encountered a cycle.
-            // We also know that if the first strand has been pursued at this depth,
-            // then all have. Otherwise, an answer to any strand would have provided an
-            // answer for the table.
-            let next_strand = self.stack[depth].active_strand.take().or_else(|| {
-                self.tables[table]
-                    .dequeue_next_strand_if(|strand| strand.last_pursued_time < clock)
-                    .map(|canonical_strand| {
-                        let num_universes = C::num_universes(&self.tables[table].table_goal);
-                        let CanonicalStrand {
-                            canonical_ex_clause,
-                            selected_subgoal,
-                            last_pursued_time,
-                        } = canonical_strand;
-                        let (infer, ex_clause) =
-                            context.instantiate_ex_clause(num_universes, &canonical_ex_clause);
-                        let strand = Strand {
-                            infer,
-                            ex_clause,
-                            selected_subgoal: selected_subgoal.clone(),
-                            last_pursued_time,
-                        };
-                        strand
-                    })
-            });
-            match next_strand {
-                Some(mut strand) => {
-                    debug!("next strand: {:#?}", strand);
-
-                    strand.last_pursued_time = clock;
-                    match self.select_subgoal(context, &mut strand) {
-                        SubGoalSelection::Selected => {
-                            // A subgoal has been selected. We now check this subgoal
-                            // table for an existing answer or if it's in a cycle.
-                            // If neither of those are the case, a strand is selected
-                            // and the next loop iteration happens.
-                            depth = self.on_subgoal_selected(depth, strand)?;
-                            continue;
-                        }
-                        SubGoalSelection::NoRemainingSubgoals => {
-                            depth = match self.on_no_remaining_subgoals(depth, strand) {
-                                NoRemainingSubgoalsResult::RootAnswerAvailable => return Ok(()),
-                                NoRemainingSubgoalsResult::RootSearchFail(e) => return Err(e),
-                                NoRemainingSubgoalsResult::Success(depth) => depth,
-                            };
-                            continue;
-                        }
-                        SubGoalSelection::Floundered => {
-                            // The strand floundered when trying to select a subgoal.
-                            // This will always return a `RootSearchFail`, either because the
-                            // root table floundered or we yield with `QuantumExceeded`.
-                            return Err(self.on_subgoal_selection_flounder(depth, strand));
-                        }
-                    }
-                }
-                None => {
-                    depth = self.on_no_strands_left(depth)?;
-                    continue;
-                }
-            }
         }
     }
 
