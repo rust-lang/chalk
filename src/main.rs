@@ -205,11 +205,17 @@ fn process(
         help()
     } else if command == "program" {
         // Load a .chalk file via stdin, until EOF is found.
-        *prog = Some(LoadedProgram::new(read_program(rl)?, args.solver_choice())?);
+        let chalk_prog = LoadedProgram::new(read_program(rl)?, args.solver_choice())?;
+        // Let's do a sanity check before going forward.
+        let _ = chalk_prog.db.checked_program()?;
+        *prog = Some(chalk_prog);
     } else if command.starts_with("load ") {
         // Load a .chalk file.
         let filename = &command["load ".len()..];
-        *prog = Some(load_program(args, filename)?);
+        let chalk_prog = load_program(args, filename)?;
+        // Let's do a sanity check before going forward.
+        let _ = chalk_prog.db.checked_program()?;
+        *prog = Some(chalk_prog);
     } else if command.starts_with("debug ") {
         match command.split_whitespace().nth(1) {
             Some(level) => std::env::set_var("CHALK_DEBUG", level),
