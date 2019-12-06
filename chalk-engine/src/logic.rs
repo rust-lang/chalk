@@ -700,8 +700,8 @@ impl<C: Context> Forest<C> {
             };
 
             // This subgoal selection for the strand is finished, so take it
-            let selected_subgoal = caller_strand.selected_subgoal.take().unwrap();
-            return match caller_strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+            let caller_selected_subgoal = caller_strand.selected_subgoal.take().unwrap();
+            return match caller_strand.ex_clause.subgoals[caller_selected_subgoal.subgoal_index] {
                 // T' wanted an answer from T, but none is
                 // forthcoming.  Therefore, the active strand from T'
                 // has failed and can be discarded.
@@ -722,7 +722,7 @@ impl<C: Context> Forest<C> {
                     caller_strand
                         .ex_clause
                         .subgoals
-                        .remove(selected_subgoal.subgoal_index);
+                        .remove(caller_selected_subgoal.subgoal_index);
 
                     // This strand is still active, so continue
                     Ok(depth)
@@ -766,8 +766,8 @@ impl<C: Context> Forest<C> {
             };
 
             // We can't take this because we might need it later to clear the cycle
-            let selected_subgoal = caller_strand.selected_subgoal.as_ref().unwrap();
-            match caller_strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+            let caller_selected_subgoal = caller_strand.selected_subgoal.as_ref().unwrap();
+            match caller_strand.ex_clause.subgoals[caller_selected_subgoal.subgoal_index] {
                 Literal::Positive(_) => {
                     self.stack[depth]
                         .cyclic_minimums
