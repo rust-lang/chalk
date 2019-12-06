@@ -56,12 +56,9 @@ impl<C: Context> Table<C> {
         }
     }
 
-    pub(crate) fn push_strand(&mut self, strand: CanonicalStrand<C>) {
+    /// Push a strand to the back of the queue of strands to be processed.
+    pub(crate) fn enqueue_strand(&mut self, strand: CanonicalStrand<C>) {
         self.strands.push_back(strand);
-    }
-
-    pub(crate) fn extend_strands(&mut self, strands: impl IntoIterator<Item = CanonicalStrand<C>>) {
-        self.strands.extend(strands);
     }
 
     pub(crate) fn strands_mut(&mut self) -> impl Iterator<Item = &mut CanonicalStrand<C>> {
@@ -72,8 +69,20 @@ impl<C: Context> Table<C> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
-    pub(crate) fn pop_next_strand(&mut self) -> Option<CanonicalStrand<C>> {
-        self.strands.pop_front()
+    /// Remove the next strand from the queue as long as it meets the
+    /// given criteria.
+    pub(crate) fn dequeue_next_strand_if(
+        &mut self,
+        test: impl Fn(&CanonicalStrand<C>) -> bool,
+    ) -> Option<CanonicalStrand<C>> {
+        let strand = self.strands.pop_front();
+        if let Some(strand) = strand {
+            if test(&strand) {
+                return Some(strand);
+            }
+            self.strands.push_front(strand);
+        }
+        None
     }
 
     /// Mark the table as floundered -- this also discards all pre-existing answers,
@@ -89,12 +98,16 @@ impl<C: Context> Table<C> {
         self.floundered
     }
 
-    /// Adds `answer` to our list of answers, unless it (or some
-    /// better answer) is already present. An answer A is better than
-    /// an answer B if their substitutions are the same, but A has a subset
-    /// of the delayed literals that B does.
+    /// Adds `answer` to our list of answers, unless it is already present.
     ///
     /// Returns true if `answer` was added.
+    ///
+    /// # Panics
+    /// This will panic if a previous answer with the same substitution
+    /// was marked as ambgiuous, but the new answer is not. No current
+    /// tests trigger this case, and assumptions upstream assume that when
+    /// `true` is returned here, that a *new* answer was added (instead of an)
+    /// existing answer replaced.
     pub(super) fn push_answer(&mut self, answer: Answer<C>) -> bool {
         assert!(!self.floundered);
 
@@ -110,14 +123,12 @@ impl<C: Context> Table<C> {
                 true
             }
 
-            Entry::Occupied(mut entry) => {
+            Entry::Occupied(entry) => {
                 let was_ambiguous = entry.get();
-                if !was_ambiguous || answer.ambiguous {
-                    false
-                } else {
-                    *entry.get_mut() = false;
-                    true
+                if *was_ambiguous && !answer.ambiguous {
+                    panic!("New answer was not ambiguous whereas previous answer was.");
                 }
+                false
             }
         };
 

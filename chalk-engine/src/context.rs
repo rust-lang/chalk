@@ -69,17 +69,17 @@ pub trait Context: Clone + Debug {
 
     /// Represents a substitution from the "canonical variables" found
     /// in a canonical goal to specific values.
-    type Substitution: Debug;
+    type Substitution: Clone + Debug;
 
     /// Represents a region constraint that will be propagated back
     /// (but not verified).
-    type RegionConstraint: Debug;
+    type RegionConstraint: Clone + Debug;
 
     /// Represents a goal along with an environment.
     type GoalInEnvironment: Debug + Clone + Eq + Hash;
 
     /// Represents an inference table.
-    type InferenceTable: InferenceTable<Self>;
+    type InferenceTable: InferenceTable<Self> + Clone;
 
     /// Represents a set of hypotheses that are assumed to be true.
     type Environment: Debug + Clone;
@@ -207,12 +207,11 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         op: impl FnOnce(C::InferenceTable, C::Substitution, C::Environment, C::Goal) -> R,
     ) -> R;
 
-    fn instantiate_ex_clause<R>(
+    fn instantiate_ex_clause(
         &self,
         num_universes: usize,
         canonical_ex_clause: &C::CanonicalExClause,
-        op: impl FnOnce(C::InferenceTable, ExClause<C>) -> R,
-    ) -> R;
+    ) -> (C::InferenceTable, ExClause<C>);
 
     /// returns unique solution from answer
     fn constrained_subst_from_answer(&self, answer: Answer<C>) -> C::CanonicalConstrainedSubst;
@@ -337,7 +336,7 @@ pub trait ResolventOps<C: Context> {
         goal: &C::DomainGoal,
         subst: &C::Substitution,
         clause: &C::ProgramClause,
-    ) -> Fallible<C::CanonicalExClause>;
+    ) -> Fallible<ExClause<C>>;
 
     fn apply_answer_subst(
         &mut self,

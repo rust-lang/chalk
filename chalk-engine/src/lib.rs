@@ -94,16 +94,6 @@ index_struct! {
     }
 }
 
-/// The `DepthFirstNumber` (DFN) is a sequential number assigned to
-/// each goal when it is first encountered. The naming (taken from
-/// EWFS) refers to the idea that this number tracks the index of when
-/// we encounter the goal during a depth-first traversal of the proof
-/// tree.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-struct DepthFirstNumber {
-    value: u64,
-}
-
 /// The paper describes these as `A :- D | G`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExClause<C: Context> {
@@ -128,8 +118,9 @@ pub struct ExClause<C: Context> {
     /// floundered subgoals may no longer be floundered: we record the
     /// current time when we add something to the list of floundered
     /// subgoals, and then we can compare whether its value has
-    /// changed since then.
-    pub current_time: TimeStamp,
+    /// changed since then. This is not the same `TimeStamp` of
+    /// `Forest`'s clock.
+    pub answer_time: TimeStamp,
 
     /// List of subgoals that have floundered. See `FlounderedSubgoal`
     /// for more information.
@@ -146,6 +137,10 @@ pub struct TimeStamp {
 }
 
 impl TimeStamp {
+    const MAX: TimeStamp = TimeStamp {
+        clock: ::std::u64::MAX,
+    };
+
     fn increment(&mut self) {
         self.clock += 1;
     }
@@ -255,14 +250,14 @@ pub enum Literal<C: Context> {
 /// however, this value must be updated.
 #[derive(Copy, Clone, Debug)]
 struct Minimums {
-    positive: DepthFirstNumber,
-    negative: DepthFirstNumber,
+    positive: TimeStamp,
+    negative: TimeStamp,
 }
 
 impl Minimums {
     const MAX: Minimums = Minimums {
-        positive: DepthFirstNumber::MAX,
-        negative: DepthFirstNumber::MAX,
+        positive: TimeStamp::MAX,
+        negative: TimeStamp::MAX,
     };
 
     /// Update our fields to be the minimum of our current value
@@ -272,43 +267,7 @@ impl Minimums {
         self.negative = min(self.negative, other.negative);
     }
 
-    fn minimum_of_pos_and_neg(&self) -> DepthFirstNumber {
+    fn minimum_of_pos_and_neg(&self) -> TimeStamp {
         min(self.positive, self.negative)
     }
-}
-
-impl DepthFirstNumber {
-    const MIN: DepthFirstNumber = DepthFirstNumber { value: 0 };
-    const MAX: DepthFirstNumber = DepthFirstNumber {
-        value: ::std::u64::MAX,
-    };
-
-    fn next(&mut self) -> DepthFirstNumber {
-        let value = self.value;
-        assert!(value < ::std::u64::MAX);
-        self.value += 1;
-        DepthFirstNumber { value }
-    }
-}
-
-/// Because we recurse so deeply, we rely on stacker to
-/// avoid overflowing the stack.
-#[cfg(feature = "stack_protection")]
-fn maybe_grow_stack<F, R>(op: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    // These numbers are somewhat randomly chosen to make tests work
-    // well enough on my system. In particular, because we only test
-    // for growing the stack in `new_clause`, a red zone of 32K was
-    // insufficient to prevent stack overflow. - nikomatsakis
-    stacker::maybe_grow(256 * 1024, 2 * 1024 * 1024, op)
-}
-
-#[cfg(not(feature = "stack_protection"))]
-fn maybe_grow_stack<F, R>(op: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    op()
 }

@@ -52,6 +52,7 @@ pub(crate) struct SlgContextOps<'me, TF: TypeFamily> {
     max_size: usize,
 }
 
+#[derive(Clone)]
 pub struct TruncatingInferenceTable<TF: TypeFamily> {
     max_size: usize,
     infer: InferenceTable<TF>,
@@ -208,16 +209,15 @@ impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<
         op(infer_table, subst, environment, goal)
     }
 
-    fn instantiate_ex_clause<R>(
+    fn instantiate_ex_clause(
         &self,
         num_universes: usize,
         canonical_ex_clause: &Canonical<ExClause<SlgContext<TF>>>,
-        op: impl FnOnce(TruncatingInferenceTable<TF>, ExClause<SlgContext<TF>>) -> R,
-    ) -> R {
+    ) -> (TruncatingInferenceTable<TF>, ExClause<SlgContext<TF>>) {
         let (infer, _subst, ex_cluse) =
             InferenceTable::from_canonical(num_universes, canonical_ex_clause);
         let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
-        op(infer_table, ex_cluse)
+        (infer_table, ex_cluse)
     }
 
     fn constrained_subst_from_answer(

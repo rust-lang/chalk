@@ -6,9 +6,7 @@ use crate::stack::StackIndex;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::AnswerIndex;
 use crate::Answer;
-use crate::{
-    DepthFirstNumber, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
-};
+use crate::{ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp};
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -16,9 +14,6 @@ type RootSearchResult<T> = Result<T, RootSearchFail>;
 /// The different ways that a *root* search (which potentially pursues
 /// many strands) can fail. A root search is one that begins with an
 /// empty stack.
-///
-/// (This is different from `RecursiveSearchFail` because nothing can
-/// be on the stack, so cycles are ruled out.)
 #[derive(Debug)]
 pub(super) enum RootSearchFail {
     /// The subgoal we were trying to solve cannot succeed.
@@ -39,92 +34,155 @@ pub(super) enum RootSearchFail {
     NegativeCycle,
 }
 
-type RecursiveSearchResult<T> = Result<T, RecursiveSearchFail>;
+/// This is returned when we try to select a subgoal for a strand.
+enum SubGoalSelection {
+    /// A subgoal was successfully selected. It has already been checked
+    /// to not be floundering. However, it may have an answer already, be
+    /// coinductive, or create a cycle.
+    Selected,
 
-/// The different ways that a recursive search (which potentially
-/// pursues many strands) can fail -- a "recursive" search is one that
-/// did not start with an empty stack.
-#[derive(Debug)]
-enum RecursiveSearchFail {
-    /// The subgoal we were trying to solve cannot succeed.
-    NoMoreSolutions,
+    /// This strand has no remaining subgoals.
+    NoRemainingSubgoals,
 
-    /// The subgoal cannot be solved without more type information.
+    /// This strand has floundered. Either all the positive subgoals
+    /// have floundered or a single negative subgoal has floundered.
     Floundered,
-
-    /// A negative cycle was found. This is fail-fast, so even if there was
-    /// possibly a solution (ambiguous or not), it may not have been found.
-    NegativeCycle,
-
-    /// **All** avenues to solve the subgoal we were trying solve
-    /// encountered a cyclic dependency on something higher up in the
-    /// stack. The `Minimums` encodes how high up (and whether
-    /// positive or negative).
-    PositiveCycle(Minimums),
-
-    /// We did not find a solution, but we still have things to try.
-    /// Repeat the request, and we'll give one of those a spin.
-    ///
-    /// (In a purely depth-first-based solver, like Prolog, this
-    /// doesn't appear.)
-    QuantumExceeded,
 }
 
-#[allow(type_alias_bounds)]
-type StrandResult<C: Context, T> = Result<T, StrandFail<C>>;
+/// This is returned `on_no_remaining_subgoals`
+enum NoRemainingSubgoalsResult {
+    /// There is an answer available for the root table
+    RootAnswerAvailable,
 
-/// Possible failures from pursuing a particular strand.
-#[derive(Debug)]
-pub(super) enum StrandFail<C: Context> {
-    /// The strand has no solution.
-    NoSolution,
+    /// There was a `RootSearchFail`
+    RootSearchFail(RootSearchFail),
 
-    /// The strand got stuck and the table requires more type information.
-    Floundered,
-
-    /// We did not yet figure out a solution; the strand will have
-    /// been rescheduled for later.
-    QuantumExceeded,
-
-    /// A negative cycle was found. This is fail-fast, so even if there was
-    /// possibly a solution (ambiguous or not), it may not have been found.
-    NegativeCycle,
-
-    /// The strand hit a cyclic dependency. In this case,
-    /// we return the strand, as well as a `Minimums` struct.
-    PositiveCycle(CanonicalStrand<C>, Minimums),
-}
-
-#[derive(Debug)]
-enum EnsureSuccess {
-    AnswerAvailable,
-    Coinductive,
+    // This was a success and the new depth is returned
+    Success(StackIndex),
 }
 
 impl<C: Context> Forest<C> {
-    /// Ensures that answer with the given index is available from the
-    /// given table. This may require activating a strand. Returns
-    /// `Ok(())` if the answer is available and otherwise a
+    /// Returns an answer with a given index for the given table. This
+    /// may require activating a strand and following it. It returns
+    /// `Ok(answer)` if they answer is available and otherwise a
     /// `RootSearchFail` result.
-    pub(super) fn ensure_root_answer(
+    pub(super) fn root_answer(
         &mut self,
         context: &impl ContextOps<C>,
         table: TableIndex,
         answer: AnswerIndex,
-    ) -> RootSearchResult<()> {
+    ) -> RootSearchResult<&Answer<C>> {
         assert!(self.stack.is_empty());
 
-        match self.ensure_answer_recursively(context, table, answer) {
-            Ok(EnsureSuccess::AnswerAvailable) => Ok(()),
-            Err(RecursiveSearchFail::Floundered) => Err(RootSearchFail::Floundered),
-            Err(RecursiveSearchFail::NoMoreSolutions) => Err(RootSearchFail::NoMoreSolutions),
-            Err(RecursiveSearchFail::QuantumExceeded) => Err(RootSearchFail::QuantumExceeded),
-            Err(RecursiveSearchFail::NegativeCycle) => Err(RootSearchFail::NegativeCycle),
+        match self.ensure_root_answer(context, table, answer) {
+            Ok(()) => Ok(self.tables[table].answer(answer).unwrap()),
+            Err(err) => Err(err),
+        }
+    }
 
-            // Things involving cycles should be impossible since our
-            // stack was empty on entry:
-            Ok(EnsureSuccess::Coinductive) | Err(RecursiveSearchFail::PositiveCycle(..)) => {
-                panic!("ensure_root_answer: nothing on the stack but cyclic result")
+    /// Ensures that answer with the given index is available from the
+    /// given table. Returns `Ok` if there is an answer.
+    ///
+    /// This function first attempts to fetch answer that is cached in
+    /// the table. If none is found, then it will recursively search
+    /// to find an answer.
+    fn ensure_root_answer(
+        &mut self,
+        context: &impl ContextOps<C>,
+        initial_table: TableIndex,
+        initial_answer: AnswerIndex,
+    ) -> RootSearchResult<()> {
+        info_heading!(
+            "ensure_answer(table={:?}, answer={:?})",
+            initial_table,
+            initial_answer
+        );
+        info!("table goal = {:#?}", self.tables[initial_table].table_goal);
+        // Check if this table has floundered.
+        if self.tables[initial_table].is_floundered() {
+            return Err(RootSearchFail::Floundered);
+        }
+        // Check for a tabled answer.
+        if let Some(answer) = self.tables[initial_table].answer(initial_answer) {
+            info!("answer cached = {:?}", answer);
+            return Ok(());
+        }
+
+        // If no tabled answer is present, we ought to be requesting
+        // the next available index.
+        assert_eq!(
+            self.tables[initial_table].next_answer_index(),
+            initial_answer
+        );
+
+        let mut depth = self.stack.push(initial_table, Minimums::MAX);
+        loop {
+            // FIXME: use depth for debug/info printing
+
+            let clock = self.stack[depth].clock;
+            // If we had an active strand, continue to pursue it
+            let table = self.stack[depth].table;
+
+            // We track when we last pursued each strand. If all the strands have been
+            // pursued at this depth, then that means they all encountered a cycle.
+            // We also know that if the first strand has been pursued at this depth,
+            // then all have. Otherwise, an answer to any strand would have provided an
+            // answer for the table.
+            let next_strand = self.stack[depth].active_strand.take().or_else(|| {
+                self.tables[table]
+                    .dequeue_next_strand_if(|strand| strand.last_pursued_time < clock)
+                    .map(|canonical_strand| {
+                        let num_universes = C::num_universes(&self.tables[table].table_goal);
+                        let CanonicalStrand {
+                            canonical_ex_clause,
+                            selected_subgoal,
+                            last_pursued_time,
+                        } = canonical_strand;
+                        let (infer, ex_clause) =
+                            context.instantiate_ex_clause(num_universes, &canonical_ex_clause);
+                        let strand = Strand {
+                            infer,
+                            ex_clause,
+                            selected_subgoal: selected_subgoal.clone(),
+                            last_pursued_time,
+                        };
+                        strand
+                    })
+            });
+            match next_strand {
+                Some(mut strand) => {
+                    debug!("next strand: {:#?}", strand);
+
+                    strand.last_pursued_time = clock;
+                    match self.select_subgoal(context, &mut strand) {
+                        SubGoalSelection::Selected => {
+                            // A subgoal has been selected. We now check this subgoal
+                            // table for an existing answer or if it's in a cycle.
+                            // If neither of those are the case, a strand is selected
+                            // and the next loop iteration happens.
+                            depth = self.on_subgoal_selected(depth, strand)?;
+                            continue;
+                        }
+                        SubGoalSelection::NoRemainingSubgoals => {
+                            depth = match self.on_no_remaining_subgoals(depth, strand) {
+                                NoRemainingSubgoalsResult::RootAnswerAvailable => return Ok(()),
+                                NoRemainingSubgoalsResult::RootSearchFail(e) => return Err(e),
+                                NoRemainingSubgoalsResult::Success(depth) => depth,
+                            };
+                            continue;
+                        }
+                        SubGoalSelection::Floundered => {
+                            // The strand floundered when trying to select a subgoal.
+                            // This will always return a `RootSearchFail`, either because the
+                            // root table floundered or we yield with `QuantumExceeded`.
+                            return Err(self.on_subgoal_selection_flounder(depth, strand));
+                        }
+                    }
+                }
+                None => {
+                    depth = self.on_no_strands_left(depth)?;
+                    continue;
+                }
             }
         }
     }
@@ -147,174 +205,617 @@ impl<C: Context> Forest<C> {
         })
     }
 
-    /// Ensures that answer with the given index is available from the
-    /// given table. Returns `Ok` if there is an answer:
-    ///
-    /// - `EnsureSuccess::AnswerAvailable` means that the answer is
-    ///   cached in the table (and can be fetched with e.g. `self.answer()`).
-    /// - `EnsureSuccess::Coinductive` means that this was a cyclic
-    ///   request of a coinductive goal and is thus considered true;
-    ///   in this case, the answer is not cached in the table (it is
-    ///   only true in this cyclic context).
-    ///
-    /// This function first attempts to fetch answer that is cached in
-    /// the table. If none is found, then we will if the table is on
-    /// the stack; if so, that constitutes a cycle (producing a new
-    /// result for the table X required producing a new result for the
-    /// table X), and we return a suitable result. Otherwise, we can
-    /// push the table onto the stack and select the next available
-    /// strand -- if none are available, then no more answers are
-    /// possible.
-    fn ensure_answer_recursively(
+    /// This is called when an answer is available for the selected subgoal
+    /// of the strand. First, if the selected subgoal is a `Positive` subgoal,
+    /// it first clones the strand pursuing the next answer. Then, it merges the
+    /// answer into the provided `Strand`.
+    /// On success, `Ok` is returned and the `Strand` can be continued to process
+    /// On failure, `Err` is returned and the `Strand` should be discarded
+    fn merge_answer_into_strand(
         &mut self,
-        context: &impl ContextOps<C>,
-        table: TableIndex,
-        answer: AnswerIndex,
-    ) -> RecursiveSearchResult<EnsureSuccess> {
-        info_heading!(
-            "ensure_answer_recursively(table={:?}, answer={:?})",
-            table,
-            answer
-        );
-        info!("table goal = {:#?}", self.tables[table].table_goal);
+        strand: &mut Strand<C>,
+        depth: &mut StackIndex,
+    ) -> RootSearchResult<()> {
+        // At this point, we know we have an answer for
+        // the selected subgoal of the strand.
+        // Now, we have to unify that answer onto the strand.
 
-        // First, check if this table has floundered.
-        if self.tables[table].is_floundered() {
-            return Err(RecursiveSearchFail::Floundered);
+        // If this subgoal was a `Positive` one, whichever way this
+        // particular answer turns out, there may yet be *more* answers.
+        // Enqueue that alternative for later.
+        // NOTE: this is separate from the match below because we `take` the selected_subgoal
+        // below, but here we keep it for the new `Strand`.
+        let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
+        if let Literal::Positive(_) = strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+            let mut next_subgoal = selected_subgoal.clone();
+            next_subgoal.answer_index.increment();
+            let next_strand = Strand {
+                infer: strand.infer.clone(),
+                ex_clause: strand.ex_clause.clone(),
+                selected_subgoal: Some(next_subgoal),
+                last_pursued_time: strand.last_pursued_time.clone(),
+            };
+            let table = self.stack[*depth].table;
+            let canonical_next_strand = Self::canonicalize_strand(next_strand);
+            self.tables[table].enqueue_strand(canonical_next_strand);
         }
 
-        // Next, check for a tabled answer.
-        if self.tables[table].answer(answer).is_some() {
-            info!("answer cached = {:?}", self.tables[table].answer(answer));
-            return Ok(EnsureSuccess::AnswerAvailable);
+        // Deselect and remove the selected subgoal, now that we have an answer for it.
+        let selected_subgoal = strand.selected_subgoal.take().unwrap();
+        let subgoal = strand
+            .ex_clause
+            .subgoals
+            .remove(selected_subgoal.subgoal_index);
+        match subgoal {
+            Literal::Positive(subgoal) => {
+                let SelectedSubgoal {
+                    subgoal_index: _,
+                    subgoal_table,
+                    answer_index,
+                    ref universe_map,
+                } = selected_subgoal;
+                let table_goal = &C::map_goal_from_canonical(
+                    &universe_map,
+                    &C::canonical(&self.tables[subgoal_table].table_goal),
+                );
+                let answer_subst = &C::map_subst_from_canonical(
+                    &universe_map,
+                    &self.answer(subgoal_table, answer_index).subst,
+                );
+                match strand.infer.apply_answer_subst(
+                    &mut strand.ex_clause,
+                    &subgoal,
+                    table_goal,
+                    answer_subst,
+                ) {
+                    Ok(()) => {
+                        let Strand {
+                            infer,
+                            ex_clause,
+                            selected_subgoal: _,
+                            last_pursued_time: _,
+                        } = strand;
+
+                        // If the answer had delayed literals, we have to
+                        // ensure that `ex_clause` is also delayed. This is
+                        // the SLG FACTOR operation, though NFTD just makes it
+                        // part of computing the SLG resolvent.
+                        if self.answer(subgoal_table, answer_index).ambiguous {
+                            ex_clause.ambiguous = true;
+                        }
+
+                        // Increment the answer time for the `ex_clause`. Floundered
+                        // subgoals may be eligble to be pursued again.
+                        ex_clause.answer_time.increment();
+
+                        // Apply answer abstraction.
+                        self.truncate_returned(ex_clause, infer);
+
+                        // Ok, we've applied the answer to this Strand.
+                        return Ok(());
+                    }
+
+                    // This answer led nowhere. Give up for now, but of course
+                    // there may still be other strands to pursue, so return
+                    // `QuantumExceeded`.
+                    Err(NoSolution) => {
+                        info!("answer not unifiable -> NoSolution");
+                        // This strand as no solution. It is no longer active,
+                        // so it dropped at the end of this scope.
+
+                        // Now we want to propogate back to the up with `QuantumExceeded`
+                        self.unwind_stack(*depth);
+                        return Err(RootSearchFail::QuantumExceeded);
+                    }
+                }
+            }
+            Literal::Negative(_) => {
+                if self
+                    .answer(
+                        selected_subgoal.subgoal_table,
+                        selected_subgoal.answer_index,
+                    )
+                    .is_unconditional()
+                {
+                    // We want to disproval the subgoal, but we
+                    // have an unconditional answer for the subgoal,
+                    // therefore we have failed to disprove it.
+                    info!("found unconditional answer to neg literal -> NoSolution");
+
+                    // This strand as no solution. By returning an Err,
+                    // the caller should discard this `Strand`.
+
+                    // Now we want to propogate back to the up with `QuantumExceeded`
+                    self.unwind_stack(*depth);
+                    return Err(RootSearchFail::QuantumExceeded);
+                }
+
+                // Got back a conditional answer. We neither succeed
+                // nor fail yet, so just mark as ambiguous.
+                //
+                // This corresponds to the Delaying action in NFTD.
+                // It also interesting to compare this with the EWFS
+                // paper; there, when we encounter a delayed cached
+                // answer in `negative_subgoal`, we do not immediately
+                // convert to a delayed literal, but instead simply
+                // stop. However, in EWFS, we *do* add the strand to
+                // the table as a negative pending subgoal, and also
+                // update the link to depend negatively on the
+                // table. Then later, when all pending work from that
+                // table is completed, all negative links are
+                // converted to delays.
+                //
+                // Previously, this introduced a `delayed_literal` that
+                // we could follow and potentially resolve later. However,
+                // for simplicity, we now just mark the strand as ambiguous.
+
+                // We've already removed the selected subgoal
+                // Now we just have to mark this Strand as ambiguous
+                strand.ex_clause.ambiguous = true;
+
+                // Strand is ambigious.
+                return Ok(());
+            }
+        };
+    }
+
+    /// This is called when the selected subgoal for a strand has floundered.
+    /// We have to decide what this means for the strand.
+    /// - If the strand was positively dependent on the subgoal, we flounder,
+    ///   the subgoal, then return `false`. This strand may be able to be
+    ///   retried later.
+    /// - If the strand was negatively dependent on the subgoal, then strand
+    ///   has led nowhere of interest and we return `true`. This strand should
+    ///   be discarded.
+    ///
+    /// In other words, we return whether this strand flounders.
+    fn propagate_floundered_subgoal(&mut self, strand: &mut Strand<C>) -> bool {
+        // This subgoal selection for the strand is finished, so take it
+        let selected_subgoal = strand.selected_subgoal.take().unwrap();
+        match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+            Literal::Positive(_) => {
+                // If this strand depends on this positively, then we can
+                // come back to it later. So, we mark that subgoal as
+                // floundered and yield `QuantumExceeded` up the stack
+
+                // If this subgoal floundered, push it onto the
+                // floundered list, along with the time that it
+                // floundered. We'll try to solve some other subgoals
+                // and maybe come back to it.
+                self.flounder_subgoal(&mut strand.ex_clause, selected_subgoal.subgoal_index);
+
+                return false;
+            }
+            Literal::Negative(_) => {
+                // Floundering on a negative literal isn't like a
+                // positive search: we only pursue negative literals
+                // when we already know precisely the type we are
+                // looking for. So there's no point waiting for other
+                // subgoals, we'll never recover more information.
+                //
+                // In fact, floundering on negative searches shouldn't
+                // normally happen, since there are no uninferred
+                // variables in the goal, but it can with forall
+                // goals:
+                //
+                //     forall<T> { not { T: Debug } }
+                //
+                // Here, the table we will be searching for answers is
+                // `?T: Debug`, so it could well flounder.
+
+                // This strand has no solution. It is no longer active,
+                // so it dropped at the end of this scope.
+
+                return true;
+            }
+        }
+    }
+
+    /// This is called if the selected subgoal for a `Strand` is
+    /// a coinductive cycle.
+    fn on_coinductive_subgoal(
+        &mut self,
+        depth: StackIndex,
+        mut strand: Strand<C>,
+    ) -> Result<StackIndex, RootSearchFail> {
+        // This is a co-inductive cycle. That is, this table
+        // appears somewhere higher on the stack, and has now
+        // recursively requested an answer for itself. That
+        // means that our subgoal is unconditionally true.
+
+        // This subgoal selection for the strand is finished, so take it
+        let selected_subgoal = strand.selected_subgoal.take().unwrap();
+        match strand
+            .ex_clause
+            .subgoals
+            .remove(selected_subgoal.subgoal_index)
+        {
+            Literal::Positive(_) => {
+                // We can drop this subgoal and pursue the next thing.
+                let table = self.stack[depth].table;
+                assert!(
+                    self.tables[table].coinductive_goal
+                        && self.tables[selected_subgoal.subgoal_table].coinductive_goal
+                );
+
+                self.stack[depth].active_strand = Some(strand);
+                return Ok(depth);
+            }
+            Literal::Negative(_) => {
+                // Our negative goal fails
+
+                // We discard the current strand
+                drop(strand);
+
+                // Now we yield with `QuantumExceeded`
+                self.unwind_stack(depth);
+                return Err(RootSearchFail::QuantumExceeded);
+            }
+        }
+    }
+
+    /// This is called if the selected subgoal for `strand` is
+    /// a positive, non-coinductive cycle.
+    ///
+    /// # Parameters
+    ///
+    /// * `depth` is the depth in the stack of where the subgoal appears
+    /// * `strand` the strand from the top of the stack we are pursuing
+    /// * `minimums` is the collected minimum clock times
+    fn on_positive_cycle(
+        &mut self,
+        depth: StackIndex,
+        strand: Strand<C>,
+        minimums: Minimums,
+    ) -> Result<StackIndex, RootSearchFail> {
+        // We can't take this because we might need it later to clear the cycle
+        let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
+
+        match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+            Literal::Positive(_) => {
+                self.stack[depth].cyclic_minimums.take_minimums(&minimums);
+            }
+            Literal::Negative(_) => {
+                // We depend on `not(subgoal)`. For us to continue,
+                // `subgoal` must be completely evaluated. Therefore,
+                // we depend (negatively) on the minimum link of
+                // `subgoal` as a whole -- it doesn't matter whether
+                // it's pos or neg.
+                let mins = Minimums {
+                    positive: self.stack[depth].clock,
+                    negative: minimums.minimum_of_pos_and_neg(),
+                };
+                self.stack[depth].cyclic_minimums.take_minimums(&mins);
+            }
+        }
+
+        // Ok, we've taken the minimums from this cycle above. Now,
+        // we just return the strand to the table. The table only
+        // pulls strands if they have not been checked at this
+        // depth.
+        //
+        // We also can't mark these and return early from this
+        // because the stack above us might change.
+        let table = self.stack[depth].table;
+        let canonical_strand = Self::canonicalize_strand(strand);
+        self.tables[table].enqueue_strand(canonical_strand);
+
+        // The strand isn't active, but the table is, so just continue
+        Ok(depth)
+    }
+
+    /// Invoked after we've selected a (new) subgoal for the top-most
+    /// strand. Attempts to pursue this selected subgoal.
+    ///
+    /// Returns:
+    ///
+    /// * `Ok(top_depth)` if we should keep searching. `top_depth` is
+    ///   the new depth of the stack. If may be greater than the old
+    ///   depth if we pushed a new table onto the stack.
+    /// * `Err` if the subgoal failed in some way such that the strand can be abandoned.
+    fn on_subgoal_selected(
+        &mut self,
+        mut depth: StackIndex,
+        mut strand: Strand<C>,
+    ) -> Result<StackIndex, RootSearchFail> {
+        // This may be a newly selected subgoal or an existing selected subgoal.
+
+        let SelectedSubgoal {
+            subgoal_index: _,
+            subgoal_table,
+            answer_index,
+            universe_map: _,
+        } = *strand.selected_subgoal.as_ref().unwrap();
+
+        debug!(
+            "table selection {:?} with goal: {:#?}",
+            subgoal_table, self.tables[subgoal_table].table_goal
+        );
+
+        // This is checked inside select_subgoal
+        assert!(!self.tables[subgoal_table].is_floundered());
+
+        // Check for a tabled answer.
+        if let Some(answer) = self.tables[subgoal_table].answer(answer_index) {
+            info!("answer cached = {:?}", answer);
+
+            // There was a previous answer available for this table
+            // We need to check if we can merge it into the current `Strand`.
+            match self.merge_answer_into_strand(&mut strand, &mut depth) {
+                Err(e) => {
+                    debug!("could not merge into current strand");
+                    drop(strand);
+                    return Err(e);
+                }
+                Ok(_) => {
+                    debug!("merged answer into current strand");
+                    self.stack[depth].active_strand = Some(strand);
+                    return Ok(depth);
+                }
+            }
         }
 
         // If no tabled answer is present, we ought to be requesting
         // the next available index.
-        assert_eq!(self.tables[table].next_answer_index(), answer);
+        assert_eq!(self.tables[subgoal_table].next_answer_index(), answer_index);
 
         // Next, check if the table is already active. If so, then we
         // have a recursive attempt.
-        if let Some(depth) = self.stack.is_active(table) {
-            info!("ensure_answer: cycle detected at depth {:?}", depth);
+        if let Some(cyclic_depth) = self.stack.is_active(subgoal_table) {
+            info!("cycle detected at depth {:?}", cyclic_depth);
+            let minimums = Minimums {
+                positive: self.stack[cyclic_depth].clock,
+                negative: TimeStamp::MAX,
+            };
 
-            if self.top_of_stack_is_coinductive_from(depth) {
-                return Ok(EnsureSuccess::Coinductive);
+            if self.top_of_stack_is_coinductive_from(cyclic_depth) {
+                debug!("table is coinductive");
+                return self.on_coinductive_subgoal(depth, strand);
             }
 
-            return Err(RecursiveSearchFail::PositiveCycle(Minimums {
-                positive: self.stack[depth].dfn,
-                negative: DepthFirstNumber::MAX,
-            }));
+            debug!("table encountered a positive cycle");
+            return self.on_positive_cycle(depth, strand, minimums);
         }
 
-        let dfn = self.next_dfn();
-        let depth = self.stack.push(table, dfn);
-        let result = crate::maybe_grow_stack(|| self.pursue_next_strand(context, depth));
-        self.stack.pop(table, depth);
-        info!("ensure_answer: result = {:?}", result);
-        result.map(|()| EnsureSuccess::AnswerAvailable)
+        // We don't know anything about the selected subgoal table.
+        // Set this strand as active and push it onto the stack.
+        self.stack[depth].active_strand = Some(strand);
+
+        let cyclic_minimums = Minimums::MAX;
+        depth = self.stack.push(subgoal_table, cyclic_minimums);
+        Ok(depth)
+    }
+
+    fn on_no_remaining_subgoals(
+        &mut self,
+        mut depth: StackIndex,
+        strand: Strand<C>,
+    ) -> NoRemainingSubgoalsResult {
+        debug!("no remaining subgoals for the table");
+
+        match self.pursue_answer(depth, strand) {
+            Some(()) => {
+                debug!("answer is available");
+
+                // We found an answer for this strand, and therefore an
+                // answer for this table. Now, this table was either a
+                // subgoal for another strand, or was the root table.
+                let mut caller_strand = match self.stack.pop_and_take_caller_strand(&mut depth) {
+                    Some(s) => s,
+                    None => {
+                        // That was the root table, so we are done.
+                        return NoRemainingSubgoalsResult::RootAnswerAvailable;
+                    }
+                };
+
+                match self.merge_answer_into_strand(&mut caller_strand, &mut depth) {
+                    Err(e) => {
+                        drop(caller_strand);
+                        return NoRemainingSubgoalsResult::RootSearchFail(e);
+                    }
+                    Ok(_) => {
+                        self.stack[depth].active_strand = Some(caller_strand);
+                        return NoRemainingSubgoalsResult::Success(depth);
+                    }
+                }
+            }
+            None => {
+                debug!("answer is not available (or not new)");
+
+                // This table ned nowhere of interest
+
+                // Now we yield with `QuantumExceeded`
+                self.unwind_stack(depth);
+                return NoRemainingSubgoalsResult::RootSearchFail(RootSearchFail::QuantumExceeded);
+            }
+        };
+    }
+
+    fn on_subgoal_selection_flounder(
+        &mut self,
+        mut depth: StackIndex,
+        strand: Strand<C>,
+    ) -> RootSearchFail {
+        debug!("all subgoals floundered");
+
+        // We were unable to select a subgoal for this strand
+        // because all of them had floundered or because any one
+        // that we dependended on negatively floundered
+
+        // We discard this strand because it led nowhere of interest
+        drop(strand);
+
+        loop {
+            // This table is marked as floundered
+            let table = self.stack[depth].table;
+            debug!("Marking table {:?} as floundered!", table);
+            self.tables[table].mark_floundered();
+
+            let mut strand = match self.stack.pop_and_take_caller_strand(&mut depth) {
+                Some(s) => s,
+                None => {
+                    // That was the root table, so we are done.
+                    return RootSearchFail::Floundered;
+                }
+            };
+
+            if self.propagate_floundered_subgoal(&mut strand) {
+                // This strand will never lead anywhere of interest.
+                // Drop it and continue around the loop.
+                drop(strand);
+            } else {
+                // We want to maybe pursue this strand later
+                let table = self.stack[depth].table;
+                let canonical_strand = Self::canonicalize_strand(strand);
+                self.tables[table].enqueue_strand(canonical_strand);
+
+                // Now we yield with `QuantumExceeded`
+                self.unwind_stack(depth);
+                return RootSearchFail::QuantumExceeded;
+            }
+        }
+    }
+
+    fn on_no_strands_left(&mut self, mut depth: StackIndex) -> Result<StackIndex, RootSearchFail> {
+        debug!("no more strands available (or all cycles)");
+
+        // No more strands left to try! This is either because all
+        // strands have failed or because all strands encountered a
+        // cycle.
+
+        let table = self.stack[depth].table;
+        if self.tables[table].strands_mut().count() == 0 {
+            // All strands for the table T on the top of the stack
+            // have **failed**. Hence we can pop it off the stack and
+            // check what this means for the table T' that was just
+            // below T on the stack (if any).
+            debug!("no more strands available");
+            let caller_strand = match self.stack.pop_and_borrow_caller_strand(&mut depth) {
+                Some(s) => s,
+                None => {
+                    // T was the root table, so we are done.
+                    debug!("no more solutions");
+                    return Err(RootSearchFail::NoMoreSolutions);
+                }
+            };
+
+            // This subgoal selection for the strand is finished, so take it
+            let caller_selected_subgoal = caller_strand.selected_subgoal.take().unwrap();
+            return match caller_strand.ex_clause.subgoals[caller_selected_subgoal.subgoal_index] {
+                // T' wanted an answer from T, but none is
+                // forthcoming.  Therefore, the active strand from T'
+                // has failed and can be discarded.
+                Literal::Positive(_) => {
+                    debug!("discarding strand because positive literal");
+                    self.stack[depth].active_strand.take();
+                    self.unwind_stack(depth);
+                    Err(RootSearchFail::QuantumExceeded)
+                }
+
+                // T' wanted there to be no answer from T, but none is forthcoming.
+                Literal::Negative(_) => {
+                    debug!("subgoal was proven because negative literal");
+
+                    // There is no solution for this strand. But, this
+                    // is what we want, so can remove this subgoal and
+                    // keep going.
+                    caller_strand
+                        .ex_clause
+                        .subgoals
+                        .remove(caller_selected_subgoal.subgoal_index);
+
+                    // This strand is still active, so continue
+                    Ok(depth)
+                }
+            };
+        }
+
+        let clock = self.stack[depth].clock;
+        let cyclic_minimums = self.stack[depth].cyclic_minimums;
+        if cyclic_minimums.positive >= clock && cyclic_minimums.negative >= clock {
+            debug!("cycle with no new answers");
+
+            if cyclic_minimums.negative < TimeStamp::MAX {
+                // This is a negative cycle.
+                self.unwind_stack(depth);
+                return Err(RootSearchFail::NegativeCycle);
+            }
+
+            // If all the things that we recursively depend on have
+            // positive dependencies on things below us in the stack,
+            // then no more answers are forthcoming. We can clear all
+            // the strands for those things recursively.
+            let table = self.stack[depth].table;
+            let cyclic_strands = self.tables[table].take_strands();
+            self.clear_strands_after_cycle(cyclic_strands);
+
+            // Now we yield with `QuantumExceeded`
+            self.unwind_stack(depth);
+            return Err(RootSearchFail::QuantumExceeded);
+        } else {
+            debug!("table part of a cycle");
+
+            // This table resulted in a positive cycle, so we have
+            // to check what this means for the subgoal containing
+            // this strand
+            let caller_strand = match self.stack.pop_and_borrow_caller_strand(&mut depth) {
+                Some(s) => s,
+                None => {
+                    panic!("nothing on the stack but cyclic result");
+                }
+            };
+
+            // We can't take this because we might need it later to clear the cycle
+            let caller_selected_subgoal = caller_strand.selected_subgoal.as_ref().unwrap();
+            match caller_strand.ex_clause.subgoals[caller_selected_subgoal.subgoal_index] {
+                Literal::Positive(_) => {
+                    self.stack[depth]
+                        .cyclic_minimums
+                        .take_minimums(&cyclic_minimums);
+                }
+                Literal::Negative(_) => {
+                    // We depend on `not(subgoal)`. For us to continue,
+                    // `subgoal` must be completely evaluated. Therefore,
+                    // we depend (negatively) on the minimum link of
+                    // `subgoal` as a whole -- it doesn't matter whether
+                    // it's pos or neg.
+                    let mins = Minimums {
+                        positive: self.stack[depth].clock,
+                        negative: cyclic_minimums.minimum_of_pos_and_neg(),
+                    };
+                    self.stack[depth].cyclic_minimums.take_minimums(&mins);
+                }
+            }
+
+            // We can't pursue this strand anymore, so push it back onto the table
+            let active_strand = self.stack[depth].active_strand.take().unwrap();
+            let table = self.stack[depth].table;
+            let canonical_active_strand = Self::canonicalize_strand(active_strand);
+            self.tables[table].enqueue_strand(canonical_active_strand);
+
+            // The strand isn't active, but the table is, so just continue
+            return Ok(depth);
+        }
+    }
+
+    /// Unwinds the entire stack, returning all active strands back to
+    /// their tables (this time at the end of the queue).
+    fn unwind_stack(&mut self, mut depth: StackIndex) {
+        loop {
+            match self.stack.pop_and_take_caller_strand(&mut depth) {
+                Some(active_strand) => {
+                    let table = self.stack[depth].table;
+                    let canonical_active_strand = Self::canonicalize_strand(active_strand);
+                    self.tables[table].enqueue_strand(canonical_active_strand);
+                }
+
+                None => return,
+            }
+        }
     }
 
     pub(crate) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<C> {
         self.tables[table].answer(answer).unwrap()
-    }
-
-    /// Selects the next eligible strand from the table at depth
-    /// `depth` and pursues it. If that strand encounters a cycle,
-    /// then this function will loop and keep trying strands until it
-    /// reaches one that did not encounter a cycle; that result is
-    /// propagated.  If all strands return a cycle, then the entire
-    /// subtree is "completed" by invoking `cycle`.
-    fn pursue_next_strand(
-        &mut self,
-        context: &impl ContextOps<C>,
-        depth: StackIndex,
-    ) -> RecursiveSearchResult<()> {
-        // This is a bit complicated because this is where we handle cycles.
-        let table = self.stack[depth].table;
-
-        // Strands that encountered a cyclic error.
-        let mut cyclic_strands = vec![];
-
-        // The minimum of all cyclic strands.
-        let mut cyclic_minimums = Minimums::MAX;
-
-        loop {
-            match self.tables[table].pop_next_strand() {
-                Some(canonical_strand) => {
-                    let num_universes = C::num_universes(&self.tables[table].table_goal);
-                    let CanonicalStrand {
-                        canonical_ex_clause,
-                        selected_subgoal,
-                    } = canonical_strand;
-                    let result: StrandResult<C, ()> = context.instantiate_ex_clause(
-                        num_universes,
-                        &canonical_ex_clause,
-                        |infer, ex_clause| {
-                            let strand = Strand {
-                                infer,
-                                ex_clause,
-                                selected_subgoal: selected_subgoal.clone(),
-                            };
-                            self.pursue_strand(context, depth, strand)
-                        },
-                    );
-                    match result {
-                        Ok(answer) => {
-                            // Now that we produced an answer, these
-                            // cyclic strands need to be retried.
-                            self.tables[table].extend_strands(cyclic_strands);
-                            return Ok(answer);
-                        }
-
-                        Err(StrandFail::Floundered) => {
-                            debug!("Marking table {:?} as floundered!", table);
-                            self.tables[table].mark_floundered();
-                            return Err(RecursiveSearchFail::Floundered);
-                        }
-
-                        Err(StrandFail::NoSolution) | Err(StrandFail::QuantumExceeded) => {
-                            // This strand did not produce an answer,
-                            // but either it (or some other, pending
-                            // strands) may do so in the
-                            // future. Enqueue the cyclic strands to
-                            // be retried after that point.
-                            self.tables[table].extend_strands(cyclic_strands);
-                            return Err(RecursiveSearchFail::QuantumExceeded);
-                        }
-
-                        Err(StrandFail::NegativeCycle) => {
-                            return Err(RecursiveSearchFail::NegativeCycle);
-                        }
-
-                        Err(StrandFail::PositiveCycle(canonical_strand, strand_minimums)) => {
-                            // This strand encountered a cycle. Stash
-                            // it for later and try the next one until
-                            // we know that *all* available strands
-                            // are hitting a cycle.
-                            cyclic_strands.push(canonical_strand);
-                            cyclic_minimums.take_minimums(&strand_minimums);
-                        }
-                    }
-                }
-
-                None => {
-                    // No more strands left to try! That means either we started
-                    // with no strands, or all available strands encountered a cycle.
-
-                    if cyclic_strands.is_empty() {
-                        // We started with no strands!
-                        return Err(RecursiveSearchFail::NoMoreSolutions);
-                    } else {
-                        let c = mem::replace(&mut cyclic_strands, vec![]);
-                        if let Some(err) = self.cycle(depth, c, cyclic_minimums) {
-                            return Err(err);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     fn canonicalize_strand(strand: Strand<C>) -> CanonicalStrand<C> {
@@ -322,52 +823,22 @@ impl<C: Context> Forest<C> {
             mut infer,
             ex_clause,
             selected_subgoal,
+            last_pursued_time,
         } = strand;
-        Self::canonicalize_strand_from(&mut infer, &ex_clause, selected_subgoal)
+        Self::canonicalize_strand_from(&mut infer, &ex_clause, selected_subgoal, last_pursued_time)
     }
 
     fn canonicalize_strand_from(
         infer: &mut dyn InferenceTable<C>,
         ex_clause: &ExClause<C>,
         selected_subgoal: Option<SelectedSubgoal<C>>,
+        last_pursued_time: TimeStamp,
     ) -> CanonicalStrand<C> {
         let canonical_ex_clause = infer.canonicalize_ex_clause(&ex_clause);
         CanonicalStrand {
             canonical_ex_clause,
             selected_subgoal,
-        }
-    }
-
-    /// Invoked when all available strands for a table have
-    /// encountered a cycle. In this case, the vector `strands` are
-    /// the set of strands that encountered cycles, and `minimums` is
-    /// the minimum stack depths that they were dependent on.
-    ///
-    /// Returns `None` if we have resolved the cycle and should try to
-    /// pick a strand again. Returns `Some(_)` if the cycle indicates
-    /// an error that we can propagate higher up.
-    fn cycle(
-        &mut self,
-        depth: StackIndex,
-        strands: Vec<CanonicalStrand<C>>,
-        minimums: Minimums,
-    ) -> Option<RecursiveSearchFail> {
-        let table = self.stack[depth].table;
-        assert!(self.tables[table].pop_next_strand().is_none());
-
-        let dfn = self.stack[depth].dfn;
-        if minimums.positive == dfn && minimums.negative == DepthFirstNumber::MAX {
-            // If all the things that we recursively depend on have
-            // positive dependencies on things below us in the stack,
-            // then no more answers are forthcoming. We can clear all
-            // the strands for those things recursively.
-            self.clear_strands_after_cycle(table, strands);
-            Some(RecursiveSearchFail::NoMoreSolutions)
-        } else if minimums.positive >= dfn && minimums.negative >= dfn {
-            Some(RecursiveSearchFail::NegativeCycle)
-        } else {
-            self.tables[table].extend_strands(strands);
-            Some(RecursiveSearchFail::PositiveCycle(minimums))
+            last_pursued_time,
         }
     }
 
@@ -377,62 +848,44 @@ impl<C: Context> Forest<C> {
     /// recursively clears the active strands from the tables
     /// referenced in `strands`, since all of them must encounter
     /// cycles too.
-    fn clear_strands_after_cycle(
-        &mut self,
-        table: TableIndex,
-        strands: impl IntoIterator<Item = CanonicalStrand<C>>,
-    ) {
-        assert!(self.tables[table].pop_next_strand().is_none());
+    fn clear_strands_after_cycle(&mut self, strands: impl IntoIterator<Item = CanonicalStrand<C>>) {
         for strand in strands {
             let CanonicalStrand {
                 canonical_ex_clause,
                 selected_subgoal,
+                last_pursued_time: _,
             } = strand;
             let selected_subgoal = selected_subgoal.unwrap_or_else(|| {
                 panic!(
-                    "clear_strands_after_cycle invoked on strand in table {:?} \
+                    "clear_strands_after_cycle invoked on strand in table \
                      without a selected subgoal: {:?}",
-                    table, canonical_ex_clause,
+                    canonical_ex_clause,
                 )
             });
 
             let strand_table = selected_subgoal.subgoal_table;
             let strands = self.tables[strand_table].take_strands();
-            self.clear_strands_after_cycle(strand_table, strands);
+            self.clear_strands_after_cycle(strands);
         }
     }
 
-    /// Pursues `strand` to see if it leads us to a new answer, either
-    /// by selecting a new subgoal or by checking to see if the
-    /// selected subgoal has an answer. `strand` is associated with
-    /// the table on the stack at the given `depth`.
-    fn pursue_strand(
+    fn select_subgoal(
         &mut self,
         context: &impl ContextOps<C>,
-        depth: StackIndex,
-        mut strand: Strand<C>,
-    ) -> StrandResult<C, ()> {
+        strand: &mut Strand<C>,
+    ) -> SubGoalSelection {
         loop {
-            info_heading!(
-                "pursue_strand(table={:?}, depth={:?}, ex_clause={:#?}, selected_subgoal={:?})",
-                self.stack[depth].table,
-                depth,
-                strand.infer.debug_ex_clause(&strand.ex_clause),
-                strand.selected_subgoal,
-            );
-
-            // If no subgoal has yet been selected, select one.
             while strand.selected_subgoal.is_none() {
                 if strand.ex_clause.subgoals.len() == 0 {
                     if strand.ex_clause.floundered_subgoals.is_empty() {
-                        return self.pursue_answer(depth, strand);
+                        return SubGoalSelection::NoRemainingSubgoals;
                     }
 
                     self.reconsider_floundered_subgoals(&mut strand.ex_clause);
 
                     if strand.ex_clause.subgoals.is_empty() {
                         assert!(!strand.ex_clause.floundered_subgoals.is_empty());
-                        return Err(StrandFail::Floundered);
+                        return SubGoalSelection::Floundered;
                     }
 
                     continue;
@@ -460,56 +913,24 @@ impl<C: Context> Forest<C> {
                         // that is because we have a floundered negative
                         // literal.
                         self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
-                        continue;
                     }
                 }
             }
 
-            // Find the selected subgoal and ask it for the next answer.
-            let SelectedSubgoal {
-                subgoal_index: _,
-                subgoal_table,
-                answer_index,
-                universe_map: _,
-            } = *strand.selected_subgoal.as_ref().unwrap();
-            let recursive_search_result =
-                self.ensure_answer_recursively(context, subgoal_table, answer_index);
-            let incorporate_result = match strand.ex_clause.subgoals
-                [strand.selected_subgoal.as_ref().unwrap().subgoal_index]
-            {
-                Literal::Positive(_) => self.incorporate_result_from_positive_subgoal(
-                    depth,
-                    &mut strand,
-                    recursive_search_result,
-                ),
-                Literal::Negative(_) => self.incorporate_result_from_negative_subgoal(
-                    depth,
-                    &mut strand,
-                    recursive_search_result,
-                ),
-            };
-
-            match incorporate_result {
-                Ok(_) => {}
-                Err(RecursiveSearchFail::NoMoreSolutions) => {
-                    return Err(StrandFail::NoSolution);
+            let selected_subgoal_table = strand.selected_subgoal.as_ref().unwrap().subgoal_table;
+            if self.tables[selected_subgoal_table].is_floundered() {
+                if self.propagate_floundered_subgoal(strand) {
+                    // This strand will never lead anywhere of interest.
+                    return SubGoalSelection::Floundered;
+                } else {
+                    // This subgoal has floundered and has been marked.
+                    // We previously would immediately mark the table as
+                    // floundered too, and maybe come back to it. Now, we
+                    // try to see if any other subgoals can be pursued first.
+                    continue;
                 }
-                Err(RecursiveSearchFail::Floundered) => {
-                    return Err(StrandFail::Floundered);
-                }
-                Err(RecursiveSearchFail::QuantumExceeded) => {
-                    let table = self.stack[depth].table;
-                    let canonical_strand = Self::canonicalize_strand(strand);
-                    self.tables[table].push_strand(canonical_strand);
-                    return Err(StrandFail::QuantumExceeded);
-                }
-                Err(RecursiveSearchFail::NegativeCycle) => {
-                    return Err(StrandFail::NegativeCycle);
-                }
-                Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
-                    let canonical_strand = Self::canonicalize_strand(strand);
-                    return Err(StrandFail::PositiveCycle(canonical_strand, minimums));
-                }
+            } else {
+                return SubGoalSelection::Selected;
             }
         }
     }
@@ -518,11 +939,11 @@ impl<C: Context> Forest<C> {
     /// that the strand has no subgoals left. There are two possibilities:
     ///
     /// - the strand may represent an answer we have already found; in
-    ///   that case, we can return `StrandFail::NoSolution`, as this
+    ///   that case, we can return `None`, as this
     ///   strand led nowhere of interest.
     /// - the strand may represent a new answer, in which case it is
-    ///   added to the table and `Ok` is returned.
-    fn pursue_answer(&mut self, depth: StackIndex, strand: Strand<C>) -> StrandResult<C, ()> {
+    ///   added to the table and `Some(())` is returned.
+    fn pursue_answer(&mut self, depth: StackIndex, strand: Strand<C>) -> Option<()> {
         let table = self.stack[depth].table;
         let Strand {
             mut infer,
@@ -532,10 +953,11 @@ impl<C: Context> Forest<C> {
                     constraints,
                     ambiguous,
                     subgoals,
-                    current_time: _,
+                    answer_time: _,
                     floundered_subgoals,
                 },
             selected_subgoal: _,
+            last_pursued_time: _,
         } = strand;
         assert!(subgoals.is_empty());
         assert!(floundered_subgoals.is_empty());
@@ -617,23 +1039,23 @@ impl<C: Context> Forest<C> {
                 self.tables[table].take_strands();
             }
 
-            Ok(())
+            Some(())
         } else {
-            info!("answer: not a new answer, returning StrandFail::NoSolution");
-            Err(StrandFail::NoSolution)
+            info!("answer: not a new answer, returning None");
+            None
         }
     }
 
     fn reconsider_floundered_subgoals(&mut self, ex_clause: &mut ExClause<impl Context>) {
         info!("reconsider_floundered_subgoals(ex_clause={:#?})", ex_clause,);
         let ExClause {
-            current_time,
+            answer_time,
             subgoals,
             floundered_subgoals,
             ..
         } = ex_clause;
         for i in (0..floundered_subgoals.len()).rev() {
-            if floundered_subgoals[i].floundered_time < *current_time {
+            if floundered_subgoals[i].floundered_time < *answer_time {
                 let floundered_subgoal = floundered_subgoals.swap_remove(i);
                 subgoals.push(floundered_subgoal.floundered_literal);
             }
@@ -719,15 +1141,8 @@ impl<C: Context> Forest<C> {
     fn push_initial_strands(&mut self, context: &impl ContextOps<C>, table: TableIndex) {
         // Instantiate the table goal with fresh inference variables.
         let table_goal = self.tables[table].table_goal.clone();
-        context.instantiate_ucanonical_goal(&table_goal, |mut infer, subst, environment, goal| {
-            self.push_initial_strands_instantiated(
-                context,
-                table,
-                &mut infer,
-                subst,
-                environment,
-                goal,
-            );
+        context.instantiate_ucanonical_goal(&table_goal, |infer, subst, environment, goal| {
+            self.push_initial_strands_instantiated(context, table, infer, subst, environment, goal);
         });
     }
 
@@ -735,7 +1150,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         table: TableIndex,
-        infer: &mut C::InferenceTable,
+        mut infer: C::InferenceTable,
         subst: C::Substitution,
         environment: C::Environment,
         goal: C::Goal,
@@ -743,18 +1158,23 @@ impl<C: Context> Forest<C> {
         let table_ref = &mut self.tables[table];
         match infer.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
-                match context.program_clauses(&environment, &domain_goal, infer) {
+                match context.program_clauses(&environment, &domain_goal, &mut infer) {
                     Ok(clauses) => {
                         for clause in clauses {
                             info!("program clause = {:#?}", clause);
+                            let mut infer = infer.clone();
                             if let Ok(resolvent) =
                                 infer.resolvent_clause(&environment, &domain_goal, &subst, &clause)
                             {
                                 info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
-                                table_ref.push_strand(CanonicalStrand {
-                                    canonical_ex_clause: resolvent,
+                                let strand = Strand {
+                                    infer,
+                                    ex_clause: resolvent,
                                     selected_subgoal: None,
-                                });
+                                    last_pursued_time: TimeStamp::default(),
+                                };
+                                let canonical_strand = Self::canonicalize_strand(strand);
+                                table_ref.enqueue_strand(canonical_strand);
                             }
                         }
                     }
@@ -774,12 +1194,21 @@ impl<C: Context> Forest<C> {
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
-                if let Ok(ex_clause) = Self::simplify_hh_goal(infer, subst, environment, hh_goal) {
+                if let Ok(ex_clause) =
+                    Self::simplify_hh_goal(&mut infer, subst, environment, hh_goal)
+                {
                     info!(
                         "pushing initial strand with ex-clause: {:#?}",
                         infer.debug_ex_clause(&ex_clause),
                     );
-                    table_ref.push_strand(Self::canonicalize_strand_from(infer, &ex_clause, None));
+                    let strand = Strand {
+                        infer,
+                        ex_clause,
+                        selected_subgoal: None,
+                        last_pursued_time: TimeStamp::default(),
+                    };
+                    let canonical_strand = Self::canonicalize_strand(strand);
+                    table_ref.enqueue_strand(canonical_strand);
                 }
             }
         }
@@ -938,288 +1367,16 @@ impl<C: Context> Forest<C> {
         }
     }
 
-    /// Invoked when we have selected a positive literal, created its
-    /// table, and selected a particular answer index N we are looking
-    /// for. Searches for that answer. If we find one, we can do two things:
-    ///
-    /// - create a new strand with the same selected subgoal, but searching for the
-    ///   answer with index N+1
-    /// - use the answer to resolve our selected literal and select the next subgoal
-    ///   in this strand to pursue
-    ///
-    /// When an answer is found, that corresponds to *Positive Return*
-    /// from the NFTD paper.
-    fn incorporate_result_from_positive_subgoal(
-        &mut self,
-        depth: StackIndex,
-        strand: &mut Strand<C>,
-        recursive_search_result: RecursiveSearchResult<EnsureSuccess>,
-    ) -> RecursiveSearchResult<()> {
-        let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
-        let SelectedSubgoal {
-            subgoal_index,
-            subgoal_table,
-            answer_index,
-            ref universe_map,
-        } = *selected_subgoal;
-
-        match recursive_search_result {
-            Ok(EnsureSuccess::AnswerAvailable) => {
-                // Whichever way this particular answer turns out, there may
-                // yet be *more* answers. Enqueue that alternative for later.
-                let mut next_subgoal = selected_subgoal.clone();
-                next_subgoal.answer_index.increment();
-                let table = self.stack[depth].table;
-                self.tables[table].push_strand(Self::canonicalize_strand_from(
-                    &mut strand.infer,
-                    &strand.ex_clause,
-                    Some(next_subgoal),
-                ));
-
-                // OK, let's follow *this* answer and see where it leads.
-                let subgoal = match strand.ex_clause.subgoals.remove(subgoal_index) {
-                    Literal::Positive(g) => g,
-                    Literal::Negative(g) => panic!(
-                        "incorporate_result_from_positive_subgoal invoked with negative selected literal: {:?}",
-                        g
-                    ),
-                };
-
-                let table_goal = &C::map_goal_from_canonical(
-                    &universe_map,
-                    &C::canonical(&self.tables[subgoal_table].table_goal),
-                );
-                let answer_subst = &C::map_subst_from_canonical(
-                    &universe_map,
-                    &self.answer(subgoal_table, answer_index).subst,
-                );
-                match strand.infer.apply_answer_subst(
-                    &mut strand.ex_clause,
-                    &subgoal,
-                    table_goal,
-                    answer_subst,
-                ) {
-                    Ok(()) => {
-                        let Strand {
-                            infer,
-                            ex_clause,
-                            selected_subgoal: _,
-                        } = strand;
-
-                        // If the answer had delayed literals, we have to
-                        // ensure that `ex_clause` is also delayed. This is
-                        // the SLG FACTOR operation, though NFTD just makes it
-                        // part of computing the SLG resolvent.
-                        {
-                            let answer = self.answer(subgoal_table, answer_index);
-                            if answer.ambiguous {
-                                ex_clause.ambiguous = true;
-                            }
-                        }
-
-                        // Increment time counter because we received a new answer.
-                        ex_clause.current_time.increment();
-
-                        // Apply answer abstraction.
-                        self.truncate_returned(ex_clause, infer);
-
-                        strand.selected_subgoal = None;
-                        return Ok(());
-                    }
-
-                    // This answer led nowhere. Give up for now, but of course
-                    // there may still be other strands to pursue, so return
-                    // `QuantumExceeded`.
-                    Err(NoSolution) => {
-                        info!("incorporate_result_from_positive_subgoal: answer not unifiable -> NoSolution");
-                        Err(RecursiveSearchFail::NoMoreSolutions)
-                    }
-                }
-            }
-            Ok(EnsureSuccess::Coinductive) => {
-                // This is a co-inductive cycle. That is, this table
-                // appears somewhere higher on the stack, and has now
-                // recursively requested an answer for itself. That
-                // means that our subgoal is unconditionally true, so
-                // we can drop it and pursue the next thing.
-                let table = self.stack[depth].table;
-                assert!(
-                    self.tables[table].coinductive_goal
-                        && self.tables[subgoal_table].coinductive_goal
-                );
-                strand.ex_clause.subgoals.remove(subgoal_index);
-                strand.selected_subgoal = None;
-                return Ok(());
-            }
-            Err(RecursiveSearchFail::NoMoreSolutions) => {
-                info!("incorporate_result_from_positive_subgoal: no more solutions");
-                return Err(RecursiveSearchFail::NoMoreSolutions);
-            }
-            Err(RecursiveSearchFail::Floundered) => {
-                // If this subgoal floundered, push it onto the
-                // floundered list, along with the time that it
-                // floundered. We'll try to solve some other subgoals
-                // and maybe come back to it.
-                info!("incorporate_result_from_positive_subgoal: floundered");
-                self.flounder_subgoal(&mut strand.ex_clause, subgoal_index);
-                strand.selected_subgoal = None;
-                return Err(RecursiveSearchFail::QuantumExceeded);
-            }
-            Err(RecursiveSearchFail::QuantumExceeded) => {
-                // We'll have to revisit this strand later
-                info!("incorporate_result_from_positive_subgoal: quantum exceeded");
-                return Err(RecursiveSearchFail::QuantumExceeded);
-            }
-            Err(RecursiveSearchFail::NegativeCycle) => {
-                info!("negative cycle detected");
-                return Err(RecursiveSearchFail::NegativeCycle);
-            }
-            Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
-                info!(
-                    "incorporate_result_from_positive_subgoal: cycle with minimums {:?}",
-                    minimums
-                );
-                return Err(RecursiveSearchFail::PositiveCycle(minimums));
-            }
-        }
-    }
-
-    fn incorporate_result_from_negative_subgoal(
-        &mut self,
-        depth: StackIndex,
-        strand: &mut Strand<C>,
-        recursive_search_result: RecursiveSearchResult<EnsureSuccess>,
-    ) -> RecursiveSearchResult<()> {
-        let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
-        let SelectedSubgoal {
-            subgoal_index: _,
-            subgoal_table,
-            answer_index,
-            universe_map: _,
-        } = *selected_subgoal;
-
-        // In the match below, we will either (a) return early with an
-        // error or some kind or (b) continue on to pursue this strand
-        // further. We continue onward in the case where we either
-        // proved that `answer_index` does not exist (in which case
-        // the negative literal is true) or if we found an ambiguous answer.
-        match recursive_search_result {
-            Ok(EnsureSuccess::AnswerAvailable) => {
-                if self.answer(subgoal_table, answer_index).is_unconditional() {
-                    // We want to disproval the subgoal, but we
-                    // have an unconditional answer for the subgoal,
-                    // therefore we have failed to disprove it.
-                    info!("incorporate_result_from_negative_subgoal: found unconditional answer to neg literal -> NoSolution");
-                    return Err(RecursiveSearchFail::NoMoreSolutions);
-                }
-
-                // Got back a conditional answer. We neither succeed
-                // nor fail yet, so just mark as ambiguous.
-                //
-                // This corresponds to the Delaying action in NFTD.
-                // It also interesting to compare this with the EWFS
-                // paper; there, when we encounter a delayed cached
-                // answer in `negative_subgoal`, we do not immediately
-                // convert to a delayed literal, but instead simply
-                // stop. However, in EWFS, we *do* add the strand to
-                // the table as a negative pending subgoal, and also
-                // update the link to depend negatively on the
-                // table. Then later, when all pending work from that
-                // table is completed, all negative links are
-                // converted to delays.
-                //
-                // Previously, this introduced a `delayed_literal` that
-                // we could follow and potentially resolve later. However,
-                // for simplicity, we now just mark the strand as ambiguous.
-                strand
-                    .ex_clause
-                    .subgoals
-                    .remove(selected_subgoal.subgoal_index);
-                strand.selected_subgoal = None;
-                strand.ex_clause.ambiguous = true;
-                return Ok(());
-            }
-
-            Ok(EnsureSuccess::Coinductive) => {
-                // This is a co-inductive cycle. That is, this table
-                // appears somewhere higher on the stack, and has now
-                // recursively requested an answer for itself. That
-                // means that our subgoal is unconditionally true, so
-                // our negative goal fails.
-                info!("incorporate_result_from_negative_subgoal: found coinductive answer to neg literal -> NoSolution");
-                return Err(RecursiveSearchFail::NoMoreSolutions);
-            }
-
-            Err(RecursiveSearchFail::Floundered) => {
-                // Floundering on a negative literal isn't like a
-                // positive search: we only pursue negative literals
-                // when we already know precisely the type we are
-                // looking for. So there's no point waiting for other
-                // subgoals, we'll never recover more information.
-                //
-                // In fact, floundering on negative searches shouldn't
-                // normally happen, since there are no uninferred
-                // variables in the goal, but it can with forall
-                // goals:
-                //
-                //     forall<T> { not { T: Debug } }
-                //
-                // Here, the table we will be searching for answers is
-                // `?T: Debug`, so it could well flounder.
-                return Err(RecursiveSearchFail::Floundered);
-            }
-
-            Err(RecursiveSearchFail::NegativeCycle) => {
-                return Err(RecursiveSearchFail::NegativeCycle);
-            }
-
-            Err(RecursiveSearchFail::PositiveCycle(minimums)) => {
-                // We depend on `not(subgoal)`. For us to continue,
-                // `subgoal` must be completely evaluated. Therefore,
-                // we depend (negatively) on the minimum link of
-                // `subgoal` as a whole -- it doesn't matter whether
-                // it's pos or neg.
-                let min = minimums.minimum_of_pos_and_neg();
-                info!(
-                    "incorporate_result_from_negative_subgoal: found neg cycle at depth {:?}",
-                    min
-                );
-                return Err(RecursiveSearchFail::PositiveCycle(Minimums {
-                    positive: self.stack[depth].dfn,
-                    negative: min,
-                }));
-            }
-
-            Err(RecursiveSearchFail::NoMoreSolutions) => {
-                // This answer does not exist. Huzzah, happy days are
-                // here again! =) We can just remove this subgoal and continue
-                // with no need for a delayed literal.
-                strand
-                    .ex_clause
-                    .subgoals
-                    .remove(selected_subgoal.subgoal_index);
-                strand.selected_subgoal = None;
-                return Ok(());
-            }
-
-            // Learned nothing yet. Have to try again some other time.
-            Err(RecursiveSearchFail::QuantumExceeded) => {
-                info!("incorporate_result_from_negative_subgoal: quantum exceeded");
-                return Err(RecursiveSearchFail::QuantumExceeded);
-            }
-        }
-    }
-
     /// Removes the subgoal at `subgoal_index` from the strand's
     /// subgoal list and adds it to the strand's floundered subgoal
     /// list.
     fn flounder_subgoal(&self, ex_clause: &mut ExClause<impl Context>, subgoal_index: usize) {
         info_heading!(
-            "flounder_subgoal(current_time={:?}, subgoal={:?})",
-            ex_clause.current_time,
+            "flounder_subgoal(answer_time={:?}, subgoal={:?})",
+            ex_clause.answer_time,
             ex_clause.subgoals[subgoal_index],
         );
-        let floundered_time = ex_clause.current_time;
+        let floundered_time = ex_clause.answer_time;
         let floundered_literal = ex_clause.subgoals.remove(subgoal_index);
         ex_clause.floundered_subgoals.push(FlounderedSubgoal {
             floundered_literal,
@@ -1265,7 +1422,7 @@ impl<C: Context> Forest<C> {
                         ambiguous: true,
                         constraints: vec![],
                         subgoals: vec![],
-                        current_time: TimeStamp::default(),
+                        answer_time: TimeStamp::default(),
                         floundered_subgoals: vec![],
                     },
                 );

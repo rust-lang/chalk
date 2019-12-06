@@ -61,7 +61,7 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
         goal: &DomainGoal<TF>,
         subst: &Substitution<TF>,
         clause: &ProgramClause<TF>,
-    ) -> Fallible<Canonical<ExClause<SlgContext<TF>>>> {
+    ) -> Fallible<ExClause<SlgContext<TF>>> {
         // Relating the above description to our situation:
         //
         // - `goal` G, except with binders for any existential variables.
@@ -75,8 +75,6 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
             goal,
             clause,
         );
-
-        let snapshot = self.infer.snapshot();
 
         // C' in the description above is `consequence :- conditions`.
         //
@@ -102,7 +100,7 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
             ambiguous: false,
             constraints: vec![],
             subgoals: vec![],
-            current_time: TimeStamp::default(),
+            answer_time: TimeStamp::default(),
             floundered_subgoals: vec![],
         };
 
@@ -117,11 +115,7 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
                 c => Literal::Positive(InEnvironment::new(environment, c)),
             }));
 
-        let canonical_ex_clause = self.infer.canonicalize(&ex_clause).quantified;
-
-        self.infer.rollback_to(snapshot);
-
-        Ok(canonical_ex_clause)
+        Ok(ex_clause)
     }
 
     ///////////////////////////////////////////////////////////////////////////
