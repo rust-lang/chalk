@@ -726,16 +726,17 @@ impl<C: Context> Forest<C> {
                     // There is no solution for this strand, so discard it
                     self.stack[depth].active_strand.take();
 
-                    // Now we yield with `QuantumExceeded`
+                    // Now we yield with `QuantumExceeded`, as the
+                    // table may have other strands
                     self.unwind_stack(depth);
                     return Err(RootSearchFail::QuantumExceeded);
                 }
                 Literal::Negative(_) => {
                     debug!("subgoal was proven because negative literal");
 
-                    // There is no solution for this strand
-                    // But, this is what we want, so can remove
-                    // this subgoal
+                    // There is no solution for this strand. But, this
+                    // is what we want, so can remove this subgoal and
+                    // keep going.
                     strand
                         .ex_clause
                         .subgoals
