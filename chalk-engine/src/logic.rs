@@ -262,7 +262,7 @@ impl<C: Context> Forest<C> {
     ///   be discarded.
     ///
     /// In other words, we return whether this strand flounders.
-    fn should_strand_flounder(&mut self, strand: &mut Strand<C>) -> bool {
+    fn propagate_floundered_subgoal(&mut self, strand: &mut Strand<C>) -> bool {
         // This subgoal selection for the strand is finished, so take it
         let selected_subgoal = strand.selected_subgoal.take().unwrap();
         match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
@@ -548,24 +548,19 @@ impl<C: Context> Forest<C> {
             }
             let mut strand = self.stack[depth].active_strand.take().unwrap();
 
-            match self.should_strand_flounder(&mut strand) {
-                false => {
-                    // We want to maybe pursue this strand later
-                    let table = self.stack[depth].table;
-                    let canonical_strand = Self::canonicalize_strand(strand);
-                    self.tables[table].push_strand(canonical_strand);
+            if self.propagate_floundered_subgoal(&mut strand) {
+                // This strand will never lead anywhere of interest.
+                // Drop it and continue around the loop.
+                drop(strand);
+            } else {
+                // We want to maybe pursue this strand later
+                let table = self.stack[depth].table;
+                let canonical_strand = Self::canonicalize_strand(strand);
+                self.tables[table].push_strand(canonical_strand);
 
-                    // Now we yield with `QuantumExceeded`
-                    self.unwind_stack(depth);
-                    return RootSearchFail::QuantumExceeded;
-                }
-                true => {
-                    // This strand will never lead anywhere of interest
-                    drop(strand);
-
-                    // Because a subgoal that we depended on negatively floundered,
-                    // this table flounders (continue loop).
-                }
+                // Now we yield with `QuantumExceeded`
+                self.unwind_stack(depth);
+                return RootSearchFail::QuantumExceeded;
             }
         }
     }
@@ -929,20 +924,17 @@ impl<C: Context> Forest<C> {
                 }
             }
 
-            if self.tables[strand.selected_subgoal.as_ref().unwrap().subgoal_table].is_floundered()
-            {
-                match self.should_strand_flounder(strand) {
-                    false => {
-                        // This subgoal has floundered and has been marked.
-                        // We previously would immediately mark the table as
-                        // floundered too, and maybe come back to it. Now, we
-                        // try to see if any other subgoals can be pursued first.
-                        continue;
-                    }
-                    true => {
-                        // This strand will never lead anywhere of interest.
-                        return SubGoalSelection::Floundered;
-                    }
+            let selected_subgoal_table = strand.selected_subgoal.as_ref().unwrap().subgoal_table;
+            if self.tables[selected_subgoal_table].is_floundered() {
+                if self.propagate_floundered_subgoal(strand) {
+                    // This strand will never lead anywhere of interest.
+                    return SubGoalSelection::Floundered;
+                } else {
+                    // This subgoal has floundered and has been marked.
+                    // We previously would immediately mark the table as
+                    // floundered too, and maybe come back to it. Now, we
+                    // try to see if any other subgoals can be pursued first.
+                    continue;
                 }
             } else {
                 return SubGoalSelection::Selected;
