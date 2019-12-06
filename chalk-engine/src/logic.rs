@@ -689,46 +689,47 @@ impl<C: Context> Forest<C> {
     fn on_no_strands_left(&mut self, mut depth: StackIndex) -> Result<StackIndex, RootSearchFail> {
         debug!("no more strands available (or all cycles)");
 
-        // No more strands left to try! That means either we started
-        // with no strands, or all available strands encountered a cycle.
+        // No more strands left to try! This is either because all
+        // strands have failed or because all strands encountered a
+        // cycle.
 
         let table = self.stack[depth].table;
         if self.tables[table].strands_mut().count() == 0 {
+            // All strands for the table T on the top of the stack
+            // have **failed**. Hence we can pop it off the stack and
+            // check what this means for the table T' that was just
+            // below T on the stack (if any).
             debug!("no more strands available");
-
-            // We started with no strands!
-
-            // This table has no solutions, so we have to check what
-            // this means for the subgoal containing this strand
-            let strand = {
-                self.stack.pop(depth);
-                if let Some(prev_depth) = self.stack.top_depth() {
-                    // The table was a subgoal for another strand,
-                    // which is still active.
+            self.stack.pop(depth);
+            let strand = match self.stack.top_depth() {
+                Some(prev_depth) => {
+                    // T was not the root table. Load the active
+                    // strand from its parent table T'. This strand
+                    // was waiting for an answer from T.
                     depth = prev_depth;
                     self.stack[depth].active_strand.as_mut().unwrap()
-                } else {
+                }
+                None => {
+                    // T was the root table, so we are done.
                     debug!("no more solutions");
-
-                    // That was the root table, so we are done.
                     return Err(RootSearchFail::NoMoreSolutions);
                 }
             };
 
             // This subgoal selection for the strand is finished, so take it
             let selected_subgoal = strand.selected_subgoal.take().unwrap();
-            match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+            return match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+                // T' wanted an answer from T, but none is
+                // forthcoming.  Therefore, the active strand from T'
+                // has failed and can be discarded.
                 Literal::Positive(_) => {
                     debug!("discarding strand because positive literal");
-
-                    // There is no solution for this strand, so discard it
                     self.stack[depth].active_strand.take();
-
-                    // Now we yield with `QuantumExceeded`, as the
-                    // table may have other strands
                     self.unwind_stack(depth);
-                    return Err(RootSearchFail::QuantumExceeded);
+                    Err(RootSearchFail::QuantumExceeded)
                 }
+
+                // T' wanted there to be no answer from T, but none is forthcoming.
                 Literal::Negative(_) => {
                     debug!("subgoal was proven because negative literal");
 
@@ -741,9 +742,9 @@ impl<C: Context> Forest<C> {
                         .remove(selected_subgoal.subgoal_index);
 
                     // This strand is still active, so continue
-                    return Ok(depth);
+                    Ok(depth)
                 }
-            }
+            };
         }
 
         let clock = self.stack[depth].clock;
@@ -820,6 +821,8 @@ impl<C: Context> Forest<C> {
         }
     }
 
+    /// Unwinds the entire stack, returning all active strands back to
+    /// their tables (this time at the end of the queue).
     fn unwind_stack(&mut self, mut depth: StackIndex) {
         loop {
             self.stack.pop(depth);
