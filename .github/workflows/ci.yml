@@ -32,6 +32,15 @@ jobs:
       - name: Execute tests for all crates in the workspace
         run: cargo test --all
 
+      - name: Install mdbook
+        run: cargo install mdbook
+
+      - name: Execute tests for Chalk book
+        run: cd book && mdbook test
+
+      - name: Build Chalk book
+        run: cd book && mdbook build
+
       - name: Build documentation for all crates in the workspace
         run: cargo doc --all --document-private-items --no-deps
 
@@ -40,6 +49,7 @@ jobs:
           touch target/doc/.nojekyll
           curl -LsSf https://raw.githubusercontent.com/rust-lang/simpleinfra/master/setup-deploy-keys/src/deploy.rs | rustc - -o /tmp/deploy
           (cd target/doc && /tmp/deploy)
+          (cd book/book && /tmp/deploy)
         env:
           GITHUB_DEPLOY_KEY: ${{ secrets.GITHUB_DEPLOY_KEY }}
         if: matrix.rust == 'stable' && github.ref == 'refs/heads/master'
