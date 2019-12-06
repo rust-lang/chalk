@@ -4,18 +4,12 @@ use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
 use crate::table::AnswerIndex;
 use crate::tables::Tables;
-use crate::{Answer, TableIndex, TimeStamp};
+use crate::{Answer, TableIndex};
 
 pub struct Forest<C: Context> {
     context: C,
     pub(crate) tables: Tables<C>,
     pub(crate) stack: Stack<C>,
-
-    /// This is a clock which always increases. It is
-    /// incremented every time a new subgoal is followed.
-    /// This effectively gives us way to track what depth
-    /// and loop a table or strand was last followed.
-    clock: TimeStamp,
 }
 
 impl<C: Context> Forest<C> {
@@ -24,7 +18,6 @@ impl<C: Context> Forest<C> {
             context,
             tables: Tables::new(),
             stack: Stack::default(),
-            clock: TimeStamp::default(),
         }
     }
 
@@ -36,12 +29,6 @@ impl<C: Context> Forest<C> {
     /// term in here).
     pub fn context(&self) -> &C {
         &self.context
-    }
-
-    // Gets the next clock TimeStamp. This will never decrease.
-    pub(super) fn increment_clock(&mut self) -> TimeStamp {
-        self.clock.increment();
-        self.clock
     }
 
     /// Finds the first N answers, looping as much as needed to get

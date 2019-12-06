@@ -115,8 +115,7 @@ impl<C: Context> Forest<C> {
             initial_answer
         );
 
-        let next_clock = self.increment_clock();
-        let mut depth = self.stack.push(initial_table, next_clock, Minimums::MAX);
+        let mut depth = self.stack.push(initial_table, Minimums::MAX);
         loop {
             // FIXME: use depth for debug/info printing
 
@@ -582,9 +581,8 @@ impl<C: Context> Forest<C> {
         // Set this strand as active and push it onto the stack.
         self.stack[depth].active_strand = Some(strand);
 
-        let clock = self.increment_clock();
         let cyclic_minimums = Minimums::MAX;
-        depth = self.stack.push(subgoal_table, clock, cyclic_minimums);
+        depth = self.stack.push(subgoal_table, cyclic_minimums);
         Ok(depth)
     }
 
