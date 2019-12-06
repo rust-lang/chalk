@@ -92,9 +92,10 @@ impl<C: Context> Forest<C> {
         initial_table: TableIndex,
         initial_answer: AnswerIndex,
     ) -> RootSearchResult<()> {
-        info!(
+        info_heading!(
             "ensure_answer(table={:?}, answer={:?})",
-            initial_table, initial_answer
+            initial_table,
+            initial_answer
         );
         info!("table goal = {:#?}", self.tables[initial_table].table_goal);
         // Check if this table has floundered.
