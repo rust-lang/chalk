@@ -455,8 +455,14 @@ impl<C: Context> Forest<C> {
         }
     }
 
-    /// This is called if the selected subgoal for a `Strand` is
+    /// This is called if the selected subgoal for `strand` is
     /// a positive, non-coinductive cycle.
+    ///
+    /// # Parameters
+    ///
+    /// * `depth` is the depth in the stack of where the subgoal appears
+    /// * `strand` the strand from the top of the stack we are pursuing
+    /// * `minimums` is the collected minimum clock times
     fn on_positive_cycle(
         &mut self,
         depth: StackIndex,
@@ -499,6 +505,15 @@ impl<C: Context> Forest<C> {
         Ok(depth)
     }
 
+    /// Invoked after we've selected a (new) subgoal for the top-most
+    /// strand. Attempts to pursue this selected subgoal.
+    ///
+    /// Returns:
+    ///
+    /// * `Ok(top_depth)` if we should keep searching. `top_depth` is
+    ///   the new depth of the stack. If may be greater than the old
+    ///   depth if we pushed a new table onto the stack.
+    /// * `Err` if the subgoal failed in some way such that the strand can be abandoned.
     fn on_subgoal_selected(
         &mut self,
         mut depth: StackIndex,
