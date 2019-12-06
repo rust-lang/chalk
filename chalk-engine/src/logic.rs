@@ -601,12 +601,12 @@ impl<C: Context> Forest<C> {
                 // answer for this table. Now, this table was either a
                 // subgoal for another strand, or was the root table.
                 self.stack.pop(depth);
-                let mut strand = match self.stack.top_depth() {
-                    Some(prev_depth) => {
+                let mut caller_strand = match self.stack.top_depth() {
+                    Some(caller_depth) => {
                         // The table was a subgoal for another strand,
                         // which is still active.
                         // We need to merge the answer into it.
-                        depth = prev_depth;
+                        depth = caller_depth;
                         self.stack[depth].active_strand.take().unwrap()
                     }
 
@@ -616,13 +616,13 @@ impl<C: Context> Forest<C> {
                     }
                 };
 
-                match self.merge_answer_into_strand(&mut strand, &mut depth) {
+                match self.merge_answer_into_strand(&mut caller_strand, &mut depth) {
                     Err(e) => {
-                        drop(strand);
+                        drop(caller_strand);
                         return NoRemainingSubgoalsResult::RootSearchFail(e);
                     }
                     Ok(_) => {
-                        self.stack[depth].active_strand = Some(strand);
+                        self.stack[depth].active_strand = Some(caller_strand);
                         return NoRemainingSubgoalsResult::Success(depth);
                     }
                 }
@@ -660,11 +660,11 @@ impl<C: Context> Forest<C> {
             self.tables[table].mark_floundered();
 
             self.stack.pop(depth);
-            if let Some(prev_depth) = self.stack.top_depth() {
+            if let Some(caller_depth) = self.stack.top_depth() {
                 // The table was a subgoal for another strand,
                 // which is still active.
                 // We need to decide what a floundered subgoal means
-                depth = prev_depth;
+                depth = caller_depth;
             } else {
                 // That was the root table, so we are done.
                 return RootSearchFail::Floundered;
@@ -703,12 +703,12 @@ impl<C: Context> Forest<C> {
             // below T on the stack (if any).
             debug!("no more strands available");
             self.stack.pop(depth);
-            let strand = match self.stack.top_depth() {
-                Some(prev_depth) => {
+            let caller_strand = match self.stack.top_depth() {
+                Some(caller_depth) => {
                     // T was not the root table. Load the active
                     // strand from its parent table T'. This strand
                     // was waiting for an answer from T.
-                    depth = prev_depth;
+                    depth = caller_depth;
                     self.stack[depth].active_strand.as_mut().unwrap()
                 }
                 None => {
@@ -719,8 +719,8 @@ impl<C: Context> Forest<C> {
             };
 
             // This subgoal selection for the strand is finished, so take it
-            let selected_subgoal = strand.selected_subgoal.take().unwrap();
-            return match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+            let selected_subgoal = caller_strand.selected_subgoal.take().unwrap();
+            return match caller_strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
                 // T' wanted an answer from T, but none is
                 // forthcoming.  Therefore, the active strand from T'
                 // has failed and can be discarded.
@@ -738,7 +738,7 @@ impl<C: Context> Forest<C> {
                     // There is no solution for this strand. But, this
                     // is what we want, so can remove this subgoal and
                     // keep going.
-                    strand
+                    caller_strand
                         .ex_clause
                         .subgoals
                         .remove(selected_subgoal.subgoal_index);
@@ -778,12 +778,12 @@ impl<C: Context> Forest<C> {
             // to check what this means for the subgoal containing
             // this strand
             self.stack.pop(depth);
-            let strand = match self.stack.top_depth() {
-                Some(prev_depth) => {
+            let caller_strand = match self.stack.top_depth() {
+                Some(caller_depth) => {
                     // The table was a subgoal for another strand,
                     // which is still active.
                     // We need to merge the answer into it.
-                    depth = prev_depth;
+                    depth = caller_depth;
                     self.stack[depth].active_strand.as_mut().unwrap()
                 }
 
@@ -793,8 +793,8 @@ impl<C: Context> Forest<C> {
             };
 
             // We can't take this because we might need it later to clear the cycle
-            let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
-            match strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
+            let selected_subgoal = caller_strand.selected_subgoal.as_ref().unwrap();
+            match caller_strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
                 Literal::Positive(_) => {
                     self.stack[depth]
                         .cyclic_minimums
@@ -830,8 +830,8 @@ impl<C: Context> Forest<C> {
     fn unwind_stack(&mut self, mut depth: StackIndex) {
         loop {
             self.stack.pop(depth);
-            if let Some(prev_depth) = self.stack.top_depth() {
-                depth = prev_depth;
+            if let Some(caller_depth) = self.stack.top_depth() {
+                depth = caller_depth;
             } else {
                 return;
             }
