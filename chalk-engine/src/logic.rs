@@ -480,12 +480,12 @@ impl<C: Context> Forest<C> {
                 // answer for this table. Now, this table was either a
                 // subgoal for another strand, or was the root table.
                 let mut strand = {
-                    let prev_index = self.stack.pop(depth);
-                    if let Some(index) = prev_index {
+                    self.stack.pop(depth);
+                    if let Some(prev_depth) = self.stack.top_depth() {
                         // The table was a subgoal for another strand,
                         // which is still active.
                         // We need to merge the answer into it.
-                        depth = index;
+                        depth = prev_depth;
                         self.stack[depth].active_strand.take().unwrap()
                     } else {
                         // That was the root table, so we are done.
@@ -536,12 +536,12 @@ impl<C: Context> Forest<C> {
             debug!("Marking table {:?} as floundered!", table);
             self.tables[table].mark_floundered();
 
-            let prev_index = self.stack.pop(depth);
-            if let Some(index) = prev_index {
+            self.stack.pop(depth);
+            if let Some(prev_depth) = self.stack.top_depth() {
                 // The table was a subgoal for another strand,
                 // which is still active.
                 // We need to decide what a floundered subgoal means
-                depth = index;
+                depth = prev_depth;
             } else {
                 // That was the root table, so we are done.
                 return RootSearchFail::Floundered;
@@ -580,11 +580,11 @@ impl<C: Context> Forest<C> {
             // This table has no solutions, so we have to check what
             // this means for the subgoal containing this strand
             let strand = {
-                let prev_index = self.stack.pop(depth);
-                if let Some(index) = prev_index {
+                self.stack.pop(depth);
+                if let Some(prev_depth) = self.stack.top_depth() {
                     // The table was a subgoal for another strand,
                     // which is still active.
-                    depth = index;
+                    depth = prev_depth;
                     self.stack[depth].active_strand.as_mut().unwrap()
                 } else {
                     debug!("no more solutions");
@@ -653,12 +653,12 @@ impl<C: Context> Forest<C> {
             // to check what this means for the subgoal containing
             // this strand
             let strand = {
-                let prev_index = self.stack.pop(depth);
-                if let Some(index) = prev_index {
+                self.stack.pop(depth);
+                if let Some(prev_depth) = self.stack.top_depth() {
                     // The table was a subgoal for another strand,
                     // which is still active.
                     // We need to merge the answer into it.
-                    depth = index;
+                    depth = prev_depth;
                     self.stack[depth].active_strand.as_mut().unwrap()
                 } else {
                     panic!("nothing on the stack but cyclic result");
@@ -700,9 +700,9 @@ impl<C: Context> Forest<C> {
 
     fn unwind_stack(&mut self, mut depth: StackIndex) {
         loop {
-            let next_index = self.stack.pop(depth);
-            if let Some(index) = next_index {
-                depth = index;
+            self.stack.pop(depth);
+            if let Some(prev_depth) = self.stack.top_depth() {
+                depth = prev_depth;
             } else {
                 return;
             }

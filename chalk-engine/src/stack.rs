@@ -83,9 +83,15 @@ impl<C: Context> Stack<C> {
         StackIndex::from(old_len)
     }
 
-    pub(super) fn pop(&mut self, depth: StackIndex) -> Option<StackIndex> {
+    /// Pops the top-most entry from the stack.
+    pub(super) fn pop(&mut self, depth: StackIndex) {
         assert_eq!(self.stack.len(), depth.value + 1);
         self.stack.pop();
+    }
+
+    /// Returns the index of the top of the stack, or None if the
+    /// stack is empty.
+    pub(super) fn top_depth(&self) -> Option<StackIndex> {
         if !self.stack.is_empty() {
             Some(StackIndex::from(self.stack.len() - 1))
         } else {
