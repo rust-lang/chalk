@@ -600,16 +600,8 @@ impl<C: Context> Forest<C> {
                 // We found an answer for this strand, and therefore an
                 // answer for this table. Now, this table was either a
                 // subgoal for another strand, or was the root table.
-                self.stack.pop(depth);
-                let mut caller_strand = match self.stack.top_depth() {
-                    Some(caller_depth) => {
-                        // The table was a subgoal for another strand,
-                        // which is still active.
-                        // We need to merge the answer into it.
-                        depth = caller_depth;
-                        self.stack[depth].active_strand.take().unwrap()
-                    }
-
+                let mut caller_strand = match self.stack.pop_and_take_caller_strand(&mut depth) {
+                    Some(s) => s,
                     None => {
                         // That was the root table, so we are done.
                         return NoRemainingSubgoalsResult::RootAnswerAvailable;
@@ -659,17 +651,13 @@ impl<C: Context> Forest<C> {
             debug!("Marking table {:?} as floundered!", table);
             self.tables[table].mark_floundered();
 
-            self.stack.pop(depth);
-            if let Some(caller_depth) = self.stack.top_depth() {
-                // The table was a subgoal for another strand,
-                // which is still active.
-                // We need to decide what a floundered subgoal means
-                depth = caller_depth;
-            } else {
-                // That was the root table, so we are done.
-                return RootSearchFail::Floundered;
-            }
-            let mut strand = self.stack[depth].active_strand.take().unwrap();
+            let mut strand = match self.stack.pop_and_take_caller_strand(&mut depth) {
+                Some(s) => s,
+                None => {
+                    // That was the root table, so we are done.
+                    return RootSearchFail::Floundered;
+                }
+            };
 
             if self.propagate_floundered_subgoal(&mut strand) {
                 // This strand will never lead anywhere of interest.
@@ -702,15 +690,8 @@ impl<C: Context> Forest<C> {
             // check what this means for the table T' that was just
             // below T on the stack (if any).
             debug!("no more strands available");
-            self.stack.pop(depth);
-            let caller_strand = match self.stack.top_depth() {
-                Some(caller_depth) => {
-                    // T was not the root table. Load the active
-                    // strand from its parent table T'. This strand
-                    // was waiting for an answer from T.
-                    depth = caller_depth;
-                    self.stack[depth].active_strand.as_mut().unwrap()
-                }
+            let caller_strand = match self.stack.pop_and_borrow_caller_strand(&mut depth) {
+                Some(s) => s,
                 None => {
                     // T was the root table, so we are done.
                     debug!("no more solutions");
@@ -777,16 +758,8 @@ impl<C: Context> Forest<C> {
             // This table resulted in a positive cycle, so we have
             // to check what this means for the subgoal containing
             // this strand
-            self.stack.pop(depth);
-            let caller_strand = match self.stack.top_depth() {
-                Some(caller_depth) => {
-                    // The table was a subgoal for another strand,
-                    // which is still active.
-                    // We need to merge the answer into it.
-                    depth = caller_depth;
-                    self.stack[depth].active_strand.as_mut().unwrap()
-                }
-
+            let caller_strand = match self.stack.pop_and_borrow_caller_strand(&mut depth) {
+                Some(s) => s,
                 None => {
                     panic!("nothing on the stack but cyclic result");
                 }
@@ -829,17 +802,15 @@ impl<C: Context> Forest<C> {
     /// their tables (this time at the end of the queue).
     fn unwind_stack(&mut self, mut depth: StackIndex) {
         loop {
-            self.stack.pop(depth);
-            if let Some(caller_depth) = self.stack.top_depth() {
-                depth = caller_depth;
-            } else {
-                return;
-            }
+            match self.stack.pop_and_take_caller_strand(&mut depth) {
+                Some(active_strand) => {
+                    let table = self.stack[depth].table;
+                    let canonical_active_strand = Self::canonicalize_strand(active_strand);
+                    self.tables[table].enqueue_strand(canonical_active_strand);
+                }
 
-            let active_strand = self.stack[depth].active_strand.take().unwrap();
-            let table = self.stack[depth].table;
-            let canonical_active_strand = Self::canonicalize_strand(active_strand);
-            self.tables[table].enqueue_strand(canonical_active_strand);
+                None => return,
+            }
         }
     }
 

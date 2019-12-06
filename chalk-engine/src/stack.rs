@@ -94,17 +94,43 @@ impl<C: Context> Stack<C> {
         StackIndex::from(old_len)
     }
 
-    /// Pops the top-most entry from the stack.
-    pub(super) fn pop(&mut self, depth: StackIndex) {
+    /// Pops the top-most entry from the stack, which should have the depth `*depth`:
+    /// * If the stack is now empty, returns false.
+    /// * Otherwise, adjusts depth to reflect the new top of the stack and returns true.
+    fn pop_and_adjust_depth(&mut self, depth: &mut StackIndex) -> bool {
         assert_eq!(self.stack.len(), depth.value + 1);
         self.stack.pop();
+        if depth.value == 0 {
+            false
+        } else {
+            depth.value -= 1;
+            true
+        }
     }
 
-    /// Returns the index of the top of the stack, or None if the
-    /// stack is empty.
-    pub(super) fn top_depth(&self) -> Option<StackIndex> {
-        if !self.stack.is_empty() {
-            Some(StackIndex::from(self.stack.len() - 1))
+    /// Pops the top-most entry from the stack, which should have the depth `*depth`:
+    /// * If the stack is now empty, returns None.
+    /// * Otherwise, `take`s the active strand from the new top and returns it.
+    pub(super) fn pop_and_take_caller_strand(
+        &mut self,
+        depth: &mut StackIndex,
+    ) -> Option<Strand<C>> {
+        if self.pop_and_adjust_depth(depth) {
+            Some(self[*depth].active_strand.take().unwrap())
+        } else {
+            None
+        }
+    }
+
+    /// Pops the top-most entry from the stack, which should have the depth `*depth`:
+    /// * If the stack is now empty, returns None.
+    /// * Otherwise, borrows the active strand (mutably) from the new top and returns it.
+    pub(super) fn pop_and_borrow_caller_strand(
+        &mut self,
+        depth: &mut StackIndex,
+    ) -> Option<&mut Strand<C>> {
+        if self.pop_and_adjust_depth(depth) {
+            Some(self[*depth].active_strand.as_mut().unwrap())
         } else {
             None
         }
