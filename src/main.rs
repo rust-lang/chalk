@@ -27,7 +27,6 @@ Options:
   --program=PATH      Specifies the path to the `.chalk` file containing traits/impls.
   --goal=GOAL         Specifies a goal to evaluate (may be given more than once).
   --overflow-depth=N  Specifies the overflow depth [default: 10].
-  --no-cache          Disable caching.
   --multiple          Ouput multiple answers instead of ambiguous solution.
 ";
 
@@ -37,7 +36,6 @@ struct Args {
     flag_program: Option<String>,
     flag_goal: Vec<String>,
     flag_overflow_depth: usize,
-    flag_no_cache: bool,
     flag_multiple: bool,
 }
 

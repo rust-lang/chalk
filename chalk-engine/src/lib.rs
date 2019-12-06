@@ -63,7 +63,6 @@ extern crate rustc_hash;
 
 use crate::context::Context;
 use std::cmp::min;
-use std::fmt::Debug;
 use std::usize;
 
 pub mod context;
