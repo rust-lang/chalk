@@ -56,7 +56,8 @@ impl<C: Context> Table<C> {
         }
     }
 
-    pub(crate) fn push_strand(&mut self, strand: CanonicalStrand<C>) {
+    /// Push a strand to the back of the queue of strands to be processed.
+    pub(crate) fn enqueue_strand(&mut self, strand: CanonicalStrand<C>) {
         self.strands.push_back(strand);
     }
 
@@ -68,7 +69,9 @@ impl<C: Context> Table<C> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
-    pub(crate) fn pop_next_strand_if(
+    /// Remove the next strand from the queue as long as it meets the
+    /// given criteria.
+    pub(crate) fn dequeue_next_strand_if(
         &mut self,
         test: impl Fn(&CanonicalStrand<C>) -> bool,
     ) -> Option<CanonicalStrand<C>> {

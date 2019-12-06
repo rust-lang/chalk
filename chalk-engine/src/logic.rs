@@ -130,7 +130,7 @@ impl<C: Context> Forest<C> {
             };
             let table = self.stack[*depth].table;
             let canonical_next_strand = Self::canonicalize_strand(next_strand);
-            self.tables[table].push_strand(canonical_next_strand);
+            self.tables[table].enqueue_strand(canonical_next_strand);
         }
 
         // Deselect and remove the selected subgoal, now that we have an answer for it.
@@ -385,7 +385,7 @@ impl<C: Context> Forest<C> {
         // because the stack above us might change.
         let table = self.stack[depth].table;
         let canonical_strand = Self::canonicalize_strand(strand);
-        self.tables[table].push_strand(canonical_strand);
+        self.tables[table].enqueue_strand(canonical_strand);
 
         // The strand isn't active, but the table is, so just continue
         Ok(depth)
@@ -556,7 +556,7 @@ impl<C: Context> Forest<C> {
                 // We want to maybe pursue this strand later
                 let table = self.stack[depth].table;
                 let canonical_strand = Self::canonicalize_strand(strand);
-                self.tables[table].push_strand(canonical_strand);
+                self.tables[table].enqueue_strand(canonical_strand);
 
                 // Now we yield with `QuantumExceeded`
                 self.unwind_stack(depth);
@@ -691,7 +691,7 @@ impl<C: Context> Forest<C> {
             let active_strand = self.stack[depth].active_strand.take().unwrap();
             let table = self.stack[depth].table;
             let canonical_active_strand = Self::canonicalize_strand(active_strand);
-            self.tables[table].push_strand(canonical_active_strand);
+            self.tables[table].enqueue_strand(canonical_active_strand);
 
             // The strand isn't active, but the table is, so just continue
             return Ok(depth);
@@ -710,7 +710,7 @@ impl<C: Context> Forest<C> {
             let active_strand = self.stack[depth].active_strand.take().unwrap();
             let table = self.stack[depth].table;
             let canonical_active_strand = Self::canonicalize_strand(active_strand);
-            self.tables[table].push_strand(canonical_active_strand);
+            self.tables[table].enqueue_strand(canonical_active_strand);
         }
     }
 
@@ -764,7 +764,7 @@ impl<C: Context> Forest<C> {
             // answer for the table.
             let next_strand = self.stack[depth].active_strand.take().or_else(|| {
                 self.tables[table]
-                    .pop_next_strand_if(|strand| strand.last_pursued_time < clock)
+                    .dequeue_next_strand_if(|strand| strand.last_pursued_time < clock)
                     .map(|canonical_strand| {
                         let num_universes = C::num_universes(&self.tables[table].table_goal);
                         let CanonicalStrand {
@@ -1181,7 +1181,7 @@ impl<C: Context> Forest<C> {
                                     last_pursued_time: TimeStamp::default(),
                                 };
                                 let canonical_strand = Self::canonicalize_strand(strand);
-                                table_ref.push_strand(canonical_strand);
+                                table_ref.enqueue_strand(canonical_strand);
                             }
                         }
                     }
@@ -1215,7 +1215,7 @@ impl<C: Context> Forest<C> {
                         last_pursued_time: TimeStamp::default(),
                     };
                     let canonical_strand = Self::canonicalize_strand(strand);
-                    table_ref.push_strand(canonical_strand);
+                    table_ref.enqueue_strand(canonical_strand);
                 }
             }
         }
