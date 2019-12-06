@@ -600,15 +600,17 @@ impl<C: Context> Forest<C> {
                 // We found an answer for this strand, and therefore an
                 // answer for this table. Now, this table was either a
                 // subgoal for another strand, or was the root table.
-                let mut strand = {
-                    self.stack.pop(depth);
-                    if let Some(prev_depth) = self.stack.top_depth() {
+                self.stack.pop(depth);
+                let mut strand = match self.stack.top_depth() {
+                    Some(prev_depth) => {
                         // The table was a subgoal for another strand,
                         // which is still active.
                         // We need to merge the answer into it.
                         depth = prev_depth;
                         self.stack[depth].active_strand.take().unwrap()
-                    } else {
+                    }
+
+                    None => {
                         // That was the root table, so we are done.
                         return NoRemainingSubgoalsResult::RootAnswerAvailable;
                     }
@@ -775,15 +777,17 @@ impl<C: Context> Forest<C> {
             // This table resulted in a positive cycle, so we have
             // to check what this means for the subgoal containing
             // this strand
-            let strand = {
-                self.stack.pop(depth);
-                if let Some(prev_depth) = self.stack.top_depth() {
+            self.stack.pop(depth);
+            let strand = match self.stack.top_depth() {
+                Some(prev_depth) => {
                     // The table was a subgoal for another strand,
                     // which is still active.
                     // We need to merge the answer into it.
                     depth = prev_depth;
                     self.stack[depth].active_strand.as_mut().unwrap()
-                } else {
+                }
+
+                None => {
                     panic!("nothing on the stack but cyclic result");
                 }
             };
