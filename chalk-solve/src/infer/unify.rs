@@ -77,19 +77,6 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
         })
     }
 
-    /// When we encounter a "sub-unification" problem that is in a distinct
-    /// environment, we invoke this routine.
-    fn sub_unify<T>(&mut self, ty1: T, ty2: T) -> Fallible<()>
-    where
-        T: Zip<TF> + Fold<TF>,
-    {
-        let sub_unifier = Unifier::new(self.table, &self.environment);
-        let UnificationResult { goals, constraints } = sub_unifier.unify(&ty1, &ty2)?;
-        self.goals.extend(goals);
-        self.constraints.extend(constraints);
-        Ok(())
-    }
-
     fn unify_ty_ty<'a>(&mut self, a: &'a Ty<TF>, b: &'a Ty<TF>) -> Fallible<()> {
         //         ^^                 ^^         ^^ FIXME rustc bug
         if let Some(n_a) = self.table.normalize_shallow(a) {
@@ -135,17 +122,15 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
                 self.unify_binders(quantified_ty1, quantified_ty2)
             }
 
-            // Unifying `forall<X> { T }` with some other type `U`
-            (&TyData::ForAll(ref quantified_ty), &TyData::Apply(_))
-            | (&TyData::ForAll(ref quantified_ty), &TyData::Placeholder(_))
-            | (&TyData::ForAll(ref quantified_ty), &TyData::Dyn(_)) => {
-                self.unify_forall_other(quantified_ty, b)
-            }
-
-            (&TyData::Apply(_), &TyData::ForAll(ref quantified_ty))
-            | (&TyData::Placeholder(_), &TyData::ForAll(ref quantified_ty))
-            | (&TyData::Dyn(_), &TyData::ForAll(ref quantified_ty)) => {
-                self.unify_forall_other(quantified_ty, a)
+            // This would correspond to unifying a `fn` type with a non-fn
+            // type in Rust; error.
+            (&TyData::ForAll(_), &TyData::Apply(_))
+            | (&TyData::ForAll(_), &TyData::Dyn(_))
+            | (&TyData::ForAll(_), &TyData::Placeholder(_))
+            | (&TyData::Apply(_), &TyData::ForAll(_))
+            | (&TyData::Placeholder(_), &TyData::ForAll(_))
+            | (&TyData::Dyn(_), &TyData::ForAll(_)) => {
+                return Err(NoSolution);
             }
 
             (&TyData::Placeholder(ref p1), &TyData::Placeholder(ref p2)) => {
@@ -241,26 +226,6 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             }
             .cast(),
         )))
-    }
-
-    /// Unifying `forall<X> { T }` with some other type `U` --
-    /// to do so, we create a fresh placeholder `P` for `X` and
-    /// see if `[X/Px] T` can be unified with `U`. This should
-    /// almost never be true, actually, unless `X` is unused.
-    fn unify_forall_other(&mut self, ty1: &QuantifiedApply<TF>, ty2: &Ty<TF>) -> Fallible<()> {
-        let ui = self.table.new_universe();
-        let lifetimes1: Vec<_> = (0..ty1.num_binders)
-            .map(|idx| {
-                LifetimeData::Placeholder(PlaceholderIndex { ui, idx })
-                    .intern()
-                    .cast()
-            })
-            .collect();
-
-        let ty1 = ty1.substitute(&lifetimes1);
-        let ty2 = ty2.clone();
-
-        self.sub_unify(ty1, ty2)
     }
 
     /// Unify an inference variable `var` with some non-inference

@@ -130,7 +130,7 @@ fn equality_binder() {
         goal {
             forall<T> {
                 exists<'a> {
-                    for<'c> Ref<'c, T> = Ref<'a, T>
+                    for<'c> Ref<'c, T> = for<> Ref<'a, T>
                 }
             }
         } yields {
@@ -293,11 +293,11 @@ fn quantified_types() {
         }
 
         goal {
-            forall<'a> { fn<'a>: Foo }
+            forall<'a> { for<> fn<'a>: Foo }
         } yields {
             // Lifetime constraints are unsatisfiable
             "Unique; substitution [], \
-            lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '!1_0 }]"
+            lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0 == '!3_0 }]"
         }
     }
 }
