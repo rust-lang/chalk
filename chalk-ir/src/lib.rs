@@ -1022,7 +1022,7 @@ pub struct UCanonical<T> {
 impl<T> UCanonical<T> {
     pub fn is_trivial_substitution<TF: TypeFamily>(
         &self,
-        canonical_subst: &Canonical<ConstrainedSubst<TF>>,
+        canonical_subst: &Canonical<AnswerSubst<TF>>,
     ) -> bool {
         let subst = &canonical_subst.value.subst;
         assert_eq!(self.canonical.binders.len(), subst.parameters.len());
@@ -1232,4 +1232,11 @@ impl<'a, TF: TypeFamily> DefaultPlaceholderFolder for &'a Substitution<TF> {}
 pub struct ConstrainedSubst<TF: TypeFamily> {
     pub subst: Substitution<TF>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
     pub constraints: Vec<InEnvironment<Constraint<TF>>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasTypeFamily)]
+pub struct AnswerSubst<TF: TypeFamily> {
+    pub subst: Substitution<TF>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
+    pub constraints: Vec<InEnvironment<Constraint<TF>>>,
+    pub delayed_subgoals: Vec<InEnvironment<Goal<TF>>>,
 }

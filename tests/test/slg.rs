@@ -97,7 +97,7 @@ fn basic() {
             forall<T> { if (T: Sized) { T: Sized } }
         } first 2 with max 10 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [],
@@ -132,7 +132,7 @@ fn breadth_first() {
             exists<T> { T: Sized }
         } first 5 with max 10 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := i32],
@@ -142,7 +142,7 @@ fn breadth_first() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Vec<i32>],
@@ -152,7 +152,7 @@ fn breadth_first() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Slice<i32>],
@@ -162,7 +162,7 @@ fn breadth_first() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Vec<Vec<i32>>],
@@ -172,7 +172,7 @@ fn breadth_first() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Slice<Vec<i32>>],
@@ -347,7 +347,7 @@ fn subgoal_cycle_uninhabited() {
             not { exists<T> { T: Foo } }
         } first 10 with max 2 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [],
@@ -365,7 +365,7 @@ fn subgoal_cycle_uninhabited() {
             forall<T> { not { T: Foo } }
         } first 10 with max 2 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [],
@@ -391,7 +391,7 @@ fn subgoal_cycle_uninhabited() {
             exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
         } first 10 with max 4 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Vec<u32>],
@@ -409,7 +409,7 @@ fn subgoal_cycle_uninhabited() {
             forall<U> { if (U: Foo) { exists<T> { T: Foo } } }
         } first 10 with max 2 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := !1_0],
@@ -440,7 +440,7 @@ fn subgoal_cycle_inhabited() {
             exists<T> { T: Foo }
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := u32],
@@ -469,7 +469,7 @@ fn basic_region_constraint_from_positive_impl() {
             forall<'a, 'b, T> { Ref<'a, 'b, T>: Foo }
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [],
@@ -511,7 +511,7 @@ fn example_2_1_EWFS() {
             exists<V> { a: TransitiveClosure<V> }
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := b],
@@ -521,7 +521,7 @@ fn example_2_1_EWFS() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := c],
@@ -531,7 +531,7 @@ fn example_2_1_EWFS() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := a],
@@ -570,7 +570,7 @@ fn example_2_2_EWFS() {
             c: M
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [],
@@ -693,7 +693,7 @@ fn cached_answers_1() {
             exists<T> { T: Sour }
         } first 10 with max 2 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Lemon],
@@ -703,7 +703,7 @@ fn cached_answers_1() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Vinegar],
@@ -713,7 +713,7 @@ fn cached_answers_1() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := HotSauce<Lemon>],
@@ -723,7 +723,7 @@ fn cached_answers_1() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := HotSauce<Vinegar>],
@@ -733,7 +733,7 @@ fn cached_answers_1() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := HotSauce<^0>],
@@ -769,7 +769,7 @@ fn cached_answers_2() {
             exists<T> { T: Sour }
         } first 10 with max 2 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Lemon],
@@ -779,7 +779,7 @@ fn cached_answers_2() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Vinegar],
@@ -789,7 +789,7 @@ fn cached_answers_2() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := HotSauce<Lemon>],
@@ -799,7 +799,7 @@ fn cached_answers_2() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := HotSauce<Vinegar>],
@@ -809,7 +809,7 @@ fn cached_answers_2() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := HotSauce<^0>],
@@ -845,7 +845,7 @@ fn cached_answers_3() {
             exists<T> { T: Sour }
         } first 10 with max 2 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Lemon],
@@ -855,7 +855,7 @@ fn cached_answers_3() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := HotSauce<Lemon>],
@@ -865,7 +865,7 @@ fn cached_answers_3() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Vinegar],
@@ -875,7 +875,7 @@ fn cached_answers_3() {
                     },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := HotSauce<^0>],
@@ -887,7 +887,7 @@ fn cached_answers_3() {
                     },
                     ambiguous: true
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := HotSauce<Vinegar>],
@@ -952,24 +952,24 @@ fn non_enumerable_traits_direct() {
             exists<A> { A: Enumerable }
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Foo]
                             constraints: []
                         }
                         binders: []
-                    }
+                    },
                     ambiguous: false
                 },
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Bar]
                             constraints: []
                         }
                         binders: []
-                    }
+                    },
                     ambiguous: false
                 }
             ]"
@@ -979,14 +979,14 @@ fn non_enumerable_traits_direct() {
             Foo: NonEnumerable
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: []
                             constraints: []
                         }
                         binders: []
-                    }
+                    },
                     ambiguous: false
                 }
             ]"
@@ -1078,14 +1078,14 @@ fn non_enumerable_traits_reorder() {
             exists<A> { A: Debug1 }
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Foo]
                             constraints: []
                         }
                         binders: []
-                    }
+                    },
                     ambiguous: false
                 }
             ]"
@@ -1096,14 +1096,14 @@ fn non_enumerable_traits_reorder() {
             exists<A> { A: Debug2 }
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Foo]
                             constraints: []
                         }
                         binders: []
-                    }
+                    },
                     ambiguous: false
                 }
             ]"
@@ -1164,14 +1164,14 @@ fn negative_reorder() {
             exists<A> { A: Debug1 }
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Bar]
                             constraints: []
                         }
                         binders: []
-                    }
+                    },
                     ambiguous: false
                 }
             ]"
@@ -1182,14 +1182,14 @@ fn negative_reorder() {
             exists<A> { A: Debug2 }
         } first 10 with max 3 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [?0 := Bar]
                             constraints: []
                         }
                         binders: []
-                    }
+                    },
                     ambiguous: false
                 }
             ]"
@@ -1238,19 +1238,7 @@ fn coinductive_unsound1() {
         goal {
             forall<X> { X: C1orC2 }
         } first 10 with max 3 {
-            // FIXME(chalk#248) -- demonstrate bug in coinduction
-            r"[
-                Answer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [],
-                            constraints: []
-                        }
-                        binders: []
-                    }
-                    ambiguous: false
-                }
-           ]"
+            r"[]"
         }
     }
 }
@@ -1343,7 +1331,7 @@ fn max_size_infinite_loop_regression() {
             }
         } first 1 with max 4 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [],
@@ -1368,7 +1356,7 @@ fn max_size_infinite_loop_regression() {
             }
         } first 1 with max 10 {
             r"[
-                Answer {
+                CompleteAnswer {
                     subst: Canonical {
                         value: ConstrainedSubst {
                             subst: [],
@@ -1379,6 +1367,216 @@ fn max_size_infinite_loop_regression() {
                     ambiguous: false
                 }
            ]"
+        }
+    }
+}
+
+#[test]
+fn coinductive_multicycle1() {
+    test! {
+        program {
+            trait Any { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            forall<T> {
+                T: C1 if T: C2
+            }
+
+            forall<T> {
+                T: C2 if T: C3
+            }
+
+            forall<T> {
+                T: C3 if T: C1
+            }
+
+            forall<T> {
+                T: Any if T: C3
+            }
+
+            forall<T> {
+                T: Any if T: C2
+            }
+
+            forall<T> {
+                T: Any if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: Any }
+        } first 10 with max 3 {
+            r"[
+                CompleteAnswer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: []
+                            constraints: []
+                        }
+                        binders: []
+                    },
+                    ambiguous: false
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+fn coinductive_multicycle2() {
+    test! {
+        program {
+            trait Any { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            forall<T> {
+                T: C1 if T: C2
+            }
+
+            forall<T> {
+                T: C2 if T: C3
+            }
+
+            forall<T> {
+                T: C3 if T: C1, T: C2
+            }
+
+            forall<T> {
+                T: Any if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: Any }
+        } first 10 with max 3 {
+            r"[
+                CompleteAnswer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: []
+                            constraints: []
+                        }
+                        binders: []
+                    },
+                    ambiguous: false
+                }
+            ]"
+        }
+    }
+}
+
+#[test]
+fn coinductive_multicycle3() {
+    test! {
+        program {
+            trait Any { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            trait C4 { }
+
+            forall<T> {
+                T: C1 if T: C2
+            }
+
+            forall<T> {
+                T: C2 if T: C3, T: C4
+            }
+
+            forall<T> {
+                T: C3 if T: C1
+            }
+
+            forall<T> {
+                T: Any if T: C3
+            }
+
+            forall<T> {
+                T: Any if T: C2
+            }
+
+            forall<T> {
+                T: Any if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: Any }
+        } first 10 with max 3 {
+            r"[]"
+        }
+    }
+}
+
+#[test]
+fn coinductive_multicycle4() {
+    test! {
+        program {
+            trait Any { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            trait C4 { }
+
+            forall<T> {
+                T: C1 if T: C2
+            }
+
+            forall<T> {
+                T: C2 if T: C3
+            }
+
+            forall<T> {
+                T: C3 if T: C1, T: C4
+            }
+
+            forall<T> {
+                T: Any if T: C3
+            }
+
+            forall<T> {
+                T: Any if T: C2
+            }
+
+            forall<T> {
+                T: Any if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: Any }
+        } first 10 with max 3 {
+            r"[]"
         }
     }
 }

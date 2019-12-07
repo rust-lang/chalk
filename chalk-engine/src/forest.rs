@@ -4,7 +4,7 @@ use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
 use crate::table::AnswerIndex;
 use crate::tables::Tables;
-use crate::{Answer, TableIndex};
+use crate::{CompleteAnswer, TableIndex};
 
 pub struct Forest<C: Context> {
     context: C,
@@ -45,7 +45,7 @@ impl<C: Context> Forest<C> {
         context: &impl ContextOps<C>,
         goal: C::UCanonicalGoalInEnvironment,
         num_answers: usize,
-    ) -> Option<Vec<Answer<C>>> {
+    ) -> Option<Vec<CompleteAnswer<C>>> {
         let table = self.get_or_create_table_for_ucanonical_goal(context, goal);
         let mut answers = Vec::with_capacity(num_answers);
         for i in 0..num_answers {
@@ -181,7 +181,7 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
     /// # Panics
     ///
     /// Panics if a negative cycle was detected.
-    fn peek_answer(&mut self) -> Option<Answer<C>> {
+    fn peek_answer(&mut self) -> Option<CompleteAnswer<C>> {
         loop {
             match self
                 .forest
@@ -193,7 +193,7 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
 
                 Err(RootSearchFail::Floundered) => {
                     let table_goal = &self.forest.tables[self.table].table_goal;
-                    return Some(Answer {
+                    return Some(CompleteAnswer {
                         subst: self.context.identity_constrained_subst(table_goal),
                         ambiguous: true,
                     });
@@ -217,7 +217,7 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
         }
     }
 
-    fn next_answer(&mut self) -> Option<Answer<C>> {
+    fn next_answer(&mut self) -> Option<CompleteAnswer<C>> {
         self.peek_answer().map(|answer| {
             self.answer.increment();
             answer

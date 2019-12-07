@@ -4,8 +4,9 @@ use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::AnswerIndex;
-use crate::Answer;
-use crate::{ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp};
+use crate::{
+    Answer, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
+};
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -69,12 +70,58 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         table: TableIndex,
-        answer: AnswerIndex,
-    ) -> RootSearchResult<&Answer<C>> {
+        answer_index: AnswerIndex,
+    ) -> RootSearchResult<CompleteAnswer<C>> {
         assert!(self.stack.is_empty());
 
-        match self.ensure_root_answer(context, table, answer) {
-            Ok(()) => Ok(self.tables[table].answer(answer).unwrap()),
+        match self.ensure_root_answer(context, table, answer_index) {
+            Ok(()) => {
+                let answer = self.answer(table, answer_index);
+
+                // At this point, there already shouldn't be
+                // any *trivial* delayed subgoals, since those should
+                // be removed from the Answer when it is published in
+                // any case. What we have to be concerned about are
+                // delayed subgoals that were cached with a different
+                // stack.
+
+                for delayed_subgoal in C::delayed_subgoals(&answer.subst).clone() {
+                    let canonical_delayed_subgoal =
+                        C::apply_binders(&self.tables[table].table_goal, &delayed_subgoal);
+                    let delayed_table = self.get_or_create_table_for_ucanonical_goal(
+                        context,
+                        canonical_delayed_subgoal,
+                    );
+                    loop {
+                        // FIXME: this shouldn't be `AnswerIndex::ZERO`
+                        match self.ensure_root_answer(context, delayed_table, AnswerIndex::ZERO) {
+                            Ok(answer) => break answer,
+                            Err(RootSearchFail::Floundered) => unimplemented!(),
+                            Err(RootSearchFail::QuantumExceeded) => continue,
+                            Err(RootSearchFail::NoMoreSolutions) => {
+                                return Err(RootSearchFail::NoMoreSolutions)
+                            }
+                            Err(RootSearchFail::NegativeCycle) => {
+                                return Err(RootSearchFail::NegativeCycle)
+                            }
+                        }
+                    }
+                }
+
+                let answer = self.answer(table, answer_index);
+
+                // FIXME: The answer still has delayed subgoals, but all *have* an answer
+                // (or we would have returned `NoMoreSolutions` above). But we haven't incorporated those
+                // answers into the `CompleteAnswer`
+                //assert!(!C::has_delayed_subgoals(&answer.subst));
+
+                Ok(CompleteAnswer {
+                    subst: C::canonical_constrained_subst_from_canonical_constrained_answer(
+                        &answer.subst,
+                    ),
+                    ambiguous: answer.ambiguous,
+                })
+            }
             Err(err) => Err(err),
         }
     }
@@ -271,8 +318,8 @@ impl<C: Context> Forest<C> {
                             last_pursued_time: _,
                         } = strand;
 
-                        // If the answer had delayed literals, we have to
-                        // ensure that `ex_clause` is also delayed. This is
+                        // If the answer had was ambiguous, we have to
+                        // ensure that `ex_clause` is also ambiguous. This is
                         // the SLG FACTOR operation, though NFTD just makes it
                         // part of computing the SLG resolvent.
                         if self.answer(subgoal_table, answer_index).ambiguous {
@@ -305,13 +352,27 @@ impl<C: Context> Forest<C> {
                 }
             }
             Literal::Negative(_) => {
-                if self
-                    .answer(
-                        selected_subgoal.subgoal_table,
-                        selected_subgoal.answer_index,
-                    )
-                    .is_unconditional()
-                {
+                let SelectedSubgoal {
+                    subgoal_index: _,
+                    subgoal_table,
+                    answer_index,
+                    universe_map: _,
+                } = selected_subgoal;
+                // We got back an answer. This is bad, because we want
+                // to disprove the subgoal, but it may be
+                // "conditional" (maybe true, maybe not).
+                let answer = self.answer(subgoal_table, answer_index);
+
+                // By construction, we do not expect negative subgoals
+                // to have delayed subgoals. This is because we do not
+                // need to permit `not { L }` where `L` is a
+                // coinductive goal. We could improve this if needed,
+                // but it keeps things simple.
+                if C::has_delayed_subgoals(&answer.subst) {
+                    panic!("Negative subgoal had delayed_subgoals");
+                }
+
+                if !answer.ambiguous {
                     // We want to disproval the subgoal, but we
                     // have an unconditional answer for the subgoal,
                     // therefore we have failed to disprove it.
@@ -325,27 +386,12 @@ impl<C: Context> Forest<C> {
                     return Err(RootSearchFail::QuantumExceeded);
                 }
 
-                // Got back a conditional answer. We neither succeed
-                // nor fail yet, so just mark as ambiguous.
+                // Otherwise, the answer is ambiguous. We can keep going,
+                // but we have to mark our strand, too, as ambiguous.
                 //
-                // This corresponds to the Delaying action in NFTD.
-                // It also interesting to compare this with the EWFS
-                // paper; there, when we encounter a delayed cached
-                // answer in `negative_subgoal`, we do not immediately
-                // convert to a delayed literal, but instead simply
-                // stop. However, in EWFS, we *do* add the strand to
-                // the table as a negative pending subgoal, and also
-                // update the link to depend negatively on the
-                // table. Then later, when all pending work from that
-                // table is completed, all negative links are
-                // converted to delays.
-                //
-                // Previously, this introduced a `delayed_literal` that
-                // we could follow and potentially resolve later. However,
-                // for simplicity, we now just mark the strand as ambiguous.
-
-                // We've already removed the selected subgoal
-                // Now we just have to mark this Strand as ambiguous
+                // We want to disproval the subgoal, but we
+                // have an unconditional answer for the subgoal,
+                // therefore we have failed to disprove it.
                 strand.ex_clause.ambiguous = true;
 
                 // Strand is ambigious.
@@ -411,8 +457,9 @@ impl<C: Context> Forest<C> {
     fn on_coinductive_subgoal(&mut self, mut strand: Strand<C>) -> Result<(), RootSearchFail> {
         // This is a co-inductive cycle. That is, this table
         // appears somewhere higher on the stack, and has now
-        // recursively requested an answer for itself. That
-        // means that our subgoal is unconditionally true.
+        // recursively requested an answer for itself. This
+        // means that we have to delay this subgoal until we
+        // reach a trivial self-cycle.
 
         // This subgoal selection for the strand is finished, so take it
         let selected_subgoal = strand.selected_subgoal.take().unwrap();
@@ -421,26 +468,23 @@ impl<C: Context> Forest<C> {
             .subgoals
             .remove(selected_subgoal.subgoal_index)
         {
-            Literal::Positive(_) => {
-                // We can drop this subgoal and pursue the next thing.
+            Literal::Positive(subgoal) => {
+                // We delay this subgoal
                 let table = self.stack.top().table;
                 assert!(
                     self.tables[table].coinductive_goal
                         && self.tables[selected_subgoal.subgoal_table].coinductive_goal
                 );
 
+                strand.ex_clause.delayed_subgoals.push(subgoal);
+
                 self.stack.top().active_strand = Some(strand);
                 return Ok(());
             }
             Literal::Negative(_) => {
-                // Our negative goal fails
-
-                // We discard the current strand
-                drop(strand);
-
-                // Now we yield with `QuantumExceeded`
-                self.unwind_stack();
-                return Err(RootSearchFail::QuantumExceeded);
+                // We don't allow coinduction for negative literals
+                info!("found coinductive answer to negative literal");
+                panic!("Coinductive cycle with negative literal");
             }
         }
     }
@@ -929,6 +973,7 @@ impl<C: Context> Forest<C> {
                     constraints,
                     ambiguous,
                     subgoals,
+                    delayed_subgoals,
                     answer_time: _,
                     floundered_subgoals,
                 },
@@ -938,13 +983,10 @@ impl<C: Context> Forest<C> {
         assert!(subgoals.is_empty());
         assert!(floundered_subgoals.is_empty());
 
-        let answer_subst = infer.canonicalize_constrained_subst(subst, constraints);
-        debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
+        let subst = infer.canonicalize_answer_subst(subst, constraints, delayed_subgoals);
+        debug!("answer: table={:?}, subst={:?}", table, subst);
 
-        let answer = Answer {
-            subst: answer_subst,
-            ambiguous: ambiguous,
-        };
+        let answer = Answer { subst, ambiguous };
 
         // A "trivial" answer is one that is 'just true for all cases'
         // -- in other words, it gives no information back to the
@@ -1398,6 +1440,7 @@ impl<C: Context> Forest<C> {
                         ambiguous: true,
                         constraints: vec![],
                         subgoals: vec![],
+                        delayed_subgoals: vec![],
                         answer_time: TimeStamp::default(),
                         floundered_subgoals: vec![],
                     },
