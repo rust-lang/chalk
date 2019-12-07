@@ -36,7 +36,7 @@ fn futures_ambiguity() {
         goal {
             forall<T> { if (T: FutureResult) { exists<I, E> { T: Future<Output = Result<I, E>> } } }
         } yields {
-            r"Unique; substitution [?0 := (FutureResult::Item)<!1_0>, ?1 := (FutureResult::Error)<!1_0>], lifetime constraints []"
+            r"Unique; substitution [?0 := <!1_0 as FutureResult>::Item, ?1 := <!1_0 as FutureResult>::Error], lifetime constraints []"
         }
     }
 }

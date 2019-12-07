@@ -123,11 +123,13 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             (&TyData::InferenceVar(var), &TyData::Apply(_))
             | (&TyData::InferenceVar(var), &TyData::Opaque(_))
             | (&TyData::InferenceVar(var), &TyData::Dyn(_))
+            | (&TyData::InferenceVar(var), &TyData::Projection(_))
             | (&TyData::InferenceVar(var), &TyData::ForAll(_)) => self.unify_var_ty(var, b),
 
             (&TyData::Apply(_), &TyData::InferenceVar(var))
             | (TyData::Opaque(_), &TyData::InferenceVar(var))
             | (&TyData::Dyn(_), &TyData::InferenceVar(var))
+            | (&TyData::Projection(_), &TyData::InferenceVar(var))
             | (&TyData::ForAll(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, a),
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
@@ -179,7 +181,6 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             // Trait>::Item` with some other type `U`.
             (&TyData::Apply(_), &TyData::Projection(ref proj))
             | (&TyData::ForAll(_), &TyData::Projection(ref proj))
-            | (&TyData::InferenceVar(_), &TyData::Projection(ref proj))
             | (&TyData::Dyn(_), &TyData::Projection(ref proj))
             | (&TyData::Opaque(_), &TyData::Projection(ref proj)) => {
                 self.unify_projection_ty(proj, a)
@@ -188,7 +189,6 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             (&TyData::Projection(ref proj), &TyData::Projection(_))
             | (&TyData::Projection(ref proj), &TyData::Apply(_))
             | (&TyData::Projection(ref proj), &TyData::ForAll(_))
-            | (&TyData::Projection(ref proj), &TyData::InferenceVar(_))
             | (&TyData::Projection(ref proj), &TyData::Dyn(_))
             | (&TyData::Projection(ref proj), &TyData::Opaque(_)) => {
                 self.unify_projection_ty(proj, b)
