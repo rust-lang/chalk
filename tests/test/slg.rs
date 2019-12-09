@@ -1296,3 +1296,89 @@ fn coinductive_unsound2() {
         }
     }
 }
+
+// See rust-lang/chalk#280
+#[test]
+fn max_size_infinite_loop_regression() {
+    test! {
+        program {
+            trait FnOnce<Args> {
+                type Output;
+            }
+
+            trait Try {
+                type Ok;
+                type Error;
+            }
+
+            struct Tuple<A, B> { }
+
+            trait ParallelIterator {
+                type Item;
+            }
+        }
+
+        //fn try_reduce_with<PI, R, T>(pi: PI, reduce_op: R) -> Option<T>
+        //    where
+        //        PI: ParallelIterator<Item = T>,
+        //        R: FnOnce(T::Ok) -> T,
+        //        T: Try,
+        //    {
+        //        pi.drive_unindexed()
+        //    }
+        //
+        // where `drive_unindexed` is a method in `ParallelIterator`:
+        //
+        // fn drive_unindexed(self) -> ();
+
+        goal {
+            forall<PI, R, T> {
+                if (
+                    PI: ParallelIterator<Item = T>;
+                    R: FnOnce<Tuple< <T as Try>::Ok, <T as Try>::Ok >>;
+                    T: Try
+                ) {
+                    PI: ParallelIterator
+                }
+            }
+        } first 1 with max 4 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: []
+                        }
+                        binders: []
+                    }
+                    ambiguous: false
+                }
+           ]"
+        }
+
+        goal {
+            forall<PI, R, T> {
+                if (
+                    PI: ParallelIterator<Item = T>;
+                    R: FnOnce<Tuple< <T as Try>::Ok, <T as Try>::Ok >>;
+                    T: Try
+                ) {
+                    PI: ParallelIterator
+                }
+            }
+        } first 1 with max 10 {
+            r"[
+                Answer {
+                    subst: Canonical {
+                        value: ConstrainedSubst {
+                            subst: [],
+                            constraints: []
+                        }
+                        binders: []
+                    }
+                    ambiguous: false
+                }
+           ]"
+        }
+    }
+}
