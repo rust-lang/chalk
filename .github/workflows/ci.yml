@@ -48,7 +48,7 @@ jobs:
         run: |
           touch target/doc/.nojekyll
           curl -LsSf https://raw.githubusercontent.com/rust-lang/simpleinfra/master/setup-deploy-keys/src/deploy.rs | rustc - -o /tmp/deploy
-          cp -r book/book/* target/doc
+          cp -r book/book target/doc/book
           (cd target/doc && /tmp/deploy)
         env:
           GITHUB_DEPLOY_KEY: ${{ secrets.GITHUB_DEPLOY_KEY }}
