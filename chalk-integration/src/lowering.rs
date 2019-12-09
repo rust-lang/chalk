@@ -1037,7 +1037,7 @@ impl LowerTy for Ty {
                         .map(|id| chalk_ir::ParameterKind::Lifetime(id.str)),
                 )?;
 
-                let quantified_ty = chalk_ir::QuantifiedApply {
+                let quantified_ty = chalk_ir::Fn {
                     num_binders: lifetime_names.len(),
                     parameters: vec![ty.lower(&quantified_env)?.cast()],
                 };

@@ -112,7 +112,7 @@ impl<'a, T> IntoBindersAndValue for &'a Binders<T> {
     }
 }
 
-impl<'a, TF> IntoBindersAndValue for &'a QuantifiedApply<TF>
+impl<'a, TF> IntoBindersAndValue for &'a Fn<TF>
 where
     TF: TypeFamily,
 {

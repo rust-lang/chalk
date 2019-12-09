@@ -267,7 +267,7 @@ pub enum TyData<TF: TypeFamily> {
     /// from the underlying type, so technically we can represent
     /// things like `for<'a> SomeStruct<'a>`, although that has no
     /// meaning in Rust.
-    ForAll(QuantifiedApply<TF>),
+    ForAll(Fn<TF>),
 
     /// References the binding at the given depth. The index is a [de
     /// Bruijn index], so it counts back through the in-scope binders,
@@ -345,7 +345,7 @@ impl InferenceVar {
 /// for<'a...'z> X -- all binders are instantiated at once,
 /// and we use deBruijn indices within `self.ty`
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-pub struct QuantifiedApply<TF: TypeFamily> {
+pub struct Fn<TF: TypeFamily> {
     pub num_binders: usize,
     pub parameters: Vec<Parameter<TF>>,
 }

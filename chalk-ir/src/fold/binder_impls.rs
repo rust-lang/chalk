@@ -6,18 +6,18 @@
 use crate::family::TargetTypeFamily;
 use crate::*;
 
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for QuantifiedApply<TF> {
-    type Result = QuantifiedApply<TTF>;
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Fn<TF> {
+    type Result = Fn<TTF>;
     fn fold_with(
         &self,
         folder: &mut dyn Folder<TF, TTF>,
         binders: usize,
     ) -> Fallible<Self::Result> {
-        let QuantifiedApply {
+        let Fn {
             num_binders,
             ref parameters,
         } = *self;
-        Ok(QuantifiedApply {
+        Ok(Fn {
             num_binders,
             parameters: parameters.fold_with(folder, binders + num_binders)?,
         })
