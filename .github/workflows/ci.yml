@@ -32,6 +32,15 @@ jobs:
       - name: Execute tests for all crates in the workspace
         run: cargo test --all
 
+      - name: Install mdbook
+        run: cd book && curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.5/mdbook-v0.3.5-x86_64-unknown-linux-gnu.tar.gz | tar xz
+
+      - name: Execute tests for Chalk book
+        run: cd book && ./mdbook test
+
+      - name: Build Chalk book
+        run: cd book && ./mdbook build
+
       - name: Build documentation for all crates in the workspace
         run: cargo doc --all --document-private-items --no-deps
 
@@ -39,6 +48,7 @@ jobs:
         run: |
           touch target/doc/.nojekyll
           curl -LsSf https://raw.githubusercontent.com/rust-lang/simpleinfra/master/setup-deploy-keys/src/deploy.rs | rustc - -o /tmp/deploy
+          cp -r book/book target/doc/book
           (cd target/doc && /tmp/deploy)
         env:
           GITHUB_DEPLOY_KEY: ${{ secrets.GITHUB_DEPLOY_KEY }}
