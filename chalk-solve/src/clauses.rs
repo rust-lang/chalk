@@ -45,8 +45,8 @@ pub mod program_clauses;
 /// ```
 pub fn push_auto_trait_impls<TF: TypeFamily>(
     builder: &mut ClauseBuilder<'_, TF>,
-    auto_trait_id: TraitId,
-    struct_id: StructId,
+    auto_trait_id: TraitId<TF>,
+    struct_id: StructId<TF>,
 ) {
     debug_heading!(
         "push_auto_trait_impls({:?}, {:?})",
@@ -294,7 +294,7 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
 /// ```
 fn push_program_clauses_for_associated_type_values_in_impls_of<TF: TypeFamily>(
     builder: &mut ClauseBuilder<'_, TF>,
-    trait_id: TraitId,
+    trait_id: TraitId<TF>,
     trait_parameters: &[Parameter<TF>],
 ) {
     debug_heading!(
@@ -357,7 +357,10 @@ fn match_ty<TF: TypeFamily>(
     }
 }
 
-fn match_type_kind<TF: TypeFamily>(builder: &mut ClauseBuilder<'_, TF>, type_kind_id: TypeKindId) {
+fn match_type_kind<TF: TypeFamily>(
+    builder: &mut ClauseBuilder<'_, TF>,
+    type_kind_id: TypeKindId<TF>,
+) {
     match type_kind_id {
         TypeKindId::TypeId(type_id) => builder
             .db

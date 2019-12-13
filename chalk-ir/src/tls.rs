@@ -11,7 +11,7 @@ thread_local! {
 pub trait DebugContext {
     fn debug_type_kind_id(
         &self,
-        id: TypeKindId,
+        id: TypeKindId<ChalkIr>,
         fmt: &mut fmt::Formatter,
     ) -> Result<(), fmt::Error>;
 

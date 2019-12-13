@@ -451,7 +451,7 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ApplicationTy<
         binders: usize,
     ) -> Fallible<Self::Result> {
         let ApplicationTy { name, parameters } = self;
-        let name = *name;
+        let name = name.fold_with(folder, binders)?;
         match name {
             TypeName::Placeholder(ui) => {
                 assert!(
@@ -599,16 +599,35 @@ macro_rules! copy_fold {
 
 copy_fold!(Identifier);
 copy_fold!(UniverseIndex);
-copy_fold!(ImplId);
-copy_fold!(StructId);
-copy_fold!(TraitId);
-copy_fold!(TypeId);
-copy_fold!(TypeKindId);
 copy_fold!(usize);
+copy_fold!(PlaceholderIndex);
 copy_fold!(QuantifierKind);
 copy_fold!(chalk_engine::TableIndex);
 copy_fold!(chalk_engine::TimeStamp);
 copy_fold!(());
+
+#[macro_export]
+macro_rules! id_fold {
+    ($t:ident) => {
+        impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> $crate::fold::Fold<TF, TTF> for $t<TF> {
+            type Result = $t<TTF>;
+            fn fold_with(
+                &self,
+                _folder: &mut dyn ($crate::fold::Folder<TF, TTF>),
+                _binders: usize,
+            ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+                let $t(def_id_tf) = *self;
+                let def_id_ttf = TTF::transfer_def_id(def_id_tf);
+                Ok($t(def_id_ttf))
+            }
+        }
+    };
+}
+
+id_fold!(ImplId);
+id_fold!(StructId);
+id_fold!(TraitId);
+id_fold!(TypeId);
 
 impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for PhantomData<TF> {
     type Result = PhantomData<TTF>;

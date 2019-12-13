@@ -22,22 +22,22 @@ pub trait RustIrDatabase<TF: TypeFamily>: Debug {
     fn custom_clauses(&self) -> Vec<ProgramClause<TF>>;
 
     /// Returns the datum for the associated type with the given id.
-    fn associated_ty_data(&self, ty: TypeId) -> Arc<AssociatedTyDatum<TF>>;
+    fn associated_ty_data(&self, ty: TypeId<TF>) -> Arc<AssociatedTyDatum<TF>>;
 
     /// Returns the datum for the impl with the given id.
-    fn trait_datum(&self, trait_id: TraitId) -> Arc<TraitDatum<TF>>;
+    fn trait_datum(&self, trait_id: TraitId<TF>) -> Arc<TraitDatum<TF>>;
 
     /// Returns the datum for the impl with the given id.
-    fn struct_datum(&self, struct_id: StructId) -> Arc<StructDatum<TF>>;
+    fn struct_datum(&self, struct_id: StructId<TF>) -> Arc<StructDatum<TF>>;
 
     /// Returns the datum for the impl with the given id.
-    fn impl_datum(&self, impl_id: ImplId) -> Arc<ImplDatum<TF>>;
+    fn impl_datum(&self, impl_id: ImplId<TF>) -> Arc<ImplDatum<TF>>;
 
     /// Returns the `AssociatedTyValue` with the given id.
     fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue<TF>>;
 
     /// If `id` is a struct id, returns `Some(id)` (but cast to `StructId`).
-    fn as_struct_id(&self, id: &TypeName) -> Option<StructId>;
+    fn as_struct_id(&self, id: &TypeName<TF>) -> Option<StructId<TF>>;
 
     /// Returns a list of potentially relevant impls for a given
     /// trait-id; we also supply the type parameters that we are
@@ -48,7 +48,11 @@ pub trait RustIrDatabase<TF: TypeFamily>: Debug {
     /// apply. The parameters are provided as a "hint" to help the
     /// implementor do less work, but can be completely ignored if
     /// desired.
-    fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter<TF>]) -> Vec<ImplId>;
+    fn impls_for_trait(
+        &self,
+        trait_id: TraitId<TF>,
+        parameters: &[Parameter<TF>],
+    ) -> Vec<ImplId<TF>>;
 
     /// Returns the impls that require coherence checking. This is not the
     /// full set of impls that exist:
@@ -56,7 +60,7 @@ pub trait RustIrDatabase<TF: TypeFamily>: Debug {
     /// - It can exclude impls not defined in the current crate.
     /// - It can exclude "built-in" impls, like those for closures; only the
     ///   impls actually written by users need to be checked.
-    fn local_impls_to_coherence_check(&self, trait_id: TraitId) -> Vec<ImplId>;
+    fn local_impls_to_coherence_check(&self, trait_id: TraitId<TF>) -> Vec<ImplId<TF>>;
 
     /// Returns true if there is an explicit impl of the auto trait
     /// `auto_trait_id` for the struct `struct_id`. This is part of
@@ -64,10 +68,10 @@ pub trait RustIrDatabase<TF: TypeFamily>: Debug {
     /// by the user for the struct, then we provide default impls
     /// based on the field types (otherwise, we rely on the impls the
     /// user gave).
-    fn impl_provided_for(&self, auto_trait_id: TraitId, struct_id: StructId) -> bool;
+    fn impl_provided_for(&self, auto_trait_id: TraitId<TF>, struct_id: StructId<TF>) -> bool;
 
     /// Returns the name for the type with the given id.
-    fn type_name(&self, id: TypeKindId) -> Identifier;
+    fn type_name(&self, id: TypeKindId<TF>) -> Identifier;
 }
 
 pub use solve::Guidance;

@@ -4,46 +4,31 @@ use super::*;
 
 impl Debug for RawId {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        fmt.debug_struct("RawId")
-            .field("index", &self.index)
-            .finish()
+        write!(fmt, "#{}", self.index)
     }
 }
 
-impl Debug for TypeKindId {
+impl<TF: TypeFamily> Debug for TypeKindId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match self {
-            TypeKindId::TypeId(id) => write!(fmt, "{:?}", id),
-            TypeKindId::TraitId(id) => write!(fmt, "{:?}", id),
-            TypeKindId::StructId(id) => write!(fmt, "{:?}", id),
-        }
+        TF::debug_type_kind_id(*self, fmt)
     }
 }
 
-impl Debug for TypeId {
+impl<TF: TypeFamily> Debug for TypeId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        tls::with_current_program(|p| match p {
-            Some(prog) => prog.debug_type_kind_id(TypeKindId::TypeId(*self), fmt),
-            None => write!(fmt, "TypeId({:?})", self.0.index),
-        })
+        TF::debug_type_kind_id(TypeKindId::TypeId(*self), fmt)
     }
 }
 
-impl Debug for TraitId {
+impl<TF: TypeFamily> Debug for TraitId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        tls::with_current_program(|p| match p {
-            Some(prog) => prog.debug_type_kind_id(TypeKindId::TraitId(*self), fmt),
-            None => write!(fmt, "TraitId({:?})", self.0.index),
-        })
+        TF::debug_type_kind_id(TypeKindId::TraitId(*self), fmt)
     }
 }
 
-impl Debug for StructId {
+impl<TF: TypeFamily> Debug for StructId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        tls::with_current_program(|p| match p {
-            Some(prog) => prog.debug_type_kind_id(TypeKindId::StructId(*self), fmt),
-            None => write!(fmt, "StructId({:?})", self.0.index),
-        })
+        TF::debug_type_kind_id(TypeKindId::StructId(*self), fmt)
     }
 }
 
@@ -59,7 +44,7 @@ impl Debug for UniverseIndex {
     }
 }
 
-impl Debug for TypeName {
+impl<TF: TypeFamily> Debug for TypeName<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             TypeName::TypeKindId(id) => write!(fmt, "{:?}", id),

@@ -32,7 +32,9 @@ pub trait LoweringDatabase: RustIrDatabase<ChalkIr> {
 
     /// Performs coherence check and computes which impls specialize
     /// one another (the "specialization priorities").
-    fn coherence(&self) -> Result<BTreeMap<TraitId, Arc<SpecializationPriorities>>, ChalkError>;
+    fn coherence(
+        &self,
+    ) -> Result<BTreeMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError>;
 
     fn orphan_check(&self) -> Result<(), ChalkError>;
 
@@ -71,7 +73,7 @@ fn orphan_check(db: &impl LoweringDatabase) -> Result<(), ChalkError> {
 
 fn coherence(
     db: &impl LoweringDatabase,
-) -> Result<BTreeMap<TraitId, Arc<SpecializationPriorities>>, ChalkError> {
+) -> Result<BTreeMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError> {
     let program = db.program_ir()?;
 
     let priorities_map: Result<BTreeMap<_, _>, ChalkError> = program

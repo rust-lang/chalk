@@ -11,7 +11,7 @@ use itertools::Itertools;
 impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
     pub(super) fn visit_specializations_of_trait(
         &self,
-        mut record_specialization: impl FnMut(ImplId, ImplId),
+        mut record_specialization: impl FnMut(ImplId<TF>, ImplId<TF>),
     ) -> Result<(), CoherenceError> {
         // Ignore impls for marker traits as they are allowed to overlap.
         let trait_datum = self.db.trait_datum(self.trait_id);

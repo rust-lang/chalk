@@ -33,7 +33,7 @@ impl<TF: TypeFamily> ImplDatum<TF> {
         self.polarity.is_positive()
     }
 
-    pub fn trait_id(&self) -> TraitId {
+    pub fn trait_id(&self) -> TraitId<TF> {
         self.binders.value.trait_ref.trait_id
     }
 }
@@ -64,12 +64,12 @@ pub struct DefaultImplDatumBound<TF: TypeFamily> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructDatum<TF: TypeFamily> {
     pub binders: Binders<StructDatumBound<TF>>,
-    pub id: StructId,
+    pub id: StructId<TF>,
     pub flags: StructFlags,
 }
 
 impl<TF: TypeFamily> StructDatum<TF> {
-    pub fn name(&self) -> TypeName {
+    pub fn name(&self) -> TypeName<TF> {
         self.id.cast()
     }
 }
@@ -88,7 +88,7 @@ pub struct StructFlags {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitDatum<TF: TypeFamily> {
-    pub id: TraitId,
+    pub id: TraitId<TF>,
 
     pub binders: Binders<TraitDatumBound<TF>>,
 
@@ -98,7 +98,7 @@ pub struct TraitDatum<TF: TypeFamily> {
     pub flags: TraitFlags,
 
     /// The id of each associated type defined in the trait.
-    pub associated_ty_ids: Vec<TypeId>,
+    pub associated_ty_ids: Vec<TypeId<TF>>,
 }
 
 impl<TF: TypeFamily> TraitDatum<TF> {
@@ -188,7 +188,7 @@ impl<TF: TypeFamily> IntoWhereClauses<TF> for QuantifiedInlineBound<TF> {
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
 pub struct TraitBound<TF: TypeFamily> {
-    pub trait_id: TraitId,
+    pub trait_id: TraitId<TF>,
     pub args_no_self: Vec<Parameter<TF>>,
 }
 
@@ -213,7 +213,7 @@ impl<TF: TypeFamily> TraitBound<TF> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
 pub struct ProjectionEqBound<TF: TypeFamily> {
     pub trait_bound: TraitBound<TF>,
-    pub associated_ty_id: TypeId,
+    pub associated_ty_id: TypeId<TF>,
     /// Does not include trait parameters.
     pub parameters: Vec<Parameter<TF>>,
     pub value: Ty<TF>,
@@ -291,10 +291,10 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedTyDatum<TF: TypeFamily> {
     /// The trait this associated type is defined in.
-    pub trait_id: TraitId,
+    pub trait_id: TraitId<TF>,
 
     /// The ID of this associated type
-    pub id: TypeId,
+    pub id: TypeId<TF>,
 
     /// Name of this associated type.
     pub name: Identifier,
@@ -377,7 +377,7 @@ pub struct AssociatedTyValue<TF: TypeFamily> {
     ///     type Item = XXX; // <-- (where this is self)
     /// }
     /// ```
-    pub impl_id: ImplId,
+    pub impl_id: ImplId<TF>,
 
     /// Associated type being defined.
     ///
@@ -390,7 +390,7 @@ pub struct AssociatedTyValue<TF: TypeFamily> {
     ///     type Item; // <-- refers to this declaration here!
     /// }
     /// ```
-    pub associated_ty_id: TypeId,
+    pub associated_ty_id: TypeId<TF>,
 
     /// Additional binders declared on the associated type itself,
     /// beyond those from the impl. This would be empty for normal

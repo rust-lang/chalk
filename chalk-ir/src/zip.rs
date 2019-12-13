@@ -154,11 +154,11 @@ macro_rules! eq_zip {
     };
 }
 
-eq_zip!(TF => StructId);
-eq_zip!(TF => TraitId);
-eq_zip!(TF => TypeId);
-eq_zip!(TF => TypeKindId);
-eq_zip!(TF => TypeName);
+eq_zip!(TF => StructId<TF>);
+eq_zip!(TF => TraitId<TF>);
+eq_zip!(TF => TypeId<TF>);
+eq_zip!(TF => TypeKindId<TF>);
+eq_zip!(TF => TypeName<TF>);
 eq_zip!(TF => Identifier);
 eq_zip!(TF => QuantifierKind);
 eq_zip!(TF => PhantomData<TF>);

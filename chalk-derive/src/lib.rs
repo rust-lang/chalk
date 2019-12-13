@@ -164,12 +164,36 @@ fn derive_fold_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream {
         Data::Enum(e) => {
             let matches = e.variants.into_iter().map(|v| {
                 let variant = v.ident;
-                let names: Vec<_> = (0..v.fields.iter().count())
-                    .map(|index| format_ident!("a{}", index))
-                    .collect();
-                quote! {
-                    #type_name::#variant( #(ref #names),* ) => {
-                        Ok(#type_name::#variant( #(#names.fold_with(folder, binders)?),* ))
+                match &v.fields {
+                    syn::Fields::Named(fields) => {
+                        let fnames: &Vec<_> = &fields.named.iter().map(|f| &f.ident).collect();
+                        let fnames1: &Vec<_> = fnames;
+                        quote! {
+                            #type_name :: #variant { #(#fnames),* } => {
+                                Ok(#type_name :: #variant {
+                                    #(#fnames: #fnames1),*
+                                })
+                            }
+                        }
+                    }
+
+                    syn::Fields::Unnamed(_fields) => {
+                        let names: Vec<_> = (0..v.fields.iter().count())
+                            .map(|index| format_ident!("a{}", index))
+                            .collect();
+                        quote! {
+                            #type_name::#variant( #(ref #names),* ) => {
+                                Ok(#type_name::#variant( #(#names.fold_with(folder, binders)?),* ))
+                            }
+                        }
+                    }
+
+                    syn::Fields::Unit => {
+                        quote! {
+                            #type_name::#variant => {
+                                Ok(#type_name::#variant)
+                            }
+                        }
                     }
                 }
             });

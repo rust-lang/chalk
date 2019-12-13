@@ -16,7 +16,7 @@ use chalk_ir::*;
 pub fn perform_orphan_check<TF: TypeFamily>(
     db: &dyn RustIrDatabase<TF>,
     solver_choice: SolverChoice,
-    impl_id: ImplId,
+    impl_id: ImplId<TF>,
 ) -> Result<(), CoherenceError> {
     debug_heading!("orphan_check(impl={:#?})", impl_id);
 
