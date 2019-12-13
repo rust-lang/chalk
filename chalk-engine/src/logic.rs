@@ -617,7 +617,7 @@ impl<C: Context> Forest<C> {
         debug!("no remaining subgoals for the table");
 
         match self.pursue_answer(strand) {
-            Some(()) => {
+            Some(_answer_index) => {
                 debug!("answer is available");
 
                 // We found an answer for this strand, and therefore an
@@ -963,7 +963,7 @@ impl<C: Context> Forest<C> {
     ///   strand led nowhere of interest.
     /// - the strand may represent a new answer, in which case it is
     ///   added to the table and `Some(())` is returned.
-    fn pursue_answer(&mut self, strand: Strand<C>) -> Option<()> {
+    fn pursue_answer(&mut self, strand: Strand<C>) -> Option<AnswerIndex> {
         let table = self.stack.top().table;
         let Strand {
             mut infer,
@@ -1052,12 +1052,12 @@ impl<C: Context> Forest<C> {
                 && C::empty_constraints(&answer.subst)
         };
 
-        if self.tables[table].push_answer(answer) {
+        if let Some(answer_index) = self.tables[table].push_answer(answer) {
             if is_trivial_answer {
                 self.tables[table].take_strands();
             }
 
-            Some(())
+            Some(answer_index)
         } else {
             info!("answer: not a new answer, returning None");
             None

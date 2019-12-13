@@ -113,7 +113,7 @@ impl<C: Context> Table<C> {
     /// tests trigger this case, and assumptions upstream assume that when
     /// `true` is returned here, that a *new* answer was added (instead of an)
     /// existing answer replaced.
-    pub(super) fn push_answer(&mut self, answer: Answer<C>) -> bool {
+    pub(super) fn push_answer(&mut self, answer: Answer<C>) -> Option<AnswerIndex> {
         assert!(!self.floundered);
 
         debug_heading!("push_answer(answer={:?})", answer);
@@ -141,10 +141,13 @@ impl<C: Context> Table<C> {
             "new answer to table with goal {:?}: answer={:?}",
             self.table_goal, answer,
         );
-        if added {
-            self.answers.push(answer);
+        if !added {
+            return None;
         }
-        added
+
+        let index = self.answers.len();
+        self.answers.push(answer);
+        Some(AnswerIndex::from(index))
     }
 
     pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer<C>> {
