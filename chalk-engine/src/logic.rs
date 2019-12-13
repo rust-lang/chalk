@@ -210,7 +210,7 @@ impl<C: Context> Forest<C> {
                             continue;
                         }
                         SubGoalSelection::NoRemainingSubgoals => {
-                            match self.on_no_remaining_subgoals(strand) {
+                            match self.on_no_remaining_subgoals(context, strand) {
                                 NoRemainingSubgoalsResult::RootAnswerAvailable => return Ok(()),
                                 NoRemainingSubgoalsResult::RootSearchFail(e) => return Err(e),
                                 NoRemainingSubgoalsResult::Success => {}
@@ -613,20 +613,41 @@ impl<C: Context> Forest<C> {
         Ok(())
     }
 
-    fn on_no_remaining_subgoals(&mut self, strand: Strand<C>) -> NoRemainingSubgoalsResult {
+    fn on_no_remaining_subgoals(
+        &mut self,
+        context: &impl ContextOps<C>,
+        strand: Strand<C>,
+    ) -> NoRemainingSubgoalsResult {
         debug!("no remaining subgoals for the table");
 
         match self.pursue_answer(strand) {
-            Some(_answer_index) => {
+            Some(answer_index) => {
                 debug!("answer is available");
 
                 // We found an answer for this strand, and therefore an
                 // answer for this table. Now, this table was either a
                 // subgoal for another strand, or was the root table.
+                let table = self.stack.top().table;
                 let mut caller_strand = match self.stack.pop_and_take_caller_strand() {
                     Some(s) => s,
                     None => {
-                        // That was the root table, so we are done.
+                        // That was the root table, so we are done --
+                        // *well*, unless there were delayed
+                        // subgoals. In that case, we want to evaluate
+                        // those delayed subgoals to completion, so we
+                        // have to create a fresh strand that will
+                        // take them as goals. Note that we *still
+                        // need the original answer in place*, because
+                        // we might have to build on it (see the
+                        // Delayed Trivial Self Cycle, Variant 3
+                        // example).
+
+                        let answer = self.answer(table, answer_index);
+                        if let Some(strand) = self.create_refinement_strand(context, table, answer)
+                        {
+                            self.tables[table].enqueue_strand(strand);
+                        }
+
                         return NoRemainingSubgoalsResult::RootAnswerAvailable;
                     }
                 };
@@ -652,6 +673,56 @@ impl<C: Context> Forest<C> {
                 return NoRemainingSubgoalsResult::RootSearchFail(RootSearchFail::QuantumExceeded);
             }
         };
+    }
+
+    /// A "refinement" strand is used in coinduction. When the root
+    /// table on the stack publishes an answer has delayed subgoals,
+    /// we create a new strand that will attempt to prove out those
+    /// delayed subgoals (the root answer here is not *special* except
+    /// in so far as that there is nothing above it, and hence we know
+    /// that the delayed subgoals (which resulted in some cycle) must
+    /// be referring to a table that now has completed).
+    ///
+    /// Note that it is important for this to be a *refinement* strand
+    /// -- meaning that the answer with delayed subgoals has been
+    /// published. This is necessary because sometimes the strand must
+    /// build on that very answer that it is refining. See Delayed
+    /// Trivial Self Cycle, Variant 3.
+    fn create_refinement_strand(
+        &self,
+        context: &impl ContextOps<C>,
+        table: TableIndex,
+        answer: &Answer<C>,
+    ) -> Option<CanonicalStrand<C>> {
+        // If there are no delayed subgoals, then there is no need for
+        // a refinement strand.
+        if !C::has_delayed_subgoals(&answer.subst) {
+            return None;
+        }
+
+        let num_universes = C::num_universes(&self.tables[table].table_goal);
+        let (table, subst, constraints, delayed_subgoals) =
+            context.instantiate_answer_subst(num_universes, &answer.subst);
+
+        let strand = Strand {
+            infer: table,
+            ex_clause: ExClause {
+                subst,
+                ambiguous: answer.ambiguous,
+                constraints,
+                subgoals: delayed_subgoals
+                    .into_iter()
+                    .map(Literal::Positive)
+                    .collect(),
+                delayed_subgoals: Vec::new(),
+                answer_time: TimeStamp::default(),
+                floundered_subgoals: Vec::new(),
+            },
+            selected_subgoal: None,
+            last_pursued_time: TimeStamp::default(),
+        };
+
+        Some(Self::canonicalize_strand(strand))
     }
 
     fn on_subgoal_selection_flounder(&mut self, strand: Strand<C>) -> RootSearchFail {

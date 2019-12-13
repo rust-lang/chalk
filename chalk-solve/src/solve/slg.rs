@@ -257,6 +257,29 @@ impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<
         (infer_table, ex_cluse)
     }
 
+    fn instantiate_answer_subst(
+        &self,
+        num_universes: usize,
+        answer: &Canonical<AnswerSubst<TF>>,
+    ) -> (
+        TruncatingInferenceTable<TF>,
+        Substitution<TF>,
+        Vec<InEnvironment<Constraint<TF>>>,
+        Vec<InEnvironment<Goal<TF>>>,
+    ) {
+        let (
+            infer,
+            _subst,
+            AnswerSubst {
+                subst,
+                constraints,
+                delayed_subgoals,
+            },
+        ) = InferenceTable::from_canonical(num_universes, answer);
+        let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
+        (infer_table, subst, constraints, delayed_subgoals)
+    }
+
     fn constrained_subst_from_answer(
         &self,
         answer: CompleteAnswer<SlgContext<TF>>,

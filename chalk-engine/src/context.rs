@@ -231,6 +231,18 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         canonical_ex_clause: &C::CanonicalExClause,
     ) -> (C::InferenceTable, ExClause<C>);
 
+    // Used by: logic
+    fn instantiate_answer_subst(
+        &self,
+        num_universes: usize,
+        answer: &C::CanonicalAnswerSubst,
+    ) -> (
+        C::InferenceTable,
+        C::Substitution,
+        Vec<C::RegionConstraint>,
+        Vec<C::GoalInEnvironment>,
+    );
+
     /// returns unique solution from answer
     fn constrained_subst_from_answer(
         &self,
