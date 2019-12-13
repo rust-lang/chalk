@@ -76,7 +76,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         let mut impl_generics = input.generics.clone();
         impl_generics.params.extend(vec![
             GenericParam::Type(syn::parse(quote! { _TF: TypeFamily }.into()).unwrap()),
-            GenericParam::Type(syn::parse(quote! { _TTF: TypeFamily }.into()).unwrap()),
+            GenericParam::Type(syn::parse(quote! { _TTF: TargetTypeFamily<_TF> }.into()).unwrap()),
             GenericParam::Type(
                 syn::parse(quote! { _U: HasTypeFamily<TypeFamily = _TTF> }.into()).unwrap(),
             ),
@@ -124,7 +124,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     if let Some(tf) = is_type_family(&generic_param0) {
         let mut impl_generics = input.generics.clone();
         impl_generics.params.extend(vec![GenericParam::Type(
-            syn::parse(quote! { _TTF: TypeFamily }.into()).unwrap(),
+            syn::parse(quote! { _TTF: TargetTypeFamily<#tf> }.into()).unwrap(),
         )]);
 
         return TokenStream::from(quote! {

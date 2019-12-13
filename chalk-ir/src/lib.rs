@@ -53,7 +53,7 @@ pub mod fold;
 pub mod cast;
 
 pub mod family;
-use family::{HasTypeFamily, TypeFamily};
+use family::{HasTypeFamily, TargetTypeFamily, TypeFamily};
 
 pub mod could_match;
 pub mod debug;

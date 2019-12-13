@@ -59,6 +59,10 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     fn lifetime_data(lifetime: &Self::InternedLifetime) -> &LifetimeData<Self>;
 }
 
+pub trait TargetTypeFamily<TF: TypeFamily>: TypeFamily {}
+
+impl<TF: TypeFamily> TargetTypeFamily<TF> for TF {}
+
 /// Implemented by types that have an associated type family (which
 /// are virtually all of the types in chalk-ir, for example).
 /// This lets us map from a type like `Ty<TF>` to the parameter `TF`.

@@ -1,6 +1,7 @@
 //! Traits for transforming bits of IR.
 
 use crate::cast::Cast;
+use crate::family::TargetTypeFamily;
 use crate::*;
 use chalk_engine::context::Context;
 use chalk_engine::{ExClause, FlounderedSubgoal, Literal};
@@ -94,7 +95,7 @@ impl<T, TF, TTF> TypeFolder<TF, TTF> for T
 where
     T: FreeVarFolder<TTF> + InferenceFolder<TTF> + PlaceholderFolder<TTF> + DefaultTypeFolder,
     TF: TypeFamily,
-    TTF: TypeFamily,
+    TTF: TargetTypeFamily<TF>,
 {
     fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TTF>> {
         super_fold_ty(self, ty, binders)
@@ -294,7 +295,7 @@ where
 /// * `TTF` is the "target type family" that we are folding *into*
 ///
 /// Often, both are the same.
-pub trait Fold<TF: TypeFamily, TTF: TypeFamily = TF>: Debug {
+pub trait Fold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Debug {
     /// The type of value that will be produced once folding is done.
     /// Typically this is `Self`, unless `Self` contains borrowed
     /// values, in which case owned values are produced (for example,
@@ -311,7 +312,7 @@ pub trait Fold<TF: TypeFamily, TTF: TypeFamily = TF>: Debug {
         -> Fallible<Self::Result>;
 }
 
-impl<'a, T: Fold<TF, TTF>, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for &'a T {
+impl<'a, T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for &'a T {
     type Result = T::Result;
     fn fold_with(
         &self,
@@ -322,7 +323,7 @@ impl<'a, T: Fold<TF, TTF>, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for &'
     }
 }
 
-impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Vec<T> {
+impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Vec<T> {
     type Result = Vec<T::Result>;
     fn fold_with(
         &self,
@@ -333,7 +334,7 @@ impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Vec<T>
     }
 }
 
-impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Box<T> {
+impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Box<T> {
     type Result = Box<T::Result>;
     fn fold_with(
         &self,
@@ -344,7 +345,7 @@ impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Box<T>
     }
 }
 
-impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Arc<T> {
+impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Arc<T> {
     type Result = Arc<T::Result>;
     fn fold_with(
         &self,
@@ -357,7 +358,7 @@ impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Arc<T>
 
 macro_rules! tuple_fold {
     ($($n:ident),*) => {
-        impl<$($n: Fold<TF, TTF>,)* TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for ($($n,)*) {
+        impl<$($n: Fold<TF, TTF>,)* TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ($($n,)*) {
             type Result = ($($n::Result,)*);
             fn fold_with(&self, folder: &mut dyn Folder<TF, TTF>, binders: usize) -> Fallible<Self::Result> {
                 #[allow(non_snake_case)]
@@ -373,7 +374,7 @@ tuple_fold!(A, B, C);
 tuple_fold!(A, B, C, D);
 tuple_fold!(A, B, C, D, E);
 
-impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Option<T> {
+impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Option<T> {
     type Result = Option<T::Result>;
     fn fold_with(
         &self,
@@ -394,7 +395,7 @@ pub fn super_fold_ty<TF, TTF>(
 ) -> Fallible<Ty<TTF>>
 where
     TF: TypeFamily,
-    TTF: TypeFamily,
+    TTF: TargetTypeFamily<TF>,
 {
     match ty.data() {
         TyData::BoundVar(depth) => {
@@ -417,7 +418,7 @@ where
     }
 }
 
-impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Ty<TF> {
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
     type Result = Ty<TTF>;
 
     fn fold_with(
@@ -429,7 +430,7 @@ impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Ty<TF> {
     }
 }
 
-impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Lifetime<TF> {
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Lifetime<TF> {
     type Result = Lifetime<TTF>;
 
     fn fold_with(
@@ -441,7 +442,7 @@ impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Lifetime<TF> {
     }
 }
 
-impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for ApplicationTy<TF> {
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ApplicationTy<TF> {
     type Result = Ty<TTF>;
 
     fn fold_with(
@@ -470,7 +471,7 @@ impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for ApplicationTy<TF> {
     }
 }
 
-impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for QuantifiedTy<TF> {
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for QuantifiedTy<TF> {
     type Result = QuantifiedTy<TTF>;
     fn fold_with(
         &self,
@@ -488,7 +489,7 @@ impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for QuantifiedTy<TF> {
     }
 }
 
-impl<T, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Binders<T>
+impl<T, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Binders<T>
 where
     T: Fold<TF, TTF>,
     TF: TypeFamily,
@@ -515,7 +516,7 @@ impl<T, TF, TTF> Fold<TF, TTF> for Canonical<T>
 where
     T: Fold<TF, TTF>,
     TF: TypeFamily,
-    TTF: TypeFamily,
+    TTF: TargetTypeFamily<TF>,
 {
     type Result = Canonical<T::Result>;
     fn fold_with(
@@ -535,7 +536,7 @@ where
     }
 }
 
-pub fn super_fold_lifetime<TF: TypeFamily, TTF: TypeFamily>(
+pub fn super_fold_lifetime<TF: TypeFamily, TTF: TargetTypeFamily<TF>>(
     folder: &mut dyn Folder<TF, TTF>,
     lifetime: &Lifetime<TF>,
     binders: usize,
@@ -556,7 +557,7 @@ pub fn super_fold_lifetime<TF: TypeFamily, TTF: TypeFamily>(
     }
 }
 
-impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Substitution<TF> {
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Substitution<TF> {
     type Result = Substitution<TTF>;
     fn fold_with(
         &self,
@@ -568,7 +569,7 @@ impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Substitution<TF> {
     }
 }
 
-impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Parameter<TF> {
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Parameter<TF> {
     type Result = Parameter<TTF>;
     fn fold_with(
         &self,
@@ -583,7 +584,7 @@ impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Parameter<TF> {
 #[macro_export]
 macro_rules! copy_fold {
     ($t:ty) => {
-        impl<TF: TypeFamily, TTF: TypeFamily> $crate::fold::Fold<TF, TTF> for $t {
+        impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> $crate::fold::Fold<TF, TTF> for $t {
             type Result = Self;
             fn fold_with(
                 &self,
@@ -609,7 +610,7 @@ copy_fold!(chalk_engine::TableIndex);
 copy_fold!(chalk_engine::TimeStamp);
 copy_fold!(());
 
-impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for PhantomData<TF> {
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for PhantomData<TF> {
     type Result = PhantomData<TTF>;
 
     fn fold_with(
@@ -621,7 +622,7 @@ impl<TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for PhantomData<TF> {
     }
 }
 
-impl<TF: TypeFamily, TTF: TypeFamily, T, L> Fold<TF, TTF> for ParameterKind<T, L>
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>, T, L> Fold<TF, TTF> for ParameterKind<T, L>
 where
     T: Fold<TF, TTF>,
     L: Fold<TF, TTF>,
@@ -642,7 +643,7 @@ where
     }
 }
 
-impl<C: Context, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for ExClause<C>
+impl<C: Context, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ExClause<C>
 where
     C: Context,
     C::Substitution: Fold<TF, TTF, Result = C::Substitution>,
@@ -676,7 +677,7 @@ where
     }
 }
 
-impl<C: Context, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for FlounderedSubgoal<C>
+impl<C: Context, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for FlounderedSubgoal<C>
 where
     C: Context,
     C::Substitution: Fold<TF, TTF, Result = C::Substitution>,
@@ -702,7 +703,7 @@ where
     }
 }
 
-impl<C: Context, TF: TypeFamily, TTF: TypeFamily> Fold<TF, TTF> for Literal<C>
+impl<C: Context, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Literal<C>
 where
     C: Context,
     C::GoalInEnvironment: Fold<TF, TTF, Result = C::GoalInEnvironment>,

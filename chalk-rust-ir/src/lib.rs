@@ -4,7 +4,7 @@
 
 use chalk_derive::{Fold, HasTypeFamily};
 use chalk_ir::cast::Cast;
-use chalk_ir::family::{HasTypeFamily, TypeFamily};
+use chalk_ir::family::{HasTypeFamily, TargetTypeFamily, TypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
     Binders, Identifier, ImplId, LifetimeData, Parameter, ParameterKind, ProjectionEq,
