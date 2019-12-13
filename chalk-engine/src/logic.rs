@@ -77,49 +77,24 @@ impl<C: Context> Forest<C> {
         match self.ensure_root_answer(context, table, answer_index) {
             Ok(()) => {
                 let answer = self.answer(table, answer_index);
-
-                // At this point, there already shouldn't be
-                // any *trivial* delayed subgoals, since those should
-                // be removed from the Answer when it is published in
-                // any case. What we have to be concerned about are
-                // delayed subgoals that were cached with a different
-                // stack.
-
-                for delayed_subgoal in C::delayed_subgoals(&answer.subst).clone() {
-                    let canonical_delayed_subgoal =
-                        C::apply_binders(&self.tables[table].table_goal, &delayed_subgoal);
-                    let delayed_table = self.get_or_create_table_for_ucanonical_goal(
-                        context,
-                        canonical_delayed_subgoal,
-                    );
-                    loop {
-                        // FIXME: this shouldn't be `AnswerIndex::ZERO`
-                        match self.ensure_root_answer(context, delayed_table, AnswerIndex::ZERO) {
-                            Ok(answer) => break answer,
-                            Err(RootSearchFail::Floundered) => unimplemented!(),
-                            Err(RootSearchFail::QuantumExceeded) => continue,
-                            Err(RootSearchFail::NoMoreSolutions) => {
-                                return Err(RootSearchFail::NoMoreSolutions)
-                            }
-                            Err(RootSearchFail::NegativeCycle) => {
-                                return Err(RootSearchFail::NegativeCycle)
-                            }
-                        }
-                    }
-                }
-
-                let answer = self.answer(table, answer_index);
-
-                // FIXME: The answer still has delayed subgoals, but all *have* an answer
-                // (or we would have returned `NoMoreSolutions` above). But we haven't incorporated those
-                // answers into the `CompleteAnswer`
-                //assert!(!C::has_delayed_subgoals(&answer.subst));
-
+                let has_delayed_subgoals = C::has_delayed_subgoals(&answer.subst);
                 Ok(CompleteAnswer {
                     subst: C::canonical_constrained_subst_from_canonical_constrained_answer(
                         &answer.subst,
                     ),
-                    ambiguous: answer.ambiguous,
+
+                    // We consider "delayed subgoals" currently to be
+                    // ambiguous, since -- after all -- we don't know
+                    // if they're true or not. But this is not as
+                    // precise as it could be, we should probably
+                    // consider them to be a *failure* actually. The
+                    // reason is that we will have created another
+                    // strand that is attempting to prove them
+                    // true. If that strand *succeeds*, we'll have
+                    // another answer. If it fails, we won't.  (And if
+                    // *it* encounters ambiguity, we'll have an
+                    // ambiguous answer.)
+                    ambiguous: answer.ambiguous || has_delayed_subgoals,
                 })
             }
             Err(err) => Err(err),
