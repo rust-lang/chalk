@@ -716,3 +716,23 @@ fn rust_analyzer_regression() {
         }
     }
 }
+
+#[test]
+fn issue_144_regression() {
+    test! {
+        program {
+            trait Bar { }
+            trait Foo { type Item<T>: Bar; }
+        }
+
+        goal {
+            forall<T, U> {
+                if (T: Foo) {
+                    <T as Foo>::Item<U>: Bar
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
