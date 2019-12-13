@@ -157,7 +157,7 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             if trait_datum.is_auto_trait() {
                 match trait_ref.parameters[0].assert_ty_ref().data() {
                     TyData::Apply(apply) => {
-                        if let TypeName::TypeKindId(TypeKindId::StructId(struct_id)) = apply.name {
+                        if let Some(struct_id) = db.as_struct_id(&apply.name) {
                             push_auto_trait_impls(builder, trait_id, struct_id);
                         }
                     }

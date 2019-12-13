@@ -122,6 +122,13 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.struct_data[&id].clone()
     }
 
+    fn as_struct_id(&self, type_name: &TypeName) -> Option<StructId> {
+        match type_name {
+            TypeName::TypeKindId(TypeKindId::StructId(struct_id)) => Some(*struct_id),
+            _ => None,
+        }
+    }
+
     fn impls_for_trait(&self, trait_id: TraitId, parameters: &[Parameter<ChalkIr>]) -> Vec<ImplId> {
         self.impl_data
             .iter()

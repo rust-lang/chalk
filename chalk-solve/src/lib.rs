@@ -36,6 +36,9 @@ pub trait RustIrDatabase<TF: TypeFamily>: Debug {
     /// Returns the `AssociatedTyValue` with the given id.
     fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue<TF>>;
 
+    /// If `id` is a struct id, returns `Some(id)` (but cast to `StructId`).
+    fn as_struct_id(&self, id: &TypeName) -> Option<StructId>;
+
     /// Returns a list of potentially relevant impls for a given
     /// trait-id; we also supply the type parameters that we are
     /// trying to match (if known: these parameters may contain
