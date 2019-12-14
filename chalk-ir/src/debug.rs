@@ -48,7 +48,6 @@ impl<TF: TypeFamily> Debug for TypeName<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             TypeName::TypeKindId(id) => write!(fmt, "{:?}", id),
-            TypeName::Placeholder(index) => write!(fmt, "{:?}", index),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
@@ -69,7 +68,16 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
             TyData::InferenceVar(var) => write!(fmt, "{:?}", var),
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
             TyData::Projection(proj) => write!(fmt, "{:?}", proj),
+            TyData::Placeholder(index) => write!(fmt, "{:?}", index),
             TyData::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
+        }
+    }
+}
+
+impl Debug for PlaceholderTy {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match self {
+            PlaceholderTy::Simple(p) => write!(fmt, "{:?}", p),
         }
     }
 }

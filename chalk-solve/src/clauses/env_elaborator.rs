@@ -3,6 +3,7 @@ use crate::clauses::builder::ClauseBuilder;
 use crate::clauses::match_type_kind;
 use crate::DomainGoal;
 use crate::FromEnv;
+use crate::PlaceholderTy;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
@@ -56,13 +57,15 @@ impl<'me, TF: TypeFamily> EnvElaborator<'me, TF> {
                 TypeName::TypeKindId(type_kind_id) => {
                     match_type_kind(&mut self.builder, type_kind_id)
                 }
-                TypeName::Placeholder(_) | TypeName::Error => (),
+                TypeName::Error => {}
                 TypeName::AssociatedType(type_id) => {
                     self.db
                         .associated_ty_data(type_id)
                         .to_program_clauses(&mut self.builder);
                 }
             },
+            TyData::Placeholder(PlaceholderTy::Simple(_)) => {}
+
             TyData::Projection(projection_ty) => {
                 self.visit_projection_ty(projection_ty);
             }

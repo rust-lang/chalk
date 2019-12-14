@@ -444,6 +444,10 @@ impl MayInvalidate {
                 self.aggregate_application_tys(apply1, apply2)
             }
 
+            (TyData::Placeholder(p1), TyData::Placeholder(p2)) => {
+                self.aggregate_placeholder_tys(p1, p2)
+            }
+
             (TyData::Projection(apply1), TyData::Projection(apply2)) => {
                 self.aggregate_projection_tys(apply1, apply2)
             }
@@ -453,6 +457,7 @@ impl MayInvalidate {
             | (TyData::Dyn(_), _)
             | (TyData::Opaque(_), _)
             | (TyData::Apply(_), _)
+            | (TyData::Placeholder(_), _)
             | (TyData::Projection(_), _) => true,
         }
     }
@@ -476,6 +481,12 @@ impl MayInvalidate {
         } = current;
 
         self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
+    }
+
+    fn aggregate_placeholder_tys(&mut self, new: &PlaceholderTy, current: &PlaceholderTy) -> bool {
+        match (new, current) {
+            (PlaceholderTy::Simple(p1), PlaceholderTy::Simple(p2)) => p1 != p2,
+        }
     }
 
     fn aggregate_projection_tys<TF: TypeFamily>(

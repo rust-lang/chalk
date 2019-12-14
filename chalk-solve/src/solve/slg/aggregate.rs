@@ -192,6 +192,10 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
                 self.aggregate_projection_tys(apply1, apply2)
             }
 
+            (TyData::Placeholder(apply1), TyData::Placeholder(apply2)) => {
+                self.aggregate_placeholder_tys(apply1, apply2)
+            }
+
             // Mismatched base kinds.
             (TyData::InferenceVar(_), _)
             | (TyData::BoundVar(_), _)
@@ -199,7 +203,8 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
             | (TyData::Opaque(_), _)
             | (TyData::ForAll(_), _)
             | (TyData::Apply(_), _)
-            | (TyData::Projection(_), _) => self.new_variable(),
+            | (TyData::Projection(_), _)
+            | (TyData::Placeholder(_), _) => self.new_variable(),
         }
     }
 
@@ -220,6 +225,22 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
             .map(|(&name, parameters)| TyData::Apply(ApplicationTy { name, parameters }).intern())
             .unwrap_or_else(|| self.new_variable())
+    }
+
+    fn aggregate_placeholder_tys(
+        &mut self,
+        placeholder1: &PlaceholderTy,
+        placeholder2: &PlaceholderTy,
+    ) -> Ty<TF> {
+        match (placeholder1, placeholder2) {
+            (PlaceholderTy::Simple(index1), PlaceholderTy::Simple(index2)) => {
+                if index1 != index2 {
+                    self.new_variable()
+                } else {
+                    TyData::Placeholder(placeholder1.clone()).intern()
+                }
+            }
+        }
     }
 
     fn aggregate_projection_tys(

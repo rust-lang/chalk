@@ -340,12 +340,13 @@ fn match_ty<TF: TypeFamily>(
     match ty.data() {
         TyData::Apply(application_ty) => match application_ty.name {
             TypeName::TypeKindId(type_kind_id) => match_type_kind(builder, type_kind_id),
-            TypeName::Placeholder(_) | TypeName::Error => {}
+            TypeName::Error => {}
             TypeName::AssociatedType(type_id) => builder
                 .db
                 .associated_ty_data(type_id)
                 .to_program_clauses(builder),
         },
+        TyData::Placeholder(PlaceholderTy::Simple(_)) => {}
         TyData::Projection(projection_ty) => builder
             .db
             .associated_ty_data(projection_ty.associated_ty_id)

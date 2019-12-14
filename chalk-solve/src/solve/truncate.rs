@@ -130,7 +130,7 @@ fn truncate_types() {
                   (apply (item 0)
                    (apply (item 0)
                     (apply (item 0)
-                     (apply (placeholder 1))))));
+                     (placeholder 1)))));
 
     // test: no truncation with size 5
     let Truncated {
@@ -155,7 +155,7 @@ fn truncate_types() {
     let _u2 = table.new_universe();
     let ty_in_u2 = ty!(apply (item 0)
                        (apply (item 0)
-                        (apply (placeholder 2))));
+                        (placeholder 2)));
     table
         .unify(environment0, &ty_overflow, &ty_in_u2)
         .unwrap_err();
@@ -171,7 +171,7 @@ fn truncate_multiple_types() {
                   (apply (item 0)
                    (apply (item 0)
                     (apply (item 0)
-                     (apply (placeholder 1))))));
+                     (placeholder 1)))));
 
     // test: no truncation with size 5
     let ty0_3 = vec![ty0.clone(), ty0.clone(), ty0.clone()];
@@ -224,7 +224,7 @@ fn truncate_normalizes() {
     // ty1 = Vec<Vec<T>>
     let ty1 = ty!(apply (item 0)
                   (apply (item 0)
-                   (apply (placeholder 1))));
+                   (placeholder 1)));
 
     // test: truncating *before* unifying has no effect
     assert!(!truncate(&mut table, 3, &ty0).overflow);

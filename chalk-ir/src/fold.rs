@@ -1,6 +1,5 @@
 //! Traits for transforming bits of IR.
 
-use crate::cast::Cast;
 use crate::family::TargetTypeFamily;
 use crate::*;
 use chalk_engine::context::Context;
@@ -408,7 +407,10 @@ where
         TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
         TyData::Opaque(clauses) => Ok(TyData::Opaque(clauses.fold_with(folder, binders)?).intern()),
         TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
-        TyData::Apply(apply) => Ok(apply.fold_with(folder, binders)?),
+        TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, binders)?).intern()),
+        TyData::Placeholder(PlaceholderTy::Simple(ui)) => {
+            Ok(folder.fold_free_placeholder_ty(*ui, binders)?)
+        }
         TyData::Projection(proj) => {
             Ok(TyData::Projection(proj.fold_with(folder, binders)?).intern())
         }
@@ -443,7 +445,7 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Lifetime<TF> {
 }
 
 impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ApplicationTy<TF> {
-    type Result = Ty<TTF>;
+    type Result = ApplicationTy<TTF>;
 
     fn fold_with(
         &self,
@@ -452,22 +454,8 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ApplicationTy<
     ) -> Fallible<Self::Result> {
         let ApplicationTy { name, parameters } = self;
         let name = name.fold_with(folder, binders)?;
-        match name {
-            TypeName::Placeholder(ui) => {
-                assert!(
-                    parameters.is_empty(),
-                    "placeholder type {:?} with parameters {:?}",
-                    self,
-                    parameters
-                );
-                folder.fold_free_placeholder_ty(ui, binders)
-            }
-
-            TypeName::TypeKindId(_) | TypeName::AssociatedType(_) | TypeName::Error => {
-                let parameters = parameters.fold_with(folder, binders)?;
-                Ok(ApplicationTy { name, parameters }.cast().intern())
-            }
-        }
+        let parameters = parameters.fold_with(folder, binders)?;
+        Ok(ApplicationTy { name, parameters })
     }
 }
 

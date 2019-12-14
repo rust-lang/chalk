@@ -119,11 +119,6 @@ pub enum TypeName<TF: TypeFamily> {
     /// a type like `Vec<T>`
     TypeKindId(TypeKindId<TF>),
 
-    /// instantiated form a universally quantified type, e.g., from
-    /// `forall<T> { .. }`. Stands in as a representative of "some
-    /// unknown type".
-    Placeholder(PlaceholderIndex),
-
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(TypeId<TF>),
 
@@ -276,6 +271,11 @@ pub enum TyData<TF: TypeFamily> {
     /// This type is also used for base types like `u32` (which just apply
     /// an empty list).
     Apply(ApplicationTy<TF>),
+
+    /// instantiated form a universally quantified type, e.g., from
+    /// `forall<T> { .. }`. Stands in as a representative of "some
+    /// unknown type".
+    Placeholder(PlaceholderTy),
 
     /// A "dyn" type is a trait object type created via the "dyn Trait" syntax.
     /// In the chalk parser, the traits that the object represents is parsed as
@@ -448,11 +448,8 @@ impl PlaceholderIndex {
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
-        TyData::Apply(ApplicationTy::<TF> {
-            name: TypeName::Placeholder(self),
-            parameters: vec![],
-        })
-        .intern()
+        let data: TyData<TF> = TyData::Placeholder(PlaceholderTy::Simple(self));
+        data.intern()
     }
 }
 
@@ -479,6 +476,11 @@ impl<TF: TypeFamily> ApplicationTy<TF> {
     pub fn len_type_parameters(&self) -> usize {
         self.type_parameters().count()
     }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum PlaceholderTy {
+    Simple(PlaceholderIndex),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

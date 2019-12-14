@@ -162,6 +162,7 @@ eq_zip!(TF => TypeName<TF>);
 eq_zip!(TF => Identifier);
 eq_zip!(TF => QuantifierKind);
 eq_zip!(TF => PhantomData<TF>);
+eq_zip!(TF => PlaceholderIndex);
 
 /// Generates a Zip impl that zips each field of the struct in turn.
 macro_rules! struct_zip {
@@ -225,6 +226,7 @@ macro_rules! enum_zip {
                         }
                     )*
 
+                    #[allow(unreachable_patterns)] // needed if there is exactly one variant
                     $((Self :: $variant ( .. ), _))|* => {
                         return Err(NoSolution);
                     }
@@ -251,6 +253,8 @@ enum_zip!(impl<TF> for DomainGoal<TF> {
 });
 enum_zip!(impl<TF> for LeafGoal<TF> { DomainGoal, EqGoal });
 enum_zip!(impl<TF> for ProgramClause<TF> { Implies, ForAll });
+
+enum_zip!(impl<TF> for PlaceholderTy { Simple });
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the

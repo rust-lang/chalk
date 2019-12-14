@@ -16,6 +16,13 @@ macro_rules! ty {
         })).intern()
     };
 
+    (placeholder $n:expr) => {
+        $crate::TyData::Placeholder(PlaceholderTy::Simple(PlaceholderIndex {
+            ui: UniverseIndex { counter: $n },
+            idx: 0,
+        })).intern()
+    };
+
     (projection (item $n:tt) $($arg:tt)*) => {
         $crate::TyData::Projection(ProjectionTy {
             associated_ty_id: TypeId(RawId { index: $n }),
@@ -78,11 +85,5 @@ macro_rules! lifetime {
 macro_rules! ty_name {
     ((item $n:expr)) => {
         $crate::TypeName::TypeKindId(TypeKindId::TypeId(TypeId(RawId { index: $n })))
-    };
-    ((placeholder $n:expr)) => {
-        $crate::TypeName::Placeholder(PlaceholderIndex {
-            ui: UniverseIndex { counter: $n },
-            idx: 0,
-        })
     };
 }
