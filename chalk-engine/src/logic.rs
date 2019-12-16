@@ -16,10 +16,10 @@ type RootSearchResult<T> = Result<T, RootSearchFail>;
 /// empty stack.
 #[derive(Debug)]
 pub(super) enum RootSearchFail {
-    /// The subgoal we were trying to solve cannot succeed.
+    /// The table we were trying to solve cannot succeed.
     NoMoreSolutions,
 
-    /// The subgoal cannot be solved without more type information.
+    /// The table cannot be solved without more type information.
     Floundered,
 
     /// We did not find a solution, but we still have things to try.
@@ -32,6 +32,10 @@ pub(super) enum RootSearchFail {
     /// A negative cycle was found. This is fail-fast, so even if there was
     /// possibly a solution (ambiguous or not), it may not have been found.
     NegativeCycle,
+
+    /// The current answer index is not useful. Currently, this is returned
+    /// because the current answer needs refining.
+    InvalidAnswer,
 }
 
 /// This is returned when we try to select a subgoal for a strand.
@@ -78,23 +82,14 @@ impl<C: Context> Forest<C> {
             Ok(()) => {
                 let answer = self.answer(table, answer_index);
                 let has_delayed_subgoals = C::has_delayed_subgoals(&answer.subst);
+                if has_delayed_subgoals {
+                    return Err(RootSearchFail::InvalidAnswer);
+                }
                 Ok(CompleteAnswer {
                     subst: C::canonical_constrained_subst_from_canonical_constrained_answer(
                         &answer.subst,
                     ),
-
-                    // We consider "delayed subgoals" currently to be
-                    // ambiguous, since -- after all -- we don't know
-                    // if they're true or not. But this is not as
-                    // precise as it could be, we should probably
-                    // consider them to be a *failure* actually. The
-                    // reason is that we will have created another
-                    // strand that is attempting to prove them
-                    // true. If that strand *succeeds*, we'll have
-                    // another answer. If it fails, we won't.  (And if
-                    // *it* encounters ambiguity, we'll have an
-                    // ambiguous answer.)
-                    ambiguous: answer.ambiguous || has_delayed_subgoals,
+                    ambiguous: answer.ambiguous,
                 })
             }
             Err(err) => Err(err),
@@ -616,9 +611,12 @@ impl<C: Context> Forest<C> {
                         // we might have to build on it (see the
                         // Delayed Trivial Self Cycle, Variant 3
                         // example).
+                        let (_, _, _, table_goal) =
+                            context.instantiate_ucanonical_goal(&self.tables[table].table_goal);
 
                         let answer = self.answer(table, answer_index);
-                        if let Some(strand) = self.create_refinement_strand(context, table, answer)
+                        if let Some(strand) =
+                            self.create_refinement_strand(context, table, answer, table_goal)
                         {
                             self.tables[table].enqueue_strand(strand);
                         }
@@ -668,6 +666,7 @@ impl<C: Context> Forest<C> {
         context: &impl ContextOps<C>,
         table: TableIndex,
         answer: &Answer<C>,
+        table_goal: C::Goal,
     ) -> Option<CanonicalStrand<C>> {
         // If there are no delayed subgoals, then there is no need for
         // a refinement strand.
@@ -679,16 +678,29 @@ impl<C: Context> Forest<C> {
         let (table, subst, constraints, delayed_subgoals) =
             context.instantiate_answer_subst(num_universes, &answer.subst);
 
+        // FIXME: really, these shouldn't be added to the delayed_subgoals at all
+        // however, because we can't compare the table goal until `canonicalize_answer_subst`
+        // is called in `pursue_answer`, this will require a bit of refactoring work
+        let filtered_delayed_subgoals = delayed_subgoals
+            .into_iter()
+            .filter(|delayed_subgoal| {
+                dbg!(
+                    &C::goal_from_goal_in_environment(delayed_subgoal),
+                    &table_goal,
+                    *C::goal_from_goal_in_environment(delayed_subgoal) != table_goal
+                );
+                *C::goal_from_goal_in_environment(delayed_subgoal) != table_goal
+            })
+            .map(Literal::Positive)
+            .collect();
+
         let strand = Strand {
             infer: table,
             ex_clause: ExClause {
                 subst,
                 ambiguous: answer.ambiguous,
                 constraints,
-                subgoals: delayed_subgoals
-                    .into_iter()
-                    .map(Literal::Positive)
-                    .collect(),
+                subgoals: filtered_delayed_subgoals,
                 delayed_subgoals: Vec::new(),
                 answer_time: TimeStamp::default(),
                 floundered_subgoals: Vec::new(),
@@ -1205,9 +1217,8 @@ impl<C: Context> Forest<C> {
     fn push_initial_strands(&mut self, context: &impl ContextOps<C>, table: TableIndex) {
         // Instantiate the table goal with fresh inference variables.
         let table_goal = self.tables[table].table_goal.clone();
-        context.instantiate_ucanonical_goal(&table_goal, |infer, subst, environment, goal| {
-            self.push_initial_strands_instantiated(context, table, infer, subst, environment, goal);
-        });
+        let (infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&table_goal);
+        self.push_initial_strands_instantiated(context, table, infer, subst, environment, goal);
     }
 
     fn push_initial_strands_instantiated(

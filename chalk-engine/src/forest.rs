@@ -48,13 +48,16 @@ impl<C: Context> Forest<C> {
     ) -> Option<Vec<CompleteAnswer<C>>> {
         let table = self.get_or_create_table_for_ucanonical_goal(context, goal);
         let mut answers = Vec::with_capacity(num_answers);
-        for i in 0..num_answers {
-            let i = AnswerIndex::from(i);
+        let mut count = 0;
+        for _ in 0..num_answers {
             loop {
-                match self.root_answer(context, table, i) {
+                match self.root_answer(context, table, AnswerIndex::from(count)) {
                     Ok(answer) => {
                         answers.push(answer.clone());
                         break;
+                    }
+                    Err(RootSearchFail::InvalidAnswer) => {
+                        count += 1;
                     }
                     Err(RootSearchFail::Floundered) => return None,
                     Err(RootSearchFail::QuantumExceeded) => continue,
@@ -69,6 +72,7 @@ impl<C: Context> Forest<C> {
                     }
                 }
             }
+            count += 1;
         }
 
         Some(answers)
@@ -191,6 +195,9 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
                     return Some(answer.clone());
                 }
 
+                Err(RootSearchFail::InvalidAnswer) => {
+                    self.answer.increment();
+                }
                 Err(RootSearchFail::Floundered) => {
                     let table_goal = &self.forest.tables[self.table].table_goal;
                     return Some(CompleteAnswer {

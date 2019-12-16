@@ -181,6 +181,8 @@ pub trait Context: Clone + Debug {
         ucanon: &Self::UCanonicalGoalInEnvironment,
         goal: &Self::GoalInEnvironment,
     ) -> Self::UCanonicalGoalInEnvironment;
+
+    fn goal_from_goal_in_environment(goal: &Self::GoalInEnvironment) -> &Self::Goal;
 }
 
 pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
@@ -219,11 +221,10 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     /// - the table `T`
     /// - the substitution `S`
     /// - the environment and goal found by substitution `S` into `arg`
-    fn instantiate_ucanonical_goal<R>(
+    fn instantiate_ucanonical_goal(
         &self,
         arg: &C::UCanonicalGoalInEnvironment,
-        op: impl FnOnce(C::InferenceTable, C::Substitution, C::Environment, C::Goal) -> R,
-    ) -> R;
+    ) -> (C::InferenceTable, C::Substitution, C::Environment, C::Goal);
 
     fn instantiate_ex_clause(
         &self,

@@ -169,6 +169,10 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
             universes: arg.universes,
         }
     }
+
+    fn goal_from_goal_in_environment(goal: &InEnvironment<Goal<TF>>) -> &Goal<TF> {
+        &goal.goal
+    }
 }
 
 impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<'me, TF> {
@@ -235,15 +239,19 @@ impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<
         Ok(clauses)
     }
 
-    fn instantiate_ucanonical_goal<R>(
+    fn instantiate_ucanonical_goal(
         &self,
         arg: &UCanonical<InEnvironment<Goal<TF>>>,
-        op: impl FnOnce(TruncatingInferenceTable<TF>, Substitution<TF>, Environment<TF>, Goal<TF>) -> R,
-    ) -> R {
+    ) -> (
+        TruncatingInferenceTable<TF>,
+        Substitution<TF>,
+        Environment<TF>,
+        Goal<TF>,
+    ) {
         let (infer, subst, InEnvironment { environment, goal }) =
             InferenceTable::from_canonical(arg.universes, &arg.canonical);
         let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
-        op(infer_table, subst, environment, goal)
+        (infer_table, subst, environment, goal)
     }
 
     fn instantiate_ex_clause(

@@ -147,7 +147,7 @@ fn coinductive_trivial_variant2() {
         goal {
             exists<T, U> { T: C1<U> }
         } yields {
-            r"Unique; for<?U0> { substitution [?0 := X, ?1 := ^0], lifetime constraints [] }"
+            r"Unique; substitution [?0 := X, ?1 := X], lifetime constraints []"
         }
     }
 }
