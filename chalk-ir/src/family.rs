@@ -2,7 +2,9 @@ use crate::debug::Angle;
 use crate::tls;
 use crate::LifetimeData;
 use crate::ProjectionTy;
+use crate::RawId;
 use crate::TyData;
+use crate::TypeKindId;
 use chalk_engine::context::Context;
 use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
@@ -33,6 +35,18 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// `Lookup` trait to convert this to a `Lifetime<Self>`.
     type InternedLifetime: Debug + Clone + Eq + Ord + Hash;
 
+    /// The core "id" type used for struct-ids and the like.
+    type DefId: Debug + Copy + Eq + Ord + Hash;
+
+    /// Prints the debug representation of a type-kind-id. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific type-family (and hence
+    /// fully known types).
+    fn debug_type_kind_id(
+        type_kind_id: TypeKindId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result;
+
     /// Prints the debug representation of a projection. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific type-family (and hence
@@ -59,6 +73,16 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     fn lifetime_data(lifetime: &Self::InternedLifetime) -> &LifetimeData<Self>;
 }
 
+pub trait TargetTypeFamily<TF: TypeFamily>: TypeFamily {
+    fn transfer_def_id(def_id: TF::DefId) -> Self::DefId;
+}
+
+impl<TF: TypeFamily> TargetTypeFamily<TF> for TF {
+    fn transfer_def_id(def_id: TF::DefId) -> Self::DefId {
+        def_id
+    }
+}
+
 /// Implemented by types that have an associated type family (which
 /// are virtually all of the types in chalk-ir, for example).
 /// This lets us map from a type like `Ty<TF>` to the parameter `TF`.
@@ -78,6 +102,21 @@ pub struct ChalkIr {}
 impl TypeFamily for ChalkIr {
     type InternedType = TyData<ChalkIr>;
     type InternedLifetime = LifetimeData<ChalkIr>;
+    type DefId = RawId;
+
+    fn debug_type_kind_id(
+        type_kind_id: TypeKindId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        tls::with_current_program(|p| match p {
+            Some(prog) => prog.debug_type_kind_id(type_kind_id, fmt),
+            None => match type_kind_id {
+                TypeKindId::TypeId(id) => write!(fmt, "TypeId({:?})", id),
+                TypeKindId::TraitId(id) => write!(fmt, "TraitId({:?})", id),
+                TypeKindId::StructId(id) => write!(fmt, "StructId({:?})", id),
+            },
+        })
+    }
 
     fn debug_projection(
         projection: &ProjectionTy<ChalkIr>,

@@ -194,7 +194,7 @@ fn atc_accounting() {
         assert_eq!(
             &atv_text[..].replace(",\n", "\n"),
             &r#"AssociatedTyValue {
-    impl_id: ImplId(2),
+    impl_id: ImplId(#2),
     associated_ty_id: (Iterable::Iter),
     value: for<lifetime, type> AssociatedTyValueBound {
         ty: Iter<'^0, ^1>

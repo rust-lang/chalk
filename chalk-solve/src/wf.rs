@@ -133,7 +133,7 @@ where
         Self { db, solver_choice }
     }
 
-    pub fn verify_struct_decl(&self, struct_id: StructId) -> Result<(), WfError> {
+    pub fn verify_struct_decl(&self, struct_id: StructId<TF>) -> Result<(), WfError> {
         let struct_datum = self.db.struct_datum(struct_id);
 
         // We retrieve all the input types of the struct fields.
@@ -189,7 +189,7 @@ where
         }
     }
 
-    pub fn verify_trait_impl(&self, impl_id: ImplId) -> Result<(), WfError> {
+    pub fn verify_trait_impl(&self, impl_id: ImplId<TF>) -> Result<(), WfError> {
         let impl_datum = self.db.impl_datum(impl_id);
 
         if !impl_datum.is_positive() {

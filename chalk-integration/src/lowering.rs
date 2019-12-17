@@ -12,10 +12,12 @@ use std::sync::Arc;
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
 
-type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeKindId>;
-type TypeKinds = BTreeMap<chalk_ir::TypeKindId, rust_ir::TypeKind>;
-type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId, chalk_ir::Identifier), AssociatedTyLookup>;
-type AssociatedTyValueIds = BTreeMap<(chalk_ir::ImplId, chalk_ir::Identifier), AssociatedTyValueId>;
+type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeKindId<ChalkIr>>;
+type TypeKinds = BTreeMap<chalk_ir::TypeKindId<ChalkIr>, rust_ir::TypeKind>;
+type AssociatedTyLookups =
+    BTreeMap<(chalk_ir::TraitId<ChalkIr>, chalk_ir::Identifier), AssociatedTyLookup>;
+type AssociatedTyValueIds =
+    BTreeMap<(chalk_ir::ImplId<ChalkIr>, chalk_ir::Identifier), AssociatedTyValueId>;
 type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usize>;
 
 pub type LowerResult<T> = Result<T, RustIrError>;
@@ -45,12 +47,12 @@ struct Env<'k> {
 /// ```
 #[derive(Debug, PartialEq, Eq)]
 struct AssociatedTyLookup {
-    id: chalk_ir::TypeId,
+    id: chalk_ir::TypeId<ChalkIr>,
     addl_parameter_kinds: Vec<chalk_ir::ParameterKind<()>>,
 }
 
 enum NameLookup {
-    Type(chalk_ir::TypeKindId),
+    Type(chalk_ir::TypeKindId<ChalkIr>),
     Parameter(usize),
 }
 
@@ -88,7 +90,7 @@ impl<'k> Env<'k> {
         Err(RustIrError::InvalidLifetimeName(name))
     }
 
-    fn type_kind(&self, id: chalk_ir::TypeKindId) -> &rust_ir::TypeKind {
+    fn type_kind(&self, id: chalk_ir::TypeKindId<ChalkIr>) -> &rust_ir::TypeKind {
         &self.type_kinds[&id]
     }
 
@@ -623,7 +625,7 @@ impl LowerLeafGoal for LeafGoal {
 trait LowerStructDefn {
     fn lower_struct(
         &self,
-        struct_id: chalk_ir::StructId,
+        struct_id: chalk_ir::StructId<ChalkIr>,
         env: &Env,
     ) -> LowerResult<rust_ir::StructDatum<ChalkIr>>;
 }
@@ -631,7 +633,7 @@ trait LowerStructDefn {
 impl LowerStructDefn for StructDefn {
     fn lower_struct(
         &self,
-        struct_id: chalk_ir::StructId,
+        struct_id: chalk_ir::StructId<ChalkIr>,
         env: &Env,
     ) -> LowerResult<rust_ir::StructDatum<ChalkIr>> {
         if self.flags.fundamental && self.all_parameters().len() != 1 {
@@ -1056,7 +1058,7 @@ trait LowerImpl {
     fn lower_impl(
         &self,
         empty_env: &Env,
-        impl_id: ImplId,
+        impl_id: ImplId<ChalkIr>,
         associated_ty_value_ids: &AssociatedTyValueIds,
     ) -> LowerResult<rust_ir::ImplDatum<ChalkIr>>;
 }
@@ -1065,7 +1067,7 @@ impl LowerImpl for Impl {
     fn lower_impl(
         &self,
         empty_env: &Env,
-        impl_id: ImplId,
+        impl_id: ImplId<ChalkIr>,
         associated_ty_value_ids: &AssociatedTyValueIds,
     ) -> LowerResult<rust_ir::ImplDatum<ChalkIr>> {
         debug_heading!("LowerImpl::lower_impl(impl_id={:?})", impl_id);
@@ -1158,7 +1160,7 @@ impl LowerClause for Clause {
 trait LowerTrait {
     fn lower_trait(
         &self,
-        trait_id: chalk_ir::TraitId,
+        trait_id: chalk_ir::TraitId<ChalkIr>,
         env: &Env,
     ) -> LowerResult<rust_ir::TraitDatum<ChalkIr>>;
 }
@@ -1166,7 +1168,7 @@ trait LowerTrait {
 impl LowerTrait for TraitDefn {
     fn lower_trait(
         &self,
-        trait_id: chalk_ir::TraitId,
+        trait_id: chalk_ir::TraitId<ChalkIr>,
         env: &Env,
     ) -> LowerResult<rust_ir::TraitDatum<ChalkIr>> {
         let all_parameters = self.all_parameters();

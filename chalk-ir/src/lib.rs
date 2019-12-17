@@ -17,8 +17,8 @@ pub enum Void {}
 macro_rules! impl_froms {
     ($e:ident: $($v:ident), *) => {
         $(
-            impl From<$v> for $e {
-                fn from(it: $v) -> $e {
+            impl<TF: TypeFamily> From<$v<TF>> for $e<TF> {
+                fn from(it: $v<TF>) -> $e<TF> {
                     $e::$v(it)
                 }
             }
@@ -29,9 +29,9 @@ macro_rules! impl_froms {
 macro_rules! impl_debugs {
     ($($id:ident), *) => {
         $(
-            impl std::fmt::Debug for $id {
+            impl<TF: TypeFamily> std::fmt::Debug for $id<TF> {
                 fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-                    write!(fmt, "{}({:?})", stringify!($id), self.0.index)
+                    write!(fmt, "{}({:?})", stringify!($id), self.0)
                 }
             }
         )*
@@ -53,7 +53,7 @@ pub mod fold;
 pub mod cast;
 
 pub mod family;
-use family::{HasTypeFamily, TypeFamily};
+use family::{HasTypeFamily, TargetTypeFamily, TypeFamily};
 
 pub mod could_match;
 pub mod debug;
@@ -114,10 +114,10 @@ impl<G: HasTypeFamily> HasTypeFamily for InEnvironment<G> {
     type TypeFamily = G::TypeFamily;
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum TypeName {
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
+pub enum TypeName<TF: TypeFamily> {
     /// a type like `Vec<T>`
-    TypeKindId(TypeKindId),
+    TypeKindId(TypeKindId<TF>),
 
     /// instantiated form a universally quantified type, e.g., from
     /// `forall<T> { .. }`. Stands in as a representative of "some
@@ -125,7 +125,7 @@ pub enum TypeName {
     Placeholder(PlaceholderIndex),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
-    AssociatedType(TypeId),
+    AssociatedType(TypeId<TF>),
 
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.
@@ -163,31 +163,31 @@ impl UniverseIndex {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct StructId(pub RawId);
+pub struct StructId<TF: TypeFamily>(pub TF::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TraitId(pub RawId);
+pub struct TraitId<TF: TypeFamily>(pub TF::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ImplId(pub RawId);
+pub struct ImplId<TF: TypeFamily>(pub TF::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ClauseId(pub RawId);
+pub struct ClauseId<TF: TypeFamily>(pub TF::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeId(pub RawId);
+pub struct TypeId<TF: TypeFamily>(pub TF::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum TypeKindId {
-    TypeId(TypeId),
-    TraitId(TraitId),
-    StructId(StructId),
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
+pub enum TypeKindId<TF: TypeFamily> {
+    TypeId(TypeId<TF>),
+    TraitId(TraitId<TF>),
+    StructId(StructId<TF>),
 }
 
-impl TypeKindId {
-    pub fn raw_id(&self) -> RawId {
+impl<TF: TypeFamily> TypeKindId<TF> {
+    pub fn raw_id(&self) -> TF::DefId {
         match self {
             TypeKindId::TypeId(id) => id.0,
             TypeKindId::TraitId(id) => id.0,
@@ -459,7 +459,7 @@ impl PlaceholderIndex {
 // Fold derive intentionally omitted, folded through Ty
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
 pub struct ApplicationTy<TF: TypeFamily> {
-    pub name: TypeName,
+    pub name: TypeName<TF>,
     pub parameters: Vec<Parameter<TF>>,
 }
 
@@ -587,7 +587,7 @@ impl<TF: TypeFamily> Parameter<TF> {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct ProjectionTy<TF: TypeFamily> {
-    pub associated_ty_id: TypeId,
+    pub associated_ty_id: TypeId<TF>,
     pub parameters: Vec<Parameter<TF>>,
 }
 
@@ -599,7 +599,7 @@ impl<TF: TypeFamily> ProjectionTy<TF> {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct TraitRef<TF: TypeFamily> {
-    pub trait_id: TraitId,
+    pub trait_id: TraitId<TF>,
     pub parameters: Vec<Parameter<TF>>,
 }
 
