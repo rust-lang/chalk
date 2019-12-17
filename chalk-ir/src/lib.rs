@@ -454,7 +454,7 @@ impl PlaceholderIndex {
 }
 
 // Fold derive intentionally omitted, folded through Ty
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Fold, Ord, HasTypeFamily)]
 pub struct ApplicationTy<TF: TypeFamily> {
     pub name: TypeName<TF>,
     pub parameters: Vec<Parameter<TF>>,
@@ -1165,7 +1165,7 @@ pub enum Constraint<TF: TypeFamily> {
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Fold, Hash, HasTypeFamily)]
 pub struct Substitution<TF: TypeFamily> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
