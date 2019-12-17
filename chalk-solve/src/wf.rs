@@ -8,7 +8,6 @@ use chalk_ir::cast::*;
 use chalk_ir::family::{HasTypeFamily, TypeFamily};
 use chalk_ir::*;
 use chalk_rust_ir::*;
-use itertools::Itertools;
 
 #[derive(Debug)]
 pub enum WfError {
@@ -159,9 +158,7 @@ where
             .into_iter()
             .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
             .casted();
-        let goal = goals
-            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-            .expect("at least one goal");
+        let goal = goals.collect::<Box<Goal<TF>>>();
 
         let hypotheses = struct_datum
             .binders
@@ -175,7 +172,7 @@ where
 
         // We ask that the above input types are well-formed provided that all the where-clauses
         // on the struct definition hold.
-        let goal = Goal::Implies(hypotheses, Box::new(goal))
+        let goal = Goal::Implies(hypotheses, goal)
             .quantify(QuantifierKind::ForAll, struct_datum.binders.binders.clone());
 
         let is_legal = match self
@@ -247,9 +244,7 @@ where
             .chain(assoc_ty_goals)
             .chain(Some(trait_ref_wf).cast());
 
-        let goal = goals
-            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-            .expect("at least one goal");
+        let goal = goals.collect::<Box<Goal<TF>>>();
 
         // Assumptions: types appearing in the header which are not projection types are
         // assumed to be well-formed, and where clauses declared on the impl are assumed
@@ -270,7 +265,7 @@ where
             )
             .collect();
 
-        let goal = Goal::Implies(hypotheses, Box::new(goal))
+        let goal = Goal::Implies(hypotheses, goal)
             .quantify(QuantifierKind::ForAll, impl_datum.binders.binders.clone());
 
         debug!("WF trait goal: {:?}", goal);
@@ -392,10 +387,10 @@ where
 
         // Concatenate the WF goals of inner types + the requirements from trait
         let goals = wf_goals.chain(bound_goals);
-        let goal = match goals.fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf))) {
-            Some(goal) => goal,
-            None => return None,
-        };
+        let goal: Goal<TF> = goals.collect();
+        if goal.is_trivially_true() {
+            return None;
+        }
 
         // Add where clauses from the associated ty definition. We must
         // substitute parameters here, like we did with the bounds above.

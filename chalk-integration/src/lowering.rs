@@ -4,7 +4,6 @@ use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
-use itertools::Itertools;
 use lalrpop_intern::intern;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -1256,19 +1255,20 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                     g.lower(env)?,
                 )))
             }
-            Goal::And(g1, g2) => Ok(Box::new(chalk_ir::Goal::And(
-                g1.lower(env)?,
-                g2.lower(env)?,
-            ))),
+            Goal::And(g1, g2s) => {
+                let mut goals = vec![];
+                goals.push(*g1.lower(env)?);
+                for g2 in g2s {
+                    goals.push(*g2.lower(env)?);
+                }
+                Ok(Box::new(chalk_ir::Goal::All(goals)))
+            }
             Goal::Not(g) => Ok(Box::new(chalk_ir::Goal::Not(g.lower(env)?))),
             Goal::Compatible(g) => Ok(Box::new(g.lower(env)?.compatible())),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
                 let leaves = leaf.lower(env)?.into_iter().map(chalk_ir::Goal::Leaf);
-                let goal = leaves
-                    .fold1(|goal, leaf| chalk_ir::Goal::And(Box::new(goal), Box::new(leaf)))
-                    .expect("at least one goal");
-                Ok(Box::new(goal))
+                Ok(leaves.collect())
             }
         }
     }

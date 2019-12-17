@@ -23,7 +23,7 @@ Comment: () = r"//.*";
 
 pub Goal: Box<Goal> = {
     Goal1,
-    <g1:Goal1> "," <g2:Goal> => Box::new(Goal::And(g1, g2)),
+    <g1:Goal1> <g2s:("," <Goal1>)+> => Box::new(Goal::And(g1, g2s)),
 };
 
 Goal1: Box<Goal> = {

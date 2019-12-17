@@ -40,9 +40,10 @@ impl<C: Context> Forest<C> {
                     let new_environment = infer.add_clauses(&environment, wc);
                     pending_goals.push((new_environment, infer.into_hh_goal(subgoal)));
                 }
-                HhGoal::And(subgoal1, subgoal2) => {
-                    pending_goals.push((environment.clone(), infer.into_hh_goal(subgoal1)));
-                    pending_goals.push((environment, infer.into_hh_goal(subgoal2)));
+                HhGoal::All(subgoals) => {
+                    for subgoal in subgoals {
+                        pending_goals.push((environment.clone(), infer.into_hh_goal(subgoal)));
+                    }
                 }
                 HhGoal::Not(subgoal) => {
                     ex_clause

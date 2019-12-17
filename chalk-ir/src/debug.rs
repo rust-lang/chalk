@@ -279,7 +279,17 @@ impl<TF: TypeFamily> Debug for Goal<TF> {
                 write!(fmt, "> {{ {:?} }}", subgoal.value)
             }
             Goal::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
-            Goal::And(ref g1, ref g2) => write!(fmt, "({:?}, {:?})", g1, g2),
+            Goal::All(ref goals) => {
+                write!(fmt, "all(")?;
+                for (goal, index) in goals.iter().zip(0..) {
+                    if index > 0 {
+                        write!(fmt, ", ")?;
+                    }
+                    write!(fmt, "{:?}", goal)?;
+                }
+                write!(fmt, ")")?;
+                Ok(())
+            }
             Goal::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),
             Goal::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),

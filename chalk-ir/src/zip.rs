@@ -268,16 +268,13 @@ impl<TF: TypeFamily> Zip<TF> for Goal<TF> {
                 Zip::zip_with(zipper, f_a, f_b)?;
                 Zip::zip_with(zipper, g_a, g_b)
             }
-            (&Goal::And(ref f_a, ref g_a), &Goal::And(ref f_b, ref g_b)) => {
-                Zip::zip_with(zipper, f_a, f_b)?;
-                Zip::zip_with(zipper, g_a, g_b)
-            }
+            (&Goal::All(ref g_a), &Goal::All(ref g_b)) => Zip::zip_with(zipper, g_a, g_b),
             (&Goal::Not(ref f_a), &Goal::Not(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
             (&Goal::Leaf(ref f_a), &Goal::Leaf(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
             (&Goal::CannotProve(()), &Goal::CannotProve(())) => Ok(()),
             (&Goal::Quantified(..), _)
             | (&Goal::Implies(..), _)
-            | (&Goal::And(..), _)
+            | (&Goal::All(..), _)
             | (&Goal::Not(..), _)
             | (&Goal::Leaf(..), _)
             | (&Goal::CannotProve(..), _) => {

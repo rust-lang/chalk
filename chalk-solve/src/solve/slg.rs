@@ -266,7 +266,7 @@ impl<TF: TypeFamily> context::InferenceTable<SlgContext<TF>> for TruncatingInfer
             Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
             Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
             Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
-            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
+            Goal::All(goals) => HhGoal::All(goals),
             Goal::Not(g1) => HhGoal::Not(*g1),
             Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify((), a, b),
             Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),

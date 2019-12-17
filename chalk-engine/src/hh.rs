@@ -8,7 +8,7 @@ pub enum HhGoal<C: Context> {
     ForAll(C::BindersGoal),
     Exists(C::BindersGoal),
     Implies(C::ProgramClauses, C::Goal),
-    And(C::Goal, C::Goal),
+    All(Vec<C::Goal>),
     Not(C::Goal),
     Unify(C::Variance, C::Parameter, C::Parameter),
     DomainGoal(C::DomainGoal),

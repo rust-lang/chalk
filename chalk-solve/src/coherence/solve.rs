@@ -118,8 +118,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
         // over the joined binders. This is our query.
         let goal = params_goals
             .chain(wc_goals)
-            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-            .expect("Every trait takes at least one input type")
+            .collect::<Box<Goal<TF>>>()
             .quantify(QuantifierKind::Exists, binders)
             .compatible()
             .negate();
@@ -198,8 +197,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
         // Join all of the goals together.
         let goal = params_goals
             .chain(less_special_wc)
-            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-            .expect("Every trait takes at least one input type")
+            .collect::<Box<Goal<TF>>>()
             .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
             .implied_by(more_special_wc)
             .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());

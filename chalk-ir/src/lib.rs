@@ -1041,7 +1041,7 @@ pub enum Goal<TF: TypeFamily> {
     /// (deBruijn index).
     Quantified(QuantifierKind, Binders<Box<Goal<TF>>>),
     Implies(Vec<ProgramClause<TF>>, Box<Goal<TF>>),
-    And(Box<Goal<TF>>, Box<Goal<TF>>),
+    All(Vec<Goal<TF>>),
     Not(Box<Goal<TF>>),
     Leaf(LeafGoal<TF>),
 
@@ -1097,6 +1097,53 @@ impl<TF: TypeFamily> Goal<TF> {
 
     pub fn implied_by(self, predicates: Vec<ProgramClause<TF>>) -> Goal<TF> {
         Goal::Implies(predicates, Box::new(self))
+    }
+
+    /// True if this goal is "trivially true" -- i.e., no work is
+    /// required to prove it.
+    pub fn is_trivially_true(&self) -> bool {
+        match self {
+            Goal::All(goals) => goals.is_empty(),
+            _ => false,
+        }
+    }
+}
+
+impl<TF> std::iter::FromIterator<Goal<TF>> for Box<Goal<TF>>
+where
+    TF: TypeFamily,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = Goal<TF>>,
+    {
+        Box::new(iter.into_iter().collect())
+    }
+}
+
+impl<TF> std::iter::FromIterator<Goal<TF>> for Goal<TF>
+where
+    TF: TypeFamily,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = Goal<TF>>,
+    {
+        let mut iter = iter.into_iter();
+        if let Some(goal0) = iter.next() {
+            if let Some(goal1) = iter.next() {
+                // More than one goal to prove
+                let mut goals = vec![goal0, goal1];
+                goals.extend(iter);
+                Goal::All(goals)
+            } else {
+                // One goal to prove
+                goal0
+            }
+        } else {
+            // No goals to prove, always true
+            Goal::All(vec![])
+        }
     }
 }
 
