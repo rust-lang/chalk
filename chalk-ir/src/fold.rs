@@ -4,7 +4,7 @@ use crate::family::TargetTypeFamily;
 use crate::*;
 use std::fmt::Debug;
 
-mod impls;
+mod boring_impls;
 pub mod shift;
 mod subst;
 
