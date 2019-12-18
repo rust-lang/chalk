@@ -922,13 +922,19 @@ impl LowerTy for Ty {
                             identifier: name,
                             expected: k.binders.len(),
                             actual: 0,
-                        })?
-                    } else {
-                        Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                            name: chalk_ir::TypeName::TypeKindId(id.into()),
-                            parameters: vec![],
                         })
-                        .intern())
+                    } else {
+                        match id {
+                            TypeKindId::StructId(id) => {
+                                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                                    name: chalk_ir::TypeName::Struct(id),
+                                    parameters: vec![],
+                                })
+                                .intern())
+                            }
+
+                            TypeKindId::TraitId(_) => Err(RustIrError::NotStruct(name)),
+                        }
                     }
                 }
                 NameLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d).intern()),
@@ -966,11 +972,12 @@ impl LowerTy for Ty {
 
             Ty::Apply { name, ref args } => {
                 let id = match env.lookup(name)? {
-                    NameLookup::Type(id) => id,
+                    NameLookup::Type(TypeKindId::StructId(id)) => id,
+                    NameLookup::Type(TypeKindId::TraitId(_)) => Err(RustIrError::NotStruct(name))?,
                     NameLookup::Parameter(_) => Err(RustIrError::CannotApplyTypeParameter(name))?,
                 };
 
-                let k = env.type_kind(id);
+                let k = env.type_kind(id.cast());
                 if k.binders.len() != args.len() {
                     Err(RustIrError::IncorrectNumberOfTypeParameters {
                         identifier: name,
@@ -995,7 +1002,7 @@ impl LowerTy for Ty {
                 }
 
                 Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::TypeKindId(id.into()),
+                    name: chalk_ir::TypeName::Struct(id),
                     parameters: parameters,
                 })
                 .intern())

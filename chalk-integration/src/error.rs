@@ -58,6 +58,7 @@ pub enum RustIrError {
     InvalidLifetimeName(Identifier),
     DuplicateLangItem(LangItem),
     NotTrait(Identifier),
+    NotStruct(Identifier),
     DuplicateOrShadowedParameters,
     AutoTraitAssociatedTypes(Identifier),
     AutoTraitParameters(Identifier),
@@ -102,6 +103,11 @@ impl std::fmt::Display for RustIrError {
             RustIrError::NotTrait(name) => write!(
                 f,
                 "expected a trait, found `{}`, which is not a trait",
+                name
+            ),
+            RustIrError::NotStruct(name) => write!(
+                f,
+                "expected a struct, found `{}`, which is not a struct",
                 name
             ),
             RustIrError::DuplicateOrShadowedParameters => {

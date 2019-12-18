@@ -273,13 +273,12 @@ impl<TF: TypeFamily> CastTo<TypeKindId<TF>> for StructId<TF> {
     }
 }
 
-impl<TF, T> CastTo<TypeName<TF>> for T
+impl<TF> CastTo<TypeName<TF>> for StructId<TF>
 where
     TF: TypeFamily,
-    T: CastTo<TypeKindId<TF>>,
 {
     fn cast_to(self) -> TypeName<TF> {
-        TypeName::TypeKindId(self.cast())
+        TypeName::Struct(self)
     }
 }
 

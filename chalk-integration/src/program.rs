@@ -130,7 +130,7 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn as_struct_id(&self, type_name: &TypeName<ChalkIr>) -> Option<StructId<ChalkIr>> {
         match type_name {
-            TypeName::TypeKindId(TypeKindId::StructId(struct_id)) => Some(*struct_id),
+            TypeName::Struct(struct_id) => Some(*struct_id),
             _ => None,
         }
     }
@@ -170,13 +170,12 @@ impl RustIrDatabase<ChalkIr> for Program {
     ) -> bool {
         // Look for an impl like `impl Send for Foo` where `Foo` is
         // the struct.  See `push_auto_trait_impls` for more.
-        let type_kind_id = TypeKindId::StructId(struct_id);
         self.impl_data.values().any(|impl_datum| {
             let impl_trait_ref = &impl_datum.binders.value.trait_ref;
             impl_trait_ref.trait_id == auto_trait_id
                 && match impl_trait_ref.parameters[0].assert_ty_ref().data() {
                     TyData::Apply(apply) => match apply.name {
-                        TypeName::TypeKindId(id) => id == type_kind_id,
+                        TypeName::Struct(id) => id == struct_id,
                         _ => false,
                     },
 

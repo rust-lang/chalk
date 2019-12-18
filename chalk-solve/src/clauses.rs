@@ -338,14 +338,7 @@ fn match_ty<TF: TypeFamily>(
     ty: &Ty<TF>,
 ) {
     match ty.data() {
-        TyData::Apply(application_ty) => match application_ty.name {
-            TypeName::TypeKindId(type_kind_id) => match_type_kind(builder, type_kind_id),
-            TypeName::Error => {}
-            TypeName::AssociatedType(type_id) => builder
-                .db
-                .associated_ty_data(type_id)
-                .to_program_clauses(builder),
-        },
+        TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
         TyData::Placeholder(_) => {}
         TyData::Projection(projection_ty) => builder
             .db
@@ -358,19 +351,22 @@ fn match_ty<TF: TypeFamily>(
     }
 }
 
-fn match_type_kind<TF: TypeFamily>(
-    builder: &mut ClauseBuilder<'_, TF>,
-    type_kind_id: TypeKindId<TF>,
-) {
-    match type_kind_id {
-        TypeKindId::TraitId(trait_id) => {
-            builder.db.trait_datum(trait_id).to_program_clauses(builder)
-        }
-        TypeKindId::StructId(struct_id) => builder
+fn match_type_name<TF: TypeFamily>(builder: &mut ClauseBuilder<'_, TF>, name: TypeName<TF>) {
+    match name {
+        TypeName::Struct(struct_id) => match_struct(builder, struct_id),
+        TypeName::Error => {}
+        TypeName::AssociatedType(type_id) => builder
             .db
-            .struct_datum(struct_id)
+            .associated_ty_data(type_id)
             .to_program_clauses(builder),
     }
+}
+
+fn match_struct<TF: TypeFamily>(builder: &mut ClauseBuilder<'_, TF>, struct_id: StructId<TF>) {
+    builder
+        .db
+        .struct_datum(struct_id)
+        .to_program_clauses(builder)
 }
 
 fn program_clauses_for_env<'db, TF: TypeFamily>(

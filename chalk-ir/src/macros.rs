@@ -84,6 +84,6 @@ macro_rules! lifetime {
 #[macro_export]
 macro_rules! ty_name {
     ((item $n:expr)) => {
-        $crate::TypeName::TypeKindId(TypeKindId::StructId(StructId(RawId { index: $n })))
+        $crate::TypeName::Struct(StructId(RawId { index: $n }))
     };
 }

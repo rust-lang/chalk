@@ -117,7 +117,7 @@ impl<G: HasTypeFamily> HasTypeFamily for InEnvironment<G> {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
 pub enum TypeName<TF: TypeFamily> {
     /// a type like `Vec<T>`
-    TypeKindId(TypeKindId<TF>),
+    Struct(StructId<TF>),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(AssocTypeId<TF>),

@@ -51,7 +51,7 @@ impl Debug for UniverseIndex {
 impl<TF: TypeFamily> Debug for TypeName<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            TypeName::TypeKindId(id) => write!(fmt, "{:?}", id),
+            TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }

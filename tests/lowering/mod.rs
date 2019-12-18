@@ -343,7 +343,7 @@ fn gat_higher_ranked_bound() {
     lowering_success! {
         program {
             trait Fn<T> {}
-            trait Ref<'a, T> {}
+            struct Ref<'a, T> {}
             trait Sized {}
 
             trait Foo {
