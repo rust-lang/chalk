@@ -268,15 +268,6 @@ impl<T: DefaultInferenceFolder, TTF: TypeFamily> InferenceFolder<TTF> for T {
     }
 }
 
-pub trait ReflexiveFold<TF: TypeFamily>: Fold<TF, TF, Result = Self> + Sized {}
-
-impl<T, TF> ReflexiveFold<TF> for T
-where
-    T: Fold<TF, TF, Result = Self>,
-    TF: TypeFamily,
-{
-}
-
 /// Applies the given `Folder` to a value, producing a folded result
 /// of type `Self::Result`. The result is in the type family
 /// `TTF`. The result type is typically the same as the source type
