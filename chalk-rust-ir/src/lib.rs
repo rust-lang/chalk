@@ -7,9 +7,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::family::{HasTypeFamily, TargetTypeFamily, TypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
-    Binders, Identifier, ImplId, LifetimeData, Parameter, ParameterKind, ProjectionEq,
-    ProjectionTy, QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TyData, TypeId,
-    TypeName, WhereClause,
+    AssocTypeId, Binders, Identifier, ImplId, LifetimeData, Parameter, ParameterKind, ProjectionEq,
+    ProjectionTy, QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TyData, TypeName,
+    WhereClause,
 };
 use std::iter;
 
@@ -98,7 +98,7 @@ pub struct TraitDatum<TF: TypeFamily> {
     pub flags: TraitFlags,
 
     /// The id of each associated type defined in the trait.
-    pub associated_ty_ids: Vec<TypeId<TF>>,
+    pub associated_ty_ids: Vec<AssocTypeId<TF>>,
 }
 
 impl<TF: TypeFamily> TraitDatum<TF> {
@@ -213,7 +213,7 @@ impl<TF: TypeFamily> TraitBound<TF> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
 pub struct ProjectionEqBound<TF: TypeFamily> {
     pub trait_bound: TraitBound<TF>,
-    pub associated_ty_id: TypeId<TF>,
+    pub associated_ty_id: AssocTypeId<TF>,
     /// Does not include trait parameters.
     pub parameters: Vec<Parameter<TF>>,
     pub value: Ty<TF>,
@@ -294,7 +294,7 @@ pub struct AssociatedTyDatum<TF: TypeFamily> {
     pub trait_id: TraitId<TF>,
 
     /// The ID of this associated type
-    pub id: TypeId<TF>,
+    pub id: AssocTypeId<TF>,
 
     /// Name of this associated type.
     pub name: Identifier,
@@ -390,7 +390,7 @@ pub struct AssociatedTyValue<TF: TypeFamily> {
     ///     type Item; // <-- refers to this declaration here!
     /// }
     /// ```
-    pub associated_ty_id: TypeId<TF>,
+    pub associated_ty_id: AssocTypeId<TF>,
 
     /// Additional binders declared on the associated type itself,
     /// beyond those from the impl. This would be empty for normal

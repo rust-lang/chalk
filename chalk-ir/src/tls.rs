@@ -1,5 +1,5 @@
 use crate::family::ChalkIr;
-use crate::{ProjectionTy, TypeKindId};
+use crate::{AssocTypeId, ProjectionTy, TypeKindId};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
@@ -12,6 +12,12 @@ pub trait DebugContext {
     fn debug_type_kind_id(
         &self,
         id: TypeKindId<ChalkIr>,
+        fmt: &mut fmt::Formatter,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_assoc_type_id(
+        &self,
+        id: AssocTypeId<ChalkIr>,
         fmt: &mut fmt::Formatter,
     ) -> Result<(), fmt::Error>;
 

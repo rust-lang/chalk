@@ -4,6 +4,7 @@ use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
 use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
+use chalk_ir::AssocTypeId;
 use chalk_ir::Canonical;
 use chalk_ir::ConstrainedSubst;
 use chalk_ir::Goal;
@@ -14,7 +15,6 @@ use chalk_ir::Parameter;
 use chalk_ir::ProgramClause;
 use chalk_ir::StructId;
 use chalk_ir::TraitId;
-use chalk_ir::TypeId;
 use chalk_ir::TypeKindId;
 use chalk_ir::TypeName;
 use chalk_ir::UCanonical;
@@ -85,7 +85,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().custom_clauses()
     }
 
-    fn associated_ty_data(&self, ty: TypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
+    fn associated_ty_data(&self, ty: AssocTypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.program_ir().unwrap().associated_ty_data(ty)
     }
 

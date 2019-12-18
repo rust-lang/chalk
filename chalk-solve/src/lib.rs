@@ -22,7 +22,7 @@ pub trait RustIrDatabase<TF: TypeFamily>: Debug {
     fn custom_clauses(&self) -> Vec<ProgramClause<TF>>;
 
     /// Returns the datum for the associated type with the given id.
-    fn associated_ty_data(&self, ty: TypeId<TF>) -> Arc<AssociatedTyDatum<TF>>;
+    fn associated_ty_data(&self, ty: AssocTypeId<TF>) -> Arc<AssociatedTyDatum<TF>>;
 
     /// Returns the datum for the impl with the given id.
     fn trait_datum(&self, trait_id: TraitId<TF>) -> Arc<TraitDatum<TF>>;

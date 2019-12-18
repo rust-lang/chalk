@@ -25,7 +25,7 @@ macro_rules! ty {
 
     (projection (item $n:tt) $($arg:tt)*) => {
         $crate::TyData::Projection(ProjectionTy {
-            associated_ty_id: TypeId(RawId { index: $n }),
+            associated_ty_id: AssocTypeId(RawId { index: $n }),
             parameters: vec![$(arg!($arg)),*],
         }).intern()
     };
@@ -84,6 +84,6 @@ macro_rules! lifetime {
 #[macro_export]
 macro_rules! ty_name {
     ((item $n:expr)) => {
-        $crate::TypeName::TypeKindId(TypeKindId::TypeId(TypeId(RawId { index: $n })))
+        $crate::TypeName::TypeKindId(TypeKindId::StructId(StructId(RawId { index: $n })))
     };
 }

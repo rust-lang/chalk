@@ -120,7 +120,7 @@ pub enum TypeName<TF: TypeFamily> {
     TypeKindId(TypeKindId<TF>),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
-    AssociatedType(TypeId<TF>),
+    AssociatedType(AssocTypeId<TF>),
 
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.
@@ -170,13 +170,12 @@ pub struct ImplId<TF: TypeFamily>(pub TF::DefId);
 pub struct ClauseId<TF: TypeFamily>(pub TF::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeId<TF: TypeFamily>(pub TF::DefId);
+pub struct AssocTypeId<TF: TypeFamily>(pub TF::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
 pub enum TypeKindId<TF: TypeFamily> {
-    TypeId(TypeId<TF>),
     TraitId(TraitId<TF>),
     StructId(StructId<TF>),
 }
@@ -184,14 +183,13 @@ pub enum TypeKindId<TF: TypeFamily> {
 impl<TF: TypeFamily> TypeKindId<TF> {
     pub fn raw_id(&self) -> TF::DefId {
         match self {
-            TypeKindId::TypeId(id) => id.0,
             TypeKindId::TraitId(id) => id.0,
             TypeKindId::StructId(id) => id.0,
         }
     }
 }
 
-impl_froms!(TypeKindId: TypeId, TraitId, StructId);
+impl_froms!(TypeKindId: TraitId, StructId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(non_camel_case_types)]
@@ -584,7 +582,7 @@ impl<TF: TypeFamily> Parameter<TF> {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct ProjectionTy<TF: TypeFamily> {
-    pub associated_ty_id: TypeId<TF>,
+    pub associated_ty_id: AssocTypeId<TF>,
     pub parameters: Vec<Parameter<TF>>,
 }
 

@@ -363,10 +363,6 @@ fn match_type_kind<TF: TypeFamily>(
     type_kind_id: TypeKindId<TF>,
 ) {
     match type_kind_id {
-        TypeKindId::TypeId(type_id) => builder
-            .db
-            .associated_ty_data(type_id)
-            .to_program_clauses(builder),
         TypeKindId::TraitId(trait_id) => {
             builder.db.trait_datum(trait_id).to_program_clauses(builder)
         }

@@ -1,4 +1,5 @@
 use crate::tls;
+use crate::AssocTypeId;
 use crate::LifetimeData;
 use crate::ProjectionTy;
 use crate::RawId;
@@ -46,6 +47,15 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// if no info about current program is available from TLS).
     fn debug_type_kind_id(
         type_kind_id: TypeKindId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
+
+    /// Prints the debug representation of a type-kind-id. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific type-family (and hence
+    /// fully known types).
+    fn debug_assoc_type_id(
+        type_id: AssocTypeId<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result>;
 
@@ -114,6 +124,13 @@ impl TypeFamily for ChalkIr {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         tls::with_current_program(|prog| Some(prog?.debug_type_kind_id(type_kind_id, fmt)))
+    }
+
+    fn debug_assoc_type_id(
+        id: AssocTypeId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_assoc_type_id(id, fmt)))
     }
 
     fn debug_projection(

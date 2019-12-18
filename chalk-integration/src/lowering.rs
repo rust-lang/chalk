@@ -1,6 +1,6 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::family::ChalkIr;
-use chalk_ir::{self, ImplId, StructId, TraitId, TypeId, TypeKindId};
+use chalk_ir::{self, AssocTypeId, ImplId, StructId, TraitId, TypeKindId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
@@ -46,7 +46,7 @@ struct Env<'k> {
 /// ```
 #[derive(Debug, PartialEq, Eq)]
 struct AssociatedTyLookup {
-    id: chalk_ir::TypeId<ChalkIr>,
+    id: chalk_ir::AssocTypeId<ChalkIr>,
     addl_parameter_kinds: Vec<chalk_ir::ParameterKind<()>>,
 }
 
@@ -163,7 +163,7 @@ impl LowerProgram for Program {
                     for defn in &d.assoc_ty_defns {
                         let addl_parameter_kinds = defn.all_parameters();
                         let lookup = AssociatedTyLookup {
-                            id: TypeId(next_item_id()),
+                            id: AssocTypeId(next_item_id()),
                             addl_parameter_kinds: addl_parameter_kinds.anonymize(),
                         };
                         associated_ty_lookups.insert((TraitId(raw_id), defn.name.str), lookup);

@@ -3,8 +3,8 @@ use chalk_ir::debug::Angle;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, TyData, TypeId,
-    TypeKindId, TypeName,
+    AssocTypeId, Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId,
+    TyData, TypeKindId, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -37,7 +37,7 @@ pub struct Program {
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
-    pub associated_ty_data: BTreeMap<TypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
+    pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
@@ -64,17 +64,23 @@ impl tls::DebugContext for Program {
             write!(fmt, "{}", k.name)
         } else if let Some(k) = self.type_kinds.get(&type_kind_id) {
             write!(fmt, "{}", k.name)
-        } else if let TypeKindId::TypeId(type_id) = type_kind_id {
-            if let Some(k) = self.associated_ty_data.get(&type_id) {
-                write!(fmt, "({:?}::{})", k.trait_id, k.name)
-            } else {
-                fmt.debug_struct("InvalidItemId")
-                    .field("index", &type_id.0)
-                    .finish()
-            }
         } else {
             fmt.debug_struct("InvalidItemId")
                 .field("index", &type_kind_id.raw_id())
+                .finish()
+        }
+    }
+
+    fn debug_assoc_type_id(
+        &self,
+        assoc_type_id: AssocTypeId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(k) = self.associated_ty_data.get(&assoc_type_id) {
+            write!(fmt, "({:?}::{})", k.trait_id, k.name)
+        } else {
+            fmt.debug_struct("InvalidItemId")
+                .field("index", &assoc_type_id.0)
                 .finish()
         }
     }
@@ -102,7 +108,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.custom_clauses.clone()
     }
 
-    fn associated_ty_data(&self, ty: TypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
+    fn associated_ty_data(&self, ty: AssocTypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.associated_ty_data[&ty].clone()
     }
 

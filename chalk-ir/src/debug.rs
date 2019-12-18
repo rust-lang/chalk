@@ -11,16 +11,9 @@ impl Debug for RawId {
 impl<TF: TypeFamily> Debug for TypeKindId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         TF::debug_type_kind_id(*self, fmt).unwrap_or_else(|| match self {
-            TypeKindId::TypeId(id) => write!(fmt, "TypeId({:?})", id),
             TypeKindId::TraitId(id) => write!(fmt, "TraitId({:?})", id),
             TypeKindId::StructId(id) => write!(fmt, "StructId({:?})", id),
         })
-    }
-}
-
-impl<TF: TypeFamily> Debug for TypeId<TF> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        Debug::fmt(&TypeKindId::from(*self), fmt)
     }
 }
 
@@ -33,6 +26,13 @@ impl<TF: TypeFamily> Debug for TraitId<TF> {
 impl<TF: TypeFamily> Debug for StructId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         Debug::fmt(&TypeKindId::from(*self), fmt)
+    }
+}
+
+impl<TF: TypeFamily> Debug for AssocTypeId<TF> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        TF::debug_assoc_type_id(*self, fmt)
+            .unwrap_or_else(|| write!(fmt, "AssocTypeId({:?})", self.0))
     }
 }
 

@@ -144,7 +144,7 @@ macro_rules! id_fold {
 id_fold!(ImplId);
 id_fold!(StructId);
 id_fold!(TraitId);
-id_fold!(TypeId);
+id_fold!(AssocTypeId);
 
 impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for PhantomData<TF> {
     type Result = PhantomData<TTF>;
