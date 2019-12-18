@@ -3,7 +3,6 @@ use crate::clauses::builder::ClauseBuilder;
 use crate::clauses::match_type_kind;
 use crate::DomainGoal;
 use crate::FromEnv;
-use crate::PlaceholderTy;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
@@ -64,7 +63,7 @@ impl<'me, TF: TypeFamily> EnvElaborator<'me, TF> {
                         .to_program_clauses(&mut self.builder);
                 }
             },
-            TyData::Placeholder(PlaceholderTy::Simple(_)) => {}
+            TyData::Placeholder(_) => {}
 
             TyData::Projection(projection_ty) => {
                 self.visit_projection_ty(projection_ty);

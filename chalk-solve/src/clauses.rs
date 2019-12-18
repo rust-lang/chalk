@@ -346,7 +346,7 @@ fn match_ty<TF: TypeFamily>(
                 .associated_ty_data(type_id)
                 .to_program_clauses(builder),
         },
-        TyData::Placeholder(PlaceholderTy::Simple(_)) => {}
+        TyData::Placeholder(_) => {}
         TyData::Projection(projection_ty) => builder
             .db
             .associated_ty_data(projection_ty.associated_ty_id)

@@ -77,7 +77,7 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
 impl Debug for PlaceholderTy {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            PlaceholderTy::Simple(p) => write!(fmt, "{:?}", p),
+            PlaceholderTy(p) => write!(fmt, "{:?}", p),
         }
     }
 }

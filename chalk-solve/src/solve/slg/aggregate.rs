@@ -233,7 +233,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         placeholder2: &PlaceholderTy,
     ) -> Ty<TF> {
         match (placeholder1, placeholder2) {
-            (PlaceholderTy::Simple(index1), PlaceholderTy::Simple(index2)) => {
+            (PlaceholderTy(index1), PlaceholderTy(index2)) => {
                 if index1 != index2 {
                     self.new_variable()
                 } else {

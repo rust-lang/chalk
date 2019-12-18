@@ -485,7 +485,7 @@ impl MayInvalidate {
 
     fn aggregate_placeholder_tys(&mut self, new: &PlaceholderTy, current: &PlaceholderTy) -> bool {
         match (new, current) {
-            (PlaceholderTy::Simple(p1), PlaceholderTy::Simple(p2)) => p1 != p2,
+            (PlaceholderTy(p1), PlaceholderTy(p2)) => p1 != p2,
         }
     }
 

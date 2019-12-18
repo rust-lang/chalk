@@ -17,7 +17,7 @@ macro_rules! ty {
     };
 
     (placeholder $n:expr) => {
-        $crate::TyData::Placeholder(PlaceholderTy::Simple(PlaceholderIndex {
+        $crate::TyData::Placeholder(PlaceholderTy(PlaceholderIndex {
             ui: UniverseIndex { counter: $n },
             idx: 0,
         })).intern()

@@ -448,7 +448,7 @@ impl PlaceholderIndex {
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
-        let data: TyData<TF> = TyData::Placeholder(PlaceholderTy::Simple(self));
+        let data: TyData<TF> = TyData::Placeholder(PlaceholderTy(self));
         data.intern()
     }
 }
@@ -479,9 +479,7 @@ impl<TF: TypeFamily> ApplicationTy<TF> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum PlaceholderTy {
-    Simple(PlaceholderIndex),
-}
+pub struct PlaceholderTy(pub PlaceholderIndex);
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ParameterKind<T, L = T> {

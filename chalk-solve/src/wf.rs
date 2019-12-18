@@ -79,7 +79,7 @@ impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
                 proj.parameters.fold(accumulator);
             }
 
-            TyData::Placeholder(PlaceholderTy::Simple(_)) => {
+            TyData::Placeholder(_) => {
                 accumulator.push(self.clone());
             }
 
