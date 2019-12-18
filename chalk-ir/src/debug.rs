@@ -10,25 +10,29 @@ impl Debug for RawId {
 
 impl<TF: TypeFamily> Debug for TypeKindId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_type_kind_id(*self, fmt)
+        TF::debug_type_kind_id(*self, fmt).unwrap_or_else(|| match self {
+            TypeKindId::TypeId(id) => write!(fmt, "TypeId({:?})", id),
+            TypeKindId::TraitId(id) => write!(fmt, "TraitId({:?})", id),
+            TypeKindId::StructId(id) => write!(fmt, "StructId({:?})", id),
+        })
     }
 }
 
 impl<TF: TypeFamily> Debug for TypeId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_type_kind_id(TypeKindId::TypeId(*self), fmt)
+        Debug::fmt(&TypeKindId::from(*self), fmt)
     }
 }
 
 impl<TF: TypeFamily> Debug for TraitId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_type_kind_id(TypeKindId::TraitId(*self), fmt)
+        Debug::fmt(&TypeKindId::from(*self), fmt)
     }
 }
 
 impl<TF: TypeFamily> Debug for StructId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_type_kind_id(TypeKindId::StructId(*self), fmt)
+        Debug::fmt(&TypeKindId::from(*self), fmt)
     }
 }
 
@@ -162,7 +166,14 @@ impl<TF: TypeFamily> Debug for SeparatorTraitRef<'_, TF> {
 
 impl<TF: TypeFamily> Debug for ProjectionTy<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_projection(self, fmt)
+        TF::debug_projection(self, fmt).unwrap_or_else(|| {
+            write!(
+                fmt,
+                "({:?}){:?}",
+                self.associated_ty_id,
+                Angle(&self.parameters)
+            )
+        })
     }
 }
 

@@ -1,4 +1,3 @@
-use crate::debug::Angle;
 use crate::tls;
 use crate::LifetimeData;
 use crate::ProjectionTy;
@@ -42,19 +41,25 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific type-family (and hence
     /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
     fn debug_type_kind_id(
         type_kind_id: TypeKindId<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result;
+    ) -> Option<fmt::Result>;
 
     /// Prints the debug representation of a projection. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific type-family (and hence
     /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
     fn debug_projection(
         projection: &ProjectionTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result;
+    ) -> Option<fmt::Result>;
 
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyData::intern` (which
@@ -107,30 +112,15 @@ impl TypeFamily for ChalkIr {
     fn debug_type_kind_id(
         type_kind_id: TypeKindId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        tls::with_current_program(|p| match p {
-            Some(prog) => prog.debug_type_kind_id(type_kind_id, fmt),
-            None => match type_kind_id {
-                TypeKindId::TypeId(id) => write!(fmt, "TypeId({:?})", id),
-                TypeKindId::TraitId(id) => write!(fmt, "TraitId({:?})", id),
-                TypeKindId::StructId(id) => write!(fmt, "StructId({:?})", id),
-            },
-        })
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_type_kind_id(type_kind_id, fmt)))
     }
 
     fn debug_projection(
         projection: &ProjectionTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        tls::with_current_program(|p| match p {
-            Some(program) => program.debug_projection(projection, fmt),
-            None => write!(
-                fmt,
-                "({:?}){:?}",
-                projection.associated_ty_id,
-                Angle(&projection.parameters)
-            ),
-        })
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_projection(projection, fmt)))
     }
 
     fn intern_ty(ty: TyData<ChalkIr>) -> TyData<ChalkIr> {
