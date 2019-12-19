@@ -299,6 +299,6 @@ impl<T: Zip<TF>, L: Zip<TF>, TF: TypeFamily> Zip<TF> for ParameterKind<T, L> {
 
 impl<TF: TypeFamily> Zip<TF> for Parameter<TF> {
     fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        Zip::zip_with(zipper, &a.0, &b.0)
+        Zip::zip_with(zipper, a.data(), b.data())
     }
 }

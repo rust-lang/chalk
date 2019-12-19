@@ -392,7 +392,7 @@ impl MayInvalidate {
         new: &Parameter<TF>,
         current: &Parameter<TF>,
     ) -> bool {
-        match (&new.0, &current.0) {
+        match (new.data(), current.data()) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2)

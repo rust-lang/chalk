@@ -444,7 +444,7 @@ impl<TF: TypeFamily> ApplicationTy<TF> {
     }
 
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
-        self.parameters.iter().cloned().filter_map(|p| p.ty())
+        self.parameters.iter().filter_map(|p| p.ty()).cloned()
     }
 
     pub fn first_type_parameter(&self) -> Option<Ty<TF>> {
@@ -520,9 +520,17 @@ impl<T, L> ParameterKind<T, L> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-pub struct Parameter<TF: TypeFamily>(pub ParameterKind<Ty<TF>, Lifetime<TF>>);
+pub struct Parameter<TF: TypeFamily>(ParameterKind<Ty<TF>, Lifetime<TF>>);
 
 impl<TF: TypeFamily> Parameter<TF> {
+    pub fn new(data: ParameterData<TF>) -> Self {
+        Parameter(data)
+    }
+
+    pub fn data(&self) -> &ParameterData<TF> {
+        &self.0
+    }
+
     pub fn assert_ty_ref(&self) -> &Ty<TF> {
         self.as_ref().ty().unwrap()
     }
@@ -532,31 +540,40 @@ impl<TF: TypeFamily> Parameter<TF> {
     }
 
     pub fn as_ref(&self) -> ParameterKind<&Ty<TF>, &Lifetime<TF>> {
-        match &self.0 {
+        match self.data() {
             ParameterKind::Ty(t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(l) => ParameterKind::Lifetime(l),
         }
     }
 
     pub fn is_ty(&self) -> bool {
-        match self.0 {
+        match self.data() {
             ParameterKind::Ty(_) => true,
             ParameterKind::Lifetime(_) => false,
         }
     }
 
-    pub fn ty(self) -> Option<Ty<TF>> {
-        match self.0 {
+    pub fn ty(&self) -> Option<&Ty<TF>> {
+        match self.data() {
             ParameterKind::Ty(t) => Some(t),
             _ => None,
         }
     }
 
-    pub fn lifetime(self) -> Option<Lifetime<TF>> {
-        match self.0 {
+    pub fn lifetime(&self) -> Option<&Lifetime<TF>> {
+        match self.data() {
             ParameterKind::Lifetime(t) => Some(t),
             _ => None,
         }
+    }
+}
+
+#[allow(type_alias_bounds)]
+pub type ParameterData<TF: TypeFamily> = ParameterKind<Ty<TF>, Lifetime<TF>>;
+
+impl<TF: TypeFamily> ParameterData<TF> {
+    pub fn intern(self) -> Parameter<TF> {
+        Parameter::new(self)
     }
 }
 
@@ -580,7 +597,7 @@ pub struct TraitRef<TF: TypeFamily> {
 
 impl<TF: TypeFamily> TraitRef<TF> {
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
-        self.parameters.iter().cloned().filter_map(|p| p.ty())
+        self.parameters.iter().filter_map(|p| p.ty()).cloned()
     }
 
     pub fn self_type_parameter(&self) -> Option<Ty<TF>> {
@@ -1172,7 +1189,7 @@ impl<TF: TypeFamily> Substitution<TF> {
         self.parameters
             .iter()
             .zip(0..)
-            .all(|(parameter, index)| match &parameter.0 {
+            .all(|(parameter, index)| match parameter.data() {
                 ParameterKind::Ty(ty) => match ty.data() {
                     TyData::BoundVar(depth) => index == *depth,
                     _ => false,

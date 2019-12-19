@@ -395,7 +395,7 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
 
 impl<TF: TypeFamily> Debug for Parameter<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match &self.0 {
+        match self.data() {
             ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
             ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
         }

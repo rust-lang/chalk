@@ -105,7 +105,7 @@ fn merge_into_guidance<TF: TypeFamily>(
             // of X.
             let universe = root_goal.binders[index].into_inner();
 
-            let ty = match &value.0 {
+            let ty = match value.data() {
                 ParameterKind::Ty(ty) => ty,
                 ParameterKind::Lifetime(_) => {
                     // Ignore the lifetimes from the substitution: we're just
@@ -139,7 +139,7 @@ fn is_trivial<TF: TypeFamily>(subst: &Canonical<Substitution<TF>>) -> bool {
         .parameters
         .iter()
         .enumerate()
-        .all(|(index, parameter)| match &parameter.0 {
+        .all(|(index, parameter)| match parameter.data() {
             // All types are mapped to distinct variables.  Since this
             // has been canonicalized, those will also be the first N
             // variables.
@@ -299,7 +299,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
     }
 
     fn aggregate_parameters(&mut self, p1: &Parameter<TF>, p2: &Parameter<TF>) -> Parameter<TF> {
-        match (&p1.0, &p2.0) {
+        match (p1.data(), p2.data()) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2).cast(),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2).cast()

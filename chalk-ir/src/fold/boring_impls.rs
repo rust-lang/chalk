@@ -93,8 +93,8 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Parameter<TF> 
         folder: &mut dyn Folder<TF, TTF>,
         binders: usize,
     ) -> Fallible<Self::Result> {
-        let inner = self.0.fold_with(folder, binders)?;
-        Ok(Parameter(inner))
+        let data = self.data().fold_with(folder, binders)?;
+        Ok(Parameter::new(data))
     }
 }
 

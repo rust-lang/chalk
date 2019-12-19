@@ -50,11 +50,11 @@ macro_rules! ty {
 #[macro_export]
 macro_rules! arg {
     ((lifetime $b:tt)) => {
-        $crate::Parameter($crate::ParameterKind::Lifetime(lifetime!($b)))
+        $crate::Parameter::new($crate::ParameterKind::Lifetime(lifetime!($b)))
     };
 
     ($arg:tt) => {
-        $crate::Parameter($crate::ParameterKind::Ty(ty!($arg)))
+        $crate::Parameter::new($crate::ParameterKind::Ty(ty!($arg)))
     };
 }
 

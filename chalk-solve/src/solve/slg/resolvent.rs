@@ -290,8 +290,11 @@ impl<TF: TypeFamily> AnswerSubstitutor<'_, TF> {
             });
 
         slg::into_ex_clause(
-            self.table
-                .unify(&self.environment, answer_param, &Parameter(pending_shifted))?,
+            self.table.unify(
+                &self.environment,
+                answer_param,
+                &Parameter::new(pending_shifted),
+            )?,
             self.ex_clause,
         );
 
