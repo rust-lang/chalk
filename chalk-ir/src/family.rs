@@ -1,6 +1,7 @@
 use crate::tls;
 use crate::AssocTypeId;
 use crate::LifetimeData;
+use crate::ParameterData;
 use crate::ProjectionTy;
 use crate::RawId;
 use crate::StructId;
@@ -47,6 +48,15 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// from a `LifetimeData` (by the [`intern_lifetime`] method) and
     /// then later converted back (by the [`lifetime_data`] method).
     type InternedLifetime: Debug + Clone + Eq + Ord + Hash;
+
+    /// "Interned" representation of a "generic parameter", which can
+    /// be either a type or a lifetime.  In normal user code,
+    /// `Self::InternedParameter` is not referenced. Instead, we refer to
+    /// `Parameter<Self>`, which wraps this type.
+    ///
+    /// An `InternedType` is created by `intern_parameter` and can be
+    /// converted back to its underlying data via `parameter_data`.
+    type InternedParameter: Debug + Clone + Eq + Ord + Hash;
 
     /// The core "id" type used for struct-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
@@ -110,6 +120,15 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
     fn lifetime_data(lifetime: &Self::InternedLifetime) -> &LifetimeData<Self>;
+
+    /// Create an "interned" parameter from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `ParameterData::intern` (which will ultimately call this
+    /// method).
+    fn intern_parameter(data: ParameterData<Self>) -> Self::InternedParameter;
+
+    /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
+    fn parameter_data(lifetime: &Self::InternedParameter) -> &ParameterData<Self>;
 }
 
 pub trait TargetTypeFamily<TF: TypeFamily>: TypeFamily {
@@ -141,6 +160,7 @@ pub struct ChalkIr {}
 impl TypeFamily for ChalkIr {
     type InternedType = Box<TyData<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
+    type InternedParameter = ParameterData<ChalkIr>;
     type DefId = RawId;
 
     fn debug_struct_id(
@@ -185,6 +205,14 @@ impl TypeFamily for ChalkIr {
 
     fn lifetime_data(lifetime: &LifetimeData<ChalkIr>) -> &LifetimeData<ChalkIr> {
         lifetime
+    }
+
+    fn intern_parameter(parameter: ParameterData<ChalkIr>) -> ParameterData<ChalkIr> {
+        parameter
+    }
+
+    fn parameter_data(parameter: &ParameterData<ChalkIr>) -> &ParameterData<ChalkIr> {
+        parameter
     }
 }
 

@@ -520,15 +520,16 @@ impl<T, L> ParameterKind<T, L> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-pub struct Parameter<TF: TypeFamily>(ParameterKind<Ty<TF>, Lifetime<TF>>);
+pub struct Parameter<TF: TypeFamily>(TF::InternedParameter);
 
 impl<TF: TypeFamily> Parameter<TF> {
     pub fn new(data: ParameterData<TF>) -> Self {
-        Parameter(data)
+        let interned = TF::intern_parameter(data);
+        Parameter(interned)
     }
 
     pub fn data(&self) -> &ParameterData<TF> {
-        &self.0
+        TF::parameter_data(&self.0)
     }
 
     pub fn assert_ty_ref(&self) -> &Ty<TF> {
