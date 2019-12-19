@@ -70,7 +70,7 @@ impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
 
             TyData::Dyn(qwc) | TyData::Opaque(qwc) => {
                 accumulator.push(self.clone());
-                qwc.fold(accumulator);
+                qwc.bounds.fold(accumulator);
             }
 
             TyData::Projection(proj) => {

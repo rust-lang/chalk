@@ -211,12 +211,12 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             // not `Clone`.
             let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
             match self_ty.data() {
-                TyData::Opaque(exists_qwcs) | TyData::Dyn(exists_qwcs) => {
+                TyData::Opaque(bounded_ty) | TyData::Dyn(bounded_ty) => {
                     // In this arm, `self_ty` is the `dyn Fn(&u8)`,
-                    // and `exists_qwcs` is the `exists<T> { .. }`
+                    // and `bounded_ty` is the `exists<T> { .. }`
                     // clauses shown above.
 
-                    for exists_qwc in exists_qwcs.into_iter() {
+                    for exists_qwc in &bounded_ty.bounds {
                         // Replace the `T` from `exists<T> { .. }` with `self_ty`,
                         // yielding clases like
                         //

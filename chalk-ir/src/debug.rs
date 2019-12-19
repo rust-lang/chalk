@@ -58,14 +58,21 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             TyData::BoundVar(depth) => write!(fmt, "^{}", depth),
-            TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
-            TyData::Opaque(clauses) => write!(fmt, "{:?}", clauses),
+            TyData::Dyn(clauses) => write!(fmt, "dyn {:?}", clauses),
+            TyData::Opaque(clauses) => write!(fmt, "impl {:?}", clauses),
             TyData::InferenceVar(var) => write!(fmt, "{:?}", var),
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
             TyData::Projection(proj) => write!(fmt, "{:?}", proj),
             TyData::Placeholder(index) => write!(fmt, "{:?}", index),
             TyData::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
         }
+    }
+}
+
+impl<TF: TypeFamily> Debug for BoundedTy<TF> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let BoundedTy { bounds } = self;
+        write!(fmt, "{:?}", bounds)
     }
 }
 
