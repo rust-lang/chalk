@@ -8,25 +8,30 @@ role of each crate. This crate structure helps to serve Chalk's two goals:
 
 ## Crates for embedding chalk into other programs
 
-## Crates for 
+The following crates are "public facing" crates that you may use when embedding chalk into
+other programs:
 
-Although there are many crates, there are two main "entry-point"
-crates that define the different "levels" of chalk:
+* The `chalk-solve` crate, which defines the rules that translate Rust IR into logical predicates.
+* The `chalk-ir` crate, which defines the IR representing types and logical predicates.
+* The `chalk-rust-ir` crate, which defines the IR representing Rust concepts like traits and impls.
 
-* the main `chalk` crate, along with the testing crate in the `tests` directory
-    * These define the REPL and 
-* the `chalk-solve` crate
-* `chalk-integration`: The highest level crate. This is the "testing
-  harness" and is also used by the REPL.
-* `chalk-solve`: The mid-level crate where 
-* `chalk-engine`: This is the lowest-level crate.
+The following crate is an implementation detail, used internally by `chalk-solve`:
 
-being both embeddable into compilers like rustc and rust-analyzer, 
+* The `chalk-engine` crate, which defines the actual engine that solves logical predicate. This 
+  engine is quite general and not really specific to 
+* The `chalk-derive` crate defines custom derives for the `chalk_ir::fold::Fold` trait and other
+  such things.
+* The `chalk-macros` crate defines a few miscellaneous utility macros.
 
-One of the major goals of chalk is to be usable between many different
-contexts:
+## Crates for standalone REPL and testing
 
-* Chalk can be embedded into compilers and tools to serve as a Rust trait solving
-  engine.
-* Chalk can be used via a standalone testing harness.
+The following crates are used to define the REPL and internal testing
+harness. These crates build on the crates above. Essentially, they
+define a kind of "minimal embedding" of chalk.
 
+* The `chalk-parser` crate can parse Rust syntax to product an AST.
+* The `chalk-integration` crate can take that AST and use it to drive
+  the `chalk-solve` crate above. The AST is converted into
+  `chalk-rust-ir` by a process called "lowering'.
+* Finally, the main `chalk` crate, along with the testing crate in the
+  `tests` directory, define the actual entry points.
