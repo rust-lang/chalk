@@ -14,18 +14,6 @@ use std::marker::PhantomData;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Void {}
 
-macro_rules! impl_froms {
-    ($e:ident: $($v:ident), *) => {
-        $(
-            impl<TF: TypeFamily> From<$v<TF>> for $e<TF> {
-                fn from(it: $v<TF>) -> $e<TF> {
-                    $e::$v(it)
-                }
-            }
-        )*
-    }
-}
-
 macro_rules! impl_debugs {
     ($($id:ident), *) => {
         $(
@@ -173,23 +161,6 @@ pub struct ClauseId<TF: TypeFamily>(pub TF::DefId);
 pub struct AssocTypeId<TF: TypeFamily>(pub TF::DefId);
 
 impl_debugs!(ImplId, ClauseId);
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
-pub enum TypeKindId<TF: TypeFamily> {
-    TraitId(TraitId<TF>),
-    StructId(StructId<TF>),
-}
-
-impl<TF: TypeFamily> TypeKindId<TF> {
-    pub fn raw_id(&self) -> TF::DefId {
-        match self {
-            TypeKindId::TraitId(id) => id.0,
-            TypeKindId::StructId(id) => id.0,
-        }
-    }
-}
-
-impl_froms!(TypeKindId: TraitId, StructId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(non_camel_case_types)]

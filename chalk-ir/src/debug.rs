@@ -8,15 +8,6 @@ impl Debug for RawId {
     }
 }
 
-impl<TF: TypeFamily> Debug for TypeKindId<TF> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match self {
-            TypeKindId::TraitId(id) => Debug::fmt(id, fmt),
-            TypeKindId::StructId(id) => Debug::fmt(id, fmt),
-        }
-    }
-}
-
 impl<TF: TypeFamily> Debug for TraitId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         TF::debug_trait_id(*self, fmt).unwrap_or_else(|| write!(fmt, "TraitId({:?})", self.0))
