@@ -55,18 +55,30 @@ impl Program {
 }
 
 impl tls::DebugContext for Program {
-    fn debug_type_kind_id(
+    fn debug_struct_id(
         &self,
-        type_kind_id: TypeKindId<ChalkIr>,
+        struct_id: StructId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(k) = self.type_kinds.get(&type_kind_id) {
-            write!(fmt, "{}", k.name)
-        } else if let Some(k) = self.type_kinds.get(&type_kind_id) {
+        if let Some(k) = self.type_kinds.get(&TypeKindId::StructId(struct_id)) {
             write!(fmt, "{}", k.name)
         } else {
-            fmt.debug_struct("InvalidItemId")
-                .field("index", &type_kind_id.raw_id())
+            fmt.debug_struct("InvalidStructId")
+                .field("index", &struct_id.0)
+                .finish()
+        }
+    }
+
+    fn debug_trait_id(
+        &self,
+        trait_id: TraitId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(k) = self.type_kinds.get(&TypeKindId::TraitId(trait_id)) {
+            write!(fmt, "{}", k.name)
+        } else {
+            fmt.debug_struct("InvalidTraitId")
+                .field("index", &trait_id.0)
                 .finish()
         }
     }

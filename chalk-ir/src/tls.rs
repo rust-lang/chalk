@@ -1,5 +1,5 @@
 use crate::family::ChalkIr;
-use crate::{AssocTypeId, ProjectionTy, TypeKindId};
+use crate::{AssocTypeId, ProjectionTy, StructId, TraitId};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
@@ -9,9 +9,15 @@ thread_local! {
 }
 
 pub trait DebugContext {
-    fn debug_type_kind_id(
+    fn debug_struct_id(
         &self,
-        id: TypeKindId<ChalkIr>,
+        id: StructId<ChalkIr>,
+        fmt: &mut fmt::Formatter,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_trait_id(
+        &self,
+        id: TraitId<ChalkIr>,
         fmt: &mut fmt::Formatter,
     ) -> Result<(), fmt::Error>;
 

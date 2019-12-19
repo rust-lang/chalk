@@ -10,22 +10,22 @@ impl Debug for RawId {
 
 impl<TF: TypeFamily> Debug for TypeKindId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_type_kind_id(*self, fmt).unwrap_or_else(|| match self {
-            TypeKindId::TraitId(id) => write!(fmt, "TraitId({:?})", id),
-            TypeKindId::StructId(id) => write!(fmt, "StructId({:?})", id),
-        })
+        match self {
+            TypeKindId::TraitId(id) => Debug::fmt(id, fmt),
+            TypeKindId::StructId(id) => Debug::fmt(id, fmt),
+        }
     }
 }
 
 impl<TF: TypeFamily> Debug for TraitId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        Debug::fmt(&TypeKindId::from(*self), fmt)
+        TF::debug_trait_id(*self, fmt).unwrap_or_else(|| write!(fmt, "TraitId({:?})", self.0))
     }
 }
 
 impl<TF: TypeFamily> Debug for StructId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        Debug::fmt(&TypeKindId::from(*self), fmt)
+        TF::debug_struct_id(*self, fmt).unwrap_or_else(|| write!(fmt, "StructId({:?})", self.0))
     }
 }
 

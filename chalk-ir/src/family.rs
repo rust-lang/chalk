@@ -3,8 +3,9 @@ use crate::AssocTypeId;
 use crate::LifetimeData;
 use crate::ProjectionTy;
 use crate::RawId;
+use crate::StructId;
+use crate::TraitId;
 use crate::TyData;
-use crate::TypeKindId;
 use chalk_engine::context::Context;
 use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
@@ -45,10 +46,20 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
-    fn debug_type_kind_id(
-        type_kind_id: TypeKindId<Self>,
+    fn debug_struct_id(
+        struct_id: StructId<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result>;
+
+    /// Prints the debug representation of a type-kind-id. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific type-family (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_trait_id(trait_id: TraitId<Self>, fmt: &mut fmt::Formatter<'_>)
+        -> Option<fmt::Result>;
 
     /// Prints the debug representation of a type-kind-id. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -119,11 +130,18 @@ impl TypeFamily for ChalkIr {
     type InternedLifetime = LifetimeData<ChalkIr>;
     type DefId = RawId;
 
-    fn debug_type_kind_id(
-        type_kind_id: TypeKindId<ChalkIr>,
+    fn debug_struct_id(
+        type_kind_id: StructId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
-        tls::with_current_program(|prog| Some(prog?.debug_type_kind_id(type_kind_id, fmt)))
+        tls::with_current_program(|prog| Some(prog?.debug_struct_id(type_kind_id, fmt)))
+    }
+
+    fn debug_trait_id(
+        type_kind_id: TraitId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_trait_id(type_kind_id, fmt)))
     }
 
     fn debug_assoc_type_id(
