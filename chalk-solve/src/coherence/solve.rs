@@ -12,7 +12,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
     pub(super) fn visit_specializations_of_trait(
         &self,
         mut record_specialization: impl FnMut(ImplId<TF>, ImplId<TF>),
-    ) -> Result<(), CoherenceError> {
+    ) -> Result<(), CoherenceError<TF>> {
         // Ignore impls for marker traits as they are allowed to overlap.
         let trait_datum = self.db.trait_datum(self.trait_id);
         if trait_datum.flags.marker {
@@ -38,8 +38,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
                     (true, false) => record_specialization(l_id, r_id),
                     (false, true) => record_specialization(r_id, l_id),
                     (_, _) => {
-                        let trait_name = self.db.trait_name(self.trait_id);
-                        Err(CoherenceError::OverlappingImpls(trait_name))?;
+                        Err(CoherenceError::OverlappingImpls(self.trait_id))?;
                     }
                 }
             }

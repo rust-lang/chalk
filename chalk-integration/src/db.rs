@@ -8,7 +8,6 @@ use chalk_ir::AssocTypeId;
 use chalk_ir::Canonical;
 use chalk_ir::ConstrainedSubst;
 use chalk_ir::Goal;
-use chalk_ir::Identifier;
 use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
 use chalk_ir::Parameter;
@@ -132,13 +131,5 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir()
             .unwrap()
             .impl_provided_for(auto_trait_id, struct_id)
-    }
-
-    fn struct_name(&self, id: StructId<ChalkIr>) -> Identifier {
-        self.program_ir().unwrap().struct_name(id)
-    }
-
-    fn trait_name(&self, id: TraitId<ChalkIr>) -> Identifier {
-        self.program_ir().unwrap().trait_name(id)
     }
 }

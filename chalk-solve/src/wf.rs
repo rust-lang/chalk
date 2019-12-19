@@ -10,29 +10,29 @@ use chalk_ir::*;
 use chalk_rust_ir::*;
 
 #[derive(Debug)]
-pub enum WfError {
-    IllFormedTypeDecl(chalk_ir::Identifier),
-    IllFormedTraitImpl(chalk_ir::Identifier),
+pub enum WfError<TF: TypeFamily> {
+    IllFormedTypeDecl(chalk_ir::StructId<TF>),
+    IllFormedTraitImpl(chalk_ir::TraitId<TF>),
 }
 
-impl fmt::Display for WfError {
+impl<TF: TypeFamily> fmt::Display for WfError<TF> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             WfError::IllFormedTypeDecl(id) => write!(
                 f,
-                "type declaration {:?} does not meet well-formedness requirements",
+                "type declaration `{:?}` does not meet well-formedness requirements",
                 id
             ),
             WfError::IllFormedTraitImpl(id) => write!(
                 f,
-                "trait impl for {:?} does not meet well-formedness requirements",
+                "trait impl for `{:?}` does not meet well-formedness requirements",
                 id
             ),
         }
     }
 }
 
-impl std::error::Error for WfError {}
+impl<TF: TypeFamily> std::error::Error for WfError<TF> {}
 
 pub struct WfSolver<'db, TF: TypeFamily> {
     db: &'db dyn RustIrDatabase<TF>,
@@ -138,7 +138,7 @@ where
         Self { db, solver_choice }
     }
 
-    pub fn verify_struct_decl(&self, struct_id: StructId<TF>) -> Result<(), WfError> {
+    pub fn verify_struct_decl(&self, struct_id: StructId<TF>) -> Result<(), WfError<TF>> {
         let struct_datum = self.db.struct_datum(struct_id);
 
         // We retrieve all the input types of the struct fields.
@@ -185,14 +185,13 @@ where
         };
 
         if !is_legal {
-            let name = self.db.struct_name(struct_id);
-            Err(WfError::IllFormedTypeDecl(name))
+            Err(WfError::IllFormedTypeDecl(struct_id))
         } else {
             Ok(())
         }
     }
 
-    pub fn verify_trait_impl(&self, impl_id: ImplId<TF>) -> Result<(), WfError> {
+    pub fn verify_trait_impl(&self, impl_id: ImplId<TF>) -> Result<(), WfError<TF>> {
         let impl_datum = self.db.impl_datum(impl_id);
 
         if !impl_datum.is_positive() {
@@ -283,8 +282,7 @@ where
             Ok(())
         } else {
             let trait_ref = &impl_datum.binders.value.trait_ref;
-            let name = self.db.trait_name(trait_ref.trait_id);
-            Err(WfError::IllFormedTraitImpl(name))
+            Err(WfError::IllFormedTraitImpl(trait_ref.trait_id))
         }
     }
 

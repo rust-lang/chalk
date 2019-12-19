@@ -201,18 +201,4 @@ impl RustIrDatabase<ChalkIr> for Program {
                 }
         })
     }
-
-    fn struct_name(&self, id: StructId<ChalkIr>) -> Identifier {
-        match self.struct_kinds.get(&id) {
-            Some(v) => v.name,
-            None => panic!("no type with id `{:?}`", id),
-        }
-    }
-
-    fn trait_name(&self, id: TraitId<ChalkIr>) -> Identifier {
-        match self.trait_kinds.get(&id) {
-            Some(v) => v.name,
-            None => panic!("no type with id `{:?}`", id),
-        }
-    }
 }

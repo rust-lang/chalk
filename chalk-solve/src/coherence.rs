@@ -3,7 +3,7 @@ use petgraph::prelude::*;
 use crate::solve::SolverChoice;
 use crate::RustIrDatabase;
 use chalk_ir::family::TypeFamily;
-use chalk_ir::{self, Identifier, ImplId, TraitId};
+use chalk_ir::{self, ImplId, TraitId};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
@@ -18,25 +18,25 @@ pub struct CoherenceSolver<'db, TF: TypeFamily> {
 }
 
 #[derive(Debug)]
-pub enum CoherenceError {
-    OverlappingImpls(Identifier),
-    FailedOrphanCheck(Identifier),
+pub enum CoherenceError<TF: TypeFamily> {
+    OverlappingImpls(TraitId<TF>),
+    FailedOrphanCheck(TraitId<TF>),
 }
 
-impl fmt::Display for CoherenceError {
+impl<TF: TypeFamily> fmt::Display for CoherenceError<TF> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CoherenceError::OverlappingImpls(id) => {
-                write!(f, "overlapping impls of trait {:?}", id)
+                write!(f, "overlapping impls of trait `{:?}`", id)
             }
             CoherenceError::FailedOrphanCheck(id) => {
-                write!(f, "impl for trait {:?} violates the orphan rules", id)
+                write!(f, "impl for trait `{:?}` violates the orphan rules", id)
             }
         }
     }
 }
 
-impl std::error::Error for CoherenceError {}
+impl<TF: TypeFamily> std::error::Error for CoherenceError<TF> {}
 
 /// Stores the specialization priorities for a set of impls.
 /// This basically encodes which impls specialize one another.
@@ -90,7 +90,7 @@ where
 
     pub fn specialization_priorities(
         &self,
-    ) -> Result<Arc<SpecializationPriorities<TF>>, CoherenceError> {
+    ) -> Result<Arc<SpecializationPriorities<TF>>, CoherenceError<TF>> {
         let mut result = SpecializationPriorities::<TF>::new();
 
         let forest = self.build_specialization_forest()?;
@@ -105,7 +105,7 @@ where
     }
 
     // Build the forest of specialization relationships.
-    fn build_specialization_forest(&self) -> Result<Graph<ImplId<TF>, ()>, CoherenceError> {
+    fn build_specialization_forest(&self) -> Result<Graph<ImplId<TF>, ()>, CoherenceError<TF>> {
         // The forest is returned as a graph but built as a GraphMap; this is
         // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraphMap::new();

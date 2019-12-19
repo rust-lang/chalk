@@ -76,20 +76,22 @@ fn coherence(
 ) -> Result<BTreeMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError> {
     let program = db.program_ir()?;
 
-    let priorities_map: Result<BTreeMap<_, _>, ChalkError> = program
-        .trait_data
-        .keys()
-        .map(|&trait_id| {
-            let solver = CoherenceSolver::new(db, db.solver_choice(), trait_id);
-            let priorities = solver.specialization_priorities()?;
-            Ok((trait_id, priorities))
-        })
-        .collect();
-    let priorities_map = priorities_map?;
+    tls::set_current_program(&program, || -> Result<_, ChalkError> {
+        let priorities_map: Result<BTreeMap<_, _>, ChalkError> = program
+            .trait_data
+            .keys()
+            .map(|&trait_id| {
+                let solver = CoherenceSolver::new(db, db.solver_choice(), trait_id);
+                let priorities = solver.specialization_priorities()?;
+                Ok((trait_id, priorities))
+            })
+            .collect();
+        let priorities_map = priorities_map?;
 
-    let () = db.orphan_check()?;
+        let () = db.orphan_check()?;
 
-    Ok(priorities_map)
+        Ok(priorities_map)
+    })
 }
 
 fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
