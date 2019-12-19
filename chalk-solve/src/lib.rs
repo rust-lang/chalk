@@ -71,7 +71,10 @@ pub trait RustIrDatabase<TF: TypeFamily>: Debug {
     fn impl_provided_for(&self, auto_trait_id: TraitId<TF>, struct_id: StructId<TF>) -> bool;
 
     /// Returns the name for the type with the given id.
-    fn type_name(&self, id: TypeKindId<TF>) -> Identifier;
+    fn struct_name(&self, id: StructId<TF>) -> Identifier;
+
+    /// Returns the name for the type with the given id.
+    fn trait_name(&self, id: TraitId<TF>) -> Identifier;
 }
 
 pub use solve::Guidance;

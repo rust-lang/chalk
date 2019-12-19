@@ -185,7 +185,7 @@ where
         };
 
         if !is_legal {
-            let name = self.db.type_name(struct_id.into());
+            let name = self.db.struct_name(struct_id);
             Err(WfError::IllFormedTypeDecl(name))
         } else {
             Ok(())
@@ -283,7 +283,7 @@ where
             Ok(())
         } else {
             let trait_ref = &impl_datum.binders.value.trait_ref;
-            let name = self.db.type_name(trait_ref.trait_id.into());
+            let name = self.db.trait_name(trait_ref.trait_id);
             Err(WfError::IllFormedTraitImpl(name))
         }
     }

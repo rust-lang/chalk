@@ -40,7 +40,7 @@ pub fn perform_orphan_check<TF: TypeFamily>(
 
     if !is_allowed {
         let trait_id = impl_datum.trait_id();
-        let trait_name = db.type_name(trait_id.into());
+        let trait_name = db.trait_name(trait_id);
         Err(CoherenceError::FailedOrphanCheck(trait_name))?;
     }
 

@@ -1,6 +1,6 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::family::ChalkIr;
-use chalk_ir::{self, AssocTypeId, ImplId, StructId, TraitId, TypeKindId};
+use chalk_ir::{self, AssocTypeId, ImplId, StructId, TraitId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
@@ -11,8 +11,10 @@ use std::sync::Arc;
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
 
-type TypeIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TypeKindId<ChalkIr>>;
-type TypeKinds = BTreeMap<chalk_ir::TypeKindId<ChalkIr>, rust_ir::TypeKind>;
+type StructIds = BTreeMap<chalk_ir::Identifier, chalk_ir::StructId<ChalkIr>>;
+type TraitIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TraitId<ChalkIr>>;
+type StructKinds = BTreeMap<chalk_ir::StructId<ChalkIr>, rust_ir::TypeKind>;
+type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, rust_ir::TypeKind>;
 type AssociatedTyLookups =
     BTreeMap<(chalk_ir::TraitId<ChalkIr>, chalk_ir::Identifier), AssociatedTyLookup>;
 type AssociatedTyValueIds =
@@ -23,8 +25,10 @@ pub type LowerResult<T> = Result<T, RustIrError>;
 
 #[derive(Clone, Debug)]
 struct Env<'k> {
-    type_ids: &'k TypeIds,
-    type_kinds: &'k TypeKinds,
+    struct_ids: &'k StructIds,
+    struct_kinds: &'k StructKinds,
+    trait_ids: &'k TraitIds,
+    trait_kinds: &'k TraitKinds,
     associated_ty_lookups: &'k AssociatedTyLookups,
     /// Parameter identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
@@ -50,8 +54,8 @@ struct AssociatedTyLookup {
     addl_parameter_kinds: Vec<chalk_ir::ParameterKind<()>>,
 }
 
-enum NameLookup {
-    Type(chalk_ir::TypeKindId<ChalkIr>),
+enum TypeLookup {
+    Struct(chalk_ir::StructId<ChalkIr>),
     Parameter(usize),
 }
 
@@ -63,16 +67,39 @@ const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
 impl<'k> Env<'k> {
-    fn lookup(&self, name: Identifier) -> LowerResult<NameLookup> {
+    fn lookup_type(&self, name: Identifier) -> LowerResult<TypeLookup> {
         if let Some(k) = self
             .parameter_map
             .get(&chalk_ir::ParameterKind::Ty(name.str))
         {
-            return Ok(NameLookup::Parameter(*k));
+            return Ok(TypeLookup::Parameter(*k));
         }
 
-        if let Some(id) = self.type_ids.get(&name.str) {
-            return Ok(NameLookup::Type(*id));
+        if let Some(id) = self.struct_ids.get(&name.str) {
+            return Ok(TypeLookup::Struct(*id));
+        }
+
+        if let Some(_) = self.trait_ids.get(&name.str) {
+            return Err(RustIrError::NotStruct(name));
+        }
+
+        Err(RustIrError::InvalidTypeName(name))
+    }
+
+    fn lookup_trait(&self, name: Identifier) -> LowerResult<TraitId<ChalkIr>> {
+        if let Some(_) = self
+            .parameter_map
+            .get(&chalk_ir::ParameterKind::Ty(name.str))
+        {
+            return Err(RustIrError::NotTrait(name));
+        }
+
+        if let Some(_) = self.struct_ids.get(&name.str) {
+            return Err(RustIrError::NotTrait(name));
+        }
+
+        if let Some(id) = self.trait_ids.get(&name.str) {
+            return Ok(*id);
         }
 
         Err(RustIrError::InvalidTypeName(name))
@@ -89,8 +116,12 @@ impl<'k> Env<'k> {
         Err(RustIrError::InvalidLifetimeName(name))
     }
 
-    fn type_kind(&self, id: chalk_ir::TypeKindId<ChalkIr>) -> &rust_ir::TypeKind {
-        &self.type_kinds[&id]
+    fn struct_kind(&self, id: chalk_ir::StructId<ChalkIr>) -> &rust_ir::TypeKind {
+        &self.struct_kinds[&id]
+    }
+
+    fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &rust_ir::TypeKind {
+        &self.trait_kinds[&id]
     }
 
     /// Introduces new parameters, shifting the indices of existing
@@ -181,17 +212,27 @@ impl LowerProgram for Program {
             }
         }
 
-        let mut type_ids = BTreeMap::new();
-        let mut type_kinds = BTreeMap::new();
+        let mut struct_ids = BTreeMap::new();
+        let mut trait_ids = BTreeMap::new();
+        let mut struct_kinds = BTreeMap::new();
+        let mut trait_kinds = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
-            let (k, id) = match *item {
-                Item::StructDefn(ref d) => (d.lower_type_kind()?, StructId(raw_id).into()),
-                Item::TraitDefn(ref d) => (d.lower_type_kind()?, TraitId(raw_id).into()),
+            match item {
+                Item::StructDefn(defn) => {
+                    let type_kind = defn.lower_type_kind()?;
+                    let id = StructId(raw_id);
+                    struct_ids.insert(type_kind.name, id);
+                    struct_kinds.insert(id, type_kind);
+                }
+                Item::TraitDefn(defn) => {
+                    let type_kind = defn.lower_type_kind()?;
+                    let id = TraitId(raw_id);
+                    trait_ids.insert(type_kind.name, id);
+                    trait_kinds.insert(id, type_kind);
+                }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
             };
-            type_ids.insert(k.name, id);
-            type_kinds.insert(id, k);
         }
 
         let mut struct_data = BTreeMap::new();
@@ -202,8 +243,10 @@ impl LowerProgram for Program {
         let mut custom_clauses = Vec::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
-                type_ids: &type_ids,
-                type_kinds: &type_kinds,
+                struct_ids: &struct_ids,
+                struct_kinds: &struct_kinds,
+                trait_ids: &trait_ids,
+                trait_kinds: &trait_kinds,
                 associated_ty_lookups: &associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
             };
@@ -309,8 +352,10 @@ impl LowerProgram for Program {
         }
 
         let program = LoweredProgram {
-            type_ids,
-            type_kinds,
+            struct_ids,
+            trait_ids,
+            struct_kinds,
+            trait_kinds,
             struct_data,
             trait_data,
             impl_data,
@@ -685,14 +730,9 @@ trait LowerTraitBound {
 
 impl LowerTraitBound for TraitBound {
     fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound<ChalkIr>> {
-        let trait_id = match env.lookup(self.trait_name)? {
-            NameLookup::Type(TypeKindId::TraitId(trait_id)) => trait_id,
-            NameLookup::Type(_) | NameLookup::Parameter(_) => {
-                Err(RustIrError::NotTrait(self.trait_name))?
-            }
-        };
+        let trait_id = env.lookup_trait(self.trait_name)?;
 
-        let k = env.type_kind(trait_id.into());
+        let k = env.trait_kind(trait_id);
         if k.sort != rust_ir::TypeSort::Trait {
             Err(RustIrError::NotTrait(self.trait_name))?;
         }
@@ -914,9 +954,9 @@ trait LowerTy {
 impl LowerTy for Ty {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>> {
         match *self {
-            Ty::Id { name } => match env.lookup(name)? {
-                NameLookup::Type(id) => {
-                    let k = env.type_kind(id);
+            Ty::Id { name } => match env.lookup_type(name)? {
+                TypeLookup::Struct(id) => {
+                    let k = env.struct_kind(id);
                     if k.binders.len() > 0 {
                         Err(RustIrError::IncorrectNumberOfTypeParameters {
                             identifier: name,
@@ -924,20 +964,14 @@ impl LowerTy for Ty {
                             actual: 0,
                         })
                     } else {
-                        match id {
-                            TypeKindId::StructId(id) => {
-                                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                                    name: chalk_ir::TypeName::Struct(id),
-                                    parameters: vec![],
-                                })
-                                .intern())
-                            }
-
-                            TypeKindId::TraitId(_) => Err(RustIrError::NotStruct(name)),
-                        }
+                        Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                            name: chalk_ir::TypeName::Struct(id),
+                            parameters: vec![],
+                        })
+                        .intern())
                     }
                 }
-                NameLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d).intern()),
+                TypeLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d).intern()),
             },
 
             Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(env.in_binders(
@@ -971,13 +1005,12 @@ impl LowerTy for Ty {
             .intern()),
 
             Ty::Apply { name, ref args } => {
-                let id = match env.lookup(name)? {
-                    NameLookup::Type(TypeKindId::StructId(id)) => id,
-                    NameLookup::Type(TypeKindId::TraitId(_)) => Err(RustIrError::NotStruct(name))?,
-                    NameLookup::Parameter(_) => Err(RustIrError::CannotApplyTypeParameter(name))?,
+                let id = match env.lookup_type(name)? {
+                    TypeLookup::Struct(id) => id,
+                    TypeLookup::Parameter(_) => Err(RustIrError::CannotApplyTypeParameter(name))?,
                 };
 
-                let k = env.type_kind(id.cast());
+                let k = env.struct_kind(id);
                 if k.binders.len() != args.len() {
                     Err(RustIrError::IncorrectNumberOfTypeParameters {
                         identifier: name,
@@ -1232,8 +1265,10 @@ impl LowerGoal<LoweredProgram> for Goal {
             .collect();
 
         let env = Env {
-            type_ids: &program.type_ids,
-            type_kinds: &program.type_kinds,
+            struct_ids: &program.struct_ids,
+            trait_ids: &program.trait_ids,
+            struct_kinds: &program.struct_kinds,
+            trait_kinds: &program.trait_kinds,
             associated_ty_lookups: &associated_ty_lookups,
             parameter_map: BTreeMap::new(),
         };

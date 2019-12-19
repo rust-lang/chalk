@@ -4,7 +4,7 @@ use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
     AssocTypeId, Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId,
-    TyData, TypeKindId, TypeName,
+    TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -18,11 +18,17 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
-    /// From type-name to item-id. Used during lowering only.
-    pub type_ids: BTreeMap<Identifier, TypeKindId<ChalkIr>>,
+    /// From struct name to item-id. Used during lowering only.
+    pub struct_ids: BTreeMap<Identifier, StructId<ChalkIr>>,
 
-    /// For each struct/trait:
-    pub type_kinds: BTreeMap<TypeKindId<ChalkIr>, TypeKind>,
+    /// For each struct:
+    pub struct_kinds: BTreeMap<StructId<ChalkIr>, TypeKind>,
+
+    /// From trait name to item-id. Used during lowering only.
+    pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
+
+    /// For each trait:
+    pub trait_kinds: BTreeMap<TraitId<ChalkIr>, TypeKind>,
 
     /// For each struct:
     pub struct_data: BTreeMap<StructId<ChalkIr>, Arc<StructDatum<ChalkIr>>>,
@@ -60,7 +66,7 @@ impl tls::DebugContext for Program {
         struct_id: StructId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(k) = self.type_kinds.get(&TypeKindId::StructId(struct_id)) {
+        if let Some(k) = self.struct_kinds.get(&struct_id) {
             write!(fmt, "{}", k.name)
         } else {
             fmt.debug_struct("InvalidStructId")
@@ -74,7 +80,7 @@ impl tls::DebugContext for Program {
         trait_id: TraitId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(k) = self.type_kinds.get(&TypeKindId::TraitId(trait_id)) {
+        if let Some(k) = self.trait_kinds.get(&trait_id) {
             write!(fmt, "{}", k.name)
         } else {
             fmt.debug_struct("InvalidTraitId")
@@ -196,8 +202,15 @@ impl RustIrDatabase<ChalkIr> for Program {
         })
     }
 
-    fn type_name(&self, id: TypeKindId<ChalkIr>) -> Identifier {
-        match self.type_kinds.get(&id) {
+    fn struct_name(&self, id: StructId<ChalkIr>) -> Identifier {
+        match self.struct_kinds.get(&id) {
+            Some(v) => v.name,
+            None => panic!("no type with id `{:?}`", id),
+        }
+    }
+
+    fn trait_name(&self, id: TraitId<ChalkIr>) -> Identifier {
+        match self.trait_kinds.get(&id) {
             Some(v) => v.name,
             None => panic!("no type with id `{:?}`", id),
         }

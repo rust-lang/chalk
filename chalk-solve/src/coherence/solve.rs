@@ -38,7 +38,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
                     (true, false) => record_specialization(l_id, r_id),
                     (false, true) => record_specialization(r_id, l_id),
                     (_, _) => {
-                        let trait_name = self.db.type_name(self.trait_id.into());
+                        let trait_name = self.db.trait_name(self.trait_id);
                         Err(CoherenceError::OverlappingImpls(trait_name))?;
                     }
                 }
