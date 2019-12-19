@@ -163,7 +163,6 @@ eq_zip!(TF => Identifier);
 eq_zip!(TF => QuantifierKind);
 eq_zip!(TF => PhantomData<TF>);
 eq_zip!(TF => PlaceholderIndex);
-eq_zip!(TF => PlaceholderTy);
 
 /// Generates a Zip impl that zips each field of the struct in turn.
 macro_rules! struct_zip {

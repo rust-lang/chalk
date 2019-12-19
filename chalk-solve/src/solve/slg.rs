@@ -483,10 +483,12 @@ impl MayInvalidate {
         self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
     }
 
-    fn aggregate_placeholder_tys(&mut self, new: &PlaceholderTy, current: &PlaceholderTy) -> bool {
-        match (new, current) {
-            (PlaceholderTy(p1), PlaceholderTy(p2)) => p1 != p2,
-        }
+    fn aggregate_placeholder_tys(
+        &mut self,
+        new: &PlaceholderIndex,
+        current: &PlaceholderIndex,
+    ) -> bool {
+        new != current
     }
 
     fn aggregate_projection_tys<TF: TypeFamily>(

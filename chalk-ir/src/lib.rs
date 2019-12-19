@@ -275,7 +275,7 @@ pub enum TyData<TF: TypeFamily> {
     /// instantiated form a universally quantified type, e.g., from
     /// `forall<T> { .. }`. Stands in as a representative of "some
     /// unknown type".
-    Placeholder(PlaceholderTy),
+    Placeholder(PlaceholderIndex),
 
     /// A "dyn" type is a trait object type created via the "dyn Trait" syntax.
     /// In the chalk parser, the traits that the object represents is parsed as
@@ -448,7 +448,7 @@ impl PlaceholderIndex {
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
-        let data: TyData<TF> = TyData::Placeholder(PlaceholderTy(self));
+        let data: TyData<TF> = TyData::Placeholder(self);
         data.intern()
     }
 }
@@ -477,9 +477,6 @@ impl<TF: TypeFamily> ApplicationTy<TF> {
         self.type_parameters().count()
     }
 }
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct PlaceholderTy(pub PlaceholderIndex);
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ParameterKind<T, L = T> {

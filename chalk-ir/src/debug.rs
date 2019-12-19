@@ -74,14 +74,6 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
     }
 }
 
-impl Debug for PlaceholderTy {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match self {
-            PlaceholderTy(p) => write!(fmt, "{:?}", p),
-        }
-    }
-}
-
 impl Debug for InferenceVar {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "?{}", self.index)

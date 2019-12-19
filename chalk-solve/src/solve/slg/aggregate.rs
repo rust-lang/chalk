@@ -229,17 +229,13 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
 
     fn aggregate_placeholder_tys(
         &mut self,
-        placeholder1: &PlaceholderTy,
-        placeholder2: &PlaceholderTy,
+        index1: &PlaceholderIndex,
+        index2: &PlaceholderIndex,
     ) -> Ty<TF> {
-        match (placeholder1, placeholder2) {
-            (PlaceholderTy(index1), PlaceholderTy(index2)) => {
-                if index1 != index2 {
-                    self.new_variable()
-                } else {
-                    TyData::Placeholder(placeholder1.clone()).intern()
-                }
-            }
+        if index1 != index2 {
+            self.new_variable()
+        } else {
+            TyData::Placeholder(index1.clone()).intern()
         }
     }
 

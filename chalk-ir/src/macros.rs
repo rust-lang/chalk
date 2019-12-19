@@ -17,10 +17,10 @@ macro_rules! ty {
     };
 
     (placeholder $n:expr) => {
-        $crate::TyData::Placeholder(PlaceholderTy(PlaceholderIndex {
+        $crate::TyData::Placeholder(PlaceholderIndex {
             ui: UniverseIndex { counter: $n },
             idx: 0,
-        })).intern()
+        }).intern()
     };
 
     (projection (item $n:tt) $($arg:tt)*) => {
