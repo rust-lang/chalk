@@ -274,7 +274,7 @@ pub enum TyData<TF: TypeFamily> {
     /// from the underlying type, so technically we can represent
     /// things like `for<'a> SomeStruct<'a>`, although that has no
     /// meaning in Rust.
-    ForAll(Box<QuantifiedTy<TF>>),
+    ForAll(QuantifiedTy<TF>),
 
     /// References the binding at the given depth. The index is a [de
     /// Bruijn index], so it counts back through the in-scope binders,

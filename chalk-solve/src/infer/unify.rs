@@ -134,7 +134,7 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&TyData::ForAll(ref quantified_ty1), &TyData::ForAll(ref quantified_ty2)) => {
-                self.unify_binders(&**quantified_ty1, &**quantified_ty2)
+                self.unify_binders(quantified_ty1, quantified_ty2)
             }
 
             // Unifying `forall<X> { T }` with some other type `U`

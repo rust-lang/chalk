@@ -28,12 +28,24 @@ use std::marker::PhantomData;
 /// wind up being mapped to the same underlying type families in the
 /// end.
 pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
-    /// "Interned" representation of types. You can use the `Lookup`
-    /// trait to convert this to a `Ty<Self>`.
+    /// "Interned" representation of types.  In normal user code,
+    /// `Self::InternedType` is not referenced Instead, we refer to
+    /// `Ty<Self>`, which wraps this type.
+    ///
+    /// An `InternedType` must be something that can be created from a
+    /// `TyData` (by the [`intern_ty`] method) and then later
+    /// converted back (by the [`ty_data`] method). The interned form
+    /// must also introduce indirection, either via a `Box`, `&`, or
+    /// other pointer type.
     type InternedType: Debug + Clone + Eq + Ord + Hash;
 
-    /// "Interned" representation of lifetimes. You can use the
-    /// `Lookup` trait to convert this to a `Lifetime<Self>`.
+    /// "Interned" representation of lifetimes.  In normal user code,
+    /// `Self::InternedLifetime` is not referenced Instead, we refer to
+    /// `Lifetime<Self>`, which wraps this type.
+    ///
+    /// An `InternedLifetime` must be something that can be created
+    /// from a `LifetimeData` (by the [`intern_lifetime`] method) and
+    /// then later converted back (by the [`lifetime_data`] method).
     type InternedLifetime: Debug + Clone + Eq + Ord + Hash;
 
     /// The core "id" type used for struct-ids and the like.
@@ -96,6 +108,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// method).
     fn intern_lifetime(lifetime: LifetimeData<Self>) -> Self::InternedLifetime;
 
+    /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
     fn lifetime_data(lifetime: &Self::InternedLifetime) -> &LifetimeData<Self>;
 }
 
@@ -126,7 +139,7 @@ pub trait HasTypeFamily {
 pub struct ChalkIr {}
 
 impl TypeFamily for ChalkIr {
-    type InternedType = TyData<ChalkIr>;
+    type InternedType = Box<TyData<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
     type DefId = RawId;
 
@@ -158,11 +171,11 @@ impl TypeFamily for ChalkIr {
         tls::with_current_program(|prog| Some(prog?.debug_projection(projection, fmt)))
     }
 
-    fn intern_ty(ty: TyData<ChalkIr>) -> TyData<ChalkIr> {
-        ty
+    fn intern_ty(ty: TyData<ChalkIr>) -> Box<TyData<ChalkIr>> {
+        Box::new(ty)
     }
 
-    fn ty_data(ty: &TyData<ChalkIr>) -> &TyData<Self> {
+    fn ty_data(ty: &Box<TyData<ChalkIr>>) -> &TyData<Self> {
         ty
     }
 

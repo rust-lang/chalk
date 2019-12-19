@@ -1064,7 +1064,7 @@ impl LowerTy for Ty {
                     num_binders: lifetime_names.len(),
                     ty,
                 };
-                Ok(chalk_ir::TyData::ForAll(Box::new(quantified_ty)).intern())
+                Ok(chalk_ir::TyData::ForAll(quantified_ty).intern())
             }
         }
     }

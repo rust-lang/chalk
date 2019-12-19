@@ -10,10 +10,10 @@ macro_rules! ty {
     };
 
     (for_all $n:tt $t:tt) => {
-        $crate::TyData::ForAll(Box::new(QuantifiedTy {
+        $crate::TyData::ForAll(QuantifiedTy {
             num_binders: $n,
             ty: ty!($t),
-        })).intern()
+        }).intern()
     };
 
     (placeholder $n:expr) => {
