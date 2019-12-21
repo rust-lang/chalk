@@ -181,8 +181,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
             // variable in there and be done with it.
             (TyData::BoundVar(_), TyData::BoundVar(_))
             | (TyData::ForAll(_), TyData::ForAll(_))
-            | (TyData::Dyn(_), TyData::Dyn(_))
-            | (TyData::Opaque(_), TyData::Opaque(_)) => self.new_variable(),
+            | (TyData::Dyn(_), TyData::Dyn(_)) => self.new_variable(),
 
             (TyData::Apply(apply1), TyData::Apply(apply2)) => {
                 self.aggregate_application_tys(apply1, apply2)
@@ -200,7 +199,6 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
             (TyData::InferenceVar(_), _)
             | (TyData::BoundVar(_), _)
             | (TyData::Dyn(_), _)
-            | (TyData::Opaque(_), _)
             | (TyData::ForAll(_), _)
             | (TyData::Apply(_), _)
             | (TyData::Projection(_), _)

@@ -61,8 +61,8 @@ impl<'me, TF: TypeFamily> EnvElaborator<'me, TF> {
             }
 
             // FIXME(#203) -- We haven't fully figured out the implied
-            // bounds story around object and impl trait types.
-            TyData::Dyn(_) | TyData::Opaque(_) => (),
+            // bounds story around `dyn Trait` types.
+            TyData::Dyn(_) => (),
 
             TyData::ForAll(_) | TyData::BoundVar(_) | TyData::InferenceVar(_) => (),
         }

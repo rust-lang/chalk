@@ -525,7 +525,6 @@ impl MayInvalidate {
             // For everything else, be conservative here and just say we may invalidate.
             (TyData::ForAll(_), _)
             | (TyData::Dyn(_), _)
-            | (TyData::Opaque(_), _)
             | (TyData::Apply(_), _)
             | (TyData::Placeholder(_), _)
             | (TyData::Projection(_), _) => true,

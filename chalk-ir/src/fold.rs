@@ -318,7 +318,6 @@ where
             }
         }
         TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
-        TyData::Opaque(clauses) => Ok(TyData::Opaque(clauses.fold_with(folder, binders)?).intern()),
         TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
         TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, binders)?).intern()),
         TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, binders)?),

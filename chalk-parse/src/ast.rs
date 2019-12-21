@@ -158,9 +158,6 @@ pub enum Ty {
     Dyn {
         bounds: Vec<QuantifiedInlineBound>,
     },
-    Opaque {
-        bounds: Vec<QuantifiedInlineBound>,
-    },
     Apply {
         name: Identifier,
         args: Vec<Parameter>,

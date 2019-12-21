@@ -68,7 +68,7 @@ impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
                 app.parameters.fold(accumulator);
             }
 
-            TyData::Dyn(qwc) | TyData::Opaque(qwc) => {
+            TyData::Dyn(qwc) => {
                 accumulator.push(self.clone());
                 qwc.bounds.fold(accumulator);
             }

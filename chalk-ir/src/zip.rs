@@ -191,7 +191,7 @@ struct_zip!(impl[
     goal,
 });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for ApplicationTy<TF> { name, parameters });
-struct_zip!(impl[TF: TypeFamily] Zip<TF> for BoundedTy<TF> { bounds });
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for DynTy<TF> { bounds });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for ProjectionTy<TF> {
     associated_ty_id,
     parameters,

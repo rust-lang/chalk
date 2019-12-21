@@ -974,24 +974,7 @@ impl LowerTy for Ty {
                 TypeLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d).intern()),
             },
 
-            Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(chalk_ir::BoundedTy {
-                bounds: env.in_binders(
-                    // FIXME: Figure out a proper name for this type parameter
-                    Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
-                    |env| {
-                        Ok(bounds
-                            .lower(env)?
-                            .iter()
-                            .flat_map(|qil| {
-                                qil.into_where_clauses(chalk_ir::TyData::BoundVar(0).intern())
-                            })
-                            .collect())
-                    },
-                )?,
-            })
-            .intern()),
-
-            Ty::Opaque { ref bounds } => Ok(chalk_ir::TyData::Opaque(chalk_ir::BoundedTy {
+            Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
                 bounds: env.in_binders(
                     // FIXME: Figure out a proper name for this type parameter
                     Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),

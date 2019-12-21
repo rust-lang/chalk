@@ -210,27 +210,24 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             // that goal, because they let us prove other things but
             // not `Clone`.
             let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
-            match self_ty.data() {
-                TyData::Opaque(bounded_ty) | TyData::Dyn(bounded_ty) => {
-                    // In this arm, `self_ty` is the `dyn Fn(&u8)`,
-                    // and `bounded_ty` is the `exists<T> { .. }`
-                    // clauses shown above.
+            if let TyData::Dyn(dyn_ty) = self_ty.data() {
+                // In this arm, `self_ty` is the `dyn Fn(&u8)`,
+                // and `bounded_ty` is the `exists<T> { .. }`
+                // clauses shown above.
 
-                    for exists_qwc in &bounded_ty.bounds {
-                        // Replace the `T` from `exists<T> { .. }` with `self_ty`,
-                        // yielding clases like
-                        //
-                        // ```
-                        // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
-                        // ```
-                        let qwc = exists_qwc.substitute(&[self_ty.clone().cast()]);
+                for exists_qwc in &dyn_ty.bounds {
+                    // Replace the `T` from `exists<T> { .. }` with `self_ty`,
+                    // yielding clases like
+                    //
+                    // ```
+                    // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
+                    // ```
+                    let qwc = exists_qwc.substitute(&[self_ty.clone().cast()]);
 
-                        builder.push_binders(&qwc, |builder, wc| {
-                            builder.push_fact(wc);
-                        });
-                    }
+                    builder.push_binders(&qwc, |builder, wc| {
+                        builder.push_fact(wc);
+                    });
                 }
-                _ => {}
             }
 
             // TODO sized, unsize_trait, builtin impls?
@@ -347,7 +344,7 @@ fn match_ty<TF: TypeFamily>(
         TyData::ForAll(quantified_ty) => match_ty(builder, environment, &quantified_ty.ty),
         TyData::BoundVar(_) => {}
         TyData::InferenceVar(_) => panic!("should have floundered"),
-        TyData::Dyn(_) | TyData::Opaque(_) => {}
+        TyData::Dyn(_) => {}
     }
 }
 

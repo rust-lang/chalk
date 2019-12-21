@@ -177,9 +177,6 @@ TyWithoutFor: Ty = {
     "dyn" <b:Plus<QuantifiedInlineBound>> => Ty::Dyn {
         bounds: b,
     },
-    "impl" <b:Plus<QuantifiedInlineBound>> => Ty::Opaque {
-        bounds: b,
-    },
     <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
     <p:ProjectionTy> => Ty::Projection { proj: p },
     "(" <Ty> ")",

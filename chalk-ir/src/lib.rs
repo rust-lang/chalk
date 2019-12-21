@@ -253,14 +253,7 @@ pub enum TyData<TF: TypeFamily> {
     ///
     /// See the `Opaque` variant for a discussion about the use of
     /// binders here.
-    Dyn(BoundedTy<TF>),
-
-    /// An "opaque" type is one that is created via the "impl Trait" syntax.
-    /// They are named so because the concrete type implementing the trait
-    /// is unknown, and hence the type is opaque to us. The only information
-    /// that we know of is that this type implements the traits listed by the
-    /// user.
-    Opaque(BoundedTy<TF>),
+    Dyn(DynTy<TF>),
 
     /// A "projection" type corresponds to an (unnormalized)
     /// projection like `<P0 as Trait<P1..Pn>>::Foo`. Note that the
@@ -296,10 +289,10 @@ impl<TF: TypeFamily> TyData<TF> {
     }
 }
 
-/// A "BoundedTy" could be either a `dyn Trait` or an (opaque) `impl
+/// A "DynTy" could be either a `dyn Trait` or an (opaque) `impl
 /// Trait`. Both of them are conceptually very related to a
 /// "existential type" of the form `exists<T> { T: Trait }`. The
-/// `BoundedTy` type represents those bounds.
+/// `DynTy` type represents those bounds.
 ///
 /// The "binder" here represents the unknown self type. So, a type like
 /// `impl for<'a> Fn(&'a u32)` would be represented with two-levels of
@@ -320,7 +313,7 @@ impl<TF: TypeFamily> TyData<TF> {
 /// a bound type with debruijn index 1 (i.e., skipping through one
 /// level of binder).
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
-pub struct BoundedTy<TF: TypeFamily> {
+pub struct DynTy<TF: TypeFamily> {
     pub bounds: Binders<Vec<QuantifiedWhereClause<TF>>>,
 }
 

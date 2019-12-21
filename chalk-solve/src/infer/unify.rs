@@ -122,13 +122,11 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             // Unifying an inference variables with a non-inference variable.
             (&TyData::InferenceVar(var), &TyData::Apply(_))
             | (&TyData::InferenceVar(var), &TyData::Placeholder(_))
-            | (&TyData::InferenceVar(var), &TyData::Opaque(_))
             | (&TyData::InferenceVar(var), &TyData::Dyn(_))
             | (&TyData::InferenceVar(var), &TyData::ForAll(_)) => self.unify_var_ty(var, b),
 
             (&TyData::Apply(_), &TyData::InferenceVar(var))
             | (&TyData::Placeholder(_), &TyData::InferenceVar(var))
-            | (TyData::Opaque(_), &TyData::InferenceVar(var))
             | (&TyData::Dyn(_), &TyData::InferenceVar(var))
             | (&TyData::ForAll(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, a),
 
@@ -140,15 +138,13 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             // Unifying `forall<X> { T }` with some other type `U`
             (&TyData::ForAll(ref quantified_ty), &TyData::Apply(_))
             | (&TyData::ForAll(ref quantified_ty), &TyData::Placeholder(_))
-            | (&TyData::ForAll(ref quantified_ty), &TyData::Dyn(_))
-            | (&TyData::ForAll(ref quantified_ty), &TyData::Opaque(_)) => {
+            | (&TyData::ForAll(ref quantified_ty), &TyData::Dyn(_)) => {
                 self.unify_forall_other(quantified_ty, b)
             }
 
             (&TyData::Apply(_), &TyData::ForAll(ref quantified_ty))
             | (&TyData::Placeholder(_), &TyData::ForAll(ref quantified_ty))
-            | (&TyData::Dyn(_), &TyData::ForAll(ref quantified_ty))
-            | (&TyData::Opaque(_), &TyData::ForAll(ref quantified_ty)) => {
+            | (&TyData::Dyn(_), &TyData::ForAll(ref quantified_ty)) => {
                 self.unify_forall_other(quantified_ty, a)
             }
 
@@ -166,14 +162,6 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
                 return Err(NoSolution);
             }
 
-            // Cannot unify `impl Trait` with things like structs or placeholders
-            (&TyData::Placeholder(_), &TyData::Opaque(_))
-            | (&TyData::Opaque(_), &TyData::Placeholder(_))
-            | (&TyData::Apply(_), &TyData::Opaque(_))
-            | (&TyData::Opaque(_), &TyData::Apply(_)) => {
-                return Err(NoSolution);
-            }
-
             // Cannot unify `dyn Trait` with things like structs or placeholders
             (&TyData::Placeholder(_), &TyData::Dyn(_))
             | (&TyData::Dyn(_), &TyData::Placeholder(_))
@@ -182,13 +170,8 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
                 return Err(NoSolution);
             }
 
-            // Cannot unify (e.g.) some `dyn Trait` and some `impl Trait` type
-            (&TyData::Dyn(..), &TyData::Opaque(..)) | (&TyData::Opaque(..), &TyData::Dyn(..)) => {
-                return Err(NoSolution);
-            }
-
-            (&TyData::Opaque(ref qwc1), &TyData::Opaque(ref qwc2))
-            | (&TyData::Dyn(ref qwc1), &TyData::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
+            // Unifying two dyn is possible if they have the same bounds.
+            (&TyData::Dyn(ref qwc1), &TyData::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
 
             // Unifying an associated type projection `<T as
             // Trait>::Item` with some other type `U`.
@@ -196,20 +179,14 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             | (&TyData::Placeholder(_), &TyData::Projection(ref proj))
             | (&TyData::ForAll(_), &TyData::Projection(ref proj))
             | (&TyData::InferenceVar(_), &TyData::Projection(ref proj))
-            | (&TyData::Dyn(_), &TyData::Projection(ref proj))
-            | (&TyData::Opaque(_), &TyData::Projection(ref proj)) => {
-                self.unify_projection_ty(proj, a)
-            }
+            | (&TyData::Dyn(_), &TyData::Projection(ref proj)) => self.unify_projection_ty(proj, a),
 
             (&TyData::Projection(ref proj), &TyData::Projection(_))
             | (&TyData::Projection(ref proj), &TyData::Apply(_))
             | (&TyData::Projection(ref proj), &TyData::Placeholder(_))
             | (&TyData::Projection(ref proj), &TyData::ForAll(_))
             | (&TyData::Projection(ref proj), &TyData::InferenceVar(_))
-            | (&TyData::Projection(ref proj), &TyData::Dyn(_))
-            | (&TyData::Projection(ref proj), &TyData::Opaque(_)) => {
-                self.unify_projection_ty(proj, b)
-            }
+            | (&TyData::Projection(ref proj), &TyData::Dyn(_)) => self.unify_projection_ty(proj, b),
 
             (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",

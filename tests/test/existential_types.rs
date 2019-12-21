@@ -14,12 +14,6 @@ fn dyn_Clone_is_Clone() {
         } yields {
             "Unique; substitution []"
         }
-
-        goal {
-            impl Clone: Clone
-        } yields {
-            "Unique; substitution []"
-        }
     }
 }
 
@@ -101,23 +95,7 @@ fn dyn_higher_ranked_type_arguments() {
 
         goal {
             forall<'static> {
-                impl forall<'a> Foo<Ref<'a>>: Foo<Ref<'static>>
-            }
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-
-        goal {
-            forall<'static> {
                 dyn forall<'a> Foo<Ref<'a>> + Bar: Foo<Ref<'static>>
-            }
-        } yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
-
-        goal {
-            forall<'static> {
-                impl forall<'a> Foo<Ref<'a>> + Bar: Foo<Ref<'static>>
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
@@ -133,17 +111,6 @@ fn dyn_higher_ranked_type_arguments() {
             forall<'static> {
                 forall<'a> {
                     dyn Foo<Ref<'static>>: Foo<Ref<'a>>
-                }
-            }
-        } yields {
-            // Note that this requires 'a == 'static, so it would be resolveable later on.
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '!1_0 }]"
-        }
-
-        goal {
-            forall<'static> {
-                forall<'a> {
-                    impl Foo<Ref<'static>>: Foo<Ref<'a>>
                 }
             }
         } yields {
