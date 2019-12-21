@@ -18,7 +18,7 @@ other programs:
 The following crate is an implementation detail, used internally by `chalk-solve`:
 
 * The `chalk-engine` crate, which defines the actual engine that solves logical predicate. This 
-  engine is quite general and not really specific to 
+  engine is quite general and not really specific to Rust.
 * The `chalk-derive` crate defines custom derives for the `chalk_ir::fold::Fold` trait and other
   such things.
 * The `chalk-macros` crate defines a few miscellaneous utility macros.
