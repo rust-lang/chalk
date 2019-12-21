@@ -150,10 +150,6 @@ pub trait Context: Clone + Debug {
 
     fn has_delayed_subgoals(canonical_subst: &Self::CanonicalAnswerSubst) -> bool;
 
-    fn delayed_subgoals(
-        canonical_answer: &Self::CanonicalAnswerSubst,
-    ) -> &Vec<Self::GoalInEnvironment>;
-
     fn num_universes(_: &Self::UCanonicalGoalInEnvironment) -> usize;
 
     fn canonical_constrained_subst_from_canonical_constrained_answer(
@@ -176,11 +172,6 @@ pub trait Context: Clone + Debug {
         _: &Self::UniverseMap,
         value: &Self::CanonicalAnswerSubst,
     ) -> Self::CanonicalAnswerSubst;
-
-    fn apply_binders(
-        ucanon: &Self::UCanonicalGoalInEnvironment,
-        goal: &Self::GoalInEnvironment,
-    ) -> Self::UCanonicalGoalInEnvironment;
 
     fn goal_from_goal_in_environment(goal: &Self::GoalInEnvironment) -> &Self::Goal;
 }

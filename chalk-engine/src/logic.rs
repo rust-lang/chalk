@@ -678,17 +678,14 @@ impl<C: Context> Forest<C> {
         let (table, subst, constraints, delayed_subgoals) =
             context.instantiate_answer_subst(num_universes, &answer.subst);
 
-        // FIXME: really, these shouldn't be added to the delayed_subgoals at all
-        // however, because we can't compare the table goal until `canonicalize_answer_subst`
-        // is called in `pursue_answer`, this will require a bit of refactoring work
+        // FIXME: it would be nice if these delayed subgoals didn't get added to the answer
+        // at all. However, we can't compare the delayed subgoals with the table goal until
+        // we call `canonicalize_answer_subst` in `pursue_answer`. However, at this point,
+        // it's a bit late since `pursue_answer` doesn't know about the table goal. This could
+        // be refactored a bit.
         let filtered_delayed_subgoals = delayed_subgoals
             .into_iter()
             .filter(|delayed_subgoal| {
-                dbg!(
-                    &C::goal_from_goal_in_environment(delayed_subgoal),
-                    &table_goal,
-                    *C::goal_from_goal_in_environment(delayed_subgoal) != table_goal
-                );
                 *C::goal_from_goal_in_environment(delayed_subgoal) != table_goal
             })
             .map(Literal::Positive)

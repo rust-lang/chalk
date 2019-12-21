@@ -121,12 +121,6 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
         !canonical_subst.value.delayed_subgoals.is_empty()
     }
 
-    fn delayed_subgoals(
-        canonical_answer: &Canonical<AnswerSubst<TF>>,
-    ) -> &Vec<InEnvironment<Goal<TF>>> {
-        &canonical_answer.value.delayed_subgoals
-    }
-
     fn num_universes(u_canon: &UCanonical<InEnvironment<Goal<TF>>>) -> usize {
         u_canon.universes
     }
@@ -155,19 +149,6 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
         value: &Canonical<AnswerSubst<TF>>,
     ) -> Canonical<AnswerSubst<TF>> {
         map.map_from_canonical(value)
-    }
-
-    fn apply_binders(
-        arg: &UCanonical<InEnvironment<Goal<TF>>>,
-        goal: &InEnvironment<Goal<TF>>,
-    ) -> UCanonical<InEnvironment<Goal<TF>>> {
-        UCanonical {
-            canonical: Canonical {
-                value: goal.clone(),
-                binders: arg.canonical.binders.clone(),
-            },
-            universes: arg.universes,
-        }
     }
 
     fn goal_from_goal_in_environment(goal: &InEnvironment<Goal<TF>>) -> &Goal<TF> {
