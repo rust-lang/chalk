@@ -10,15 +10,22 @@ macro_rules! ty {
     };
 
     (for_all $n:tt $t:tt) => {
-        $crate::TyData::ForAll(Box::new(QuantifiedTy {
+        $crate::TyData::ForAll(QuantifiedTy {
             num_binders: $n,
             ty: ty!($t),
-        })).intern()
+        }).intern()
+    };
+
+    (placeholder $n:expr) => {
+        $crate::TyData::Placeholder(PlaceholderIndex {
+            ui: UniverseIndex { counter: $n },
+            idx: 0,
+        }).intern()
     };
 
     (projection (item $n:tt) $($arg:tt)*) => {
         $crate::TyData::Projection(ProjectionTy {
-            associated_ty_id: TypeId(RawId { index: $n }),
+            associated_ty_id: AssocTypeId(RawId { index: $n }),
             parameters: vec![$(arg!($arg)),*],
         }).intern()
     };
@@ -43,11 +50,11 @@ macro_rules! ty {
 #[macro_export]
 macro_rules! arg {
     ((lifetime $b:tt)) => {
-        $crate::Parameter($crate::ParameterKind::Lifetime(lifetime!($b)))
+        $crate::Parameter::new($crate::ParameterKind::Lifetime(lifetime!($b)))
     };
 
     ($arg:tt) => {
-        $crate::Parameter($crate::ParameterKind::Ty(ty!($arg)))
+        $crate::Parameter::new($crate::ParameterKind::Ty(ty!($arg)))
     };
 }
 
@@ -77,12 +84,6 @@ macro_rules! lifetime {
 #[macro_export]
 macro_rules! ty_name {
     ((item $n:expr)) => {
-        $crate::TypeName::TypeKindId(TypeKindId::TypeId(TypeId(RawId { index: $n })))
-    };
-    ((placeholder $n:expr)) => {
-        $crate::TypeName::Placeholder(PlaceholderIndex {
-            ui: UniverseIndex { counter: $n },
-            idx: 0,
-        })
+        $crate::TypeName::Struct(StructId(RawId { index: $n }))
     };
 }

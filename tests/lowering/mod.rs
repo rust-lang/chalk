@@ -215,7 +215,7 @@ fn atc_accounting() {
             "ForAll<type> { \
              ForAll<lifetime> { \
              ForAll<type> { \
-             (ProjectionEq(<^2 as Iterable>::Iter<'^1> = ^0), \
+             all(ProjectionEq(<^2 as Iterable>::Iter<'^1> = ^0), \
              Implemented(^2: Iterable)) \
              } \
              } \
@@ -343,7 +343,7 @@ fn gat_higher_ranked_bound() {
     lowering_success! {
         program {
             trait Fn<T> {}
-            trait Ref<'a, T> {}
+            struct Ref<'a, T> {}
             trait Sized {}
 
             trait Foo {

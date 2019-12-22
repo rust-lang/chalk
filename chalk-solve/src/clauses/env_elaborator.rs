@@ -1,6 +1,6 @@
 use super::program_clauses::ToProgramClauses;
 use crate::clauses::builder::ClauseBuilder;
-use crate::clauses::match_type_kind;
+use crate::clauses::match_type_name;
 use crate::DomainGoal;
 use crate::FromEnv;
 use crate::ProgramClause;
@@ -9,7 +9,6 @@ use crate::Ty;
 use crate::TyData;
 use chalk_ir::family::TypeFamily;
 use chalk_ir::ProjectionTy;
-use chalk_ir::TypeName;
 use rustc_hash::FxHashSet;
 
 /// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
@@ -52,17 +51,11 @@ impl<'me, TF: TypeFamily> EnvElaborator<'me, TF> {
 
     fn visit_ty(&mut self, ty: &Ty<TF>) {
         match ty.data() {
-            TyData::Apply(application_ty) => match application_ty.name {
-                TypeName::TypeKindId(type_kind_id) => {
-                    match_type_kind(&mut self.builder, type_kind_id)
-                }
-                TypeName::Placeholder(_) | TypeName::Error => (),
-                TypeName::AssociatedType(type_id) => {
-                    self.db
-                        .associated_ty_data(type_id)
-                        .to_program_clauses(&mut self.builder);
-                }
-            },
+            TyData::Apply(application_ty) => {
+                match_type_name(&mut self.builder, application_ty.name)
+            }
+            TyData::Placeholder(_) => {}
+
             TyData::Projection(projection_ty) => {
                 self.visit_projection_ty(projection_ty);
             }

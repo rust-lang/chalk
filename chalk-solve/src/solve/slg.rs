@@ -272,7 +272,7 @@ impl<TF: TypeFamily> context::InferenceTable<SlgContext<TF>> for TruncatingInfer
             Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
             Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
             Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
-            Goal::And(g1, g2) => HhGoal::And(*g1, *g2),
+            Goal::All(goals) => HhGoal::All(goals),
             Goal::Not(g1) => HhGoal::Not(*g1),
             Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify((), a, b),
             Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
@@ -398,7 +398,7 @@ impl MayInvalidate {
         new: &Parameter<TF>,
         current: &Parameter<TF>,
     ) -> bool {
-        match (&new.0, &current.0) {
+        match (new.data(), current.data()) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2)
@@ -450,6 +450,10 @@ impl MayInvalidate {
                 self.aggregate_application_tys(apply1, apply2)
             }
 
+            (TyData::Placeholder(p1), TyData::Placeholder(p2)) => {
+                self.aggregate_placeholder_tys(p1, p2)
+            }
+
             (TyData::Projection(apply1), TyData::Projection(apply2)) => {
                 self.aggregate_projection_tys(apply1, apply2)
             }
@@ -459,6 +463,7 @@ impl MayInvalidate {
             | (TyData::Dyn(_), _)
             | (TyData::Opaque(_), _)
             | (TyData::Apply(_), _)
+            | (TyData::Placeholder(_), _)
             | (TyData::Projection(_), _) => true,
         }
     }
@@ -482,6 +487,14 @@ impl MayInvalidate {
         } = current;
 
         self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
+    }
+
+    fn aggregate_placeholder_tys(
+        &mut self,
+        new: &PlaceholderIndex,
+        current: &PlaceholderIndex,
+    ) -> bool {
+        new != current
     }
 
     fn aggregate_projection_tys<TF: TypeFamily>(

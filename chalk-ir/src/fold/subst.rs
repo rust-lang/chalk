@@ -28,8 +28,8 @@ impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
         if depth >= self.parameters.len() {
             Ok(TyData::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
         } else {
-            match self.parameters[depth].0 {
-                ParameterKind::Ty(ref t) => Ok(t.shifted_in(binders)),
+            match self.parameters[depth].data() {
+                ParameterKind::Ty(t) => Ok(t.shifted_in(binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         }
@@ -39,8 +39,8 @@ impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
         if depth >= self.parameters.len() {
             Ok(LifetimeData::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
         } else {
-            match self.parameters[depth].0 {
-                ParameterKind::Lifetime(ref l) => Ok(l.shifted_in(binders)),
+            match self.parameters[depth].data() {
+                ParameterKind::Lifetime(l) => Ok(l.shifted_in(binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         }

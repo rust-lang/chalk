@@ -211,12 +211,12 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             // not `Clone`.
             let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
             match self_ty.data() {
-                TyData::Opaque(exists_qwcs) | TyData::Dyn(exists_qwcs) => {
+                TyData::Opaque(bounded_ty) | TyData::Dyn(bounded_ty) => {
                     // In this arm, `self_ty` is the `dyn Fn(&u8)`,
-                    // and `exists_qwcs` is the `exists<T> { .. }`
+                    // and `bounded_ty` is the `exists<T> { .. }`
                     // clauses shown above.
 
-                    for exists_qwc in exists_qwcs.into_iter() {
+                    for exists_qwc in &bounded_ty.bounds {
                         // Replace the `T` from `exists<T> { .. }` with `self_ty`,
                         // yielding clases like
                         //
@@ -338,14 +338,8 @@ fn match_ty<TF: TypeFamily>(
     ty: &Ty<TF>,
 ) {
     match ty.data() {
-        TyData::Apply(application_ty) => match application_ty.name {
-            TypeName::TypeKindId(type_kind_id) => match_type_kind(builder, type_kind_id),
-            TypeName::Placeholder(_) | TypeName::Error => {}
-            TypeName::AssociatedType(type_id) => builder
-                .db
-                .associated_ty_data(type_id)
-                .to_program_clauses(builder),
-        },
+        TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
+        TyData::Placeholder(_) => {}
         TyData::Projection(projection_ty) => builder
             .db
             .associated_ty_data(projection_ty.associated_ty_id)
@@ -357,23 +351,22 @@ fn match_ty<TF: TypeFamily>(
     }
 }
 
-fn match_type_kind<TF: TypeFamily>(
-    builder: &mut ClauseBuilder<'_, TF>,
-    type_kind_id: TypeKindId<TF>,
-) {
-    match type_kind_id {
-        TypeKindId::TypeId(type_id) => builder
+fn match_type_name<TF: TypeFamily>(builder: &mut ClauseBuilder<'_, TF>, name: TypeName<TF>) {
+    match name {
+        TypeName::Struct(struct_id) => match_struct(builder, struct_id),
+        TypeName::Error => {}
+        TypeName::AssociatedType(type_id) => builder
             .db
             .associated_ty_data(type_id)
             .to_program_clauses(builder),
-        TypeKindId::TraitId(trait_id) => {
-            builder.db.trait_datum(trait_id).to_program_clauses(builder)
-        }
-        TypeKindId::StructId(struct_id) => builder
-            .db
-            .struct_datum(struct_id)
-            .to_program_clauses(builder),
     }
+}
+
+fn match_struct<TF: TypeFamily>(builder: &mut ClauseBuilder<'_, TF>, struct_id: StructId<TF>) {
+    builder
+        .db
+        .struct_datum(struct_id)
+        .to_program_clauses(builder)
 }
 
 fn program_clauses_for_env<'db, TF: TypeFamily>(

@@ -30,7 +30,7 @@ fn universe_error() {
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     table
-        .unify(&environment0, &a, &ty!(apply (placeholder 1)))
+        .unify(&environment0, &a, &ty!(placeholder 1))
         .unwrap_err();
 }
 
@@ -70,9 +70,7 @@ fn universe_error_indirect_1() {
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty();
     let b = table.new_variable(U1).to_ty();
-    table
-        .unify(&environment0, &b, &ty!(apply (placeholder 1)))
-        .unwrap();
+    table.unify(&environment0, &b, &ty!(placeholder 1)).unwrap();
     table.unify(&environment0, &a, &b).unwrap_err();
 }
 
@@ -85,7 +83,7 @@ fn universe_error_indirect_2() {
     let b = table.new_variable(U1).to_ty();
     table.unify(&environment0, &a, &b).unwrap();
     table
-        .unify(&environment0, &b, &ty!(apply (placeholder 1)))
+        .unify(&environment0, &b, &ty!(placeholder 1))
         .unwrap_err();
 }
 
@@ -115,7 +113,7 @@ fn universe_promote_bad() {
         .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
     table
-        .unify(&environment0, &b, &ty!(apply (placeholder 1)))
+        .unify(&environment0, &b, &ty!(placeholder 1))
         .unwrap_err();
 }
 

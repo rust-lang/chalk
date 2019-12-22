@@ -8,27 +8,22 @@ impl Debug for RawId {
     }
 }
 
-impl<TF: TypeFamily> Debug for TypeKindId<TF> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_type_kind_id(*self, fmt)
-    }
-}
-
-impl<TF: TypeFamily> Debug for TypeId<TF> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_type_kind_id(TypeKindId::TypeId(*self), fmt)
-    }
-}
-
 impl<TF: TypeFamily> Debug for TraitId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_type_kind_id(TypeKindId::TraitId(*self), fmt)
+        TF::debug_trait_id(*self, fmt).unwrap_or_else(|| write!(fmt, "TraitId({:?})", self.0))
     }
 }
 
 impl<TF: TypeFamily> Debug for StructId<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_type_kind_id(TypeKindId::StructId(*self), fmt)
+        TF::debug_struct_id(*self, fmt).unwrap_or_else(|| write!(fmt, "StructId({:?})", self.0))
+    }
+}
+
+impl<TF: TypeFamily> Debug for AssocTypeId<TF> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        TF::debug_assoc_type_id(*self, fmt)
+            .unwrap_or_else(|| write!(fmt, "AssocTypeId({:?})", self.0))
     }
 }
 
@@ -47,8 +42,7 @@ impl Debug for UniverseIndex {
 impl<TF: TypeFamily> Debug for TypeName<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
-            TypeName::TypeKindId(id) => write!(fmt, "{:?}", id),
-            TypeName::Placeholder(index) => write!(fmt, "{:?}", index),
+            TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
@@ -64,13 +58,21 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             TyData::BoundVar(depth) => write!(fmt, "^{}", depth),
-            TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
-            TyData::Opaque(clauses) => write!(fmt, "{:?}", clauses),
+            TyData::Dyn(clauses) => write!(fmt, "dyn {:?}", clauses),
+            TyData::Opaque(clauses) => write!(fmt, "impl {:?}", clauses),
             TyData::InferenceVar(var) => write!(fmt, "{:?}", var),
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
             TyData::Projection(proj) => write!(fmt, "{:?}", proj),
+            TyData::Placeholder(index) => write!(fmt, "{:?}", index),
             TyData::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
         }
+    }
+}
+
+impl<TF: TypeFamily> Debug for BoundedTy<TF> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let BoundedTy { bounds } = self;
+        write!(fmt, "{:?}", bounds)
     }
 }
 
@@ -162,7 +164,14 @@ impl<TF: TypeFamily> Debug for SeparatorTraitRef<'_, TF> {
 
 impl<TF: TypeFamily> Debug for ProjectionTy<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_projection(self, fmt)
+        TF::debug_projection(self, fmt).unwrap_or_else(|| {
+            write!(
+                fmt,
+                "({:?}){:?}",
+                self.associated_ty_id,
+                Angle(&self.parameters)
+            )
+        })
     }
 }
 
@@ -279,7 +288,17 @@ impl<TF: TypeFamily> Debug for Goal<TF> {
                 write!(fmt, "> {{ {:?} }}", subgoal.value)
             }
             Goal::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
-            Goal::And(ref g1, ref g2) => write!(fmt, "({:?}, {:?})", g1, g2),
+            Goal::All(ref goals) => {
+                write!(fmt, "all(")?;
+                for (goal, index) in goals.iter().zip(0..) {
+                    if index > 0 {
+                        write!(fmt, ", ")?;
+                    }
+                    write!(fmt, "{:?}", goal)?;
+                }
+                write!(fmt, ")")?;
+                Ok(())
+            }
             Goal::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),
             Goal::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
@@ -376,7 +395,7 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
 
 impl<TF: TypeFamily> Debug for Parameter<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match &self.0 {
+        match self.data() {
             ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
             ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
         }

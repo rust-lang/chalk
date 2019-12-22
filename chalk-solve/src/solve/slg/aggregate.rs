@@ -105,7 +105,7 @@ fn merge_into_guidance<TF: TypeFamily>(
             // of X.
             let universe = root_goal.binders[index].into_inner();
 
-            let ty = match &value.0 {
+            let ty = match value.data() {
                 ParameterKind::Ty(ty) => ty,
                 ParameterKind::Lifetime(_) => {
                     // Ignore the lifetimes from the substitution: we're just
@@ -139,7 +139,7 @@ fn is_trivial<TF: TypeFamily>(subst: &Canonical<Substitution<TF>>) -> bool {
         .parameters
         .iter()
         .enumerate()
-        .all(|(index, parameter)| match &parameter.0 {
+        .all(|(index, parameter)| match parameter.data() {
             // All types are mapped to distinct variables.  Since this
             // has been canonicalized, those will also be the first N
             // variables.
@@ -192,6 +192,10 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
                 self.aggregate_projection_tys(apply1, apply2)
             }
 
+            (TyData::Placeholder(apply1), TyData::Placeholder(apply2)) => {
+                self.aggregate_placeholder_tys(apply1, apply2)
+            }
+
             // Mismatched base kinds.
             (TyData::InferenceVar(_), _)
             | (TyData::BoundVar(_), _)
@@ -199,7 +203,8 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
             | (TyData::Opaque(_), _)
             | (TyData::ForAll(_), _)
             | (TyData::Apply(_), _)
-            | (TyData::Projection(_), _) => self.new_variable(),
+            | (TyData::Projection(_), _)
+            | (TyData::Placeholder(_), _) => self.new_variable(),
         }
     }
 
@@ -220,6 +225,18 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
             .map(|(&name, parameters)| TyData::Apply(ApplicationTy { name, parameters }).intern())
             .unwrap_or_else(|| self.new_variable())
+    }
+
+    fn aggregate_placeholder_tys(
+        &mut self,
+        index1: &PlaceholderIndex,
+        index2: &PlaceholderIndex,
+    ) -> Ty<TF> {
+        if index1 != index2 {
+            self.new_variable()
+        } else {
+            TyData::Placeholder(index1.clone()).intern()
+        }
     }
 
     fn aggregate_projection_tys(
@@ -282,7 +299,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
     }
 
     fn aggregate_parameters(&mut self, p1: &Parameter<TF>, p2: &Parameter<TF>) -> Parameter<TF> {
-        match (&p1.0, &p2.0) {
+        match (p1.data(), p2.data()) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2).cast(),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2).cast()

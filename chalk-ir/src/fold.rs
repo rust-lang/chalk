@@ -1,14 +1,11 @@
 //! Traits for transforming bits of IR.
 
-use crate::cast::Cast;
 use crate::family::TargetTypeFamily;
 use crate::*;
-use chalk_engine::context::Context;
-use chalk_engine::{ExClause, FlounderedSubgoal, Literal};
 use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::sync::Arc;
 
+mod binder_impls;
+mod boring_impls;
 pub mod shift;
 mod subst;
 
@@ -271,15 +268,6 @@ impl<T: DefaultInferenceFolder, TTF: TypeFamily> InferenceFolder<TTF> for T {
     }
 }
 
-pub trait ReflexiveFold<TF: TypeFamily>: Fold<TF, TF, Result = Self> + Sized {}
-
-impl<T, TF> ReflexiveFold<TF> for T
-where
-    T: Fold<TF, TF, Result = Self>,
-    TF: TypeFamily,
-{
-}
-
 /// Applies the given `Folder` to a value, producing a folded result
 /// of type `Self::Result`. The result is in the type family
 /// `TTF`. The result type is typically the same as the source type
@@ -312,82 +300,6 @@ pub trait Fold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Debug {
         -> Fallible<Self::Result>;
 }
 
-impl<'a, T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for &'a T {
-    type Result = T::Result;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        (**self).fold_with(folder, binders)
-    }
-}
-
-impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Vec<T> {
-    type Result = Vec<T::Result>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        self.iter().map(|e| e.fold_with(folder, binders)).collect()
-    }
-}
-
-impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Box<T> {
-    type Result = Box<T::Result>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        Ok(Box::new((**self).fold_with(folder, binders)?))
-    }
-}
-
-impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Arc<T> {
-    type Result = Arc<T::Result>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        Ok(Arc::new((**self).fold_with(folder, binders)?))
-    }
-}
-
-macro_rules! tuple_fold {
-    ($($n:ident),*) => {
-        impl<$($n: Fold<TF, TTF>,)* TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ($($n,)*) {
-            type Result = ($($n::Result,)*);
-            fn fold_with(&self, folder: &mut dyn Folder<TF, TTF>, binders: usize) -> Fallible<Self::Result> {
-                #[allow(non_snake_case)]
-                let &($(ref $n),*) = self;
-                Ok(($($n.fold_with(folder, binders)?,)*))
-            }
-        }
-    }
-}
-
-tuple_fold!(A, B);
-tuple_fold!(A, B, C);
-tuple_fold!(A, B, C, D);
-tuple_fold!(A, B, C, D, E);
-
-impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Option<T> {
-    type Result = Option<T::Result>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        match self {
-            None => Ok(None),
-            Some(e) => Ok(Some(e.fold_with(folder, binders)?)),
-        }
-    }
-}
-
 pub fn super_fold_ty<TF, TTF>(
     folder: &mut dyn Folder<TF, TTF>,
     ty: &Ty<TF>,
@@ -408,7 +320,8 @@ where
         TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
         TyData::Opaque(clauses) => Ok(TyData::Opaque(clauses.fold_with(folder, binders)?).intern()),
         TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
-        TyData::Apply(apply) => Ok(apply.fold_with(folder, binders)?),
+        TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, binders)?).intern()),
+        TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, binders)?),
         TyData::Projection(proj) => {
             Ok(TyData::Projection(proj.fold_with(folder, binders)?).intern())
         }
@@ -418,6 +331,9 @@ where
     }
 }
 
+/// "Folding" a type invokes the `fold_ty` method on the folder; this
+/// usually (in turn) invokes `super_fold_ty` to fold the individual
+/// parts.
 impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
     type Result = Ty<TTF>;
 
@@ -427,112 +343,6 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
         binders: usize,
     ) -> Fallible<Self::Result> {
         folder.fold_ty(self, binders)
-    }
-}
-
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Lifetime<TF> {
-    type Result = Lifetime<TTF>;
-
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        folder.fold_lifetime(self, binders)
-    }
-}
-
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ApplicationTy<TF> {
-    type Result = Ty<TTF>;
-
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        let ApplicationTy { name, parameters } = self;
-        let name = name.fold_with(folder, binders)?;
-        match name {
-            TypeName::Placeholder(ui) => {
-                assert!(
-                    parameters.is_empty(),
-                    "placeholder type {:?} with parameters {:?}",
-                    self,
-                    parameters
-                );
-                folder.fold_free_placeholder_ty(ui, binders)
-            }
-
-            TypeName::TypeKindId(_) | TypeName::AssociatedType(_) | TypeName::Error => {
-                let parameters = parameters.fold_with(folder, binders)?;
-                Ok(ApplicationTy { name, parameters }.cast().intern())
-            }
-        }
-    }
-}
-
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for QuantifiedTy<TF> {
-    type Result = QuantifiedTy<TTF>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        let QuantifiedTy {
-            num_binders,
-            ref ty,
-        } = *self;
-        Ok(QuantifiedTy {
-            num_binders,
-            ty: ty.fold_with(folder, binders + num_binders)?,
-        })
-    }
-}
-
-impl<T, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Binders<T>
-where
-    T: Fold<TF, TTF>,
-    TF: TypeFamily,
-{
-    type Result = Binders<T::Result>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        let Binders {
-            binders: ref self_binders,
-            value: ref self_value,
-        } = *self;
-        let value = self_value.fold_with(folder, binders + self_binders.len())?;
-        Ok(Binders {
-            binders: self_binders.clone(),
-            value: value,
-        })
-    }
-}
-
-impl<T, TF, TTF> Fold<TF, TTF> for Canonical<T>
-where
-    T: Fold<TF, TTF>,
-    TF: TypeFamily,
-    TTF: TargetTypeFamily<TF>,
-{
-    type Result = Canonical<T::Result>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        let Canonical {
-            binders: ref self_binders,
-            value: ref self_value,
-        } = *self;
-        let value = self_value.fold_with(folder, binders + self_binders.len())?;
-        Ok(Canonical {
-            binders: self_binders.clone(),
-            value: value,
-        })
     }
 }
 
@@ -557,186 +367,17 @@ pub fn super_fold_lifetime<TF: TypeFamily, TTF: TargetTypeFamily<TF>>(
     }
 }
 
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Substitution<TF> {
-    type Result = Substitution<TTF>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        let parameters = self.parameters.fold_with(folder, binders)?;
-        Ok(Substitution { parameters })
-    }
-}
-
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Parameter<TF> {
-    type Result = Parameter<TTF>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        let inner = self.0.fold_with(folder, binders)?;
-        Ok(Parameter(inner))
-    }
-}
-
-#[macro_export]
-macro_rules! copy_fold {
-    ($t:ty) => {
-        impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> $crate::fold::Fold<TF, TTF> for $t {
-            type Result = Self;
-            fn fold_with(
-                &self,
-                _folder: &mut dyn ($crate::fold::Folder<TF, TTF>),
-                _binders: usize,
-            ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
-                Ok(*self)
-            }
-        }
-    };
-}
-
-copy_fold!(Identifier);
-copy_fold!(UniverseIndex);
-copy_fold!(usize);
-copy_fold!(PlaceholderIndex);
-copy_fold!(QuantifierKind);
-copy_fold!(chalk_engine::TableIndex);
-copy_fold!(chalk_engine::TimeStamp);
-copy_fold!(());
-
-#[macro_export]
-macro_rules! id_fold {
-    ($t:ident) => {
-        impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> $crate::fold::Fold<TF, TTF> for $t<TF> {
-            type Result = $t<TTF>;
-            fn fold_with(
-                &self,
-                _folder: &mut dyn ($crate::fold::Folder<TF, TTF>),
-                _binders: usize,
-            ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
-                let $t(def_id_tf) = *self;
-                let def_id_ttf = TTF::transfer_def_id(def_id_tf);
-                Ok($t(def_id_ttf))
-            }
-        }
-    };
-}
-
-id_fold!(ImplId);
-id_fold!(StructId);
-id_fold!(TraitId);
-id_fold!(TypeId);
-
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for PhantomData<TF> {
-    type Result = PhantomData<TTF>;
-
-    fn fold_with(
-        &self,
-        _folder: &mut dyn Folder<TF, TTF>,
-        _binders: usize,
-    ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
-        Ok(PhantomData)
-    }
-}
-
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>, T, L> Fold<TF, TTF> for ParameterKind<T, L>
-where
-    T: Fold<TF, TTF>,
-    L: Fold<TF, TTF>,
-{
-    type Result = ParameterKind<T::Result, L::Result>;
+/// "Folding" a lifetime invokes the `fold_lifetime` method on the folder; this
+/// usually (in turn) invokes `super_fold_lifetime` to fold the individual
+/// parts.
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Lifetime<TF> {
+    type Result = Lifetime<TTF>;
 
     fn fold_with(
         &self,
         folder: &mut dyn Folder<TF, TTF>,
         binders: usize,
     ) -> Fallible<Self::Result> {
-        match self {
-            ParameterKind::Ty(a) => Ok(ParameterKind::Ty(a.fold_with(folder, binders)?)),
-            ParameterKind::Lifetime(a) => {
-                Ok(ParameterKind::Lifetime(a.fold_with(folder, binders)?))
-            }
-        }
-    }
-}
-
-impl<C: Context, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ExClause<C>
-where
-    C: Context,
-    C::Substitution: Fold<TF, TTF, Result = C::Substitution>,
-    C::RegionConstraint: Fold<TF, TTF, Result = C::RegionConstraint>,
-    C::CanonicalConstrainedSubst: Fold<TF, TTF, Result = C::CanonicalConstrainedSubst>,
-    C::GoalInEnvironment: Fold<TF, TTF, Result = C::GoalInEnvironment>,
-{
-    type Result = ExClause<C>;
-
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        let ExClause {
-            subst,
-            ambiguous,
-            constraints,
-            subgoals,
-            answer_time,
-            floundered_subgoals,
-        } = self;
-        Ok(ExClause {
-            subst: subst.fold_with(folder, binders)?,
-            ambiguous: *ambiguous,
-            constraints: constraints.fold_with(folder, binders)?,
-            subgoals: subgoals.fold_with(folder, binders)?,
-            answer_time: answer_time.fold_with(folder, binders)?,
-            floundered_subgoals: floundered_subgoals.fold_with(folder, binders)?,
-        })
-    }
-}
-
-impl<C: Context, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for FlounderedSubgoal<C>
-where
-    C: Context,
-    C::Substitution: Fold<TF, TTF, Result = C::Substitution>,
-    C::RegionConstraint: Fold<TF, TTF, Result = C::RegionConstraint>,
-    C::CanonicalConstrainedSubst: Fold<TF, TTF, Result = C::CanonicalConstrainedSubst>,
-    C::GoalInEnvironment: Fold<TF, TTF, Result = C::GoalInEnvironment>,
-{
-    type Result = FlounderedSubgoal<C>;
-
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        let FlounderedSubgoal {
-            floundered_literal,
-            floundered_time,
-        } = self;
-        Ok(FlounderedSubgoal {
-            floundered_literal: floundered_literal.fold_with(folder, binders)?,
-            floundered_time: floundered_time.fold_with(folder, binders)?,
-        })
-    }
-}
-
-impl<C: Context, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Literal<C>
-where
-    C: Context,
-    C::GoalInEnvironment: Fold<TF, TTF, Result = C::GoalInEnvironment>,
-{
-    type Result = Literal<C>;
-
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        match self {
-            Literal::Positive(goal) => Ok(Literal::Positive(goal.fold_with(folder, binders)?)),
-            Literal::Negative(goal) => Ok(Literal::Negative(goal.fold_with(folder, binders)?)),
-        }
+        folder.fold_lifetime(self, binders)
     }
 }

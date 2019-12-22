@@ -26,7 +26,7 @@ fn ill_formed_trait_decl() {
 
             impl Copy for i32 { }
         } error_msg {
-            "trait impl for \"Copy\" does not meet well-formedness requirements"
+            "trait impl for `Copy` does not meet well-formedness requirements"
         }
     }
 }
@@ -54,7 +54,7 @@ fn cyclic_traits() {
 
             impl<T> A for T where T: B {}
         } error_msg {
-            "trait impl for \"B\" does not meet well-formedness requirements"
+            "trait impl for `B` does not meet well-formedness requirements"
         }
     }
 
@@ -105,7 +105,7 @@ fn ill_formed_assoc_ty() {
                 type Value = OnlyFoo<i32>;
             }
         } error_msg {
-            "trait impl for \"Bar\" does not meet well-formedness requirements"
+            "trait impl for `Bar` does not meet well-formedness requirements"
         }
     }
 }
@@ -144,7 +144,7 @@ fn ill_formed_ty_decl() {
                 value: Set<K>
             }
         } error_msg {
-            "type declaration \"MyType\" does not meet well-formedness requirements"
+            "type declaration `MyType` does not meet well-formedness requirements"
         }
     }
 }
@@ -182,7 +182,7 @@ fn wf_requiremements_for_projection() {
                 type Value = <T as Iterator>::Item;
             }
         } error_msg {
-            "trait impl for \"Foo\" does not meet well-formedness requirements"
+            "trait impl for `Foo` does not meet well-formedness requirements"
         }
     }
 
@@ -217,7 +217,7 @@ fn ill_formed_type_in_header() {
             // an explicit where clause would be needed (see below).
             impl<T> Bar for T where <T as Foo>::Value: Bar { }
         } error_msg {
-            "trait impl for \"Bar\" does not meet well-formedness requirements"
+            "trait impl for `Bar` does not meet well-formedness requirements"
         }
     }
 
@@ -269,7 +269,7 @@ fn bound_in_header_from_env() {
                 type Item = T;
             }
         } error_msg {
-            "trait impl for \"Bar\" does not meet well-formedness requirements"
+            "trait impl for `Bar` does not meet well-formedness requirements"
         }
     }
 }
@@ -307,7 +307,7 @@ fn mixed_indices_check_projection_bounds() {
                 type Item = U;
             }
         } error_msg {
-            "trait impl for \"Bar\" does not meet well-formedness requirements"
+            "trait impl for `Bar` does not meet well-formedness requirements"
         }
     }
 }
@@ -353,7 +353,7 @@ fn mixed_indices_check_generic_projection_bounds() {
                 type Item<V> = Fooey<U, V>;
             }
         } error_msg {
-            "trait impl for \"Bar\" does not meet well-formedness requirements"
+            "trait impl for `Bar` does not meet well-formedness requirements"
         }
     }
 }
@@ -390,7 +390,7 @@ fn generic_projection_where_clause() {
                 bar: <P as PointerFamily>::Pointer<String>
             }
         } error_msg {
-            "type declaration \"Foo\" does not meet well-formedness requirements"
+            "type declaration `Foo` does not meet well-formedness requirements"
         }
     }
 }
@@ -431,7 +431,7 @@ fn generic_projection_bound() {
             // No impl Clone for Cow<T>, so this will fail.
             impl PointerFamily for CowFamily { type Pointer<T> = Cow<T>; }
         } error_msg {
-            "trait impl for \"PointerFamily\" does not meet well-formedness requirements"
+            "trait impl for `PointerFamily` does not meet well-formedness requirements"
         }
     }
 }
@@ -446,7 +446,7 @@ fn higher_ranked_trait_bounds() {
 
             impl Bar for i32 { }
         } error_msg {
-            "trait impl for \"Bar\" does not meet well-formedness requirements"
+            "trait impl for `Bar` does not meet well-formedness requirements"
         }
     }
 
@@ -502,7 +502,7 @@ fn higher_ranked_cyclic_requirements() {
             impl<T, U> Foo<T> for U { }
             impl<T, U> Bar<T> for U where U: Foo<T> { }
         } error_msg {
-            "trait impl for \"Foo\" does not meet well-formedness requirements"
+            "trait impl for `Foo` does not meet well-formedness requirements"
         }
     }
 
@@ -557,7 +557,7 @@ fn higher_ranked_inline_bound_on_gat() {
                 type Item<T> = fn<T, i32>;
             }
         } error_msg {
-            "trait impl for \"Bar\" does not meet well-formedness requirements"
+            "trait impl for `Bar` does not meet well-formedness requirements"
         }
     }
 }
@@ -632,7 +632,7 @@ fn assoc_type_recursive_bound() {
             // }
             // ```
         } error_msg {
-            "trait impl for \"Bar\" does not meet well-formedness requirements"
+            "trait impl for `Bar` does not meet well-formedness requirements"
         }
     }
 }

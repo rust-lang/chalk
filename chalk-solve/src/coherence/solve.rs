@@ -12,7 +12,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
     pub(super) fn visit_specializations_of_trait(
         &self,
         mut record_specialization: impl FnMut(ImplId<TF>, ImplId<TF>),
-    ) -> Result<(), CoherenceError> {
+    ) -> Result<(), CoherenceError<TF>> {
         // Ignore impls for marker traits as they are allowed to overlap.
         let trait_datum = self.db.trait_datum(self.trait_id);
         if trait_datum.flags.marker {
@@ -38,8 +38,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
                     (true, false) => record_specialization(l_id, r_id),
                     (false, true) => record_specialization(r_id, l_id),
                     (_, _) => {
-                        let trait_name = self.db.type_name(self.trait_id.into());
-                        Err(CoherenceError::OverlappingImpls(trait_name))?;
+                        Err(CoherenceError::OverlappingImpls(self.trait_id))?;
                     }
                 }
             }
@@ -118,8 +117,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
         // over the joined binders. This is our query.
         let goal = params_goals
             .chain(wc_goals)
-            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-            .expect("Every trait takes at least one input type")
+            .collect::<Box<Goal<TF>>>()
             .quantify(QuantifierKind::Exists, binders)
             .compatible()
             .negate();
@@ -198,8 +196,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
         // Join all of the goals together.
         let goal = params_goals
             .chain(less_special_wc)
-            .fold1(|goal, leaf| Goal::And(Box::new(goal), Box::new(leaf)))
-            .expect("Every trait takes at least one input type")
+            .collect::<Box<Goal<TF>>>()
             .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
             .implied_by(more_special_wc)
             .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());

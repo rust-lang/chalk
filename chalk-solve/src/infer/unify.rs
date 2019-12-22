@@ -121,49 +121,64 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
 
             // Unifying an inference variables with a non-inference variable.
             (&TyData::InferenceVar(var), &TyData::Apply(_))
+            | (&TyData::InferenceVar(var), &TyData::Placeholder(_))
             | (&TyData::InferenceVar(var), &TyData::Opaque(_))
             | (&TyData::InferenceVar(var), &TyData::Dyn(_))
             | (&TyData::InferenceVar(var), &TyData::ForAll(_)) => self.unify_var_ty(var, b),
 
             (&TyData::Apply(_), &TyData::InferenceVar(var))
+            | (&TyData::Placeholder(_), &TyData::InferenceVar(var))
             | (TyData::Opaque(_), &TyData::InferenceVar(var))
             | (&TyData::Dyn(_), &TyData::InferenceVar(var))
             | (&TyData::ForAll(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, a),
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&TyData::ForAll(ref quantified_ty1), &TyData::ForAll(ref quantified_ty2)) => {
-                self.unify_binders(&**quantified_ty1, &**quantified_ty2)
+                self.unify_binders(quantified_ty1, quantified_ty2)
             }
 
             // Unifying `forall<X> { T }` with some other type `U`
             (&TyData::ForAll(ref quantified_ty), &TyData::Apply(_))
+            | (&TyData::ForAll(ref quantified_ty), &TyData::Placeholder(_))
             | (&TyData::ForAll(ref quantified_ty), &TyData::Dyn(_))
             | (&TyData::ForAll(ref quantified_ty), &TyData::Opaque(_)) => {
                 self.unify_forall_other(quantified_ty, b)
             }
 
             (&TyData::Apply(_), &TyData::ForAll(ref quantified_ty))
+            | (&TyData::Placeholder(_), &TyData::ForAll(ref quantified_ty))
             | (&TyData::Dyn(_), &TyData::ForAll(ref quantified_ty))
             | (&TyData::Opaque(_), &TyData::ForAll(ref quantified_ty)) => {
                 self.unify_forall_other(quantified_ty, a)
             }
 
-            (&TyData::Apply(ref apply1), &TyData::Apply(ref apply2)) => {
-                // Cannot unify (e.g.) some struct type `Foo` and some struct type `Bar`
-                if apply1.name != apply2.name {
-                    return Err(NoSolution);
-                }
-
-                Zip::zip_with(self, &apply1.parameters, &apply2.parameters)
+            (&TyData::Placeholder(ref p1), &TyData::Placeholder(ref p2)) => {
+                Zip::zip_with(self, p1, p2)
             }
 
-            // Cannot unify (e.g.) some struct type `Foo` and an `impl Trait` type
-            (&TyData::Apply(_), &TyData::Opaque(_)) | (&TyData::Opaque(_), &TyData::Apply(_)) => {
+            (&TyData::Apply(ref apply1), &TyData::Apply(ref apply2)) => {
+                Zip::zip_with(self, apply1, apply2)
+            }
+
+            // Cannot unify (e.g.) some struct type `Foo` and a placeholder like `T`
+            (&TyData::Apply(_), &TyData::Placeholder(_))
+            | (&TyData::Placeholder(_), &TyData::Apply(_)) => {
                 return Err(NoSolution);
             }
 
-            // Cannot unify (e.g.) some struct type `Foo` and a `dyn Trait` type
-            (&TyData::Apply(_), &TyData::Dyn(_)) | (&TyData::Dyn(_), &TyData::Apply(_)) => {
+            // Cannot unify `impl Trait` with things like structs or placeholders
+            (&TyData::Placeholder(_), &TyData::Opaque(_))
+            | (&TyData::Opaque(_), &TyData::Placeholder(_))
+            | (&TyData::Apply(_), &TyData::Opaque(_))
+            | (&TyData::Opaque(_), &TyData::Apply(_)) => {
+                return Err(NoSolution);
+            }
+
+            // Cannot unify `dyn Trait` with things like structs or placeholders
+            (&TyData::Placeholder(_), &TyData::Dyn(_))
+            | (&TyData::Dyn(_), &TyData::Placeholder(_))
+            | (&TyData::Apply(_), &TyData::Dyn(_))
+            | (&TyData::Dyn(_), &TyData::Apply(_)) => {
                 return Err(NoSolution);
             }
 
@@ -178,6 +193,7 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             // Unifying an associated type projection `<T as
             // Trait>::Item` with some other type `U`.
             (&TyData::Apply(_), &TyData::Projection(ref proj))
+            | (&TyData::Placeholder(_), &TyData::Projection(ref proj))
             | (&TyData::ForAll(_), &TyData::Projection(ref proj))
             | (&TyData::InferenceVar(_), &TyData::Projection(ref proj))
             | (&TyData::Dyn(_), &TyData::Projection(ref proj))
@@ -187,6 +203,7 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
 
             (&TyData::Projection(ref proj), &TyData::Projection(_))
             | (&TyData::Projection(ref proj), &TyData::Apply(_))
+            | (&TyData::Projection(ref proj), &TyData::Placeholder(_))
             | (&TyData::Projection(ref proj), &TyData::ForAll(_))
             | (&TyData::Projection(ref proj), &TyData::InferenceVar(_))
             | (&TyData::Projection(ref proj), &TyData::Dyn(_))

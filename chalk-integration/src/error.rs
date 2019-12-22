@@ -1,3 +1,4 @@
+use chalk_ir::family::ChalkIr;
 use chalk_parse::ast::{Identifier, Kind};
 use chalk_rust_ir::LangItem;
 use chalk_solve::coherence::CoherenceError;
@@ -20,16 +21,16 @@ impl From<Box<dyn std::error::Error>> for ChalkError {
     }
 }
 
-impl From<WfError> for ChalkError {
-    fn from(value: WfError) -> Self {
+impl From<WfError<ChalkIr>> for ChalkError {
+    fn from(value: WfError<ChalkIr>) -> Self {
         ChalkError {
             error_text: value.to_string(),
         }
     }
 }
 
-impl From<CoherenceError> for ChalkError {
-    fn from(value: CoherenceError) -> Self {
+impl From<CoherenceError<ChalkIr>> for ChalkError {
+    fn from(value: CoherenceError<ChalkIr>) -> Self {
         ChalkError {
             error_text: value.to_string(),
         }
@@ -58,6 +59,7 @@ pub enum RustIrError {
     InvalidLifetimeName(Identifier),
     DuplicateLangItem(LangItem),
     NotTrait(Identifier),
+    NotStruct(Identifier),
     DuplicateOrShadowedParameters,
     AutoTraitAssociatedTypes(Identifier),
     AutoTraitParameters(Identifier),
@@ -102,6 +104,11 @@ impl std::fmt::Display for RustIrError {
             RustIrError::NotTrait(name) => write!(
                 f,
                 "expected a trait, found `{}`, which is not a trait",
+                name
+            ),
+            RustIrError::NotStruct(name) => write!(
+                f,
+                "expected a struct, found `{}`, which is not a struct",
                 name
             ),
             RustIrError::DuplicateOrShadowedParameters => {

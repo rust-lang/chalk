@@ -3,8 +3,8 @@ use chalk_ir::debug::Angle;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId, TyData, TypeId,
-    TypeKindId, TypeName,
+    AssocTypeId, Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId,
+    TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -18,11 +18,17 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
-    /// From type-name to item-id. Used during lowering only.
-    pub type_ids: BTreeMap<Identifier, TypeKindId<ChalkIr>>,
+    /// From struct name to item-id. Used during lowering only.
+    pub struct_ids: BTreeMap<Identifier, StructId<ChalkIr>>,
 
-    /// For each struct/trait:
-    pub type_kinds: BTreeMap<TypeKindId<ChalkIr>, TypeKind>,
+    /// For each struct:
+    pub struct_kinds: BTreeMap<StructId<ChalkIr>, TypeKind>,
+
+    /// From trait name to item-id. Used during lowering only.
+    pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
+
+    /// For each trait:
+    pub trait_kinds: BTreeMap<TraitId<ChalkIr>, TypeKind>,
 
     /// For each struct:
     pub struct_data: BTreeMap<StructId<ChalkIr>, Arc<StructDatum<ChalkIr>>>,
@@ -37,7 +43,7 @@ pub struct Program {
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
-    pub associated_ty_data: BTreeMap<TypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
+    pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
@@ -55,26 +61,44 @@ impl Program {
 }
 
 impl tls::DebugContext for Program {
-    fn debug_type_kind_id(
+    fn debug_struct_id(
         &self,
-        type_kind_id: TypeKindId<ChalkIr>,
+        struct_id: StructId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(k) = self.type_kinds.get(&type_kind_id) {
+        if let Some(k) = self.struct_kinds.get(&struct_id) {
             write!(fmt, "{}", k.name)
-        } else if let Some(k) = self.type_kinds.get(&type_kind_id) {
+        } else {
+            fmt.debug_struct("InvalidStructId")
+                .field("index", &struct_id.0)
+                .finish()
+        }
+    }
+
+    fn debug_trait_id(
+        &self,
+        trait_id: TraitId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(k) = self.trait_kinds.get(&trait_id) {
             write!(fmt, "{}", k.name)
-        } else if let TypeKindId::TypeId(type_id) = type_kind_id {
-            if let Some(k) = self.associated_ty_data.get(&type_id) {
-                write!(fmt, "({:?}::{})", k.trait_id, k.name)
-            } else {
-                fmt.debug_struct("InvalidItemId")
-                    .field("index", &type_id.0)
-                    .finish()
-            }
+        } else {
+            fmt.debug_struct("InvalidTraitId")
+                .field("index", &trait_id.0)
+                .finish()
+        }
+    }
+
+    fn debug_assoc_type_id(
+        &self,
+        assoc_type_id: AssocTypeId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(k) = self.associated_ty_data.get(&assoc_type_id) {
+            write!(fmt, "({:?}::{})", k.trait_id, k.name)
         } else {
             fmt.debug_struct("InvalidItemId")
-                .field("index", &type_kind_id.raw_id())
+                .field("index", &assoc_type_id.0)
                 .finish()
         }
     }
@@ -102,7 +126,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.custom_clauses.clone()
     }
 
-    fn associated_ty_data(&self, ty: TypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
+    fn associated_ty_data(&self, ty: AssocTypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.associated_ty_data[&ty].clone()
     }
 
@@ -124,7 +148,7 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn as_struct_id(&self, type_name: &TypeName<ChalkIr>) -> Option<StructId<ChalkIr>> {
         match type_name {
-            TypeName::TypeKindId(TypeKindId::StructId(struct_id)) => Some(*struct_id),
+            TypeName::Struct(struct_id) => Some(*struct_id),
             _ => None,
         }
     }
@@ -164,25 +188,17 @@ impl RustIrDatabase<ChalkIr> for Program {
     ) -> bool {
         // Look for an impl like `impl Send for Foo` where `Foo` is
         // the struct.  See `push_auto_trait_impls` for more.
-        let type_kind_id = TypeKindId::StructId(struct_id);
         self.impl_data.values().any(|impl_datum| {
             let impl_trait_ref = &impl_datum.binders.value.trait_ref;
             impl_trait_ref.trait_id == auto_trait_id
                 && match impl_trait_ref.parameters[0].assert_ty_ref().data() {
                     TyData::Apply(apply) => match apply.name {
-                        TypeName::TypeKindId(id) => id == type_kind_id,
+                        TypeName::Struct(id) => id == struct_id,
                         _ => false,
                     },
 
                     _ => false,
                 }
         })
-    }
-
-    fn type_name(&self, id: TypeKindId<ChalkIr>) -> Identifier {
-        match self.type_kinds.get(&id) {
-            Some(v) => v.name,
-            None => panic!("no type with id `{:?}`", id),
-        }
     }
 }

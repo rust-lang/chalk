@@ -156,12 +156,12 @@ macro_rules! eq_zip {
 
 eq_zip!(TF => StructId<TF>);
 eq_zip!(TF => TraitId<TF>);
-eq_zip!(TF => TypeId<TF>);
-eq_zip!(TF => TypeKindId<TF>);
+eq_zip!(TF => AssocTypeId<TF>);
 eq_zip!(TF => TypeName<TF>);
 eq_zip!(TF => Identifier);
 eq_zip!(TF => QuantifierKind);
 eq_zip!(TF => PhantomData<TF>);
+eq_zip!(TF => PlaceholderIndex);
 
 /// Generates a Zip impl that zips each field of the struct in turn.
 macro_rules! struct_zip {
@@ -191,6 +191,7 @@ struct_zip!(impl[
     goal,
 });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for ApplicationTy<TF> { name, parameters });
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for BoundedTy<TF> { bounds });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for ProjectionTy<TF> {
     associated_ty_id,
     parameters,
@@ -225,6 +226,7 @@ macro_rules! enum_zip {
                         }
                     )*
 
+                    #[allow(unreachable_patterns)] // needed if there is exactly one variant
                     $((Self :: $variant ( .. ), _))|* => {
                         return Err(NoSolution);
                     }
@@ -266,16 +268,13 @@ impl<TF: TypeFamily> Zip<TF> for Goal<TF> {
                 Zip::zip_with(zipper, f_a, f_b)?;
                 Zip::zip_with(zipper, g_a, g_b)
             }
-            (&Goal::And(ref f_a, ref g_a), &Goal::And(ref f_b, ref g_b)) => {
-                Zip::zip_with(zipper, f_a, f_b)?;
-                Zip::zip_with(zipper, g_a, g_b)
-            }
+            (&Goal::All(ref g_a), &Goal::All(ref g_b)) => Zip::zip_with(zipper, g_a, g_b),
             (&Goal::Not(ref f_a), &Goal::Not(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
             (&Goal::Leaf(ref f_a), &Goal::Leaf(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
             (&Goal::CannotProve(()), &Goal::CannotProve(())) => Ok(()),
             (&Goal::Quantified(..), _)
             | (&Goal::Implies(..), _)
-            | (&Goal::And(..), _)
+            | (&Goal::All(..), _)
             | (&Goal::Not(..), _)
             | (&Goal::Leaf(..), _)
             | (&Goal::CannotProve(..), _) => {
@@ -300,6 +299,6 @@ impl<T: Zip<TF>, L: Zip<TF>, TF: TypeFamily> Zip<TF> for ParameterKind<T, L> {
 
 impl<TF: TypeFamily> Zip<TF> for Parameter<TF> {
     fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        Zip::zip_with(zipper, &a.0, &b.0)
+        Zip::zip_with(zipper, a.data(), b.data())
     }
 }

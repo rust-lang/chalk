@@ -278,7 +278,7 @@ pub enum Goal {
     ForAll(Vec<ParameterKind>, Box<Goal>),
     Exists(Vec<ParameterKind>, Box<Goal>),
     Implies(Vec<Clause>, Box<Goal>),
-    And(Box<Goal>, Box<Goal>),
+    And(Box<Goal>, Vec<Box<Goal>>),
     Not(Box<Goal>),
 
     /// The `compatible { G }` syntax

@@ -172,13 +172,13 @@ impl<TF: TypeFamily> CastTo<TyData<TF>> for ProjectionTy<TF> {
 
 impl<TF: TypeFamily> CastTo<Parameter<TF>> for Ty<TF> {
     fn cast_to(self) -> Parameter<TF> {
-        Parameter(ParameterKind::Ty(self))
+        Parameter::new(ParameterKind::Ty(self))
     }
 }
 
 impl<TF: TypeFamily> CastTo<Parameter<TF>> for Lifetime<TF> {
     fn cast_to(self) -> Parameter<TF> {
-        Parameter(ParameterKind::Lifetime(self))
+        Parameter::new(ParameterKind::Lifetime(self))
     }
 }
 
@@ -267,19 +267,12 @@ where
     }
 }
 
-impl<TF: TypeFamily> CastTo<TypeKindId<TF>> for StructId<TF> {
-    fn cast_to(self) -> TypeKindId<TF> {
-        TypeKindId::StructId(self)
-    }
-}
-
-impl<TF, T> CastTo<TypeName<TF>> for T
+impl<TF> CastTo<TypeName<TF>> for StructId<TF>
 where
     TF: TypeFamily,
-    T: CastTo<TypeKindId<TF>>,
 {
     fn cast_to(self) -> TypeName<TF> {
-        TypeName::TypeKindId(self.cast())
+        TypeName::Struct(self)
     }
 }
 

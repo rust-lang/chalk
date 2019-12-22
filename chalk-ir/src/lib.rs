@@ -14,18 +14,6 @@ use std::marker::PhantomData;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Void {}
 
-macro_rules! impl_froms {
-    ($e:ident: $($v:ident), *) => {
-        $(
-            impl<TF: TypeFamily> From<$v<TF>> for $e<TF> {
-                fn from(it: $v<TF>) -> $e<TF> {
-                    $e::$v(it)
-                }
-            }
-        )*
-    }
-}
-
 macro_rules! impl_debugs {
     ($($id:ident), *) => {
         $(
@@ -117,15 +105,10 @@ impl<G: HasTypeFamily> HasTypeFamily for InEnvironment<G> {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
 pub enum TypeName<TF: TypeFamily> {
     /// a type like `Vec<T>`
-    TypeKindId(TypeKindId<TF>),
-
-    /// instantiated form a universally quantified type, e.g., from
-    /// `forall<T> { .. }`. Stands in as a representative of "some
-    /// unknown type".
-    Placeholder(PlaceholderIndex),
+    Struct(StructId<TF>),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
-    AssociatedType(TypeId<TF>),
+    AssociatedType(AssocTypeId<TF>),
 
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.
@@ -175,28 +158,9 @@ pub struct ImplId<TF: TypeFamily>(pub TF::DefId);
 pub struct ClauseId<TF: TypeFamily>(pub TF::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeId<TF: TypeFamily>(pub TF::DefId);
+pub struct AssocTypeId<TF: TypeFamily>(pub TF::DefId);
 
 impl_debugs!(ImplId, ClauseId);
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
-pub enum TypeKindId<TF: TypeFamily> {
-    TypeId(TypeId<TF>),
-    TraitId(TraitId<TF>),
-    StructId(StructId<TF>),
-}
-
-impl<TF: TypeFamily> TypeKindId<TF> {
-    pub fn raw_id(&self) -> TF::DefId {
-        match self {
-            TypeKindId::TypeId(id) => id.0,
-            TypeKindId::TraitId(id) => id.0,
-            TypeKindId::StructId(id) => id.0,
-        }
-    }
-}
-
-impl_froms!(TypeKindId: TypeId, TraitId, StructId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(non_camel_case_types)]
@@ -277,6 +241,11 @@ pub enum TyData<TF: TypeFamily> {
     /// an empty list).
     Apply(ApplicationTy<TF>),
 
+    /// instantiated form a universally quantified type, e.g., from
+    /// `forall<T> { .. }`. Stands in as a representative of "some
+    /// unknown type".
+    Placeholder(PlaceholderIndex),
+
     /// A "dyn" type is a trait object type created via the "dyn Trait" syntax.
     /// In the chalk parser, the traits that the object represents is parsed as
     /// a QuantifiedInlineBound, and is then changed to a list of where clauses
@@ -284,33 +253,14 @@ pub enum TyData<TF: TypeFamily> {
     ///
     /// See the `Opaque` variant for a discussion about the use of
     /// binders here.
-    Dyn(Binders<Vec<QuantifiedWhereClause<TF>>>),
+    Dyn(BoundedTy<TF>),
 
     /// An "opaque" type is one that is created via the "impl Trait" syntax.
     /// They are named so because the concrete type implementing the trait
     /// is unknown, and hence the type is opaque to us. The only information
     /// that we know of is that this type implements the traits listed by the
     /// user.
-    ///
-    /// The "binder" here represents the unknown self type. So, a type like
-    /// `impl for<'a> Fn(&'a u32)` would be represented with two-levels of
-    /// binder, as "depicted" here:
-    ///
-    /// ```notrust
-    /// exists<type> {
-    ///    vec![
-    ///        // A QuantifiedWhereClause:
-    ///        forall<region> { ^1: Fn(&^0 u32) }
-    ///    ]
-    /// }
-    /// ```
-    ///
-    /// The outer `exists<type>` binder indicates that there exists
-    /// some type that meets the criteria within, but that type is not
-    /// known. It is referenced within the type using `^1`, indicating
-    /// a bound type with debruijn index 1 (i.e., skipping through one
-    /// level of binder).
-    Opaque(Binders<Vec<QuantifiedWhereClause<TF>>>),
+    Opaque(BoundedTy<TF>),
 
     /// A "projection" type corresponds to an (unnormalized)
     /// projection like `<P0 as Trait<P1..Pn>>::Foo`. Note that the
@@ -324,7 +274,7 @@ pub enum TyData<TF: TypeFamily> {
     /// from the underlying type, so technically we can represent
     /// things like `for<'a> SomeStruct<'a>`, although that has no
     /// meaning in Rust.
-    ForAll(Box<QuantifiedTy<TF>>),
+    ForAll(QuantifiedTy<TF>),
 
     /// References the binding at the given depth. The index is a [de
     /// Bruijn index], so it counts back through the in-scope binders,
@@ -344,6 +294,34 @@ impl<TF: TypeFamily> TyData<TF> {
     pub fn intern(self) -> Ty<TF> {
         Ty::new(self)
     }
+}
+
+/// A "BoundedTy" could be either a `dyn Trait` or an (opaque) `impl
+/// Trait`. Both of them are conceptually very related to a
+/// "existential type" of the form `exists<T> { T: Trait }`. The
+/// `BoundedTy` type represents those bounds.
+///
+/// The "binder" here represents the unknown self type. So, a type like
+/// `impl for<'a> Fn(&'a u32)` would be represented with two-levels of
+/// binder, as "depicted" here:
+///
+/// ```notrust
+/// exists<type> {
+///    vec![
+///        // A QuantifiedWhereClause:
+///        forall<region> { ^1: Fn(&^0 u32) }
+///    ]
+/// }
+/// ```
+///
+/// The outer `exists<type>` binder indicates that there exists
+/// some type that meets the criteria within, but that type is not
+/// known. It is referenced within the type using `^1`, indicating
+/// a bound type with debruijn index 1 (i.e., skipping through one
+/// level of binder).
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
+pub struct BoundedTy<TF: TypeFamily> {
+    pub bounds: Binders<Vec<QuantifiedWhereClause<TF>>>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -448,16 +426,13 @@ impl PlaceholderIndex {
     }
 
     pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
-        TyData::Apply(ApplicationTy::<TF> {
-            name: TypeName::Placeholder(self),
-            parameters: vec![],
-        })
-        .intern()
+        let data: TyData<TF> = TyData::Placeholder(self);
+        data.intern()
     }
 }
 
 // Fold derive intentionally omitted, folded through Ty
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Fold, Ord, HasTypeFamily)]
 pub struct ApplicationTy<TF: TypeFamily> {
     pub name: TypeName<TF>,
     pub parameters: Vec<Parameter<TF>>,
@@ -469,7 +444,7 @@ impl<TF: TypeFamily> ApplicationTy<TF> {
     }
 
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
-        self.parameters.iter().cloned().filter_map(|p| p.ty())
+        self.parameters.iter().filter_map(|p| p.ty()).cloned()
     }
 
     pub fn first_type_parameter(&self) -> Option<Ty<TF>> {
@@ -545,9 +520,18 @@ impl<T, L> ParameterKind<T, L> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-pub struct Parameter<TF: TypeFamily>(pub ParameterKind<Ty<TF>, Lifetime<TF>>);
+pub struct Parameter<TF: TypeFamily>(TF::InternedParameter);
 
 impl<TF: TypeFamily> Parameter<TF> {
+    pub fn new(data: ParameterData<TF>) -> Self {
+        let interned = TF::intern_parameter(data);
+        Parameter(interned)
+    }
+
+    pub fn data(&self) -> &ParameterData<TF> {
+        TF::parameter_data(&self.0)
+    }
+
     pub fn assert_ty_ref(&self) -> &Ty<TF> {
         self.as_ref().ty().unwrap()
     }
@@ -557,37 +541,46 @@ impl<TF: TypeFamily> Parameter<TF> {
     }
 
     pub fn as_ref(&self) -> ParameterKind<&Ty<TF>, &Lifetime<TF>> {
-        match &self.0 {
+        match self.data() {
             ParameterKind::Ty(t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(l) => ParameterKind::Lifetime(l),
         }
     }
 
     pub fn is_ty(&self) -> bool {
-        match self.0 {
+        match self.data() {
             ParameterKind::Ty(_) => true,
             ParameterKind::Lifetime(_) => false,
         }
     }
 
-    pub fn ty(self) -> Option<Ty<TF>> {
-        match self.0 {
+    pub fn ty(&self) -> Option<&Ty<TF>> {
+        match self.data() {
             ParameterKind::Ty(t) => Some(t),
             _ => None,
         }
     }
 
-    pub fn lifetime(self) -> Option<Lifetime<TF>> {
-        match self.0 {
+    pub fn lifetime(&self) -> Option<&Lifetime<TF>> {
+        match self.data() {
             ParameterKind::Lifetime(t) => Some(t),
             _ => None,
         }
     }
 }
 
+#[allow(type_alias_bounds)]
+pub type ParameterData<TF: TypeFamily> = ParameterKind<Ty<TF>, Lifetime<TF>>;
+
+impl<TF: TypeFamily> ParameterData<TF> {
+    pub fn intern(self) -> Parameter<TF> {
+        Parameter::new(self)
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct ProjectionTy<TF: TypeFamily> {
-    pub associated_ty_id: TypeId<TF>,
+    pub associated_ty_id: AssocTypeId<TF>,
     pub parameters: Vec<Parameter<TF>>,
 }
 
@@ -605,7 +598,7 @@ pub struct TraitRef<TF: TypeFamily> {
 
 impl<TF: TypeFamily> TraitRef<TF> {
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
-        self.parameters.iter().cloned().filter_map(|p| p.ty())
+        self.parameters.iter().filter_map(|p| p.ty()).cloned()
     }
 
     pub fn self_type_parameter(&self) -> Option<Ty<TF>> {
@@ -1044,7 +1037,7 @@ pub enum Goal<TF: TypeFamily> {
     /// (deBruijn index).
     Quantified(QuantifierKind, Binders<Box<Goal<TF>>>),
     Implies(Vec<ProgramClause<TF>>, Box<Goal<TF>>),
-    And(Box<Goal<TF>>, Box<Goal<TF>>),
+    All(Vec<Goal<TF>>),
     Not(Box<Goal<TF>>),
     Leaf(LeafGoal<TF>),
 
@@ -1101,6 +1094,53 @@ impl<TF: TypeFamily> Goal<TF> {
     pub fn implied_by(self, predicates: Vec<ProgramClause<TF>>) -> Goal<TF> {
         Goal::Implies(predicates, Box::new(self))
     }
+
+    /// True if this goal is "trivially true" -- i.e., no work is
+    /// required to prove it.
+    pub fn is_trivially_true(&self) -> bool {
+        match self {
+            Goal::All(goals) => goals.is_empty(),
+            _ => false,
+        }
+    }
+}
+
+impl<TF> std::iter::FromIterator<Goal<TF>> for Box<Goal<TF>>
+where
+    TF: TypeFamily,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = Goal<TF>>,
+    {
+        Box::new(iter.into_iter().collect())
+    }
+}
+
+impl<TF> std::iter::FromIterator<Goal<TF>> for Goal<TF>
+where
+    TF: TypeFamily,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = Goal<TF>>,
+    {
+        let mut iter = iter.into_iter();
+        if let Some(goal0) = iter.next() {
+            if let Some(goal1) = iter.next() {
+                // More than one goal to prove
+                let mut goals = vec![goal0, goal1];
+                goals.extend(iter);
+                Goal::All(goals)
+            } else {
+                // One goal to prove
+                goal0
+            }
+        } else {
+            // No goals to prove, always true
+            Goal::All(vec![])
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -1121,7 +1161,7 @@ pub enum Constraint<TF: TypeFamily> {
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Fold, Hash, HasTypeFamily)]
 pub struct Substitution<TF: TypeFamily> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
@@ -1150,7 +1190,7 @@ impl<TF: TypeFamily> Substitution<TF> {
         self.parameters
             .iter()
             .zip(0..)
-            .all(|(parameter, index)| match &parameter.0 {
+            .all(|(parameter, index)| match parameter.data() {
                 ParameterKind::Ty(ty) => match ty.data() {
                     TyData::BoundVar(depth) => index == *depth,
                     _ => false,

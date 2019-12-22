@@ -10,7 +10,7 @@ fn two_impls_for_same_type() {
             impl Foo for Bar { }
         }
         error_msg {
-            "overlapping impls of trait \"Foo\""
+            "overlapping impls of trait `Foo`"
         }
     }
 }
@@ -54,7 +54,7 @@ fn two_blanket_impls() {
             impl Baz for Quux { }
         }
         error_msg {
-            "overlapping impls of trait \"Foo\""
+            "overlapping impls of trait `Foo`"
         }
     }
 }
@@ -70,7 +70,7 @@ fn two_blanket_impls_open_ended() {
             impl<T> Foo for T where T: Baz { }
         }
         error_msg {
-            "overlapping impls of trait \"Foo\""
+            "overlapping impls of trait `Foo`"
         }
     }
 }
@@ -111,7 +111,7 @@ fn multiple_parameters() {
             impl<T> Foo<Baz> for T { }
             impl<T> Foo<T> for Baz { }
         } error_msg {
-            "overlapping impls of trait \"Foo\""
+            "overlapping impls of trait `Foo`"
         }
     }
 }
@@ -182,7 +182,7 @@ fn overlapping_assoc_types_error() {
 
             impl<A, B> Foo<A> for B where A: Bar { }
         } error_msg {
-            "overlapping impls of trait \"Foo\""
+            "overlapping impls of trait `Foo`"
         }
     }
 }
@@ -197,7 +197,7 @@ fn overlapping_negative_positive_impls() {
             impl Send for i32 { }
             impl !Send for i32 { }
         } error_msg {
-            "overlapping impls of trait \"Send\""
+            "overlapping impls of trait `Send`"
         }
     }
 }
@@ -250,7 +250,7 @@ fn downstream_impl_of_fundamental_43355() {
             // This makes the first impl now apply to A, which means that both of these impls now
             // overlap for A even though they didn't overlap in the original crate where A is defined.
         } error_msg {
-            "overlapping impls of trait \"Trait1\""
+            "overlapping impls of trait `Trait1`"
         }
     }
 }
@@ -269,7 +269,7 @@ fn fundamental_traits() {
             impl Bar for str { }
             impl<T> Bar for T where T: Sized { }
         } error_msg {
-            "overlapping impls of trait \"Bar\""
+            "overlapping impls of trait `Bar`"
         }
     }
 
@@ -298,7 +298,7 @@ fn orphan_check() {
 
             impl Foo for Bar { }
         } error_msg {
-            "impl for trait \"Foo\" violates the orphan rules"
+            "impl for trait `Foo` violates the orphan rules"
         }
     }
 
@@ -308,7 +308,7 @@ fn orphan_check() {
 
             impl<T> Foo for T { }
         } error_msg {
-            "impl for trait \"Foo\" violates the orphan rules"
+            "impl for trait `Foo` violates the orphan rules"
         }
     }
 
@@ -319,7 +319,7 @@ fn orphan_check() {
 
             impl<T> Foo<Bar> for T { }
         } error_msg {
-            "impl for trait \"Foo\" violates the orphan rules"
+            "impl for trait `Foo` violates the orphan rules"
         }
     }
 
@@ -335,7 +335,7 @@ fn orphan_check() {
 
             impl<T> Remote for Pair<T, Cover<T>> { }
         } error_msg {
-            "impl for trait \"Remote\" violates the orphan rules"
+            "impl for trait `Remote` violates the orphan rules"
         }
     }
     lowering_error! {
@@ -346,7 +346,7 @@ fn orphan_check() {
 
             impl<T> Remote for Pair<Cover<T>, T> { }
         } error_msg {
-            "impl for trait \"Remote\" violates the orphan rules"
+            "impl for trait `Remote` violates the orphan rules"
         }
     }
     lowering_error! {
@@ -357,7 +357,7 @@ fn orphan_check() {
 
             impl<T, U> Remote for Pair<Cover<T>, U> { }
         } error_msg {
-            "impl for trait \"Remote\" violates the orphan rules"
+            "impl for trait `Remote` violates the orphan rules"
         }
     }
 
@@ -377,7 +377,7 @@ fn orphan_check() {
             // This impl should fail because it contains only upstream type
             impl TheTrait<usize> for isize { }
         } error_msg {
-            "impl for trait \"TheTrait\" violates the orphan rules"
+            "impl for trait `TheTrait` violates the orphan rules"
         }
     }
 
@@ -389,7 +389,7 @@ fn orphan_check() {
 
             impl !Send for Vec<isize> { }
         } error_msg {
-            "impl for trait \"Send\" violates the orphan rules"
+            "impl for trait `Send` violates the orphan rules"
         }
     }
 
@@ -402,7 +402,7 @@ fn orphan_check() {
 
             impl<T> Remote for Pair<T, Foo> { }
         } error_msg {
-            "impl for trait \"Remote\" violates the orphan rules"
+            "impl for trait `Remote` violates the orphan rules"
         }
     }
 
@@ -416,7 +416,7 @@ fn orphan_check() {
 
             impl<T, U> Remote1<Pair<T, Local<U>>> for i32 { }
         } error_msg {
-            "impl for trait \"Remote1\" violates the orphan rules"
+            "impl for trait `Remote1` violates the orphan rules"
         }
     }
 
@@ -429,7 +429,7 @@ fn orphan_check() {
 
             impl<T, U> Remote for Pair<T, Local<U>> { }
         } error_msg {
-            "impl for trait \"Remote\" violates the orphan rules"
+            "impl for trait `Remote` violates the orphan rules"
         }
     }
 
@@ -442,7 +442,7 @@ fn orphan_check() {
 
             impl Remote for Vec<Local> { }
         } error_msg {
-            "impl for trait \"Remote\" violates the orphan rules"
+            "impl for trait `Remote` violates the orphan rules"
         }
     }
 
@@ -455,7 +455,7 @@ fn orphan_check() {
 
             impl<T> Remote for Vec<Local<T>> { }
         } error_msg {
-            "impl for trait \"Remote\" violates the orphan rules"
+            "impl for trait `Remote` violates the orphan rules"
         }
     }
 }

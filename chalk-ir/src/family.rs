@@ -1,10 +1,12 @@
-use crate::debug::Angle;
 use crate::tls;
+use crate::AssocTypeId;
 use crate::LifetimeData;
+use crate::ParameterData;
 use crate::ProjectionTy;
 use crate::RawId;
+use crate::StructId;
+use crate::TraitId;
 use crate::TyData;
-use crate::TypeKindId;
 use chalk_engine::context::Context;
 use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
@@ -27,13 +29,34 @@ use std::marker::PhantomData;
 /// wind up being mapped to the same underlying type families in the
 /// end.
 pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
-    /// "Interned" representation of types. You can use the `Lookup`
-    /// trait to convert this to a `Ty<Self>`.
+    /// "Interned" representation of types.  In normal user code,
+    /// `Self::InternedType` is not referenced Instead, we refer to
+    /// `Ty<Self>`, which wraps this type.
+    ///
+    /// An `InternedType` must be something that can be created from a
+    /// `TyData` (by the [`intern_ty`] method) and then later
+    /// converted back (by the [`ty_data`] method). The interned form
+    /// must also introduce indirection, either via a `Box`, `&`, or
+    /// other pointer type.
     type InternedType: Debug + Clone + Eq + Ord + Hash;
 
-    /// "Interned" representation of lifetimes. You can use the
-    /// `Lookup` trait to convert this to a `Lifetime<Self>`.
+    /// "Interned" representation of lifetimes.  In normal user code,
+    /// `Self::InternedLifetime` is not referenced Instead, we refer to
+    /// `Lifetime<Self>`, which wraps this type.
+    ///
+    /// An `InternedLifetime` must be something that can be created
+    /// from a `LifetimeData` (by the [`intern_lifetime`] method) and
+    /// then later converted back (by the [`lifetime_data`] method).
     type InternedLifetime: Debug + Clone + Eq + Ord + Hash;
+
+    /// "Interned" representation of a "generic parameter", which can
+    /// be either a type or a lifetime.  In normal user code,
+    /// `Self::InternedParameter` is not referenced. Instead, we refer to
+    /// `Parameter<Self>`, which wraps this type.
+    ///
+    /// An `InternedType` is created by `intern_parameter` and can be
+    /// converted back to its underlying data via `parameter_data`.
+    type InternedParameter: Debug + Clone + Eq + Ord + Hash;
 
     /// The core "id" type used for struct-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
@@ -42,19 +65,44 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific type-family (and hence
     /// fully known types).
-    fn debug_type_kind_id(
-        type_kind_id: TypeKindId<Self>,
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_struct_id(
+        struct_id: StructId<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result;
+    ) -> Option<fmt::Result>;
+
+    /// Prints the debug representation of a type-kind-id. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific type-family (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_trait_id(trait_id: TraitId<Self>, fmt: &mut fmt::Formatter<'_>)
+        -> Option<fmt::Result>;
+
+    /// Prints the debug representation of a type-kind-id. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific type-family (and hence
+    /// fully known types).
+    fn debug_assoc_type_id(
+        type_id: AssocTypeId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
 
     /// Prints the debug representation of a projection. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific type-family (and hence
     /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
     fn debug_projection(
         projection: &ProjectionTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result;
+    ) -> Option<fmt::Result>;
 
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyData::intern` (which
@@ -70,7 +118,17 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// method).
     fn intern_lifetime(lifetime: LifetimeData<Self>) -> Self::InternedLifetime;
 
+    /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
     fn lifetime_data(lifetime: &Self::InternedLifetime) -> &LifetimeData<Self>;
+
+    /// Create an "interned" parameter from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `ParameterData::intern` (which will ultimately call this
+    /// method).
+    fn intern_parameter(data: ParameterData<Self>) -> Self::InternedParameter;
+
+    /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
+    fn parameter_data(lifetime: &Self::InternedParameter) -> &ParameterData<Self>;
 }
 
 pub trait TargetTypeFamily<TF: TypeFamily>: TypeFamily {
@@ -100,44 +158,44 @@ pub trait HasTypeFamily {
 pub struct ChalkIr {}
 
 impl TypeFamily for ChalkIr {
-    type InternedType = TyData<ChalkIr>;
+    type InternedType = Box<TyData<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
+    type InternedParameter = ParameterData<ChalkIr>;
     type DefId = RawId;
 
-    fn debug_type_kind_id(
-        type_kind_id: TypeKindId<ChalkIr>,
+    fn debug_struct_id(
+        type_kind_id: StructId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        tls::with_current_program(|p| match p {
-            Some(prog) => prog.debug_type_kind_id(type_kind_id, fmt),
-            None => match type_kind_id {
-                TypeKindId::TypeId(id) => write!(fmt, "TypeId({:?})", id),
-                TypeKindId::TraitId(id) => write!(fmt, "TraitId({:?})", id),
-                TypeKindId::StructId(id) => write!(fmt, "StructId({:?})", id),
-            },
-        })
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_struct_id(type_kind_id, fmt)))
+    }
+
+    fn debug_trait_id(
+        type_kind_id: TraitId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_trait_id(type_kind_id, fmt)))
+    }
+
+    fn debug_assoc_type_id(
+        id: AssocTypeId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_assoc_type_id(id, fmt)))
     }
 
     fn debug_projection(
         projection: &ProjectionTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        tls::with_current_program(|p| match p {
-            Some(program) => program.debug_projection(projection, fmt),
-            None => write!(
-                fmt,
-                "({:?}){:?}",
-                projection.associated_ty_id,
-                Angle(&projection.parameters)
-            ),
-        })
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_projection(projection, fmt)))
     }
 
-    fn intern_ty(ty: TyData<ChalkIr>) -> TyData<ChalkIr> {
-        ty
+    fn intern_ty(ty: TyData<ChalkIr>) -> Box<TyData<ChalkIr>> {
+        Box::new(ty)
     }
 
-    fn ty_data(ty: &TyData<ChalkIr>) -> &TyData<Self> {
+    fn ty_data(ty: &Box<TyData<ChalkIr>>) -> &TyData<Self> {
         ty
     }
 
@@ -147,6 +205,14 @@ impl TypeFamily for ChalkIr {
 
     fn lifetime_data(lifetime: &LifetimeData<ChalkIr>) -> &LifetimeData<ChalkIr> {
         lifetime
+    }
+
+    fn intern_parameter(parameter: ParameterData<ChalkIr>) -> ParameterData<ChalkIr> {
+        parameter
+    }
+
+    fn parameter_data(parameter: &ParameterData<ChalkIr>) -> &ParameterData<ChalkIr> {
+        parameter
     }
 }
 
