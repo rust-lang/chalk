@@ -199,6 +199,7 @@ where
             ambiguous,
             constraints,
             subgoals,
+            delayed_subgoals,
             answer_time,
             floundered_subgoals,
         } = self;
@@ -207,6 +208,7 @@ where
             ambiguous: *ambiguous,
             constraints: constraints.fold_with(folder, binders)?,
             subgoals: subgoals.fold_with(folder, binders)?,
+            delayed_subgoals: delayed_subgoals.fold_with(folder, binders)?,
             answer_time: answer_time.fold_with(folder, binders)?,
             floundered_subgoals: floundered_subgoals.fold_with(folder, binders)?,
         })

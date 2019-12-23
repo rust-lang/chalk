@@ -28,7 +28,12 @@ pub(crate) struct Table<C: Context> {
     /// represented here -- we discard answers from `answers_hash`
     /// (but not `answers`) when better answers arrive (in particular,
     /// answers with no ambiguity).
-    answers_hash: FxHashMap<C::CanonicalConstrainedSubst, bool>,
+    ///
+    /// FIXME -- Ideally we would exclude the region constraints and
+    /// delayed subgoals from the hash, but that's a bit tricky to do
+    /// with the current canonicalization setup. It should be ok not
+    /// to do so though it can result in more answers than we need.
+    answers_hash: FxHashMap<C::CanonicalAnswerSubst, bool>,
 
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
@@ -108,7 +113,7 @@ impl<C: Context> Table<C> {
     /// tests trigger this case, and assumptions upstream assume that when
     /// `true` is returned here, that a *new* answer was added (instead of an)
     /// existing answer replaced.
-    pub(super) fn push_answer(&mut self, answer: Answer<C>) -> bool {
+    pub(super) fn push_answer(&mut self, answer: Answer<C>) -> Option<AnswerIndex> {
         assert!(!self.floundered);
 
         debug_heading!("push_answer(answer={:?})", answer);
@@ -136,10 +141,13 @@ impl<C: Context> Table<C> {
             "new answer to table with goal {:?}: answer={:?}",
             self.table_goal, answer,
         );
-        if added {
-            self.answers.push(answer);
+        if !added {
+            return None;
         }
-        added
+
+        let index = self.answers.len();
+        self.answers.push(answer);
+        Some(AnswerIndex::from(index))
     }
 
     pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer<C>> {
@@ -158,12 +166,4 @@ impl<C: Context> Table<C> {
 
 impl AnswerIndex {
     pub(crate) const ZERO: AnswerIndex = AnswerIndex { value: 0 };
-}
-
-impl<C: Context> Answer<C> {
-    /// An "unconditional" answer is one that must be true -- this is
-    /// the case so long as we have no delayed literals.
-    pub(super) fn is_unconditional(&self) -> bool {
-        !self.ambiguous
-    }
 }

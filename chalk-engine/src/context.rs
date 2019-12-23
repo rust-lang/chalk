@@ -7,7 +7,7 @@
 
 use crate::fallible::Fallible;
 use crate::hh::HhGoal;
-use crate::{Answer, ExClause};
+use crate::{CompleteAnswer, ExClause};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -61,11 +61,14 @@ pub trait Context: Clone + Debug {
     /// `make_solution`.
     type Solution;
 
-    /// Part of an answer: represents a canonicalized substitution,
-    /// combined with region constraints. See [the rustc-guide] for more information.
-    ///
-    /// [the rustc-guide]: https://rust-lang.github.io/rustc-guide/traits/canonicalization.html#canonicalizing-the-query-result
+    /// Part of a complete answer: the canonical version of a
+    /// substitution and region constraints but without any delayed
+    /// literals.
     type CanonicalConstrainedSubst: Clone + Debug + Eq + Hash;
+
+    /// Part of an answer: the canonical version of a substitution,
+    /// region constraints, and delayed literals.
+    type CanonicalAnswerSubst: Clone + Debug + Eq + Hash;
 
     /// Represents a substitution from the "canonical variables" found
     /// in a canonical goal to specific values.
@@ -132,20 +135,26 @@ pub trait Context: Clone + Debug {
 
     /// Extracts the inner normalized substitution from a canonical constraint subst.
     fn inference_normalized_subst_from_subst(
-        canon_ex_clause: &Self::CanonicalConstrainedSubst,
+        canon_ex_clause: &Self::CanonicalAnswerSubst,
     ) -> &Self::InferenceNormalizedSubst;
 
     /// True if this solution has no region constraints.
-    fn empty_constraints(ccs: &Self::CanonicalConstrainedSubst) -> bool;
+    fn empty_constraints(ccs: &Self::CanonicalAnswerSubst) -> bool;
 
     fn canonical(u_canon: &Self::UCanonicalGoalInEnvironment) -> &Self::CanonicalGoalInEnvironment;
 
     fn is_trivial_substitution(
         u_canon: &Self::UCanonicalGoalInEnvironment,
-        canonical_subst: &Self::CanonicalConstrainedSubst,
+        canonical_subst: &Self::CanonicalAnswerSubst,
     ) -> bool;
 
+    fn has_delayed_subgoals(canonical_subst: &Self::CanonicalAnswerSubst) -> bool;
+
     fn num_universes(_: &Self::UCanonicalGoalInEnvironment) -> usize;
+
+    fn canonical_constrained_subst_from_canonical_constrained_answer(
+        canonical_subst: &Self::CanonicalAnswerSubst,
+    ) -> Self::CanonicalConstrainedSubst;
 
     /// Convert a goal G *from* the canonical universes *into* our
     /// local universes. This will yield a goal G' that is the same
@@ -161,8 +170,10 @@ pub trait Context: Clone + Debug {
     /// names.
     fn map_subst_from_canonical(
         _: &Self::UniverseMap,
-        value: &Self::CanonicalConstrainedSubst,
-    ) -> Self::CanonicalConstrainedSubst;
+        value: &Self::CanonicalAnswerSubst,
+    ) -> Self::CanonicalAnswerSubst;
+
+    fn goal_from_goal_in_environment(goal: &Self::GoalInEnvironment) -> &Self::Goal;
 }
 
 pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
@@ -201,11 +212,10 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     /// - the table `T`
     /// - the substitution `S`
     /// - the environment and goal found by substitution `S` into `arg`
-    fn instantiate_ucanonical_goal<R>(
+    fn instantiate_ucanonical_goal(
         &self,
         arg: &C::UCanonicalGoalInEnvironment,
-        op: impl FnOnce(C::InferenceTable, C::Substitution, C::Environment, C::Goal) -> R,
-    ) -> R;
+    ) -> (C::InferenceTable, C::Substitution, C::Environment, C::Goal);
 
     fn instantiate_ex_clause(
         &self,
@@ -213,8 +223,23 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         canonical_ex_clause: &C::CanonicalExClause,
     ) -> (C::InferenceTable, ExClause<C>);
 
+    // Used by: logic
+    fn instantiate_answer_subst(
+        &self,
+        num_universes: usize,
+        answer: &C::CanonicalAnswerSubst,
+    ) -> (
+        C::InferenceTable,
+        C::Substitution,
+        Vec<C::RegionConstraint>,
+        Vec<C::GoalInEnvironment>,
+    );
+
     /// returns unique solution from answer
-    fn constrained_subst_from_answer(&self, answer: Answer<C>) -> C::CanonicalConstrainedSubst;
+    fn constrained_subst_from_answer(
+        &self,
+        answer: CompleteAnswer<C>,
+    ) -> C::CanonicalConstrainedSubst;
 }
 
 /// Methods for combining solutions to yield an aggregate solution.
@@ -283,6 +308,14 @@ pub trait UnificationOps<C: Context> {
     ) -> C::CanonicalConstrainedSubst;
 
     // Used by: logic
+    fn canonicalize_answer_subst(
+        &mut self,
+        subst: C::Substitution,
+        constraints: Vec<C::RegionConstraint>,
+        delayed_subgoals: Vec<C::GoalInEnvironment>,
+    ) -> C::CanonicalAnswerSubst;
+
+    // Used by: logic
     fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
 
     /// First unify the parameters, then add the residual subgoals
@@ -343,13 +376,13 @@ pub trait ResolventOps<C: Context> {
         ex_clause: &mut ExClause<C>,
         selected_goal: &C::GoalInEnvironment,
         answer_table_goal: &C::CanonicalGoalInEnvironment,
-        canonical_answer_subst: &C::CanonicalConstrainedSubst,
+        canonical_answer_subst: &C::CanonicalAnswerSubst,
     ) -> Fallible<()>;
 }
 
 pub trait AnswerStream<C: Context> {
-    fn peek_answer(&mut self) -> Option<Answer<C>>;
-    fn next_answer(&mut self) -> Option<Answer<C>>;
+    fn peek_answer(&mut self) -> Option<CompleteAnswer<C>>;
+    fn next_answer(&mut self) -> Option<CompleteAnswer<C>>;
 
     /// Invokes `test` with each possible future answer, returning true immediately
     /// if we find any answer for which `test` returns true.

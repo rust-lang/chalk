@@ -100,6 +100,7 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
             ambiguous: false,
             constraints: vec![],
             subgoals: vec![],
+            delayed_subgoals: vec![],
             answer_time: TimeStamp::default(),
             floundered_subgoals: vec![],
         };
@@ -201,7 +202,7 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
         ex_clause: &mut ExClause<SlgContext<TF>>,
         selected_goal: &InEnvironment<Goal<TF>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<TF>>>,
-        canonical_answer_subst: &Canonical<ConstrainedSubst<TF>>,
+        canonical_answer_subst: &Canonical<AnswerSubst<TF>>,
     ) -> Fallible<()> {
         debug_heading!("apply_answer_subst()");
         debug!("ex_clause={:?}", ex_clause);
@@ -213,7 +214,7 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
         debug!("canonical_answer_subst={:?}", canonical_answer_subst);
 
         // C' is now `answer`. No variables in common with G.
-        let ConstrainedSubst {
+        let AnswerSubst {
             subst: answer_subst,
 
             // Assuming unification succeeds, we incorporate the
@@ -222,7 +223,11 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
             // to be true) winds up being true, and otherwise (if the
             // answer is false or unknown) it doesn't matter.
             constraints: answer_constraints,
+
+            delayed_subgoals,
         } = self.infer.instantiate_canonical(&canonical_answer_subst);
+
+        let table_goal = self.infer.instantiate_canonical(&answer_table_goal);
 
         AnswerSubstitutor::substitute(
             &mut self.infer,
@@ -233,6 +238,18 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
             selected_goal,
         )?;
         ex_clause.constraints.extend(answer_constraints);
+
+        for delayed_subgoal in delayed_subgoals {
+            // FIXME: is this always valid or would we ever run
+            // into an issue with normalization? (Would this even
+            // be a "trivial self-cycle"?)
+            // Only add the delayed_subgoals to the ex-clause if
+            // it isn't a trivial self-cycle
+            if delayed_subgoal.goal != table_goal.goal {
+                ex_clause.delayed_subgoals.push(delayed_subgoal);
+            }
+        }
+
         Ok(())
     }
 }

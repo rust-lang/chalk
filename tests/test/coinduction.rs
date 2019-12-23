@@ -100,9 +100,7 @@ fn coinductive_nontrivial() {
         goal {
             exists<T> { T: C1 }
         } yields {
-            // FIXME(chalk#248)
-            // r"No possible solution"
-            r"Unique; substitution [?0 := Y], lifetime constraints []"
+            r"No possible solution"
         }
     }
 }
@@ -117,16 +115,15 @@ fn coinductive_trivial_variant1() {
             trait C2<T> { }
 
             struct X { }
-            struct Y { }
 
-            forall<A, B> { A: C1<B> if A: C2<B>, A = X, B = Y }
+            forall<A, B> { A: C1<B> if A: C2<B>, A = X, B = X }
             forall<A, B> { A: C2<B> if B: C1<A> }
         }
 
         goal {
             exists<T, U> { T: C1<U> }
         } yields {
-            r"Unique; substitution [?0 := X, ?1 := Y], lifetime constraints []"
+            r"Unique; substitution [?0 := X, ?1 := X], lifetime constraints []"
         }
     }
 }
@@ -150,7 +147,7 @@ fn coinductive_trivial_variant2() {
         goal {
             exists<T, U> { T: C1<U> }
         } yields {
-            r"Unique; for<?U0> { substitution [?0 := X, ?1 := ^0], lifetime constraints [] }"
+            r"Unique; substitution [?0 := X, ?1 := X], lifetime constraints []"
         }
     }
 }

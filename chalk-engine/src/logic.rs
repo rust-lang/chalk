@@ -4,8 +4,9 @@ use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::AnswerIndex;
-use crate::Answer;
-use crate::{ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp};
+use crate::{
+    Answer, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
+};
 use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -15,10 +16,10 @@ type RootSearchResult<T> = Result<T, RootSearchFail>;
 /// empty stack.
 #[derive(Debug)]
 pub(super) enum RootSearchFail {
-    /// The subgoal we were trying to solve cannot succeed.
+    /// The table we were trying to solve cannot succeed.
     NoMoreSolutions,
 
-    /// The subgoal cannot be solved without more type information.
+    /// The table cannot be solved without more type information.
     Floundered,
 
     /// We did not find a solution, but we still have things to try.
@@ -31,6 +32,10 @@ pub(super) enum RootSearchFail {
     /// A negative cycle was found. This is fail-fast, so even if there was
     /// possibly a solution (ambiguous or not), it may not have been found.
     NegativeCycle,
+
+    /// The current answer index is not useful. Currently, this is returned
+    /// because the current answer needs refining.
+    InvalidAnswer,
 }
 
 /// This is returned when we try to select a subgoal for a strand.
@@ -69,12 +74,24 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         table: TableIndex,
-        answer: AnswerIndex,
-    ) -> RootSearchResult<&Answer<C>> {
+        answer_index: AnswerIndex,
+    ) -> RootSearchResult<CompleteAnswer<C>> {
         assert!(self.stack.is_empty());
 
-        match self.ensure_root_answer(context, table, answer) {
-            Ok(()) => Ok(self.tables[table].answer(answer).unwrap()),
+        match self.ensure_root_answer(context, table, answer_index) {
+            Ok(()) => {
+                let answer = self.answer(table, answer_index);
+                let has_delayed_subgoals = C::has_delayed_subgoals(&answer.subst);
+                if has_delayed_subgoals {
+                    return Err(RootSearchFail::InvalidAnswer);
+                }
+                Ok(CompleteAnswer {
+                    subst: C::canonical_constrained_subst_from_canonical_constrained_answer(
+                        &answer.subst,
+                    ),
+                    ambiguous: answer.ambiguous,
+                })
+            }
             Err(err) => Err(err),
         }
     }
@@ -163,7 +180,7 @@ impl<C: Context> Forest<C> {
                             continue;
                         }
                         SubGoalSelection::NoRemainingSubgoals => {
-                            match self.on_no_remaining_subgoals(strand) {
+                            match self.on_no_remaining_subgoals(context, strand) {
                                 NoRemainingSubgoalsResult::RootAnswerAvailable => return Ok(()),
                                 NoRemainingSubgoalsResult::RootSearchFail(e) => return Err(e),
                                 NoRemainingSubgoalsResult::Success => {}
@@ -271,8 +288,8 @@ impl<C: Context> Forest<C> {
                             last_pursued_time: _,
                         } = strand;
 
-                        // If the answer had delayed literals, we have to
-                        // ensure that `ex_clause` is also delayed. This is
+                        // If the answer had was ambiguous, we have to
+                        // ensure that `ex_clause` is also ambiguous. This is
                         // the SLG FACTOR operation, though NFTD just makes it
                         // part of computing the SLG resolvent.
                         if self.answer(subgoal_table, answer_index).ambiguous {
@@ -305,13 +322,27 @@ impl<C: Context> Forest<C> {
                 }
             }
             Literal::Negative(_) => {
-                if self
-                    .answer(
-                        selected_subgoal.subgoal_table,
-                        selected_subgoal.answer_index,
-                    )
-                    .is_unconditional()
-                {
+                let SelectedSubgoal {
+                    subgoal_index: _,
+                    subgoal_table,
+                    answer_index,
+                    universe_map: _,
+                } = selected_subgoal;
+                // We got back an answer. This is bad, because we want
+                // to disprove the subgoal, but it may be
+                // "conditional" (maybe true, maybe not).
+                let answer = self.answer(subgoal_table, answer_index);
+
+                // By construction, we do not expect negative subgoals
+                // to have delayed subgoals. This is because we do not
+                // need to permit `not { L }` where `L` is a
+                // coinductive goal. We could improve this if needed,
+                // but it keeps things simple.
+                if C::has_delayed_subgoals(&answer.subst) {
+                    panic!("Negative subgoal had delayed_subgoals");
+                }
+
+                if !answer.ambiguous {
                     // We want to disproval the subgoal, but we
                     // have an unconditional answer for the subgoal,
                     // therefore we have failed to disprove it.
@@ -325,27 +356,12 @@ impl<C: Context> Forest<C> {
                     return Err(RootSearchFail::QuantumExceeded);
                 }
 
-                // Got back a conditional answer. We neither succeed
-                // nor fail yet, so just mark as ambiguous.
+                // Otherwise, the answer is ambiguous. We can keep going,
+                // but we have to mark our strand, too, as ambiguous.
                 //
-                // This corresponds to the Delaying action in NFTD.
-                // It also interesting to compare this with the EWFS
-                // paper; there, when we encounter a delayed cached
-                // answer in `negative_subgoal`, we do not immediately
-                // convert to a delayed literal, but instead simply
-                // stop. However, in EWFS, we *do* add the strand to
-                // the table as a negative pending subgoal, and also
-                // update the link to depend negatively on the
-                // table. Then later, when all pending work from that
-                // table is completed, all negative links are
-                // converted to delays.
-                //
-                // Previously, this introduced a `delayed_literal` that
-                // we could follow and potentially resolve later. However,
-                // for simplicity, we now just mark the strand as ambiguous.
-
-                // We've already removed the selected subgoal
-                // Now we just have to mark this Strand as ambiguous
+                // We want to disproval the subgoal, but we
+                // have an unconditional answer for the subgoal,
+                // therefore we have failed to disprove it.
                 strand.ex_clause.ambiguous = true;
 
                 // Strand is ambigious.
@@ -411,8 +427,9 @@ impl<C: Context> Forest<C> {
     fn on_coinductive_subgoal(&mut self, mut strand: Strand<C>) -> Result<(), RootSearchFail> {
         // This is a co-inductive cycle. That is, this table
         // appears somewhere higher on the stack, and has now
-        // recursively requested an answer for itself. That
-        // means that our subgoal is unconditionally true.
+        // recursively requested an answer for itself. This
+        // means that we have to delay this subgoal until we
+        // reach a trivial self-cycle.
 
         // This subgoal selection for the strand is finished, so take it
         let selected_subgoal = strand.selected_subgoal.take().unwrap();
@@ -421,26 +438,23 @@ impl<C: Context> Forest<C> {
             .subgoals
             .remove(selected_subgoal.subgoal_index)
         {
-            Literal::Positive(_) => {
-                // We can drop this subgoal and pursue the next thing.
+            Literal::Positive(subgoal) => {
+                // We delay this subgoal
                 let table = self.stack.top().table;
                 assert!(
                     self.tables[table].coinductive_goal
                         && self.tables[selected_subgoal.subgoal_table].coinductive_goal
                 );
 
+                strand.ex_clause.delayed_subgoals.push(subgoal);
+
                 self.stack.top().active_strand = Some(strand);
                 return Ok(());
             }
             Literal::Negative(_) => {
-                // Our negative goal fails
-
-                // We discard the current strand
-                drop(strand);
-
-                // Now we yield with `QuantumExceeded`
-                self.unwind_stack();
-                return Err(RootSearchFail::QuantumExceeded);
+                // We don't allow coinduction for negative literals
+                info!("found coinductive answer to negative literal");
+                panic!("Coinductive cycle with negative literal");
             }
         }
     }
@@ -569,20 +583,44 @@ impl<C: Context> Forest<C> {
         Ok(())
     }
 
-    fn on_no_remaining_subgoals(&mut self, strand: Strand<C>) -> NoRemainingSubgoalsResult {
+    fn on_no_remaining_subgoals(
+        &mut self,
+        context: &impl ContextOps<C>,
+        strand: Strand<C>,
+    ) -> NoRemainingSubgoalsResult {
         debug!("no remaining subgoals for the table");
 
         match self.pursue_answer(strand) {
-            Some(()) => {
+            Some(answer_index) => {
                 debug!("answer is available");
 
                 // We found an answer for this strand, and therefore an
                 // answer for this table. Now, this table was either a
                 // subgoal for another strand, or was the root table.
+                let table = self.stack.top().table;
                 let mut caller_strand = match self.stack.pop_and_take_caller_strand() {
                     Some(s) => s,
                     None => {
-                        // That was the root table, so we are done.
+                        // That was the root table, so we are done --
+                        // *well*, unless there were delayed
+                        // subgoals. In that case, we want to evaluate
+                        // those delayed subgoals to completion, so we
+                        // have to create a fresh strand that will
+                        // take them as goals. Note that we *still
+                        // need the original answer in place*, because
+                        // we might have to build on it (see the
+                        // Delayed Trivial Self Cycle, Variant 3
+                        // example).
+                        let (_, _, _, table_goal) =
+                            context.instantiate_ucanonical_goal(&self.tables[table].table_goal);
+
+                        let answer = self.answer(table, answer_index);
+                        if let Some(strand) =
+                            self.create_refinement_strand(context, table, answer, table_goal)
+                        {
+                            self.tables[table].enqueue_strand(strand);
+                        }
+
                         return NoRemainingSubgoalsResult::RootAnswerAvailable;
                     }
                 };
@@ -608,6 +646,67 @@ impl<C: Context> Forest<C> {
                 return NoRemainingSubgoalsResult::RootSearchFail(RootSearchFail::QuantumExceeded);
             }
         };
+    }
+
+    /// A "refinement" strand is used in coinduction. When the root
+    /// table on the stack publishes an answer has delayed subgoals,
+    /// we create a new strand that will attempt to prove out those
+    /// delayed subgoals (the root answer here is not *special* except
+    /// in so far as that there is nothing above it, and hence we know
+    /// that the delayed subgoals (which resulted in some cycle) must
+    /// be referring to a table that now has completed).
+    ///
+    /// Note that it is important for this to be a *refinement* strand
+    /// -- meaning that the answer with delayed subgoals has been
+    /// published. This is necessary because sometimes the strand must
+    /// build on that very answer that it is refining. See Delayed
+    /// Trivial Self Cycle, Variant 3.
+    fn create_refinement_strand(
+        &self,
+        context: &impl ContextOps<C>,
+        table: TableIndex,
+        answer: &Answer<C>,
+        table_goal: C::Goal,
+    ) -> Option<CanonicalStrand<C>> {
+        // If there are no delayed subgoals, then there is no need for
+        // a refinement strand.
+        if !C::has_delayed_subgoals(&answer.subst) {
+            return None;
+        }
+
+        let num_universes = C::num_universes(&self.tables[table].table_goal);
+        let (table, subst, constraints, delayed_subgoals) =
+            context.instantiate_answer_subst(num_universes, &answer.subst);
+
+        // FIXME: it would be nice if these delayed subgoals didn't get added to the answer
+        // at all. However, we can't compare the delayed subgoals with the table goal until
+        // we call `canonicalize_answer_subst` in `pursue_answer`. However, at this point,
+        // it's a bit late since `pursue_answer` doesn't know about the table goal. This could
+        // be refactored a bit.
+        let filtered_delayed_subgoals = delayed_subgoals
+            .into_iter()
+            .filter(|delayed_subgoal| {
+                *C::goal_from_goal_in_environment(delayed_subgoal) != table_goal
+            })
+            .map(Literal::Positive)
+            .collect();
+
+        let strand = Strand {
+            infer: table,
+            ex_clause: ExClause {
+                subst,
+                ambiguous: answer.ambiguous,
+                constraints,
+                subgoals: filtered_delayed_subgoals,
+                delayed_subgoals: Vec::new(),
+                answer_time: TimeStamp::default(),
+                floundered_subgoals: Vec::new(),
+            },
+            selected_subgoal: None,
+            last_pursued_time: TimeStamp::default(),
+        };
+
+        Some(Self::canonicalize_strand(strand))
     }
 
     fn on_subgoal_selection_flounder(&mut self, strand: Strand<C>) -> RootSearchFail {
@@ -919,7 +1018,7 @@ impl<C: Context> Forest<C> {
     ///   strand led nowhere of interest.
     /// - the strand may represent a new answer, in which case it is
     ///   added to the table and `Some(())` is returned.
-    fn pursue_answer(&mut self, strand: Strand<C>) -> Option<()> {
+    fn pursue_answer(&mut self, strand: Strand<C>) -> Option<AnswerIndex> {
         let table = self.stack.top().table;
         let Strand {
             mut infer,
@@ -929,6 +1028,7 @@ impl<C: Context> Forest<C> {
                     constraints,
                     ambiguous,
                     subgoals,
+                    delayed_subgoals,
                     answer_time: _,
                     floundered_subgoals,
                 },
@@ -938,13 +1038,10 @@ impl<C: Context> Forest<C> {
         assert!(subgoals.is_empty());
         assert!(floundered_subgoals.is_empty());
 
-        let answer_subst = infer.canonicalize_constrained_subst(subst, constraints);
-        debug!("answer: table={:?}, answer_subst={:?}", table, answer_subst);
+        let subst = infer.canonicalize_answer_subst(subst, constraints, delayed_subgoals);
+        debug!("answer: table={:?}, subst={:?}", table, subst);
 
-        let answer = Answer {
-            subst: answer_subst,
-            ambiguous: ambiguous,
-        };
+        let answer = Answer { subst, ambiguous };
 
         // A "trivial" answer is one that is 'just true for all cases'
         // -- in other words, it gives no information back to the
@@ -1010,12 +1107,12 @@ impl<C: Context> Forest<C> {
                 && C::empty_constraints(&answer.subst)
         };
 
-        if self.tables[table].push_answer(answer) {
+        if let Some(answer_index) = self.tables[table].push_answer(answer) {
             if is_trivial_answer {
                 self.tables[table].take_strands();
             }
 
-            Some(())
+            Some(answer_index)
         } else {
             info!("answer: not a new answer, returning None");
             None
@@ -1117,9 +1214,8 @@ impl<C: Context> Forest<C> {
     fn push_initial_strands(&mut self, context: &impl ContextOps<C>, table: TableIndex) {
         // Instantiate the table goal with fresh inference variables.
         let table_goal = self.tables[table].table_goal.clone();
-        context.instantiate_ucanonical_goal(&table_goal, |infer, subst, environment, goal| {
-            self.push_initial_strands_instantiated(context, table, infer, subst, environment, goal);
-        });
+        let (infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&table_goal);
+        self.push_initial_strands_instantiated(context, table, infer, subst, environment, goal);
     }
 
     fn push_initial_strands_instantiated(
@@ -1398,6 +1494,7 @@ impl<C: Context> Forest<C> {
                         ambiguous: true,
                         constraints: vec![],
                         subgoals: vec![],
+                        delayed_subgoals: vec![],
                         answer_time: TimeStamp::default(),
                         floundered_subgoals: vec![],
                     },

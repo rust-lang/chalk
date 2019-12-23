@@ -9,7 +9,7 @@ use chalk_ir::family::TypeFamily;
 use chalk_ir::*;
 
 use chalk_engine::context;
-use chalk_engine::Answer;
+use chalk_engine::CompleteAnswer;
 use std::fmt::Debug;
 
 /// Draws as many answers as it needs from `answers` (but
@@ -24,7 +24,7 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
         if answers.peek_answer().is_none() {
             return None;
         }
-        let Answer { subst, ambiguous } = answers.next_answer().unwrap();
+        let CompleteAnswer { subst, ambiguous } = answers.next_answer().unwrap();
 
         // Exactly 1 unconditional answer?
         if answers.peek_answer().is_none() && !ambiguous {
