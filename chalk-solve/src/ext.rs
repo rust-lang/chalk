@@ -68,20 +68,20 @@ impl<TF: TypeFamily> GoalExt<TF> for Goal<TF> {
             let mut env_goal = InEnvironment::new(&Environment::new(), self);
             loop {
                 let InEnvironment { environment, goal } = env_goal;
-                match goal {
-                    Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
-                        let subgoal = infer.instantiate_binders_universally(&subgoal);
+                match goal.data() {
+                    GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
+                        let subgoal = infer.instantiate_binders_universally(subgoal);
                         env_goal = InEnvironment::new(&environment, *subgoal);
                     }
 
-                    Goal::Quantified(QuantifierKind::Exists, subgoal) => {
-                        let subgoal = infer.instantiate_binders_existentially(&subgoal);
+                    GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
+                        let subgoal = infer.instantiate_binders_existentially(subgoal);
                         env_goal = InEnvironment::new(&environment, *subgoal);
                     }
 
-                    Goal::Implies(wc, subgoal) => {
-                        let new_environment = &environment.add_clauses(wc);
-                        env_goal = InEnvironment::new(&new_environment, *subgoal);
+                    GoalData::Implies(wc, subgoal) => {
+                        let new_environment = environment.add_clauses(wc.iter().cloned());
+                        env_goal = InEnvironment::new(&new_environment, Goal::clone(subgoal));
                     }
 
                     _ => break InEnvironment::new(&environment, goal),

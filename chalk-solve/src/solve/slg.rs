@@ -317,15 +317,19 @@ impl<TF: TypeFamily> context::TruncateOps<SlgContext<TF>> for TruncatingInferenc
 
 impl<TF: TypeFamily> context::InferenceTable<SlgContext<TF>> for TruncatingInferenceTable<TF> {
     fn into_hh_goal(&mut self, goal: Goal<TF>) -> HhGoal<SlgContext<TF>> {
-        match goal {
-            Goal::Quantified(QuantifierKind::ForAll, binders_goal) => HhGoal::ForAll(binders_goal),
-            Goal::Quantified(QuantifierKind::Exists, binders_goal) => HhGoal::Exists(binders_goal),
-            Goal::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
-            Goal::All(goals) => HhGoal::All(goals),
-            Goal::Not(g1) => HhGoal::Not(*g1),
-            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify((), a, b),
-            Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
-            Goal::CannotProve(()) => HhGoal::CannotProve,
+        match goal.data().clone() {
+            GoalData::Quantified(QuantifierKind::ForAll, binders_goal) => {
+                HhGoal::ForAll(binders_goal)
+            }
+            GoalData::Quantified(QuantifierKind::Exists, binders_goal) => {
+                HhGoal::Exists(binders_goal)
+            }
+            GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
+            GoalData::All(goals) => HhGoal::All(goals),
+            GoalData::Not(g1) => HhGoal::Not(*g1),
+            GoalData::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify((), a, b),
+            GoalData::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
+            GoalData::CannotProve(()) => HhGoal::CannotProve,
         }
     }
 

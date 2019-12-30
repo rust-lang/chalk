@@ -117,7 +117,7 @@ where
     T: CastTo<LeafGoal<TF>>,
 {
     fn cast_to(self) -> Goal<TF> {
-        Goal::Leaf(self.cast())
+        GoalData::Leaf(self.cast()).intern()
     }
 }
 
@@ -150,10 +150,11 @@ impl<T: CastTo<Goal<TF>>, TF: TypeFamily> CastTo<Goal<TF>> for Binders<T> {
         if self.binders.is_empty() {
             self.value.cast()
         } else {
-            Goal::Quantified(
+            GoalData::Quantified(
                 QuantifierKind::ForAll,
                 self.map(|bound| Box::new(bound.cast())),
             )
+            .intern()
         }
     }
 }

@@ -259,25 +259,31 @@ enum_zip!(impl<TF> for ProgramClause<TF> { Implies, ForAll });
 // relevant name mangling.
 impl<TF: TypeFamily> Zip<TF> for Goal<TF> {
     fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+        Zip::zip_with(zipper, a.data(), b.data())
+    }
+}
+
+impl<TF: TypeFamily> Zip<TF> for GoalData<TF> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
         match (a, b) {
-            (&Goal::Quantified(ref f_a, ref g_a), &Goal::Quantified(ref f_b, ref g_b)) => {
+            (&GoalData::Quantified(ref f_a, ref g_a), &GoalData::Quantified(ref f_b, ref g_b)) => {
                 Zip::zip_with(zipper, f_a, f_b)?;
                 Zip::zip_with(zipper, g_a, g_b)
             }
-            (&Goal::Implies(ref f_a, ref g_a), &Goal::Implies(ref f_b, ref g_b)) => {
+            (&GoalData::Implies(ref f_a, ref g_a), &GoalData::Implies(ref f_b, ref g_b)) => {
                 Zip::zip_with(zipper, f_a, f_b)?;
                 Zip::zip_with(zipper, g_a, g_b)
             }
-            (&Goal::All(ref g_a), &Goal::All(ref g_b)) => Zip::zip_with(zipper, g_a, g_b),
-            (&Goal::Not(ref f_a), &Goal::Not(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
-            (&Goal::Leaf(ref f_a), &Goal::Leaf(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
-            (&Goal::CannotProve(()), &Goal::CannotProve(())) => Ok(()),
-            (&Goal::Quantified(..), _)
-            | (&Goal::Implies(..), _)
-            | (&Goal::All(..), _)
-            | (&Goal::Not(..), _)
-            | (&Goal::Leaf(..), _)
-            | (&Goal::CannotProve(..), _) => {
+            (&GoalData::All(ref g_a), &GoalData::All(ref g_b)) => Zip::zip_with(zipper, g_a, g_b),
+            (&GoalData::Not(ref f_a), &GoalData::Not(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
+            (&GoalData::Leaf(ref f_a), &GoalData::Leaf(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
+            (&GoalData::CannotProve(()), &GoalData::CannotProve(())) => Ok(()),
+            (&GoalData::Quantified(..), _)
+            | (&GoalData::Implies(..), _)
+            | (&GoalData::All(..), _)
+            | (&GoalData::Not(..), _)
+            | (&GoalData::Leaf(..), _)
+            | (&GoalData::CannotProve(..), _) => {
                 return Err(NoSolution);
             }
         }

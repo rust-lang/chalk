@@ -111,9 +111,11 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
         // Add the `conditions` from the program clause into the result too.
         ex_clause
             .subgoals
-            .extend(conditions.into_iter().map(|c| match c {
-                Goal::Not(c) => Literal::Negative(InEnvironment::new(environment, *c)),
-                c => Literal::Positive(InEnvironment::new(environment, c)),
+            .extend(conditions.into_iter().map(|c| match c.data() {
+                GoalData::Not(c) => {
+                    Literal::Negative(InEnvironment::new(environment, Goal::clone(c)))
+                }
+                _ => Literal::Positive(InEnvironment::new(environment, c)),
             }));
 
         Ok(ex_clause)

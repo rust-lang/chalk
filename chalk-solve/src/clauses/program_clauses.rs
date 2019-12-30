@@ -221,6 +221,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for StructDatum<TF> {
                     builder.push_clause(
                         DomainGoal::$goal(self_ty.clone()),
                         Some(DomainGoal::$goal(
+                            //
                             // This unwrap is safe because we asserted
                             // above for the presence of a type
                             // parameter
@@ -428,7 +429,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for TraitDatum<TF> {
                         .chain(iter::once(
                             DomainGoal::DownstreamType(type_parameters[i].clone()).cast(),
                         ))
-                        .chain(iter::once(Goal::CannotProve(()))),
+                        .chain(iter::once(GoalData::CannotProve(()).intern())),
                 );
             }
 
@@ -463,7 +464,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for TraitDatum<TF> {
                                 .type_parameters()
                                 .map(|ty| DomainGoal::IsUpstream(ty).cast()),
                         )
-                        .chain(iter::once(Goal::CannotProve(()))),
+                        .chain(iter::once(GoalData::CannotProve(()).intern())),
                 );
             }
 

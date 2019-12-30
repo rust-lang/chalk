@@ -1279,10 +1279,9 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                     .flat_map(|h| h.lower_clause(env).apply_result())
                     .map(|result| result.map(|h| h.into_from_env_clause()))
                     .collect();
-                Ok(Box::new(chalk_ir::Goal::Implies(
-                    where_clauses?,
-                    g.lower(env)?,
-                )))
+                Ok(Box::new(
+                    chalk_ir::GoalData::Implies(where_clauses?, g.lower(env)?).intern(),
+                ))
             }
             Goal::And(g1, g2s) => {
                 let mut goals = vec![];
@@ -1290,13 +1289,16 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 for g2 in g2s {
                     goals.push(*g2.lower(env)?);
                 }
-                Ok(Box::new(chalk_ir::Goal::All(goals)))
+                Ok(Box::new(chalk_ir::GoalData::All(goals).intern()))
             }
-            Goal::Not(g) => Ok(Box::new(chalk_ir::Goal::Not(g.lower(env)?))),
+            Goal::Not(g) => Ok(Box::new(chalk_ir::GoalData::Not(g.lower(env)?).intern())),
             Goal::Compatible(g) => Ok(Box::new(g.lower(env)?.compatible())),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
-                let leaves = leaf.lower(env)?.into_iter().map(chalk_ir::Goal::Leaf);
+                let leaves = leaf
+                    .lower(env)?
+                    .into_iter()
+                    .map(|lg| chalk_ir::GoalData::Leaf(lg).intern());
                 Ok(leaves.collect())
             }
         }
@@ -1325,10 +1327,9 @@ impl LowerQuantifiedGoal for Goal {
 
         let parameter_kinds = parameter_kinds.iter().map(|pk| pk.lower());
         let subgoal = env.in_binders(parameter_kinds, |env| self.lower(env))?;
-        Ok(Box::new(chalk_ir::Goal::Quantified(
-            quantifier_kind,
-            subgoal,
-        )))
+        Ok(Box::new(
+            chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern(),
+        ))
     }
 }
 

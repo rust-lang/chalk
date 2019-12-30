@@ -272,8 +272,8 @@ impl<TF: TypeFamily> Debug for EqGoal<TF> {
 
 impl<TF: TypeFamily> Debug for Goal<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
-            Goal::Quantified(qkind, ref subgoal) => {
+        match self.data() {
+            GoalData::Quantified(qkind, ref subgoal) => {
                 write!(fmt, "{:?}<", qkind)?;
                 for (index, binder) in subgoal.binders.iter().enumerate() {
                     if index > 0 {
@@ -286,8 +286,8 @@ impl<TF: TypeFamily> Debug for Goal<TF> {
                 }
                 write!(fmt, "> {{ {:?} }}", subgoal.value)
             }
-            Goal::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
-            Goal::All(ref goals) => {
+            GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
+            GoalData::All(ref goals) => {
                 write!(fmt, "all(")?;
                 for (goal, index) in goals.iter().zip(0..) {
                     if index > 0 {
@@ -298,9 +298,9 @@ impl<TF: TypeFamily> Debug for Goal<TF> {
                 write!(fmt, ")")?;
                 Ok(())
             }
-            Goal::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
-            Goal::Leaf(ref wc) => write!(fmt, "{:?}", wc),
-            Goal::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
+            GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
+            GoalData::Leaf(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
         }
     }
 }

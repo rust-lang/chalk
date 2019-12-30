@@ -1025,74 +1025,70 @@ impl<T> UCanonical<T> {
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
-pub enum Goal<TF: TypeFamily> {
-    /// Introduces a binding at depth 0, shifting other bindings up
-    /// (deBruijn index).
-    Quantified(QuantifierKind, Binders<Box<Goal<TF>>>),
-    Implies(Vec<ProgramClause<TF>>, Box<Goal<TF>>),
-    All(Vec<Goal<TF>>),
-    Not(Box<Goal<TF>>),
-    Leaf(LeafGoal<TF>),
-
-    /// Indicates something that cannot be proven to be true or false
-    /// definitively. This can occur with overflow but also with
-    /// unifications of skolemized variables like `forall<X,Y> { X = Y
-    /// }`. Of course, that statement is false, as there exist types
-    /// X, Y where `X = Y` is not true. But we treat it as "cannot
-    /// prove" so that `forall<X,Y> { not { X = Y } }` also winds up
-    /// as cannot prove.
-    ///
-    /// (TOTAL HACK: Having a unit result makes some of our macros work better.)
-    CannotProve(()),
+pub struct Goal<TF: TypeFamily> {
+    interned: GoalData<TF>,
 }
 
 impl<TF: TypeFamily> Goal<TF> {
+    pub fn new(interned: GoalData<TF>) -> Self {
+        Self { interned }
+    }
+
+    pub fn data(&self) -> &GoalData<TF> {
+        &self.interned
+    }
+
     pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal<TF> {
-        Goal::Quantified(
+        GoalData::Quantified(
             kind,
             Binders {
                 value: Box::new(self),
                 binders,
             },
         )
+        .intern()
     }
 
     /// Takes a goal `G` and turns it into `not { G }`
     pub fn negate(self) -> Self {
-        Goal::Not(Box::new(self))
+        GoalData::Not(Box::new(self)).intern()
     }
 
     /// Takes a goal `G` and turns it into `compatible { G }`
     pub fn compatible(self) -> Self {
         // compatible { G } desugars into: forall<T> { if (Compatible, DownstreamType(T)) { G } }
         // This activates the compatible modality rules and introduces an anonymous downstream type
-        Goal::Quantified(
+        GoalData::Quantified(
             QuantifierKind::ForAll,
             Binders {
                 value: Box::new(self),
                 binders: Vec::new(),
             }
             .with_fresh_type_var(|goal, ty| {
-                Box::new(Goal::Implies(
-                    vec![
-                        DomainGoal::Compatible(()).cast(),
-                        DomainGoal::DownstreamType(ty).cast(),
-                    ],
-                    goal,
-                ))
+                Box::new(
+                    GoalData::Implies(
+                        vec![
+                            DomainGoal::Compatible(()).cast(),
+                            DomainGoal::DownstreamType(ty).cast(),
+                        ],
+                        goal,
+                    )
+                    .intern(),
+                )
             }),
         )
+        .intern()
     }
 
     pub fn implied_by(self, predicates: Vec<ProgramClause<TF>>) -> Goal<TF> {
-        Goal::Implies(predicates, Box::new(self))
+        GoalData::Implies(predicates, Box::new(self)).intern()
     }
 
     /// True if this goal is "trivially true" -- i.e., no work is
     /// required to prove it.
     pub fn is_trivially_true(&self) -> bool {
-        match self {
-            Goal::All(goals) => goals.is_empty(),
+        match self.data() {
+            GoalData::All(goals) => goals.is_empty(),
             _ => false,
         }
     }
@@ -1124,15 +1120,44 @@ where
                 // More than one goal to prove
                 let mut goals = vec![goal0, goal1];
                 goals.extend(iter);
-                Goal::All(goals)
+                GoalData::All(goals).intern()
             } else {
                 // One goal to prove
                 goal0
             }
         } else {
             // No goals to prove, always true
-            Goal::All(vec![])
+            GoalData::All(vec![]).intern()
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
+/// A general goal; this is the full range of questions you can pose to Chalk.
+pub enum GoalData<TF: TypeFamily> {
+    /// Introduces a binding at depth 0, shifting other bindings up
+    /// (deBruijn index).
+    Quantified(QuantifierKind, Binders<Box<Goal<TF>>>),
+    Implies(Vec<ProgramClause<TF>>, Box<Goal<TF>>),
+    All(Vec<Goal<TF>>),
+    Not(Box<Goal<TF>>),
+    Leaf(LeafGoal<TF>),
+
+    /// Indicates something that cannot be proven to be true or false
+    /// definitively. This can occur with overflow but also with
+    /// unifications of skolemized variables like `forall<X,Y> { X = Y
+    /// }`. Of course, that statement is false, as there exist types
+    /// X, Y where `X = Y` is not true. But we treat it as "cannot
+    /// prove" so that `forall<X,Y> { not { X = Y } }` also winds up
+    /// as cannot prove.
+    ///
+    /// (TOTAL HACK: Having a unit result makes some of our macros work better.)
+    CannotProve(()),
+}
+
+impl<TF: TypeFamily> GoalData<TF> {
+    pub fn intern(self) -> Goal<TF> {
+        Goal::new(self)
     }
 }
 

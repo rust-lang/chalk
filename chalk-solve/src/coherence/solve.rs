@@ -97,7 +97,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
         // to unify the inputs to both impls with one another
         let params_goals = lhs_params
             .zip(rhs_params)
-            .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
+            .map(|(a, b)| GoalData::Leaf(LeafGoal::EqGoal(EqGoal { a, b })).intern());
 
         // Upshift the rhs variables in where clauses
         let lhs_where_clauses = lhs.binders.value.where_clauses.iter().cloned();
@@ -175,7 +175,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
         let less_special_params = params(less_special).iter().map(|p| p.shifted_in(more_len));
         let params_goals = more_special_params
             .zip(less_special_params)
-            .map(|(a, b)| Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })));
+            .map(|(a, b)| GoalData::Leaf(LeafGoal::EqGoal(EqGoal { a, b })).intern());
 
         // Create the where clause goals.
         let more_special_wc = more_special
