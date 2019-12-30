@@ -1023,19 +1023,20 @@ impl<T> UCanonical<T> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub struct Goal<TF: TypeFamily> {
-    interned: GoalData<TF>,
+    interned: TF::InternedGoal,
 }
 
 impl<TF: TypeFamily> Goal<TF> {
     pub fn new(interned: GoalData<TF>) -> Self {
+        let interned = TF::intern_goal(interned);
         Self { interned }
     }
 
     pub fn data(&self) -> &GoalData<TF> {
-        &self.interned
+        TF::goal_data(&self.interned)
     }
 
     pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal<TF> {

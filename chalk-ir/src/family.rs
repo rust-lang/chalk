@@ -1,5 +1,6 @@
 use crate::tls;
 use crate::AssocTypeId;
+use crate::GoalData;
 use crate::LifetimeData;
 use crate::ParameterData;
 use crate::ProjectionTy;
@@ -57,6 +58,14 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// An `InternedType` is created by `intern_parameter` and can be
     /// converted back to its underlying data via `parameter_data`.
     type InternedParameter: Debug + Clone + Eq + Ord + Hash;
+
+    /// "Interned" representation of a "goal".  In normal user code,
+    /// `Self::InternedGoal` is not referenced. Instead, we refer to
+    /// `Goal<Self>`, which wraps this type.
+    ///
+    /// An `InternedGoal` is created by `intern_goal` and can be
+    /// converted back to its underlying data via `goal_data`.
+    type InternedGoal: Debug + Clone + Eq + Ord + Hash;
 
     /// The core "id" type used for struct-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
@@ -129,6 +138,15 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
     fn parameter_data(lifetime: &Self::InternedParameter) -> &ParameterData<Self>;
+
+    /// Create an "interned" goal from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `GoalData::intern` (which will ultimately call this
+    /// method).
+    fn intern_goal(data: GoalData<Self>) -> Self::InternedGoal;
+
+    /// Lookup the `GoalData` that was interned to create a `InternedGoal`.
+    fn goal_data(lifetime: &Self::InternedGoal) -> &GoalData<Self>;
 }
 
 pub trait TargetTypeFamily<TF: TypeFamily>: TypeFamily {
@@ -161,6 +179,7 @@ impl TypeFamily for ChalkIr {
     type InternedType = Box<TyData<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
     type InternedParameter = ParameterData<ChalkIr>;
+    type InternedGoal = GoalData<ChalkIr>;
     type DefId = RawId;
 
     fn debug_struct_id(
@@ -213,6 +232,14 @@ impl TypeFamily for ChalkIr {
 
     fn parameter_data(parameter: &ParameterData<ChalkIr>) -> &ParameterData<ChalkIr> {
         parameter
+    }
+
+    fn intern_goal(goal: GoalData<ChalkIr>) -> GoalData<ChalkIr> {
+        goal
+    }
+
+    fn goal_data(goal: &GoalData<ChalkIr>) -> &GoalData<ChalkIr> {
+        goal
     }
 }
 

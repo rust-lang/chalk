@@ -98,6 +98,18 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Parameter<TF> 
     }
 }
 
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Goal<TF> {
+    type Result = Goal<TTF>;
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        let data = self.data().fold_with(folder, binders)?;
+        Ok(Goal::new(data))
+    }
+}
+
 #[macro_export]
 macro_rules! copy_fold {
     ($t:ty) => {
