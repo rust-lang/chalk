@@ -221,7 +221,6 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for StructDatum<TF> {
                     builder.push_clause(
                         DomainGoal::$goal(self_ty.clone()),
                         Some(DomainGoal::$goal(
-                            //
                             // This unwrap is safe because we asserted
                             // above for the presence of a type
                             // parameter
