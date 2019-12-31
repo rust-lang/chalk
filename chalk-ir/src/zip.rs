@@ -251,7 +251,6 @@ enum_zip!(impl<TF> for DomainGoal<TF> {
     Compatible,
     DownstreamType
 });
-enum_zip!(impl<TF> for LeafGoal<TF> { DomainGoal, EqGoal });
 enum_zip!(impl<TF> for ProgramClause<TF> { Implies, ForAll });
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
@@ -276,13 +275,19 @@ impl<TF: TypeFamily> Zip<TF> for GoalData<TF> {
             }
             (&GoalData::All(ref g_a), &GoalData::All(ref g_b)) => Zip::zip_with(zipper, g_a, g_b),
             (&GoalData::Not(ref f_a), &GoalData::Not(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
-            (&GoalData::Leaf(ref f_a), &GoalData::Leaf(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
+            (&GoalData::EqGoal(ref f_a), &GoalData::EqGoal(ref f_b)) => {
+                Zip::zip_with(zipper, f_a, f_b)
+            }
+            (&GoalData::DomainGoal(ref f_a), &GoalData::DomainGoal(ref f_b)) => {
+                Zip::zip_with(zipper, f_a, f_b)
+            }
             (&GoalData::CannotProve(()), &GoalData::CannotProve(())) => Ok(()),
             (&GoalData::Quantified(..), _)
             | (&GoalData::Implies(..), _)
             | (&GoalData::All(..), _)
             | (&GoalData::Not(..), _)
-            | (&GoalData::Leaf(..), _)
+            | (&GoalData::EqGoal(..), _)
+            | (&GoalData::DomainGoal(..), _)
             | (&GoalData::CannotProve(..), _) => {
                 return Err(NoSolution);
             }

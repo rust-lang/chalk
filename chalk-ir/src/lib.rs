@@ -792,15 +792,6 @@ impl<TF: TypeFamily> DomainGoal<TF> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
-/// A goal that does not involve any logical connectives. Equality is treated
-/// specially by the logic (as with most first-order logics), since it interacts
-/// with unification etc.
-pub enum LeafGoal<TF: TypeFamily> {
-    EqGoal(EqGoal<TF>),
-    DomainGoal(DomainGoal<TF>),
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct EqGoal<TF: TypeFamily> {
     pub a: Parameter<TF>,
     pub b: Parameter<TF>,
@@ -1140,7 +1131,13 @@ pub enum GoalData<TF: TypeFamily> {
     Implies(Vec<ProgramClause<TF>>, Goal<TF>),
     All(Vec<Goal<TF>>),
     Not(Goal<TF>),
-    Leaf(LeafGoal<TF>),
+
+    /// Make two things equal; the rules for doing so are well known to the logic
+    EqGoal(EqGoal<TF>),
+
+    /// A "domain goal" indicates some base sort of goal that can be
+    /// proven via program clauses
+    DomainGoal(DomainGoal<TF>),
 
     /// Indicates something that cannot be proven to be true or false
     /// definitively. This can occur with overflow but also with

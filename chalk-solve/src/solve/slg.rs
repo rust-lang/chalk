@@ -327,8 +327,8 @@ impl<TF: TypeFamily> context::InferenceTable<SlgContext<TF>> for TruncatingInfer
             GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, subgoal),
             GoalData::All(goals) => HhGoal::All(goals),
             GoalData::Not(g1) => HhGoal::Not(g1),
-            GoalData::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify((), a, b),
-            GoalData::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
+            GoalData::EqGoal(EqGoal { a, b }) => HhGoal::Unify((), a, b),
+            GoalData::DomainGoal(domain_goal) => HhGoal::DomainGoal(domain_goal),
             GoalData::CannotProve(()) => HhGoal::CannotProve,
         }
     }

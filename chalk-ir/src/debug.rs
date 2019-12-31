@@ -255,15 +255,6 @@ impl<TF: TypeFamily> Debug for DomainGoal<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for LeafGoal<TF> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        match *self {
-            LeafGoal::EqGoal(ref eq) => write!(fmt, "{:?}", eq),
-            LeafGoal::DomainGoal(ref dom) => write!(fmt, "{:?}", dom),
-        }
-    }
-}
-
 impl<TF: TypeFamily> Debug for EqGoal<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "({:?} = {:?})", self.a, self.b)
@@ -299,7 +290,8 @@ impl<TF: TypeFamily> Debug for Goal<TF> {
                 Ok(())
             }
             GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
-            GoalData::Leaf(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
             GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
         }
     }

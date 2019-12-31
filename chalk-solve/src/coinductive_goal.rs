@@ -17,16 +17,14 @@ pub trait IsCoinductive<TF: TypeFamily> {
 impl<TF: TypeFamily> IsCoinductive<TF> for Goal<TF> {
     fn is_coinductive(&self, db: &dyn RustIrDatabase<TF>) -> bool {
         match self.data() {
-            GoalData::Leaf(LeafGoal::DomainGoal(DomainGoal::Holds(wca))) => match wca {
+            GoalData::DomainGoal(DomainGoal::Holds(wca)) => match wca {
                 WhereClause::Implemented(tr) => {
                     db.trait_datum(tr.trait_id).is_auto_trait()
                         || db.trait_datum(tr.trait_id).is_coinductive_trait()
                 }
                 WhereClause::ProjectionEq(..) => false,
             },
-            GoalData::Leaf(LeafGoal::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..)))) => {
-                true
-            }
+            GoalData::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..))) => true,
             GoalData::Quantified(QuantifierKind::ForAll, goal) => goal.value.is_coinductive(db),
             _ => false,
         }

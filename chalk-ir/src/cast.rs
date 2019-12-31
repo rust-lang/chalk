@@ -76,7 +76,6 @@ macro_rules! reflexive_impl {
 reflexive_impl!(for(TF: TypeFamily) TyData<TF>);
 reflexive_impl!(for(TF: TypeFamily) LifetimeData<TF>);
 reflexive_impl!(for(TF: TypeFamily) TraitRef<TF>);
-reflexive_impl!(for(TF: TypeFamily) LeafGoal<TF>);
 reflexive_impl!(for(TF: TypeFamily) DomainGoal<TF>);
 reflexive_impl!(for(TF: TypeFamily) Goal<TF>);
 reflexive_impl!(for(TF: TypeFamily) WhereClause<TF>);
@@ -103,21 +102,12 @@ where
     }
 }
 
-impl<T, TF: TypeFamily> CastTo<LeafGoal<TF>> for T
+impl<T, TF: TypeFamily> CastTo<Goal<TF>> for T
 where
     T: CastTo<DomainGoal<TF>>,
 {
-    fn cast_to(self) -> LeafGoal<TF> {
-        LeafGoal::DomainGoal(self.cast())
-    }
-}
-
-impl<T, TF: TypeFamily> CastTo<Goal<TF>> for T
-where
-    T: CastTo<LeafGoal<TF>>,
-{
     fn cast_to(self) -> Goal<TF> {
-        GoalData::Leaf(self.cast()).intern()
+        GoalData::DomainGoal(self.cast()).intern()
     }
 }
 
@@ -139,9 +129,9 @@ impl<TF: TypeFamily> CastTo<DomainGoal<TF>> for FromEnv<TF> {
     }
 }
 
-impl<TF: TypeFamily> CastTo<LeafGoal<TF>> for EqGoal<TF> {
-    fn cast_to(self) -> LeafGoal<TF> {
-        LeafGoal::EqGoal(self)
+impl<TF: TypeFamily> CastTo<Goal<TF>> for EqGoal<TF> {
+    fn cast_to(self) -> Goal<TF> {
+        GoalData::EqGoal(self).intern()
     }
 }
 
