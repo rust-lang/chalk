@@ -191,7 +191,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.impl_data.values().any(|impl_datum| {
             let impl_trait_ref = &impl_datum.binders.value.trait_ref;
             impl_trait_ref.trait_id == auto_trait_id
-                && match impl_trait_ref.parameters[0].assert_ty_ref().data() {
+                && match impl_trait_ref.self_type_parameter().data() {
                     TyData::Apply(apply) => match apply.name {
                         TypeName::Struct(id) => id == struct_id,
                         _ => false,

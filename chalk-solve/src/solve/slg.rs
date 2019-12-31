@@ -186,7 +186,7 @@ impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<
             DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
                 let trait_datum = self.program.trait_datum(trait_ref.trait_id);
                 if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                    let self_ty = trait_ref.self_type_parameter().unwrap();
+                    let self_ty = trait_ref.self_type_parameter();
                     if let Some(v) = self_ty.inference_var() {
                         if !infer.infer.var_is_bound(v) {
                             return Err(Floundered);

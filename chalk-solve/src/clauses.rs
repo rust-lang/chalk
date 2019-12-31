@@ -155,7 +155,7 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                match trait_ref.parameters[0].assert_ty_ref().data() {
+                match trait_ref.self_type_parameter().data() {
                     TyData::Apply(apply) => {
                         if let Some(struct_id) = db.as_struct_id(&apply.name) {
                             push_auto_trait_impls(builder, trait_id, struct_id);
@@ -209,7 +209,7 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             // generated two clauses that are totally irrelevant to
             // that goal, because they let us prove other things but
             // not `Clone`.
-            let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
+            let self_ty = trait_ref.self_type_parameter();
             if let TyData::Dyn(dyn_ty) = self_ty.data() {
                 // In this arm, `self_ty` is the `dyn Fn(&u8)`,
                 // and `bounded_ty` is the `exists<T> { .. }`
