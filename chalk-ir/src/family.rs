@@ -13,6 +13,7 @@ use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
 use std::hash::Hash;
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 /// A "type family" encapsulates the concrete representation of
 /// certain "core types" from chalk-ir. All the types in chalk-ir are
@@ -176,10 +177,10 @@ pub trait HasTypeFamily {
 pub struct ChalkIr {}
 
 impl TypeFamily for ChalkIr {
-    type InternedType = Box<TyData<ChalkIr>>;
+    type InternedType = Arc<TyData<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
     type InternedParameter = ParameterData<ChalkIr>;
-    type InternedGoal = Box<GoalData<ChalkIr>>;
+    type InternedGoal = Arc<GoalData<ChalkIr>>;
     type DefId = RawId;
 
     fn debug_struct_id(
@@ -210,11 +211,11 @@ impl TypeFamily for ChalkIr {
         tls::with_current_program(|prog| Some(prog?.debug_projection(projection, fmt)))
     }
 
-    fn intern_ty(ty: TyData<ChalkIr>) -> Box<TyData<ChalkIr>> {
-        Box::new(ty)
+    fn intern_ty(ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
+        Arc::new(ty)
     }
 
-    fn ty_data(ty: &Box<TyData<ChalkIr>>) -> &TyData<Self> {
+    fn ty_data(ty: &Arc<TyData<ChalkIr>>) -> &TyData<Self> {
         ty
     }
 
@@ -234,11 +235,11 @@ impl TypeFamily for ChalkIr {
         parameter
     }
 
-    fn intern_goal(goal: GoalData<ChalkIr>) -> Box<GoalData<ChalkIr>> {
-        Box::new(goal)
+    fn intern_goal(goal: GoalData<ChalkIr>) -> Arc<GoalData<ChalkIr>> {
+        Arc::new(goal)
     }
 
-    fn goal_data(goal: &Box<GoalData<ChalkIr>>) -> &GoalData<ChalkIr> {
+    fn goal_data(goal: &Arc<GoalData<ChalkIr>>) -> &GoalData<ChalkIr> {
         goal
     }
 }
@@ -256,6 +257,10 @@ impl<T: HasTypeFamily> HasTypeFamily for Vec<T> {
 }
 
 impl<T: HasTypeFamily> HasTypeFamily for Box<T> {
+    type TypeFamily = T::TypeFamily;
+}
+
+impl<T: HasTypeFamily> HasTypeFamily for Arc<T> {
     type TypeFamily = T::TypeFamily;
 }
 
