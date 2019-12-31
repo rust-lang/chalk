@@ -594,8 +594,8 @@ impl<TF: TypeFamily> TraitRef<TF> {
         self.parameters.iter().filter_map(|p| p.ty()).cloned()
     }
 
-    pub fn self_type_parameter(&self) -> Option<Ty<TF>> {
-        self.type_parameters().next()
+    pub fn self_type_parameter(&self) -> Ty<TF> {
+        self.type_parameters().next().unwrap()
     }
 
     pub fn from_env(self) -> FromEnv<TF> {
