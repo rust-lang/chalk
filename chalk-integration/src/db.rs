@@ -53,7 +53,7 @@ impl ChalkDatabase {
         tls::set_current_program(&program, || op(&program))
     }
 
-    pub fn parse_and_lower_goal(&self, text: &str) -> Result<Box<Goal<ChalkIr>>, ChalkError> {
+    pub fn parse_and_lower_goal(&self, text: &str) -> Result<Goal<ChalkIr>, ChalkError> {
         let program = self.checked_program()?;
         Ok(chalk_parse::parse_goal(text)?.lower(&*program)?)
     }

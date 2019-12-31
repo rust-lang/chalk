@@ -1043,7 +1043,7 @@ impl<TF: TypeFamily> Goal<TF> {
         GoalData::Quantified(
             kind,
             Binders {
-                value: Box::new(self),
+                value: self,
                 binders,
             },
         )
@@ -1052,7 +1052,7 @@ impl<TF: TypeFamily> Goal<TF> {
 
     /// Takes a goal `G` and turns it into `not { G }`
     pub fn negate(self) -> Self {
-        GoalData::Not(Box::new(self)).intern()
+        GoalData::Not(self).intern()
     }
 
     /// Takes a goal `G` and turns it into `compatible { G }`
@@ -1062,27 +1062,25 @@ impl<TF: TypeFamily> Goal<TF> {
         GoalData::Quantified(
             QuantifierKind::ForAll,
             Binders {
-                value: Box::new(self),
+                value: self,
                 binders: Vec::new(),
             }
             .with_fresh_type_var(|goal, ty| {
-                Box::new(
-                    GoalData::Implies(
-                        vec![
-                            DomainGoal::Compatible(()).cast(),
-                            DomainGoal::DownstreamType(ty).cast(),
-                        ],
-                        goal,
-                    )
-                    .intern(),
+                GoalData::Implies(
+                    vec![
+                        DomainGoal::Compatible(()).cast(),
+                        DomainGoal::DownstreamType(ty).cast(),
+                    ],
+                    goal,
                 )
+                .intern()
             }),
         )
         .intern()
     }
 
     pub fn implied_by(self, predicates: Vec<ProgramClause<TF>>) -> Goal<TF> {
-        GoalData::Implies(predicates, Box::new(self)).intern()
+        GoalData::Implies(predicates, self).intern()
     }
 
     /// True if this goal is "trivially true" -- i.e., no work is
@@ -1138,10 +1136,10 @@ where
 pub enum GoalData<TF: TypeFamily> {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
-    Quantified(QuantifierKind, Binders<Box<Goal<TF>>>),
-    Implies(Vec<ProgramClause<TF>>, Box<Goal<TF>>),
+    Quantified(QuantifierKind, Binders<Goal<TF>>),
+    Implies(Vec<ProgramClause<TF>>, Goal<TF>),
     All(Vec<Goal<TF>>),
-    Not(Box<Goal<TF>>),
+    Not(Goal<TF>),
     Leaf(LeafGoal<TF>),
 
     /// Indicates something that cannot be proven to be true or false

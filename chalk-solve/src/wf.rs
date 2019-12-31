@@ -158,7 +158,7 @@ where
             .into_iter()
             .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
             .casted();
-        let goal = goals.collect::<Box<Goal<TF>>>();
+        let goal = goals.collect::<Goal<TF>>();
 
         let hypotheses = struct_datum
             .binders
@@ -244,7 +244,7 @@ where
             .chain(assoc_ty_goals)
             .chain(Some(trait_ref_wf).cast());
 
-        let goal = goals.collect::<Box<Goal<TF>>>();
+        let goal = goals.collect::<Goal<TF>>();
 
         // Assumptions: types appearing in the header which are not projection types are
         // assumed to be well-formed, and where clauses declared on the impl are assumed
@@ -401,7 +401,7 @@ where
             .casted()
             .collect();
 
-        let goal = GoalData::Implies(hypotheses, Box::new(goal)).intern();
+        let goal = GoalData::Implies(hypotheses, goal).intern();
 
         // Create a composed goal that is universally quantified over
         // the parameters from the associated type value (e.g.,

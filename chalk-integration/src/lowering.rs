@@ -1149,7 +1149,7 @@ impl LowerClause for Clause {
             let conditions: Vec<chalk_ir::Goal<ChalkIr>> = self
                 .conditions
                 .iter()
-                .map(|g| g.lower(env).map(|g| *g))
+                .map(|g| g.lower(env))
                 .rev() // (*)
                 .collect::<LowerResult<_>>()?;
 
@@ -1230,11 +1230,11 @@ impl LowerTrait for TraitDefn {
 }
 
 pub trait LowerGoal<A> {
-    fn lower(&self, arg: &A) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>>;
+    fn lower(&self, arg: &A) -> LowerResult<chalk_ir::Goal<ChalkIr>>;
 }
 
 impl LowerGoal<LoweredProgram> for Goal {
-    fn lower(&self, program: &LoweredProgram) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>> {
+    fn lower(&self, program: &LoweredProgram) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
         let associated_ty_lookups: BTreeMap<_, _> = program
             .associated_ty_data
             .iter()
@@ -1265,7 +1265,7 @@ impl LowerGoal<LoweredProgram> for Goal {
 }
 
 impl<'k> LowerGoal<Env<'k>> for Goal {
-    fn lower(&self, env: &Env<'k>) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>> {
+    fn lower(&self, env: &Env<'k>) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
         match self {
             Goal::ForAll(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::ForAll, ids),
             Goal::Exists(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::Exists, ids),
@@ -1279,20 +1279,18 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                     .flat_map(|h| h.lower_clause(env).apply_result())
                     .map(|result| result.map(|h| h.into_from_env_clause()))
                     .collect();
-                Ok(Box::new(
-                    chalk_ir::GoalData::Implies(where_clauses?, g.lower(env)?).intern(),
-                ))
+                Ok(chalk_ir::GoalData::Implies(where_clauses?, g.lower(env)?).intern())
             }
             Goal::And(g1, g2s) => {
                 let mut goals = vec![];
-                goals.push(*g1.lower(env)?);
+                goals.push(g1.lower(env)?);
                 for g2 in g2s {
-                    goals.push(*g2.lower(env)?);
+                    goals.push(g2.lower(env)?);
                 }
-                Ok(Box::new(chalk_ir::GoalData::All(goals).intern()))
+                Ok(chalk_ir::GoalData::All(goals).intern())
             }
-            Goal::Not(g) => Ok(Box::new(chalk_ir::GoalData::Not(g.lower(env)?).intern())),
-            Goal::Compatible(g) => Ok(Box::new(g.lower(env)?.compatible())),
+            Goal::Not(g) => Ok(chalk_ir::GoalData::Not(g.lower(env)?).intern()),
+            Goal::Compatible(g) => Ok(g.lower(env)?.compatible()),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
                 let leaves = leaf
@@ -1311,7 +1309,7 @@ trait LowerQuantifiedGoal {
         env: &Env,
         quantifier_kind: chalk_ir::QuantifierKind,
         parameter_kinds: &[ParameterKind],
-    ) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>>;
+    ) -> LowerResult<chalk_ir::Goal<ChalkIr>>;
 }
 
 impl LowerQuantifiedGoal for Goal {
@@ -1320,16 +1318,14 @@ impl LowerQuantifiedGoal for Goal {
         env: &Env,
         quantifier_kind: chalk_ir::QuantifierKind,
         parameter_kinds: &[ParameterKind],
-    ) -> LowerResult<Box<chalk_ir::Goal<ChalkIr>>> {
+    ) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
         if parameter_kinds.is_empty() {
             return self.lower(env);
         }
 
         let parameter_kinds = parameter_kinds.iter().map(|pk| pk.lower());
         let subgoal = env.in_binders(parameter_kinds, |env| self.lower(env))?;
-        Ok(Box::new(
-            chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern(),
-        ))
+        Ok(chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern())
     }
 }
 

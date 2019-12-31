@@ -179,7 +179,7 @@ impl TypeFamily for ChalkIr {
     type InternedType = Box<TyData<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
     type InternedParameter = ParameterData<ChalkIr>;
-    type InternedGoal = GoalData<ChalkIr>;
+    type InternedGoal = Box<GoalData<ChalkIr>>;
     type DefId = RawId;
 
     fn debug_struct_id(
@@ -234,11 +234,11 @@ impl TypeFamily for ChalkIr {
         parameter
     }
 
-    fn intern_goal(goal: GoalData<ChalkIr>) -> GoalData<ChalkIr> {
-        goal
+    fn intern_goal(goal: GoalData<ChalkIr>) -> Box<GoalData<ChalkIr>> {
+        Box::new(goal)
     }
 
-    fn goal_data(goal: &GoalData<ChalkIr>) -> &GoalData<ChalkIr> {
+    fn goal_data(goal: &Box<GoalData<ChalkIr>>) -> &GoalData<ChalkIr> {
         goal
     }
 }

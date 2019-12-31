@@ -150,11 +150,7 @@ impl<T: CastTo<Goal<TF>>, TF: TypeFamily> CastTo<Goal<TF>> for Binders<T> {
         if self.binders.is_empty() {
             self.value.cast()
         } else {
-            GoalData::Quantified(
-                QuantifierKind::ForAll,
-                self.map(|bound| Box::new(bound.cast())),
-            )
-            .intern()
+            GoalData::Quantified(QuantifierKind::ForAll, self.map(|bound| bound.cast())).intern()
         }
     }
 }

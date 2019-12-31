@@ -70,7 +70,7 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
     type Environment = Environment<TF>;
     type DomainGoal = DomainGoal<TF>;
     type Goal = Goal<TF>;
-    type BindersGoal = Binders<Box<Goal<TF>>>;
+    type BindersGoal = Binders<Goal<TF>>;
     type Parameter = Parameter<TF>;
     type ProgramClause = ProgramClause<TF>;
     type ProgramClauses = Vec<ProgramClause<TF>>;
@@ -324,9 +324,9 @@ impl<TF: TypeFamily> context::InferenceTable<SlgContext<TF>> for TruncatingInfer
             GoalData::Quantified(QuantifierKind::Exists, binders_goal) => {
                 HhGoal::Exists(binders_goal)
             }
-            GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, *subgoal),
+            GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, subgoal),
             GoalData::All(goals) => HhGoal::All(goals),
-            GoalData::Not(g1) => HhGoal::Not(*g1),
+            GoalData::Not(g1) => HhGoal::Not(g1),
             GoalData::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => HhGoal::Unify((), a, b),
             GoalData::Leaf(LeafGoal::DomainGoal(domain_goal)) => HhGoal::DomainGoal(domain_goal),
             GoalData::CannotProve(()) => HhGoal::CannotProve,
@@ -360,12 +360,12 @@ impl<TF: TypeFamily> context::InferenceTable<SlgContext<TF>> for TruncatingInfer
 }
 
 impl<TF: TypeFamily> context::UnificationOps<SlgContext<TF>> for TruncatingInferenceTable<TF> {
-    fn instantiate_binders_universally(&mut self, arg: &Binders<Box<Goal<TF>>>) -> Goal<TF> {
-        *self.infer.instantiate_binders_universally(arg)
+    fn instantiate_binders_universally(&mut self, arg: &Binders<Goal<TF>>) -> Goal<TF> {
+        self.infer.instantiate_binders_universally(arg)
     }
 
-    fn instantiate_binders_existentially(&mut self, arg: &Binders<Box<Goal<TF>>>) -> Goal<TF> {
-        *self.infer.instantiate_binders_existentially(arg)
+    fn instantiate_binders_existentially(&mut self, arg: &Binders<Goal<TF>>) -> Goal<TF> {
+        self.infer.instantiate_binders_existentially(arg)
     }
 
     fn debug_ex_clause<'v>(&mut self, value: &'v ExClause<SlgContext<TF>>) -> Box<dyn Debug + 'v> {

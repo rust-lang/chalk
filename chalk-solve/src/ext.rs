@@ -71,12 +71,12 @@ impl<TF: TypeFamily> GoalExt<TF> for Goal<TF> {
                 match goal.data() {
                     GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
                         let subgoal = infer.instantiate_binders_universally(subgoal);
-                        env_goal = InEnvironment::new(&environment, *subgoal);
+                        env_goal = InEnvironment::new(&environment, subgoal);
                     }
 
                     GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
                         let subgoal = infer.instantiate_binders_existentially(subgoal);
-                        env_goal = InEnvironment::new(&environment, *subgoal);
+                        env_goal = InEnvironment::new(&environment, subgoal);
                     }
 
                     GoalData::Implies(wc, subgoal) => {
