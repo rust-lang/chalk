@@ -640,29 +640,24 @@ impl LowerDomainGoal for DomainGoal {
 }
 
 trait LowerLeafGoal {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::LeafGoal<ChalkIr>>>;
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Goal<ChalkIr>>;
 }
 
 impl LowerLeafGoal for LeafGoal {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::LeafGoal<ChalkIr>>> {
-        let goals = match self {
-            LeafGoal::DomainGoal { goal } => goal
-                .lower(env)?
-                .into_iter()
-                .map(|goal| chalk_ir::LeafGoal::DomainGoal(goal))
-                .collect(),
-            LeafGoal::UnifyTys { a, b } => vec![chalk_ir::EqGoal {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+        Ok(match self {
+            LeafGoal::DomainGoal { goal } => goal.lower(env)?.into_iter().casted().collect(),
+            LeafGoal::UnifyTys { a, b } => chalk_ir::EqGoal {
                 a: a.lower(env)?.cast(),
                 b: b.lower(env)?.cast(),
             }
-            .cast()],
-            LeafGoal::UnifyLifetimes { ref a, ref b } => vec![chalk_ir::EqGoal {
+            .cast::<chalk_ir::Goal<ChalkIr>>(),
+            LeafGoal::UnifyLifetimes { ref a, ref b } => chalk_ir::EqGoal {
                 a: a.lower(env)?.cast(),
                 b: b.lower(env)?.cast(),
             }
-            .cast()],
-        };
-        Ok(goals)
+            .cast::<chalk_ir::Goal<ChalkIr>>(),
+        })
     }
 }
 
@@ -1293,11 +1288,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
             Goal::Compatible(g) => Ok(g.lower(env)?.compatible()),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
-                let leaves = leaf
-                    .lower(env)?
-                    .into_iter()
-                    .map(|lg| chalk_ir::GoalData::Leaf(lg).intern());
-                Ok(leaves.collect())
+                Ok(leaf.lower(env)?)
             }
         }
     }
