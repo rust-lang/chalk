@@ -66,6 +66,12 @@ impl<'me, TF: TypeFamily> ClauseBuilder<'me, TF> {
         &self.parameters
     }
 
+    /// Accesses the placeholders for the current list of parameters in scope,
+    /// in the form of a `Substitution`.
+    pub fn substitution_in_scope(&self) -> Substitution<TF> {
+        self.placeholders_in_scope().iter().cloned().collect()
+    }
+
     /// Executes `op` with the `binders` in-scope; `op` is invoked
     /// with the bound value `v` as a parameter. After `op` finishes,
     /// the binders are popped from scope.

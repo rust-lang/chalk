@@ -8,8 +8,8 @@ use chalk_ir::family::{HasTypeFamily, TargetTypeFamily, TypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
     AssocTypeId, Binders, Identifier, ImplId, LifetimeData, Parameter, ParameterKind, ProjectionEq,
-    ProjectionTy, QuantifiedWhereClause, RawId, StructId, TraitId, TraitRef, Ty, TyData, TypeName,
-    WhereClause,
+    ProjectionTy, QuantifiedWhereClause, RawId, StructId, Substitution, TraitId, TraitRef, Ty,
+    TyData, TypeName, WhereClause,
 };
 use std::iter;
 
@@ -201,7 +201,7 @@ impl<TF: TypeFamily> TraitBound<TF> {
     pub fn as_trait_ref(&self, self_ty: Ty<TF>) -> TraitRef<TF> {
         TraitRef {
             trait_id: self.trait_id,
-            parameters: iter::once(self_ty.cast())
+            substitution: iter::once(self_ty.cast())
                 .chain(self.args_no_self.iter().cloned())
                 .collect(),
         }
@@ -223,15 +223,19 @@ impl<TF: TypeFamily> ProjectionEqBound<TF> {
     fn into_where_clauses(&self, self_ty: Ty<TF>) -> Vec<WhereClause<TF>> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 
-        let mut parameters = self.parameters.clone();
-        parameters.extend(trait_ref.parameters.clone());
+        let substitution: Substitution<TF> = self
+            .parameters
+            .iter()
+            .cloned()
+            .chain(trait_ref.substitution.iter().cloned())
+            .collect();
 
         vec![
             WhereClause::Implemented(trait_ref),
             WhereClause::ProjectionEq(ProjectionEq {
                 projection: ProjectionTy {
                     associated_ty_id: self.associated_ty_id,
-                    parameters: parameters,
+                    substitution,
                 },
                 ty: self.value.clone(),
             }),
@@ -335,12 +339,12 @@ impl<TF: TypeFamily> AssociatedTyDatum<TF> {
 
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:
-        let parameters = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
+        let substitution = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
         let self_ty = TyData::Projection(ProjectionTy {
             associated_ty_id: self.id,
-            parameters,
+            substitution,
         })
         .intern();
 

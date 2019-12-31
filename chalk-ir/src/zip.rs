@@ -179,9 +179,12 @@ macro_rules! struct_zip {
     }
 }
 
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for Substitution<TF> {
+    parameters,
+});
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for TraitRef<TF> {
     trait_id,
-    parameters,
+    substitution,
 });
 struct_zip!(impl[
     T: HasTypeFamily<TypeFamily = TF> + Zip<TF>,
@@ -190,11 +193,11 @@ struct_zip!(impl[
     environment,
     goal,
 });
-struct_zip!(impl[TF: TypeFamily] Zip<TF> for ApplicationTy<TF> { name, parameters });
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for ApplicationTy<TF> { name, substitution });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for DynTy<TF> { bounds });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for ProjectionTy<TF> {
     associated_ty_id,
-    parameters,
+    substitution,
 });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for Normalize<TF> { projection, ty });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for ProjectionEq<TF> { projection, ty });

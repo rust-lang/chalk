@@ -163,8 +163,11 @@ impl RustIrDatabase<ChalkIr> for Program {
             .filter(|(_, impl_datum)| {
                 let trait_ref = &impl_datum.binders.value.trait_ref;
                 trait_id == trait_ref.trait_id && {
-                    assert_eq!(trait_ref.parameters.len(), parameters.len());
-                    <[_] as CouldMatch<[_]>>::could_match(&parameters, &trait_ref.parameters)
+                    assert_eq!(trait_ref.substitution.len(), parameters.len());
+                    <[_] as CouldMatch<[_]>>::could_match(
+                        &parameters,
+                        &trait_ref.substitution.parameters(),
+                    )
                 }
             })
             .map(|(&impl_id, _)| impl_id)

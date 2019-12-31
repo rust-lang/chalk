@@ -218,5 +218,5 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
 }
 
 fn params<TF: TypeFamily>(impl_datum: &ImplDatum<TF>) -> &[Parameter<TF>] {
-    &impl_datum.binders.value.trait_ref.parameters
+    impl_datum.binders.value.trait_ref.substitution.parameters()
 }

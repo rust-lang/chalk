@@ -428,7 +428,7 @@ impl PlaceholderIndex {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Fold, Ord, HasTypeFamily)]
 pub struct ApplicationTy<TF: TypeFamily> {
     pub name: TypeName<TF>,
-    pub parameters: Vec<Parameter<TF>>,
+    pub substitution: Substitution<TF>,
 }
 
 impl<TF: TypeFamily> ApplicationTy<TF> {
@@ -437,7 +437,7 @@ impl<TF: TypeFamily> ApplicationTy<TF> {
     }
 
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
-        self.parameters.iter().filter_map(|p| p.ty()).cloned()
+        self.substitution.iter().filter_map(|p| p.ty()).cloned()
     }
 
     pub fn first_type_parameter(&self) -> Option<Ty<TF>> {
@@ -574,7 +574,7 @@ impl<TF: TypeFamily> ParameterData<TF> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct ProjectionTy<TF: TypeFamily> {
     pub associated_ty_id: AssocTypeId<TF>,
-    pub parameters: Vec<Parameter<TF>>,
+    pub substitution: Substitution<TF>,
 }
 
 impl<TF: TypeFamily> ProjectionTy<TF> {
@@ -586,12 +586,12 @@ impl<TF: TypeFamily> ProjectionTy<TF> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct TraitRef<TF: TypeFamily> {
     pub trait_id: TraitId<TF>,
-    pub parameters: Vec<Parameter<TF>>,
+    pub substitution: Substitution<TF>,
 }
 
 impl<TF: TypeFamily> TraitRef<TF> {
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
-        self.parameters.iter().filter_map(|p| p.ty()).cloned()
+        self.substitution.iter().filter_map(|p| p.ty()).cloned()
     }
 
     pub fn self_type_parameter(&self) -> Ty<TF> {
@@ -897,7 +897,8 @@ where
     /// binders. So if the binders represent (e.g.) `<X, Y> { T }` and
     /// parameters is the slice `[A, B]`, then returns `[X => A, Y =>
     /// B] T`.
-    pub fn substitute(&self, parameters: &[Parameter<TF>]) -> T::Result {
+    pub fn substitute(&self, parameters: &(impl AsParameters<TF> + ?Sized)) -> T::Result {
+        let parameters = parameters.as_parameters();
         assert_eq!(self.binders.len(), parameters.len());
         Subst::apply(parameters, &self.value)
     }
@@ -1184,8 +1185,34 @@ pub struct Substitution<TF: TypeFamily> {
 }
 
 impl<TF: TypeFamily> Substitution<TF> {
+    pub fn from(parameters: impl IntoIterator<Item = impl CastTo<Parameter<TF>>>) -> Self {
+        use crate::cast::Caster;
+        let parameters = parameters.into_iter().casted().collect();
+        Substitution { parameters }
+    }
+
+    pub fn from1(parameter: impl CastTo<Parameter<TF>>) -> Self {
+        Self::from(Some(parameter))
+    }
+
+    pub fn empty() -> Self {
+        Self::from(None::<Parameter<TF>>)
+    }
+
     pub fn is_empty(&self) -> bool {
         self.parameters.is_empty()
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Parameter<TF>> {
+        self.parameters().iter()
+    }
+
+    pub fn parameters(&self) -> &[Parameter<TF>] {
+        &self.parameters
+    }
+
+    pub fn len(&self) -> usize {
+        self.parameters().len()
     }
 
     /// A substitution is an **identity substitution** if it looks
@@ -1214,6 +1241,69 @@ impl<TF: TypeFamily> Substitution<TF> {
                     _ => false,
                 },
             })
+    }
+}
+
+pub trait AsParameters<TF: TypeFamily> {
+    fn as_parameters(&self) -> &[Parameter<TF>];
+}
+
+impl<TF: TypeFamily> AsParameters<TF> for Substitution<TF> {
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        self.parameters()
+    }
+}
+
+impl<TF: TypeFamily> AsParameters<TF> for [Parameter<TF>] {
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        self
+    }
+}
+
+impl<TF: TypeFamily> AsParameters<TF> for [Parameter<TF>; 1] {
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        self
+    }
+}
+
+impl<TF: TypeFamily> AsParameters<TF> for Vec<Parameter<TF>> {
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        self
+    }
+}
+
+impl<T, TF: TypeFamily> AsParameters<TF> for &T
+where
+    T: ?Sized + AsParameters<TF>,
+{
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        T::as_parameters(self)
+    }
+}
+
+impl<'me, TF> std::iter::IntoIterator for &'me Substitution<TF>
+where
+    TF: TypeFamily,
+{
+    type IntoIter = std::slice::Iter<'me, Parameter<TF>>;
+    type Item = &'me Parameter<TF>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<TF> std::iter::FromIterator<Parameter<TF>> for Substitution<TF>
+where
+    TF: TypeFamily,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = Parameter<TF>>,
+    {
+        Substitution {
+            parameters: iter.into_iter().collect(),
+        }
     }
 }
 

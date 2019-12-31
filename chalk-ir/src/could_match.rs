@@ -24,10 +24,10 @@ where
                         let names_could_match = a.name == b.name;
 
                         names_could_match
-                            && a.parameters
+                            && a.substitution
                                 .iter()
-                                .zip(&b.parameters)
-                                .all(|(p_a, p_b)| p_a.could_match(p_b))
+                                .zip(&b.substitution)
+                                .all(|(p_a, p_b)| p_a.could_match(&p_b))
                     }
 
                     _ => true,

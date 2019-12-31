@@ -169,6 +169,12 @@ impl<TF: TypeFamily> CastTo<Parameter<TF>> for Lifetime<TF> {
     }
 }
 
+impl<TF: TypeFamily> CastTo<Parameter<TF>> for Parameter<TF> {
+    fn cast_to(self) -> Parameter<TF> {
+        self
+    }
+}
+
 impl<T, TF> CastTo<ProgramClause<TF>> for T
 where
     T: CastTo<DomainGoal<TF>>,
