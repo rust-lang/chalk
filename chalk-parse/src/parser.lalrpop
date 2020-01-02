@@ -165,7 +165,7 @@ AssocTyValue: AssocTyValue = {
 };
 
 pub Ty: Ty = {
-    "for" "<" <l:Comma<LifetimeId>> ">" <t:Ty> => Ty::ForAll {
+    "for" "<" <l:Comma<LifetimeId>> ">" "fn" "(" <t:Ty> ")" => Ty::ForAll {
         lifetime_names: l,
         ty: Box::new(t)
     },

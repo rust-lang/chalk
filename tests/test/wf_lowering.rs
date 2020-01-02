@@ -526,16 +526,16 @@ fn higher_ranked_inline_bound_on_gat() {
             struct Ref<'a, T> { }
             struct i32 {}
 
-            struct fn<T> { }
+            struct fun<T> { }
 
-            impl<'a, T> Fn<Ref<'a, T>> for for<'b> fn<Ref<'b, T>> { }
+            impl<'a, T> Fn<Ref<'a, T>> for for<'b> fn(fun<Ref<'b, T>>) { }
 
             trait Bar {
                 type Item<T>: forall<'a> Fn<Ref<'a, T>>;
             }
 
             impl Bar for i32 {
-                type Item<T> = for<'a> fn<Ref<'a, T>>;
+                type Item<T> = for<'a> fn(fun<Ref<'a, T>>);
             }
         }
     }
@@ -545,16 +545,16 @@ fn higher_ranked_inline_bound_on_gat() {
             trait Fn<T, U> { }
             struct i32 {}
 
-            struct fn<T, U> { }
+            struct fun<T, U> { }
 
-            impl<T, U> Fn<T, U> for fn<T, U> { }
+            impl<T, U> Fn<T, U> for fun<T, U> { }
 
             trait Bar {
                 type Item<T>: forall<U> Fn<T, U>;
             }
 
             impl Bar for i32 {
-                type Item<T> = fn<T, i32>;
+                type Item<T> = fun<T, i32>;
             }
         } error_msg {
             "trait impl for `Bar` does not meet well-formedness requirements"

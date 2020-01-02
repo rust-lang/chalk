@@ -57,7 +57,7 @@ fn forall_equality() {
             // region constraints, since each region variable must
             // refer to exactly one placeholder region, and they are
             // all in a valid universe to do so (universe 4).
-            for<'a, 'b> Ref<'a, Ref<'b, Unit>>: Eq<for<'c, 'd> Ref<'c, Ref<'d, Unit>>>
+            for<'a, 'b> fn(Ref<'a, Ref<'b, Unit>>): Eq<for<'c, 'd> fn(Ref<'c, Ref<'d, Unit>>)>
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
@@ -68,8 +68,8 @@ fn forall_equality() {
             //
             // Note that `?0` (in universe 2) must be equal to both
             // `!1_0` and `!1_1`, which of course it cannot be.
-            for<'a, 'b> Ref<'a, Ref<'b, Ref<'a, Unit>>>: Eq<
-                for<'c, 'd> Ref<'c, Ref<'d, Ref<'d, Unit>>>>
+            for<'a, 'b> fn(Ref<'a, Ref<'b, Ref<'a, Unit>>>): Eq<
+                for<'c, 'd> fn(Ref<'c, Ref<'d, Ref<'d, Unit>>>)>
         } yields {
             "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }, InEnvironment { environment: Env([]), goal: '!2_1 == '!2_0 }]"
         }
@@ -130,7 +130,7 @@ fn equality_binder() {
         goal {
             forall<T> {
                 exists<'a> {
-                    for<'c> Ref<'c, T> = for<> Ref<'a, T>
+                    for<'c> fn(Ref<'c, T>) = for<> fn(Ref<'a, T>)
                 }
             }
         } yields {
@@ -150,13 +150,13 @@ fn equality_binder2() {
         }
 
         goal {
-            for<'b, 'c> Ref<'b, 'c> = for<'a> Ref<'a, 'a>
+            for<'b, 'c> fn(Ref<'b, 'c>) = for<'a> fn(Ref<'a, 'a>)
         } yields {
             "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }]"
         }
 
         goal {
-            for<'a> Ref<'a, 'a> = for<'b, 'c> Ref<'b, 'c>
+            for<'a> fn(Ref<'a, 'a>) = for<'b, 'c> fn(Ref<'b, 'c>)
         } yields {
             "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '!2_1 }]"
         }
@@ -275,25 +275,25 @@ fn quantified_types() {
     test! {
         program {
             trait Foo { }
-            struct fn<'a> { }
+            struct fn1<'a> { }
             struct fn2<'a, 'b> { }
-            impl Foo for for<'a> fn<'a> { }
+            impl Foo for for<'a> fn(fn1<'a>) { }
         }
 
         goal {
-            for<'a> fn<'a>: Foo
+            for<'a> fn(fn1<'a>): Foo
         } yields {
             "Unique"
         }
 
         goal {
-            for<'a, 'b> fn2<'a, 'b> = for<'b, 'a> fn2<'a, 'b>
+            for<'a, 'b> fn(fn2<'a, 'b>) = for<'b, 'a> fn(fn2<'a, 'b>)
         } yields {
             "Unique"
         }
 
         goal {
-            forall<'a> { for<> fn<'a>: Foo }
+            forall<'a> { for<> fn(fn1<'a>): Foo }
         } yields {
             // Lifetime constraints are unsatisfiable
             "Unique; substitution [], \
