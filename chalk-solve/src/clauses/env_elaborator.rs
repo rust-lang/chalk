@@ -64,7 +64,7 @@ impl<'me, TF: TypeFamily> EnvElaborator<'me, TF> {
             // bounds story around `dyn Trait` types.
             TyData::Dyn(_) => (),
 
-            TyData::ForAll(_) | TyData::BoundVar(_) | TyData::InferenceVar(_) => (),
+            TyData::Function(_) | TyData::BoundVar(_) | TyData::InferenceVar(_) => (),
         }
     }
 

@@ -110,26 +110,26 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             (&TyData::InferenceVar(var), &TyData::Apply(_))
             | (&TyData::InferenceVar(var), &TyData::Placeholder(_))
             | (&TyData::InferenceVar(var), &TyData::Dyn(_))
-            | (&TyData::InferenceVar(var), &TyData::ForAll(_)) => self.unify_var_ty(var, b),
+            | (&TyData::InferenceVar(var), &TyData::Function(_)) => self.unify_var_ty(var, b),
 
             (&TyData::Apply(_), &TyData::InferenceVar(var))
             | (&TyData::Placeholder(_), &TyData::InferenceVar(var))
             | (&TyData::Dyn(_), &TyData::InferenceVar(var))
-            | (&TyData::ForAll(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, a),
+            | (&TyData::Function(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, a),
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
-            (&TyData::ForAll(ref quantified_ty1), &TyData::ForAll(ref quantified_ty2)) => {
+            (&TyData::Function(ref quantified_ty1), &TyData::Function(ref quantified_ty2)) => {
                 self.unify_binders(quantified_ty1, quantified_ty2)
             }
 
             // This would correspond to unifying a `fn` type with a non-fn
             // type in Rust; error.
-            (&TyData::ForAll(_), &TyData::Apply(_))
-            | (&TyData::ForAll(_), &TyData::Dyn(_))
-            | (&TyData::ForAll(_), &TyData::Placeholder(_))
-            | (&TyData::Apply(_), &TyData::ForAll(_))
-            | (&TyData::Placeholder(_), &TyData::ForAll(_))
-            | (&TyData::Dyn(_), &TyData::ForAll(_)) => {
+            (&TyData::Function(_), &TyData::Apply(_))
+            | (&TyData::Function(_), &TyData::Dyn(_))
+            | (&TyData::Function(_), &TyData::Placeholder(_))
+            | (&TyData::Apply(_), &TyData::Function(_))
+            | (&TyData::Placeholder(_), &TyData::Function(_))
+            | (&TyData::Dyn(_), &TyData::Function(_)) => {
                 return Err(NoSolution);
             }
 
@@ -162,14 +162,14 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             // Trait>::Item` with some other type `U`.
             (&TyData::Apply(_), &TyData::Projection(ref proj))
             | (&TyData::Placeholder(_), &TyData::Projection(ref proj))
-            | (&TyData::ForAll(_), &TyData::Projection(ref proj))
+            | (&TyData::Function(_), &TyData::Projection(ref proj))
             | (&TyData::InferenceVar(_), &TyData::Projection(ref proj))
             | (&TyData::Dyn(_), &TyData::Projection(ref proj)) => self.unify_projection_ty(proj, a),
 
             (&TyData::Projection(ref proj), &TyData::Projection(_))
             | (&TyData::Projection(ref proj), &TyData::Apply(_))
             | (&TyData::Projection(ref proj), &TyData::Placeholder(_))
-            | (&TyData::Projection(ref proj), &TyData::ForAll(_))
+            | (&TyData::Projection(ref proj), &TyData::Function(_))
             | (&TyData::Projection(ref proj), &TyData::InferenceVar(_))
             | (&TyData::Projection(ref proj), &TyData::Dyn(_)) => self.unify_projection_ty(proj, b),
 

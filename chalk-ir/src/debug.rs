@@ -63,7 +63,7 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
             TyData::Projection(proj) => write!(fmt, "{:?}", proj),
             TyData::Placeholder(index) => write!(fmt, "{:?}", index),
-            TyData::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
+            TyData::Function(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
         }
     }
 }

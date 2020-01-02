@@ -180,7 +180,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
             // kinda hard. Don't try to be smart for now, just plop a
             // variable in there and be done with it.
             (TyData::BoundVar(_), TyData::BoundVar(_))
-            | (TyData::ForAll(_), TyData::ForAll(_))
+            | (TyData::Function(_), TyData::Function(_))
             | (TyData::Dyn(_), TyData::Dyn(_)) => self.new_variable(),
 
             (TyData::Apply(apply1), TyData::Apply(apply2)) => {
@@ -199,7 +199,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
             (TyData::InferenceVar(_), _)
             | (TyData::BoundVar(_), _)
             | (TyData::Dyn(_), _)
-            | (TyData::ForAll(_), _)
+            | (TyData::Function(_), _)
             | (TyData::Apply(_), _)
             | (TyData::Projection(_), _)
             | (TyData::Placeholder(_), _) => self.new_variable(),

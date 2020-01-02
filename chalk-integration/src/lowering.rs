@@ -1041,7 +1041,7 @@ impl LowerTy for Ty {
                     num_binders: lifetime_names.len(),
                     parameters: vec![ty.lower(&quantified_env)?.cast()],
                 };
-                Ok(chalk_ir::TyData::ForAll(quantified_ty).intern())
+                Ok(chalk_ir::TyData::Function(quantified_ty).intern())
             }
         }
     }

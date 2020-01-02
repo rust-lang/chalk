@@ -324,8 +324,8 @@ where
         TyData::Projection(proj) => {
             Ok(TyData::Projection(proj.fold_with(folder, binders)?).intern())
         }
-        TyData::ForAll(quantified_ty) => {
-            Ok(TyData::ForAll(quantified_ty.fold_with(folder, binders)?).intern())
+        TyData::Function(quantified_ty) => {
+            Ok(TyData::Function(quantified_ty.fold_with(folder, binders)?).intern())
         }
     }
 }
