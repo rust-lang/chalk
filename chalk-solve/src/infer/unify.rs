@@ -118,8 +118,8 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             | (&TyData::Function(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, a),
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
-            (&TyData::Function(ref quantified_ty1), &TyData::Function(ref quantified_ty2)) => {
-                self.unify_binders(quantified_ty1, quantified_ty2)
+            (&TyData::Function(ref fn1), &TyData::Function(ref fn2)) => {
+                self.unify_binders(fn1, fn2)
             }
 
             // This would correspond to unifying a `fn` type with a non-fn

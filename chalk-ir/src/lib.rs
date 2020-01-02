@@ -260,13 +260,10 @@ pub enum TyData<TF: TypeFamily> {
     /// trait and all its parameters are fully known.
     Projection(ProjectionTy<TF>),
 
-    /// A "higher-ranked" type. In the Rust surface syntax, this can
-    /// only be a function type (e.g., `for<'a> fn(&'a u32)`) or a dyn
-    /// type (e.g., `dyn for<'a> SomeTrait<&'a u32>`). However, in
-    /// Chalk's representation, we separate out the `for<'a>` part
-    /// from the underlying type, so technically we can represent
-    /// things like `for<'a> SomeStruct<'a>`, although that has no
-    /// meaning in Rust.
+    /// A function type such as `for<'a> fn(&'a u32)`.
+    /// Note that "higher-ranked" types (starting with `for<>`) are either
+    /// function types or dyn types, and do not appear otherwise in Rust
+    /// surface syntax.
     Function(Fn<TF>),
 
     /// References the binding at the given depth. The index is a [de
