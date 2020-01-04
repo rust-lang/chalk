@@ -450,9 +450,8 @@ trait SubstitutionExt<TF: TypeFamily> {
 
 impl<TF: TypeFamily> SubstitutionExt<TF> for Substitution<TF> {
     fn may_invalidate(&self, subst: &Canonical<Substitution<TF>>) -> bool {
-        self.parameters
-            .iter()
-            .zip(&subst.value.parameters)
+        self.iter()
+            .zip(subst.value.iter())
             .any(|(new, current)| MayInvalidate.aggregate_parameters(new, current))
     }
 }

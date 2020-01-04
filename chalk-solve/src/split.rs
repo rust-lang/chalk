@@ -142,11 +142,12 @@ pub trait Split<TF: TypeFamily>: RustIrDatabase<TF> {
         // Create the parameters for the projection -- in our example
         // above, this would be `['!a, Box<!T>]`, corresponding to
         // `<Box<!T> as Foo>::Item<'!a>`
-        let projection_substitution: Substitution<_> = atv_parameters
-            .iter()
-            .chain(&trait_ref.substitution)
-            .cloned()
-            .collect();
+        let projection_substitution = Substitution::from(
+            atv_parameters
+                .iter()
+                .chain(&trait_ref.substitution)
+                .cloned(),
+        );
 
         let projection = ProjectionTy {
             associated_ty_id: associated_ty_value.associated_ty_id,

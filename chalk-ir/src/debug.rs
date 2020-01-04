@@ -425,7 +425,7 @@ impl<TF: TypeFamily> Display for Substitution<TF> {
 
         write!(f, "[")?;
 
-        for (index, value) in self.parameters.iter().enumerate() {
+        for (index, value) in self.iter().enumerate() {
             if first {
                 first = false;
             } else {

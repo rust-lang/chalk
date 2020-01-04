@@ -201,9 +201,9 @@ impl<TF: TypeFamily> TraitBound<TF> {
     pub fn as_trait_ref(&self, self_ty: Ty<TF>) -> TraitRef<TF> {
         TraitRef {
             trait_id: self.trait_id,
-            substitution: iter::once(self_ty.cast())
-                .chain(self.args_no_self.iter().cloned())
-                .collect(),
+            substitution: Substitution::from(
+                iter::once(self_ty.cast()).chain(self.args_no_self.iter().cloned()),
+            ),
         }
     }
 }
@@ -223,12 +223,12 @@ impl<TF: TypeFamily> ProjectionEqBound<TF> {
     fn into_where_clauses(&self, self_ty: Ty<TF>) -> Vec<WhereClause<TF>> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 
-        let substitution: Substitution<TF> = self
-            .parameters
-            .iter()
-            .cloned()
-            .chain(trait_ref.substitution.iter().cloned())
-            .collect();
+        let substitution = Substitution::from(
+            self.parameters
+                .iter()
+                .cloned()
+                .chain(trait_ref.substitution.iter().cloned()),
+        );
 
         vec![
             WhereClause::Implemented(trait_ref),
@@ -339,7 +339,7 @@ impl<TF: TypeFamily> AssociatedTyDatum<TF> {
 
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:
-        let substitution = binders.iter().zip(0..).map(|p| p.to_parameter()).collect();
+        let substitution = Substitution::from(binders.iter().zip(0..).map(|p| p.to_parameter()));
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
         let self_ty = TyData::Projection(ProjectionTy {

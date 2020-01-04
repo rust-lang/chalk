@@ -1001,10 +1001,8 @@ impl LowerTy for Ty {
                     })?;
                 }
 
-                let substitution = args
-                    .iter()
-                    .map(|t| Ok(t.lower(env)?))
-                    .collect::<LowerResult<chalk_ir::Substitution<_>>>()?;
+                let substitution =
+                    chalk_ir::Substitution::from_fallible(args.iter().map(|t| Ok(t.lower(env)?)))?;
 
                 for (param, arg) in k.binders.binders.iter().zip(args.iter()) {
                     if param.kind() != arg.kind() {

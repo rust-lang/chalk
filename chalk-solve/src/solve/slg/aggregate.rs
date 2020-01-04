@@ -95,9 +95,8 @@ fn merge_into_guidance<TF: TypeFamily>(
     // common.
     let aggr_parameters: Vec<_> = guidance
         .value
-        .parameters
         .iter()
-        .zip(&subst1.parameters)
+        .zip(subst1.iter())
         .enumerate()
         .map(|(index, (value, value1))| {
             // We have two values for some variable X that
@@ -125,9 +124,7 @@ fn merge_into_guidance<TF: TypeFamily>(
         })
         .collect();
 
-    let aggr_subst = Substitution {
-        parameters: aggr_parameters,
-    };
+    let aggr_subst = Substitution::from(aggr_parameters);
 
     infer.canonicalize(&aggr_subst).quantified
 }
@@ -136,7 +133,6 @@ fn is_trivial<TF: TypeFamily>(subst: &Canonical<Substitution<TF>>) -> bool {
     // A subst is trivial if..
     subst
         .value
-        .parameters
         .iter()
         .enumerate()
         .all(|(index, parameter)| match parameter.data() {
@@ -289,11 +285,12 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
             substitution2.len()
         );
 
-        let substitution: Substitution<_> = substitution1
-            .iter()
-            .zip(substitution2)
-            .map(|(p1, p2)| self.aggregate_parameters(p1, p2))
-            .collect();
+        let substitution = Substitution::from(
+            substitution1
+                .iter()
+                .zip(substitution2)
+                .map(|(p1, p2)| self.aggregate_parameters(p1, p2)),
+        );
 
         Some((name, substitution))
     }

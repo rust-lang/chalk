@@ -1010,7 +1010,7 @@ impl<T> UCanonical<T> {
         canonical_subst: &Canonical<AnswerSubst<TF>>,
     ) -> bool {
         let subst = &canonical_subst.value.subst;
-        assert_eq!(self.canonical.binders.len(), subst.parameters.len());
+        assert_eq!(self.canonical.binders.len(), subst.parameters().len());
         subst.is_identity_subst()
     }
 }
@@ -1181,7 +1181,7 @@ pub struct Substitution<TF: TypeFamily> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
     /// the kind of the value.
-    pub parameters: Vec<Parameter<TF>>,
+    parameters: Vec<Parameter<TF>>,
 }
 
 impl<TF: TypeFamily> Substitution<TF> {
@@ -1189,6 +1189,19 @@ impl<TF: TypeFamily> Substitution<TF> {
         use crate::cast::Caster;
         let parameters = parameters.into_iter().casted().collect();
         Substitution { parameters }
+    }
+
+    pub fn from_fallible<E>(
+        parameters: impl IntoIterator<Item = Result<impl CastTo<Parameter<TF>>, E>>,
+    ) -> Result<Self, E> {
+        use crate::cast::Caster;
+        let parameters: Result<Vec<Parameter<TF>>, E> = parameters.into_iter().casted().collect();
+        Ok(Substitution::from(parameters?))
+    }
+
+    /// Index into the list of parameters
+    pub fn at(&self, index: usize) -> &Parameter<TF> {
+        &self.parameters()[index]
     }
 
     pub fn from1(parameter: impl CastTo<Parameter<TF>>) -> Self {
@@ -1200,7 +1213,7 @@ impl<TF: TypeFamily> Substitution<TF> {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.parameters.is_empty()
+        self.parameters().is_empty()
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, Parameter<TF>> {
@@ -1228,8 +1241,7 @@ impl<TF: TypeFamily> Substitution<TF> {
     /// Basically, each value is mapped to a type or lifetime with its
     /// same index.
     pub fn is_identity_subst(&self) -> bool {
-        self.parameters
-            .iter()
+        self.iter()
             .zip(0..)
             .all(|(parameter, index)| match parameter.data() {
                 ParameterKind::Ty(ty) => match ty.data() {
@@ -1293,33 +1305,19 @@ where
     }
 }
 
-impl<TF> std::iter::FromIterator<Parameter<TF>> for Substitution<TF>
-where
-    TF: TypeFamily,
-{
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = Parameter<TF>>,
-    {
-        Substitution {
-            parameters: iter.into_iter().collect(),
-        }
-    }
-}
-
 impl<'a, TF: TypeFamily> DefaultTypeFolder for &'a Substitution<TF> {}
 
 impl<'a, TF: TypeFamily> DefaultInferenceFolder for &'a Substitution<TF> {}
 
 impl<'a, TF: TypeFamily> FreeVarFolder<TF> for &'a Substitution<TF> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
-        let ty = &self.parameters[depth];
+        let ty = self.at(depth);
         let ty = ty.assert_ty_ref();
         Ok(ty.shifted_in(binders))
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
-        let l = &self.parameters[depth];
+        let l = self.at(depth);
         let l = l.assert_lifetime_ref();
         Ok(l.shifted_in(binders))
     }

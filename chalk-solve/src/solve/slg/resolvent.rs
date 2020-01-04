@@ -297,7 +297,7 @@ impl<TF: TypeFamily> AnswerSubstitutor<'_, TF> {
             return Ok(false);
         }
 
-        let answer_param = &self.answer_subst.parameters[answer_depth - self.answer_binders];
+        let answer_param = self.answer_subst.at(answer_depth - self.answer_binders);
 
         let pending_shifted = pending
             .shifted_out(self.pending_binders)
