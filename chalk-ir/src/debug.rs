@@ -409,7 +409,7 @@ impl<TF: TypeFamily> Substitution<TF> {
     /// Displays the substitution in the form `< P0, .. Pn >`, or (if
     /// the substitution is empty) as an empty string.
     pub fn with_angle(&self) -> Angle<'_, Parameter<TF>> {
-        Angle(&self.parameters)
+        Angle(self.parameters())
     }
 }
 

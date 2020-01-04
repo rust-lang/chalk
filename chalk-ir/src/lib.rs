@@ -1176,27 +1176,31 @@ pub enum Constraint<TF: TypeFamily> {
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Fold, Hash, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, HasTypeFamily)]
 pub struct Substitution<TF: TypeFamily> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
     /// the kind of the value.
-    parameters: Vec<Parameter<TF>>,
+    parameters: TF::InternedSubstitution,
 }
 
 impl<TF: TypeFamily> Substitution<TF> {
     pub fn from(parameters: impl IntoIterator<Item = impl CastTo<Parameter<TF>>>) -> Self {
-        use crate::cast::Caster;
-        let parameters = parameters.into_iter().casted().collect();
-        Substitution { parameters }
+        Self::from_fallible(
+            parameters
+                .into_iter()
+                .map(|p| -> Result<Parameter<TF>, ()> { Ok(p.cast()) }),
+        )
+        .unwrap()
     }
 
     pub fn from_fallible<E>(
         parameters: impl IntoIterator<Item = Result<impl CastTo<Parameter<TF>>, E>>,
     ) -> Result<Self, E> {
         use crate::cast::Caster;
-        let parameters: Result<Vec<Parameter<TF>>, E> = parameters.into_iter().casted().collect();
-        Ok(Substitution::from(parameters?))
+        Ok(Substitution {
+            parameters: TF::intern_substitution(parameters.into_iter().casted())?,
+        })
     }
 
     /// Index into the list of parameters
@@ -1221,7 +1225,7 @@ impl<TF: TypeFamily> Substitution<TF> {
     }
 
     pub fn parameters(&self) -> &[Parameter<TF>] {
-        &self.parameters
+        TF::substitution_data(&self.parameters)
     }
 
     pub fn len(&self) -> usize {

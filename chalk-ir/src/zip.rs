@@ -179,9 +179,6 @@ macro_rules! struct_zip {
     }
 }
 
-struct_zip!(impl[TF: TypeFamily] Zip<TF> for Substitution<TF> {
-    parameters,
-});
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for TraitRef<TF> {
     trait_id,
     substitution,
@@ -255,6 +252,12 @@ enum_zip!(impl<TF> for DomainGoal<TF> {
     DownstreamType
 });
 enum_zip!(impl<TF> for ProgramClause<TF> { Implies, ForAll });
+
+impl<TF: TypeFamily> Zip<TF> for Substitution<TF> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+        Zip::zip_with(zipper, a.parameters(), b.parameters())
+    }
+}
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the
