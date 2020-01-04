@@ -668,6 +668,7 @@ fn gat_unify_with_implied_wc() {
     }
 }
 
+// See rust-lang/chalk#280
 #[test]
 fn rust_analyzer_regression() {
     test! {
@@ -711,7 +712,7 @@ fn rust_analyzer_regression() {
                     PI: ParallelIterator
                 }
             }
-        } yields[SolverChoice::SLG { max_size: 4 }] {
+        } yields_all[SolverChoice::SLG { max_size: 4 }] {
             "substitution [], lifetime constraints []"
         }
     }
