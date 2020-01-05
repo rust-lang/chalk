@@ -154,11 +154,6 @@ impl<C: Context> Table<C> {
         self.answers.get(index.value)
     }
 
-    /// Useful for testing.
-    pub fn num_cached_answers(&self) -> usize {
-        self.answers.len()
-    }
-
     pub(super) fn next_answer_index(&self) -> AnswerIndex {
         AnswerIndex::from(self.answers.len())
     }

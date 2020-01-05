@@ -5,7 +5,7 @@ use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
 use crate::table::AnswerIndex;
 use crate::tables::Tables;
-use crate::{CompleteAnswer, TableIndex};
+use crate::TableIndex;
 use std::fmt::Display;
 
 pub struct Forest<C: Context> {
@@ -31,53 +31,6 @@ impl<C: Context> Forest<C> {
     /// term in here).
     pub fn context(&self) -> &C {
         &self.context
-    }
-
-    /// Finds the first N answers, looping as much as needed to get
-    /// them. Returns `None` if the result flounders.
-    ///
-    /// Thanks to subgoal abstraction and so forth, this should always
-    /// terminate.
-    ///
-    /// # Panics
-    ///
-    /// Panics if a negative cycle was detected.
-    pub fn force_answers(
-        &mut self,
-        context: &impl ContextOps<C>,
-        goal: C::UCanonicalGoalInEnvironment,
-        num_answers: usize,
-    ) -> Option<Vec<CompleteAnswer<C>>> {
-        let table = self.get_or_create_table_for_ucanonical_goal(context, goal);
-        let mut answers = Vec::with_capacity(num_answers);
-        let mut count = 0;
-        for _ in 0..num_answers {
-            loop {
-                match self.root_answer(context, table, AnswerIndex::from(count)) {
-                    Ok(answer) => {
-                        answers.push(answer.clone());
-                        break;
-                    }
-                    Err(RootSearchFail::InvalidAnswer) => {
-                        count += 1;
-                    }
-                    Err(RootSearchFail::Floundered) => return None,
-                    Err(RootSearchFail::QuantumExceeded) => continue,
-                    Err(RootSearchFail::NoMoreSolutions) => return Some(answers),
-                    Err(RootSearchFail::NegativeCycle) => {
-                        // Negative cycles *ought* to be avoided by construction. Hence panic
-                        // if we find one, as that likely indicates a problem in the chalk-solve
-                        // lowering rules. (In principle, we could propagate this error out,
-                        // and let chalk-solve do the asserting, but that seemed like it would
-                        // complicate the function signature more than it's worth.)
-                        panic!("negative cycle was detected");
-                    }
-                }
-            }
-            count += 1;
-        }
-
-        Some(answers)
     }
 
     /// Returns a "solver" for a given goal in the form of an
@@ -179,16 +132,6 @@ impl<C: Context> Forest<C> {
             let table = self.stack[d].table;
             self.tables[table].coinductive_goal
         })
-    }
-
-    /// Useful for testing.
-    pub fn num_cached_answers_for_goal(
-        &mut self,
-        context: &impl ContextOps<C>,
-        goal: &C::UCanonicalGoalInEnvironment,
-    ) -> usize {
-        let table = self.get_or_create_table_for_ucanonical_goal(context, goal.clone());
-        self.tables[table].num_cached_answers()
     }
 }
 

@@ -169,70 +169,10 @@ impl<TF: TypeFamily> Solver<TF> {
         let ops = self.forest.context().ops(program);
         self.forest.solve_multiple(&ops, goal, f)
     }
-
-    pub fn into_test(self) -> TestSolver<TF> {
-        TestSolver { state: self }
-    }
 }
 
 impl<TF: TypeFamily> std::fmt::Debug for Solver<TF> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(fmt, "Solver {{ .. }}")
-    }
-}
-
-/// Wrapper around a `Solver` that exposes
-/// additional methods meant only for testing.
-pub struct TestSolver<TF: TypeFamily> {
-    state: Solver<TF>,
-}
-
-impl<TF: TypeFamily> std::ops::Deref for TestSolver<TF> {
-    type Target = Solver<TF>;
-
-    fn deref(&self) -> &Solver<TF> {
-        &self.state
-    }
-}
-
-impl<TF: TypeFamily> std::ops::DerefMut for TestSolver<TF> {
-    fn deref_mut(&mut self) -> &mut Solver<TF> {
-        &mut self.state
-    }
-}
-
-impl<TF: TypeFamily> TestSolver<TF> {
-    /// Force the first `num_answers` answers. Meant only for testing,
-    /// and hence the precise return type is obscured (but you can get
-    /// its debug representation).
-    pub fn force_answers<'tf>(
-        &mut self,
-        program: &dyn RustIrDatabase<TF>,
-        goal: &UCanonical<InEnvironment<Goal<TF>>>,
-        num_answers: usize,
-    ) -> Box<dyn std::fmt::Debug + 'tf>
-    where
-        TF: 'tf,
-    {
-        let ops = self.forest.context().ops(program);
-        match self.forest.force_answers(&ops, goal.clone(), num_answers) {
-            Some(v) => Box::new(v),
-            None => {
-                #[derive(Debug)]
-                struct Floundered;
-                Box::new(Floundered)
-            }
-        }
-    }
-
-    /// Returns then number of cached answers for `goal`. Used only in
-    /// testing.
-    pub fn num_cached_answers_for_goal(
-        &mut self,
-        program: &dyn RustIrDatabase<TF>,
-        goal: &UCanonical<InEnvironment<Goal<TF>>>,
-    ) -> usize {
-        let ops = self.forest.context().ops(program);
-        self.forest.num_cached_answers_for_goal(&ops, goal)
     }
 }
