@@ -70,16 +70,16 @@ pub enum SolverChoice {
     /// Run the SLG solver, producing a Solution.
     SLG {
         max_size: usize,
-        max_answers: Option<usize>,
+        expected_answers: Option<usize>,
     },
 }
 
 impl SolverChoice {
     /// Returns the default SLG parameters.
-    pub fn slg(max_size: usize, max_answers: Option<usize>) -> Self {
+    pub fn slg(max_size: usize, expected_answers: Option<usize>) -> Self {
         SolverChoice::SLG {
             max_size,
-            max_answers,
+            expected_answers,
         }
     }
 
@@ -88,9 +88,9 @@ impl SolverChoice {
         match self {
             SolverChoice::SLG {
                 max_size,
-                max_answers,
+                expected_answers,
             } => Solver {
-                forest: Forest::new(SlgContext::new(max_size, max_answers)),
+                forest: Forest::new(SlgContext::new(max_size, expected_answers)),
             },
         }
     }

@@ -75,28 +75,22 @@ impl<C: Context> Forest<C> {
     ) -> bool {
         let mut answers = self.iter_answers(context, goal);
         loop {
-            match answers.next_answer() {
+            let subst = match answers.next_answer() {
                 AnswerResult::Answer(answer) => {
-                    let subst = if !answer.ambiguous {
+                    if !answer.ambiguous {
                         SubstitutionResult::Definite(context.constrained_subst_from_answer(answer))
                     } else {
                         SubstitutionResult::Ambiguous(context.constrained_subst_from_answer(answer))
-                    };
-                    if !f(subst, !answers.peek_answer().is_no_more_solutions()) {
-                        return false;
                     }
                 }
-                AnswerResult::Floundered => {
-                    if !f(
-                        SubstitutionResult::Floundered,
-                        !answers.peek_answer().is_no_more_solutions(),
-                    ) {
-                        return false;
-                    }
-                }
+                AnswerResult::Floundered => SubstitutionResult::Floundered,
                 AnswerResult::NoMoreSolutions => {
                     return true;
                 }
+            };
+
+            if !f(subst, !answers.peek_answer().is_no_more_solutions()) {
+                return false;
             }
         }
     }

@@ -63,38 +63,31 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
                 break Guidance::Definite(subst);
             }
 
-            if let Some(max_answers) = self.max_answers {
-                if num_answers >= max_answers {
+            if let Some(expected_answers) = self.expected_answers {
+                if num_answers >= expected_answers {
                     panic!("Too many answers for solution.");
                 }
             }
 
-            match answers.next_answer() {
-                AnswerResult::Answer(answer1) => {
-                    subst = merge_into_guidance(
-                        SlgContext::canonical(root_goal),
-                        subst,
-                        &answer1.subst,
-                    );
-                    num_answers += 1;
-                }
+            let new_subst = match answers.next_answer() {
+                AnswerResult::Answer(answer1) => answer1.subst,
                 AnswerResult::Floundered => {
                     // FIXME: this doesn't trigger for any current tests
-                    subst = merge_into_guidance(
-                        SlgContext::canonical(root_goal),
-                        subst,
-                        &SlgContext::identity_constrained_subst(root_goal),
-                    );
-                    num_answers += 1;
+                    SlgContext::identity_constrained_subst(root_goal)
                 }
                 AnswerResult::NoMoreSolutions => {
                     break Guidance::Definite(subst);
                 }
-            }
+            };
+            subst = merge_into_guidance(SlgContext::canonical(root_goal), subst, &new_subst);
+            num_answers += 1;
         };
 
-        if let Some(max_answers) = self.max_answers {
-            assert_eq!(max_answers, num_answers, "Not enough answers for solution.");
+        if let Some(expected_answers) = self.expected_answers {
+            assert_eq!(
+                expected_answers, num_answers,
+                "Not enough answers for solution."
+            );
         }
         Some(Solution::Ambig(guidance))
     }

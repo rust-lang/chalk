@@ -32,15 +32,15 @@ pub(crate) struct SlgContext<TF: TypeFamily> {
     /// Only really sseful for tests, since `make_solution`
     /// will panic if the number of cached answers does not
     /// equal this when a solution is made.
-    max_answers: Option<usize>,
+    expected_answers: Option<usize>,
     phantom: PhantomData<TF>,
 }
 
 impl<TF: TypeFamily> SlgContext<TF> {
-    pub(crate) fn new(max_size: usize, max_answers: Option<usize>) -> SlgContext<TF> {
+    pub(crate) fn new(max_size: usize, expected_answers: Option<usize>) -> SlgContext<TF> {
         SlgContext {
             max_size,
-            max_answers,
+            expected_answers,
             phantom: PhantomData,
         }
     }
@@ -49,7 +49,7 @@ impl<TF: TypeFamily> SlgContext<TF> {
         SlgContextOps {
             program,
             max_size: self.max_size,
-            max_answers: self.max_answers,
+            expected_answers: self.expected_answers,
         }
     }
 }
@@ -58,7 +58,7 @@ impl<TF: TypeFamily> SlgContext<TF> {
 pub(crate) struct SlgContextOps<'me, TF: TypeFamily> {
     program: &'me dyn RustIrDatabase<TF>,
     max_size: usize,
-    max_answers: Option<usize>,
+    expected_answers: Option<usize>,
 }
 
 #[derive(Clone)]
