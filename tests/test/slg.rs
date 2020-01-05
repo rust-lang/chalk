@@ -7,13 +7,6 @@ macro_rules! test {
     (program $program:tt $(goal $goal:tt first $n:tt with max $depth:tt { $expected:expr })*) => {
         solve_goal(stringify!($program), vec![$(($depth, $n, stringify!($goal), $expected)),*])
     };
-
-    (program $program:tt $(goal $goal:tt fixed $n:tt with max $depth:tt { $expected:expr })*) => {
-        solve_goal_fixed_num_answers(
-            stringify!($program),
-            vec![$(($depth, $n, stringify!($goal), $expected)),*],
-        )
-    }
 }
 
 fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
@@ -34,7 +27,7 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
                 .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
                 .unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let mut slg_solver = SolverChoice::SLG { max_size }.into_solver().into_test();
+            let mut slg_solver = SolverChoice::SLG { max_size, max_answers: None }.into_solver().into_test();
             let result = format!(
                 "{:#?}",
                 slg_solver.force_answers(&db, &peeled_goal, num_answers)
@@ -43,42 +36,6 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
             let result = result.replace(",\n", "\n");
             let expected = expected.replace(",\n", "\n");
             assert_test_result_eq(&expected, &result);
-        }
-    });
-}
-
-fn solve_goal_fixed_num_answers(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
-    println!("program {}", program_text);
-    assert!(program_text.starts_with("{"));
-    assert!(program_text.ends_with("}"));
-    let db = ChalkDatabase::with(
-        &program_text[1..program_text.len() - 1],
-        SolverChoice::default(),
-    );
-    db.with_program(|_| {
-        for (max_size, num_answers, goal_text, expected) in goals {
-            println!("----------------------------------------------------------------------");
-            println!("goal {}", goal_text);
-            assert!(goal_text.starts_with("{"));
-            assert!(goal_text.ends_with("}"));
-            let goal = db
-                .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
-                .unwrap();
-            let peeled_goal = goal.into_peeled_goal();
-            let mut solver = SolverChoice::SLG { max_size }.into_solver().into_test();
-            let result = format!("{:?}", solver.solve(&db, &peeled_goal));
-
-            // Strip trailing commas to handle both nightly and stable debug formatting
-            let result = result.replace(",\n", "\n");
-            let expected = expected.replace(",\n", "\n");
-            assert_test_result_eq(&expected, &result);
-
-            let num_cached_answers_for_goal = solver.num_cached_answers_for_goal(&db, &peeled_goal);
-            // ::test_util::assert_test_result_eq(
-            //     &format!("{}", num_cached_answers_for_goal),
-            //     &format!("{}", expected_num_answers)
-            // );
-            assert_eq!(num_cached_answers_for_goal, num_answers);
         }
     });
 }
@@ -97,33 +54,6 @@ fn flounder() {
             exists<T> { not { T: A } }
         } first 5 with max 10 {
             "Floundered"
-        }
-    }
-}
-
-// Test that, when solving `?T: Sized`, we only wind up pulling a few
-// answers before we stop.
-// FIXME: This is basically the same as `breadth_first`. Is it testing something different?
-#[test]
-fn only_draw_so_many() {
-    test! {
-        program {
-            trait Sized { }
-
-            struct Vec<T> { }
-            impl<T> Sized for Vec<T> where T: Sized { }
-
-            struct i32 { }
-            impl Sized for i32 { }
-
-            struct Slice<T> { }
-            impl<T> Sized for Slice<T> where T: Sized { }
-        }
-
-        goal {
-            exists<T> { T: Sized }
-        } fixed 2 with max 10 {
-            "Some(Ambig(Unknown))"
         }
     }
 }

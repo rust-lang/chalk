@@ -14,7 +14,7 @@ fn basic() {
 
         goal {
             forall<T> { if (T: Sized) { T: Sized } }
-        } yields_all[SolverChoice::SLG { max_size: 10 }] {
+        } yields_all[SolverChoice::slg(10, None)] {
             "substitution [], lifetime constraints []"
         }
     }
@@ -38,7 +38,7 @@ fn breadth_first() {
 
         goal {
             exists<T> { T: Sized }
-        } yields_first[SolverChoice::SLG { max_size: 10 }] {
+        } yields_first[SolverChoice::slg(10, None)] {
             "substitution [?0 := i32], lifetime constraints []",
             "substitution [?0 := Vec<i32>], lifetime constraints []",
             "substitution [?0 := Slice<i32>], lifetime constraints []",
@@ -66,7 +66,7 @@ fn infinite_recursion() {
 
         goal {
             exists<T> { T: A }
-        } yields_all[SolverChoice::SLG { max_size: 10 }] {
+        } yields_all[SolverChoice::slg(10, None)] {
             "substitution [], lifetime constraints []"
         }
     }
@@ -85,7 +85,7 @@ fn subgoal_abstraction() {
 
         goal {
             exists<T> { T: Foo }
-        } yields_all[SolverChoice::SLG { max_size: 50 }] {
+        } yields_all[SolverChoice::slg(50, None)] {
             "substitution [], lifetime constraints []"
         }
     }
@@ -103,9 +103,45 @@ fn flounder() {
 
         goal {
             exists<T> { not { T: A } }
-        } yields_first[SolverChoice::SLG { max_size: 10 }] {
+        } yields_first[SolverChoice::slg(10, None)] {
             // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
             "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
+        }
+    }
+}
+
+// Test that, when solving `?T: Sized`, we only wind up pulling a few
+// answers before we stop.
+// This is similar to the `breadth_first` test, except the order of the 
+// FIXME: This is basically the same as `breadth_first`. Is it testing something different?
+#[test]
+fn only_draw_so_many() {
+    test! {
+        program {
+            trait Sized { }
+
+            struct Vec<T> { }
+            impl<T> Sized for Vec<T> where T: Sized { }
+
+            struct i32 { }
+            impl Sized for i32 { }
+
+            struct Slice<T> { }
+            impl<T> Sized for Slice<T> where T: Sized { }
+        }
+
+        goal {
+            exists<T> { T: Sized }
+        } yields_first[SolverChoice::slg(10, None)] {
+            "substitution [?0 := i32], lifetime constraints []",
+            "substitution [?0 := Slice<i32>], lifetime constraints []",
+            "substitution [?0 := Vec<i32>], lifetime constraints []"
+        }
+
+        goal {
+            exists<T> { T: Sized }
+        } yields[SolverChoice::slg(10, Some(2))] {
+            "Ambiguous; no inference guidance"
         }
     }
 }
@@ -130,7 +166,7 @@ fn only_draw_so_many_blow_up() {
 
         goal {
             exists<T> { T: Foo }
-        } yields {
+        } yields[SolverChoice::slg(10, Some(2))] {
             "Ambiguous; definite substitution for<?U0> { [?0 := Vec<^0>] }"
         }
     }
@@ -152,7 +188,7 @@ fn negative_loop() {
 
         goal {
             u32: P
-        } yields_all[SolverChoice::SLG { max_size: 10 }] {
+        } yields_all[SolverChoice::slg(10, None)] {
             // Negative cycle -> panic
             ""
         }
@@ -176,21 +212,21 @@ fn subgoal_cycle_uninhabited() {
         // back: 0 answer(s) found.
         goal {
             exists<T> { T: Foo }
-        } yields_all[SolverChoice::SLG { max_size: 2 }] {
+        } yields_all[SolverChoice::slg(2, None)] {
             "substitution [], lifetime constraints []"
         }
 
         // Unsurprisingly, applying negation succeeds then.
         goal {
             not { exists<T> { T: Foo } }
-        } yields_all[SolverChoice::SLG { max_size: 2 }] {
+        } yields_all[SolverChoice::slg(2, None)] {
             "substitution [], lifetime constraints []"
         }
 
         // Equivalent to the previous.
         goal {
             forall<T> { not { T: Foo } }
-        } yields_all[SolverChoice::SLG { max_size: 2 }] {
+        } yields_all[SolverChoice::slg(2, None)] {
             "substitution [], lifetime constraints []"
         }
 
@@ -198,21 +234,21 @@ fn subgoal_cycle_uninhabited() {
         // size threshold, we have a problem.
         goal {
             exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
-        } yields_all[SolverChoice::SLG { max_size: 2 }] {
+        } yields_all[SolverChoice::slg(2, None)] {
             ""
         }
 
         // Same query with larger threshold works fine, though.
         goal {
             exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
-        } yields_all[SolverChoice::SLG { max_size: 4 }] {
+        } yields_all[SolverChoice::slg(4, None)] {
             "substitution [?0 := Vec<u32>], lifetime constraints []"
         }
 
         // Here, due to the hypothesis, there does indeed exist a suitable T, `U`.
         goal {
             forall<U> { if (U: Foo) { exists<T> { T: Foo } } }
-        } yields_all[SolverChoice::SLG { max_size: 2 }] {
+        } yields_all[SolverChoice::slg(2, None)] {
             "substitution [?0 := !1_0], lifetime constraints []"
         }
     }
@@ -233,7 +269,7 @@ fn subgoal_cycle_inhabited() {
 
         goal {
             exists<T> { T: Foo }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [?0 := u32], lifetime constraints []"
         }
     }
@@ -251,7 +287,7 @@ fn basic_region_constraint_from_positive_impl() {
 
         goal {
             forall<'a, 'b, T> { Ref<'a, 'b, T>: Foo }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }]"
         }
     }
@@ -277,7 +313,7 @@ fn example_2_1_EWFS() {
 
         goal {
             exists<V> { a: TransitiveClosure<V> }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [?0 := b], lifetime constraints []",
             "substitution [?0 := c], lifetime constraints []",
             "substitution [?0 := a], lifetime constraints []"
@@ -307,7 +343,7 @@ fn example_2_2_EWFS() {
 
         goal {
             c: M
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [], lifetime constraints []"
         }
     }
@@ -336,7 +372,7 @@ fn example_2_3_EWFS() {
 
         goal {
             a: W
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
             ""
         }
@@ -362,7 +398,7 @@ fn example_3_3_EWFS() {
 
         goal {
             a: S
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
             ""
         }
@@ -384,7 +420,7 @@ fn contradiction() {
 
         goal {
             u32: P
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
             ""
         }
@@ -419,7 +455,7 @@ fn cached_answers_1() {
 
         goal {
             exists<T> { T: Sour }
-        } yields_all[SolverChoice::SLG { max_size: 2 }] {
+        } yields_all[SolverChoice::slg(2, None)] {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
@@ -447,7 +483,7 @@ fn cached_answers_2() {
 
         goal {
             exists<T> { T: Sour }
-        } yields_all[SolverChoice::SLG { max_size: 2 }] {
+        } yields_all[SolverChoice::slg(2, None)] {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
@@ -475,7 +511,7 @@ fn cached_answers_3() {
 
         goal {
             exists<T> { T: Sour }
-        } yields_all[SolverChoice::SLG { max_size: 2 }] {
+        } yields_all[SolverChoice::slg(2, None)] {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
@@ -502,7 +538,7 @@ fn negative_answer_ambiguous() {
 
         goal {
             u32: P
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
             ""
         }
@@ -528,21 +564,21 @@ fn non_enumerable_traits_direct() {
 
         goal {
             exists<A> { A: NonEnumerable }
-        } yields_first[SolverChoice::SLG { max_size: 3 }] {
+        } yields_first[SolverChoice::slg(3, None)] {
             // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
             "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
         }
 
         goal {
             exists<A> { A: Enumerable }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [?0 := Foo], lifetime constraints []",
             "substitution [?0 := Bar], lifetime constraints []"
         }
 
         goal {
             Foo: NonEnumerable
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [], lifetime constraints []"
         }
     }
@@ -566,7 +602,7 @@ fn non_enumerable_traits_indirect() {
 
         goal {
             exists<A> { A: Debug }
-        } yields_first[SolverChoice::SLG { max_size: 3 }] {
+        } yields_first[SolverChoice::slg(3, None)] {
             // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
             "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
         }
@@ -596,7 +632,7 @@ fn non_enumerable_traits_double() {
 
         goal {
             exists<A> { A: Debug }
-        } yields_first[SolverChoice::SLG { max_size: 3 }] {
+        } yields_first[SolverChoice::slg(3, None)] {
             // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
             "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
         }
@@ -632,14 +668,14 @@ fn non_enumerable_traits_reorder() {
 
         goal {
             exists<A> { A: Debug1 }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [?0 := Foo], lifetime constraints []"
         }
 
 
         goal {
             exists<A> { A: Debug2 }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [?0 := Foo], lifetime constraints []"
         }
     }
@@ -658,7 +694,7 @@ fn auto_traits_flounder() {
 
         goal {
             exists<A> { A: Send }
-        } yields_first[SolverChoice::SLG { max_size: 3 }] {
+        } yields_first[SolverChoice::slg(3, None)] {
             // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
             "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
         }
@@ -697,14 +733,14 @@ fn negative_reorder() {
 
         goal {
             exists<A> { A: Debug1 }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [?0 := Bar], lifetime constraints []"
         }
 
 
         goal {
             exists<A> { A: Debug2 }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [?0 := Bar], lifetime constraints []"
         }
     }
@@ -750,7 +786,7 @@ fn coinductive_unsound1() {
 
         goal {
             forall<X> { X: C1orC2 }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             ""
         }
     }
@@ -792,7 +828,7 @@ fn coinductive_unsound2() {
 
         goal {
             forall<X> { X: C1orC2 }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             ""
         }
     }
@@ -840,7 +876,7 @@ fn coinductive_multicycle1() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [], lifetime constraints []"
         }
     }
@@ -880,7 +916,7 @@ fn coinductive_multicycle2() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             "substitution [], lifetime constraints []"
         }
     }
@@ -930,7 +966,7 @@ fn coinductive_multicycle3() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             ""
         }
     }
@@ -980,7 +1016,7 @@ fn coinductive_multicycle4() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::SLG { max_size: 3 }] {
+        } yields_all[SolverChoice::slg(3, None)] {
             ""
         }
     }

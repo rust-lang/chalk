@@ -47,6 +47,7 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
 
         // Extract answers and merge them into `subst`. Stop once we have
         // a trivial subst (or run out of answers).
+        let mut num_answers = 1;
         let guidance = loop {
             if subst.value.is_empty() || is_trivial(&subst) {
                 break Guidance::Unknown;
@@ -56,9 +57,16 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
                 break Guidance::Definite(subst);
             }
 
+            if let Some(max_answers) = self.max_answers {
+                if num_answers >= max_answers {
+                    panic!("Too many answers for solution.");
+                }
+            }
+
             match answers.next_answer() {
                 Some(answer1) => {
                     subst = merge_into_guidance(root_goal, subst, &answer1.subst);
+                    num_answers += 1;
                 }
 
                 None => {
@@ -67,6 +75,9 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
             }
         };
 
+        if let Some(max_answers) = self.max_answers {
+            assert_eq!(max_answers, num_answers, "Not enough answers for solution.");
+        }
         Some(Solution::Ambig(guidance))
     }
 }

@@ -102,6 +102,37 @@ macro_rules! test {
               @unparsed_goals[$($unparsed_goals)*])
     };
 
+    // goal { G } yields[C1] { "Y1" } yields[C2] { "Y2" } -- test that solver C1 yields Y1
+    // and C2 yields Y2
+    //
+    // Annoyingly, to avoid getting a parsing ambiguity error, we have
+    // to distinguish the case where there are other goals to come
+    // (this rule) for the last goal in the list (next rule). There
+    // might be a more elegant fix than copy-and-paste but this works.
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt yields[$C:expr] { $expected:expr }
+            goal $($unparsed_goals:tt)*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::Aggregated($expected))
+              ]
+              @unparsed_goals[goal $($unparsed_goals)*])
+    };
+
+    // same as above, but for the final goal in the list.
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt yields[$C:expr] { $expected:expr }
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::Aggregated($expected))
+                ]
+              @unparsed_goals[])
+    };
+
     // goal { G } yields_all[C1] { "Y1" } yields_all[C2] { "Y2" } -- test that solver C1 yields Y1
     // and C2 yields Y2
     //
