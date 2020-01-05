@@ -104,15 +104,14 @@ fn flounder() {
         goal {
             exists<T> { not { T: A } }
         } yields_first[SolverChoice::slg(10, None)] {
-            // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
-            "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
+            "Floundered"
         }
     }
 }
 
 // Test that, when solving `?T: Sized`, we only wind up pulling a few
 // answers before we stop.
-// This is similar to the `breadth_first` test, except the order of the 
+// This is similar to the `breadth_first` test, except the order of the
 // FIXME: This is basically the same as `breadth_first`. Is it testing something different?
 #[test]
 fn only_draw_so_many() {
@@ -253,7 +252,6 @@ fn subgoal_cycle_uninhabited() {
         }
     }
 }
-
 
 #[test]
 fn subgoal_cycle_inhabited() {
@@ -565,8 +563,7 @@ fn non_enumerable_traits_direct() {
         goal {
             exists<A> { A: NonEnumerable }
         } yields_first[SolverChoice::slg(3, None)] {
-            // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
-            "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
+            "Floundered"
         }
 
         goal {
@@ -603,8 +600,7 @@ fn non_enumerable_traits_indirect() {
         goal {
             exists<A> { A: Debug }
         } yields_first[SolverChoice::slg(3, None)] {
-            // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
-            "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
+            "Floundered"
         }
     }
 }
@@ -633,8 +629,7 @@ fn non_enumerable_traits_double() {
         goal {
             exists<A> { A: Debug }
         } yields_first[SolverChoice::slg(3, None)] {
-            // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
-            "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
+            "Floundered"
         }
     }
 }
@@ -695,8 +690,7 @@ fn auto_traits_flounder() {
         goal {
             exists<A> { A: Send }
         } yields_first[SolverChoice::slg(3, None)] {
-            // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
-            "for<?U0> { substitution [?0 := ^0], lifetime constraints [] }"
+            "Floundered"
         }
     }
 }

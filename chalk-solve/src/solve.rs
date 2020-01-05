@@ -1,6 +1,6 @@
 use crate::solve::slg::SlgContext;
 use crate::RustIrDatabase;
-use chalk_engine::forest::Forest;
+use chalk_engine::forest::{Forest, SubstitutionResult};
 use chalk_ir::family::TypeFamily;
 use chalk_ir::*;
 use std::fmt;
@@ -68,19 +68,28 @@ impl<TF: TypeFamily> fmt::Display for Solution<TF> {
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum SolverChoice {
     /// Run the SLG solver, producing a Solution.
-    SLG { max_size: usize, max_answers: Option<usize> },
+    SLG {
+        max_size: usize,
+        max_answers: Option<usize>,
+    },
 }
 
 impl SolverChoice {
     /// Returns the default SLG parameters.
     pub fn slg(max_size: usize, max_answers: Option<usize>) -> Self {
-        SolverChoice::SLG { max_size, max_answers }
+        SolverChoice::SLG {
+            max_size,
+            max_answers,
+        }
     }
 
     /// Creates a solver state.
     pub fn into_solver<TF: TypeFamily>(self) -> Solver<TF> {
         match self {
-            SolverChoice::SLG { max_size, max_answers } => Solver {
+            SolverChoice::SLG {
+                max_size,
+                max_answers,
+            } => Solver {
                 forest: Forest::new(SlgContext::new(max_size, max_answers)),
             },
         }
@@ -155,7 +164,7 @@ impl<TF: TypeFamily> Solver<TF> {
         &mut self,
         program: &dyn RustIrDatabase<TF>,
         goal: &UCanonical<InEnvironment<Goal<TF>>>,
-        f: impl FnMut(Canonical<ConstrainedSubst<TF>>, bool) -> bool,
+        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<TF>>>, bool) -> bool,
     ) -> bool {
         let ops = self.forest.context().ops(program);
         self.forest.solve_multiple(&ops, goal, f)

@@ -27,10 +27,7 @@ fn assert_result(result: &Option<Solution<ChalkIr>>, expected: &str) {
     assert!(!expected1.is_empty() && result1.starts_with(&expected1));
 }
 
-fn assert_canonical(
-    result: &chalk_ir::Canonical<chalk_ir::ConstrainedSubst<chalk_ir::family::ChalkIr>>,
-    expected: &str,
-) {
+fn assert_canonical(result: &str, expected: &str) {
     let result = format!("{}", result);
 
     println!("expected:\n{}", expected);
@@ -235,7 +232,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                         db.solve_multiple(&peeled_goal, |result, next_result| {
                             match expected.next() {
                                 Some(expected) => {
-                                    assert_canonical(&result, expected);
+                                    assert_canonical(&format!("{}", &result), expected);
                                 }
                                 None => {
                                     assert!(!next_result, "Unexpected next solution");
@@ -250,7 +247,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                     let mut expected = expected.into_iter();
                     db.solve_multiple(&peeled_goal, |result, next_result| match expected.next() {
                         Some(solution) => {
-                            assert_canonical(&result, solution);
+                            assert_canonical(&format!("{}", &result), solution);
                             if !next_result {
                                 assert!(expected.next().is_none(), "Not enough solutions found");
                             }
@@ -275,6 +272,6 @@ mod impls;
 mod misc;
 mod negation;
 mod projection;
+mod slgext;
 mod unify;
 mod wf_goals;
-mod slgext;

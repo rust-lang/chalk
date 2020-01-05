@@ -162,15 +162,8 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
     fn goal_from_goal_in_environment(goal: &InEnvironment<Goal<TF>>) -> &Goal<TF> {
         &goal.goal
     }
-}
-
-impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<'me, TF> {
-    fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal<TF>>>) -> bool {
-        goal.is_coinductive(self.program)
-    }
 
     fn identity_constrained_subst(
-        &self,
         goal: &UCanonical<InEnvironment<Goal<TF>>>,
     ) -> Canonical<ConstrainedSubst<TF>> {
         let (mut infer, subst, _) = InferenceTable::from_canonical(goal.universes, &goal.canonical);
@@ -180,6 +173,12 @@ impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<
                 constraints: vec![],
             })
             .quantified
+    }
+}
+
+impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<'me, TF> {
+    fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal<TF>>>) -> bool {
+        goal.is_coinductive(self.program)
     }
 
     fn program_clauses(

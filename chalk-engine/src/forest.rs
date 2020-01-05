@@ -1,10 +1,12 @@
 use crate::context::prelude::*;
+use crate::context::AnswerResult;
 use crate::context::AnswerStream;
 use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
 use crate::table::AnswerIndex;
 use crate::tables::Tables;
 use crate::{CompleteAnswer, TableIndex};
+use std::fmt::Display;
 
 pub struct Forest<C: Context> {
     context: C,
@@ -105,7 +107,7 @@ impl<C: Context> Forest<C> {
         context: &impl ContextOps<C>,
         goal: &C::UCanonicalGoalInEnvironment,
     ) -> Option<C::Solution> {
-        context.make_solution(C::canonical(&goal), self.iter_answers(context, goal))
+        context.make_solution(&goal, self.iter_answers(context, goal))
     }
 
     /// Solves a given goal, producing the solution. This will do only
@@ -116,18 +118,34 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         goal: &C::UCanonicalGoalInEnvironment,
-        mut f: impl FnMut(C::CanonicalConstrainedSubst, bool) -> bool,
+        mut f: impl FnMut(SubstitutionResult<C::CanonicalConstrainedSubst>, bool) -> bool,
     ) -> bool {
         let mut answers = self.iter_answers(context, goal);
-        while let Some(answer) = answers.next_answer() {
-            if !f(
-                context.constrained_subst_from_answer(answer),
-                answers.peek_answer().is_some(),
-            ) {
-                return false;
+        loop {
+            match answers.next_answer() {
+                AnswerResult::Answer(answer) => {
+                    if !f(
+                        SubstitutionResult::Substitution(
+                            context.constrained_subst_from_answer(answer),
+                        ),
+                        !answers.peek_answer().is_no_more_solutions(),
+                    ) {
+                        return false;
+                    }
+                }
+                AnswerResult::Floundered => {
+                    if !f(
+                        SubstitutionResult::Floundered,
+                        !answers.peek_answer().is_no_more_solutions(),
+                    ) {
+                        return false;
+                    }
+                }
+                AnswerResult::NoMoreSolutions => {
+                    return true;
+                }
             }
         }
-        return true;
     }
 
     /// True if all the tables on the stack starting from `depth` and
@@ -174,6 +192,21 @@ impl<C: Context> Forest<C> {
     }
 }
 
+#[derive(Debug)]
+pub enum SubstitutionResult<S> {
+    Substitution(S),
+    Floundered,
+}
+
+impl<S: Display> Display for SubstitutionResult<S> {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            SubstitutionResult::Substitution(subst) => write!(fmt, "{}", subst),
+            SubstitutionResult::Floundered => write!(fmt, "Floundered"),
+        }
+    }
+}
+
 struct ForestSolver<'me, C: Context, CO: ContextOps<C>> {
     forest: &'me mut Forest<C>,
     context: &'me CO,
@@ -185,29 +218,25 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
     /// # Panics
     ///
     /// Panics if a negative cycle was detected.
-    fn peek_answer(&mut self) -> Option<CompleteAnswer<C>> {
+    fn peek_answer(&mut self) -> AnswerResult<C> {
         loop {
             match self
                 .forest
                 .root_answer(self.context, self.table, self.answer)
             {
                 Ok(answer) => {
-                    return Some(answer.clone());
+                    return AnswerResult::Answer(answer.clone());
                 }
 
                 Err(RootSearchFail::InvalidAnswer) => {
                     self.answer.increment();
                 }
                 Err(RootSearchFail::Floundered) => {
-                    let table_goal = &self.forest.tables[self.table].table_goal;
-                    return Some(CompleteAnswer {
-                        subst: self.context.identity_constrained_subst(table_goal),
-                        ambiguous: true,
-                    });
+                    return AnswerResult::Floundered;
                 }
 
                 Err(RootSearchFail::NoMoreSolutions) => {
-                    return None;
+                    return AnswerResult::NoMoreSolutions;
                 }
 
                 Err(RootSearchFail::QuantumExceeded) => {}
@@ -224,11 +253,10 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
         }
     }
 
-    fn next_answer(&mut self) -> Option<CompleteAnswer<C>> {
-        self.peek_answer().map(|answer| {
-            self.answer.increment();
-            answer
-        })
+    fn next_answer(&mut self) -> AnswerResult<C> {
+        let answer = self.peek_answer();
+        self.answer.increment();
+        answer
     }
 
     fn any_future_answer(

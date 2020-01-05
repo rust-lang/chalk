@@ -27,7 +27,12 @@ fn solve_goal(program_text: &str, goals: Vec<(usize, usize, &str, &str)>) {
                 .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
                 .unwrap();
             let peeled_goal = goal.into_peeled_goal();
-            let mut slg_solver = SolverChoice::SLG { max_size, max_answers: None }.into_solver().into_test();
+            let mut slg_solver = SolverChoice::SLG {
+                max_size,
+                max_answers: None,
+            }
+            .into_solver()
+            .into_test();
             let result = format!(
                 "{:#?}",
                 slg_solver.force_answers(&db, &peeled_goal, num_answers)
@@ -394,146 +399,6 @@ fn cached_answers_3() {
                     ambiguous: false
                 }
             ]"
-        }
-    }
-}
-
-#[test]
-fn non_enumerable_traits_direct() {
-    test! {
-        program {
-            struct Foo { }
-            struct Bar { }
-
-            #[non_enumerable]
-            trait NonEnumerable { }
-            impl NonEnumerable for Foo { }
-            impl NonEnumerable for Bar { }
-
-            trait Enumerable { }
-            impl Enumerable for Foo { }
-            impl Enumerable for Bar { }
-        }
-
-        goal {
-            exists<A> { A: NonEnumerable }
-        } first 10 with max 3 {
-            r"Floundered"
-        }
-
-        goal {
-            exists<A> { A: Enumerable }
-        } first 10 with max 3 {
-            r"[
-                CompleteAnswer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [?0 := Foo]
-                            constraints: []
-                        }
-                        binders: []
-                    },
-                    ambiguous: false
-                },
-                CompleteAnswer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: [?0 := Bar]
-                            constraints: []
-                        }
-                        binders: []
-                    },
-                    ambiguous: false
-                }
-            ]"
-        }
-
-        goal {
-            Foo: NonEnumerable
-        } first 10 with max 3 {
-            r"[
-                CompleteAnswer {
-                    subst: Canonical {
-                        value: ConstrainedSubst {
-                            subst: []
-                            constraints: []
-                        }
-                        binders: []
-                    },
-                    ambiguous: false
-                }
-            ]"
-        }
-    }
-}
-
-#[test]
-fn non_enumerable_traits_indirect() {
-    test! {
-        program {
-            struct Foo { }
-            struct Bar { }
-
-            #[non_enumerable]
-            trait NonEnumerable { }
-            impl NonEnumerable for Foo { }
-            impl NonEnumerable for Bar { }
-
-            trait Debug { }
-            impl<T> Debug for T where T: NonEnumerable { }
-        }
-
-        goal {
-            exists<A> { A: Debug }
-        } first 10 with max 3 {
-            r"Floundered"
-        }
-    }
-}
-
-#[test]
-fn non_enumerable_traits_double() {
-    test! {
-        program {
-            struct Foo { }
-            struct Bar { }
-
-            #[non_enumerable]
-            trait NonEnumerable1 { }
-            impl NonEnumerable1 for Foo { }
-            impl NonEnumerable1 for Bar { }
-
-            #[non_enumerable]
-            trait NonEnumerable2 { }
-            impl NonEnumerable2 for Foo { }
-            impl NonEnumerable2 for Bar { }
-
-            trait Debug { }
-            impl<T> Debug for T where T: NonEnumerable1, T: NonEnumerable2  { }
-        }
-
-        goal {
-            exists<A> { A: Debug }
-        } first 10 with max 3 {
-            r"Floundered"
-        }
-    }
-}
-#[test]
-fn auto_traits_flounder() {
-    test! {
-        program {
-            struct Foo { }
-            struct Bar { }
-
-            #[auto]
-            trait Send { }
-        }
-
-        goal {
-            exists<A> { A: Send }
-        } first 10 with max 3 {
-            r"Floundered"
         }
     }
 }

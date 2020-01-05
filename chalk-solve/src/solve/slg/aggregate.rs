@@ -8,7 +8,7 @@ use chalk_ir::cast::Cast;
 use chalk_ir::family::TypeFamily;
 use chalk_ir::*;
 
-use chalk_engine::context;
+use chalk_engine::context::{self, AnswerResult, Context};
 use chalk_engine::CompleteAnswer;
 use std::fmt::Debug;
 
@@ -17,17 +17,23 @@ use std::fmt::Debug;
 impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_, TF> {
     fn make_solution(
         &self,
-        root_goal: &Canonical<InEnvironment<Goal<TF>>>,
+        root_goal: &UCanonical<InEnvironment<Goal<TF>>>,
         mut answers: impl context::AnswerStream<SlgContext<TF>>,
     ) -> Option<Solution<TF>> {
-        // No answers at all?
-        if answers.peek_answer().is_none() {
-            return None;
-        }
-        let CompleteAnswer { subst, ambiguous } = answers.next_answer().unwrap();
+        let CompleteAnswer { subst, ambiguous } = match answers.next_answer() {
+            AnswerResult::NoMoreSolutions => {
+                // No answers at all
+                return None;
+            }
+            AnswerResult::Answer(answer) => answer,
+            AnswerResult::Floundered => CompleteAnswer {
+                subst: SlgContext::identity_constrained_subst(root_goal),
+                ambiguous: true,
+            },
+        };
 
         // Exactly 1 unconditional answer?
-        if answers.peek_answer().is_none() && !ambiguous {
+        if answers.peek_answer().is_no_more_solutions() && !ambiguous {
             return Some(Solution::Unique(subst));
         }
 
@@ -64,12 +70,24 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
             }
 
             match answers.next_answer() {
-                Some(answer1) => {
-                    subst = merge_into_guidance(root_goal, subst, &answer1.subst);
+                AnswerResult::Answer(answer1) => {
+                    subst = merge_into_guidance(
+                        SlgContext::canonical(root_goal),
+                        subst,
+                        &answer1.subst,
+                    );
                     num_answers += 1;
                 }
-
-                None => {
+                AnswerResult::Floundered => {
+                    // FIXME: this doesn't trigger for any current tests
+                    subst = merge_into_guidance(
+                        SlgContext::canonical(root_goal),
+                        subst,
+                        &SlgContext::identity_constrained_subst(root_goal),
+                    );
+                    num_answers += 1;
+                }
+                AnswerResult::NoMoreSolutions => {
                     break Guidance::Definite(subst);
                 }
             }
