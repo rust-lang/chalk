@@ -10,7 +10,6 @@ use chalk_solve::{Solution, SolverChoice};
 #[cfg(feature = "bench")]
 mod bench;
 mod coherence;
-mod slg;
 mod wf_lowering;
 
 fn assert_result(result: &Option<Solution<ChalkIr>>, expected: &str) {
@@ -19,17 +18,10 @@ fn assert_result(result: &Option<Solution<ChalkIr>>, expected: &str) {
         None => format!("No possible solution"),
     };
 
-    println!("expected:\n{}", expected);
-    println!("actual:\n{}", result);
-
-    let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-    let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-    assert!(!expected1.is_empty() && result1.starts_with(&expected1));
+    assert_same(&result, expected);
 }
 
-fn assert_canonical(result: &str, expected: &str) {
-    let result = format!("{}", result);
-
+fn assert_same(result: &str, expected: &str) {
     println!("expected:\n{}", expected);
     println!("actual:\n{}", result);
 
@@ -232,7 +224,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                         db.solve_multiple(&peeled_goal, |result, next_result| {
                             match expected.next() {
                                 Some(expected) => {
-                                    assert_canonical(&format!("{}", &result), expected);
+                                    assert_same(&format!("{}", &result), expected);
                                 }
                                 None => {
                                     assert!(!next_result, "Unexpected next solution");
@@ -242,12 +234,15 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                         }),
                         "Not all solutions processed"
                     );
+                    if expected.next().is_some() {
+                        panic!("Not all solutions processed");
+                    }
                 }
                 TestGoal::First(expected) => {
                     let mut expected = expected.into_iter();
                     db.solve_multiple(&peeled_goal, |result, next_result| match expected.next() {
                         Some(solution) => {
-                            assert_canonical(&format!("{}", &result), solution);
+                            assert_same(&format!("{}", &result), solution);
                             if !next_result {
                                 assert!(expected.next().is_none(), "Not enough solutions found");
                             }

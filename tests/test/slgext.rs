@@ -67,7 +67,6 @@ fn infinite_recursion() {
         goal {
             exists<T> { T: A }
         } yields_all[SolverChoice::slg(10, None)] {
-            "substitution [], lifetime constraints []"
         }
     }
 }
@@ -86,7 +85,6 @@ fn subgoal_abstraction() {
         goal {
             exists<T> { T: Foo }
         } yields_all[SolverChoice::slg(50, None)] {
-            "substitution [], lifetime constraints []"
         }
     }
 }
@@ -778,7 +776,6 @@ fn coinductive_unsound1() {
         goal {
             forall<X> { X: C1orC2 }
         } yields_all[SolverChoice::slg(3, None)] {
-            ""
         }
     }
 }
@@ -820,7 +817,6 @@ fn coinductive_unsound2() {
         goal {
             forall<X> { X: C1orC2 }
         } yields_all[SolverChoice::slg(3, None)] {
-            ""
         }
     }
 }
@@ -958,7 +954,6 @@ fn coinductive_multicycle3() {
         goal {
             forall<X> { X: Any }
         } yields_all[SolverChoice::slg(3, None)] {
-            ""
         }
     }
 }
@@ -1008,7 +1003,6 @@ fn coinductive_multicycle4() {
         goal {
             forall<X> { X: Any }
         } yields_all[SolverChoice::slg(3, None)] {
-            ""
         }
     }
 }
