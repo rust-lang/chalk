@@ -125,18 +125,11 @@ impl<C: Context> Forest<C> {
             match answers.next_answer() {
                 AnswerResult::Answer(answer) => {
                     let subst = if !answer.ambiguous {
-                        SubstitutionResult::Definite(
-                            context.constrained_subst_from_answer(answer),
-                        )
+                        SubstitutionResult::Definite(context.constrained_subst_from_answer(answer))
                     } else {
-                        SubstitutionResult::Ambiguous(
-                            context.constrained_subst_from_answer(answer),
-                        )
+                        SubstitutionResult::Ambiguous(context.constrained_subst_from_answer(answer))
                     };
-                    if !f(
-                        subst,
-                        !answers.peek_answer().is_no_more_solutions(),
-                    ) {
+                    if !f(subst, !answers.peek_answer().is_no_more_solutions()) {
                         return false;
                     }
                 }

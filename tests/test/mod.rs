@@ -267,6 +267,5 @@ mod impls;
 mod misc;
 mod negation;
 mod projection;
-mod slgext;
 mod unify;
 mod wf_goals;

@@ -169,3 +169,275 @@ fn coinductive_trivial_variant3() {
         }
     }
 }
+
+/// Test a tricky case for coinductive handling:
+///
+/// While proving C1, we try to prove C2, which recursively requires
+/// proving C1.  If you are naive, you will assume that C2 therefore
+/// holds -- but this is wrong, because C1 later fails when proving
+/// C3.
+#[test]
+fn coinductive_unsound1() {
+    test! {
+        program {
+            trait C1orC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            forall<T> {
+                T: C1 if T: C2, T: C3
+            }
+
+            forall<T> {
+                T: C2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C2
+            }
+        }
+
+        goal {
+            forall<X> { X: C1orC2 }
+        } yields_all[SolverChoice::slg(3, None)] {
+        }
+    }
+}
+
+/// The only difference between this test and `coinductive_unsound1`
+/// is the order of the final `forall` clauses.
+#[test]
+fn coinductive_unsound2() {
+    test! {
+        program {
+            trait C1orC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            forall<T> {
+                T: C1 if T: C2, T: C3
+            }
+
+            forall<T> {
+                T: C2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C2
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: C1orC2 }
+        } yields_all[SolverChoice::slg(3, None)] {
+        }
+    }
+}
+
+#[test]
+fn coinductive_multicycle1() {
+    test! {
+        program {
+            trait Any { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            forall<T> {
+                T: C1 if T: C2
+            }
+
+            forall<T> {
+                T: C2 if T: C3
+            }
+
+            forall<T> {
+                T: C3 if T: C1
+            }
+
+            forall<T> {
+                T: Any if T: C3
+            }
+
+            forall<T> {
+                T: Any if T: C2
+            }
+
+            forall<T> {
+                T: Any if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: Any }
+        } yields_all[SolverChoice::slg(3, None)] {
+            "substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn coinductive_multicycle2() {
+    test! {
+        program {
+            trait Any { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            forall<T> {
+                T: C1 if T: C2
+            }
+
+            forall<T> {
+                T: C2 if T: C3
+            }
+
+            forall<T> {
+                T: C3 if T: C1, T: C2
+            }
+
+            forall<T> {
+                T: Any if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: Any }
+        } yields_all[SolverChoice::slg(3, None)] {
+            "substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn coinductive_multicycle3() {
+    test! {
+        program {
+            trait Any { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            trait C4 { }
+
+            forall<T> {
+                T: C1 if T: C2
+            }
+
+            forall<T> {
+                T: C2 if T: C3, T: C4
+            }
+
+            forall<T> {
+                T: C3 if T: C1
+            }
+
+            forall<T> {
+                T: Any if T: C3
+            }
+
+            forall<T> {
+                T: Any if T: C2
+            }
+
+            forall<T> {
+                T: Any if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: Any }
+        } yields_all[SolverChoice::slg(3, None)] {
+        }
+    }
+}
+
+#[test]
+fn coinductive_multicycle4() {
+    test! {
+        program {
+            trait Any { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            trait C4 { }
+
+            forall<T> {
+                T: C1 if T: C2
+            }
+
+            forall<T> {
+                T: C2 if T: C3
+            }
+
+            forall<T> {
+                T: C3 if T: C1, T: C4
+            }
+
+            forall<T> {
+                T: Any if T: C3
+            }
+
+            forall<T> {
+                T: Any if T: C2
+            }
+
+            forall<T> {
+                T: Any if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: Any }
+        } yields_all[SolverChoice::slg(3, None)] {
+        }
+    }
+}
