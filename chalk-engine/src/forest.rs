@@ -124,10 +124,17 @@ impl<C: Context> Forest<C> {
         loop {
             match answers.next_answer() {
                 AnswerResult::Answer(answer) => {
-                    if !f(
-                        SubstitutionResult::Substitution(
+                    let subst = if !answer.ambiguous {
+                        SubstitutionResult::Definite(
                             context.constrained_subst_from_answer(answer),
-                        ),
+                        )
+                    } else {
+                        SubstitutionResult::Ambiguous(
+                            context.constrained_subst_from_answer(answer),
+                        )
+                    };
+                    if !f(
+                        subst,
                         !answers.peek_answer().is_no_more_solutions(),
                     ) {
                         return false;
@@ -194,14 +201,16 @@ impl<C: Context> Forest<C> {
 
 #[derive(Debug)]
 pub enum SubstitutionResult<S> {
-    Substitution(S),
+    Definite(S),
+    Ambiguous(S),
     Floundered,
 }
 
 impl<S: Display> Display for SubstitutionResult<S> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            SubstitutionResult::Substitution(subst) => write!(fmt, "{}", subst),
+            SubstitutionResult::Definite(subst) => write!(fmt, "{}", subst),
+            SubstitutionResult::Ambiguous(subst) => write!(fmt, "Ambiguous({})", subst),
             SubstitutionResult::Floundered => write!(fmt, "Floundered"),
         }
     }

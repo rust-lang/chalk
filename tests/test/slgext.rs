@@ -458,8 +458,7 @@ fn cached_answers_1() {
             "substitution [?0 := Vinegar], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := HotSauce<Vinegar>], lifetime constraints []",
-            // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
-            "for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] }"
+            "Ambiguous(for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] })"
         }
     }
 }
@@ -486,8 +485,7 @@ fn cached_answers_2() {
             "substitution [?0 := Vinegar], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := HotSauce<Vinegar>], lifetime constraints []",
-            // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
-            "for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] }"
+            "Ambiguous(for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] })"
         }
     }
 }
@@ -513,8 +511,7 @@ fn cached_answers_3() {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
-            // FiXME(jackh726): need to refactor framework to detect flouder/ambiguous
-            "for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] }",
+            "Ambiguous(for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] })",
             "substitution [?0 := HotSauce<Vinegar>], lifetime constraints []"
         }
     }
