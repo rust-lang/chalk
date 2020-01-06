@@ -98,8 +98,10 @@ Write` would be represented as, effectively, an `exists<T> { T: Write
   
 When equating, two `dyn P` and `dyn Q` types are equal if `P = Q` --
 i.e., they have the same bounds. Note that -- for this purpose --
-ordering of bounds is significant, and chalk assumes that a canonical
-ordering is established from somewhere else.
+ordering of bounds is significant. That means that if you create a
+`dyn Foo + Send` and a `dyn Send + Foo`, chalk would consider them
+distinct types. The assumption is that bounds are ordered in some
+canonical fashion somewhere else. This may want to change.
 
 There are "automatic" rules for proving that `dyn P: P` and so forth, but
 that is outside the scope of the chalk-ir crate.
