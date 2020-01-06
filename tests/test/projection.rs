@@ -357,7 +357,7 @@ fn forall_projection() {
         }
 
         goal {
-            for<'a> fn(<Unit as DropLt<'a>>::Item): Eq<for<> fn(Unit)>
+            for<'a> fn(<Unit as DropLt<'a>>::Item): Eq<fn(Unit)>
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
@@ -384,7 +384,7 @@ fn forall_projection_gat() {
 
         goal {
             forall<T> {
-                for<'a> fn(<Unit as DropOuter<'a>>::Item<T>): Eq<for<> fn(Unit)>
+                for<'a> fn(<Unit as DropOuter<'a>>::Item<T>): Eq<fn(Unit)>
             }
         } yields {
             "No possible solution"
@@ -393,7 +393,7 @@ fn forall_projection_gat() {
         goal {
             forall<T> {
                 if (T: Sized) {
-                    for<'a> fn(<Unit as DropOuter<'a>>::Item<T>): Eq<for<> fn(Unit)>
+                    for<'a> fn(<Unit as DropOuter<'a>>::Item<T>): Eq<fn(Unit)>
                 }
             }
         } yields {
@@ -411,7 +411,7 @@ fn forall_projection_gat() {
         goal {
             forall<T> {
                 if (T: Sized) {
-                    WellFormed(for<'a> fn(<Unit as DropOuter<'a>>::Item<T>): Eq<for<> fn(Unit)>)
+                    WellFormed(for<'a> fn(<Unit as DropOuter<'a>>::Item<T>): Eq<fn(Unit)>)
                 }
             }
         } yields {

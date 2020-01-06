@@ -130,7 +130,7 @@ fn equality_binder() {
         goal {
             forall<T> {
                 exists<'a> {
-                    for<'c> fn(Ref<'c, T>) = for<> fn(Ref<'a, T>)
+                    for<'c> fn(Ref<'c, T>) = fn(Ref<'a, T>)
                 }
             }
         } yields {
@@ -293,7 +293,7 @@ fn quantified_types() {
         }
 
         goal {
-            forall<'a> { for<> fn(fn1<'a>): Foo }
+            forall<'a> { fn(fn1<'a>): Foo }
         } yields {
             // Lifetime constraints are unsatisfiable
             "Unique; substitution [], \
