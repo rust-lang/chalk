@@ -63,7 +63,7 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
             TyData::Projection(proj) => write!(fmt, "{:?}", proj),
             TyData::Placeholder(index) => write!(fmt, "{:?}", index),
-            TyData::ForAll(quantified_ty) => write!(fmt, "{:?}", quantified_ty),
+            TyData::Function(function) => write!(fmt, "{:?}", function),
         }
     }
 }
@@ -81,11 +81,14 @@ impl Debug for InferenceVar {
     }
 }
 
-impl<TF: TypeFamily> Debug for QuantifiedTy<TF> {
+impl<TF: TypeFamily> Debug for Fn<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         // FIXME -- we should introduce some names or something here
-        let QuantifiedTy { num_binders, ty } = self;
-        write!(fmt, "for<{}> {:?}", num_binders, ty)
+        let Fn {
+            num_binders,
+            parameters,
+        } = self;
+        write!(fmt, "for<{}> {:?}", num_binders, parameters)
     }
 }
 

@@ -46,7 +46,7 @@ fn cycle_error() {
 
     // exists(A -> A = for<'a> A)
     table
-        .unify(&environment0, &a, &ty!(for_all 1 (infer 0)))
+        .unify(&environment0, &a, &ty!(function 1 (infer 0)))
         .unwrap_err();
 }
 
@@ -215,18 +215,18 @@ fn quantify_ty_under_binder() {
         .unify(&environment0, &v0.to_ty(), &v1.to_ty())
         .unwrap();
 
-    // Here: the `for_all` introduces 3 binders, so in the result,
+    // Here: the `function` introduces 3 binders, so in the result,
     // `(bound 3)` references the first canonicalized inference
     // variable. -- note that `infer 0` and `infer 1` have been
     // unified above, as well.
     assert_eq!(
         table
             .canonicalize(
-                &ty!(for_all 3 (apply (item 0) (bound 1) (infer 0) (infer 1) (lifetime (infer 2))))
+                &ty!(function 3 (apply (item 0) (bound 1) (infer 0) (infer 1) (lifetime (infer 2))))
             )
             .quantified,
         Canonical {
-            value: ty!(for_all 3 (apply (item 0) (bound 1) (bound 3) (bound 3) (lifetime (bound 4)))),
+            value: ty!(function 3 (apply (item 0) (bound 1) (bound 3) (bound 3) (lifetime (bound 4)))),
             binders: vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)],
         }
     );

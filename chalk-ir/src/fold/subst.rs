@@ -14,13 +14,6 @@ impl<'s, TF: TypeFamily> Subst<'s, TF> {
     }
 }
 
-impl<TF: TypeFamily> QuantifiedTy<TF> {
-    pub fn substitute(&self, parameters: &[Parameter<TF>]) -> Ty<TF> {
-        assert_eq!(self.num_binders, parameters.len());
-        Subst::apply(parameters, &self.ty)
-    }
-}
-
 impl<'b, TF: TypeFamily> DefaultTypeFolder for Subst<'b, TF> {}
 
 impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {

@@ -324,9 +324,7 @@ where
         TyData::Projection(proj) => {
             Ok(TyData::Projection(proj.fold_with(folder, binders)?).intern())
         }
-        TyData::ForAll(quantified_ty) => {
-            Ok(TyData::ForAll(quantified_ty.fold_with(folder, binders)?).intern())
-        }
+        TyData::Function(fun) => Ok(TyData::Function(fun.fold_with(folder, binders)?).intern()),
     }
 }
 
@@ -345,7 +343,7 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
     }
 }
 
-pub fn super_fold_lifetime<TF: TypeFamily, TTF: TargetTypeFamily<TF>>(
+pub fn super_fold_lifetime<TF: TypeFamily, TTF: TypeFamily>(
     folder: &mut dyn Folder<TF, TTF>,
     lifetime: &Lifetime<TF>,
     binders: usize,

@@ -165,7 +165,7 @@ AssocTyValue: AssocTyValue = {
 };
 
 pub Ty: Ty = {
-    "for" "<" <l:Comma<LifetimeId>> ">" <t:Ty> => Ty::ForAll {
+    "for" "<" <l:Comma<LifetimeId>> ">" "fn" "(" <t:Ty> ")" => Ty::ForAll {
         lifetime_names: l,
         ty: Box::new(t)
     },
@@ -174,6 +174,10 @@ pub Ty: Ty = {
 
 TyWithoutFor: Ty = {
     <n:Id> => Ty::Id { name: n},
+    "fn" "(" <t:Ty> ")" => Ty::ForAll {
+        lifetime_names: vec![],
+        ty: Box::new(t)
+    },
     "dyn" <b:Plus<QuantifiedInlineBound>> => Ty::Dyn {
         bounds: b,
     },

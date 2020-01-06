@@ -6,20 +6,20 @@
 use crate::family::TargetTypeFamily;
 use crate::*;
 
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for QuantifiedTy<TF> {
-    type Result = QuantifiedTy<TTF>;
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Fn<TF> {
+    type Result = Fn<TTF>;
     fn fold_with(
         &self,
         folder: &mut dyn Folder<TF, TTF>,
         binders: usize,
     ) -> Fallible<Self::Result> {
-        let QuantifiedTy {
+        let Fn {
             num_binders,
-            ref ty,
+            ref parameters,
         } = *self;
-        Ok(QuantifiedTy {
+        Ok(Fn {
             num_binders,
-            ty: ty.fold_with(folder, binders + num_binders)?,
+            parameters: parameters.fold_with(folder, binders + num_binders)?,
         })
     }
 }

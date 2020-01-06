@@ -90,7 +90,7 @@ impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
             // bounds, and these bounds will be enforced upon calling such a function. In some
             // sense, well-formedness requirements for the input types of an HKT will be enforced
             // lazily, so no need to include them here.
-            TyData::ForAll(..) => (),
+            TyData::Function(..) => (),
 
             TyData::InferenceVar(..) => {
                 panic!("unexpected inference variable in wf rules: {:?}", self)

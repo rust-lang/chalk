@@ -256,7 +256,7 @@ fn truncate_normalizes_under_binders() {
     let _v0 = table.new_variable(u0);
 
     // ty0 = for<'a> Vec<Vec<X>>
-    let ty0 = ty!(for_all 1
+    let ty0 = ty!(function 1
                   (apply (item 0)
                    (apply (item 0)
                     (infer 0))));

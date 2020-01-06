@@ -379,9 +379,9 @@ fn duplicate_parameters() {
 
     lowering_error! {
         program {
-            struct fn<'a> { }
+            struct fun<'a> { }
             struct Foo<'a> {
-                a: for<'a> fn<'a>
+                a: for<'a> fn(fun<'a>)
             }
         } error_msg {
             "duplicate or shadowed parameters"

@@ -341,7 +341,11 @@ fn match_ty<TF: TypeFamily>(
             .db
             .associated_ty_data(projection_ty.associated_ty_id)
             .to_program_clauses(builder),
-        TyData::ForAll(quantified_ty) => match_ty(builder, environment, &quantified_ty.ty),
+        TyData::Function(quantified_ty) => quantified_ty
+            .parameters
+            .iter()
+            .map(|p| p.assert_ty_ref())
+            .for_each(|ty| match_ty(builder, environment, &ty)),
         TyData::BoundVar(_) => {}
         TyData::InferenceVar(_) => panic!("should have floundered"),
         TyData::Dyn(_) => {}

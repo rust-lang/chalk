@@ -527,7 +527,7 @@ impl MayInvalidate {
             }
 
             // For everything else, be conservative here and just say we may invalidate.
-            (TyData::ForAll(_), _)
+            (TyData::Function(_), _)
             | (TyData::Dyn(_), _)
             | (TyData::Apply(_), _)
             | (TyData::Placeholder(_), _)
