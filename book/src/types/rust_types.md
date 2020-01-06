@@ -9,6 +9,7 @@ representation of types is controlled by the [`TypeFamily`] trait.
 [`TypeFamily`]: http://rust-lang.github.io/chalk/chalk_ir/family/trait.TypeFamily.html
 [`Ty`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html
 [`TyData`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyData.html
+[`data`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html#method.data
 
 ## The `TyData` variants and how they map to Rust syntax
 
