@@ -101,14 +101,8 @@ i.e., they have the same bounds. Note that -- for this purpose --
 ordering of bounds is significant, and chalk assumes that a canonical
 ordering is established from somewhere else.
 
-**Question:** We should consider whether logical entailment (e.g., `P
-=> Q` and `Q => P`) would be a better basis. This is more of a Rust
-language design question.
-
 There are "automatic" rules for proving that `dyn P: P` and so forth, but
 that is outside the scope of the chalk-ir crate.
-
-*Question:* in rustc, `dyn Foo` has a lifetime bound, I guess we need that in chalk?
 
 ### Function pointer types
 

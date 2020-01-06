@@ -16,9 +16,3 @@ the type family is defined by the embedded and can be used to control
 other things in memory. For example, the `TypeFamily` trait could be
 used to intern all the types, as rustc does, or it could be used to
 `Box` them instead, as the chalk testing harness currently does.
-
-**Question:** What to name the `TypeFamily`? Since instances of it
-must be passed around, I've been considering `TypeContext`, as well,
-and to call those instances `tcx: TypeContext`, like in the
-compiler...?
-

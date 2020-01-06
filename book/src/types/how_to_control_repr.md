@@ -67,5 +67,3 @@ invoke `ty.data(tf)` instead of just `ty.data()`. This would permit us
 to use (for example) integers to represent interned types, which might
 be nice (e.g., to permit using generational indices).
 
-**Question:** Should we make `lookup_ty` a proper method?
-
