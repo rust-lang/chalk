@@ -165,8 +165,14 @@ impl<TF: TypeFamily> Debug for SeparatorTraitRef<'_, TF> {
 
 impl<TF: TypeFamily> Debug for ProjectionTy<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_projection(self, fmt)
-            .unwrap_or_else(|| write!(fmt, "({:?}){:?}", self.associated_ty_id, &self.substitution))
+        TF::debug_projection(self, fmt).unwrap_or_else(|| {
+            write!(
+                fmt,
+                "({:?}){:?}",
+                self.associated_ty_id,
+                self.substitution.with_angle()
+            )
+        })
     }
 }
 

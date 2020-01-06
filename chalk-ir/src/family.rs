@@ -155,8 +155,8 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// method).
     fn intern_goal(data: GoalData<Self>) -> Self::InternedGoal;
 
-    /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
-    fn goal_data(lifetime: &Self::InternedGoal) -> &GoalData<Self>;
+    /// Lookup the `GoalData` that was interned to create a `InternedGoal`.
+    fn goal_data(goal: &Self::InternedGoal) -> &GoalData<Self>;
 
     /// Create an "interned" substitution from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -167,7 +167,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     ) -> Result<Self::InternedSubstitution, E>;
 
     /// Lookup the `SubstitutionData` that was interned to create a `InternedSubstitution`.
-    fn substitution_data(lifetime: &Self::InternedSubstitution) -> &[Parameter<Self>];
+    fn substitution_data(substitution: &Self::InternedSubstitution) -> &[Parameter<Self>];
 }
 
 pub trait TargetTypeFamily<TF: TypeFamily>: TypeFamily {
