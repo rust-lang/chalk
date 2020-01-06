@@ -25,7 +25,7 @@ type representation and chalk's representation. Once chalk's design
 has stabilized, however, the goal would be for rustc to adopt this
 format as its "native" representation.
 
-Note that even if the chalk type library were uesd everywhere,
+Note that even if the chalk type library were used everywhere,
 however, it would still be useful for rustc to be able to control the
 memory management strategy. (In other words, different consumers might
 wish to use it in different ways.)
@@ -37,7 +37,7 @@ diverges in some places from what is actually implemented. It has also
 not been thoroughly discussed by the Rust compiler team as a whole.
 
 Here is a (partial) list of some things that have to be adapted in
-Chalk of today to match this document:
+Chalk as of today to match this document:
 
 * `Parameter<TF>` needs to be renamed to `GenericArgument`
 * `Vec<Parameter<TF>>` needs to be replaced with `GenericArguments`
@@ -49,4 +49,3 @@ Chalk of today to match this document:
 * Move `Error` from a `TypeName` to its own variant.
 * Introduce `GeneratorWitness` into chalk
 * Complete transition from `ForAll` to `Fn` in chalk 
-

@@ -130,7 +130,7 @@ rustc); when relating a `Fn` type `F` to an unbounded type
 variable `V`, we instantiate `V` with `F`.  But in practice
 because of the above subtyping rules there are actually a range of
 values that `V` could have and still be equal with `F`. This may
-or may not be someting to consider revisiting.
+or may not be something to consider revisiting.
 
 ### Generator witness types
 

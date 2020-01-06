@@ -3,7 +3,7 @@
 The purpose of the [`TypeFamily`] trait is to give control over how
 types and other bits of chalk-ir are represented in memory. This is
 done via an "indirection" strategy. We'll explain that strategy here
-in terms of the [`Ty`] and [`TyData`], the two types used to represent
+in terms of [`Ty`] and [`TyData`], the two types used to represent
 Rust types, but the same pattern is repeated for many other things.
 
 [`TypeFamily`]: http://rust-lang.github.io/chalk/chalk_ir/family/trait.TypeFamily.html
@@ -66,4 +66,3 @@ convenience, we could make that a method as well, so that one would
 invoke `ty.data(tf)` instead of just `ty.data()`. This would permit us
 to use (for example) integers to represent interned types, which might
 be nice (e.g., to permit using generational indices).
-
