@@ -904,7 +904,7 @@ impl LowerProjectionTy for ProjectionTy {
         } = *self;
         let chalk_ir::TraitRef {
             trait_id,
-            parameters: trait_parameters,
+            substitution: trait_substitution,
         } = trait_ref.lower(env)?;
         let lookup = match env.associated_ty_lookups.get(&(trait_id.into(), name.str)) {
             Some(lookup) => lookup,
@@ -933,11 +933,11 @@ impl LowerProjectionTy for ProjectionTy {
             }
         }
 
-        args.extend(trait_parameters);
+        args.extend(trait_substitution.iter().cloned());
 
         Ok(chalk_ir::ProjectionTy {
             associated_ty_id: lookup.id,
-            parameters: args,
+            substitution: chalk_ir::Substitution::from(args),
         })
     }
 }
@@ -961,7 +961,7 @@ impl LowerTy for Ty {
                     } else {
                         Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                             name: chalk_ir::TypeName::Struct(id),
-                            parameters: vec![],
+                            substitution: chalk_ir::Substitution::empty(),
                         })
                         .intern())
                     }
@@ -1001,10 +1001,8 @@ impl LowerTy for Ty {
                     })?;
                 }
 
-                let parameters = args
-                    .iter()
-                    .map(|t| Ok(t.lower(env)?))
-                    .collect::<LowerResult<Vec<_>>>()?;
+                let substitution =
+                    chalk_ir::Substitution::from_fallible(args.iter().map(|t| Ok(t.lower(env)?)))?;
 
                 for (param, arg) in k.binders.binders.iter().zip(args.iter()) {
                     if param.kind() != arg.kind() {
@@ -1018,7 +1016,7 @@ impl LowerTy for Ty {
 
                 Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                     name: chalk_ir::TypeName::Struct(id),
-                    parameters: parameters,
+                    substitution: substitution,
                 })
                 .intern())
             }

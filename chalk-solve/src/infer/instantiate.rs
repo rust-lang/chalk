@@ -13,15 +13,10 @@ impl<TF: TypeFamily> InferenceTable<TF> {
         &mut self,
         binders: &[ParameterKind<UniverseIndex>],
     ) -> Substitution<TF> {
-        Substitution {
-            parameters: binders
-                .iter()
-                .map(|kind| {
-                    let param_infer_var = kind.map(|ui| self.new_variable(ui));
-                    param_infer_var.to_parameter()
-                })
-                .collect(),
-        }
+        Substitution::from(binders.iter().map(|kind| {
+            let param_infer_var = kind.map(|ui| self.new_variable(ui));
+            param_infer_var.to_parameter()
+        }))
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.

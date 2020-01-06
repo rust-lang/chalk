@@ -94,7 +94,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyValue<TF> {
                 .binders
                 .map_ref(|b| &b.where_clauses)
                 .into_iter()
-                .map(|wc| wc.substitute(&projection.parameters));
+                .map(|wc| wc.substitute(&projection.substitution));
 
             // Create the final program clause:
             //
@@ -173,7 +173,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for StructDatum<TF> {
         builder.push_binders(&binders, |builder, where_clauses| {
             let self_appl_ty = &ApplicationTy {
                 name: self.id.cast(),
-                parameters: builder.placeholders_in_scope().to_vec(),
+                substitution: builder.substitution_in_scope(),
             };
             let self_ty = self_appl_ty.clone().intern();
 
@@ -387,11 +387,9 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for TraitDatum<TF> {
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, TF>) {
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         builder.push_binders(&binders, |builder, where_clauses| {
-            let parameters = builder.placeholders_in_scope().to_vec();
-
             let trait_ref = chalk_ir::TraitRef {
                 trait_id: self.id,
-                parameters,
+                substitution: builder.substitution_in_scope(),
             };
 
             builder.push_clause(
@@ -568,11 +566,11 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, TF>) {
         let binders = self.binders.map_ref(|b| (&b.where_clauses, &b.bounds));
         builder.push_binders(&binders, |builder, (where_clauses, bounds)| {
-            let parameters = builder.placeholders_in_scope().to_vec();
+            let substitution = builder.substitution_in_scope();
 
             let projection = ProjectionTy {
                 associated_ty_id: self.id,
-                parameters: parameters.clone(),
+                substitution: substitution.clone(),
             };
             let projection_ty = projection.clone().intern();
 
@@ -583,7 +581,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
             // we would produce `(Iterator::Item)<T>`.
             let app_ty: Ty<_> = ApplicationTy {
                 name: TypeName::AssociatedType(self.id),
-                parameters,
+                substitution,
             }
             .intern();
 

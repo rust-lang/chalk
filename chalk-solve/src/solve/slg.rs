@@ -186,7 +186,7 @@ impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<
             DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
                 let trait_datum = self.program.trait_datum(trait_ref.trait_id);
                 if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                    let self_ty = trait_ref.self_type_parameter().unwrap();
+                    let self_ty = trait_ref.self_type_parameter();
                     if let Some(v) = self_ty.inference_var() {
                         if !infer.infer.var_is_bound(v) {
                             return Err(Floundered);
@@ -450,9 +450,8 @@ trait SubstitutionExt<TF: TypeFamily> {
 
 impl<TF: TypeFamily> SubstitutionExt<TF> for Substitution<TF> {
     fn may_invalidate(&self, subst: &Canonical<Substitution<TF>>) -> bool {
-        self.parameters
-            .iter()
-            .zip(&subst.value.parameters)
+        self.iter()
+            .zip(subst.value.iter())
             .any(|(new, current)| MayInvalidate.aggregate_parameters(new, current))
     }
 }
@@ -546,14 +545,19 @@ impl MayInvalidate {
     ) -> bool {
         let ApplicationTy {
             name: new_name,
-            parameters: new_parameters,
+            substitution: new_substitution,
         } = new;
         let ApplicationTy {
             name: current_name,
-            parameters: current_parameters,
+            substitution: current_substitution,
         } = current;
 
-        self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
+        self.aggregate_name_and_substs(
+            new_name,
+            new_substitution,
+            current_name,
+            current_substitution,
+        )
     }
 
     fn aggregate_placeholder_tys(
@@ -571,22 +575,27 @@ impl MayInvalidate {
     ) -> bool {
         let ProjectionTy {
             associated_ty_id: new_name,
-            parameters: new_parameters,
+            substitution: new_substitution,
         } = new;
         let ProjectionTy {
             associated_ty_id: current_name,
-            parameters: current_parameters,
+            substitution: current_substitution,
         } = current;
 
-        self.aggregate_name_and_substs(new_name, new_parameters, current_name, current_parameters)
+        self.aggregate_name_and_substs(
+            new_name,
+            new_substitution,
+            current_name,
+            current_substitution,
+        )
     }
 
     fn aggregate_name_and_substs<N, TF>(
         &mut self,
         new_name: N,
-        new_parameters: &[Parameter<TF>],
+        new_substitution: &Substitution<TF>,
         current_name: N,
-        current_parameters: &[Parameter<TF>],
+        current_substitution: &Substitution<TF>,
     ) -> bool
     where
         N: Copy + Eq + Debug,
@@ -599,17 +608,17 @@ impl MayInvalidate {
         let name = new_name;
 
         assert_eq!(
-            new_parameters.len(),
-            current_parameters.len(),
-            "does {:?} take {} parameters or {}? can't both be right",
+            new_substitution.len(),
+            current_substitution.len(),
+            "does {:?} take {} substitution or {}? can't both be right",
             name,
-            new_parameters.len(),
-            current_parameters.len()
+            new_substitution.len(),
+            current_substitution.len()
         );
 
-        new_parameters
+        new_substitution
             .iter()
-            .zip(current_parameters)
+            .zip(current_substitution)
             .any(|(new, current)| self.aggregate_parameters(new, current))
     }
 }

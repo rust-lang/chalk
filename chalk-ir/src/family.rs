@@ -2,6 +2,7 @@ use crate::tls;
 use crate::AssocTypeId;
 use crate::GoalData;
 use crate::LifetimeData;
+use crate::Parameter;
 use crate::ParameterData;
 use crate::ProjectionTy;
 use crate::RawId;
@@ -67,6 +68,14 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// An `InternedGoal` is created by `intern_goal` and can be
     /// converted back to its underlying data via `goal_data`.
     type InternedGoal: Debug + Clone + Eq + Ord + Hash;
+
+    /// "Interned" representation of a "substitution".  In normal user code,
+    /// `Self::InternedSubstitution` is not referenced. Instead, we refer to
+    /// `Substitution<Self>`, which wraps this type.
+    ///
+    /// An `InternedSubstitution` is created by `intern_substitution` and can be
+    /// converted back to its underlying data via `substitution_data`.
+    type InternedSubstitution: Debug + Clone + Eq + Ord + Hash;
 
     /// The core "id" type used for struct-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
@@ -147,7 +156,18 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     fn intern_goal(data: GoalData<Self>) -> Self::InternedGoal;
 
     /// Lookup the `GoalData` that was interned to create a `InternedGoal`.
-    fn goal_data(lifetime: &Self::InternedGoal) -> &GoalData<Self>;
+    fn goal_data(goal: &Self::InternedGoal) -> &GoalData<Self>;
+
+    /// Create an "interned" substitution from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `SubstitutionData::intern` (which will ultimately call this
+    /// method).
+    fn intern_substitution<E>(
+        data: impl IntoIterator<Item = Result<Parameter<Self>, E>>,
+    ) -> Result<Self::InternedSubstitution, E>;
+
+    /// Lookup the `SubstitutionData` that was interned to create a `InternedSubstitution`.
+    fn substitution_data(substitution: &Self::InternedSubstitution) -> &[Parameter<Self>];
 }
 
 pub trait TargetTypeFamily<TF: TypeFamily>: TypeFamily {
@@ -181,6 +201,7 @@ impl TypeFamily for ChalkIr {
     type InternedLifetime = LifetimeData<ChalkIr>;
     type InternedParameter = ParameterData<ChalkIr>;
     type InternedGoal = Arc<GoalData<ChalkIr>>;
+    type InternedSubstitution = Vec<Parameter<ChalkIr>>;
     type DefId = RawId;
 
     fn debug_struct_id(
@@ -241,6 +262,16 @@ impl TypeFamily for ChalkIr {
 
     fn goal_data(goal: &Arc<GoalData<ChalkIr>>) -> &GoalData<ChalkIr> {
         goal
+    }
+
+    fn intern_substitution<E>(
+        data: impl IntoIterator<Item = Result<Parameter<ChalkIr>, E>>,
+    ) -> Result<Vec<Parameter<ChalkIr>>, E> {
+        data.into_iter().collect()
+    }
+
+    fn substitution_data(substitution: &Vec<Parameter<ChalkIr>>) -> &[Parameter<ChalkIr>] {
+        substitution
     }
 }
 

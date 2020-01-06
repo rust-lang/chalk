@@ -95,9 +95,8 @@ fn merge_into_guidance<TF: TypeFamily>(
     // common.
     let aggr_parameters: Vec<_> = guidance
         .value
-        .parameters
         .iter()
-        .zip(&subst1.parameters)
+        .zip(subst1.iter())
         .enumerate()
         .map(|(index, (value, value1))| {
             // We have two values for some variable X that
@@ -125,9 +124,7 @@ fn merge_into_guidance<TF: TypeFamily>(
         })
         .collect();
 
-    let aggr_subst = Substitution {
-        parameters: aggr_parameters,
-    };
+    let aggr_subst = Substitution::from(aggr_parameters);
 
     infer.canonicalize(&aggr_subst).quantified
 }
@@ -136,7 +133,6 @@ fn is_trivial<TF: TypeFamily>(subst: &Canonical<Substitution<TF>>) -> bool {
     // A subst is trivial if..
     subst
         .value
-        .parameters
         .iter()
         .enumerate()
         .all(|(index, parameter)| match parameter.data() {
@@ -213,15 +209,17 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
     ) -> Ty<TF> {
         let ApplicationTy {
             name: name1,
-            parameters: parameters1,
+            substitution: substitution1,
         } = apply1;
         let ApplicationTy {
             name: name2,
-            parameters: parameters2,
+            substitution: substitution2,
         } = apply2;
 
-        self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
-            .map(|(&name, parameters)| TyData::Apply(ApplicationTy { name, parameters }).intern())
+        self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
+            .map(|(&name, substitution)| {
+                TyData::Apply(ApplicationTy { name, substitution }).intern()
+            })
             .unwrap_or_else(|| self.new_variable())
     }
 
@@ -244,18 +242,18 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
     ) -> Ty<TF> {
         let ProjectionTy {
             associated_ty_id: name1,
-            parameters: parameters1,
+            substitution: substitution1,
         } = proj1;
         let ProjectionTy {
             associated_ty_id: name2,
-            parameters: parameters2,
+            substitution: substitution2,
         } = proj2;
 
-        self.aggregate_name_and_substs(name1, parameters1, name2, parameters2)
-            .map(|(&associated_ty_id, parameters)| {
+        self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
+            .map(|(&associated_ty_id, substitution)| {
                 TyData::Projection(ProjectionTy {
                     associated_ty_id,
-                    parameters,
+                    substitution,
                 })
                 .intern()
             })
@@ -265,10 +263,10 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
     fn aggregate_name_and_substs<N>(
         &mut self,
         name1: N,
-        parameters1: &[Parameter<TF>],
+        substitution1: &Substitution<TF>,
         name2: N,
-        parameters2: &[Parameter<TF>],
-    ) -> Option<(N, Vec<Parameter<TF>>)>
+        substitution2: &Substitution<TF>,
+    ) -> Option<(N, Substitution<TF>)>
     where
         N: Copy + Eq + Debug,
     {
@@ -279,21 +277,22 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         let name = name1;
 
         assert_eq!(
-            parameters1.len(),
-            parameters2.len(),
-            "does {:?} take {} parameters or {}? can't both be right",
+            substitution1.len(),
+            substitution2.len(),
+            "does {:?} take {} substitution or {}? can't both be right",
             name,
-            parameters1.len(),
-            parameters2.len()
+            substitution1.len(),
+            substitution2.len()
         );
 
-        let parameters: Vec<_> = parameters1
-            .iter()
-            .zip(parameters2)
-            .map(|(p1, p2)| self.aggregate_parameters(p1, p2))
-            .collect();
+        let substitution = Substitution::from(
+            substitution1
+                .iter()
+                .zip(substitution2)
+                .map(|(p1, p2)| self.aggregate_parameters(p1, p2)),
+        );
 
-        Some((name, parameters))
+        Some((name, substitution))
     }
 
     fn aggregate_parameters(&mut self, p1: &Parameter<TF>, p2: &Parameter<TF>) -> Parameter<TF> {

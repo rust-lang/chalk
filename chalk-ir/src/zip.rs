@@ -181,7 +181,7 @@ macro_rules! struct_zip {
 
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for TraitRef<TF> {
     trait_id,
-    parameters,
+    substitution,
 });
 struct_zip!(impl[
     T: HasTypeFamily<TypeFamily = TF> + Zip<TF>,
@@ -190,11 +190,11 @@ struct_zip!(impl[
     environment,
     goal,
 });
-struct_zip!(impl[TF: TypeFamily] Zip<TF> for ApplicationTy<TF> { name, parameters });
+struct_zip!(impl[TF: TypeFamily] Zip<TF> for ApplicationTy<TF> { name, substitution });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for DynTy<TF> { bounds });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for ProjectionTy<TF> {
     associated_ty_id,
-    parameters,
+    substitution,
 });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for Normalize<TF> { projection, ty });
 struct_zip!(impl[TF: TypeFamily] Zip<TF> for ProjectionEq<TF> { projection, ty });
@@ -252,6 +252,12 @@ enum_zip!(impl<TF> for DomainGoal<TF> {
     DownstreamType
 });
 enum_zip!(impl<TF> for ProgramClause<TF> { Implies, ForAll });
+
+impl<TF: TypeFamily> Zip<TF> for Substitution<TF> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+        Zip::zip_with(zipper, a.parameters(), b.parameters())
+    }
+}
 
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the

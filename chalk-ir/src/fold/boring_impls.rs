@@ -86,6 +86,7 @@ impl<T: Fold<TF, TTF>, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> 
         }
     }
 }
+
 impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Parameter<TF> {
     type Result = Parameter<TTF>;
     fn fold_with(
@@ -107,6 +108,19 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Goal<TF> {
     ) -> Fallible<Self::Result> {
         let data = self.data().fold_with(folder, binders)?;
         Ok(Goal::new(data))
+    }
+}
+
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Substitution<TF> {
+    type Result = Substitution<TTF>;
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        Ok(Substitution::from_fallible(
+            self.iter().map(|p| p.fold_with(folder, binders)),
+        )?)
     }
 }
 

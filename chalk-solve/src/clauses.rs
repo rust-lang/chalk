@@ -74,14 +74,14 @@ pub fn push_auto_trait_impls<TF: TypeFamily>(
     builder.push_binders(&binders, |builder, fields| {
         let self_ty: Ty<_> = ApplicationTy {
             name: struct_id.cast(),
-            parameters: builder.placeholders_in_scope().to_vec(),
+            substitution: builder.substitution_in_scope(),
         }
         .intern();
 
         // trait_ref = `MyStruct<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
             trait_id: auto_trait_id,
-            parameters: vec![self_ty.cast()],
+            substitution: Substitution::from1(self_ty),
         };
 
         // forall<P0..Pn> { // generic parameters from struct
@@ -94,7 +94,7 @@ pub fn push_auto_trait_impls<TF: TypeFamily>(
             auto_trait_ref,
             fields.iter().map(|field_ty| TraitRef {
                 trait_id: auto_trait_id,
-                parameters: vec![field_ty.clone().cast()],
+                substitution: Substitution::from1(field_ty.clone()),
             }),
         );
     });
@@ -147,7 +147,9 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             // as for the `Implemented(Foo) :- FromEnv(Foo)` rule.
             db.trait_datum(trait_id).to_program_clauses(builder);
 
-            for impl_id in db.impls_for_trait(trait_ref.trait_id, &trait_ref.parameters) {
+            for impl_id in
+                db.impls_for_trait(trait_ref.trait_id, trait_ref.substitution.parameters())
+            {
                 db.impl_datum(impl_id).to_program_clauses(builder);
             }
 
@@ -155,7 +157,7 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                match trait_ref.parameters[0].assert_ty_ref().data() {
+                match trait_ref.self_type_parameter().data() {
                     TyData::Apply(apply) => {
                         if let Some(struct_id) = db.as_struct_id(&apply.name) {
                             push_auto_trait_impls(builder, trait_id, struct_id);
@@ -209,7 +211,7 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             // generated two clauses that are totally irrelevant to
             // that goal, because they let us prove other things but
             // not `Clone`.
-            let self_ty = trait_ref.self_type_parameter().unwrap(); // This cannot be None
+            let self_ty = trait_ref.self_type_parameter();
             if let TyData::Dyn(dyn_ty) = self_ty.data() {
                 // In this arm, `self_ty` is the `dyn Fn(&u8)`,
                 // and `bounded_ty` is the `exists<T> { .. }`

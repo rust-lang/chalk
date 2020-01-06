@@ -118,7 +118,8 @@ impl Debug for PlaceholderIndex {
 
 impl<TF: TypeFamily> Debug for ApplicationTy<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{:?}{:?}", self.name, Angle(&self.parameters))
+        let ApplicationTy { name, substitution } = self;
+        write!(fmt, "{:?}{:?}", name, substitution.with_angle())
     }
 }
 
@@ -153,13 +154,14 @@ struct SeparatorTraitRef<'me, TF: TypeFamily> {
 
 impl<TF: TypeFamily> Debug for SeparatorTraitRef<'_, TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let parameters = self.trait_ref.substitution.parameters();
         write!(
             fmt,
             "{:?}{}{:?}{:?}",
-            self.trait_ref.parameters[0],
+            parameters[0],
             self.separator,
             self.trait_ref.trait_id,
-            Angle(&self.trait_ref.parameters[1..])
+            Angle(&parameters[1..])
         )
     }
 }
@@ -171,7 +173,7 @@ impl<TF: TypeFamily> Debug for ProjectionTy<TF> {
                 fmt,
                 "({:?}){:?}",
                 self.associated_ty_id,
-                Angle(&self.parameters)
+                self.substitution.with_angle()
             )
         })
     }
@@ -245,13 +247,9 @@ impl<TF: TypeFamily> Debug for DomainGoal<TF> {
             DomainGoal::IsLocal(n) => write!(fmt, "IsLocal({:?})", n),
             DomainGoal::IsUpstream(n) => write!(fmt, "IsUpstream({:?})", n),
             DomainGoal::IsFullyVisible(n) => write!(fmt, "IsFullyVisible({:?})", n),
-            DomainGoal::LocalImplAllowed(tr) => write!(
-                fmt,
-                "LocalImplAllowed({:?}: {:?}{:?})",
-                tr.parameters[0],
-                tr.trait_id,
-                Angle(&tr.parameters[1..])
-            ),
+            DomainGoal::LocalImplAllowed(tr) => {
+                write!(fmt, "LocalImplAllowed({:?})", tr.with_colon(),)
+            }
             DomainGoal::Compatible(_) => write!(fmt, "Compatible"),
             DomainGoal::DownstreamType(n) => write!(fmt, "DownstreamType({:?})", n),
         }
@@ -416,9 +414,17 @@ impl<TF: TypeFamily> Display for ConstrainedSubst<TF> {
     }
 }
 
+impl<TF: TypeFamily> Substitution<TF> {
+    /// Displays the substitution in the form `< P0, .. Pn >`, or (if
+    /// the substitution is empty) as an empty string.
+    pub fn with_angle(&self) -> Angle<'_, Parameter<TF>> {
+        Angle(self.parameters())
+    }
+}
+
 impl<TF: TypeFamily> Debug for Substitution<TF> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        Display::fmt(self, f)
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        Display::fmt(self, fmt)
     }
 }
 
@@ -428,7 +434,7 @@ impl<TF: TypeFamily> Display for Substitution<TF> {
 
         write!(f, "[")?;
 
-        for (index, value) in self.parameters.iter().enumerate() {
+        for (index, value) in self.iter().enumerate() {
             if first {
                 first = false;
             } else {

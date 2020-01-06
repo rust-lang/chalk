@@ -425,7 +425,7 @@ impl PlaceholderIndex {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Fold, Ord, HasTypeFamily)]
 pub struct ApplicationTy<TF: TypeFamily> {
     pub name: TypeName<TF>,
-    pub parameters: Vec<Parameter<TF>>,
+    pub substitution: Substitution<TF>,
 }
 
 impl<TF: TypeFamily> ApplicationTy<TF> {
@@ -434,7 +434,7 @@ impl<TF: TypeFamily> ApplicationTy<TF> {
     }
 
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
-        self.parameters.iter().filter_map(|p| p.ty()).cloned()
+        self.substitution.iter().filter_map(|p| p.ty()).cloned()
     }
 
     pub fn first_type_parameter(&self) -> Option<Ty<TF>> {
@@ -571,7 +571,7 @@ impl<TF: TypeFamily> ParameterData<TF> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct ProjectionTy<TF: TypeFamily> {
     pub associated_ty_id: AssocTypeId<TF>,
-    pub parameters: Vec<Parameter<TF>>,
+    pub substitution: Substitution<TF>,
 }
 
 impl<TF: TypeFamily> ProjectionTy<TF> {
@@ -583,16 +583,16 @@ impl<TF: TypeFamily> ProjectionTy<TF> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub struct TraitRef<TF: TypeFamily> {
     pub trait_id: TraitId<TF>,
-    pub parameters: Vec<Parameter<TF>>,
+    pub substitution: Substitution<TF>,
 }
 
 impl<TF: TypeFamily> TraitRef<TF> {
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
-        self.parameters.iter().filter_map(|p| p.ty()).cloned()
+        self.substitution.iter().filter_map(|p| p.ty()).cloned()
     }
 
-    pub fn self_type_parameter(&self) -> Option<Ty<TF>> {
-        self.type_parameters().next()
+    pub fn self_type_parameter(&self) -> Ty<TF> {
+        self.type_parameters().next().unwrap()
     }
 
     pub fn from_env(self) -> FromEnv<TF> {
@@ -894,7 +894,8 @@ where
     /// binders. So if the binders represent (e.g.) `<X, Y> { T }` and
     /// parameters is the slice `[A, B]`, then returns `[X => A, Y =>
     /// B] T`.
-    pub fn substitute(&self, parameters: &[Parameter<TF>]) -> T::Result {
+    pub fn substitute(&self, parameters: &(impl AsParameters<TF> + ?Sized)) -> T::Result {
+        let parameters = parameters.as_parameters();
         assert_eq!(self.binders.len(), parameters.len());
         Subst::apply(parameters, &self.value)
     }
@@ -1006,7 +1007,7 @@ impl<T> UCanonical<T> {
         canonical_subst: &Canonical<AnswerSubst<TF>>,
     ) -> bool {
         let subst = &canonical_subst.value.subst;
-        assert_eq!(self.canonical.binders.len(), subst.parameters.len());
+        assert_eq!(self.canonical.binders.len(), subst.parameters().len());
         subst.is_identity_subst()
     }
 }
@@ -1172,17 +1173,60 @@ pub enum Constraint<TF: TypeFamily> {
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Fold, Hash, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, HasTypeFamily)]
 pub struct Substitution<TF: TypeFamily> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
     /// the kind of the value.
-    pub parameters: Vec<Parameter<TF>>,
+    parameters: TF::InternedSubstitution,
 }
 
 impl<TF: TypeFamily> Substitution<TF> {
+    pub fn from(parameters: impl IntoIterator<Item = impl CastTo<Parameter<TF>>>) -> Self {
+        Self::from_fallible(
+            parameters
+                .into_iter()
+                .map(|p| -> Result<Parameter<TF>, ()> { Ok(p.cast()) }),
+        )
+        .unwrap()
+    }
+
+    pub fn from_fallible<E>(
+        parameters: impl IntoIterator<Item = Result<impl CastTo<Parameter<TF>>, E>>,
+    ) -> Result<Self, E> {
+        use crate::cast::Caster;
+        Ok(Substitution {
+            parameters: TF::intern_substitution(parameters.into_iter().casted())?,
+        })
+    }
+
+    /// Index into the list of parameters
+    pub fn at(&self, index: usize) -> &Parameter<TF> {
+        &self.parameters()[index]
+    }
+
+    pub fn from1(parameter: impl CastTo<Parameter<TF>>) -> Self {
+        Self::from(Some(parameter))
+    }
+
+    pub fn empty() -> Self {
+        Self::from(None::<Parameter<TF>>)
+    }
+
     pub fn is_empty(&self) -> bool {
-        self.parameters.is_empty()
+        self.parameters().is_empty()
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Parameter<TF>> {
+        self.parameters().iter()
+    }
+
+    pub fn parameters(&self) -> &[Parameter<TF>] {
+        TF::substitution_data(&self.parameters)
+    }
+
+    pub fn len(&self) -> usize {
+        self.parameters().len()
     }
 
     /// A substitution is an **identity substitution** if it looks
@@ -1198,8 +1242,7 @@ impl<TF: TypeFamily> Substitution<TF> {
     /// Basically, each value is mapped to a type or lifetime with its
     /// same index.
     pub fn is_identity_subst(&self) -> bool {
-        self.parameters
-            .iter()
+        self.iter()
             .zip(0..)
             .all(|(parameter, index)| match parameter.data() {
                 ParameterKind::Ty(ty) => match ty.data() {
@@ -1214,19 +1257,68 @@ impl<TF: TypeFamily> Substitution<TF> {
     }
 }
 
+pub trait AsParameters<TF: TypeFamily> {
+    fn as_parameters(&self) -> &[Parameter<TF>];
+}
+
+impl<TF: TypeFamily> AsParameters<TF> for Substitution<TF> {
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        self.parameters()
+    }
+}
+
+impl<TF: TypeFamily> AsParameters<TF> for [Parameter<TF>] {
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        self
+    }
+}
+
+impl<TF: TypeFamily> AsParameters<TF> for [Parameter<TF>; 1] {
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        self
+    }
+}
+
+impl<TF: TypeFamily> AsParameters<TF> for Vec<Parameter<TF>> {
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        self
+    }
+}
+
+impl<T, TF: TypeFamily> AsParameters<TF> for &T
+where
+    T: ?Sized + AsParameters<TF>,
+{
+    fn as_parameters(&self) -> &[Parameter<TF>] {
+        T::as_parameters(self)
+    }
+}
+
+impl<'me, TF> std::iter::IntoIterator for &'me Substitution<TF>
+where
+    TF: TypeFamily,
+{
+    type IntoIter = std::slice::Iter<'me, Parameter<TF>>;
+    type Item = &'me Parameter<TF>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 impl<'a, TF: TypeFamily> DefaultTypeFolder for &'a Substitution<TF> {}
 
 impl<'a, TF: TypeFamily> DefaultInferenceFolder for &'a Substitution<TF> {}
 
 impl<'a, TF: TypeFamily> FreeVarFolder<TF> for &'a Substitution<TF> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
-        let ty = &self.parameters[depth];
+        let ty = self.at(depth);
         let ty = ty.assert_ty_ref();
         Ok(ty.shifted_in(binders))
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
-        let l = &self.parameters[depth];
+        let l = self.at(depth);
         let l = l.assert_lifetime_ref();
         Ok(l.shifted_in(binders))
     }

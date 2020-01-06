@@ -44,6 +44,14 @@ trait FoldInputTypes: HasTypeFamily {
     fn fold(&self, accumulator: &mut Vec<Ty<Self::TypeFamily>>);
 }
 
+impl<T: FoldInputTypes> FoldInputTypes for [T] {
+    fn fold(&self, accumulator: &mut Vec<Ty<T::TypeFamily>>) {
+        for f in self {
+            f.fold(accumulator);
+        }
+    }
+}
+
 impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
     fn fold(&self, accumulator: &mut Vec<Ty<T::TypeFamily>>) {
         for f in self {
@@ -60,12 +68,18 @@ impl<TF: TypeFamily> FoldInputTypes for Parameter<TF> {
     }
 }
 
+impl<TF: TypeFamily> FoldInputTypes for Substitution<TF> {
+    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
+        self.parameters().fold(accumulator)
+    }
+}
+
 impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
     fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
         match self.data() {
             TyData::Apply(app) => {
                 accumulator.push(self.clone());
-                app.parameters.fold(accumulator);
+                app.substitution.fold(accumulator);
             }
 
             TyData::Dyn(qwc) => {
@@ -75,7 +89,7 @@ impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
 
             TyData::Projection(proj) => {
                 accumulator.push(self.clone());
-                proj.parameters.fold(accumulator);
+                proj.substitution.fold(accumulator);
             }
 
             TyData::Placeholder(_) => {
@@ -101,7 +115,7 @@ impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
 
 impl<TF: TypeFamily> FoldInputTypes for TraitRef<TF> {
     fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
-        self.parameters.fold(accumulator);
+        self.substitution.fold(accumulator);
     }
 }
 
@@ -369,7 +383,7 @@ where
         let AssociatedTyDatumBound {
             bounds: defn_bounds,
             where_clauses: defn_where_clauses,
-        } = assoc_ty_datum.binders.substitute(&projection.parameters);
+        } = assoc_ty_datum.binders.substitute(&projection.substitution);
 
         // Check that the `value_ty` meets the bounds from the trait.
         // Here we take the substituted bounds (`defn_bounds`) and we

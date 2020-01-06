@@ -5,7 +5,7 @@ macro_rules! ty {
     (apply $n:tt $($arg:tt)*) => {
         $crate::TyData::Apply(ApplicationTy {
             name: ty_name!($n),
-            parameters: vec![$(arg!($arg)),*],
+            substitution: $crate::Substitution::from(vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
         }).intern()
     };
 
@@ -26,7 +26,7 @@ macro_rules! ty {
     (projection (item $n:tt) $($arg:tt)*) => {
         $crate::TyData::Projection(ProjectionTy {
             associated_ty_id: AssocTypeId(RawId { index: $n }),
-            parameters: vec![$(arg!($arg)),*],
+            substitution: $crate::Substitution::from(vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
         }).intern()
     };
 

@@ -23,8 +23,9 @@ pub trait Split<TF: TypeFamily>: RustIrDatabase<TF> {
     ) {
         let ProjectionTy {
             associated_ty_id,
-            ref parameters,
+            ref substitution,
         } = *projection;
+        let parameters = substitution.parameters();
         let associated_ty_data = &self.associated_ty_data(associated_ty_id);
         let trait_datum = &self.trait_datum(associated_ty_data.trait_id);
         let trait_num_params = trait_datum.binders.len();
@@ -51,7 +52,7 @@ pub trait Split<TF: TypeFamily>: RustIrDatabase<TF> {
         let (associated_ty_data, trait_params, _) = self.split_projection(&projection);
         TraitRef {
             trait_id: associated_ty_data.trait_id,
-            parameters: trait_params.to_owned(),
+            substitution: Substitution::from(trait_params),
         }
     }
 
@@ -135,21 +136,22 @@ pub trait Split<TF: TypeFamily>: RustIrDatabase<TF> {
         let trait_ref = {
             let impl_trait_ref = impl_datum.binders.map_ref(|b| &b.trait_ref);
             debug!("impl_trait_ref: {:?}", impl_trait_ref);
-            impl_trait_ref.substitute(&impl_parameters)
+            impl_trait_ref.substitute(impl_parameters)
         };
 
         // Create the parameters for the projection -- in our example
         // above, this would be `['!a, Box<!T>]`, corresponding to
         // `<Box<!T> as Foo>::Item<'!a>`
-        let projection_parameters: Vec<_> = atv_parameters
-            .iter()
-            .chain(&trait_ref.parameters)
-            .cloned()
-            .collect();
+        let projection_substitution = Substitution::from(
+            atv_parameters
+                .iter()
+                .chain(&trait_ref.substitution)
+                .cloned(),
+        );
 
         let projection = ProjectionTy {
             associated_ty_id: associated_ty_value.associated_ty_id,
-            parameters: projection_parameters,
+            substitution: projection_substitution,
         };
 
         debug!("impl_parameters: {:?}", impl_parameters);
