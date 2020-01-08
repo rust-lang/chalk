@@ -339,9 +339,9 @@ fn match_ty<TF: TypeFamily>(
     match ty.data() {
         TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
         TyData::Placeholder(_) => {}
-        TyData::Projection(projection_ty) => builder
+        TyData::Alias(alias_ty) => builder
             .db
-            .associated_ty_data(projection_ty.associated_ty_id)
+            .associated_ty_data(alias_ty.associated_ty_id)
             .to_program_clauses(builder),
         TyData::Function(quantified_ty) => quantified_ty
             .parameters

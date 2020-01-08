@@ -183,12 +183,12 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
                 self.aggregate_application_tys(apply1, apply2)
             }
 
-            (TyData::Projection(apply1), TyData::Projection(apply2)) => {
-                self.aggregate_projection_tys(apply1, apply2)
+            (TyData::Alias(alias1), TyData::Alias(alias2)) => {
+                self.aggregate_alias_tys(alias1, alias2)
             }
 
-            (TyData::Placeholder(apply1), TyData::Placeholder(apply2)) => {
-                self.aggregate_placeholder_tys(apply1, apply2)
+            (TyData::Placeholder(placeholder1), TyData::Placeholder(placeholder2)) => {
+                self.aggregate_placeholder_tys(placeholder1, placeholder2)
             }
 
             // Mismatched base kinds.
@@ -197,7 +197,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
             | (TyData::Dyn(_), _)
             | (TyData::Function(_), _)
             | (TyData::Apply(_), _)
-            | (TyData::Projection(_), _)
+            | (TyData::Alias(_), _)
             | (TyData::Placeholder(_), _) => self.new_variable(),
         }
     }
@@ -235,23 +235,23 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         }
     }
 
-    fn aggregate_projection_tys(
+    fn aggregate_alias_tys(
         &mut self,
-        proj1: &ProjectionTy<TF>,
-        proj2: &ProjectionTy<TF>,
+        alias1: &ProjectionTy<TF>,
+        alias2: &ProjectionTy<TF>,
     ) -> Ty<TF> {
         let ProjectionTy {
             associated_ty_id: name1,
             substitution: substitution1,
-        } = proj1;
+        } = alias1;
         let ProjectionTy {
             associated_ty_id: name2,
             substitution: substitution2,
-        } = proj2;
+        } = alias2;
 
         self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
             .map(|(&associated_ty_id, substitution)| {
-                TyData::Projection(ProjectionTy {
+                TyData::Alias(ProjectionTy {
                     associated_ty_id,
                     substitution,
                 })

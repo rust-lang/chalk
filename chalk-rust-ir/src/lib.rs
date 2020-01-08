@@ -342,7 +342,7 @@ impl<TF: TypeFamily> AssociatedTyDatum<TF> {
         let substitution = Substitution::from(binders.iter().zip(0..).map(|p| p.to_parameter()));
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
-        let self_ty = TyData::Projection(ProjectionTy {
+        let self_ty = TyData::Alias(ProjectionTy {
             associated_ty_id: self.id,
             substitution,
         })

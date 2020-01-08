@@ -56,8 +56,8 @@ impl<'me, TF: TypeFamily> EnvElaborator<'me, TF> {
             }
             TyData::Placeholder(_) => {}
 
-            TyData::Projection(projection_ty) => {
-                self.visit_projection_ty(projection_ty);
+            TyData::Alias(alias_ty) => {
+                self.visit_projection_ty(alias_ty);
             }
 
             // FIXME(#203) -- We haven't fully figured out the implied

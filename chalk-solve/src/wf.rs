@@ -87,9 +87,9 @@ impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
                 qwc.bounds.fold(accumulator);
             }
 
-            TyData::Projection(proj) => {
+            TyData::Alias(alias) => {
                 accumulator.push(self.clone());
-                proj.substitution.fold(accumulator);
+                alias.substitution.fold(accumulator);
             }
 
             TyData::Placeholder(_) => {
@@ -121,7 +121,7 @@ impl<TF: TypeFamily> FoldInputTypes for TraitRef<TF> {
 
 impl<TF: TypeFamily> FoldInputTypes for ProjectionEq<TF> {
     fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
-        TyData::Projection(self.projection.clone())
+        TyData::Alias(self.projection.clone())
             .intern()
             .fold(accumulator);
         self.ty.fold(accumulator);

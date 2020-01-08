@@ -61,7 +61,7 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
             TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
             TyData::InferenceVar(var) => write!(fmt, "{:?}", var),
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
-            TyData::Projection(proj) => write!(fmt, "{:?}", proj),
+            TyData::Alias(alias) => write!(fmt, "{:?}", alias),
             TyData::Placeholder(index) => write!(fmt, "{:?}", index),
             TyData::Function(function) => write!(fmt, "{:?}", function),
         }

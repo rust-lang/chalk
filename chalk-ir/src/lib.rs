@@ -218,7 +218,7 @@ impl<TF: TypeFamily> Ty<TF> {
 
     pub fn is_projection(&self) -> bool {
         match self.data() {
-            TyData::Projection(..) => true,
+            TyData::Alias(..) => true,
             _ => false,
         }
     }
@@ -255,10 +255,11 @@ pub enum TyData<TF: TypeFamily> {
     /// binders here.
     Dyn(DynTy<TF>),
 
-    /// A "projection" type corresponds to an (unnormalized)
-    /// projection like `<P0 as Trait<P1..Pn>>::Foo`. Note that the
-    /// trait and all its parameters are fully known.
-    Projection(ProjectionTy<TF>),
+    /// An "alias" type represents some form of type alias, such as:
+    /// - An associated type projection like `<T as Iterator>::Item`
+    /// - `impl Trait` types
+    /// - Named type aliases like `type Foo<X> = Vec<X>`
+    Alias(ProjectionTy<TF>),
 
     /// A function type such as `for<'a> fn(&'a u32)`.
     /// Note that "higher-ranked" types (starting with `for<>`) are either

@@ -521,8 +521,8 @@ impl MayInvalidate {
                 self.aggregate_placeholder_tys(p1, p2)
             }
 
-            (TyData::Projection(apply1), TyData::Projection(apply2)) => {
-                self.aggregate_projection_tys(apply1, apply2)
+            (TyData::Alias(alias1), TyData::Alias(alias2)) => {
+                self.aggregate_projection_tys(alias1, alias2)
             }
 
             // For everything else, be conservative here and just say we may invalidate.
@@ -530,7 +530,7 @@ impl MayInvalidate {
             | (TyData::Dyn(_), _)
             | (TyData::Apply(_), _)
             | (TyData::Placeholder(_), _)
-            | (TyData::Projection(_), _) => true,
+            | (TyData::Alias(_), _) => true,
         }
     }
 

@@ -153,7 +153,7 @@ impl<TF: TypeFamily> CastTo<TyData<TF>> for ApplicationTy<TF> {
 
 impl<TF: TypeFamily> CastTo<TyData<TF>> for ProjectionTy<TF> {
     fn cast_to(self) -> TyData<TF> {
-        TyData::Projection(self)
+        TyData::Alias(self)
     }
 }
 

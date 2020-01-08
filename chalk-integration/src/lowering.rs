@@ -1021,9 +1021,7 @@ impl LowerTy for Ty {
                 .intern())
             }
 
-            Ty::Projection { ref proj } => {
-                Ok(chalk_ir::TyData::Projection(proj.lower(env)?).intern())
-            }
+            Ty::Projection { ref proj } => Ok(chalk_ir::TyData::Alias(proj.lower(env)?).intern()),
 
             Ty::ForAll {
                 ref lifetime_names,
