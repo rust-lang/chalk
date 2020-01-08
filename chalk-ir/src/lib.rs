@@ -216,7 +216,7 @@ impl<TF: TypeFamily> Ty<TF> {
         }
     }
 
-    pub fn is_projection(&self) -> bool {
+    pub fn is_alias(&self) -> bool {
         match self.data() {
             TyData::Alias(..) => true,
             _ => false,
@@ -742,7 +742,7 @@ pub type QuantifiedWhereClause<TF> = Binders<WhereClause<TF>>;
 impl<TF: TypeFamily> WhereClause<TF> {
     /// Turn a where clause into the WF version of it i.e.:
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
-    /// * `ProjectionEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
+    /// * `AliasEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
     pub fn into_well_formed_goal(self) -> DomainGoal<TF> {
         match self {

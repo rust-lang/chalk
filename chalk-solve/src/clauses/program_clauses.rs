@@ -510,18 +510,18 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
     /// we generate the 'fallback' rule:
     ///
     /// ```notrust
-    /// -- Rule ProjectionEq-Placeholder
+    /// -- Rule AliasEq-Placeholder
     /// forall<Self, 'a, T> {
-    ///     ProjectionEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
+    ///     AliasEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
     /// }
     /// ```
     ///
     /// and
     ///
     /// ```notrust
-    /// -- Rule ProjectionEq-Normalize
+    /// -- Rule AliasEq-Normalize
     /// forall<Self, 'a, T, U> {
-    ///     ProjectionEq(<T as Foo>::Assoc<'a, T> = U) :-
+    ///     AliasEq(<T as Foo>::Assoc<'a, T> = U) :-
     ///         Normalize(<T as Foo>::Assoc -> U).
     /// }
     /// ```
@@ -530,14 +530,14 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
     ///
     /// ```notrust
     /// forall<T> {
-    ///     T: Foo :- exists<U> { ProjectionEq(<T as Foo>::Assoc = U) }.
+    ///     T: Foo :- exists<U> { AliasEq(<T as Foo>::Assoc = U) }.
     /// }
     /// ```
     ///
     /// but this caused problems with the recursive solver. In
     /// particular, whenever normalization is possible, we cannot
     /// solve that projection uniquely, since we can now elaborate
-    /// `ProjectionEq` to fallback *or* normalize it. So instead we
+    /// `AliasEq` to fallback *or* normalize it. So instead we
     /// handle this kind of reasoning through the `FromEnv` predicate.
     ///
     /// We also generate rules specific to WF requirements and implied bounds:
@@ -594,7 +594,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
             // and placeholder type.
             //
             //    forall<Self> {
-            //        ProjectionEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
+            //        AliasEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
             //    }
             builder.push_fact(alias_eq);
 

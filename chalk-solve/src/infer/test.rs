@@ -131,7 +131,7 @@ fn projection_eq() {
         .unify(
             &environment0,
             &a,
-            &ty!(apply (item 0) (projection (item 1) (expr a))),
+            &ty!(apply (item 0) (alias (item 1) (expr a))),
         )
         .unwrap_err();
 }

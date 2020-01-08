@@ -215,7 +215,7 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
     /// type `ty` (which might also be a projection). Creates a goal like
     ///
     /// ```notrust
-    /// ProjectionEq(<T as Trait>::Item = U)
+    /// AliasEq(<T as Trait>::Item = U)
     /// ```
     fn unify_alias_ty(&mut self, alias: &AliasTy<TF>, ty: &Ty<TF>) -> Fallible<()> {
         Ok(self.goals.push(InEnvironment::new(

@@ -253,7 +253,7 @@ InlineClause: Clause = {
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
 
-    // `T: Foo<U = Bar>` -- projection equality
+    // `T: Foo<U = Bar>` -- alias equality
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
         "=" <ty:Ty> ">" =>
     {
