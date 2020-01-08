@@ -215,7 +215,7 @@ fn atc_accounting() {
             "ForAll<type> { \
              ForAll<lifetime> { \
              ForAll<type> { \
-             all(ProjectionEq(<^2 as Iterable>::Iter<'^1> = ^0), \
+             all(AliasEq(<^2 as Iterable>::Iter<'^1> = ^0), \
              Implemented(^2: Iterable)) \
              } \
              } \

@@ -119,11 +119,9 @@ impl<TF: TypeFamily> FoldInputTypes for TraitRef<TF> {
     }
 }
 
-impl<TF: TypeFamily> FoldInputTypes for ProjectionEq<TF> {
+impl<TF: TypeFamily> FoldInputTypes for AliasEq<TF> {
     fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
-        TyData::Alias(self.projection.clone())
-            .intern()
-            .fold(accumulator);
+        TyData::Alias(self.alias.clone()).intern().fold(accumulator);
         self.ty.fold(accumulator);
     }
 }
@@ -132,7 +130,7 @@ impl<TF: TypeFamily> FoldInputTypes for WhereClause<TF> {
     fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
         match self {
             WhereClause::Implemented(tr) => tr.fold(accumulator),
-            WhereClause::ProjectionEq(p) => p.fold(accumulator),
+            WhereClause::AliasEq(p) => p.fold(accumulator),
         }
     }
 }

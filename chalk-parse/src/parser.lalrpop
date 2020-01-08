@@ -92,7 +92,7 @@ AssocTyDefn: AssocTyDefn = {
 
 InlineBound: InlineBound = {
     TraitBound => InlineBound::TraitBound(<>),
-    ProjectionEqBound => InlineBound::ProjectionEqBound(<>),
+    AliasEqBound => InlineBound::AliasEqBound(<>),
 };
 
 TraitBound: TraitBound = {
@@ -104,9 +104,9 @@ TraitBound: TraitBound = {
     }
 };
 
-ProjectionEqBound: ProjectionEqBound = {
+AliasEqBound: AliasEqBound = {
     <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
-        "=" <ty:Ty> ">" => ProjectionEqBound
+        "=" <ty:Ty> ">" => AliasEqBound
     {
         trait_bound: TraitBound {
             trait_name: t,
@@ -182,7 +182,7 @@ TyWithoutFor: Ty = {
         bounds: b,
     },
     <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
-    <p:ProjectionTy> => Ty::Projection { proj: p },
+    <a:AliasTy> => Ty::Alias { alias: a },
     "(" <Ty> ")",
 };
 
@@ -195,8 +195,8 @@ Parameter: Parameter = {
     Lifetime => Parameter::Lifetime(<>),
 };
 
-ProjectionTy: ProjectionTy = {
-    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => ProjectionTy {
+AliasTy: AliasTy = {
+    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => AliasTy {
         trait_ref: t, name: n, args: a
     },
 };
@@ -260,8 +260,8 @@ WhereClause: WhereClause = {
         let mut args = vec![Parameter::Ty(s)];
         if let Some(a) = a { args.extend(a); }
         let trait_ref = TraitRef { trait_name: t, args: args };
-        let projection = ProjectionTy { trait_ref, name, args: a2 };
-        WhereClause::ProjectionEq { projection, ty }
+        let alias = AliasTy { trait_ref, name, args: a2 };
+        WhereClause::AliasEq { alias, ty }
     },
 };
 
@@ -294,7 +294,7 @@ DomainGoal: DomainGoal = {
     "FromEnv" "(" <t:TraitRef<":">> ")" => DomainGoal::TraitRefFromEnv { trait_ref: t },
 
     // `<T as Foo>::U -> Bar` -- a normalization
-    "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
+    "Normalize" "(" <a:AliasTy> "->" <t:Ty> ")" => DomainGoal::Normalize { alias: a, ty: t },
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
     "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },

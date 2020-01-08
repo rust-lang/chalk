@@ -86,9 +86,9 @@ impl<TF: TypeFamily> CastTo<WhereClause<TF>> for TraitRef<TF> {
     }
 }
 
-impl<TF: TypeFamily> CastTo<WhereClause<TF>> for ProjectionEq<TF> {
+impl<TF: TypeFamily> CastTo<WhereClause<TF>> for AliasEq<TF> {
     fn cast_to(self) -> WhereClause<TF> {
-        WhereClause::ProjectionEq(self)
+        WhereClause::AliasEq(self)
     }
 }
 
@@ -151,7 +151,7 @@ impl<TF: TypeFamily> CastTo<TyData<TF>> for ApplicationTy<TF> {
     }
 }
 
-impl<TF: TypeFamily> CastTo<TyData<TF>> for ProjectionTy<TF> {
+impl<TF: TypeFamily> CastTo<TyData<TF>> for AliasTy<TF> {
     fn cast_to(self) -> TyData<TF> {
         TyData::Alias(self)
     }

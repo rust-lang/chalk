@@ -235,23 +235,19 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         }
     }
 
-    fn aggregate_alias_tys(
-        &mut self,
-        alias1: &ProjectionTy<TF>,
-        alias2: &ProjectionTy<TF>,
-    ) -> Ty<TF> {
-        let ProjectionTy {
+    fn aggregate_alias_tys(&mut self, alias1: &AliasTy<TF>, alias2: &AliasTy<TF>) -> Ty<TF> {
+        let AliasTy {
             associated_ty_id: name1,
             substitution: substitution1,
         } = alias1;
-        let ProjectionTy {
+        let AliasTy {
             associated_ty_id: name2,
             substitution: substitution2,
         } = alias2;
 
         self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
             .map(|(&associated_ty_id, substitution)| {
-                TyData::Alias(ProjectionTy {
+                TyData::Alias(AliasTy {
                     associated_ty_id,
                     substitution,
                 })

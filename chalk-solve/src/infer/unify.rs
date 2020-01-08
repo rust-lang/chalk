@@ -164,14 +164,14 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
             | (&TyData::Placeholder(_), &TyData::Alias(ref alias))
             | (&TyData::Function(_), &TyData::Alias(ref alias))
             | (&TyData::InferenceVar(_), &TyData::Alias(ref alias))
-            | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => self.unify_projection_ty(alias, a),
+            | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => self.unify_alias_ty(alias, a),
 
             (&TyData::Alias(ref alias), &TyData::Alias(_))
             | (&TyData::Alias(ref alias), &TyData::Apply(_))
             | (&TyData::Alias(ref alias), &TyData::Placeholder(_))
             | (&TyData::Alias(ref alias), &TyData::Function(_))
             | (&TyData::Alias(ref alias), &TyData::InferenceVar(_))
-            | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => self.unify_projection_ty(alias, b),
+            | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => self.unify_alias_ty(alias, b),
 
             (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
@@ -217,11 +217,11 @@ impl<'t, TF: TypeFamily> Unifier<'t, TF> {
     /// ```notrust
     /// ProjectionEq(<T as Trait>::Item = U)
     /// ```
-    fn unify_projection_ty(&mut self, proj: &ProjectionTy<TF>, ty: &Ty<TF>) -> Fallible<()> {
+    fn unify_alias_ty(&mut self, alias: &AliasTy<TF>, ty: &Ty<TF>) -> Fallible<()> {
         Ok(self.goals.push(InEnvironment::new(
             self.environment,
-            ProjectionEq {
-                projection: proj.clone(),
+            AliasEq {
+                alias: alias.clone(),
                 ty: ty.clone(),
             }
             .cast(),

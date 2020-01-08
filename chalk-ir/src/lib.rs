@@ -259,7 +259,7 @@ pub enum TyData<TF: TypeFamily> {
     /// - An associated type projection like `<T as Iterator>::Item`
     /// - `impl Trait` types
     /// - Named type aliases like `type Foo<X> = Vec<X>`
-    Alias(ProjectionTy<TF>),
+    Alias(AliasTy<TF>),
 
     /// A function type such as `for<'a> fn(&'a u32)`.
     /// Note that "higher-ranked" types (starting with `for<>`) are either
@@ -570,12 +570,12 @@ impl<TF: TypeFamily> ParameterData<TF> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
-pub struct ProjectionTy<TF: TypeFamily> {
+pub struct AliasTy<TF: TypeFamily> {
     pub associated_ty_id: AssocTypeId<TF>,
     pub substitution: Substitution<TF>,
 }
 
-impl<TF: TypeFamily> ProjectionTy<TF> {
+impl<TF: TypeFamily> AliasTy<TF> {
     pub fn intern(self) -> Ty<TF> {
         Ty::new(self)
     }
@@ -609,7 +609,7 @@ impl<TF: TypeFamily> TraitRef<TF> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub enum WhereClause<TF: TypeFamily> {
     Implemented(TraitRef<TF>),
-    ProjectionEq(ProjectionEq<TF>),
+    AliasEq(AliasEq<TF>),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
@@ -795,13 +795,13 @@ pub struct EqGoal<TF: TypeFamily> {
     pub b: Parameter<TF>,
 }
 
-/// Proves that the given projection **normalizes** to the given
+/// Proves that the given type alias **normalizes** to the given
 /// type. A projection `T::Foo` normalizes to the type `U` if we can
 /// **match it to an impl** and that impl has a `type Foo = V` where
 /// `U = V`.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct Normalize<TF: TypeFamily> {
-    pub projection: ProjectionTy<TF>,
+    pub alias: AliasTy<TF>,
     pub ty: Ty<TF>,
 }
 
@@ -809,12 +809,12 @@ pub struct Normalize<TF: TypeFamily> {
 /// `U`. Equality can be proven via normalization, but we can also
 /// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
-pub struct ProjectionEq<TF: TypeFamily> {
-    pub projection: ProjectionTy<TF>,
+pub struct AliasEq<TF: TypeFamily> {
+    pub alias: AliasTy<TF>,
     pub ty: Ty<TF>,
 }
 
-impl<TF: TypeFamily> HasTypeFamily for ProjectionEq<TF> {
+impl<TF: TypeFamily> HasTypeFamily for AliasEq<TF> {
     type TypeFamily = TF;
 }
 

@@ -84,7 +84,7 @@ pub enum Parameter {
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
 pub enum InlineBound {
     TraitBound(TraitBound),
-    ProjectionEqBound(ProjectionEqBound),
+    AliasEqBound(AliasEqBound),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -102,9 +102,9 @@ pub struct TraitBound {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-/// Represents a projection equality bound on e.g. a type or type parameter.
+/// Represents an alias equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
-pub struct ProjectionEqBound {
+pub struct AliasEqBound {
     pub trait_bound: TraitBound,
     pub name: Identifier,
     pub args: Vec<Parameter>,
@@ -162,8 +162,8 @@ pub enum Ty {
         name: Identifier,
         args: Vec<Parameter>,
     },
-    Projection {
-        proj: ProjectionTy,
+    Alias {
+        alias: AliasTy,
     },
     ForAll {
         lifetime_names: Vec<Identifier>,
@@ -177,7 +177,7 @@ pub enum Lifetime {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct ProjectionTy {
+pub struct AliasTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
     pub args: Vec<Parameter>,
@@ -223,13 +223,13 @@ impl fmt::Display for Identifier {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
-    ProjectionEq { projection: ProjectionTy, ty: Ty },
+    AliasEq { alias: AliasTy, ty: Ty },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DomainGoal {
     Holds { where_clause: WhereClause },
-    Normalize { projection: ProjectionTy, ty: Ty },
+    Normalize { alias: AliasTy, ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
     TyWellFormed { ty: Ty },
     TyFromEnv { ty: Ty },

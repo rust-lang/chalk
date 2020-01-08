@@ -522,7 +522,7 @@ impl MayInvalidate {
             }
 
             (TyData::Alias(alias1), TyData::Alias(alias2)) => {
-                self.aggregate_projection_tys(alias1, alias2)
+                self.aggregate_alias_tys(alias1, alias2)
             }
 
             // For everything else, be conservative here and just say we may invalidate.
@@ -568,16 +568,16 @@ impl MayInvalidate {
         new != current
     }
 
-    fn aggregate_projection_tys<TF: TypeFamily>(
+    fn aggregate_alias_tys<TF: TypeFamily>(
         &mut self,
-        new: &ProjectionTy<TF>,
-        current: &ProjectionTy<TF>,
+        new: &AliasTy<TF>,
+        current: &AliasTy<TF>,
     ) -> bool {
-        let ProjectionTy {
+        let AliasTy {
             associated_ty_id: new_name,
             substitution: new_substitution,
         } = new;
-        let ProjectionTy {
+        let AliasTy {
             associated_ty_id: current_name,
             substitution: current_substitution,
         } = current;

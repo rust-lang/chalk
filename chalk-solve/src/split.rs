@@ -15,16 +15,16 @@ pub trait Split<TF: TypeFamily>: RustIrDatabase<TF> {
     /// any type parameters itself.
     fn split_projection<'p>(
         &self,
-        projection: &'p ProjectionTy<TF>,
+        alias: &'p AliasTy<TF>,
     ) -> (
         Arc<AssociatedTyDatum<TF>>,
         &'p [Parameter<TF>],
         &'p [Parameter<TF>],
     ) {
-        let ProjectionTy {
+        let AliasTy {
             associated_ty_id,
             ref substitution,
-        } = *projection;
+        } = *alias;
         let parameters = substitution.parameters();
         let associated_ty_data = &self.associated_ty_data(associated_ty_id);
         let trait_datum = &self.trait_datum(associated_ty_data.trait_id);
@@ -37,18 +37,15 @@ pub trait Split<TF: TypeFamily>: RustIrDatabase<TF> {
     /// Given a projection `<P0 as Trait<P1..Pn>>::Item<Pn..Pm>`,
     /// returns the trait parameters `[P0..Pn]` (see
     /// `split_projection`).
-    fn trait_parameters_from_projection<'p>(
-        &self,
-        projection: &'p ProjectionTy<TF>,
-    ) -> &'p [Parameter<TF>] {
-        let (_, trait_params, _) = self.split_projection(projection);
+    fn trait_parameters_from_projection<'p>(&self, alias: &'p AliasTy<TF>) -> &'p [Parameter<TF>] {
+        let (_, trait_params, _) = self.split_projection(alias);
         trait_params
     }
 
     /// Given a projection `<P0 as Trait<P1..Pn>>::Item<Pn..Pm>`,
     /// returns the trait parameters `[P0..Pn]` (see
     /// `split_projection`).
-    fn trait_ref_from_projection<'p>(&self, projection: &'p ProjectionTy<TF>) -> TraitRef<TF> {
+    fn trait_ref_from_projection<'p>(&self, projection: &'p AliasTy<TF>) -> TraitRef<TF> {
         let (associated_ty_data, trait_params, _) = self.split_projection(&projection);
         TraitRef {
             trait_id: associated_ty_data.trait_id,
@@ -121,7 +118,7 @@ pub trait Split<TF: TypeFamily>: RustIrDatabase<TF> {
         &self,
         parameters: &'p [Parameter<TF>],
         associated_ty_value: &AssociatedTyValue<TF>,
-    ) -> (&'p [Parameter<TF>], ProjectionTy<TF>) {
+    ) -> (&'p [Parameter<TF>], AliasTy<TF>) {
         debug_heading!(
             "impl_parameters_and_projection_from_associated_ty_value(parameters={:?})",
             parameters,
@@ -149,16 +146,16 @@ pub trait Split<TF: TypeFamily>: RustIrDatabase<TF> {
                 .cloned(),
         );
 
-        let projection = ProjectionTy {
+        let alias = AliasTy {
             associated_ty_id: associated_ty_value.associated_ty_id,
             substitution: projection_substitution,
         };
 
         debug!("impl_parameters: {:?}", impl_parameters);
         debug!("trait_ref: {:?}", trait_ref);
-        debug!("projection: {:?}", projection);
+        debug!("alias: {:?}", alias);
 
-        (impl_parameters, projection)
+        (impl_parameters, alias)
     }
 }
 

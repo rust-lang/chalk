@@ -234,8 +234,8 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
 
             // TODO sized, unsize_trait, builtin impls?
         }
-        DomainGoal::Holds(WhereClause::ProjectionEq(projection_predicate)) => {
-            db.associated_ty_data(projection_predicate.projection.associated_ty_id)
+        DomainGoal::Holds(WhereClause::AliasEq(alias_predicate)) => {
+            db.associated_ty_data(alias_predicate.alias.associated_ty_id)
                 .to_program_clauses(builder);
         }
         DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
@@ -249,7 +249,7 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             match_ty(builder, environment, ty)
         }
         DomainGoal::FromEnv(_) => (), // Computed in the environment
-        DomainGoal::Normalize(Normalize { projection, ty: _ }) => {
+        DomainGoal::Normalize(Normalize { alias, ty: _ }) => {
             // Normalize goals derive from `AssociatedTyValue` datums,
             // which are found in impls. That is, if we are
             // normalizing (e.g.) `<T as Iterator>::Item>`, then
@@ -261,9 +261,9 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
             //     type Item = Bar; // <-- associated type value
             // }
             // ```
-            let associated_ty_datum = db.associated_ty_data(projection.associated_ty_id);
+            let associated_ty_datum = db.associated_ty_data(alias.associated_ty_id);
             let trait_id = associated_ty_datum.trait_id;
-            let trait_parameters = db.trait_parameters_from_projection(projection);
+            let trait_parameters = db.trait_parameters_from_projection(alias);
             push_program_clauses_for_associated_type_values_in_impls_of(
                 builder,
                 trait_id,
