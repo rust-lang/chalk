@@ -174,6 +174,23 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
             })
             .quantified
     }
+
+    fn into_hh_goal(goal: Goal<TF>) -> HhGoal<SlgContext<TF>> {
+        match goal.data().clone() {
+            GoalData::Quantified(QuantifierKind::ForAll, binders_goal) => {
+                HhGoal::ForAll(binders_goal)
+            }
+            GoalData::Quantified(QuantifierKind::Exists, binders_goal) => {
+                HhGoal::Exists(binders_goal)
+            }
+            GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, subgoal),
+            GoalData::All(goals) => HhGoal::All(goals),
+            GoalData::Not(g1) => HhGoal::Not(g1),
+            GoalData::EqGoal(EqGoal { a, b }) => HhGoal::Unify((), a, b),
+            GoalData::DomainGoal(domain_goal) => HhGoal::DomainGoal(domain_goal),
+            GoalData::CannotProve(()) => HhGoal::CannotProve,
+        }
+    }
 }
 
 impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<'me, TF> {
@@ -323,23 +340,6 @@ impl<TF: TypeFamily> context::TruncateOps<SlgContext<TF>> for TruncatingInferenc
 }
 
 impl<TF: TypeFamily> context::InferenceTable<SlgContext<TF>> for TruncatingInferenceTable<TF> {
-    fn into_hh_goal(&mut self, goal: Goal<TF>) -> HhGoal<SlgContext<TF>> {
-        match goal.data().clone() {
-            GoalData::Quantified(QuantifierKind::ForAll, binders_goal) => {
-                HhGoal::ForAll(binders_goal)
-            }
-            GoalData::Quantified(QuantifierKind::Exists, binders_goal) => {
-                HhGoal::Exists(binders_goal)
-            }
-            GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, subgoal),
-            GoalData::All(goals) => HhGoal::All(goals),
-            GoalData::Not(g1) => HhGoal::Not(g1),
-            GoalData::EqGoal(EqGoal { a, b }) => HhGoal::Unify((), a, b),
-            GoalData::DomainGoal(domain_goal) => HhGoal::DomainGoal(domain_goal),
-            GoalData::CannotProve(()) => HhGoal::CannotProve,
-        }
-    }
-
     // Used by: simplify
     fn add_clauses(
         &mut self,

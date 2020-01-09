@@ -31,19 +31,19 @@ impl<C: Context> Forest<C> {
             match hh_goal {
                 HhGoal::ForAll(subgoal) => {
                     let subgoal = infer.instantiate_binders_universally(&subgoal);
-                    pending_goals.push((environment, infer.into_hh_goal(subgoal)));
+                    pending_goals.push((environment, C::into_hh_goal(subgoal)));
                 }
                 HhGoal::Exists(subgoal) => {
                     let subgoal = infer.instantiate_binders_existentially(&subgoal);
-                    pending_goals.push((environment, infer.into_hh_goal(subgoal)))
+                    pending_goals.push((environment, C::into_hh_goal(subgoal)))
                 }
                 HhGoal::Implies(wc, subgoal) => {
                     let new_environment = infer.add_clauses(&environment, wc);
-                    pending_goals.push((new_environment, infer.into_hh_goal(subgoal)));
+                    pending_goals.push((new_environment, C::into_hh_goal(subgoal)));
                 }
                 HhGoal::All(subgoals) => {
                     for subgoal in subgoals {
-                        pending_goals.push((environment.clone(), infer.into_hh_goal(subgoal)));
+                        pending_goals.push((environment.clone(), C::into_hh_goal(subgoal)));
                     }
                 }
                 HhGoal::Not(subgoal) => {

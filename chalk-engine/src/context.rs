@@ -179,6 +179,16 @@ pub trait Context: Clone + Debug {
     fn identity_constrained_subst(
         goal: &Self::UCanonicalGoalInEnvironment,
     ) -> Self::CanonicalConstrainedSubst;
+
+    /// Convert the context's goal type into the `HhGoal` type that
+    /// the SLG solver understands. The expectation is that the
+    /// context's goal type has the same set of variants, but with
+    /// different names and a different setup. If you inspect
+    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
+    /// conversion -- that is, we convert the outermost goal into an
+    /// `HhGoal`, but the goals contained within are left as context
+    /// goals.
+    fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self>;
 }
 
 pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
@@ -253,16 +263,6 @@ pub trait AggregateOps<C: Context> {
 /// An "inference table" contains the state to support unification and
 /// other operations on terms.
 pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> + UnificationOps<C> {
-    /// Convert the context's goal type into the `HhGoal` type that
-    /// the SLG solver understands. The expectation is that the
-    /// context's goal type has the same set of variants, but with
-    /// different names and a different setup. If you inspect
-    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
-    /// conversion -- that is, we convert the outermost goal into an
-    /// `HhGoal`, but the goals contained within are left as context
-    /// goals.
-    fn into_hh_goal(&mut self, goal: C::Goal) -> HhGoal<C>;
-
     // Used by: simplify
     fn add_clauses(&mut self, env: &C::Environment, clauses: C::ProgramClauses) -> C::Environment;
 
