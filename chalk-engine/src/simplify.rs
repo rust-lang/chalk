@@ -38,7 +38,7 @@ impl<C: Context> Forest<C> {
                     pending_goals.push((environment, C::into_hh_goal(subgoal)))
                 }
                 HhGoal::Implies(wc, subgoal) => {
-                    let new_environment = infer.add_clauses(&environment, wc);
+                    let new_environment = C::add_clauses(&environment, wc);
                     pending_goals.push((new_environment, C::into_hh_goal(subgoal)));
                 }
                 HhGoal::All(subgoals) => {
@@ -66,7 +66,7 @@ impl<C: Context> Forest<C> {
                         .subgoals
                         .push(Literal::Positive(C::goal_in_environment(
                             &environment,
-                            infer.into_goal(domain_goal),
+                            C::into_goal(domain_goal),
                         )));
                 }
                 HhGoal::CannotProve => {

@@ -189,6 +189,16 @@ pub trait Context: Clone + Debug {
     /// `HhGoal`, but the goals contained within are left as context
     /// goals.
     fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self>;
+
+    // Used by: simplify
+    fn add_clauses(env: &Self::Environment, clauses: Self::ProgramClauses) -> Self::Environment;
+
+    /// Upcast this domain goal into a more general goal.
+    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal;
+
+    /// Selects the next appropriate subgoal index for evaluation.
+    /// Used by: logic
+    fn next_subgoal_index(ex_clause: &ExClause<Self>) -> usize;
 }
 
 pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
@@ -262,17 +272,7 @@ pub trait AggregateOps<C: Context> {
 
 /// An "inference table" contains the state to support unification and
 /// other operations on terms.
-pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> + UnificationOps<C> {
-    // Used by: simplify
-    fn add_clauses(&mut self, env: &C::Environment, clauses: C::ProgramClauses) -> C::Environment;
-
-    /// Upcast this domain goal into a more general goal.
-    fn into_goal(&self, domain_goal: C::DomainGoal) -> C::Goal;
-
-    /// Selects the next appropriate subgoal index for evaluation.
-    /// Used by: logic
-    fn next_subgoal_index(&mut self, ex_clause: &ExClause<C>) -> usize;
-}
+pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> + UnificationOps<C> {}
 
 /// Error type for the `UnificationOps::program_clauses` method --
 /// indicates that the complete set of program clauses for this goal

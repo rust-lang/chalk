@@ -966,7 +966,7 @@ impl<C: Context> Forest<C> {
                     continue;
                 }
 
-                let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
+                let subgoal_index = C::next_subgoal_index(&strand.ex_clause);
 
                 // Get or create table for this subgoal.
                 match self.get_or_create_table_for_subgoal(
