@@ -75,7 +75,7 @@ impl<C: Context> Forest<C> {
     ) -> bool {
         let mut answers = self.iter_answers(context, goal);
         loop {
-            let subst = match answers.next_answer() {
+            let subst = match answers.next_answer(|| true) {
                 AnswerResult::Answer(answer) => {
                     if !answer.ambiguous {
                         SubstitutionResult::Definite(context.constrained_subst_from_answer(answer))
@@ -87,9 +87,10 @@ impl<C: Context> Forest<C> {
                 AnswerResult::NoMoreSolutions => {
                     return true;
                 }
+                AnswerResult::QuantumExceeded => continue,
             };
 
-            if !f(subst, !answers.peek_answer().is_no_more_solutions()) {
+            if !f(subst, !answers.peek_answer(|| true).is_no_more_solutions()) {
                 return false;
             }
         }
@@ -157,7 +158,7 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
     /// # Panics
     ///
     /// Panics if a negative cycle was detected.
-    fn peek_answer(&mut self) -> AnswerResult<C> {
+    fn peek_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<C> {
         loop {
             match self
                 .forest
@@ -178,7 +179,11 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
                     return AnswerResult::NoMoreSolutions;
                 }
 
-                Err(RootSearchFail::QuantumExceeded) => {}
+                Err(RootSearchFail::QuantumExceeded) => {
+                    if !should_continue() {
+                        return AnswerResult::QuantumExceeded;
+                    }
+                }
 
                 Err(RootSearchFail::NegativeCycle) => {
                     // Negative cycles *ought* to be avoided by construction. Hence panic
@@ -192,16 +197,13 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
         }
     }
 
-    fn next_answer(&mut self) -> AnswerResult<C> {
-        let answer = self.peek_answer();
+    fn next_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<C> {
+        let answer = self.peek_answer(should_continue);
         self.answer.increment();
         answer
     }
 
-    fn any_future_answer(
-        &mut self,
-        test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
-    ) -> bool {
+    fn any_future_answer(&self, test: impl Fn(&C::InferenceNormalizedSubst) -> bool) -> bool {
         self.forest.any_future_answer(self.table, self.answer, test)
     }
 }

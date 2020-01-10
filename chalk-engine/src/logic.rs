@@ -204,7 +204,7 @@ impl<C: Context> Forest<C> {
     }
 
     pub(super) fn any_future_answer(
-        &mut self,
+        &self,
         table: TableIndex,
         answer: AnswerIndex,
         mut test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
@@ -214,7 +214,7 @@ impl<C: Context> Forest<C> {
             return test(C::inference_normalized_subst_from_subst(&answer.subst));
         }
 
-        self.tables[table].strands_mut().any(|strand| {
+        self.tables[table].strands().any(|strand| {
             test(C::inference_normalized_subst_from_ex_clause(
                 &strand.canonical_ex_clause,
             ))
@@ -1418,7 +1418,7 @@ impl<C: Context> Forest<C> {
         // untruncated literal.  Suppose that we truncate the selected
         // goal to:
         //
-        //     // Vec<Vec<T>: Sized
+        //     // Vec<Vec<T>>: Sized
         //
         // Clearly this table will have some solutions that don't
         // apply to us.  e.g., `Vec<Vec<u32>>: Sized` is a solution to

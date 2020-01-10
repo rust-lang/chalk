@@ -20,7 +20,7 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
         root_goal: &UCanonical<InEnvironment<Goal<TF>>>,
         mut answers: impl context::AnswerStream<SlgContext<TF>>,
     ) -> Option<Solution<TF>> {
-        let CompleteAnswer { subst, ambiguous } = match answers.next_answer() {
+        let CompleteAnswer { subst, ambiguous } = match answers.next_answer(|| true) {
             AnswerResult::NoMoreSolutions => {
                 // No answers at all
                 return None;
@@ -30,10 +30,11 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
                 subst: SlgContext::identity_constrained_subst(root_goal),
                 ambiguous: true,
             },
+            AnswerResult::QuantumExceeded => unreachable!(),
         };
 
         // Exactly 1 unconditional answer?
-        if answers.peek_answer().is_no_more_solutions() && !ambiguous {
+        if answers.peek_answer(|| true).is_no_more_solutions() && !ambiguous {
             return Some(Solution::Unique(subst));
         }
 
@@ -69,7 +70,7 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
                 }
             }
 
-            let new_subst = match answers.next_answer() {
+            let new_subst = match answers.next_answer(|| false) {
                 AnswerResult::Answer(answer1) => answer1.subst,
                 AnswerResult::Floundered => {
                     // FIXME: this doesn't trigger for any current tests
@@ -78,6 +79,7 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
                 AnswerResult::NoMoreSolutions => {
                     break Guidance::Definite(subst);
                 }
+                AnswerResult::QuantumExceeded => continue,
             };
             subst = merge_into_guidance(SlgContext::canonical(root_goal), subst, &new_subst);
             num_answers += 1;

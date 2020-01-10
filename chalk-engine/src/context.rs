@@ -388,6 +388,10 @@ pub enum AnswerResult<C: Context> {
 
     /// No answer could be returned because the goal has floundered.
     Floundered,
+
+    // No answer could be returned *yet*, because we exceeded our
+    // quantum (`should_continue` returned false).
+    QuantumExceeded,
 }
 
 impl<C: Context> AnswerResult<C> {
@@ -419,6 +423,7 @@ impl<C: Context> Debug for AnswerResult<C> {
             AnswerResult::Answer(answer) => write!(fmt, "{:?}", answer),
             AnswerResult::Floundered => write!(fmt, "Floundered"),
             AnswerResult::NoMoreSolutions => write!(fmt, "None"),
+            AnswerResult::QuantumExceeded => write!(fmt, "QuantumExceeded"),
         }
     }
 }
@@ -426,14 +431,13 @@ impl<C: Context> Debug for AnswerResult<C> {
 pub trait AnswerStream<C: Context> {
     /// Gets the next answer for a given goal, but doesn't increment the answer index.
     /// Calling this or `next_answer` again will give the same answer.
-    fn peek_answer(&mut self) -> AnswerResult<C>;
+    fn peek_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<C>;
 
     /// Gets the next answer for a given goal, incrementing the answer index.
     /// Calling this or `peek_answer` again will give the next answer.
-    fn next_answer(&mut self) -> AnswerResult<C>;
+    fn next_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<C>;
 
     /// Invokes `test` with each possible future answer, returning true immediately
     /// if we find any answer for which `test` returns true.
-    fn any_future_answer(&mut self, test: impl FnMut(&C::InferenceNormalizedSubst) -> bool)
-        -> bool;
+    fn any_future_answer(&self, test: impl Fn(&C::InferenceNormalizedSubst) -> bool) -> bool;
 }
