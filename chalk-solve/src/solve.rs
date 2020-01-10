@@ -135,7 +135,37 @@ impl<TF: TypeFamily> Solver<TF> {
         goal: &UCanonical<InEnvironment<Goal<TF>>>,
     ) -> Option<Solution<TF>> {
         let ops = self.forest.context().ops(program);
-        self.forest.solve(&ops, goal)
+        self.forest.solve(&ops, goal, || true)
+    }
+
+    /// Attempts to solve the given goal, which must be in canonical
+    /// form. Returns a unique solution (if one exists).  This will do
+    /// only as much work towards `goal` as it has to (and that work
+    /// is cached for future attempts). In addition, the solving of the
+    /// goal can be limited by returning `false` from `should_continue`.
+    ///
+    /// # Parameters
+    ///
+    /// - `program` -- defines the program clauses in scope.
+    ///   - **Important:** You must supply the same set of program clauses
+    ///     each time you invoke `solve`, as otherwise the cached data may be
+    ///     invalid.
+    /// - `goal` the goal to solve
+    /// - `should_continue` if `false` is returned, the no further solving will be done
+    ///
+    /// # Returns
+    ///
+    /// - `None` is the goal cannot be proven.
+    /// - `Some(solution)` if we succeeded in finding *some* answers,
+    ///   although `solution` may reflect ambiguity and unknowns.
+    pub fn solve_limited(
+        &mut self,
+        program: &dyn RustIrDatabase<TF>,
+        goal: &UCanonical<InEnvironment<Goal<TF>>>,
+        should_continue: impl Fn() -> bool,
+    ) -> Option<Solution<TF>> {
+        let ops = self.forest.context().ops(program);
+        self.forest.solve(&ops, goal, should_continue)
     }
 
     /// Attempts to solve the given goal, which must be in canonical

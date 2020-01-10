@@ -59,8 +59,9 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         goal: &C::UCanonicalGoalInEnvironment,
+        should_continue: impl Fn() -> bool,
     ) -> Option<C::Solution> {
-        context.make_solution(&goal, self.iter_answers(context, goal))
+        context.make_solution(&goal, self.iter_answers(context, goal), should_continue)
     }
 
     /// Solves a given goal, producing the solution. This will do only

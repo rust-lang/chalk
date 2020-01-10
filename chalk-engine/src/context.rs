@@ -267,6 +267,7 @@ pub trait AggregateOps<C: Context> {
         &self,
         root_goal: &C::UCanonicalGoalInEnvironment,
         answers: impl AnswerStream<C>,
+        should_continue: impl Fn() -> bool,
     ) -> Option<C::Solution>;
 }
 
@@ -412,6 +413,13 @@ impl<C: Context> AnswerResult<C> {
     pub fn is_no_more_solutions(&self) -> bool {
         match self {
             Self::NoMoreSolutions => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_quantum_exceeded(&self) -> bool {
+        match self {
+            Self::QuantumExceeded => true,
             _ => false,
         }
     }
