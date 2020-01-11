@@ -59,34 +59,6 @@ fn basic() {
     }
 }
 
-#[test]
-fn breadth_first() {
-    test! {
-        program {
-            trait Sized { }
-
-            struct i32 { }
-            impl Sized for i32 { }
-
-            struct Vec<T> { }
-            impl<T> Sized for Vec<T> where T: Sized { }
-
-            struct Slice<T> { }
-            impl<T> Sized for Slice<T> where T: Sized { }
-        }
-
-        goal {
-            exists<T> { T: Sized }
-        } yields_first[SolverChoice::slg(10, None)] {
-            "substitution [?0 := i32], lifetime constraints []",
-            "substitution [?0 := Vec<i32>], lifetime constraints []",
-            "substitution [?0 := Slice<i32>], lifetime constraints []",
-            "substitution [?0 := Vec<Vec<i32>>], lifetime constraints []",
-            "substitution [?0 := Slice<Vec<i32>>], lifetime constraints []"
-        }
-    }
-}
-
 /// Make sure we don't get a stack overflow or other badness for this
 /// test from scalexm.
 #[test]
@@ -125,8 +97,7 @@ fn flounder() {
 
 // Test that, when solving `?T: Sized`, we only wind up pulling a few
 // answers before we stop.
-// This is similar to the `breadth_first` test, except the order of the
-// FIXME: This is basically the same as `breadth_first`. Is it testing something different?
+// Also tests that we search breadth-first.
 #[test]
 fn only_draw_so_many() {
     test! {
@@ -148,7 +119,9 @@ fn only_draw_so_many() {
         } yields_first[SolverChoice::slg(10, None)] {
             "substitution [?0 := i32], lifetime constraints []",
             "substitution [?0 := Slice<i32>], lifetime constraints []",
-            "substitution [?0 := Vec<i32>], lifetime constraints []"
+            "substitution [?0 := Vec<i32>], lifetime constraints []",
+            "substitution [?0 := Slice<Slice<i32>>], lifetime constraints []",
+            "substitution [?0 := Vec<Slice<i32>>], lifetime constraints []"
         }
 
         goal {
@@ -185,9 +158,7 @@ fn only_draw_so_many_blow_up() {
     }
 }
 
-// FIXME: well-formed problems?
 #[test]
-#[ignore]
 fn subgoal_cycle_uninhabited() {
     test! {
         program {
@@ -203,7 +174,6 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T: Foo }
         } yields_all[SolverChoice::slg(2, None)] {
-            "substitution [], lifetime constraints []"
         }
 
         // Unsurprisingly, applying negation succeeds then.
@@ -224,8 +194,8 @@ fn subgoal_cycle_uninhabited() {
         // size threshold, we have a problem.
         goal {
             exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
-        } yields_all[SolverChoice::slg(2, None)] {
-            ""
+        } yields_first[SolverChoice::slg(2, None)] {
+            "Floundered"
         }
 
         // Same query with larger threshold works fine, though.
