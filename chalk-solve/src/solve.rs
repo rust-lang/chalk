@@ -162,7 +162,7 @@ impl<TF: TypeFamily> Solver<TF> {
         &mut self,
         program: &dyn RustIrDatabase<TF>,
         goal: &UCanonical<InEnvironment<Goal<TF>>>,
-        should_continue: impl Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<TF>> {
         let ops = self.forest.context().ops(program);
         self.forest.solve(&ops, goal, should_continue)

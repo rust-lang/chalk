@@ -19,7 +19,7 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
         &self,
         root_goal: &UCanonical<InEnvironment<Goal<TF>>>,
         mut answers: impl context::AnswerStream<SlgContext<TF>>,
-        should_continue: impl Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<TF>> {
         let CompleteAnswer { subst, ambiguous } = match answers.next_answer(|| should_continue()) {
             AnswerResult::NoMoreSolutions => {
