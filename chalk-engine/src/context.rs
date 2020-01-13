@@ -174,17 +174,16 @@ pub trait Context: Clone + Debug {
     ) -> Self::CanonicalAnswerSubst;
 
     fn goal_from_goal_in_environment(goal: &Self::GoalInEnvironment) -> &Self::Goal;
+
+    /// Returns a identity substitution.
+    fn identity_constrained_subst(
+        goal: &Self::UCanonicalGoalInEnvironment,
+    ) -> Self::CanonicalConstrainedSubst;
 }
 
 pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
     fn is_coinductive(&self, goal: &C::UCanonicalGoalInEnvironment) -> bool;
-
-    /// Returns a identity substitution.
-    fn identity_constrained_subst(
-        &self,
-        goal: &C::UCanonicalGoalInEnvironment,
-    ) -> C::CanonicalConstrainedSubst;
 
     /// Returns the set of program clauses that might apply to
     /// `goal`. (This set can be over-approximated, naturally.)
@@ -246,7 +245,7 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
 pub trait AggregateOps<C: Context> {
     fn make_solution(
         &self,
-        root_goal: &C::CanonicalGoalInEnvironment,
+        root_goal: &C::UCanonicalGoalInEnvironment,
         answers: impl AnswerStream<C>,
     ) -> Option<C::Solution>;
 }
@@ -380,9 +379,58 @@ pub trait ResolventOps<C: Context> {
     ) -> Fallible<()>;
 }
 
+pub enum AnswerResult<C: Context> {
+    /// The next available answer.
+    Answer(CompleteAnswer<C>),
+
+    /// No answer could be returned because there are no more solutions.
+    NoMoreSolutions,
+
+    /// No answer could be returned because the goal has floundered.
+    Floundered,
+}
+
+impl<C: Context> AnswerResult<C> {
+    pub fn is_answer(&self) -> bool {
+        match self {
+            Self::Answer(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn answer(self) -> CompleteAnswer<C> {
+        match self {
+            Self::Answer(answer) => answer,
+            _ => panic!("Not an answer."),
+        }
+    }
+
+    pub fn is_no_more_solutions(&self) -> bool {
+        match self {
+            Self::NoMoreSolutions => true,
+            _ => false,
+        }
+    }
+}
+
+impl<C: Context> Debug for AnswerResult<C> {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            AnswerResult::Answer(answer) => write!(fmt, "{:?}", answer),
+            AnswerResult::Floundered => write!(fmt, "Floundered"),
+            AnswerResult::NoMoreSolutions => write!(fmt, "None"),
+        }
+    }
+}
+
 pub trait AnswerStream<C: Context> {
-    fn peek_answer(&mut self) -> Option<CompleteAnswer<C>>;
-    fn next_answer(&mut self) -> Option<CompleteAnswer<C>>;
+    /// Gets the next answer for a given goal, but doesn't increment the answer index.
+    /// Calling this or `next_answer` again will give the same answer.
+    fn peek_answer(&mut self) -> AnswerResult<C>;
+
+    /// Gets the next answer for a given goal, incrementing the answer index.
+    /// Calling this or `peek_answer` again will give the next answer.
+    fn next_answer(&mut self) -> AnswerResult<C>;
 
     /// Invokes `test` with each possible future answer, returning true immediately
     /// if we find any answer for which `test` returns true.

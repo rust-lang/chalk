@@ -1,10 +1,12 @@
 use crate::context::prelude::*;
+use crate::context::AnswerResult;
 use crate::context::AnswerStream;
 use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
 use crate::table::AnswerIndex;
 use crate::tables::Tables;
-use crate::{CompleteAnswer, TableIndex};
+use crate::TableIndex;
+use std::fmt::Display;
 
 pub struct Forest<C: Context> {
     context: C,
@@ -29,53 +31,6 @@ impl<C: Context> Forest<C> {
     /// term in here).
     pub fn context(&self) -> &C {
         &self.context
-    }
-
-    /// Finds the first N answers, looping as much as needed to get
-    /// them. Returns `None` if the result flounders.
-    ///
-    /// Thanks to subgoal abstraction and so forth, this should always
-    /// terminate.
-    ///
-    /// # Panics
-    ///
-    /// Panics if a negative cycle was detected.
-    pub fn force_answers(
-        &mut self,
-        context: &impl ContextOps<C>,
-        goal: C::UCanonicalGoalInEnvironment,
-        num_answers: usize,
-    ) -> Option<Vec<CompleteAnswer<C>>> {
-        let table = self.get_or_create_table_for_ucanonical_goal(context, goal);
-        let mut answers = Vec::with_capacity(num_answers);
-        let mut count = 0;
-        for _ in 0..num_answers {
-            loop {
-                match self.root_answer(context, table, AnswerIndex::from(count)) {
-                    Ok(answer) => {
-                        answers.push(answer.clone());
-                        break;
-                    }
-                    Err(RootSearchFail::InvalidAnswer) => {
-                        count += 1;
-                    }
-                    Err(RootSearchFail::Floundered) => return None,
-                    Err(RootSearchFail::QuantumExceeded) => continue,
-                    Err(RootSearchFail::NoMoreSolutions) => return Some(answers),
-                    Err(RootSearchFail::NegativeCycle) => {
-                        // Negative cycles *ought* to be avoided by construction. Hence panic
-                        // if we find one, as that likely indicates a problem in the chalk-solve
-                        // lowering rules. (In principle, we could propagate this error out,
-                        // and let chalk-solve do the asserting, but that seemed like it would
-                        // complicate the function signature more than it's worth.)
-                        panic!("negative cycle was detected");
-                    }
-                }
-            }
-            count += 1;
-        }
-
-        Some(answers)
     }
 
     /// Returns a "solver" for a given goal in the form of an
@@ -105,7 +60,7 @@ impl<C: Context> Forest<C> {
         context: &impl ContextOps<C>,
         goal: &C::UCanonicalGoalInEnvironment,
     ) -> Option<C::Solution> {
-        context.make_solution(C::canonical(&goal), self.iter_answers(context, goal))
+        context.make_solution(&goal, self.iter_answers(context, goal))
     }
 
     /// Solves a given goal, producing the solution. This will do only
@@ -116,18 +71,28 @@ impl<C: Context> Forest<C> {
         &mut self,
         context: &impl ContextOps<C>,
         goal: &C::UCanonicalGoalInEnvironment,
-        mut f: impl FnMut(C::CanonicalConstrainedSubst, bool) -> bool,
+        mut f: impl FnMut(SubstitutionResult<C::CanonicalConstrainedSubst>, bool) -> bool,
     ) -> bool {
         let mut answers = self.iter_answers(context, goal);
-        while let Some(answer) = answers.next_answer() {
-            if !f(
-                context.constrained_subst_from_answer(answer),
-                answers.peek_answer().is_some(),
-            ) {
+        loop {
+            let subst = match answers.next_answer() {
+                AnswerResult::Answer(answer) => {
+                    if !answer.ambiguous {
+                        SubstitutionResult::Definite(context.constrained_subst_from_answer(answer))
+                    } else {
+                        SubstitutionResult::Ambiguous(context.constrained_subst_from_answer(answer))
+                    }
+                }
+                AnswerResult::Floundered => SubstitutionResult::Floundered,
+                AnswerResult::NoMoreSolutions => {
+                    return true;
+                }
+            };
+
+            if !f(subst, !answers.peek_answer().is_no_more_solutions()) {
                 return false;
             }
         }
-        return true;
     }
 
     /// True if all the tables on the stack starting from `depth` and
@@ -162,15 +127,22 @@ impl<C: Context> Forest<C> {
             self.tables[table].coinductive_goal
         })
     }
+}
 
-    /// Useful for testing.
-    pub fn num_cached_answers_for_goal(
-        &mut self,
-        context: &impl ContextOps<C>,
-        goal: &C::UCanonicalGoalInEnvironment,
-    ) -> usize {
-        let table = self.get_or_create_table_for_ucanonical_goal(context, goal.clone());
-        self.tables[table].num_cached_answers()
+#[derive(Debug)]
+pub enum SubstitutionResult<S> {
+    Definite(S),
+    Ambiguous(S),
+    Floundered,
+}
+
+impl<S: Display> Display for SubstitutionResult<S> {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            SubstitutionResult::Definite(subst) => write!(fmt, "{}", subst),
+            SubstitutionResult::Ambiguous(subst) => write!(fmt, "Ambiguous({})", subst),
+            SubstitutionResult::Floundered => write!(fmt, "Floundered"),
+        }
     }
 }
 
@@ -185,29 +157,25 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
     /// # Panics
     ///
     /// Panics if a negative cycle was detected.
-    fn peek_answer(&mut self) -> Option<CompleteAnswer<C>> {
+    fn peek_answer(&mut self) -> AnswerResult<C> {
         loop {
             match self
                 .forest
                 .root_answer(self.context, self.table, self.answer)
             {
                 Ok(answer) => {
-                    return Some(answer.clone());
+                    return AnswerResult::Answer(answer.clone());
                 }
 
                 Err(RootSearchFail::InvalidAnswer) => {
                     self.answer.increment();
                 }
                 Err(RootSearchFail::Floundered) => {
-                    let table_goal = &self.forest.tables[self.table].table_goal;
-                    return Some(CompleteAnswer {
-                        subst: self.context.identity_constrained_subst(table_goal),
-                        ambiguous: true,
-                    });
+                    return AnswerResult::Floundered;
                 }
 
                 Err(RootSearchFail::NoMoreSolutions) => {
-                    return None;
+                    return AnswerResult::NoMoreSolutions;
                 }
 
                 Err(RootSearchFail::QuantumExceeded) => {}
@@ -224,11 +192,10 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
         }
     }
 
-    fn next_answer(&mut self) -> Option<CompleteAnswer<C>> {
-        self.peek_answer().map(|answer| {
-            self.answer.increment();
-            answer
-        })
+    fn next_answer(&mut self) -> AnswerResult<C> {
+        let answer = self.peek_answer();
+        self.answer.increment();
+        answer
     }
 
     fn any_future_answer(

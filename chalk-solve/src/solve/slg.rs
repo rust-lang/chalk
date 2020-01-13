@@ -28,13 +28,19 @@ mod resolvent;
 #[derive(Clone, Debug, HasTypeFamily)]
 pub(crate) struct SlgContext<TF: TypeFamily> {
     max_size: usize,
+    /// The expected number of answers for a solution.
+    /// Only really sseful for tests, since `make_solution`
+    /// will panic if the number of cached answers does not
+    /// equal this when a solution is made.
+    expected_answers: Option<usize>,
     phantom: PhantomData<TF>,
 }
 
 impl<TF: TypeFamily> SlgContext<TF> {
-    pub(crate) fn new(max_size: usize) -> SlgContext<TF> {
+    pub(crate) fn new(max_size: usize, expected_answers: Option<usize>) -> SlgContext<TF> {
         SlgContext {
             max_size,
+            expected_answers,
             phantom: PhantomData,
         }
     }
@@ -43,6 +49,7 @@ impl<TF: TypeFamily> SlgContext<TF> {
         SlgContextOps {
             program,
             max_size: self.max_size,
+            expected_answers: self.expected_answers,
         }
     }
 }
@@ -51,6 +58,7 @@ impl<TF: TypeFamily> SlgContext<TF> {
 pub(crate) struct SlgContextOps<'me, TF: TypeFamily> {
     program: &'me dyn RustIrDatabase<TF>,
     max_size: usize,
+    expected_answers: Option<usize>,
 }
 
 #[derive(Clone)]
@@ -154,15 +162,8 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
     fn goal_from_goal_in_environment(goal: &InEnvironment<Goal<TF>>) -> &Goal<TF> {
         &goal.goal
     }
-}
-
-impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<'me, TF> {
-    fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal<TF>>>) -> bool {
-        goal.is_coinductive(self.program)
-    }
 
     fn identity_constrained_subst(
-        &self,
         goal: &UCanonical<InEnvironment<Goal<TF>>>,
     ) -> Canonical<ConstrainedSubst<TF>> {
         let (mut infer, subst, _) = InferenceTable::from_canonical(goal.universes, &goal.canonical);
@@ -172,6 +173,12 @@ impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<
                 constraints: vec![],
             })
             .quantified
+    }
+}
+
+impl<'me, TF: TypeFamily> context::ContextOps<SlgContext<TF>> for SlgContextOps<'me, TF> {
+    fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal<TF>>>) -> bool {
+        goal.is_coinductive(self.program)
     }
 
     fn program_clauses(

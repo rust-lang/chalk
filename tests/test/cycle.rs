@@ -195,3 +195,26 @@ fn overflow_universe() {
         }
     }
 }
+
+#[test]
+fn infinite_recursion() {
+    test! {
+        program {
+            trait A { }
+            trait B { }
+            trait C { }
+            trait D { }
+
+            struct Vec<T> { }
+            impl<T> A for Vec<T> where T: B { }
+            impl<T> B for Vec<T> where T: C { }
+            impl<T> C for Vec<T> where T: D { }
+            impl<T> D for Vec<T> where T: A { }
+        }
+
+        goal {
+            exists<T> { T: A }
+        } yields_all[SolverChoice::slg(10, None)] {
+        }
+    }
+}

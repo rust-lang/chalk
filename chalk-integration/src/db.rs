@@ -2,6 +2,7 @@ use crate::error::ChalkError;
 use crate::lowering::LowerGoal;
 use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
+use chalk_engine::forest::SubstitutionResult;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::AssocTypeId;
@@ -70,7 +71,7 @@ impl ChalkDatabase {
     pub fn solve_multiple(
         &self,
         goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        f: impl FnMut(Canonical<ConstrainedSubst<ChalkIr>>, bool) -> bool,
+        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<ChalkIr>>>, bool) -> bool,
     ) -> bool {
         let solver = self.solver();
         let solution = solver.lock().unwrap().solve_multiple(self, goal, f);

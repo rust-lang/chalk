@@ -76,7 +76,7 @@ fn coherence(
 ) -> Result<BTreeMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError> {
     let program = db.program_ir()?;
 
-    tls::set_current_program(&program, || -> Result<_, ChalkError> {
+    let priorities_map = tls::set_current_program(&program, || -> Result<_, ChalkError> {
         let priorities_map: Result<BTreeMap<_, _>, ChalkError> = program
             .trait_data
             .keys()
@@ -87,11 +87,10 @@ fn coherence(
             })
             .collect();
         let priorities_map = priorities_map?;
-
-        let () = db.orphan_check()?;
-
         Ok(priorities_map)
-    })
+    });
+    let () = db.orphan_check()?;
+    priorities_map
 }
 
 fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {

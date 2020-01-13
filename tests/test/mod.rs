@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 use chalk_integration::db::ChalkDatabase;
+use chalk_integration::lowering::LowerGoal;
 use chalk_integration::query::LoweringDatabase;
 use chalk_ir;
 use chalk_ir::family::ChalkIr;
@@ -10,7 +11,6 @@ use chalk_solve::{Solution, SolverChoice};
 #[cfg(feature = "bench")]
 mod bench;
 mod coherence;
-mod slg;
 mod wf_lowering;
 
 fn assert_result(result: &Option<Solution<ChalkIr>>, expected: &str) {
@@ -19,20 +19,10 @@ fn assert_result(result: &Option<Solution<ChalkIr>>, expected: &str) {
         None => format!("No possible solution"),
     };
 
-    println!("expected:\n{}", expected);
-    println!("actual:\n{}", result);
-
-    let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-    let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-    assert!(!expected1.is_empty() && result1.starts_with(&expected1));
+    assert_same(&result, expected);
 }
 
-fn assert_canonical(
-    result: &chalk_ir::Canonical<chalk_ir::ConstrainedSubst<chalk_ir::family::ChalkIr>>,
-    expected: &str,
-) {
-    let result = format!("{}", result);
-
+fn assert_same(result: &str, expected: &str) {
     println!("expected:\n{}", expected);
     println!("actual:\n{}", result);
 
@@ -110,22 +100,88 @@ macro_rules! test {
     // (this rule) for the last goal in the list (next rule). There
     // might be a more elegant fix than copy-and-paste but this works.
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
-        goal $goal:tt $(yields[$($C:expr),+] { $expected:expr })*
+        goal $goal:tt yields[$C:expr] { $expected:expr }
             goal $($unparsed_goals:tt)*
     ]) => {
         test!(@program[$program]
-              @parsed_goals[$($parsed_goals)*
-                            $($((stringify!($goal), $C, TestGoal::All(vec![$expected])))+)+]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::Aggregated($expected))
+              ]
               @unparsed_goals[goal $($unparsed_goals)*])
     };
 
     // same as above, but for the final goal in the list.
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
-        goal $goal:tt $(yields[$($C:expr),+] { $expected:expr })*
+        goal $goal:tt yields[$C:expr] { $expected:expr }
     ]) => {
         test!(@program[$program]
-              @parsed_goals[$($parsed_goals)*
-                            $($((stringify!($goal), $C, TestGoal::All(vec![$expected])))+)+]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::Aggregated($expected))
+                ]
+              @unparsed_goals[])
+    };
+
+    // goal { G } yields_all[C1] { "Y1" } yields_all[C2] { "Y2" } -- test that solver C1 yields Y1
+    // and C2 yields Y2
+    //
+    // Annoyingly, to avoid getting a parsing ambiguity error, we have
+    // to distinguish the case where there are other goals to come
+    // (this rule) for the last goal in the list (next rule). There
+    // might be a more elegant fix than copy-and-paste but this works.
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt yields_all[$C:expr] { $($expected:expr),* }
+            goal $($unparsed_goals:tt)*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::All(vec![$($expected),*]))
+              ]
+              @unparsed_goals[goal $($unparsed_goals)*])
+    };
+
+    // same as above, but for the final goal in the list.
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt yields_all[$C:expr] { $($expected:expr),* }
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::All(vec![$($expected),*]))
+                ]
+              @unparsed_goals[])
+    };
+
+    // goal { G } yields_first[C1] { "Y1" } yields_first[C2] { "Y2" } -- test that solver C1 yields Y1
+    // and C2 yields Y2
+    //
+    // Annoyingly, to avoid getting a parsing ambiguity error, we have
+    // to distinguish the case where there are other goals to come
+    // (this rule) for the last goal in the list (next rule). There
+    // might be a more elegant fix than copy-and-paste but this works.
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt yields_first[$C:expr] { $($expected:expr),* }
+            goal $($unparsed_goals:tt)*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::First(vec![$($expected),*]))
+              ]
+              @unparsed_goals[goal $($unparsed_goals)*])
+    };
+
+    // same as above, but for the final goal in the list.
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt yields_first[$C:expr] { $($expected:expr),* }
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::First(vec![$($expected),*]))
+                ]
               @unparsed_goals[])
     };
 }
@@ -140,20 +196,21 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
         SolverChoice::default(),
     );
 
+    let program = db.checked_program().unwrap();
+
     for (goal_text, solver_choice, expected) in goals {
         if db.solver_choice() != solver_choice {
             db.set_solver_choice(solver_choice);
         }
-
-        let program = db.checked_program().unwrap();
 
         chalk_ir::tls::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
-            let goal = db
-                .parse_and_lower_goal(&goal_text[1..goal_text.len() - 1])
+            let goal = chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1])
+                .unwrap()
+                .lower(&*program)
                 .unwrap();
 
             println!("using solver: {:?}", solver_choice);
@@ -169,7 +226,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                         db.solve_multiple(&peeled_goal, |result, next_result| {
                             match expected.next() {
                                 Some(expected) => {
-                                    assert_canonical(&result, expected);
+                                    assert_same(&format!("{}", &result), expected);
                                 }
                                 None => {
                                     assert!(!next_result, "Unexpected next solution");
@@ -179,12 +236,15 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                         }),
                         "Not all solutions processed"
                     );
+                    if expected.next().is_some() {
+                        panic!("Not all solutions processed");
+                    }
                 }
                 TestGoal::First(expected) => {
                     let mut expected = expected.into_iter();
                     db.solve_multiple(&peeled_goal, |result, next_result| match expected.next() {
                         Some(solution) => {
-                            assert_canonical(&result, solution);
+                            assert_same(&format!("{}", &result), solution);
                             if !next_result {
                                 assert!(expected.next().is_none(), "Not enough solutions found");
                             }

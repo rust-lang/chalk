@@ -141,3 +141,23 @@ fn auto_trait_with_impls() {
         }
     }
 }
+
+/// This Flounders because auto traits can't be enumerated
+#[test]
+fn auto_traits_flounder() {
+    test! {
+        program {
+            struct Foo { }
+            struct Bar { }
+
+            #[auto]
+            trait Send { }
+        }
+
+        goal {
+            exists<A> { A: Send }
+        } yields_first[SolverChoice::slg(3, None)] {
+            "Floundered"
+        }
+    }
+}

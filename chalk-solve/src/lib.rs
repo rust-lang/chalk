@@ -75,4 +75,3 @@ pub use solve::Guidance;
 pub use solve::Solution;
 pub use solve::Solver;
 pub use solve::SolverChoice;
-pub use solve::TestSolver;

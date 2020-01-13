@@ -13,7 +13,6 @@ edition = "2018"
 bench = []
 
 [dependencies]
-diff = "0.1.11"
 docopt = "1.0.0"
 itertools = "0.8.0"
 lalrpop-intern = "0.15.1"

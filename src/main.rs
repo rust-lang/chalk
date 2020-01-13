@@ -286,6 +286,7 @@ impl Args {
     fn solver_choice(&self) -> SolverChoice {
         SolverChoice::SLG {
             max_size: self.flag_overflow_depth,
+            expected_answers: None,
         }
     }
 }
