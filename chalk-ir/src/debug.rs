@@ -96,6 +96,14 @@ impl<I: Interner> Debug for QuantifiedWhereClauses<I> {
     }
 }
 
+impl<I: Interner> Debug for ProjectionTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_projection_ty(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format ProjectionTy without setting Program in tls")
+        })
+    }
+}
+
 impl<I: Interner> Display for Substitution<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
@@ -423,6 +431,35 @@ impl<'me, I: Interner> SeparatorTraitRef<'me, I> {
     pub fn debug<'a>(&'a self, interner: &'a I) -> SeparatorTraitRefDebug<'a, 'me, I> {
         SeparatorTraitRefDebug {
             separator_trait_ref: self,
+            interner,
+        }
+    }
+}
+
+pub struct ProjectionTyDebug<'a, I: Interner> {
+    projection_ty: &'a ProjectionTy<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for ProjectionTyDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let ProjectionTyDebug {
+            projection_ty,
+            interner,
+        } = self;
+        write!(
+            fmt,
+            "({:?}){:?}",
+            projection_ty.associated_ty_id,
+            projection_ty.substitution.with_angle(interner)
+        )
+    }
+}
+
+impl<I: Interner> ProjectionTy<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> ProjectionTyDebug<'a, I> {
+        ProjectionTyDebug {
+            projection_ty: self,
             interner,
         }
     }

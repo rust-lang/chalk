@@ -268,10 +268,12 @@ fn program_clauses_that_could_match<I: Interner>(
                 );
             }
         }
-        DomainGoal::Holds(WhereClause::AliasEq(alias_predicate)) => {
-            db.associated_ty_data(alias_predicate.alias.associated_ty_id)
-                .to_program_clauses(builder);
-        }
+        DomainGoal::Holds(WhereClause::AliasEq(alias_predicate)) => match &alias_predicate.alias {
+            AliasTy::Projection(proj) => db
+                .associated_ty_data(proj.associated_ty_id)
+                .to_program_clauses(builder),
+            _ => todo!(),
+        },
         DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
             db.trait_datum(trait_predicate.trait_id)
                 .to_program_clauses(builder);
@@ -283,39 +285,42 @@ fn program_clauses_that_could_match<I: Interner>(
             match_ty(builder, environment, ty)?
         }
         DomainGoal::FromEnv(_) => (), // Computed in the environment
-        DomainGoal::Normalize(Normalize { alias, ty: _ }) => {
-            // Normalize goals derive from `AssociatedTyValue` datums,
-            // which are found in impls. That is, if we are
-            // normalizing (e.g.) `<T as Iterator>::Item>`, then
-            // search for impls of iterator and, within those impls,
-            // for associated type values:
-            //
-            // ```ignore
-            // impl Iterator for Foo {
-            //     type Item = Bar; // <-- associated type value
-            // }
-            // ```
-            let associated_ty_datum = db.associated_ty_data(alias.associated_ty_id);
-            let trait_id = associated_ty_datum.trait_id;
-            let trait_parameters = db.trait_parameters_from_projection(alias);
+        DomainGoal::Normalize(Normalize { alias, ty: _ }) => match alias {
+            AliasTy::Projection(proj) => {
+                // Normalize goals derive from `AssociatedTyValue` datums,
+                // which are found in impls. That is, if we are
+                // normalizing (e.g.) `<T as Iterator>::Item>`, then
+                // search for impls of iterator and, within those impls,
+                // for associated type values:
+                //
+                // ```ignore
+                // impl Iterator for Foo {
+                //     type Item = Bar; // <-- associated type value
+                // }
+                // ```
+                let associated_ty_datum = db.associated_ty_data(proj.associated_ty_id);
+                let trait_id = associated_ty_datum.trait_id;
+                let trait_parameters = db.trait_parameters_from_projection(proj);
 
-            let trait_datum = db.trait_datum(trait_id);
+                let trait_datum = db.trait_datum(trait_id);
 
-            // Flounder if the self-type is unknown and the trait is non-enumerable.
-            //
-            // e.g., Normalize(<?X as Iterator>::Item = u32)
-            if (alias.self_type_parameter(interner).is_var(interner))
-                && trait_datum.is_non_enumerable_trait()
-            {
-                return Err(Floundered);
+                // Flounder if the self-type is unknown and the trait is non-enumerable.
+                //
+                // e.g., Normalize(<?X as Iterator>::Item = u32)
+                if (alias.self_type_parameter(interner).is_var(interner))
+                    && trait_datum.is_non_enumerable_trait()
+                {
+                    return Err(Floundered);
+                }
+
+                push_program_clauses_for_associated_type_values_in_impls_of(
+                    builder,
+                    trait_id,
+                    trait_parameters,
+                );
             }
-
-            push_program_clauses_for_associated_type_values_in_impls_of(
-                builder,
-                trait_id,
-                trait_parameters,
-            );
-        }
+            _ => todo!(),
+        },
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)
             .to_program_clauses(builder),
@@ -390,10 +395,11 @@ fn match_ty<I: Interner>(
         TyData::Placeholder(_) => {
             builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));
         }
-        TyData::Alias(alias_ty) => builder
+        TyData::Alias(AliasTy::Projection(proj)) => builder
             .db
-            .associated_ty_data(alias_ty.associated_ty_id)
+            .associated_ty_data(proj.associated_ty_id)
             .to_program_clauses(builder),
+        TyData::Alias(_) => todo!(),
         TyData::Function(quantified_ty) => {
             builder.push_fact(WellFormed::Ty(ty.clone()));
             quantified_ty
@@ -416,6 +422,16 @@ fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeNa
             .db
             .associated_ty_data(type_id)
             .to_program_clauses(builder),
+    }
+}
+
+fn match_alias_ty<I: Interner>(builder: &mut ClauseBuilder<'_, I>, alias: &AliasTy<I>) {
+    match alias {
+        AliasTy::Projection(projection_ty) => builder
+            .db
+            .associated_ty_data(projection_ty.associated_ty_id)
+            .to_program_clauses(builder),
+        _ => (),
     }
 }
 

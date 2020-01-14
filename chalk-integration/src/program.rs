@@ -5,8 +5,8 @@ use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
-    Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, StructId, Substitution,
-    TraitId, Ty, TypeName,
+    Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy, StructId,
+    Substitution, TraitId, Ty, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -114,7 +114,18 @@ impl tls::DebugContext for Program {
         alias_ty: &AliasTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        let (associated_ty_data, trait_params, other_params) = self.split_projection(alias_ty);
+        match alias_ty {
+            AliasTy::Projection(proj) => self.debug_projection_ty(proj, fmt),
+            _ => todo!(),
+        }
+    }
+
+    fn debug_projection_ty(
+        &self,
+        projection_ty: &ProjectionTy<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let (associated_ty_data, trait_params, other_params) = self.split_projection(projection_ty);
         write!(
             fmt,
             "<{:?} as {:?}{:?}>::{}{:?}",

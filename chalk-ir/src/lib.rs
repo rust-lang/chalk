@@ -838,7 +838,14 @@ impl<I: Interner> ParameterData<I> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
-pub struct AliasTy<I: Interner> {
+pub enum AliasTy<I: Interner> {
+    Projection(ProjectionTy<I>),
+    ImplTrait(()),
+    TypeAlias(()),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+pub struct ProjectionTy<I: Interner> {
     pub associated_ty_id: AssocTypeId<I>,
     pub substitution: Substitution<I>,
 }
@@ -849,11 +856,15 @@ impl<I: Interner> AliasTy<I> {
     }
 
     pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
-        self.substitution
-            .iter(interner)
-            .find_map(move |p| p.ty(interner))
-            .unwrap()
-            .clone()
+        match self {
+            AliasTy::Projection(projection_ty) => projection_ty
+                .substitution
+                .iter(interner)
+                .find_map(move |p| p.ty(interner))
+                .unwrap()
+                .clone(),
+            _ => todo!(),
+        }
     }
 }
 

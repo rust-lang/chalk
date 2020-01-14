@@ -960,10 +960,10 @@ impl LowerAliasTy for AliasTy {
 
         args.extend(trait_substitution.iter(interner).cloned());
 
-        Ok(chalk_ir::AliasTy {
+        Ok(chalk_ir::AliasTy::Projection(chalk_ir::ProjectionTy {
             associated_ty_id: lookup.id,
             substitution: chalk_ir::Substitution::from(interner, args),
-        })
+        }))
     }
 }
 

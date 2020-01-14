@@ -508,9 +508,12 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 self.aggregate_placeholder_tys(p1, p2)
             }
 
-            (TyData::Alias(alias1), TyData::Alias(alias2)) => {
-                self.aggregate_alias_tys(alias1, alias2)
-            }
+            (
+                TyData::Alias(AliasTy::Projection(proj1)),
+                TyData::Alias(AliasTy::Projection(proj2)),
+            ) => self.aggregate_projection_tys(proj1, proj2),
+
+            (TyData::Alias(_), TyData::Alias(_)) => todo!(),
 
             // For everything else, be conservative here and just say we may invalidate.
             (TyData::Function(_), _)
@@ -555,12 +558,16 @@ impl<I: Interner> MayInvalidate<'_, I> {
         new != current
     }
 
-    fn aggregate_alias_tys(&mut self, new: &AliasTy<I>, current: &AliasTy<I>) -> bool {
-        let AliasTy {
+    fn aggregate_projection_tys(
+        &mut self,
+        new: &ProjectionTy<I>,
+        current: &ProjectionTy<I>,
+    ) -> bool {
+        let ProjectionTy {
             associated_ty_id: new_name,
             substitution: new_substitution,
         } = new;
-        let AliasTy {
+        let ProjectionTy {
             associated_ty_id: current_name,
             substitution: current_substitution,
         } = current;

@@ -234,10 +234,6 @@ struct_zip!(impl[
 });
 struct_zip!(impl[I: Interner] Zip<I> for ApplicationTy<I> { name, substitution });
 struct_zip!(impl[I: Interner] Zip<I> for DynTy<I> { bounds });
-struct_zip!(impl[I: Interner] Zip<I> for AliasTy<I> {
-    associated_ty_id,
-    substitution,
-});
 struct_zip!(impl[I: Interner] Zip<I> for Normalize<I> { alias, ty });
 struct_zip!(impl[I: Interner] Zip<I> for AliasEq<I> { alias, ty });
 struct_zip!(impl[I: Interner] Zip<I> for EqGoal<I> { a, b });
@@ -245,6 +241,10 @@ struct_zip!(impl[I: Interner] Zip<I> for ProgramClauseImplication<I> {
     consequence,
     conditions,
     priority,
+});
+struct_zip!(impl[I: Interner] Zip<I> for ProjectionTy<I> {
+    associated_ty_id,
+    substitution
 });
 
 impl<I: Interner> Zip<I> for Environment<I> {
@@ -339,6 +339,7 @@ enum_zip!(impl<I> for DomainGoal<I> {
     DownstreamType
 });
 enum_zip!(impl<I> for ProgramClauseData<I> { Implies, ForAll });
+enum_zip!(impl<I> for AliasTy<I> { Projection, ImplTrait, TypeAlias });
 
 impl<I: Interner> Zip<I> for Substitution<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>

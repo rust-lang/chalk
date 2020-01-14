@@ -109,7 +109,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
             // ```
             builder.push_clause(
                 Normalize {
-                    alias: projection.clone(),
+                    alias: AliasTy::Projection(projection.clone()),
                     ty: assoc_ty_value.ty,
                 },
                 impl_where_clauses.chain(assoc_ty_where_clauses),
@@ -584,14 +584,14 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
         builder.push_binders(&binders, |builder, (where_clauses, bounds)| {
             let substitution = builder.substitution_in_scope();
 
-            let alias = AliasTy {
+            let projection = ProjectionTy {
                 associated_ty_id: self.id,
                 substitution: substitution.clone(),
             };
-            let projection_ty = alias.clone().intern(interner);
+            let projection_ty = AliasTy::Projection(projection.clone()).intern(interner);
 
             // Retrieve the trait ref embedding the associated type
-            let trait_ref = builder.db.trait_ref_from_projection(&alias);
+            let trait_ref = builder.db.trait_ref_from_projection(&projection);
 
             // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
             // we would produce `(Iterator::Item)<T>`.
@@ -602,7 +602,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             .intern(interner);
 
             let alias_eq = AliasEq {
-                alias: alias.clone(),
+                alias: AliasTy::Projection(projection.clone()),
                 ty: app_ty.clone(),
             };
 
@@ -675,12 +675,15 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             builder.push_bound_ty(|builder, ty| {
                 // `Normalize(<T as Foo>::Assoc -> U)`
                 let normalize = Normalize {
-                    alias: alias.clone(),
+                    alias: AliasTy::Projection(projection.clone()),
                     ty: ty.clone(),
                 };
 
                 // `AliasEq(<T as Foo>::Assoc = U)`
-                let alias_eq = AliasEq { alias, ty };
+                let alias_eq = AliasEq {
+                    alias: AliasTy::Projection(projection),
+                    ty,
+                };
 
                 // Projection equality rule from above.
                 //
