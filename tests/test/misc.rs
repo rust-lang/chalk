@@ -308,12 +308,12 @@ fn cached_answers_1() {
 
         goal {
             exists<T> { T: Sour }
-        } yields_all[SolverChoice::slg(2, None)] {
+        } yields_first[SolverChoice::slg(2, None)] {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := HotSauce<Vinegar>], lifetime constraints []",
-            "Ambiguous(for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] })"
+            "Floundered"
         }
     }
 }
@@ -335,12 +335,12 @@ fn cached_answers_2() {
 
         goal {
             exists<T> { T: Sour }
-        } yields_all[SolverChoice::slg(2, None)] {
+        } yields_first[SolverChoice::slg(2, None)] {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := HotSauce<Vinegar>], lifetime constraints []",
-            "Ambiguous(for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] })"
+            "Floundered"
         }
     }
 }
@@ -362,12 +362,11 @@ fn cached_answers_3() {
 
         goal {
             exists<T> { T: Sour }
-        } yields_all[SolverChoice::slg(2, None)] {
+        } yields_first[SolverChoice::slg(2, None)] {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
-            "Ambiguous(for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] })",
-            "substitution [?0 := HotSauce<Vinegar>], lifetime constraints []"
+            "Floundered"
         }
     }
 }

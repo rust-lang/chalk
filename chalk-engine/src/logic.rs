@@ -302,9 +302,6 @@ impl<C: Context> Forest<C> {
                         // subgoals may be eligble to be pursued again.
                         ex_clause.answer_time.increment();
 
-                        // Apply answer abstraction.
-                        self.truncate_returned(ex_clause, infer);
-
                         // Ok, we've applied the answer to this Strand.
                         return Ok(());
                     }
@@ -1040,6 +1037,28 @@ impl<C: Context> Forest<C> {
         assert!(subgoals.is_empty());
         assert!(floundered_subgoals.is_empty());
 
+        // If the answer gets too large, mark the table as floundered.
+        // This is the *most conservative* course. There are a few alternatives:
+        // 1) Replace the answer with a truncated version of it. (This was done
+        //    previously, but turned out to be more complicated than we wanted and
+        //    and a source of multiple bugs.)
+        // 2) Mark this *strand* as floundered. We don't currently have a mechanism
+        //    for this (only floundered subgoals), so implementing this is more
+        //    difficult because we don't want to just *remove* this strand from the
+        //    table, because that might make the table give `NoMoreSolutions`, which
+        //    is *wrong*.
+        // 3) Do something fancy with delayed subgoals, effectively delayed the
+        //    truncated bits to a different strand (and a more "refined" answer).
+        //    (This one probably needs more thought, but is here for "completeness")
+        //
+        // Ultimately, the current decision to flounder the entire table mostly boils
+        // down to "it works as we expect for the current tests". And, we likely don't
+        // even *need* the added complexity just for potentially more answers.
+        if infer.truncate_answer(&subst).is_some() {
+            self.tables[table].mark_floundered();
+            return None;
+        }
+
         let subst = infer.canonicalize_answer_subst(subst, constraints, delayed_subgoals);
         debug!("answer: table={:?}, subst={:?}", table, subst);
 
@@ -1457,51 +1476,5 @@ impl<C: Context> Forest<C> {
             floundered_time,
         });
         debug!("flounder_subgoal: ex_clause={:#?}", ex_clause);
-    }
-
-    /// Used whenever we process an answer (whether new or cached) on
-    /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
-    /// the resolvent (or factor) if it has grown too large.
-    fn truncate_returned(&self, ex_clause: &mut ExClause<C>, infer: &mut dyn InferenceTable<C>) {
-        // DIVERGENCE
-        //
-        // In the original RR paper, truncation is only applied
-        // when the result of resolution is a new answer (i.e.,
-        // `ex_clause.subgoals.is_empty()`).  I've chosen to be
-        // more aggressive here, precisely because or our extended
-        // semantics for unification. In particular, unification
-        // can insert new goals, so I fear that positive feedback
-        // loops could still run indefinitely in the original
-        // formulation. I would like to revise our unification
-        // mechanism to avoid that problem, in which case this could
-        // be tightened up to be more like the original RR paper.
-        //
-        // Still, I *believe* this more aggressive approx. should
-        // not interfere with any of the properties of the
-        // original paper. In particular, applying truncation only
-        // when the resolvent has no subgoals seems like it is
-        // aimed at giving us more times to eliminate this
-        // ambiguous answer.
-
-        match infer.truncate_answer(&ex_clause.subst) {
-            // No need to truncate
-            None => {}
-
-            // Resolvent got too large. Have to introduce approximation.
-            Some(truncated_subst) => {
-                mem::replace(
-                    ex_clause,
-                    ExClause {
-                        subst: truncated_subst,
-                        ambiguous: true,
-                        constraints: vec![],
-                        subgoals: vec![],
-                        delayed_subgoals: vec![],
-                        answer_time: TimeStamp::default(),
-                        floundered_subgoals: vec![],
-                    },
-                );
-            }
-        }
     }
 }
