@@ -9,7 +9,6 @@ use crate::table::AnswerIndex;
 use crate::{
     Answer, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
 };
-use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 
@@ -284,7 +283,7 @@ impl<C: Context> Forest<C> {
                 ) {
                     Ok(()) => {
                         let Strand {
-                            infer,
+                            infer: _,
                             ex_clause,
                             selected_subgoal: _,
                             last_pursued_time: _,
@@ -1179,7 +1178,7 @@ impl<C: Context> Forest<C> {
 
         // Subgoal abstraction:
         let (ucanonical_subgoal, universe_map) = match subgoal {
-            Literal::Positive(subgoal) => self.abstract_positive_literal(infer, subgoal),
+            Literal::Positive(subgoal) => self.abstract_positive_literal(infer, subgoal)?,
             Literal::Negative(subgoal) => self.abstract_negative_literal(infer, subgoal)?,
         };
 
@@ -1319,7 +1318,7 @@ impl<C: Context> Forest<C> {
         &mut self,
         infer: &mut dyn InferenceTable<C>,
         subgoal: &C::GoalInEnvironment,
-    ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap) {
+    ) -> Option<(C::UCanonicalGoalInEnvironment, C::UniverseMap)> {
         // Subgoal abstraction: Rather than looking up the table for
         // `selected_goal` directly, first apply the truncation
         // function. This may introduce fresh variables, making the
@@ -1343,13 +1342,12 @@ impl<C: Context> Forest<C> {
         // irrelevant answers (e.g., `Vec<Vec<u32>>: Sized`), they
         // will fail to unify with our selected goal, producing no
         // resolvent.
-        match infer.truncate_goal(subgoal) {
-            None => infer.fully_canonicalize_goal(subgoal),
-            Some(truncated_subgoal) => {
-                debug!("truncated={:?}", truncated_subgoal);
-                infer.fully_canonicalize_goal(&truncated_subgoal)
-            }
+
+        if infer.truncate_goal(subgoal).is_some() {
+            return None;
         }
+
+        return Some(infer.fully_canonicalize_goal(subgoal));
     }
 
     /// Given a selected negative subgoal, the subgoal is "inverted"
@@ -1454,10 +1452,12 @@ impl<C: Context> Forest<C> {
         // variables that have been inverted, as discussed in the
         // prior paragraph above.) I just didn't feel like dealing
         // with it yet.
-        match infer.truncate_goal(&inverted_subgoal) {
-            Some(_) => None,
-            None => Some(infer.fully_canonicalize_goal(&inverted_subgoal)),
+
+        if infer.truncate_goal(&inverted_subgoal).is_some() {
+            return None;
         }
+
+        return Some(infer.fully_canonicalize_goal(&inverted_subgoal));
     }
 
     /// Removes the subgoal at `subgoal_index` from the strand's
