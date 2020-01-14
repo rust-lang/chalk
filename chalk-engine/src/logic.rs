@@ -1310,44 +1310,17 @@ impl<C: Context> Forest<C> {
     /// abstraction function to yield the canonical form that will be
     /// used to pick a table. Typically, this abstraction has no
     /// effect, and hence we are simply returning the canonical form
-    /// of `subgoal`, but if the subgoal is getting too big, we may
-    /// truncate the goal to ensure termination.
-    ///
-    /// This technique is described in the SA paper.
+    /// of `subgoal`; but if the subgoal is getting too big, we return
+    /// `None`, which causes the subgoal to flounder.
     fn abstract_positive_literal(
         &mut self,
         infer: &mut dyn InferenceTable<C>,
         subgoal: &C::GoalInEnvironment,
     ) -> Option<(C::UCanonicalGoalInEnvironment, C::UniverseMap)> {
-        // Subgoal abstraction: Rather than looking up the table for
-        // `selected_goal` directly, first apply the truncation
-        // function. This may introduce fresh variables, making the
-        // goal that we are looking up more general, and forcing us to
-        // reuse an existing table. For example, if we had a selected
-        // goal of
-        //
-        //     // Vec<Vec<Vec<Vec<i32>>>>: Sized
-        //
-        // we might now produce a truncated goal of
-        //
-        //     // Vec<Vec<?T>>: Sized
-        //
-        // Obviously, the answer we are looking for -- if it exists -- will be
-        // found amongst the answers of this new, truncated goal.
-        //
-        // Subtle point: Note that the **selected goal** remains
-        // unchanged and will be carried over into the "pending
-        // clause" for the positive link on the new subgoal. This
-        // means that if our new, truncated subgoal produces
-        // irrelevant answers (e.g., `Vec<Vec<u32>>: Sized`), they
-        // will fail to unify with our selected goal, producing no
-        // resolvent.
-
-        if infer.truncate_goal(subgoal).is_some() {
-            return None;
+        match infer.truncate_goal(subgoal) {
+            Some(_) => None,
+            None => Some(infer.fully_canonicalize_goal(subgoal)),
         }
-
-        return Some(infer.fully_canonicalize_goal(subgoal));
     }
 
     /// Given a selected negative subgoal, the subgoal is "inverted"
@@ -1401,63 +1374,10 @@ impl<C: Context> Forest<C> {
         // affect completeness when it comes to subgoal abstraction.
         let inverted_subgoal = infer.invert_goal(subgoal)?;
 
-        // DIVERGENCE
-        //
-        // If the negative subgoal has grown so large that we would have
-        // to truncate it, we currently just abort the computation
-        // entirely. This is not necessary -- the SA paper makes no
-        // such distinction, for example, and applies truncation equally
-        // for positive/negative literals. However, there are some complications
-        // that arise that I do not wish to deal with right now.
-        //
-        // Let's work through an example to show you what I
-        // mean. Imagine we have this (negative) selected literal;
-        // hence `selected_subgoal` will just be the inner part:
-        //
-        //     // not { Vec<Vec<Vec<Vec<i32>>>>: Sized }
-        //     //       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        //     //       `selected_goal`
-        //
-        // (In this case, the `inverted_subgoal` would be the same,
-        // since there are no free universal variables.)
-        //
-        // If truncation **doesn't apply**, we would go and lookup the
-        // table for the selected goal (`Vec<Vec<..>>: Sized`) and see
-        // whether it has any answers. If it does, and they are
-        // definite, then this negative literal is false. We don't
-        // really care even how many answers there are and so forth
-        // (if the goal is ground, as in this case, there can be at
-        // most one definite answer, but if there are universals, then
-        // the inverted goal would have variables; even so, a single
-        // definite answer suffices to show that the `not { .. }` goal
-        // is false).
-        //
-        // Truncation muddies the water, because the table may
-        // generate answers that are not relevant to our original,
-        // untruncated literal.  Suppose that we truncate the selected
-        // goal to:
-        //
-        //     // Vec<Vec<T>>: Sized
-        //
-        // Clearly this table will have some solutions that don't
-        // apply to us.  e.g., `Vec<Vec<u32>>: Sized` is a solution to
-        // this table, but that doesn't imply that `not {
-        // Vec<Vec<Vec<..>>>: Sized }` is false.
-        //
-        // This can be made to work -- we carry along the original
-        // selected goal when we establish links between tables, and
-        // we could use that to screen the resulting answers. (There
-        // are some further complications around the fact that
-        // selected goal may contain universally quantified free
-        // variables that have been inverted, as discussed in the
-        // prior paragraph above.) I just didn't feel like dealing
-        // with it yet.
-
-        if infer.truncate_goal(&inverted_subgoal).is_some() {
-            return None;
+        match infer.truncate_goal(&inverted_subgoal) {
+            Some(_) => None,
+            None => Some(infer.fully_canonicalize_goal(&inverted_subgoal)),
         }
-
-        return Some(infer.fully_canonicalize_goal(&inverted_subgoal));
     }
 
     /// Removes the subgoal at `subgoal_index` from the strand's
