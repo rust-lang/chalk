@@ -98,6 +98,15 @@ AssocTyDefn: AssocTyDefn = {
     }
 };
 
+ImplTraitDefn: ImplTraitDefn = {
+    "type" <ty:Ty> "=" "impl" <b:Plus<TraitBound>> => {
+        ImplTraitDefn {
+            ty,
+            bounds: b,
+        }
+    }
+}
+
 InlineBound: InlineBound = {
     TraitBound => InlineBound::TraitBound(<>),
     AliasEqBound => InlineBound::AliasEqBound(<>),

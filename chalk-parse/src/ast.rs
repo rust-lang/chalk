@@ -77,6 +77,12 @@ pub struct AssocTyDefn {
     pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ImplTraitDefn {
+    pub ty: Ty,
+    pub bounds: Vec<TraitBound>,
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum ParameterKind {
     Ty(Identifier),
