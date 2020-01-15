@@ -9,9 +9,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData,
-    Parameter, ParameterKind, ProjectionTy, QuantifiedWhereClause, StructId, Substitution, TraitId,
-    TraitRef, Ty, TyData, TypeName, WhereClause,
+    AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData, Parameter,
+    ParameterKind, ProjectionEq, ProjectionTy, QuantifiedWhereClause, StructId, Substitution,
+    TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use std::iter;
 
@@ -306,11 +306,11 @@ impl<I: Interner> AliasEqBound<I> {
 
         vec![
             WhereClause::Implemented(trait_ref),
-            WhereClause::AliasEq(AliasEq {
-                alias: AliasTy::Projection(ProjectionTy {
+            WhereClause::ProjectionEq(ProjectionEq {
+                projection: ProjectionTy {
                     associated_ty_id: self.associated_ty_id,
                     substitution,
-                }),
+                },
                 ty: self.value.clone(),
             }),
         ]

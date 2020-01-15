@@ -170,14 +170,20 @@ impl<'t, I: Interner> Unifier<'t, I> {
             | (&TyData::Placeholder(_), &TyData::Alias(ref alias))
             | (&TyData::Function(_), &TyData::Alias(ref alias))
             | (&TyData::InferenceVar(_), &TyData::Alias(ref alias))
-            | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => self.unify_alias_ty(alias, a),
+            | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => match alias {
+                AliasTy::Projection(ref proj) => self.unify_projection_ty(proj, a),
+                _ => todo!(),
+            },
 
             (&TyData::Alias(ref alias), &TyData::Alias(_))
             | (&TyData::Alias(ref alias), &TyData::Apply(_))
             | (&TyData::Alias(ref alias), &TyData::Placeholder(_))
             | (&TyData::Alias(ref alias), &TyData::Function(_))
             | (&TyData::Alias(ref alias), &TyData::InferenceVar(_))
-            | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => self.unify_alias_ty(alias, b),
+            | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => match alias {
+                AliasTy::Projection(ref proj) => self.unify_projection_ty(proj, b),
+                _ => todo!(),
+            },
 
             (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
@@ -222,14 +228,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// type `ty` (which might also be a projection). Creates a goal like
     ///
     /// ```notrust
-    /// AliasEq(<T as Trait>::Item = U)
+    /// ProjectionEq(<T as Trait>::Item = U)
     /// ```
-    fn unify_alias_ty(&mut self, alias: &AliasTy<I>, ty: &Ty<I>) -> Fallible<()> {
+    fn unify_projection_ty(&mut self, proj: &ProjectionTy<I>, ty: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
         Ok(self.goals.push(InEnvironment::new(
             self.environment,
-            AliasEq {
-                alias: alias.clone(),
+            ProjectionEq {
+                projection: proj.clone(),
                 ty: ty.clone(),
             }
             .cast(interner),

@@ -899,7 +899,7 @@ impl<I: Interner> TraitRef<I> {
 #[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner)]
 pub enum WhereClause<I: Interner> {
     Implemented(TraitRef<I>),
-    AliasEq(AliasEq<I>),
+    ProjectionEq(ProjectionEq<I>),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
@@ -1032,7 +1032,7 @@ pub type QuantifiedWhereClause<I> = Binders<WhereClause<I>>;
 impl<I: Interner> WhereClause<I> {
     /// Turn a where clause into the WF version of it i.e.:
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
-    /// * `AliasEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
+    /// * `ProjectionEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
     pub fn into_well_formed_goal(self, interner: &I) -> DomainGoal<I> {
         match self {
@@ -1136,9 +1136,10 @@ impl<I: Interner> DomainGoal<I> {
 
     pub fn inputs(&self, interner: &I) -> Vec<Parameter<I>> {
         match self {
-            DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => {
-                vec![ParameterKind::Ty(alias_eq.alias.clone().intern(interner)).intern(interner)]
-            }
+            DomainGoal::Holds(WhereClause::ProjectionEq(proj_eq)) => vec![ParameterKind::Ty(
+                AliasTy::Projection(proj_eq.projection.clone()).intern(interner),
+            )
+            .intern(interner)],
             _ => Vec::new(),
         }
     }
@@ -1164,12 +1165,12 @@ pub struct Normalize<I: Interner> {
 /// `U`. Equality can be proven via normalization, but we can also
 /// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
-pub struct AliasEq<I: Interner> {
-    pub alias: AliasTy<I>,
+pub struct ProjectionEq<I: Interner> {
+    pub projection: ProjectionTy<I>,
     pub ty: Ty<I>,
 }
 
-impl<I: Interner> HasInterner for AliasEq<I> {
+impl<I: Interner> HasInterner for ProjectionEq<I> {
     type Interner = I;
 }
 

@@ -23,7 +23,7 @@ impl<I: Interner> IsCoinductive<I> for Goal<I> {
                     db.trait_datum(tr.trait_id).is_auto_trait()
                         || db.trait_datum(tr.trait_id).is_coinductive_trait()
                 }
-                WhereClause::AliasEq(..) => false,
+                WhereClause::ProjectionEq(..) => false,
             },
             GoalData::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..))) => true,
             GoalData::Quantified(QuantifierKind::ForAll, goal) => {

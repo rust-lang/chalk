@@ -197,7 +197,7 @@ fn program_clauses_that_could_match<I: Interner>(
             // ```
             // dyn(exists<T> {
             //     forall<'a> { Implemented(T: Fn<'a>) },
-            //     forall<'a> { AliasEq(<T as Fn<'a>>::Output, ()) },
+            //     forall<'a> { ProjectionEq(<T as Fn<'a>>::Output, ()) },
             // })
             // ```
             //
@@ -212,7 +212,7 @@ fn program_clauses_that_could_match<I: Interner>(
             // and
             //
             // ```
-            // forall<'a> { AliasEq(<dyn Fn(&u8) as Fn<'a>>::Output, ()) },
+            // forall<'a> { ProjectionEq(<dyn Fn(&u8) as Fn<'a>>::Output, ()) },
             // ```
             //
             // FIXME. This is presently rather wasteful, in that we
@@ -268,12 +268,9 @@ fn program_clauses_that_could_match<I: Interner>(
                 );
             }
         }
-        DomainGoal::Holds(WhereClause::AliasEq(alias_predicate)) => match &alias_predicate.alias {
-            AliasTy::Projection(proj) => db
-                .associated_ty_data(proj.associated_ty_id)
-                .to_program_clauses(builder),
-            _ => todo!(),
-        },
+        DomainGoal::Holds(WhereClause::ProjectionEq(projection_predicate)) => db
+            .associated_ty_data(projection_predicate.projection.associated_ty_id)
+            .to_program_clauses(builder),
         DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
             db.trait_datum(trait_predicate.trait_id)
                 .to_program_clauses(builder);

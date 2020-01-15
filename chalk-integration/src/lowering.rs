@@ -582,7 +582,7 @@ trait LowerWhereClause<T> {
     /// Lower from an AST `where` clause to an internal IR.
     /// Some AST `where` clauses can lower to multiple ones, this is why we return a `Vec`.
     /// As for now, this is the only the case for `where T: Foo<Item = U>` which lowers to
-    /// `Implemented(T: Foo)` and `AliasEq(<T as Foo>::Item = U)`.
+    /// `Implemented(T: Foo)` and `ProjectionEq(<T as Foo>::Item = U)`.
     fn lower(&self, env: &Env) -> LowerResult<Vec<T>>;
 }
 
@@ -592,12 +592,12 @@ impl LowerWhereClause<chalk_ir::WhereClause<ChalkIr>> for WhereClause {
             WhereClause::Implemented { trait_ref } => {
                 vec![chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?)]
             }
-            WhereClause::AliasEq { alias, ty } => vec![
-                chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
-                    alias: alias.lower(env)?,
+            WhereClause::ProjectionEq { projection, ty } => vec![
+                chalk_ir::WhereClause::ProjectionEq(chalk_ir::ProjectionEq {
+                    projection: projection.lower(env)?,
                     ty: ty.lower(env)?,
                 }),
-                chalk_ir::WhereClause::Implemented(alias.trait_ref.lower(env)?),
+                chalk_ir::WhereClause::Implemented(projection.trait_ref.lower(env)?),
             ],
         };
         Ok(where_clauses)
@@ -921,7 +921,19 @@ trait LowerAliasTy {
 
 impl LowerAliasTy for AliasTy {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::AliasTy<ChalkIr>> {
-        let AliasTy {
+        match self {
+            AliasTy::Projection(proj) => Ok(chalk_ir::AliasTy::Projection(proj.lower(env)?)),
+        }
+    }
+}
+
+trait LowerProjectionTy {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::ProjectionTy<ChalkIr>>;
+}
+
+impl LowerProjectionTy for ProjectionTy {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::ProjectionTy<ChalkIr>> {
+        let ProjectionTy {
             ref trait_ref,
             ref name,
             ref args,
@@ -960,10 +972,10 @@ impl LowerAliasTy for AliasTy {
 
         args.extend(trait_substitution.iter(interner).cloned());
 
-        Ok(chalk_ir::AliasTy::Projection(chalk_ir::ProjectionTy {
+        Ok(chalk_ir::ProjectionTy {
             associated_ty_id: lookup.id,
             substitution: chalk_ir::Substitution::from(interner, args),
-        }))
+        })
     }
 }
 
@@ -1055,9 +1067,10 @@ impl LowerTy for Ty {
                 .intern(interner))
             }
 
-            Ty::Alias { ref alias } => {
-                Ok(chalk_ir::TyData::Alias(alias.lower(env)?).intern(interner))
-            }
+            Ty::Projection { ref proj } => Ok(chalk_ir::TyData::Alias(
+                chalk_ir::AliasTy::Projection(proj.lower(env)?),
+            )
+            .intern(interner)),
 
             Ty::ForAll {
                 ref lifetime_names,

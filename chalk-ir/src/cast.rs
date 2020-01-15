@@ -89,9 +89,9 @@ impl<I: Interner> CastTo<WhereClause<I>> for TraitRef<I> {
     }
 }
 
-impl<I: Interner> CastTo<WhereClause<I>> for AliasEq<I> {
+impl<I: Interner> CastTo<WhereClause<I>> for ProjectionEq<I> {
     fn cast_to(self, _interner: &I) -> WhereClause<I> {
-        WhereClause::AliasEq(self)
+        WhereClause::ProjectionEq(self)
     }
 }
 

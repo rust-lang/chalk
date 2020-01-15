@@ -525,18 +525,18 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
     /// we generate the 'fallback' rule:
     ///
     /// ```notrust
-    /// -- Rule AliasEq-Placeholder
+    /// -- Rule ProjectionEq-Placeholder
     /// forall<Self, 'a, T> {
-    ///     AliasEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
+    ///     ProjectionEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
     /// }
     /// ```
     ///
     /// and
     ///
     /// ```notrust
-    /// -- Rule AliasEq-Normalize
+    /// -- Rule ProjectionEq-Normalize
     /// forall<Self, 'a, T, U> {
-    ///     AliasEq(<T as Foo>::Assoc<'a, T> = U) :-
+    ///     ProjectionEq(<T as Foo>::Assoc<'a, T> = U) :-
     ///         Normalize(<T as Foo>::Assoc -> U).
     /// }
     /// ```
@@ -545,14 +545,14 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
     ///
     /// ```notrust
     /// forall<T> {
-    ///     T: Foo :- exists<U> { AliasEq(<T as Foo>::Assoc = U) }.
+    ///     T: Foo :- exists<U> { ProjectionEq(<T as Foo>::Assoc = U) }.
     /// }
     /// ```
     ///
     /// but this caused problems with the recursive solver. In
     /// particular, whenever normalization is possible, we cannot
     /// solve that projection uniquely, since we can now elaborate
-    /// `AliasEq` to fallback *or* normalize it. So instead we
+    /// `ProjectionEq` to fallback *or* normalize it. So instead we
     /// handle this kind of reasoning through the `FromEnv` predicate.
     ///
     /// We also generate rules specific to WF requirements and implied bounds:
@@ -601,8 +601,8 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             }
             .intern(interner);
 
-            let alias_eq = AliasEq {
-                alias: AliasTy::Projection(projection.clone()),
+            let projection_eq = ProjectionEq {
+                projection: projection.clone(),
                 ty: app_ty.clone(),
             };
 
@@ -610,9 +610,9 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             // and placeholder type.
             //
             //    forall<Self> {
-            //        AliasEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
+            //        ProjectionEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
             //    }
-            builder.push_fact_with_priority(alias_eq, ClausePriority::Low);
+            builder.push_fact_with_priority(projection_eq, ClausePriority::Low);
 
             // Well-formedness of projection type.
             //
@@ -679,19 +679,16 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                     ty: ty.clone(),
                 };
 
-                // `AliasEq(<T as Foo>::Assoc = U)`
-                let alias_eq = AliasEq {
-                    alias: AliasTy::Projection(projection),
-                    ty,
-                };
+                // `ProjectionEq(<T as Foo>::Assoc = U)`
+                let projection_eq = ProjectionEq { projection, ty };
 
                 // Projection equality rule from above.
                 //
                 //    forall<T, U> {
-                //        AliasEq(<T as Foo>::Assoc = U) :-
+                //        ProjectionEq(<T as Foo>::Assoc = U) :-
                 //            Normalize(<T as Foo>::Assoc -> U).
                 //    }
-                builder.push_clause(alias_eq, Some(normalize));
+                builder.push_clause(projection_eq, Some(normalize));
             });
         });
     }

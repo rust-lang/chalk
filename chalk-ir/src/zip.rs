@@ -235,7 +235,7 @@ struct_zip!(impl[
 struct_zip!(impl[I: Interner] Zip<I> for ApplicationTy<I> { name, substitution });
 struct_zip!(impl[I: Interner] Zip<I> for DynTy<I> { bounds });
 struct_zip!(impl[I: Interner] Zip<I> for Normalize<I> { alias, ty });
-struct_zip!(impl[I: Interner] Zip<I> for AliasEq<I> { alias, ty });
+struct_zip!(impl[I: Interner] Zip<I> for ProjectionEq<I> { projection, ty });
 struct_zip!(impl[I: Interner] Zip<I> for EqGoal<I> { a, b });
 struct_zip!(impl[I: Interner] Zip<I> for ProgramClauseImplication<I> {
     consequence,
@@ -325,7 +325,7 @@ macro_rules! enum_zip {
 
 enum_zip!(impl<I> for WellFormed<I> { Trait, Ty });
 enum_zip!(impl<I> for FromEnv<I> { Trait, Ty });
-enum_zip!(impl<I> for WhereClause<I> { Implemented, AliasEq });
+enum_zip!(impl<I> for WhereClause<I> { Implemented, ProjectionEq });
 enum_zip!(impl<I> for DomainGoal<I> {
     Holds,
     WellFormed,
