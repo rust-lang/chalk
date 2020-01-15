@@ -339,7 +339,7 @@ enum_zip!(impl<I> for DomainGoal<I> {
     DownstreamType
 });
 enum_zip!(impl<I> for ProgramClauseData<I> { Implies, ForAll });
-enum_zip!(impl<I> for AliasTy<I> { Projection, ImplTrait, TypeAlias });
+enum_zip!(impl<I> for AliasTy<I> { Projection, ImplTrait });
 
 impl<I: Interner> Zip<I> for Substitution<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>

@@ -841,7 +841,6 @@ impl<I: Interner> ParameterData<I> {
 pub enum AliasTy<I: Interner> {
     Projection(ProjectionTy<I>),
     ImplTrait(()),
-    TypeAlias(()),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
