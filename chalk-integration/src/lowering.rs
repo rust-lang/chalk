@@ -239,6 +239,7 @@ impl LowerProgram for Program {
                     trait_ids.insert(type_kind.name, id);
                     trait_kinds.insert(id, type_kind);
                 }
+                Item::ImplTrait(_impl_trait) => todo!(),
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
             };
@@ -361,6 +362,7 @@ impl LowerProgram for Program {
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
                 }
+                Item::ImplTrait(_) => todo!(),
             }
         }
 

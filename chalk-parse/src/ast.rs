@@ -24,6 +24,7 @@ pub enum Item {
     TraitDefn(TraitDefn),
     Impl(Impl),
     Clause(Clause),
+    ImplTrait(ImplTrait),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -78,7 +79,7 @@ pub struct AssocTyDefn {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct ImplTraitDefn {
+pub struct ImplTrait {
     pub ty: Ty,
     pub bounds: Vec<TraitBound>,
 }

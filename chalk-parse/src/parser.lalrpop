@@ -15,6 +15,7 @@ Item: Option<Item> = {
     Comment => None,
     StructDefn => Some(Item::StructDefn(<>)),
     TraitDefn => Some(Item::TraitDefn(<>)),
+    ImplTrait => Some(Item::ImplTrait(<>)),
     Impl => Some(Item::Impl(<>)),
     Clause => Some(Item::Clause(<>)),
 };
@@ -98,9 +99,9 @@ AssocTyDefn: AssocTyDefn = {
     }
 };
 
-ImplTraitDefn: ImplTraitDefn = {
-    "type" <ty:Ty> "=" "impl" <b:Plus<TraitBound>> => {
-        ImplTraitDefn {
+ImplTrait: ImplTrait = {
+    "type" <ty:Ty> "=" "impl" <b:Plus<TraitBound>> ";" => {
+        ImplTrait {
             ty,
             bounds: b,
         }
