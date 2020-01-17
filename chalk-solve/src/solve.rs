@@ -151,7 +151,9 @@ impl<TF: TypeFamily> Solver<TF> {
     ///     each time you invoke `solve`, as otherwise the cached data may be
     ///     invalid.
     /// - `goal` the goal to solve
-    /// - `should_continue` if `false` is returned, the no further solving will be done
+    /// - `should_continue` if `false` is returned, the no further solving
+    ///   will be done. A `Guidance(Suggested(...))` will be returned a
+    ///   `Solution`, using any answers that were generated up to that point.
     ///
     /// # Returns
     ///
