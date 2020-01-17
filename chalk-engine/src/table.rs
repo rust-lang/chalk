@@ -70,6 +70,10 @@ impl<C: Context> Table<C> {
         self.strands.iter_mut()
     }
 
+    pub(crate) fn strands(&self) -> impl Iterator<Item = &CanonicalStrand<C>> {
+        self.strands.iter()
+    }
+
     pub(crate) fn take_strands(&mut self) -> VecDeque<CanonicalStrand<C>> {
         mem::replace(&mut self.strands, VecDeque::new())
     }

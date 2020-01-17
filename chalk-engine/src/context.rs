@@ -179,6 +179,26 @@ pub trait Context: Clone + Debug {
     fn identity_constrained_subst(
         goal: &Self::UCanonicalGoalInEnvironment,
     ) -> Self::CanonicalConstrainedSubst;
+
+    /// Convert the context's goal type into the `HhGoal` type that
+    /// the SLG solver understands. The expectation is that the
+    /// context's goal type has the same set of variants, but with
+    /// different names and a different setup. If you inspect
+    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
+    /// conversion -- that is, we convert the outermost goal into an
+    /// `HhGoal`, but the goals contained within are left as context
+    /// goals.
+    fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self>;
+
+    // Used by: simplify
+    fn add_clauses(env: &Self::Environment, clauses: Self::ProgramClauses) -> Self::Environment;
+
+    /// Upcast this domain goal into a more general goal.
+    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal;
+
+    /// Selects the next appropriate subgoal index for evaluation.
+    /// Used by: logic
+    fn next_subgoal_index(ex_clause: &ExClause<Self>) -> usize;
 }
 
 pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
@@ -247,32 +267,13 @@ pub trait AggregateOps<C: Context> {
         &self,
         root_goal: &C::UCanonicalGoalInEnvironment,
         answers: impl AnswerStream<C>,
+        should_continue: impl Fn() -> bool,
     ) -> Option<C::Solution>;
 }
 
 /// An "inference table" contains the state to support unification and
 /// other operations on terms.
-pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> + UnificationOps<C> {
-    /// Convert the context's goal type into the `HhGoal` type that
-    /// the SLG solver understands. The expectation is that the
-    /// context's goal type has the same set of variants, but with
-    /// different names and a different setup. If you inspect
-    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
-    /// conversion -- that is, we convert the outermost goal into an
-    /// `HhGoal`, but the goals contained within are left as context
-    /// goals.
-    fn into_hh_goal(&mut self, goal: C::Goal) -> HhGoal<C>;
-
-    // Used by: simplify
-    fn add_clauses(&mut self, env: &C::Environment, clauses: C::ProgramClauses) -> C::Environment;
-
-    /// Upcast this domain goal into a more general goal.
-    fn into_goal(&self, domain_goal: C::DomainGoal) -> C::Goal;
-
-    /// Selects the next appropriate subgoal index for evaluation.
-    /// Used by: logic
-    fn next_subgoal_index(&mut self, ex_clause: &ExClause<C>) -> usize;
-}
+pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> + UnificationOps<C> {}
 
 /// Error type for the `UnificationOps::program_clauses` method --
 /// indicates that the complete set of program clauses for this goal
@@ -388,6 +389,10 @@ pub enum AnswerResult<C: Context> {
 
     /// No answer could be returned because the goal has floundered.
     Floundered,
+
+    // No answer could be returned *yet*, because we exceeded our
+    // quantum (`should_continue` returned false).
+    QuantumExceeded,
 }
 
 impl<C: Context> AnswerResult<C> {
@@ -411,6 +416,13 @@ impl<C: Context> AnswerResult<C> {
             _ => false,
         }
     }
+
+    pub fn is_quantum_exceeded(&self) -> bool {
+        match self {
+            Self::QuantumExceeded => true,
+            _ => false,
+        }
+    }
 }
 
 impl<C: Context> Debug for AnswerResult<C> {
@@ -419,6 +431,7 @@ impl<C: Context> Debug for AnswerResult<C> {
             AnswerResult::Answer(answer) => write!(fmt, "{:?}", answer),
             AnswerResult::Floundered => write!(fmt, "Floundered"),
             AnswerResult::NoMoreSolutions => write!(fmt, "None"),
+            AnswerResult::QuantumExceeded => write!(fmt, "QuantumExceeded"),
         }
     }
 }
@@ -426,14 +439,13 @@ impl<C: Context> Debug for AnswerResult<C> {
 pub trait AnswerStream<C: Context> {
     /// Gets the next answer for a given goal, but doesn't increment the answer index.
     /// Calling this or `next_answer` again will give the same answer.
-    fn peek_answer(&mut self) -> AnswerResult<C>;
+    fn peek_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<C>;
 
     /// Gets the next answer for a given goal, incrementing the answer index.
     /// Calling this or `peek_answer` again will give the next answer.
-    fn next_answer(&mut self) -> AnswerResult<C>;
+    fn next_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<C>;
 
     /// Invokes `test` with each possible future answer, returning true immediately
     /// if we find any answer for which `test` returns true.
-    fn any_future_answer(&mut self, test: impl FnMut(&C::InferenceNormalizedSubst) -> bool)
-        -> bool;
+    fn any_future_answer(&self, test: impl Fn(&C::InferenceNormalizedSubst) -> bool) -> bool;
 }

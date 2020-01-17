@@ -204,7 +204,7 @@ impl<C: Context> Forest<C> {
     }
 
     pub(super) fn any_future_answer(
-        &mut self,
+        &self,
         table: TableIndex,
         answer: AnswerIndex,
         mut test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
@@ -214,7 +214,7 @@ impl<C: Context> Forest<C> {
             return test(C::inference_normalized_subst_from_subst(&answer.subst));
         }
 
-        self.tables[table].strands_mut().any(|strand| {
+        self.tables[table].strands().any(|strand| {
             test(C::inference_normalized_subst_from_ex_clause(
                 &strand.canonical_ex_clause,
             ))
@@ -966,7 +966,7 @@ impl<C: Context> Forest<C> {
                     continue;
                 }
 
-                let subgoal_index = strand.infer.next_subgoal_index(&strand.ex_clause);
+                let subgoal_index = C::next_subgoal_index(&strand.ex_clause);
 
                 // Get or create table for this subgoal.
                 match self.get_or_create_table_for_subgoal(
@@ -1228,7 +1228,7 @@ impl<C: Context> Forest<C> {
         goal: C::Goal,
     ) {
         let table_ref = &mut self.tables[table];
-        match infer.into_hh_goal(goal) {
+        match C::into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
                 match context.program_clauses(&environment, &domain_goal, &mut infer) {
                     Ok(clauses) => {
@@ -1418,7 +1418,7 @@ impl<C: Context> Forest<C> {
         // untruncated literal.  Suppose that we truncate the selected
         // goal to:
         //
-        //     // Vec<Vec<T>: Sized
+        //     // Vec<Vec<T>>: Sized
         //
         // Clearly this table will have some solutions that don't
         // apply to us.  e.g., `Vec<Vec<u32>>: Sized` is a solution to

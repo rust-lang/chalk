@@ -19,8 +19,9 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
         &self,
         root_goal: &UCanonical<InEnvironment<Goal<TF>>>,
         mut answers: impl context::AnswerStream<SlgContext<TF>>,
+        should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<TF>> {
-        let CompleteAnswer { subst, ambiguous } = match answers.next_answer() {
+        let CompleteAnswer { subst, ambiguous } = match answers.next_answer(|| should_continue()) {
             AnswerResult::NoMoreSolutions => {
                 // No answers at all
                 return None;
@@ -30,10 +31,19 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
                 subst: SlgContext::identity_constrained_subst(root_goal),
                 ambiguous: true,
             },
+            AnswerResult::QuantumExceeded => {
+                return Some(Solution::Ambig(Guidance::Unknown));
+            }
         };
 
         // Exactly 1 unconditional answer?
-        if answers.peek_answer().is_no_more_solutions() && !ambiguous {
+        let next_answer = answers.peek_answer(|| should_continue());
+        if next_answer.is_quantum_exceeded() {
+            return Some(Solution::Ambig(Guidance::Suggested(
+                subst.map(|cs| cs.subst),
+            )));
+        }
+        if next_answer.is_no_more_solutions() && !ambiguous {
             return Some(Solution::Unique(subst));
         }
 
@@ -69,7 +79,7 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
                 }
             }
 
-            let new_subst = match answers.next_answer() {
+            let new_subst = match answers.next_answer(|| should_continue()) {
                 AnswerResult::Answer(answer1) => answer1.subst,
                 AnswerResult::Floundered => {
                     // FIXME: this doesn't trigger for any current tests
@@ -77,6 +87,9 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
                 }
                 AnswerResult::NoMoreSolutions => {
                     break Guidance::Definite(subst);
+                }
+                AnswerResult::QuantumExceeded => {
+                    break Guidance::Suggested(subst);
                 }
             };
             subst = merge_into_guidance(SlgContext::canonical(root_goal), subst, &new_subst);
