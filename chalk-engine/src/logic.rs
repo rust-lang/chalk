@@ -1,4 +1,6 @@
-use crate::context::{prelude::*, Floundered, UnificationOps};
+use crate::context::{
+    Context, ContextOps, Floundered, InferenceTable, ResolventOps, UnificationOps,
+};
 use crate::fallible::NoSolution;
 use crate::forest::Forest;
 use crate::hh::HhGoal;

@@ -1,4 +1,4 @@
-use crate::context::prelude::*;
+use crate::context::{Context, InferenceTable};
 use crate::fallible::Fallible;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
