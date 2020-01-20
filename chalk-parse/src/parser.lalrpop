@@ -312,10 +312,7 @@ DomainGoal: DomainGoal = {
     "FromEnv" "(" <t:TraitRef<":">> ")" => DomainGoal::TraitRefFromEnv { trait_ref: t },
 
     // `<T as Foo>::U -> Bar` -- a normalization
-    "Normalize" "(" <p:ProjectionTy> "->" <t:Ty> ")" => DomainGoal::Normalize {
-        alias: AliasTy::Projection(p),
-        ty: t,
-    },
+    "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
     "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },

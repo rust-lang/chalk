@@ -626,9 +626,9 @@ impl LowerDomainGoal for DomainGoal {
                 .into_iter()
                 .casted(interner)
                 .collect(),
-            DomainGoal::Normalize { alias, ty } => {
+            DomainGoal::Normalize { projection, ty } => {
                 vec![chalk_ir::DomainGoal::Normalize(chalk_ir::Normalize {
-                    alias: alias.lower(env)?,
+                    alias: chalk_ir::AliasTy::Projection(projection.lower(env)?),
                     ty: ty.lower(env)?,
                 })]
             }
@@ -919,14 +919,6 @@ impl LowerTraitFlags for TraitFlags {
 
 trait LowerAliasTy {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::AliasTy<ChalkIr>>;
-}
-
-impl LowerAliasTy for AliasTy {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::AliasTy<ChalkIr>> {
-        match self {
-            AliasTy::Projection(proj) => Ok(chalk_ir::AliasTy::Projection(proj.lower(env)?)),
-        }
-    }
 }
 
 trait LowerProjectionTy {

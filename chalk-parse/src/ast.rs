@@ -193,12 +193,6 @@ pub enum Lifetime {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum AliasTy {
-    Projection(ProjectionTy),
-    // TODO ImplTrait
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
@@ -251,7 +245,7 @@ pub enum WhereClause {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DomainGoal {
     Holds { where_clause: WhereClause },
-    Normalize { alias: AliasTy, ty: Ty },
+    Normalize { projection: ProjectionTy, ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
     TyWellFormed { ty: Ty },
     TyFromEnv { ty: Ty },
