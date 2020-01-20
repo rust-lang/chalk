@@ -80,7 +80,7 @@ pub struct AssocTyDefn {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ImplTrait {
-    pub ty: Ty,
+    pub identifier: Identifier,
     pub bounds: Vec<TraitBound>,
 }
 

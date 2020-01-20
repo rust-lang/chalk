@@ -100,9 +100,9 @@ AssocTyDefn: AssocTyDefn = {
 };
 
 ImplTrait: ImplTrait = {
-    "type" <ty:Ty> "=" "impl" <b:Plus<TraitBound>> ";" => {
+    "type" <identifier:Id> "=" "impl" <b:Plus<TraitBound>> ";" => {
         ImplTrait {
-            ty,
+            identifier,
             bounds: b,
         }
     }

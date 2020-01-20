@@ -229,8 +229,8 @@ macro_rules! id_visit {
 id_visit!(ImplId);
 id_visit!(StructId);
 id_visit!(TraitId);
-id_visit!(AssocTypeId);
 id_visit!(ImplTraitId);
+id_visit!(AssocTypeId);
 
 impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
     fn super_visit_with<'i, R: VisitResult>(

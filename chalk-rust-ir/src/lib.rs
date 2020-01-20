@@ -506,6 +506,16 @@ pub struct AssociatedTyValueBound<I: Interner> {
     pub ty: Ty<I>,
 }
 
+/// Represents the bounds for an `impl Trait` type.
+///
+/// ```ignore
+/// impl A + B + C
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub struct ImplTraitValue<I: Interner> {
+    pub bounds: Vec<TraitBound<I>>,
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub enum Polarity {
     Positive,

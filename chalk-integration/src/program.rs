@@ -4,13 +4,13 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
-    Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy, StructId,
-    Substitution, TraitId, Ty, TypeName,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId,
+    ImplTraitId, Lifetime, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses,
+    ProjectionTy, StructId, Substitution, TraitId, Ty, TypeName,
 };
 use chalk_rust_ir::{
-    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
-    TraitDatum, WellKnownTrait,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplTraitValue, ImplType,
+    StructDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -41,6 +41,12 @@ pub struct Program {
     /// For each associated ty value `type Foo = XXX` found in an impl:
     pub associated_ty_values:
         BTreeMap<AssociatedTyValueId<ChalkIr>, Arc<AssociatedTyValue<ChalkIr>>>,
+
+    // From `impl Trait` name to item-id. Used during lowering only.
+    pub impl_trait_ids: BTreeMap<Identifier, ImplTraitId<ChalkIr>>,
+
+    /// For each `impl Trait` type:
+    pub impl_trait_values: BTreeMap<ImplTraitId<ChalkIr>, Arc<ImplTraitValue<ChalkIr>>>,
 
     /// For each trait:
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,

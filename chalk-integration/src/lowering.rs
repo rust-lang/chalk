@@ -1,12 +1,14 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::{
-    self, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, QuantifiedWhereClauses,
-    StructId, Substitution, TraitId,
+    self, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, ImplTraitId,
+    QuantifiedWhereClauses, StructId, Substitution, TraitId,
 };
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
-use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
+use chalk_rust_ir::{
+    Anonymize, AssociatedTyValueId, ImplTraitValue, IntoWhereClauses, ToParameter,
+};
 use lalrpop_intern::intern;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -225,6 +227,7 @@ impl LowerProgram for Program {
         let mut trait_ids = BTreeMap::new();
         let mut struct_kinds = BTreeMap::new();
         let mut trait_kinds = BTreeMap::new();
+        let mut impl_trait_ids = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             match item {
                 Item::StructDefn(defn) => {
@@ -239,7 +242,9 @@ impl LowerProgram for Program {
                     trait_ids.insert(type_kind.name, id);
                     trait_kinds.insert(id, type_kind);
                 }
-                Item::ImplTrait(_impl_trait) => continue,
+                Item::ImplTrait(impl_trait) => {
+                    impl_trait_ids.insert(impl_trait.identifier.str, ImplTraitId(raw_id));
+                }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
             };
@@ -251,6 +256,7 @@ impl LowerProgram for Program {
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
+        let mut impl_trait_values = BTreeMap::new();
         let mut custom_clauses = Vec::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
@@ -362,7 +368,20 @@ impl LowerProgram for Program {
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
                 }
-                Item::ImplTrait(ref _impl_trait) => todo!(),
+                Item::ImplTrait(ref impl_trait) => {
+                    if let Some(value) = impl_trait_ids.get(&impl_trait.identifier.str) {
+                        impl_trait_values.insert(
+                            *value,
+                            Arc::new(ImplTraitValue {
+                                bounds: impl_trait
+                                    .bounds
+                                    .iter()
+                                    .map(|b| b.lower(&empty_env))
+                                    .collect::<Result<Vec<_>, _>>()?,
+                            }),
+                        );
+                    }
+                }
             }
         }
 
@@ -377,6 +396,8 @@ impl LowerProgram for Program {
             impl_data,
             associated_ty_values,
             associated_ty_data,
+            impl_trait_ids,
+            impl_trait_values,
             custom_clauses,
         };
 
