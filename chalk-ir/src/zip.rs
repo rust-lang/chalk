@@ -196,6 +196,7 @@ macro_rules! eq_zip {
 eq_zip!(I => StructId<I>);
 eq_zip!(I => TraitId<I>);
 eq_zip!(I => AssocTypeId<I>);
+eq_zip!(I => ImplTraitId<I>);
 eq_zip!(I => TypeName<I>);
 eq_zip!(I => QuantifierKind);
 eq_zip!(I => PhantomData<I>);
@@ -245,6 +246,9 @@ struct_zip!(impl[I: Interner] Zip<I> for ProgramClauseImplication<I> {
 struct_zip!(impl[I: Interner] Zip<I> for ProjectionTy<I> {
     associated_ty_id,
     substitution
+});
+struct_zip!(impl[I: Interner] Zip<I> for ImplTraitTy<I> {
+    impl_trait_id
 });
 
 impl<I: Interner> Zip<I> for Environment<I> {

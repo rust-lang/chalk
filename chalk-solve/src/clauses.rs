@@ -396,7 +396,7 @@ fn match_ty<I: Interner>(
             .db
             .associated_ty_data(proj.associated_ty_id)
             .to_program_clauses(builder),
-        TyData::Alias(_) => todo!(),
+        TyData::Alias(AliasTy::ImplTrait(_impl_trait)) => todo!(),
         TyData::Function(quantified_ty) => {
             builder.push_fact(WellFormed::Ty(ty.clone()));
             quantified_ty
@@ -414,6 +414,7 @@ fn match_ty<I: Interner>(
 fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeName<I>) {
     match name {
         TypeName::Struct(struct_id) => match_struct(builder, struct_id),
+        TypeName::ImplTrait(_impl_trait) => todo!(),
         TypeName::Error => {}
         TypeName::AssociatedType(type_id) => builder
             .db

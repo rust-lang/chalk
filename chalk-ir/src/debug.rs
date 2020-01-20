@@ -110,6 +110,12 @@ impl<I: Interner> Display for Substitution<I> {
     }
 }
 
+impl<I: Interner> Debug for ImplTraitId<I> {
+    fn fmt(&self, _fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        todo!()
+    }
+}
+
 impl Display for UniverseIndex {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "U{}", self.counter)
@@ -127,6 +133,7 @@ impl<I: Interner> Debug for TypeName<I> {
         match self {
             TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
+            TypeName::ImplTrait(impl_trait) => write!(fmt, "{:?}", impl_trait),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }
@@ -462,6 +469,12 @@ impl<I: Interner> ProjectionTy<I> {
             projection_ty: self,
             interner,
         }
+    }
+}
+
+impl<I: Interner> Debug for ImplTraitTy<I> {
+    fn fmt(&self, _fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        todo!()
     }
 }
 
