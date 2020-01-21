@@ -153,4 +153,8 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     fn interner(&self) -> &ChalkIr {
         &ChalkIr
     }
+
+    fn auto_traits(&self) -> Vec<TraitId<ChalkIr>> {
+        self.program_ir().unwrap().auto_traits()
+    }
 }

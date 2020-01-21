@@ -88,6 +88,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<I>>;
 
     fn interner(&self) -> &I;
+
+    /// Returns the ids of all auto traits.
+    fn auto_traits(&self) -> Vec<TraitId<I>>;
 }
 
 pub use solve::Guidance;

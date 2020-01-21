@@ -341,4 +341,12 @@ impl RustIrDatabase<ChalkIr> for Program {
     fn interner(&self) -> &ChalkIr {
         &ChalkIr
     }
+
+    fn auto_traits(&self) -> Vec<TraitId<ChalkIr>> {
+        self.trait_data
+            .iter()
+            .filter(|(_, auto_trait)| auto_trait.is_auto_trait())
+            .map(|(trait_id, _)| *trait_id)
+            .collect()
+    }
 }

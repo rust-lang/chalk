@@ -124,17 +124,40 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
     /// ```notrust
     /// Implemented(Foo: A),
     /// Implemented(Foo: B),
-    /// Implemented(Foo: Foo: Send) :- Implemented(A + B: Send). // For all auto traits
+    /// Implemented(Foo: Send) :- Implemented(A + B: Send). // For all auto traits
     /// ```
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let interner = builder.interner();
-        for bound in &self.bounds {
-            let alias_ty = AliasTy::ImplTrait(ImplTraitTy {
+        let ty = Ty::new(
+            interner,
+            AliasTy::ImplTrait(ImplTraitTy {
                 impl_trait_id: self.impl_trait_id,
-            });
-            builder.push_fact(bound.as_trait_ref(interner, Ty::new(interner, alias_ty)));
+            }),
+        );
+
+        for bound in &self.bounds {
+            builder.push_fact(bound.as_trait_ref(interner, ty.clone()));
         }
-        todo!() // auto traits
+
+        for auto_trait_id in builder.db.auto_traits() {
+            builder.push_clause(
+                TraitRef {
+                    trait_id: auto_trait_id,
+                    substitution: Substitution::from1(interner, ty.clone()),
+                },
+                iter::once(TraitRef {
+                    trait_id: auto_trait_id,
+                    substitution: Substitution::from(
+                        interner,
+                        iter::once(ty.clone().cast(interner)).chain(
+                            self.bounds
+                                .iter()
+                                .flat_map(|b| b.args_no_self.iter().cloned()),
+                        ),
+                    ),
+                }),
+            );
+        }
     }
 }
 
