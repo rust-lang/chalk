@@ -9,9 +9,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData, Parameter,
-    ParameterKind, ProjectionEq, ProjectionTy, QuantifiedWhereClause, StructId, Substitution,
-    TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
+    AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, ImplTraitId, LifetimeData,
+    Parameter, ParameterKind, ProjectionEq, ProjectionTy, QuantifiedWhereClause, StructId,
+    Substitution, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use std::iter;
 
@@ -509,10 +509,11 @@ pub struct AssociatedTyValueBound<I: Interner> {
 /// Represents the bounds for an `impl Trait` type.
 ///
 /// ```ignore
-/// impl A + B + C
+/// type Foo = impl A + B + C;
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
-pub struct ImplTraitValue<I: Interner> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+pub struct ImplTraitDatum<I: Interner> {
+    pub impl_trait_id: ImplTraitId<I>,
     pub bounds: Vec<TraitBound<I>>,
 }
 

@@ -9,7 +9,7 @@ use chalk_ir::{
     ProjectionTy, StructId, Substitution, TraitId, Ty, TypeName,
 };
 use chalk_rust_ir::{
-    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplTraitValue, ImplType,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplTraitDatum, ImplType,
     StructDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
@@ -46,7 +46,7 @@ pub struct Program {
     pub impl_trait_ids: BTreeMap<Identifier, ImplTraitId<ChalkIr>>,
 
     /// For each `impl Trait` type:
-    pub impl_trait_values: BTreeMap<ImplTraitId<ChalkIr>, Arc<ImplTraitValue<ChalkIr>>>,
+    pub impl_trait_data: BTreeMap<ImplTraitId<ChalkIr>, Arc<ImplTraitDatum<ChalkIr>>>,
 
     /// For each trait:
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
@@ -270,6 +270,10 @@ impl RustIrDatabase<ChalkIr> for Program {
         id: AssociatedTyValueId<ChalkIr>,
     ) -> Arc<AssociatedTyValue<ChalkIr>> {
         self.associated_ty_values[&id].clone()
+    }
+
+    fn impl_trait_datum(&self, id: ImplTraitId<ChalkIr>) -> Arc<ImplTraitDatum<ChalkIr>> {
+        self.impl_trait_data[&id].clone()
     }
 
     fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {

@@ -40,6 +40,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the `AssociatedTyValue` with the given id.
     fn associated_ty_value(&self, id: AssociatedTyValueId<I>) -> Arc<AssociatedTyValue<I>>;
 
+    /// Returns the `ImplTraitDatum` with the given id.
+    fn impl_trait_datum(&self, id: ImplTraitId<I>) -> Arc<ImplTraitDatum<I>>;
+
     /// If `id` is a struct id, returns `Some(id)` (but cast to `StructId`).
     fn as_struct_id(&self, id: &TypeName<I>) -> Option<StructId<I>>;
 

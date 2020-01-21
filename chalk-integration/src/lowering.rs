@@ -7,7 +7,7 @@ use chalk_ir::{
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{
-    Anonymize, AssociatedTyValueId, ImplTraitValue, IntoWhereClauses, ToParameter,
+    Anonymize, AssociatedTyValueId, ImplTraitDatum, IntoWhereClauses, ToParameter,
 };
 use lalrpop_intern::intern;
 use std::collections::BTreeMap;
@@ -256,7 +256,7 @@ impl LowerProgram for Program {
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
-        let mut impl_trait_values = BTreeMap::new();
+        let mut impl_trait_data = BTreeMap::new();
         let mut custom_clauses = Vec::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
@@ -369,10 +369,11 @@ impl LowerProgram for Program {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
                 }
                 Item::ImplTrait(ref impl_trait) => {
-                    if let Some(value) = impl_trait_ids.get(&impl_trait.identifier.str) {
-                        impl_trait_values.insert(
-                            *value,
-                            Arc::new(ImplTraitValue {
+                    if let Some(&value) = impl_trait_ids.get(&impl_trait.identifier.str) {
+                        impl_trait_data.insert(
+                            value,
+                            Arc::new(ImplTraitDatum {
+                                impl_trait_id: value,
                                 bounds: impl_trait
                                     .bounds
                                     .iter()
@@ -397,7 +398,7 @@ impl LowerProgram for Program {
             associated_ty_values,
             associated_ty_data,
             impl_trait_ids,
-            impl_trait_values,
+            impl_trait_data,
             custom_clauses,
         };
 

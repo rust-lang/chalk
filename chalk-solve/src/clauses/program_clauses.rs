@@ -118,6 +118,26 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
     }
 }
 
+impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
+    /// Given `type Foo = impl A + B;`, we generate:
+    ///
+    /// ```notrust
+    /// Implemented(Foo: A),
+    /// Implemented(Foo: B),
+    /// Implemented(Foo: Foo: Send) :- Implemented(A + B: Send). // For all auto traits
+    /// ```
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+        let interner = builder.interner();
+        for bound in &self.bounds {
+            let alias_ty = AliasTy::ImplTrait(ImplTraitTy {
+                impl_trait_id: self.impl_trait_id,
+            });
+            builder.push_fact(bound.as_trait_ref(interner, Ty::new(interner, alias_ty)));
+        }
+        todo!() // auto traits
+    }
+}
+
 impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
     /// Given the following type definition: `struct Foo<T: Eq> { }`, generate:
     ///
