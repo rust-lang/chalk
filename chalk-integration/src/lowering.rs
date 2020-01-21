@@ -939,10 +939,6 @@ impl LowerTraitFlags for TraitFlags {
     }
 }
 
-trait LowerAliasTy {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::AliasTy<ChalkIr>>;
-}
-
 trait LowerProjectionTy {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::ProjectionTy<ChalkIr>>;
 }

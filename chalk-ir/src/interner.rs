@@ -172,7 +172,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    // Prints the debug representation of an `impl trait`. To get good
+    /// Prints the debug representation of an `impl trait`. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific type-family (and hence
     /// fully known types).
