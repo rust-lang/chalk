@@ -846,7 +846,7 @@ impl<I: Interner> ParameterData<I> {
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub enum AliasTy<I: Interner> {
     Projection(ProjectionTy<I>),
-    ImplTrait(ImplTraitTy<I>),
+    ImplTrait(ImplTraitId<I>),
 }
 
 impl<I: Interner> AliasTy<I> {

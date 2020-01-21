@@ -128,12 +128,7 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
     /// ```
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let interner = builder.interner();
-        let ty = Ty::new(
-            interner,
-            AliasTy::ImplTrait(ImplTraitTy {
-                impl_trait_id: self.impl_trait_id,
-            }),
-        );
+        let ty = Ty::new(interner, AliasTy::ImplTrait(self.impl_trait_id));
 
         for bound in &self.bounds {
             builder.push_fact(bound.as_trait_ref(interner, ty.clone()));
