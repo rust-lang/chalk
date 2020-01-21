@@ -1,7 +1,7 @@
 use crate::interner::ChalkIr;
 use crate::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, Lifetime,
-    Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplTraitId,
+    Lifetime, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
     QuantifiedWhereClauses, StructId, Substitution, TraitId, Ty,
 };
 use std::cell::RefCell;
@@ -28,6 +28,12 @@ pub trait DebugContext {
     fn debug_assoc_type_id(
         &self,
         id: AssocTypeId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_impl_trait_id(
+        &self,
+        id: ImplTraitId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 

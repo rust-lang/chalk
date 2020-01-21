@@ -4,6 +4,7 @@ use crate::AssocTypeId;
 use crate::Goal;
 use crate::GoalData;
 use crate::Goals;
+use crate::ImplTraitId;
 use crate::Lifetime;
 use crate::LifetimeData;
 use crate::Parameter;
@@ -170,6 +171,18 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ) -> Option<fmt::Result> {
         None
     }
+
+    // Prints the debug representation of an `impl trait`. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific type-family (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_impl_trait_id(
+        impl_trait_id: ImplTraitId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
 
     /// Prints the debug representation of an alias. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -546,6 +559,13 @@ mod default {
             fmt: &mut fmt::Formatter<'_>,
         ) -> Option<fmt::Result> {
             tls::with_current_program(|prog| Some(prog?.debug_assoc_type_id(id, fmt)))
+        }
+
+        fn debug_impl_trait_id(
+            id: ImplTraitId<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_impl_trait_id(id, fmt)))
         }
 
         fn debug_alias(

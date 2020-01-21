@@ -111,8 +111,9 @@ impl<I: Interner> Display for Substitution<I> {
 }
 
 impl<I: Interner> Debug for ImplTraitId<I> {
-    fn fmt(&self, _fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        todo!()
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_impl_trait_id(*self, fmt)
+            .unwrap_or_else(|| write!(fmt, "ImplTraitId({:?})", self.0))
     }
 }
 

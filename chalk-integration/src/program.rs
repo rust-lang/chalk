@@ -106,11 +106,25 @@ impl tls::DebugContext for Program {
         assoc_type_id: AssocTypeId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(k) = self.associated_ty_data.get(&assoc_type_id) {
-            write!(fmt, "({:?}::{})", k.trait_id, k.name)
+        if let Some(d) = self.associated_ty_data.get(&assoc_type_id) {
+            write!(fmt, "({:?}::{})", d.trait_id, d.name)
         } else {
             fmt.debug_struct("InvalidItemId")
                 .field("index", &assoc_type_id.0)
+                .finish()
+        }
+    }
+
+    fn debug_impl_trait_id(
+        &self,
+        impl_trait_id: ImplTraitId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(d) = self.impl_trait_data.get(&impl_trait_id) {
+            write!(fmt, "type {:?} = impl {:?}", d.impl_trait_id, d.bounds)
+        } else {
+            fmt.debug_struct("InvalidItemId")
+                .field("index", &impl_trait_id.0)
                 .finish()
         }
     }
@@ -121,8 +135,19 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         match alias_ty {
-            AliasTy::Projection(proj) => self.debug_projection_ty(proj, fmt),
-            _ => todo!(),
+            AliasTy::Projection(proj) => {
+                let (associated_ty_data, trait_params, other_params) = self.split_projection(proj);
+                write!(
+                    fmt,
+                    "<{:?} as {:?}{:?}>::{}{:?}",
+                    &trait_params[0],
+                    associated_ty_data.trait_id,
+                    Angle(&trait_params[1..]),
+                    associated_ty_data.name,
+                    Angle(&other_params)
+                )
+            }
+            AliasTy::ImplTrait(impl_trait_id) => write!(fmt, "impl {:?}", impl_trait_id),
         }
     }
 
