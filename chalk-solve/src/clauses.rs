@@ -417,7 +417,10 @@ fn match_ty<I: Interner>(
 fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeName<I>) {
     match name {
         TypeName::Struct(struct_id) => match_struct(builder, struct_id),
-        TypeName::ImplTrait(_impl_trait) => todo!(),
+        TypeName::ImplTrait(impl_trait_id) => builder
+            .db
+            .impl_trait_datum(impl_trait_id)
+            .to_program_clauses(builder),
         TypeName::Error => {}
         TypeName::AssociatedType(type_id) => builder
             .db
