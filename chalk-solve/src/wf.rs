@@ -111,8 +111,8 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
             }
 
             TyData::Alias(AliasTy::ImplTrait(impl_trait)) => {
-                accumulator.push(self.clone());
-                impl_trait.substitution.fold(interner, accumulator);
+                push_ty();
+                impl_trait.visit_with(self, outer_binder);
             }
 
             TyData::Placeholder(_) => {
