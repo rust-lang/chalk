@@ -5,6 +5,7 @@ use crate::Goal;
 use crate::GoalData;
 use crate::Goals;
 use crate::ImplTraitId;
+use crate::ImplTraitTy;
 use crate::Lifetime;
 use crate::LifetimeData;
 use crate::Parameter;
@@ -195,6 +196,18 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     fn debug_alias(alias: &AliasTy<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
+
+    /// Prints the debug representation of an ImplTraitTy. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_impl_trait_ty(
+        impl_trait_ty: &ImplTraitTy<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
 
     /// Prints the debug representation of a ProjectionTy. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -573,6 +586,13 @@ mod default {
             fmt: &mut fmt::Formatter<'_>,
         ) -> Option<fmt::Result> {
             tls::with_current_program(|prog| Some(prog?.debug_alias(alias, fmt)))
+        }
+
+        fn debug_impl_trait_ty(
+            impl_trait_ty: &ImplTraitTy<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_impl_trait_ty(impl_trait_ty, fmt)))
         }
 
         fn debug_projection_ty(

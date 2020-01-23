@@ -96,6 +96,14 @@ impl<I: Interner> Debug for QuantifiedWhereClauses<I> {
     }
 }
 
+impl<I: Interner> Debug for ImplTraitTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_impl_trait_ty(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format ImplTraitTy without setting Program in tls")
+        })
+    }
+}
+
 impl<I: Interner> Debug for ProjectionTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_projection_ty(self, fmt).unwrap_or_else(|| {
@@ -473,9 +481,32 @@ impl<I: Interner> ProjectionTy<I> {
     }
 }
 
-impl<I: Interner> Debug for ImplTraitTy<I> {
-    fn fmt(&self, _fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        todo!()
+pub struct ImplTraitTyDebug<'a, I: Interner> {
+    impl_trait_ty: &'a ImplTraitTy<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for ImplTraitTyDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let ImplTraitTyDebug {
+            impl_trait_ty,
+            interner,
+        } = self;
+        write!(
+            fmt,
+            "(impl {:?}){:?}",
+            impl_trait_ty.impl_trait_id,
+            impl_trait_ty.substitution.with_angle(interner)
+        )
+    }
+}
+
+impl<I: Interner> ImplTraitTy<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> ImplTraitTyDebug<'a, I> {
+        ImplTraitTyDebug {
+            impl_trait_ty: self,
+            interner,
+        }
     }
 }
 

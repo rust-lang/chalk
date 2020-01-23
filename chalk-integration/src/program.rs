@@ -5,8 +5,8 @@ use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId,
-    ImplTraitId, Lifetime, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses,
-    ProjectionTy, StructId, Substitution, TraitId, Ty, TypeName,
+    ImplTraitId, ImplTraitTy, Lifetime, Parameter, ProgramClause, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, StructId, Substitution, TraitId, Ty, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplTraitDatum, ImplType,
@@ -135,19 +135,8 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         match alias_ty {
-            AliasTy::Projection(proj) => {
-                let (associated_ty_data, trait_params, other_params) = self.split_projection(proj);
-                write!(
-                    fmt,
-                    "<{:?} as {:?}{:?}>::{}{:?}",
-                    &trait_params[0],
-                    associated_ty_data.trait_id,
-                    Angle(&trait_params[1..]),
-                    associated_ty_data.name,
-                    Angle(&other_params)
-                )
-            }
-            AliasTy::ImplTrait(impl_trait_id) => write!(fmt, "impl {:?}", impl_trait_id),
+            AliasTy::Projection(projection_ty) => self.debug_projection_ty(projection_ty, fmt),
+            AliasTy::ImplTrait(impl_trait_ty) => self.debug_impl_trait_ty(impl_trait_ty, fmt),
         }
     }
 
@@ -166,6 +155,14 @@ impl tls::DebugContext for Program {
             associated_ty_data.name,
             Angle(&other_params)
         )
+    }
+
+    fn debug_impl_trait_ty(
+        &self,
+        impl_trait_ty: &ImplTraitTy<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        write!(fmt, "impl {:?}", impl_trait_ty.impl_trait_id)
     }
 
     fn debug_ty(&self, ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {

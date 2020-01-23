@@ -396,9 +396,9 @@ fn match_ty<I: Interner>(
             .db
             .associated_ty_data(proj.associated_ty_id)
             .to_program_clauses(builder),
-        TyData::Alias(AliasTy::ImplTrait(impl_trait_id)) => builder
+        TyData::Alias(AliasTy::ImplTrait(impl_trait)) => builder
             .db
-            .impl_trait_datum(*impl_trait_id)
+            .impl_trait_datum(impl_trait.impl_trait_id)
             .to_program_clauses(builder),
         TyData::Function(quantified_ty) => {
             builder.push_fact(WellFormed::Ty(ty.clone()));

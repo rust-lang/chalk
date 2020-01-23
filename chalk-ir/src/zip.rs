@@ -247,6 +247,10 @@ struct_zip!(impl[I: Interner] Zip<I> for ProjectionTy<I> {
     associated_ty_id,
     substitution
 });
+struct_zip!(impl[I: Interner] Zip<I> for ImplTraitTy<I> {
+    impl_trait_id,
+    substitution
+});
 
 impl<I: Interner> Zip<I> for Environment<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>

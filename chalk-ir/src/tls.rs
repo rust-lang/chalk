@@ -1,8 +1,8 @@
 use crate::interner::ChalkIr;
 use crate::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplTraitId,
-    Lifetime, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
-    QuantifiedWhereClauses, StructId, Substitution, TraitId, Ty,
+    ImplTraitTy, Lifetime, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses,
+    ProjectionTy, QuantifiedWhereClauses, StructId, Substitution, TraitId, Ty,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -40,6 +40,12 @@ pub trait DebugContext {
     fn debug_alias(
         &self,
         alias: &AliasTy<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_impl_trait_ty(
+        &self,
+        impl_trait_ty: &ImplTraitTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
