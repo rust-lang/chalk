@@ -513,7 +513,10 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 TyData::Alias(AliasTy::Projection(proj2)),
             ) => self.aggregate_projection_tys(proj1, proj2),
 
-            (TyData::Alias(_), TyData::Alias(_)) => todo!(),
+            (
+                TyData::Alias(AliasTy::ImplTrait(impl_trait1)),
+                TyData::Alias(AliasTy::ImplTrait(impl_trait2)),
+            ) => self.aggregate_impl_trait_tys(impl_trait1, impl_trait2),
 
             // For everything else, be conservative here and just say we may invalidate.
             (TyData::Function(_), _)
@@ -569,6 +572,24 @@ impl<I: Interner> MayInvalidate<'_, I> {
         } = new;
         let ProjectionTy {
             associated_ty_id: current_name,
+            substitution: current_substitution,
+        } = current;
+
+        self.aggregate_name_and_substs(
+            new_name,
+            new_substitution,
+            current_name,
+            current_substitution,
+        )
+    }
+
+    fn aggregate_impl_trait_tys(&mut self, new: &ImplTraitTy<I>, current: &ImplTraitTy<I>) -> bool {
+        let ImplTraitTy {
+            impl_trait_id: new_name,
+            substitution: new_substitution,
+        } = new;
+        let ImplTraitTy {
+            impl_trait_id: current_name,
             substitution: current_substitution,
         } = current;
 

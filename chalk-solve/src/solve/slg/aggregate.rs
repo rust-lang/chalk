@@ -244,7 +244,10 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                 TyData::Alias(AliasTy::Projection(proj2)),
             ) => self.aggregate_projection_tys(proj1, proj2),
 
-            (TyData::Alias(_), TyData::Alias(_)) => todo!(),
+            (
+                TyData::Alias(AliasTy::ImplTrait(impl_trait1)),
+                TyData::Alias(AliasTy::ImplTrait(impl_trait2)),
+            ) => self.aggregate_impl_trait_tys(impl_trait1, impl_trait2),
 
             (TyData::Placeholder(placeholder1), TyData::Placeholder(placeholder2)) => {
                 self.aggregate_placeholder_tys(placeholder1, placeholder2)
@@ -318,6 +321,31 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                     substitution,
                 }))
                 .intern(interner)
+            })
+            .unwrap_or_else(|| self.new_variable())
+    }
+
+    fn aggregate_impl_trait_tys(
+        &mut self,
+        impl_trait1: &ImplTraitTy<I>,
+        impl_trait2: &ImplTraitTy<I>,
+    ) -> Ty<I> {
+        let ImplTraitTy {
+            impl_trait_id: name1,
+            substitution: substitution1,
+        } = impl_trait1;
+        let ImplTraitTy {
+            impl_trait_id: name2,
+            substitution: substitution2,
+        } = impl_trait2;
+
+        self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
+            .map(|(&impl_trait_id, substitution)| {
+                TyData::Alias(AliasTy::ImplTrait(ImplTraitTy {
+                    impl_trait_id,
+                    substitution,
+                }))
+                .intern(self.interner)
             })
             .unwrap_or_else(|| self.new_variable())
     }
