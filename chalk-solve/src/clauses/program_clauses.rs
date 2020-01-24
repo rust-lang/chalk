@@ -645,8 +645,8 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             }
             .intern(interner);
 
-            let projection_eq = ProjectionEq {
-                projection: projection.clone(),
+            let projection_eq = AliasEq {
+                alias: AliasTy::Projection(projection.clone()),
                 ty: app_ty.clone(),
             };
 
@@ -724,7 +724,10 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                 };
 
                 // `ProjectionEq(<T as Foo>::Assoc = U)`
-                let projection_eq = ProjectionEq { projection, ty };
+                let projection_eq = AliasEq {
+                    alias: AliasTy::Projection(projection),
+                    ty,
+                };
 
                 // Projection equality rule from above.
                 //

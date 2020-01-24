@@ -164,26 +164,19 @@ impl<'t, I: Interner> Unifier<'t, I> {
             // Unifying two dyn is possible if they have the same bounds.
             (&TyData::Dyn(ref qwc1), &TyData::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
 
-            // Unifying an associated type projection `<T as
-            // Trait>::Item` with some other type `U`.
+            // Unifying an alias type with some other type `U`.
             (&TyData::Apply(_), &TyData::Alias(ref alias))
             | (&TyData::Placeholder(_), &TyData::Alias(ref alias))
             | (&TyData::Function(_), &TyData::Alias(ref alias))
             | (&TyData::InferenceVar(_), &TyData::Alias(ref alias))
-            | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => match alias {
-                AliasTy::Projection(ref proj) => self.unify_projection_ty(proj, a),
-                _ => todo!(),
-            },
+            | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => self.unify_alias_ty(alias, a),
 
             (&TyData::Alias(ref alias), &TyData::Alias(_))
             | (&TyData::Alias(ref alias), &TyData::Apply(_))
             | (&TyData::Alias(ref alias), &TyData::Placeholder(_))
             | (&TyData::Alias(ref alias), &TyData::Function(_))
             | (&TyData::Alias(ref alias), &TyData::InferenceVar(_))
-            | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => match alias {
-                AliasTy::Projection(ref proj) => self.unify_projection_ty(proj, b),
-                _ => todo!(),
-            },
+            | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => self.unify_alias_ty(alias, b),
 
             (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
@@ -224,18 +217,19 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    /// Unify an associated type projection `proj` like `<T as Trait>::Item` with some other
-    /// type `ty` (which might also be a projection). Creates a goal like
+    /// Unify an alias like `<T as Trait>::Item` or `impl Trait` with some other
+    /// type `ty` (which might also be an alias). Creates a goal like
     ///
     /// ```notrust
-    /// ProjectionEq(<T as Trait>::Item = U)
+    /// AliasEq(<T as Trait>::Item = U) // associated type projection
+    /// AliasEq(impl Trait = U) // impl trait
     /// ```
-    fn unify_projection_ty(&mut self, proj: &ProjectionTy<I>, ty: &Ty<I>) -> Fallible<()> {
+    fn unify_alias_ty(&mut self, alias: &AliasTy<I>, ty: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
         Ok(self.goals.push(InEnvironment::new(
             self.environment,
-            ProjectionEq {
-                projection: proj.clone(),
+            AliasEq {
+                alias: alias.clone(),
                 ty: ty.clone(),
             }
             .cast(interner),

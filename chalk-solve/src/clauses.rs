@@ -268,9 +268,14 @@ fn program_clauses_that_could_match<I: Interner>(
                 );
             }
         }
-        DomainGoal::Holds(WhereClause::ProjectionEq(projection_predicate)) => db
-            .associated_ty_data(projection_predicate.projection.associated_ty_id)
-            .to_program_clauses(builder),
+        DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => match &alias_eq.alias {
+            AliasTy::Projection(proj) => db
+                .associated_ty_data(proj.associated_ty_id)
+                .to_program_clauses(builder),
+            AliasTy::ImplTrait(impl_trait) => db
+                .impl_trait_datum(impl_trait.impl_trait_id)
+                .to_program_clauses(builder),
+        },
         DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
             db.trait_datum(trait_predicate.trait_id)
                 .to_program_clauses(builder);

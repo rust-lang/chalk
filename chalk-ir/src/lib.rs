@@ -910,7 +910,7 @@ impl<I: Interner> TraitRef<I> {
 #[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner)]
 pub enum WhereClause<I: Interner> {
     Implemented(TraitRef<I>),
-    ProjectionEq(ProjectionEq<I>),
+    AliasEq(AliasEq<I>),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
@@ -1172,16 +1172,14 @@ pub struct Normalize<I: Interner> {
     pub ty: Ty<I>,
 }
 
-/// Proves **equality** between a projection `T::Foo` and a type
-/// `U`. Equality can be proven via normalization, but we can also
-/// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
+/// Proves **equality** between an alias and a type.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
-pub struct ProjectionEq<I: Interner> {
-    pub projection: ProjectionTy<I>,
+pub struct AliasEq<I: Interner> {
+    pub alias: AliasTy<I>,
     pub ty: Ty<I>,
 }
 
-impl<I: Interner> HasInterner for ProjectionEq<I> {
+impl<I: Interner> HasInterner for AliasEq<I> {
     type Interner = I;
 }
 
