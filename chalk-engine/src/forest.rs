@@ -1,6 +1,4 @@
-use crate::context::prelude::*;
-use crate::context::AnswerResult;
-use crate::context::AnswerStream;
+use crate::context::{AnswerResult, AnswerStream, Context, ContextOps};
 use crate::logic::RootSearchFail;
 use crate::stack::{Stack, StackIndex};
 use crate::table::AnswerIndex;

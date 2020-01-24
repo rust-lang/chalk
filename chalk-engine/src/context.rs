@@ -11,8 +11,6 @@ use crate::{CompleteAnswer, ExClause};
 use std::fmt::Debug;
 use std::hash::Hash;
 
-pub(crate) mod prelude;
-
 /// The "context" in which the SLG solver operates. It defines all the
 /// types that the SLG solver may need to refer to, as well as a few
 /// very simple interconversion methods.
