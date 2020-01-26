@@ -1,5 +1,5 @@
 use crate::context::{
-    Context, ContextOps, Floundered, InferenceTable, ResolventOps, UnificationOps,
+    Context, ContextOps, Floundered, InferenceTable, ResolventOps, TruncateOps, UnificationOps,
 };
 use crate::fallible::NoSolution;
 use crate::forest::Forest;
