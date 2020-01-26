@@ -147,6 +147,140 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     panic!("derive(Fold) requires a parameter that implements HasTypeFamily or TypeFamily");
 }
 
+/// Derives Fold for structs and enums for which one of the following is true:
+/// - It has a `#[has_type_family(TheTypeFamily)]` attribute
+/// - There is a single parameter `T: HasTypeFamily` (does not have to be named `T`)
+/// - There is a single parameter `TF: TypeFamily` (does not have to be named `TF`)
+#[proc_macro_derive(SuperFold, attributes(has_type_family))]
+pub fn derive_super_fold(item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as DeriveInput);
+    let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
+
+    let type_name = input.ident;
+    let body = derive_fold_body(&type_name, input.data);
+
+    if let Some(attr) = input
+        .attrs
+        .iter()
+        .find(|a| a.path.is_ident("has_type_family"))
+    {
+        // Hardcoded type-family:
+        //
+        // impl SuperFold<ChalkIr, ChalkIr> for Type {
+        // }
+        let arg = attr
+            .parse_args::<proc_macro2::TokenStream>()
+            .expect("Expected has_type_family argument");
+
+        return TokenStream::from(quote! {
+            impl #impl_generics SuperFold < #arg, #arg > for #type_name #ty_generics #where_clause_ref {
+                fn super_fold_with(
+                    &self,
+                    folder: &mut dyn Folder < #arg, #arg >,
+                    binders: usize,
+                ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+                    #body
+                }
+            }
+        });
+    }
+
+    match input.generics.params.len() {
+        1 => {}
+
+        0 => {
+            panic!("Fold derive requires a single type parameter or a `#[has_type_family]` attr");
+        }
+
+        _ => {
+            panic!("Fold derive only works with a single type parameter");
+        }
+    };
+
+    let generic_param0 = &input.generics.params[0];
+
+    if let Some(param) = has_type_family(&generic_param0) {
+        // HasTypeFamily bound:
+        //
+        // Example:
+        //
+        // impl<T, _TF, _TTF, _U> SuperFold<_TF, _TTF> for Binders<T>
+        // where
+        //     T: HasTypeFamily<TypeFamily = _TF>,
+        //     T: Fold<_TF, _TTF, Result = _U>,
+        //     U: HasTypeFamily<TypeFamily = _TTF>,
+        // {
+        // }
+
+        let mut impl_generics = input.generics.clone();
+        impl_generics.params.extend(vec![
+            GenericParam::Type(syn::parse(quote! { _TF: TypeFamily }.into()).unwrap()),
+            GenericParam::Type(syn::parse(quote! { _TTF: TargetTypeFamily<_TF> }.into()).unwrap()),
+            GenericParam::Type(
+                syn::parse(quote! { _U: HasTypeFamily<TypeFamily = _TTF> }.into()).unwrap(),
+            ),
+        ]);
+
+        let mut where_clause = where_clause_ref
+            .cloned()
+            .unwrap_or_else(|| syn::parse2(quote![where]).unwrap());
+        where_clause
+            .predicates
+            .push(syn::parse2(quote! { #param: HasTypeFamily<TypeFamily = _TF> }).unwrap());
+        where_clause
+            .predicates
+            .push(syn::parse2(quote! { #param: Fold<_TF, _TTF, Result = _U> }).unwrap());
+
+        return TokenStream::from(quote! {
+            impl #impl_generics SuperFold < _TF, _TTF > for #type_name < #param >
+                #where_clause
+            {
+                fn super_fold_with(
+                    &self,
+                    folder: &mut dyn Folder < _TF, _TTF >,
+                    binders: usize,
+                ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+                    #body
+                }
+            }
+        });
+    }
+
+    // TypeFamily bound:
+    //
+    // Example:
+    //
+    // impl<TF, _TTF> SuperFold<TF, _TTF> for Foo<TF>
+    // where
+    //     TF: TypeFamily,
+    //     _TTF: TargetTypeFamily<TF>,
+    // {
+    // }
+
+    if let Some(tf) = is_type_family(&generic_param0) {
+        let mut impl_generics = input.generics.clone();
+        impl_generics.params.extend(vec![GenericParam::Type(
+            syn::parse(quote! { _TTF: TargetTypeFamily<#tf> }.into()).unwrap(),
+        )]);
+
+        return TokenStream::from(quote! {
+            impl #impl_generics SuperFold < #tf, _TTF > for #type_name < #tf >
+                #where_clause_ref
+            {
+                fn super_fold_with(
+                    &self,
+                    folder: &mut dyn Folder < #tf, _TTF >,
+                    binders: usize,
+                ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+                    #body
+                }
+            }
+        });
+    }
+
+    panic!("derive(Fold) requires a parameter that implements HasTypeFamily or TypeFamily");
+}
+
 /// Generates the body of the Fold impl
 fn derive_fold_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream {
     match data {
