@@ -212,6 +212,13 @@ impl<TF: TypeFamily> Zip<TF> for Environment<TF> {
     }
 }
 
+impl<TF: TypeFamily> Zip<TF> for Goals<TF> {
+    fn zip_with<Z: Zipper<TF>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+        Zip::zip_with(zipper, a.as_slice(), b.as_slice())?;
+        Ok(())
+    }
+}
+
 /// Generates a Zip impl that requires the two enums be the same
 /// variant, then zips each field of the variant in turn. Only works
 /// if all variants have a single parenthesized value right now.

@@ -952,7 +952,7 @@ impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasTypeFamily)]
 pub struct ProgramClauseImplication<TF: TypeFamily> {
     pub consequence: DomainGoal<TF>,
-    pub conditions: Vec<Goal<TF>>,
+    pub conditions: Goals<TF>,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
@@ -968,7 +968,7 @@ impl<TF: TypeFamily> ProgramClause<TF> {
                 if implication.conditions.is_empty() {
                     ProgramClause::Implies(ProgramClauseImplication {
                         consequence: implication.consequence.into_from_env_goal(),
-                        conditions: vec![],
+                        conditions: Goals::new(),
                     })
                 } else {
                     ProgramClause::Implies(implication)
@@ -1010,6 +1010,52 @@ impl<T> UCanonical<T> {
         let subst = &canonical_subst.value.subst;
         assert_eq!(self.canonical.binders.len(), subst.parameters().len());
         subst.is_identity_subst()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
+/// A general goal; this is the full range of questions you can pose to Chalk.
+pub struct Goals<TF: TypeFamily> {
+    goals: Vec<Goal<TF>>,
+}
+
+impl<TF: TypeFamily> Goals<TF> {
+    pub fn from(goals: impl IntoIterator<Item = impl CastTo<Goal<TF>>>) -> Self {
+        use crate::cast::Caster;
+        Goals {
+            goals: goals.into_iter().casted().collect(),
+        }
+    }
+
+    pub fn new() -> Self {
+        Self::from(None::<Goal<TF>>)
+    }
+
+    pub fn from_fallible<E>(
+        goals: impl IntoIterator<Item = Result<impl CastTo<Goal<TF>>, E>>,
+    ) -> Result<Self, E> {
+        use crate::cast::Caster;
+        let goals = goals
+            .into_iter()
+            .casted()
+            .collect::<Result<Vec<Goal<TF>>, _>>()?;
+        Ok(Goals::from(goals))
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Goal<TF>> {
+        self.as_slice().iter()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.as_slice().is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.as_slice().len()
+    }
+
+    pub fn as_slice(&self) -> &[Goal<TF>] {
+        &self.goals
     }
 }
 
@@ -1107,8 +1153,7 @@ where
         if let Some(goal0) = iter.next() {
             if let Some(goal1) = iter.next() {
                 // More than one goal to prove
-                let mut goals = vec![goal0, goal1];
-                goals.extend(iter);
+                let goals = Goals::from(Some(goal0).into_iter().chain(Some(goal1)).chain(iter));
                 GoalData::All(goals).intern()
             } else {
                 // One goal to prove
@@ -1116,7 +1161,7 @@ where
             }
         } else {
             // No goals to prove, always true
-            GoalData::All(vec![]).intern()
+            GoalData::All(Goals::new()).intern()
         }
     }
 }
@@ -1128,7 +1173,7 @@ pub enum GoalData<TF: TypeFamily> {
     /// (deBruijn index).
     Quantified(QuantifierKind, Binders<Goal<TF>>),
     Implies(Vec<ProgramClause<TF>>, Goal<TF>),
-    All(Vec<Goal<TF>>),
+    All(Goals<TF>),
     Not(Goal<TF>),
 
     /// Make two things equal; the rules for doing so are well known to the logic

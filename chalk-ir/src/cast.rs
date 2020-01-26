@@ -183,7 +183,7 @@ where
     fn cast_to(self) -> ProgramClause<TF> {
         ProgramClause::Implies(ProgramClauseImplication {
             consequence: self.cast(),
-            conditions: vec![],
+            conditions: Goals::new(),
         })
     }
 }
@@ -199,7 +199,7 @@ where
         } else {
             ProgramClause::ForAll(self.map(|bound| ProgramClauseImplication {
                 consequence: bound.cast(),
-                conditions: vec![],
+                conditions: Goals::new(),
             }))
         }
     }

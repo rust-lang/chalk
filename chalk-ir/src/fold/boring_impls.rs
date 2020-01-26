@@ -124,6 +124,19 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Substitution<T
     }
 }
 
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Goals<TF> {
+    type Result = Goals<TTF>;
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        Ok(Goals::from_fallible(
+            self.iter().map(|p| p.fold_with(folder, binders)),
+        )?)
+    }
+}
+
 #[macro_export]
 macro_rules! copy_fold {
     ($t:ty) => {

@@ -1134,12 +1134,9 @@ impl LowerClause for Clause {
         let implications = env.in_binders(self.all_parameters(), |env| {
             let consequences: Vec<chalk_ir::DomainGoal<ChalkIr>> = self.consequence.lower(env)?;
 
-            let conditions: Vec<chalk_ir::Goal<ChalkIr>> = self
-                .conditions
-                .iter()
-                .map(|g| g.lower(env))
-                .rev() // (*)
-                .collect::<LowerResult<_>>()?;
+            let conditions = chalk_ir::Goals::from_fallible(
+                self.conditions.iter().map(|g| g.lower(env)).rev(), // (*)
+            )?;
 
             // (*) Subtle: in the SLG solver, we pop conditions from R to
             // L. To preserve the expected order (L to R), we must
@@ -1270,11 +1267,9 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(chalk_ir::GoalData::Implies(where_clauses?, g.lower(env)?).intern())
             }
             Goal::And(g1, g2s) => {
-                let mut goals = vec![];
-                goals.push(g1.lower(env)?);
-                for g2 in g2s {
-                    goals.push(g2.lower(env)?);
-                }
+                let goals = chalk_ir::Goals::from_fallible(
+                    Some(g1).into_iter().chain(g2s).map(|g| g.lower(env)),
+                )?;
                 Ok(chalk_ir::GoalData::All(goals).intern())
             }
             Goal::Not(g) => Ok(chalk_ir::GoalData::Not(g.lower(env)?).intern()),
