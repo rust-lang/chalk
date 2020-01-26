@@ -72,7 +72,8 @@ fn subgoal_abstraction() {
 
         goal {
             exists<T> { T: Foo }
-        } yields_all[SolverChoice::slg(50, None)] {
+        } yields_first[SolverChoice::slg(50, None)] {
+            "Floundered"
         }
     }
 }
@@ -169,25 +170,25 @@ fn subgoal_cycle_uninhabited() {
             impl<T> Foo for Box<T> where Box<Vec<T>>: Foo { }
         }
 
-        // There is no solution here with a finite proof, so we get
-        // back: 0 answer(s) found.
+        // Infinite recursion -> we flounder
         goal {
             exists<T> { T: Foo }
-        } yields_all[SolverChoice::slg(2, None)] {
+        } yields_first[SolverChoice::slg(2, None)] {
+            "Floundered"
         }
 
-        // Unsurprisingly, applying negation succeeds then.
+        // Unsurprisingly, applying negation also flounders.
         goal {
             not { exists<T> { T: Foo } }
-        } yields_all[SolverChoice::slg(2, None)] {
-            "substitution [], lifetime constraints []"
+        } yields_first[SolverChoice::slg(2, None)] {
+            "Floundered"
         }
 
         // Equivalent to the previous.
         goal {
             forall<T> { not { T: Foo } }
-        } yields_all[SolverChoice::slg(2, None)] {
-            "substitution [], lifetime constraints []"
+        } yields_first[SolverChoice::slg(2, None)] {
+            "Floundered"
         }
 
         // However, if we come across a negative goal that exceeds our
@@ -208,8 +209,9 @@ fn subgoal_cycle_uninhabited() {
         // Here, due to the hypothesis, there does indeed exist a suitable T, `U`.
         goal {
             forall<U> { if (U: Foo) { exists<T> { T: Foo } } }
-        } yields_all[SolverChoice::slg(2, None)] {
-            "substitution [?0 := !1_0], lifetime constraints []"
+        } yields_first[SolverChoice::slg(2, None)] {
+            "substitution [?0 := !1_0], lifetime constraints []",
+            "Floundered"
         }
     }
 }
@@ -226,10 +228,12 @@ fn subgoal_cycle_inhabited() {
             impl Foo for u32 { }
         }
 
+        // Exceeds size threshold -> flounder
         goal {
             exists<T> { T: Foo }
-        } yields_all[SolverChoice::slg(3, None)] {
-            "substitution [?0 := u32], lifetime constraints []"
+        } yields_first[SolverChoice::slg(3, None)] {
+            "substitution [?0 := u32], lifetime constraints []",
+            "Floundered"
         }
     }
 }
@@ -308,12 +312,12 @@ fn cached_answers_1() {
 
         goal {
             exists<T> { T: Sour }
-        } yields_all[SolverChoice::slg(2, None)] {
+        } yields_first[SolverChoice::slg(2, None)] {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := HotSauce<Vinegar>], lifetime constraints []",
-            "Ambiguous(for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] })"
+            "Floundered"
         }
     }
 }
@@ -335,12 +339,12 @@ fn cached_answers_2() {
 
         goal {
             exists<T> { T: Sour }
-        } yields_all[SolverChoice::slg(2, None)] {
+        } yields_first[SolverChoice::slg(2, None)] {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := HotSauce<Vinegar>], lifetime constraints []",
-            "Ambiguous(for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] })"
+            "Floundered"
         }
     }
 }
@@ -362,12 +366,11 @@ fn cached_answers_3() {
 
         goal {
             exists<T> { T: Sour }
-        } yields_all[SolverChoice::slg(2, None)] {
+        } yields_first[SolverChoice::slg(2, None)] {
             "substitution [?0 := Lemon], lifetime constraints []",
             "substitution [?0 := HotSauce<Lemon>], lifetime constraints []",
             "substitution [?0 := Vinegar], lifetime constraints []",
-            "Ambiguous(for<?U0> { substitution [?0 := HotSauce<^0>], lifetime constraints [] })",
-            "substitution [?0 := HotSauce<Vinegar>], lifetime constraints []"
+            "Floundered"
         }
     }
 }

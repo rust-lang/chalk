@@ -164,7 +164,7 @@ fn overflow() {
         goal {
             S<Z>: Q
         } yields {
-            "No possible solution"
+            "Ambiguous; no inference guidance"
         }
     }
 }

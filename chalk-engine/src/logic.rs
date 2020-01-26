@@ -1,5 +1,5 @@
 use crate::context::{
-    Context, ContextOps, Floundered, InferenceTable, ResolventOps, UnificationOps,
+    Context, ContextOps, Floundered, InferenceTable, ResolventOps, TruncateOps, UnificationOps,
 };
 use crate::fallible::NoSolution;
 use crate::forest::Forest;
@@ -9,7 +9,6 @@ use crate::table::AnswerIndex;
 use crate::{
     Answer, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
 };
-use std::mem;
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 
@@ -284,7 +283,7 @@ impl<C: Context> Forest<C> {
                 ) {
                     Ok(()) => {
                         let Strand {
-                            infer,
+                            infer: _,
                             ex_clause,
                             selected_subgoal: _,
                             last_pursued_time: _,
@@ -301,9 +300,6 @@ impl<C: Context> Forest<C> {
                         // Increment the answer time for the `ex_clause`. Floundered
                         // subgoals may be eligble to be pursued again.
                         ex_clause.answer_time.increment();
-
-                        // Apply answer abstraction.
-                        self.truncate_returned(ex_clause, infer);
 
                         // Ok, we've applied the answer to this Strand.
                         return Ok(());
@@ -1040,6 +1036,28 @@ impl<C: Context> Forest<C> {
         assert!(subgoals.is_empty());
         assert!(floundered_subgoals.is_empty());
 
+        // If the answer gets too large, mark the table as floundered.
+        // This is the *most conservative* course. There are a few alternatives:
+        // 1) Replace the answer with a truncated version of it. (This was done
+        //    previously, but turned out to be more complicated than we wanted and
+        //    and a source of multiple bugs.)
+        // 2) Mark this *strand* as floundered. We don't currently have a mechanism
+        //    for this (only floundered subgoals), so implementing this is more
+        //    difficult because we don't want to just *remove* this strand from the
+        //    table, because that might make the table give `NoMoreSolutions`, which
+        //    is *wrong*.
+        // 3) Do something fancy with delayed subgoals, effectively delayed the
+        //    truncated bits to a different strand (and a more "refined" answer).
+        //    (This one probably needs more thought, but is here for "completeness")
+        //
+        // Ultimately, the current decision to flounder the entire table mostly boils
+        // down to "it works as we expect for the current tests". And, we likely don't
+        // even *need* the added complexity just for potentially more answers.
+        if infer.truncate_answer(&subst).is_some() {
+            self.tables[table].mark_floundered();
+            return None;
+        }
+
         let subst = infer.canonicalize_answer_subst(subst, constraints, delayed_subgoals);
         debug!("answer: table={:?}, subst={:?}", table, subst);
 
@@ -1160,7 +1178,7 @@ impl<C: Context> Forest<C> {
 
         // Subgoal abstraction:
         let (ucanonical_subgoal, universe_map) = match subgoal {
-            Literal::Positive(subgoal) => self.abstract_positive_literal(infer, subgoal),
+            Literal::Positive(subgoal) => self.abstract_positive_literal(infer, subgoal)?,
             Literal::Negative(subgoal) => self.abstract_negative_literal(infer, subgoal)?,
         };
 
@@ -1292,44 +1310,16 @@ impl<C: Context> Forest<C> {
     /// abstraction function to yield the canonical form that will be
     /// used to pick a table. Typically, this abstraction has no
     /// effect, and hence we are simply returning the canonical form
-    /// of `subgoal`, but if the subgoal is getting too big, we may
-    /// truncate the goal to ensure termination.
-    ///
-    /// This technique is described in the SA paper.
+    /// of `subgoal`; but if the subgoal is getting too big, we return
+    /// `None`, which causes the subgoal to flounder.
     fn abstract_positive_literal(
         &mut self,
         infer: &mut dyn InferenceTable<C>,
         subgoal: &C::GoalInEnvironment,
-    ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap) {
-        // Subgoal abstraction: Rather than looking up the table for
-        // `selected_goal` directly, first apply the truncation
-        // function. This may introduce fresh variables, making the
-        // goal that we are looking up more general, and forcing us to
-        // reuse an existing table. For example, if we had a selected
-        // goal of
-        //
-        //     // Vec<Vec<Vec<Vec<i32>>>>: Sized
-        //
-        // we might now produce a truncated goal of
-        //
-        //     // Vec<Vec<?T>>: Sized
-        //
-        // Obviously, the answer we are looking for -- if it exists -- will be
-        // found amongst the answers of this new, truncated goal.
-        //
-        // Subtle point: Note that the **selected goal** remains
-        // unchanged and will be carried over into the "pending
-        // clause" for the positive link on the new subgoal. This
-        // means that if our new, truncated subgoal produces
-        // irrelevant answers (e.g., `Vec<Vec<u32>>: Sized`), they
-        // will fail to unify with our selected goal, producing no
-        // resolvent.
+    ) -> Option<(C::UCanonicalGoalInEnvironment, C::UniverseMap)> {
         match infer.truncate_goal(subgoal) {
-            None => infer.fully_canonicalize_goal(subgoal),
-            Some(truncated_subgoal) => {
-                debug!("truncated={:?}", truncated_subgoal);
-                infer.fully_canonicalize_goal(&truncated_subgoal)
-            }
+            Some(_) => None,
+            None => Some(infer.fully_canonicalize_goal(subgoal)),
         }
     }
 
@@ -1384,57 +1374,6 @@ impl<C: Context> Forest<C> {
         // affect completeness when it comes to subgoal abstraction.
         let inverted_subgoal = infer.invert_goal(subgoal)?;
 
-        // DIVERGENCE
-        //
-        // If the negative subgoal has grown so large that we would have
-        // to truncate it, we currently just abort the computation
-        // entirely. This is not necessary -- the SA paper makes no
-        // such distinction, for example, and applies truncation equally
-        // for positive/negative literals. However, there are some complications
-        // that arise that I do not wish to deal with right now.
-        //
-        // Let's work through an example to show you what I
-        // mean. Imagine we have this (negative) selected literal;
-        // hence `selected_subgoal` will just be the inner part:
-        //
-        //     // not { Vec<Vec<Vec<Vec<i32>>>>: Sized }
-        //     //       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        //     //       `selected_goal`
-        //
-        // (In this case, the `inverted_subgoal` would be the same,
-        // since there are no free universal variables.)
-        //
-        // If truncation **doesn't apply**, we would go and lookup the
-        // table for the selected goal (`Vec<Vec<..>>: Sized`) and see
-        // whether it has any answers. If it does, and they are
-        // definite, then this negative literal is false. We don't
-        // really care even how many answers there are and so forth
-        // (if the goal is ground, as in this case, there can be at
-        // most one definite answer, but if there are universals, then
-        // the inverted goal would have variables; even so, a single
-        // definite answer suffices to show that the `not { .. }` goal
-        // is false).
-        //
-        // Truncation muddies the water, because the table may
-        // generate answers that are not relevant to our original,
-        // untruncated literal.  Suppose that we truncate the selected
-        // goal to:
-        //
-        //     // Vec<Vec<T>>: Sized
-        //
-        // Clearly this table will have some solutions that don't
-        // apply to us.  e.g., `Vec<Vec<u32>>: Sized` is a solution to
-        // this table, but that doesn't imply that `not {
-        // Vec<Vec<Vec<..>>>: Sized }` is false.
-        //
-        // This can be made to work -- we carry along the original
-        // selected goal when we establish links between tables, and
-        // we could use that to screen the resulting answers. (There
-        // are some further complications around the fact that
-        // selected goal may contain universally quantified free
-        // variables that have been inverted, as discussed in the
-        // prior paragraph above.) I just didn't feel like dealing
-        // with it yet.
         match infer.truncate_goal(&inverted_subgoal) {
             Some(_) => None,
             None => Some(infer.fully_canonicalize_goal(&inverted_subgoal)),
@@ -1457,51 +1396,5 @@ impl<C: Context> Forest<C> {
             floundered_time,
         });
         debug!("flounder_subgoal: ex_clause={:#?}", ex_clause);
-    }
-
-    /// Used whenever we process an answer (whether new or cached) on
-    /// a positive edge (the SLG POSITIVE RETURN operation). Truncates
-    /// the resolvent (or factor) if it has grown too large.
-    fn truncate_returned(&self, ex_clause: &mut ExClause<C>, infer: &mut dyn InferenceTable<C>) {
-        // DIVERGENCE
-        //
-        // In the original RR paper, truncation is only applied
-        // when the result of resolution is a new answer (i.e.,
-        // `ex_clause.subgoals.is_empty()`).  I've chosen to be
-        // more aggressive here, precisely because or our extended
-        // semantics for unification. In particular, unification
-        // can insert new goals, so I fear that positive feedback
-        // loops could still run indefinitely in the original
-        // formulation. I would like to revise our unification
-        // mechanism to avoid that problem, in which case this could
-        // be tightened up to be more like the original RR paper.
-        //
-        // Still, I *believe* this more aggressive approx. should
-        // not interfere with any of the properties of the
-        // original paper. In particular, applying truncation only
-        // when the resolvent has no subgoals seems like it is
-        // aimed at giving us more times to eliminate this
-        // ambiguous answer.
-
-        match infer.truncate_answer(&ex_clause.subst) {
-            // No need to truncate
-            None => {}
-
-            // Resolvent got too large. Have to introduce approximation.
-            Some(truncated_subst) => {
-                mem::replace(
-                    ex_clause,
-                    ExClause {
-                        subst: truncated_subst,
-                        ambiguous: true,
-                        constraints: vec![],
-                        subgoals: vec![],
-                        delayed_subgoals: vec![],
-                        answer_time: TimeStamp::default(),
-                        floundered_subgoals: vec![],
-                    },
-                );
-            }
-        }
     }
 }
