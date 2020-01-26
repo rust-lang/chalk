@@ -216,9 +216,9 @@ impl<TF: TypeFamily> Ty<TF> {
         }
     }
 
-    pub fn is_projection(&self) -> bool {
+    pub fn is_alias(&self) -> bool {
         match self.data() {
-            TyData::Projection(..) => true,
+            TyData::Alias(..) => true,
             _ => false,
         }
     }
@@ -255,10 +255,11 @@ pub enum TyData<TF: TypeFamily> {
     /// binders here.
     Dyn(DynTy<TF>),
 
-    /// A "projection" type corresponds to an (unnormalized)
-    /// projection like `<P0 as Trait<P1..Pn>>::Foo`. Note that the
-    /// trait and all its parameters are fully known.
-    Projection(ProjectionTy<TF>),
+    /// An "alias" type represents some form of type alias, such as:
+    /// - An associated type projection like `<T as Iterator>::Item`
+    /// - `impl Trait` types
+    /// - Named type aliases like `type Foo<X> = Vec<X>`
+    Alias(AliasTy<TF>),
 
     /// A function type such as `for<'a> fn(&'a u32)`.
     /// Note that "higher-ranked" types (starting with `for<>`) are either
@@ -569,12 +570,12 @@ impl<TF: TypeFamily> ParameterData<TF> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
-pub struct ProjectionTy<TF: TypeFamily> {
+pub struct AliasTy<TF: TypeFamily> {
     pub associated_ty_id: AssocTypeId<TF>,
     pub substitution: Substitution<TF>,
 }
 
-impl<TF: TypeFamily> ProjectionTy<TF> {
+impl<TF: TypeFamily> AliasTy<TF> {
     pub fn intern(self) -> Ty<TF> {
         Ty::new(self)
     }
@@ -608,7 +609,7 @@ impl<TF: TypeFamily> TraitRef<TF> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
 pub enum WhereClause<TF: TypeFamily> {
     Implemented(TraitRef<TF>),
-    ProjectionEq(ProjectionEq<TF>),
+    AliasEq(AliasEq<TF>),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
@@ -741,7 +742,7 @@ pub type QuantifiedWhereClause<TF> = Binders<WhereClause<TF>>;
 impl<TF: TypeFamily> WhereClause<TF> {
     /// Turn a where clause into the WF version of it i.e.:
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
-    /// * `ProjectionEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
+    /// * `AliasEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
     pub fn into_well_formed_goal(self) -> DomainGoal<TF> {
         match self {
@@ -794,13 +795,13 @@ pub struct EqGoal<TF: TypeFamily> {
     pub b: Parameter<TF>,
 }
 
-/// Proves that the given projection **normalizes** to the given
+/// Proves that the given type alias **normalizes** to the given
 /// type. A projection `T::Foo` normalizes to the type `U` if we can
 /// **match it to an impl** and that impl has a `type Foo = V` where
 /// `U = V`.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
 pub struct Normalize<TF: TypeFamily> {
-    pub projection: ProjectionTy<TF>,
+    pub alias: AliasTy<TF>,
     pub ty: Ty<TF>,
 }
 
@@ -808,12 +809,12 @@ pub struct Normalize<TF: TypeFamily> {
 /// `U`. Equality can be proven via normalization, but we can also
 /// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
-pub struct ProjectionEq<TF: TypeFamily> {
-    pub projection: ProjectionTy<TF>,
+pub struct AliasEq<TF: TypeFamily> {
+    pub alias: AliasTy<TF>,
     pub ty: Ty<TF>,
 }
 
-impl<TF: TypeFamily> HasTypeFamily for ProjectionEq<TF> {
+impl<TF: TypeFamily> HasTypeFamily for AliasEq<TF> {
     type TypeFamily = TF;
 }
 

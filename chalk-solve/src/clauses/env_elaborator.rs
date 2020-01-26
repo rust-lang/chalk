@@ -8,7 +8,7 @@ use crate::RustIrDatabase;
 use crate::Ty;
 use crate::TyData;
 use chalk_ir::family::TypeFamily;
-use chalk_ir::ProjectionTy;
+use chalk_ir::AliasTy;
 use rustc_hash::FxHashSet;
 
 /// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
@@ -43,9 +43,9 @@ impl<'me, TF: TypeFamily> EnvElaborator<'me, TF> {
         }
     }
 
-    fn visit_projection_ty(&mut self, projection_ty: &ProjectionTy<TF>) {
+    fn visit_alias_ty(&mut self, alias_ty: &AliasTy<TF>) {
         self.db
-            .associated_ty_data(projection_ty.associated_ty_id)
+            .associated_ty_data(alias_ty.associated_ty_id)
             .to_program_clauses(&mut self.builder);
     }
 
@@ -56,8 +56,8 @@ impl<'me, TF: TypeFamily> EnvElaborator<'me, TF> {
             }
             TyData::Placeholder(_) => {}
 
-            TyData::Projection(projection_ty) => {
-                self.visit_projection_ty(projection_ty);
+            TyData::Alias(alias_ty) => {
+                self.visit_alias_ty(alias_ty);
             }
 
             // FIXME(#203) -- We haven't fully figured out the implied

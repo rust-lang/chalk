@@ -23,8 +23,8 @@ macro_rules! ty {
         }).intern()
     };
 
-    (projection (item $n:tt) $($arg:tt)*) => {
-        $crate::TyData::Projection(ProjectionTy {
+    (alias (item $n:tt) $($arg:tt)*) => {
+        $crate::TyData::Alias(AliasTy {
             associated_ty_id: AssocTypeId(RawId { index: $n }),
             substitution: $crate::Substitution::from(vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
         }).intern()

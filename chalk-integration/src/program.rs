@@ -3,8 +3,8 @@ use chalk_ir::debug::Angle;
 use chalk_ir::family::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AssocTypeId, Identifier, ImplId, Parameter, ProgramClause, ProjectionTy, StructId, TraitId,
-    TyData, TypeName,
+    AliasTy, AssocTypeId, Identifier, ImplId, Parameter, ProgramClause, StructId, TraitId, TyData,
+    TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -103,12 +103,12 @@ impl tls::DebugContext for Program {
         }
     }
 
-    fn debug_projection(
+    fn debug_alias(
         &self,
-        projection_ty: &ProjectionTy<ChalkIr>,
+        alias_ty: &AliasTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        let (associated_ty_data, trait_params, other_params) = self.split_projection(projection_ty);
+        let (associated_ty_data, trait_params, other_params) = self.split_projection(alias_ty);
         write!(
             fmt,
             "<{:?} as {:?}{:?}>::{}{:?}",

@@ -108,7 +108,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyValue<TF> {
             // ```
             builder.push_clause(
                 Normalize {
-                    projection: projection.clone(),
+                    alias: projection.clone(),
                     ty: assoc_ty_value.ty,
                 },
                 impl_where_clauses.chain(assoc_ty_where_clauses),
@@ -510,18 +510,18 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
     /// we generate the 'fallback' rule:
     ///
     /// ```notrust
-    /// -- Rule ProjectionEq-Placeholder
+    /// -- Rule AliasEq-Placeholder
     /// forall<Self, 'a, T> {
-    ///     ProjectionEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
+    ///     AliasEq(<Self as Foo>::Assoc<'a, T> = (Foo::Assoc<'a, T>)<Self>).
     /// }
     /// ```
     ///
     /// and
     ///
     /// ```notrust
-    /// -- Rule ProjectionEq-Normalize
+    /// -- Rule AliasEq-Normalize
     /// forall<Self, 'a, T, U> {
-    ///     ProjectionEq(<T as Foo>::Assoc<'a, T> = U) :-
+    ///     AliasEq(<T as Foo>::Assoc<'a, T> = U) :-
     ///         Normalize(<T as Foo>::Assoc -> U).
     /// }
     /// ```
@@ -530,14 +530,14 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
     ///
     /// ```notrust
     /// forall<T> {
-    ///     T: Foo :- exists<U> { ProjectionEq(<T as Foo>::Assoc = U) }.
+    ///     T: Foo :- exists<U> { AliasEq(<T as Foo>::Assoc = U) }.
     /// }
     /// ```
     ///
     /// but this caused problems with the recursive solver. In
     /// particular, whenever normalization is possible, we cannot
     /// solve that projection uniquely, since we can now elaborate
-    /// `ProjectionEq` to fallback *or* normalize it. So instead we
+    /// `AliasEq` to fallback *or* normalize it. So instead we
     /// handle this kind of reasoning through the `FromEnv` predicate.
     ///
     /// We also generate rules specific to WF requirements and implied bounds:
@@ -568,14 +568,14 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
         builder.push_binders(&binders, |builder, (where_clauses, bounds)| {
             let substitution = builder.substitution_in_scope();
 
-            let projection = ProjectionTy {
+            let alias = AliasTy {
                 associated_ty_id: self.id,
                 substitution: substitution.clone(),
             };
-            let projection_ty = projection.clone().intern();
+            let projection_ty = alias.clone().intern();
 
             // Retrieve the trait ref embedding the associated type
-            let trait_ref = builder.db.trait_ref_from_projection(&projection);
+            let trait_ref = builder.db.trait_ref_from_projection(&alias);
 
             // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
             // we would produce `(Iterator::Item)<T>`.
@@ -585,8 +585,8 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
             }
             .intern();
 
-            let projection_eq = ProjectionEq {
-                projection: projection.clone(),
+            let alias_eq = AliasEq {
+                alias: alias.clone(),
                 ty: app_ty.clone(),
             };
 
@@ -594,9 +594,9 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
             // and placeholder type.
             //
             //    forall<Self> {
-            //        ProjectionEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
+            //        AliasEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
             //    }
-            builder.push_fact(projection_eq);
+            builder.push_fact(alias_eq);
 
             // Well-formedness of projection type.
             //
@@ -656,20 +656,20 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
             builder.push_bound_ty(|builder, ty| {
                 // `Normalize(<T as Foo>::Assoc -> U)`
                 let normalize = Normalize {
-                    projection: projection.clone(),
+                    alias: alias.clone(),
                     ty: ty.clone(),
                 };
 
-                // `ProjectionEq(<T as Foo>::Assoc = U)`
-                let projection_eq = ProjectionEq { projection, ty };
+                // `AliasEq(<T as Foo>::Assoc = U)`
+                let alias_eq = AliasEq { alias, ty };
 
                 // Projection equality rule from above.
                 //
                 //    forall<T, U> {
-                //        ProjectionEq(<T as Foo>::Assoc = U) :-
+                //        AliasEq(<T as Foo>::Assoc = U) :-
                 //            Normalize(<T as Foo>::Assoc -> U).
                 //    }
-                builder.push_clause(projection_eq, Some(normalize));
+                builder.push_clause(alias_eq, Some(normalize));
             });
         });
     }

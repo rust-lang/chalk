@@ -1,5 +1,5 @@
 use crate::family::ChalkIr;
-use crate::{AssocTypeId, ProjectionTy, StructId, TraitId};
+use crate::{AliasTy, AssocTypeId, StructId, TraitId};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
@@ -27,9 +27,9 @@ pub trait DebugContext {
         fmt: &mut fmt::Formatter,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_projection(
+    fn debug_alias(
         &self,
-        projection: &ProjectionTy<ChalkIr>,
+        alias: &AliasTy<ChalkIr>,
         fmt: &mut fmt::Formatter,
     ) -> Result<(), fmt::Error>;
 }

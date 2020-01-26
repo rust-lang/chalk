@@ -524,8 +524,8 @@ impl MayInvalidate {
                 self.aggregate_placeholder_tys(p1, p2)
             }
 
-            (TyData::Projection(apply1), TyData::Projection(apply2)) => {
-                self.aggregate_projection_tys(apply1, apply2)
+            (TyData::Alias(alias1), TyData::Alias(alias2)) => {
+                self.aggregate_alias_tys(alias1, alias2)
             }
 
             // For everything else, be conservative here and just say we may invalidate.
@@ -533,7 +533,7 @@ impl MayInvalidate {
             | (TyData::Dyn(_), _)
             | (TyData::Apply(_), _)
             | (TyData::Placeholder(_), _)
-            | (TyData::Projection(_), _) => true,
+            | (TyData::Alias(_), _) => true,
         }
     }
 
@@ -571,16 +571,16 @@ impl MayInvalidate {
         new != current
     }
 
-    fn aggregate_projection_tys<TF: TypeFamily>(
+    fn aggregate_alias_tys<TF: TypeFamily>(
         &mut self,
-        new: &ProjectionTy<TF>,
-        current: &ProjectionTy<TF>,
+        new: &AliasTy<TF>,
+        current: &AliasTy<TF>,
     ) -> bool {
-        let ProjectionTy {
+        let AliasTy {
             associated_ty_id: new_name,
             substitution: new_substitution,
         } = new;
-        let ProjectionTy {
+        let AliasTy {
             associated_ty_id: current_name,
             substitution: current_substitution,
         } = current;

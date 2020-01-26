@@ -61,7 +61,7 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
             TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
             TyData::InferenceVar(var) => write!(fmt, "{:?}", var),
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
-            TyData::Projection(proj) => write!(fmt, "{:?}", proj),
+            TyData::Alias(alias) => write!(fmt, "{:?}", alias),
             TyData::Placeholder(index) => write!(fmt, "{:?}", index),
             TyData::Function(function) => write!(fmt, "{:?}", function),
         }
@@ -166,9 +166,9 @@ impl<TF: TypeFamily> Debug for SeparatorTraitRef<'_, TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for ProjectionTy<TF> {
+impl<TF: TypeFamily> Debug for AliasTy<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_projection(self, fmt).unwrap_or_else(|| {
+        TF::debug_alias(self, fmt).unwrap_or_else(|| {
             write!(
                 fmt,
                 "({:?}){:?}",
@@ -200,13 +200,13 @@ impl<'a, T: Debug> Debug for Angle<'a, T> {
 
 impl<TF: TypeFamily> Debug for Normalize<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "Normalize({:?} -> {:?})", self.projection, self.ty)
+        write!(fmt, "Normalize({:?} -> {:?})", self.alias, self.ty)
     }
 }
 
-impl<TF: TypeFamily> Debug for ProjectionEq<TF> {
+impl<TF: TypeFamily> Debug for AliasEq<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "ProjectionEq({:?} = {:?})", self.projection, self.ty)
+        write!(fmt, "AliasEq({:?} = {:?})", self.alias, self.ty)
     }
 }
 
@@ -214,7 +214,7 @@ impl<TF: TypeFamily> Debug for WhereClause<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             WhereClause::Implemented(tr) => write!(fmt, "Implemented({:?})", tr.with_colon()),
-            WhereClause::ProjectionEq(p) => write!(fmt, "{:?}", p),
+            WhereClause::AliasEq(a) => write!(fmt, "{:?}", a),
         }
     }
 }

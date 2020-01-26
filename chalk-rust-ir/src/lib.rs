@@ -7,8 +7,8 @@ use chalk_ir::cast::Cast;
 use chalk_ir::family::{HasTypeFamily, TargetTypeFamily, TypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::{
-    AssocTypeId, Binders, Identifier, ImplId, LifetimeData, Parameter, ParameterKind, ProjectionEq,
-    ProjectionTy, QuantifiedWhereClause, RawId, StructId, Substitution, TraitId, TraitRef, Ty,
+    AliasEq, AliasTy, AssocTypeId, Binders, Identifier, ImplId, LifetimeData, Parameter,
+    ParameterKind, QuantifiedWhereClause, RawId, StructId, Substitution, TraitId, TraitRef, Ty,
     TyData, TypeName, WhereClause,
 };
 use std::iter;
@@ -140,7 +140,7 @@ pub struct TraitFlags {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasTypeFamily)]
 pub enum InlineBound<TF: TypeFamily> {
     TraitBound(TraitBound<TF>),
-    ProjectionEqBound(ProjectionEqBound<TF>),
+    AliasEqBound(AliasEqBound<TF>),
 }
 
 #[allow(type_alias_bounds)]
@@ -163,7 +163,7 @@ impl<TF: TypeFamily> IntoWhereClauses<TF> for InlineBound<TF> {
     fn into_where_clauses(&self, self_ty: Ty<TF>) -> Vec<WhereClause<TF>> {
         match self {
             InlineBound::TraitBound(b) => b.into_where_clauses(self_ty),
-            InlineBound::ProjectionEqBound(b) => b.into_where_clauses(self_ty),
+            InlineBound::AliasEqBound(b) => b.into_where_clauses(self_ty),
         }
     }
 }
@@ -208,10 +208,10 @@ impl<TF: TypeFamily> TraitBound<TF> {
     }
 }
 
-/// Represents a projection equality bound on e.g. a type or type parameter.
+/// Represents an alias equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-pub struct ProjectionEqBound<TF: TypeFamily> {
+pub struct AliasEqBound<TF: TypeFamily> {
     pub trait_bound: TraitBound<TF>,
     pub associated_ty_id: AssocTypeId<TF>,
     /// Does not include trait parameters.
@@ -219,7 +219,7 @@ pub struct ProjectionEqBound<TF: TypeFamily> {
     pub value: Ty<TF>,
 }
 
-impl<TF: TypeFamily> ProjectionEqBound<TF> {
+impl<TF: TypeFamily> AliasEqBound<TF> {
     fn into_where_clauses(&self, self_ty: Ty<TF>) -> Vec<WhereClause<TF>> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 
@@ -232,8 +232,8 @@ impl<TF: TypeFamily> ProjectionEqBound<TF> {
 
         vec![
             WhereClause::Implemented(trait_ref),
-            WhereClause::ProjectionEq(ProjectionEq {
-                projection: ProjectionTy {
+            WhereClause::AliasEq(AliasEq {
+                alias: AliasTy {
                     associated_ty_id: self.associated_ty_id,
                     substitution,
                 },
@@ -342,7 +342,7 @@ impl<TF: TypeFamily> AssociatedTyDatum<TF> {
         let substitution = Substitution::from(binders.iter().zip(0..).map(|p| p.to_parameter()));
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
-        let self_ty = TyData::Projection(ProjectionTy {
+        let self_ty = TyData::Alias(AliasTy {
             associated_ty_id: self.id,
             substitution,
         })
