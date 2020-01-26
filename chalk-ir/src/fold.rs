@@ -95,7 +95,7 @@ where
     TTF: TargetTypeFamily<TF>,
 {
     fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TTF>> {
-        super_fold_ty(self, ty, binders)
+        ty.super_fold_with(self, binders)
     }
 
     fn fold_lifetime(
@@ -103,7 +103,7 @@ where
         lifetime: &Lifetime<TF>,
         binders: usize,
     ) -> Fallible<Lifetime<TTF>> {
-        super_fold_lifetime(self, lifetime, binders)
+        lifetime.super_fold_with(self, binders)
     }
 }
 
@@ -300,29 +300,42 @@ pub trait Fold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Debug {
         -> Fallible<Self::Result>;
 }
 
-pub fn super_fold_ty<TF, TTF>(
-    folder: &mut dyn Folder<TF, TTF>,
-    ty: &Ty<TF>,
-    binders: usize,
-) -> Fallible<Ty<TTF>>
+/// For types where "fold" invokes a callback on the `Folder`, the
+/// `SuperFold` trait captures the recursive behavior that folds all
+/// the contents of the type.
+pub trait SuperFold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Fold<TF, TTF> {
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result>;
+}
+
+impl<TF, TTF> SuperFold<TF, TTF> for Ty<TF>
 where
     TF: TypeFamily,
     TTF: TargetTypeFamily<TF>,
 {
-    match ty.data() {
-        TyData::BoundVar(depth) => {
-            if *depth >= binders {
-                folder.fold_free_var_ty(*depth - binders, binders)
-            } else {
-                Ok(TyData::<TTF>::BoundVar(*depth).intern())
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Ty<TTF>> {
+        match self.data() {
+            TyData::BoundVar(depth) => {
+                if *depth >= binders {
+                    folder.fold_free_var_ty(*depth - binders, binders)
+                } else {
+                    Ok(TyData::<TTF>::BoundVar(*depth).intern())
+                }
             }
+            TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
+            TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
+            TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, binders)?).intern()),
+            TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, binders)?),
+            TyData::Alias(proj) => Ok(TyData::Alias(proj.fold_with(folder, binders)?).intern()),
+            TyData::Function(fun) => Ok(TyData::Function(fun.fold_with(folder, binders)?).intern()),
         }
-        TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
-        TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
-        TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, binders)?).intern()),
-        TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, binders)?),
-        TyData::Alias(alias) => Ok(TyData::Alias(alias.fold_with(folder, binders)?).intern()),
-        TyData::Function(fun) => Ok(TyData::Function(fun.fold_with(folder, binders)?).intern()),
     }
 }
 
@@ -341,24 +354,30 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
     }
 }
 
-pub fn super_fold_lifetime<TF: TypeFamily, TTF: TypeFamily>(
-    folder: &mut dyn Folder<TF, TTF>,
-    lifetime: &Lifetime<TF>,
-    binders: usize,
-) -> Fallible<Lifetime<TTF>> {
-    match lifetime.data() {
-        LifetimeData::BoundVar(depth) => {
-            if *depth >= binders {
-                folder.fold_free_var_lifetime(depth - binders, binders)
-            } else {
-                Ok(LifetimeData::<TTF>::BoundVar(*depth).intern())
+impl<TF, TTF> SuperFold<TF, TTF> for Lifetime<TF>
+where
+    TF: TypeFamily,
+    TTF: TargetTypeFamily<TF>,
+{
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Lifetime<TTF>> {
+        match self.data() {
+            LifetimeData::BoundVar(depth) => {
+                if *depth >= binders {
+                    folder.fold_free_var_lifetime(depth - binders, binders)
+                } else {
+                    Ok(LifetimeData::<TTF>::BoundVar(*depth).intern())
+                }
             }
+            LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
+            LifetimeData::Placeholder(universe) => {
+                folder.fold_free_placeholder_lifetime(*universe, binders)
+            }
+            LifetimeData::Phantom(..) => unreachable!(),
         }
-        LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
-        LifetimeData::Placeholder(universe) => {
-            folder.fold_free_placeholder_lifetime(*universe, binders)
-        }
-        LifetimeData::Phantom(..) => unreachable!(),
     }
 }
 

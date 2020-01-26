@@ -5,7 +5,8 @@ use chalk_engine::fallible::*;
 use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{
-    self, DefaultFreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder, Fold, TypeFolder,
+    DefaultFreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder, Fold, SuperFold,
+    TypeFolder,
 };
 use chalk_ir::*;
 use std::fmt::Debug;
@@ -81,7 +82,7 @@ impl<TF: TypeFamily> TypeFolder<TF> for Truncater<'_, TF> {
         let pre_size = self.current_size;
         self.current_size += 1;
 
-        let result = fold::super_fold_ty(self, ty, binders)?;
+        let result = ty.super_fold_with(self, binders)?;
 
         // We wish to maintain the invariant that:
         //
@@ -109,7 +110,7 @@ impl<TF: TypeFamily> TypeFolder<TF> for Truncater<'_, TF> {
     }
 
     fn fold_lifetime(&mut self, lifetime: &Lifetime<TF>, binders: usize) -> Fallible<Lifetime<TF>> {
-        fold::super_fold_lifetime(self, lifetime, binders)
+        lifetime.super_fold_with(self, binders)
     }
 }
 
