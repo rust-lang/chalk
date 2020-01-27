@@ -1,6 +1,4 @@
-use super::{
-    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, FreeVarFolder,
-};
+use super::Fold;
 use crate::*;
 
 /// Methods for converting debruijn indices to move values into or out
@@ -86,9 +84,11 @@ impl Shifter {
     }
 }
 
-impl DefaultTypeFolder for Shifter {}
+impl<TF: TypeFamily> Folder<TF> for Shifter {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<TF: TypeFamily> FreeVarFolder<TF> for Shifter {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         Ok(TyData::<TF>::BoundVar(self.adjust(depth, binders)).intern())
     }
@@ -97,10 +97,6 @@ impl<TF: TypeFamily> FreeVarFolder<TF> for Shifter {
         Ok(LifetimeData::<TF>::BoundVar(self.adjust(depth, binders)).intern())
     }
 }
-
-impl DefaultPlaceholderFolder for Shifter {}
-
-impl DefaultInferenceFolder for Shifter {}
 
 //---------------------------------------------------------------------------
 
@@ -128,9 +124,11 @@ impl DownShifter {
     }
 }
 
-impl DefaultTypeFolder for DownShifter {}
+impl<TF: TypeFamily> Folder<TF> for DownShifter {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<TF: TypeFamily> FreeVarFolder<TF> for DownShifter {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         Ok(TyData::<TF>::BoundVar(self.adjust(depth, binders)?).intern())
     }
@@ -139,7 +137,3 @@ impl<TF: TypeFamily> FreeVarFolder<TF> for DownShifter {
         Ok(LifetimeData::<TF>::BoundVar(self.adjust(depth, binders)?).intern())
     }
 }
-
-impl DefaultPlaceholderFolder for DownShifter {}
-
-impl DefaultInferenceFolder for DownShifter {}

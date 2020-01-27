@@ -4,10 +4,7 @@ use crate::infer::InferenceTable;
 use chalk_engine::fallible::*;
 use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{
-    DefaultFreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder, Fold, SuperFold,
-    TypeFolder,
-};
+use chalk_ir::fold::{Fold, Folder, SuperFold};
 use chalk_ir::*;
 use std::fmt::Debug;
 
@@ -73,7 +70,11 @@ impl<'infer, TF: TypeFamily> Truncater<'infer, TF> {
     }
 }
 
-impl<TF: TypeFamily> TypeFolder<TF> for Truncater<'_, TF> {
+impl<TF: TypeFamily> Folder<TF> for Truncater<'_, TF> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
+
     fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TF>> {
         if let Some(normalized_ty) = self.infer.normalize_shallow(ty) {
             return self.fold_ty(&normalized_ty, binders);
@@ -113,12 +114,6 @@ impl<TF: TypeFamily> TypeFolder<TF> for Truncater<'_, TF> {
         lifetime.super_fold_with(self, binders)
     }
 }
-
-impl<TF: TypeFamily> DefaultFreeVarFolder for Truncater<'_, TF> {}
-
-impl<TF: TypeFamily> DefaultInferenceFolder for Truncater<'_, TF> {}
-
-impl<TF: TypeFamily> DefaultPlaceholderFolder for Truncater<'_, TF> {}
 
 #[test]
 fn truncate_types() {

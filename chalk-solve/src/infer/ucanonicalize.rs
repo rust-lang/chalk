@@ -1,8 +1,6 @@
 use chalk_engine::fallible::*;
 use chalk_ir::family::TypeFamily;
-use chalk_ir::fold::{
-    DefaultFreeVarFolder, DefaultInferenceFolder, DefaultTypeFolder, Fold, PlaceholderFolder,
-};
+use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::*;
 
 use super::InferenceTable;
@@ -231,9 +229,11 @@ struct UCollector<'q> {
     universes: &'q mut UniverseMap,
 }
 
-impl DefaultTypeFolder for UCollector<'_> {}
+impl<TF: TypeFamily> Folder<TF> for UCollector<'_> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<TF: TypeFamily> PlaceholderFolder<TF> for UCollector<'_> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
@@ -251,12 +251,8 @@ impl<TF: TypeFamily> PlaceholderFolder<TF> for UCollector<'_> {
         self.universes.add(universe.ui);
         Ok(universe.to_lifetime::<TF>())
     }
-}
 
-impl DefaultFreeVarFolder for UCollector<'_> {}
-
-impl DefaultInferenceFolder for UCollector<'_> {
-    fn forbid() -> bool {
+    fn forbid_inference_vars(&self) -> bool {
         true
     }
 }
@@ -265,15 +261,15 @@ struct UMapToCanonical<'q> {
     universes: &'q UniverseMap,
 }
 
-impl DefaultTypeFolder for UMapToCanonical<'_> {}
+impl<TF: TypeFamily> Folder<TF> for UMapToCanonical<'_> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl DefaultInferenceFolder for UMapToCanonical<'_> {
-    fn forbid() -> bool {
+    fn forbid_inference_vars(&self) -> bool {
         true
     }
-}
 
-impl<TF: TypeFamily> PlaceholderFolder<TF> for UMapToCanonical<'_> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe0: PlaceholderIndex,
@@ -301,15 +297,15 @@ impl<TF: TypeFamily> PlaceholderFolder<TF> for UMapToCanonical<'_> {
     }
 }
 
-impl DefaultFreeVarFolder for UMapToCanonical<'_> {}
-
 struct UMapFromCanonical<'q> {
     universes: &'q UniverseMap,
 }
 
-impl DefaultTypeFolder for UMapFromCanonical<'_> {}
+impl<TF: TypeFamily> Folder<TF> for UMapFromCanonical<'_> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<TF: TypeFamily> PlaceholderFolder<TF> for UMapFromCanonical<'_> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe0: PlaceholderIndex,
@@ -335,12 +331,8 @@ impl<TF: TypeFamily> PlaceholderFolder<TF> for UMapFromCanonical<'_> {
         }
         .to_lifetime::<TF>())
     }
-}
 
-impl DefaultFreeVarFolder for UMapFromCanonical<'_> {}
-
-impl DefaultInferenceFolder for UMapFromCanonical<'_> {
-    fn forbid() -> bool {
+    fn forbid_inference_vars(&self) -> bool {
         true
     }
 }

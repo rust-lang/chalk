@@ -1,9 +1,6 @@
 use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
-use crate::fold::{
-    DefaultInferenceFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, Folder,
-    FreeVarFolder, Subst,
-};
+use crate::fold::{Fold, Folder, Subst};
 use chalk_derive::{Fold, HasTypeFamily};
 use chalk_engine::fallible::*;
 use lalrpop_intern::InternedString;
@@ -1352,11 +1349,11 @@ where
     }
 }
 
-impl<'a, TF: TypeFamily> DefaultTypeFolder for &'a Substitution<TF> {}
+impl<TF: TypeFamily> Folder<TF> for &Substitution<TF> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<'a, TF: TypeFamily> DefaultInferenceFolder for &'a Substitution<TF> {}
-
-impl<'a, TF: TypeFamily> FreeVarFolder<TF> for &'a Substitution<TF> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         let ty = self.at(depth);
         let ty = ty.assert_ty_ref();
@@ -1369,8 +1366,6 @@ impl<'a, TF: TypeFamily> FreeVarFolder<TF> for &'a Substitution<TF> {
         Ok(l.shifted_in(binders))
     }
 }
-
-impl<'a, TF: TypeFamily> DefaultPlaceholderFolder for &'a Substitution<TF> {}
 
 /// Combines a substitution (`subst`) with a set of region constraints
 /// (`constraints`). This represents the result of a query; the

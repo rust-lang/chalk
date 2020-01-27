@@ -4,9 +4,7 @@ use crate::infer::instantiate::IntoBindersAndValue;
 use chalk_engine::fallible::*;
 use chalk_ir::cast::Cast;
 use chalk_ir::family::TypeFamily;
-use chalk_ir::fold::{
-    DefaultFreeVarFolder, DefaultTypeFolder, Fold, InferenceFolder, PlaceholderFolder,
-};
+use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::zip::{Zip, Zipper};
 use std::fmt::Debug;
 
@@ -375,9 +373,11 @@ impl<'u, 't, TF: TypeFamily> OccursCheck<'u, 't, TF> {
     }
 }
 
-impl<TF: TypeFamily> DefaultTypeFolder for OccursCheck<'_, '_, TF> {}
+impl<TF: TypeFamily> Folder<TF> for OccursCheck<'_, '_, TF> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<TF: TypeFamily> PlaceholderFolder<TF> for OccursCheck<'_, '_, TF> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
@@ -419,9 +419,7 @@ impl<TF: TypeFamily> PlaceholderFolder<TF> for OccursCheck<'_, '_, TF> {
             Ok(ui.to_lifetime::<TF>()) // no need to shift, not relative to depth
         }
     }
-}
 
-impl<TF: TypeFamily> InferenceFolder<TF> for OccursCheck<'_, '_, TF> {
     fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TF>> {
         let var = EnaVariable::from(var);
         match self.unifier.table.unify.probe_value(var) {
@@ -494,10 +492,8 @@ impl<TF: TypeFamily> InferenceFolder<TF> for OccursCheck<'_, '_, TF> {
             }
         }
     }
-}
 
-impl<TF: TypeFamily> DefaultFreeVarFolder for OccursCheck<'_, '_, TF> {
-    fn forbid() -> bool {
+    fn forbid_free_vars(&self) -> bool {
         true
     }
 }

@@ -8,15 +8,17 @@ pub struct Subst<'s, TF: TypeFamily> {
     parameters: &'s [Parameter<TF>],
 }
 
-impl<'s, TF: TypeFamily> Subst<'s, TF> {
+impl<TF: TypeFamily> Subst<'_, TF> {
     pub fn apply<T: Fold<TF, TF>>(parameters: &[Parameter<TF>], value: &T) -> T::Result {
         value.fold_with(&mut Subst { parameters }, 0).unwrap()
     }
 }
 
-impl<'b, TF: TypeFamily> DefaultTypeFolder for Subst<'b, TF> {}
+impl<TF: TypeFamily> Folder<TF> for Subst<'_, TF> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
         if depth >= self.parameters.len() {
             Ok(TyData::<TF>::BoundVar(depth - self.parameters.len() + binders).intern())
@@ -39,7 +41,3 @@ impl<'b, TF: TypeFamily> FreeVarFolder<TF> for Subst<'b, TF> {
         }
     }
 }
-
-impl<'b, TF: TypeFamily> DefaultPlaceholderFolder for Subst<'b, TF> {}
-
-impl<'b, TF: TypeFamily> DefaultInferenceFolder for Subst<'b, TF> {}
