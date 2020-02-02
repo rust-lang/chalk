@@ -10,6 +10,8 @@
     - [Rust types](./types/rust_types.md)
         - [Application types](./types/rust_types/application_ty.md)
     - [Rust lifetimes](./types/rust_lifetimes.md)
+    - [Operations](./types/operations.md)
+        - [Fold and the Folder trait](./types/operations/fold.md)
 - [Representing traits, impls, and other parts of Rust programs](./rust_ir.md)
 - [Lowering Rust IR to logic](./clauses.md)
     - [Unification and type equality](./clauses/type_equality.md)
