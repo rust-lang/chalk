@@ -92,6 +92,20 @@ pub trait Folder<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF> {
         lifetime.super_fold_with(self.as_dyn(), binders)
     }
 
+    /// Invoked for every program clause. By default, recursively folds the goals contents.
+    fn fold_program_clause(
+        &mut self,
+        clause: &ProgramClause<TF>,
+        binders: usize,
+    ) -> Fallible<ProgramClause<TTF>> {
+        clause.super_fold_with(self.as_dyn(), binders)
+    }
+
+    /// Invoked for every goal. By default, recursively folds the goals contents.
+    fn fold_goal(&mut self, goal: &Goal<TF>, binders: usize) -> Fallible<Goal<TTF>> {
+        goal.super_fold_with(self.as_dyn(), binders)
+    }
+
     /// If overridden to return true, then folding will panic if a
     /// free variable is encountered. This should be done if free
     /// type/lifetime variables are not expected.
@@ -242,6 +256,22 @@ pub trait SuperFold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Fold<TF, TT
     ) -> Fallible<Self::Result>;
 }
 
+/// "Folding" a type invokes the `fold_ty` method on the folder; this
+/// usually (in turn) invokes `super_fold_ty` to fold the individual
+/// parts.
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
+    type Result = Ty<TTF>;
+
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        folder.fold_ty(self, binders)
+    }
+}
+
+/// "Super fold" for a type invokes te more detailed callbacks on the type
 impl<TF, TTF> SuperFold<TF, TTF> for Ty<TF>
 where
     TF: TypeFamily,
@@ -270,18 +300,18 @@ where
     }
 }
 
-/// "Folding" a type invokes the `fold_ty` method on the folder; this
-/// usually (in turn) invokes `super_fold_ty` to fold the individual
+/// "Folding" a lifetime invokes the `fold_lifetime` method on the folder; this
+/// usually (in turn) invokes `super_fold_lifetime` to fold the individual
 /// parts.
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
-    type Result = Ty<TTF>;
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Lifetime<TF> {
+    type Result = Lifetime<TTF>;
 
     fn fold_with(
         &self,
         folder: &mut dyn Folder<TF, TTF>,
         binders: usize,
     ) -> Fallible<Self::Result> {
-        folder.fold_ty(self, binders)
+        folder.fold_lifetime(self, binders)
     }
 }
 
@@ -312,17 +342,42 @@ where
     }
 }
 
-/// "Folding" a lifetime invokes the `fold_lifetime` method on the folder; this
-/// usually (in turn) invokes `super_fold_lifetime` to fold the individual
-/// parts.
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Lifetime<TF> {
-    type Result = Lifetime<TTF>;
+/// Folding a goal invokes the `fold_goal` callback (which will, by
+/// default, invoke super-fold).
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Goal<TF> {
+    type Result = Goal<TTF>;
 
     fn fold_with(
         &self,
         folder: &mut dyn Folder<TF, TTF>,
         binders: usize,
     ) -> Fallible<Self::Result> {
-        folder.fold_lifetime(self, binders)
+        folder.fold_goal(self, binders)
+    }
+}
+
+/// Superfold folds recursively.
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> SuperFold<TF, TTF> for Goal<TF> {
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        Ok(Goal::new(self.data().fold_with(folder, binders)?))
+    }
+}
+
+/// Folding a program clause invokes the `fold_program_clause`
+/// callback on the folder (which will, by default, invoke the
+/// `super_fold_with` method on the program clause).
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ProgramClause<TF> {
+    type Result = ProgramClause<TTF>;
+
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        folder.fold_program_clause(self, binders)
     }
 }
