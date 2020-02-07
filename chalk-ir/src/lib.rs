@@ -1013,7 +1013,7 @@ impl<T> UCanonical<T> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
 /// A list of goals.
 pub struct Goals<TF: TypeFamily> {
-    goals: Vec<Goal<TF>>,
+    goals: TF::InternedGoals,
 }
 
 impl<TF: TypeFamily> Goals<TF> {
@@ -1024,7 +1024,7 @@ impl<TF: TypeFamily> Goals<TF> {
     pub fn from(goals: impl IntoIterator<Item = impl CastTo<Goal<TF>>>) -> Self {
         use crate::cast::Caster;
         Goals {
-            goals: goals.into_iter().casted().collect(),
+            goals: TF::intern_goals(goals.into_iter().casted()),
         }
     }
 
@@ -1052,7 +1052,7 @@ impl<TF: TypeFamily> Goals<TF> {
     }
 
     pub fn as_slice(&self) -> &[Goal<TF>] {
-        &self.goals
+        TF::goals_data(&self.goals)
     }
 }
 
