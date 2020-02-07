@@ -14,6 +14,7 @@ mod test_macros;
 pub mod clauses;
 pub mod coherence;
 mod coinductive_goal;
+pub mod display;
 pub mod ext;
 pub mod goal_builder;
 mod infer;
@@ -139,6 +140,16 @@ pub trait RustIrDatabase<I: Interner>: Debug {
         closure_id: ClosureId<I>,
         substs: &Substitution<I>,
     ) -> Substitution<I>;
+
+    /// Retrieves a trait's original name. No uniqueness guarantees.
+    /// TODO: remove this, use only interner debug methods
+    fn trait_name(&self, trait_id: TraitId<I>) -> String;
+
+    /// Retrieves a struct's original name. No uniqueness guarantees.
+    fn struct_name(&self, struct_id: StructId<I>) -> String;
+
+    /// Retrieves the name of an identifier
+    fn identifier_name(&self, ident: &I::Identifier) -> String;
 }
 
 pub use clauses::program_clauses_for_env;

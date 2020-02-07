@@ -302,6 +302,7 @@ impl UniverseMap {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AdtId<I: Interner>(pub I::InternedAdtId);
 
+
 /// The id of a trait definition; could be used to load the trait datum by
 /// invoking the [`trait_datum`] method.
 ///
@@ -455,7 +456,7 @@ pub enum TyData<I: Interner> {
     /// an empty list).
     Apply(ApplicationTy<I>),
 
-    /// instantiated form a universally quantified type, e.g., from
+    /// instantiated from a universally quantified type, e.g., from
     /// `forall<T> { .. }`. Stands in as a representative of "some
     /// unknown type".
     Placeholder(PlaceholderIndex),

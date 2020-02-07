@@ -7,6 +7,7 @@ pub mod interner;
 pub mod lowering;
 pub mod program;
 pub mod program_environment;
+mod program_writer;
 pub mod query;
 pub mod tls;
 
