@@ -7,7 +7,7 @@ type family to another.
 
 [`Fold`]: http://rust-lang.github.io/chalk/chalk_ir/fold/trait.Fold.html
 
-To use the fold-trait, one invokes the [`Fold::fold_with`] method, supplying some
+To use the [`Fold`] trait, one invokes the [`Fold::fold_with`] method, supplying some
 "folder" as well as the number of "in scope binders" for that term (typically `0`
 to start):
 
