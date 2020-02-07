@@ -1,10 +1,14 @@
 # Chalk engine
 
-The `chalk-engine` crate is the core PROLOG-like solver for logical predicates. Importantly, it is very general and not specific to Rust, Rust types, or Rust logic.
+The `chalk-engine` crate is the core PROLOG-like solver for logical
+predicates. Importantly, it is very general and not specific to Rust,
+Rust types, or Rust logic.
 
 ## Implemented PROLOG concepts
 
-The engine implements the following PROLOG logic concepts. Some of these have been published on previously, and some a `Chalk`-specific. This isn't necesarily an exhaustive list:
+The engine implements the following PROLOG logic concepts. Some of these
+have been published on previously, and some are `Chalk`-specific. This isn't
+necesarily an exhaustive list:
 - Basic logic
 - Negation
 - Floundering
@@ -12,4 +16,8 @@ The engine implements the following PROLOG logic concepts. Some of these have be
 
 ## Note
 
-Throughout most of this chapter, the specifics in regards to `Canonicalization` and `UCanonicalization` are avoided. These are important concepts to understand, but don't particulary help to understand how `chalk-engine` *works*. In a few places, it may be highlighted if it *is* important.
+Throughout most of this chapter, the specifics in regards to
+`Canonicalization` and `UCanonicalization` are avoided. These are important
+concepts to understand, but don't particulary help to understand how
+`chalk-engine` *works*. In a few places, it may be highlighted if it *is*
+important.
