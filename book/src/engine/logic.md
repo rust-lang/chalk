@@ -49,7 +49,7 @@ and `Coinduction and refinement strands`), whereas `CompleteAnswer`s may not.
 `root_answer` essentially just wraps `ensure_root_answer` and converts the
 `Goal`'s `Answer` to a `CompleteAnswer`.
 
-The `ensure_root_answer` function contains to core skeleton of the logic around
+The `ensure_root_answer` function contains the core skeleton of the logic around
 `Strand` and subgoal selection. The majority of the logic, however, is split out
 into separate functions that branch out from `ensure_root_answer`.
 

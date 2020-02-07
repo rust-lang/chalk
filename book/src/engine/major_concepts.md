@@ -12,7 +12,7 @@ The [`Context`] trait is the primary bridge between Chalk internal logic and
 external types. In addition actually *defining* the types (via associated
 types), it also contains associated functions to convert or extract
 information from those types. Overall, this allows the types to be basically
-opaque to the engine internals. Functions in trait are agnostic to specific
+opaque to the engine internals. Functions in the trait are agnostic to specific
 program or environment details, since they lack a `&self` argument.
 
 To give an example, there is an associated `Goal` type. However, Chalk doesn't
@@ -38,11 +38,12 @@ change the state of the logic itself.
 ## Goals
 
 A "goal" in Chalk can be thought of as "something we want to prove". The engine
-itself understands [`HhGoal`]s. Goals of are consist of the most basic logic,
+itself understands [`HhGoal`]s. `HHGoal`s consist of the most basic logic,
 such as introducing Binders (`Forall` or `Exists`) or combining goals (`All`).
-On the other `Context::Goal` represents an opaque goal generated externally.
-As such, it may contain any extra information or may be interned. When solving a
-logic predicate, Chalk will lazily convert `Context::Goal`s into `HHGoal`s.
+On the other hand, `Context::Goal` represents an opaque goal generated
+externally. As such, it may contain any extra information or may be interned.
+When solving a logic predicate, Chalk will lazily convert `Context::Goal`s
+into `HHGoal`s.
 
 There are three types of completely opaque `HhGoal`s that Chalk can solve:
 `Unify`, `DomainGoal`, and `CannotProve`. Unlike the other types of goals,
