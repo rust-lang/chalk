@@ -57,7 +57,7 @@ For every `Goal`, there are zero or more `Answer`s. Each `Answer` contains
 values for the inference variables in the goal.
 
 For example, given the following program:
-```
+```notrust
 trait Clone {}
 struct A {}
 struct B {}
@@ -66,7 +66,7 @@ impl Clone for B {}
 ```
 With the following goal: `exists<T> { T: Clone }`
 The following solutions would be given:
-```
+```notrust
 T = A
 T = B
 ```

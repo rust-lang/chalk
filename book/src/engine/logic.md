@@ -98,7 +98,7 @@ Coinduction basically means that two statements can rely on each other being
 true, unless either is proven false.
 
 For example with the following program:
-```
+```notrust
 #[coinductive]
 trait C1<T> { }
 forall<A, B> { A: C1<B> if B: C1<A> }
