@@ -1011,21 +1011,21 @@ impl<T> UCanonical<T> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-/// A general goal; this is the full range of questions you can pose to Chalk.
+/// A list of goals.
 pub struct Goals<TF: TypeFamily> {
     goals: Vec<Goal<TF>>,
 }
 
 impl<TF: TypeFamily> Goals<TF> {
+    pub fn new() -> Self {
+        Self::from(None::<Goal<TF>>)
+    }
+
     pub fn from(goals: impl IntoIterator<Item = impl CastTo<Goal<TF>>>) -> Self {
         use crate::cast::Caster;
         Goals {
             goals: goals.into_iter().casted().collect(),
         }
-    }
-
-    pub fn new() -> Self {
-        Self::from(None::<Goal<TF>>)
     }
 
     pub fn from_fallible<E>(

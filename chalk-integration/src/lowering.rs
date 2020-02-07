@@ -1135,12 +1135,11 @@ impl LowerClause for Clause {
             let consequences: Vec<chalk_ir::DomainGoal<ChalkIr>> = self.consequence.lower(env)?;
 
             let conditions = chalk_ir::Goals::from_fallible(
-                self.conditions.iter().map(|g| g.lower(env)).rev(), // (*)
+                // Subtle: in the SLG solver, we pop conditions from R to
+                // L. To preserve the expected order (L to R), we must
+                // therefore reverse.
+                self.conditions.iter().map(|g| g.lower(env)).rev(),
             )?;
-
-            // (*) Subtle: in the SLG solver, we pop conditions from R to
-            // L. To preserve the expected order (L to R), we must
-            // therefore reverse.
 
             let implications = consequences
                 .into_iter()
