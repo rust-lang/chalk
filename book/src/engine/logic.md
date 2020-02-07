@@ -79,7 +79,7 @@ still be other `Answer`s available.
 ## Answers
 
 After an answer has been found for a subgoal, it must be *applied* to the parent
-`Strand`. Specifcally, it must be able to unify with any existing `Answers`. If
+`Strand`. Specifically, it must be able to unify with any existing `Answers`. If
 the `Answer`s are incompatible, the `Strand` is dropped since it can't lead
 anywhere.
 
