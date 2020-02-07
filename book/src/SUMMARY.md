@@ -14,4 +14,6 @@
 - [Lowering Rust IR to logic](./clauses.md)
     - [Unification and type equality](./clauses/type_equality.md)
 - [How does the engine work](./engine.md)
+    - [Major concepts](./engine/major_concepts.md)
+    - [Logic](./engine/logic.md)
 - [Glossary and terminology](./glossary.md)
