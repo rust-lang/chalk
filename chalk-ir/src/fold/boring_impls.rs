@@ -173,6 +173,23 @@ id_fold!(StructId);
 id_fold!(TraitId);
 id_fold!(AssocTypeId);
 
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> SuperFold<TF, TTF> for ProgramClause<TF> {
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+        match self {
+            ProgramClause::Implies(pci) => {
+                Ok(ProgramClause::Implies(pci.fold_with(folder, binders)?))
+            }
+            ProgramClause::ForAll(pci) => {
+                Ok(ProgramClause::ForAll(pci.fold_with(folder, binders)?))
+            }
+        }
+    }
+}
+
 impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for PhantomData<TF> {
     type Result = PhantomData<TTF>;
 

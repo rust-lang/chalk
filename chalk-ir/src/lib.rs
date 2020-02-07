@@ -1,7 +1,7 @@
 use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
-use chalk_derive::{Fold, HasTypeFamily, SuperFold};
+use chalk_derive::{Fold, HasTypeFamily};
 use chalk_engine::fallible::*;
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
@@ -952,7 +952,7 @@ pub struct ProgramClauseImplication<TF: TypeFamily> {
     pub conditions: Goals<TF>,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SuperFold)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ProgramClause<TF: TypeFamily> {
     Implies(ProgramClauseImplication<TF>),
     ForAll(Binders<ProgramClauseImplication<TF>>),

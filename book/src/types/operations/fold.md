@@ -82,10 +82,11 @@ lifetimes).
 
 ## Derives
 
-Using the `chalk-derive` crate, you can auto-derive the `Fold` and
-`SuperFold` traits. The derives are a bit cludgy and require:
+Using the `chalk-derive` crate, you can auto-derive the `Fold` trait.
+There isn't presently a derive for `SuperFold` since it is very rare
+to require it. The derive for `Fold` is a bit cludgy and requires:
 
-* You must import `Fold` (or `SuperFold`, respectively) into scope.
+* You must import `Fold` into scope.
 * The type you are deriving `Fold` on must have either:
   * A type parameter that has a `TypeFamily` bound, like `TF: TypeFamily`
   * A type parameter that has a `HasTypeFamily` bound, like `TF: HasTypeFamily`
