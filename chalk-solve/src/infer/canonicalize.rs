@@ -1,9 +1,7 @@
 use chalk_engine::fallible::*;
 use chalk_ir::family::{HasTypeFamily, TypeFamily};
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{
-    DefaultFreeVarFolder, DefaultTypeFolder, Fold, InferenceFolder, PlaceholderFolder,
-};
+use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::*;
 use std::cmp::max;
 
@@ -98,9 +96,11 @@ impl<'q, TF: TypeFamily> Canonicalizer<'q, TF> {
     }
 }
 
-impl<TF: TypeFamily> DefaultTypeFolder for Canonicalizer<'_, TF> {}
+impl<TF: TypeFamily> Folder<TF> for Canonicalizer<'_, TF> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<TF: TypeFamily> PlaceholderFolder<TF> for Canonicalizer<'_, TF> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
@@ -118,15 +118,11 @@ impl<TF: TypeFamily> PlaceholderFolder<TF> for Canonicalizer<'_, TF> {
         self.max_universe = max(self.max_universe, universe.ui);
         Ok(universe.to_lifetime::<TF>())
     }
-}
 
-impl<TF: TypeFamily> DefaultFreeVarFolder for Canonicalizer<'_, TF> {
-    fn forbid() -> bool {
+    fn forbid_free_vars(&self) -> bool {
         true
     }
-}
 
-impl<TF: TypeFamily> InferenceFolder<TF> for Canonicalizer<'_, TF> {
     fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<TF>> {
         debug_heading!("fold_inference_ty(depth={:?}, binders={:?})", var, binders);
         let var = EnaVariable::from(var);

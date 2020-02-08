@@ -99,18 +99,6 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Parameter<TF> 
     }
 }
 
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Goal<TF> {
-    type Result = Goal<TTF>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
-        let data = self.data().fold_with(folder, binders)?;
-        Ok(Goal::new(data))
-    }
-}
-
 impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Substitution<TF> {
     type Result = Substitution<TTF>;
     fn fold_with(
@@ -119,6 +107,19 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Substitution<T
         binders: usize,
     ) -> Fallible<Self::Result> {
         Ok(Substitution::from_fallible(
+            self.iter().map(|p| p.fold_with(folder, binders)),
+        )?)
+    }
+}
+
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Goals<TF> {
+    type Result = Goals<TTF>;
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        Ok(Goals::from_fallible(
             self.iter().map(|p| p.fold_with(folder, binders)),
         )?)
     }
@@ -171,6 +172,23 @@ id_fold!(ImplId);
 id_fold!(StructId);
 id_fold!(TraitId);
 id_fold!(AssocTypeId);
+
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> SuperFold<TF, TTF> for ProgramClause<TF> {
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+        match self {
+            ProgramClause::Implies(pci) => {
+                Ok(ProgramClause::Implies(pci.fold_with(folder, binders)?))
+            }
+            ProgramClause::ForAll(pci) => {
+                Ok(ProgramClause::ForAll(pci.fold_with(folder, binders)?))
+            }
+        }
+    }
+}
 
 impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for PhantomData<TF> {
     type Result = PhantomData<TTF>;

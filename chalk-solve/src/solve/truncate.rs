@@ -4,9 +4,7 @@ use crate::infer::InferenceTable;
 use chalk_engine::fallible::*;
 use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{
-    self, DefaultFreeVarFolder, DefaultInferenceFolder, DefaultPlaceholderFolder, Fold, TypeFolder,
-};
+use chalk_ir::fold::{Fold, Folder, SuperFold};
 use chalk_ir::*;
 use std::fmt::Debug;
 
@@ -72,7 +70,11 @@ impl<'infer, TF: TypeFamily> Truncater<'infer, TF> {
     }
 }
 
-impl<TF: TypeFamily> TypeFolder<TF> for Truncater<'_, TF> {
+impl<TF: TypeFamily> Folder<TF> for Truncater<'_, TF> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
+
     fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TF>> {
         if let Some(normalized_ty) = self.infer.normalize_shallow(ty) {
             return self.fold_ty(&normalized_ty, binders);
@@ -81,7 +83,7 @@ impl<TF: TypeFamily> TypeFolder<TF> for Truncater<'_, TF> {
         let pre_size = self.current_size;
         self.current_size += 1;
 
-        let result = fold::super_fold_ty(self, ty, binders)?;
+        let result = ty.super_fold_with(self, binders)?;
 
         // We wish to maintain the invariant that:
         //
@@ -109,15 +111,9 @@ impl<TF: TypeFamily> TypeFolder<TF> for Truncater<'_, TF> {
     }
 
     fn fold_lifetime(&mut self, lifetime: &Lifetime<TF>, binders: usize) -> Fallible<Lifetime<TF>> {
-        fold::super_fold_lifetime(self, lifetime, binders)
+        lifetime.super_fold_with(self, binders)
     }
 }
-
-impl<TF: TypeFamily> DefaultFreeVarFolder for Truncater<'_, TF> {}
-
-impl<TF: TypeFamily> DefaultInferenceFolder for Truncater<'_, TF> {}
-
-impl<TF: TypeFamily> DefaultPlaceholderFolder for Truncater<'_, TF> {}
 
 #[test]
 fn truncate_types() {

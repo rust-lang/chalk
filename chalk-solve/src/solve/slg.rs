@@ -184,7 +184,7 @@ impl<TF: TypeFamily> context::Context for SlgContext<TF> {
                 HhGoal::Exists(binders_goal)
             }
             GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, subgoal),
-            GoalData::All(goals) => HhGoal::All(goals),
+            GoalData::All(goals) => HhGoal::All(goals.iter().cloned().collect()),
             GoalData::Not(g1) => HhGoal::Not(g1),
             GoalData::EqGoal(EqGoal { a, b }) => HhGoal::Unify((), a, b),
             GoalData::DomainGoal(domain_goal) => HhGoal::DomainGoal(domain_goal),

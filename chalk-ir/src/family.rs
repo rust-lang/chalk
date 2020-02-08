@@ -1,6 +1,7 @@
 use crate::tls;
 use crate::AliasTy;
 use crate::AssocTypeId;
+use crate::Goal;
 use crate::GoalData;
 use crate::LifetimeData;
 use crate::Parameter;
@@ -68,6 +69,14 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// An `InternedGoal` is created by `intern_goal` and can be
     /// converted back to its underlying data via `goal_data`.
     type InternedGoal: Debug + Clone + Eq + Ord + Hash;
+
+    /// "Interned" representation of a list of goals.  In normal user code,
+    /// `Self::InternedGoals` is not referenced. Instead, we refer to
+    /// `Goals<Self>`, which wraps this type.
+    ///
+    /// An `InternedGoals` is created by `intern_goals` and can be
+    /// converted back to its underlying data via `goals_data`.
+    type InternedGoals: Debug + Clone + Eq + Ord + Hash;
 
     /// "Interned" representation of a "substitution".  In normal user code,
     /// `Self::InternedSubstitution` is not referenced. Instead, we refer to
@@ -155,6 +164,15 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     /// Lookup the `GoalData` that was interned to create a `InternedGoal`.
     fn goal_data(goal: &Self::InternedGoal) -> &GoalData<Self>;
 
+    /// Create an "interned" goals from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `GoalsData::intern` (which will ultimately call this
+    /// method).
+    fn intern_goals(data: impl IntoIterator<Item = Goal<Self>>) -> Self::InternedGoals;
+
+    /// Lookup the `GoalsData` that was interned to create a `InternedGoals`.
+    fn goals_data(goals: &Self::InternedGoals) -> &[Goal<Self>];
+
     /// Create an "interned" substitution from `data`. This is not
     /// normally invoked directly; instead, you invoke
     /// `SubstitutionData::intern` (which will ultimately call this
@@ -198,6 +216,7 @@ impl TypeFamily for ChalkIr {
     type InternedLifetime = LifetimeData<ChalkIr>;
     type InternedParameter = ParameterData<ChalkIr>;
     type InternedGoal = Arc<GoalData<ChalkIr>>;
+    type InternedGoals = Vec<Goal<ChalkIr>>;
     type InternedSubstitution = Vec<Parameter<ChalkIr>>;
     type DefId = RawId;
 
@@ -256,6 +275,14 @@ impl TypeFamily for ChalkIr {
 
     fn goal_data(goal: &Arc<GoalData<ChalkIr>>) -> &GoalData<ChalkIr> {
         goal
+    }
+
+    fn intern_goals(data: impl IntoIterator<Item = Goal<ChalkIr>>) -> Vec<Goal<ChalkIr>> {
+        data.into_iter().collect()
+    }
+
+    fn goals_data(goals: &Vec<Goal<ChalkIr>>) -> &[Goal<ChalkIr>] {
+        goals
     }
 
     fn intern_substitution<E>(

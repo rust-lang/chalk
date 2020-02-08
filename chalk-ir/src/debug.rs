@@ -279,22 +279,26 @@ impl<TF: TypeFamily> Debug for Goal<TF> {
                 write!(fmt, "> {{ {:?} }}", subgoal.value)
             }
             GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
-            GoalData::All(ref goals) => {
-                write!(fmt, "all(")?;
-                for (goal, index) in goals.iter().zip(0..) {
-                    if index > 0 {
-                        write!(fmt, ", ")?;
-                    }
-                    write!(fmt, "{:?}", goal)?;
-                }
-                write!(fmt, ")")?;
-                Ok(())
-            }
+            GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
             GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
             GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
             GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
         }
+    }
+}
+
+impl<TF: TypeFamily> Debug for Goals<TF> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        write!(fmt, "(")?;
+        for (goal, index) in self.iter().zip(0..) {
+            if index > 0 {
+                write!(fmt, ", ")?;
+            }
+            write!(fmt, "{:?}", goal)?;
+        }
+        write!(fmt, ")")?;
+        Ok(())
     }
 }
 
@@ -334,16 +338,18 @@ impl<TF: TypeFamily> Debug for ProgramClauseImplication<TF> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "{:?}", self.consequence)?;
 
-        let conds = self.conditions.len();
+        let conditions = self.conditions.as_slice();
+
+        let conds = conditions.len();
         if conds == 0 {
             return Ok(());
         }
 
         write!(fmt, " :- ")?;
-        for cond in &self.conditions[..conds - 1] {
+        for cond in &conditions[..conds - 1] {
             write!(fmt, "{:?}, ", cond)?;
         }
-        write!(fmt, "{:?}", self.conditions[conds - 1])
+        write!(fmt, "{:?}", conditions[conds - 1])
     }
 }
 

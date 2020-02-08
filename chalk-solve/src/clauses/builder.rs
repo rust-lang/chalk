@@ -1,4 +1,4 @@
-use crate::cast::{Cast, CastTo, Caster};
+use crate::cast::{Cast, CastTo};
 use crate::RustIrDatabase;
 use chalk_ir::family::{HasTypeFamily, TypeFamily};
 use chalk_ir::fold::Fold;
@@ -46,7 +46,7 @@ impl<'me, TF: TypeFamily> ClauseBuilder<'me, TF> {
     ) {
         let clause = ProgramClauseImplication {
             consequence: consequence.cast(),
-            conditions: conditions.into_iter().casted().collect(),
+            conditions: Goals::from(conditions),
         };
 
         if self.binders.len() == 0 {

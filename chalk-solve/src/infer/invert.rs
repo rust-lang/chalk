@@ -2,9 +2,7 @@ use chalk_engine::fallible::*;
 use chalk_ir::family::HasTypeFamily;
 use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{
-    DefaultFreeVarFolder, DefaultInferenceFolder, DefaultTypeFolder, Fold, PlaceholderFolder,
-};
+use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::*;
 use std::collections::HashMap;
 
@@ -115,9 +113,11 @@ impl<'q, TF: TypeFamily> Inverter<'q, TF> {
     }
 }
 
-impl<TF: TypeFamily> DefaultTypeFolder for Inverter<'_, TF> {}
+impl<TF: TypeFamily> Folder<TF> for Inverter<'_, TF> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<TF: TypeFamily> PlaceholderFolder<TF> for Inverter<'_, TF> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
@@ -145,16 +145,12 @@ impl<TF: TypeFamily> PlaceholderFolder<TF> for Inverter<'_, TF> {
             .to_lifetime()
             .shifted_in(binders))
     }
-}
 
-impl<TF: TypeFamily> DefaultFreeVarFolder for Inverter<'_, TF> {
-    fn forbid() -> bool {
+    fn forbid_free_vars(&self) -> bool {
         true
     }
-}
 
-impl<TF: TypeFamily> DefaultInferenceFolder for Inverter<'_, TF> {
-    fn forbid() -> bool {
+    fn forbid_inference_vars(&self) -> bool {
         true
     }
 }

@@ -62,101 +62,89 @@ pub use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder<TF: TypeFamily, TTF: TypeFamily>:
-    FreeVarFolder<TTF> + InferenceFolder<TTF> + PlaceholderFolder<TTF> + TypeFolder<TF, TTF>
-{
-}
+pub trait Folder<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF> {
+    /// Creates a `dyn` value from this folder. Unfortunately, this
+    /// must be added manually to each impl of Folder; it permits the
+    /// default implements below to create a `&mut dyn Folder` from
+    /// `Self` without knowing what `Self` is (by invoking this
+    /// method). Effectively, this limits impls of `Folder` to types
+    /// for which we are able to create a dyn value (i.e., not `[T]`
+    /// types).
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF, TTF>;
 
-pub trait TypeFolder<TF: TypeFamily, TTF: TypeFamily = TF> {
-    fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TTF>>;
-    fn fold_lifetime(&mut self, lifetime: &Lifetime<TF>, binders: usize)
-        -> Fallible<Lifetime<TTF>>;
-}
-
-impl<T, TF, TTF> Folder<TF, TTF> for T
-where
-    T: FreeVarFolder<TTF> + InferenceFolder<TTF> + PlaceholderFolder<TTF> + TypeFolder<TF, TTF>,
-    TF: TypeFamily,
-    TTF: TypeFamily,
-{
-}
-
-/// A convenience trait that indicates that this folder doesn't take
-/// any action on types in particular, but just recursively folds
-/// their contents (note that free variables that are encountered in
-/// that process may still be substituted). The vast majority of
-/// folders implement this trait.
-pub trait DefaultTypeFolder {}
-
-impl<T, TF, TTF> TypeFolder<TF, TTF> for T
-where
-    T: FreeVarFolder<TTF> + InferenceFolder<TTF> + PlaceholderFolder<TTF> + DefaultTypeFolder,
-    TF: TypeFamily,
-    TTF: TargetTypeFamily<TF>,
-{
+    /// Top-level callback: invoked for each `Ty<TF>` that is
+    /// encountered when folding. By default, invokes
+    /// `super_fold_with`, which will in turn invoke the more
+    /// specialized folding methods below, like `fold_free_var_ty`.
     fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TTF>> {
-        super_fold_ty(self, ty, binders)
+        ty.super_fold_with(self.as_dyn(), binders)
     }
 
+    /// Top-level callback: invoked for each `Lifetime<TF>` that is
+    /// encountered when folding. By default, invokes
+    /// `super_fold_with`, which will in turn invoke the more
+    /// specialized folding methods below, like `fold_free_lifetime_ty`.
     fn fold_lifetime(
         &mut self,
         lifetime: &Lifetime<TF>,
         binders: usize,
     ) -> Fallible<Lifetime<TTF>> {
-        super_fold_lifetime(self, lifetime, binders)
+        lifetime.super_fold_with(self.as_dyn(), binders)
     }
-}
 
-/// The methods for folding **free variables**. These are `BoundVar`
-/// instances where the binder is not something we folded over.  This
-/// is used when you are instantiating previously bound things with some
-/// replacement.
-pub trait FreeVarFolder<TTF: TypeFamily> {
-    /// Invoked for `TyData::BoundVar` instances that are not bound within the type being folded
-    /// over:
-    ///
-    /// - `depth` is the depth of the `TyData::BoundVar`; this has been adjusted to account for binders
-    ///   in scope.
-    /// - `binders` is the number of binders in scope.
-    ///
-    /// This should return a type suitable for a context with `binders` in scope.
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TTF>>;
+    /// Invoked for every program clause. By default, recursively folds the goals contents.
+    fn fold_program_clause(
+        &mut self,
+        clause: &ProgramClause<TF>,
+        binders: usize,
+    ) -> Fallible<ProgramClause<TTF>> {
+        clause.super_fold_with(self.as_dyn(), binders)
+    }
 
-    /// As `fold_free_var_ty`, but for lifetimes.
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TTF>>;
-}
+    /// Invoked for every goal. By default, recursively folds the goals contents.
+    fn fold_goal(&mut self, goal: &Goal<TF>, binders: usize) -> Fallible<Goal<TTF>> {
+        goal.super_fold_with(self.as_dyn(), binders)
+    }
 
-/// A convenience trait. If you implement this, you get an
-/// implementation of `FreeVarFolder` for free that simply ignores
-/// free values (that is, it replaces them with themselves).
-///
-/// You can make it panic if a free-variable is found by overriding
-/// `forbid` to return true.
-pub trait DefaultFreeVarFolder {
-    fn forbid() -> bool {
+    /// If overridden to return true, then folding will panic if a
+    /// free variable is encountered. This should be done if free
+    /// type/lifetime variables are not expected.
+    fn forbid_free_vars(&self) -> bool {
         false
     }
-}
 
-impl<T: DefaultFreeVarFolder, TTF: TypeFamily> FreeVarFolder<TTF> for T {
+    /// Invoked for `TyData::BoundVar` instances that are not bound
+    /// within the type being folded over:
+    ///
+    /// - `depth` is the depth of the `TyData::BoundVar`; this has
+    ///   been adjusted to account for binders in scope.
+    /// - `binders` is the number of binders in scope.
+    ///
+    /// This should return a type suitable for a context with
+    /// `binders` in scope.
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TTF>> {
-        if T::forbid() {
+        if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
             Ok(TyData::<TTF>::BoundVar(depth + binders).intern())
         }
     }
 
+    /// As `fold_free_var_ty`, but for lifetimes.
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TTF>> {
-        if T::forbid() {
+        if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
             Ok(LifetimeData::<TTF>::BoundVar(depth + binders).intern())
         }
     }
-}
 
-pub trait PlaceholderFolder<TTF: TypeFamily> {
+    /// If overriden to return true, we will panic when a free
+    /// placeholder type/lifetime is encountered.
+    fn forbid_free_placeholders(&self) -> bool {
+        false
+    }
+
     /// Invoked for each occurrence of a placeholder type; these are
     /// used when we instantiate binders universally. Returns a type
     /// to use instead, which should be suitably shifted to account
@@ -167,56 +155,35 @@ pub trait PlaceholderFolder<TTF: TypeFamily> {
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
-        binders: usize,
-    ) -> Fallible<Ty<TTF>>;
-
-    /// As with `fold_free_placeholder_ty`, but for lifetimes.
-    fn fold_free_placeholder_lifetime(
-        &mut self,
-        universe: PlaceholderIndex,
-        binders: usize,
-    ) -> Fallible<Lifetime<TTF>>;
-}
-
-/// A convenience trait. If you implement this, you get an
-/// implementation of `PlaceholderFolder` for free that simply ignores
-/// placeholder values (that is, it replaces them with themselves).
-///
-/// You can make it panic if a free-variable is found by overriding
-/// `forbid` to return true.
-pub trait DefaultPlaceholderFolder {
-    fn forbid() -> bool {
-        false
-    }
-}
-
-impl<T: DefaultPlaceholderFolder, TTF: TypeFamily> PlaceholderFolder<TTF> for T {
-    fn fold_free_placeholder_ty(
-        &mut self,
-        universe: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Ty<TTF>> {
-        if T::forbid() {
+        if self.forbid_free_placeholders() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
             Ok(universe.to_ty::<TTF>())
         }
     }
 
+    /// As with `fold_free_placeholder_ty`, but for lifetimes.
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Lifetime<TTF>> {
-        if T::forbid() {
+        if self.forbid_free_placeholders() {
             panic!("unexpected placeholder lifetime `{:?}`", universe)
         } else {
             Ok(universe.to_lifetime::<TTF>())
         }
     }
-}
 
-pub trait InferenceFolder<TTF: TypeFamily> {
+    /// If overridden to return true, inference variables will trigger
+    /// panics when folded. Used when inference variables are
+    /// unexpected.
+    fn forbid_inference_vars(&self) -> bool {
+        false
+    }
+
     /// Invoked for each occurrence of a inference type; these are
     /// used when we instantiate binders universally. Returns a type
     /// to use instead, which should be suitably shifted to account
@@ -224,43 +191,21 @@ pub trait InferenceFolder<TTF: TypeFamily> {
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<TTF>>;
-
-    /// As with `fold_free_inference_ty`, but for lifetimes.
-    fn fold_inference_lifetime(
-        &mut self,
-        var: InferenceVar,
-        binders: usize,
-    ) -> Fallible<Lifetime<TTF>>;
-}
-
-/// A convenience trait. If you implement this, you get an
-/// implementation of `InferenceFolder` for free that simply ignores
-/// inference values (that is, it replaces them with themselves).
-///
-/// You can make it panic if a free-variable is found by overriding
-/// `forbid` to return true.
-pub trait DefaultInferenceFolder {
-    fn forbid() -> bool {
-        false
-    }
-}
-
-impl<T: DefaultInferenceFolder, TTF: TypeFamily> InferenceFolder<TTF> for T {
     fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TTF>> {
-        if T::forbid() {
+        if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
             Ok(var.to_ty::<TTF>())
         }
     }
 
+    /// As with `fold_free_inference_ty`, but for lifetimes.
     fn fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
         _binders: usize,
     ) -> Fallible<Lifetime<TTF>> {
-        if T::forbid() {
+        if self.forbid_inference_vars() {
             panic!("unexpected inference lifetime `'{:?}`", var)
         } else {
             Ok(var.to_lifetime::<TTF>())
@@ -300,30 +245,15 @@ pub trait Fold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Debug {
         -> Fallible<Self::Result>;
 }
 
-pub fn super_fold_ty<TF, TTF>(
-    folder: &mut dyn Folder<TF, TTF>,
-    ty: &Ty<TF>,
-    binders: usize,
-) -> Fallible<Ty<TTF>>
-where
-    TF: TypeFamily,
-    TTF: TargetTypeFamily<TF>,
-{
-    match ty.data() {
-        TyData::BoundVar(depth) => {
-            if *depth >= binders {
-                folder.fold_free_var_ty(*depth - binders, binders)
-            } else {
-                Ok(TyData::<TTF>::BoundVar(*depth).intern())
-            }
-        }
-        TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
-        TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
-        TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, binders)?).intern()),
-        TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, binders)?),
-        TyData::Alias(alias) => Ok(TyData::Alias(alias.fold_with(folder, binders)?).intern()),
-        TyData::Function(fun) => Ok(TyData::Function(fun.fold_with(folder, binders)?).intern()),
-    }
+/// For types where "fold" invokes a callback on the `Folder`, the
+/// `SuperFold` trait captures the recursive behavior that folds all
+/// the contents of the type.
+pub trait SuperFold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Fold<TF, TTF> {
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result>;
 }
 
 /// "Folding" a type invokes the `fold_ty` method on the folder; this
@@ -341,24 +271,32 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
     }
 }
 
-pub fn super_fold_lifetime<TF: TypeFamily, TTF: TypeFamily>(
-    folder: &mut dyn Folder<TF, TTF>,
-    lifetime: &Lifetime<TF>,
-    binders: usize,
-) -> Fallible<Lifetime<TTF>> {
-    match lifetime.data() {
-        LifetimeData::BoundVar(depth) => {
-            if *depth >= binders {
-                folder.fold_free_var_lifetime(depth - binders, binders)
-            } else {
-                Ok(LifetimeData::<TTF>::BoundVar(*depth).intern())
+/// "Super fold" for a type invokes te more detailed callbacks on the type
+impl<TF, TTF> SuperFold<TF, TTF> for Ty<TF>
+where
+    TF: TypeFamily,
+    TTF: TargetTypeFamily<TF>,
+{
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Ty<TTF>> {
+        match self.data() {
+            TyData::BoundVar(depth) => {
+                if *depth >= binders {
+                    folder.fold_free_var_ty(*depth - binders, binders)
+                } else {
+                    Ok(TyData::<TTF>::BoundVar(*depth).intern())
+                }
             }
+            TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
+            TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
+            TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, binders)?).intern()),
+            TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, binders)?),
+            TyData::Alias(proj) => Ok(TyData::Alias(proj.fold_with(folder, binders)?).intern()),
+            TyData::Function(fun) => Ok(TyData::Function(fun.fold_with(folder, binders)?).intern()),
         }
-        LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
-        LifetimeData::Placeholder(universe) => {
-            folder.fold_free_placeholder_lifetime(*universe, binders)
-        }
-        LifetimeData::Phantom(..) => unreachable!(),
     }
 }
 
@@ -374,5 +312,72 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Lifetime<TF> {
         binders: usize,
     ) -> Fallible<Self::Result> {
         folder.fold_lifetime(self, binders)
+    }
+}
+
+impl<TF, TTF> SuperFold<TF, TTF> for Lifetime<TF>
+where
+    TF: TypeFamily,
+    TTF: TargetTypeFamily<TF>,
+{
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Lifetime<TTF>> {
+        match self.data() {
+            LifetimeData::BoundVar(depth) => {
+                if *depth >= binders {
+                    folder.fold_free_var_lifetime(depth - binders, binders)
+                } else {
+                    Ok(LifetimeData::<TTF>::BoundVar(*depth).intern())
+                }
+            }
+            LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
+            LifetimeData::Placeholder(universe) => {
+                folder.fold_free_placeholder_lifetime(*universe, binders)
+            }
+            LifetimeData::Phantom(..) => unreachable!(),
+        }
+    }
+}
+
+/// Folding a goal invokes the `fold_goal` callback (which will, by
+/// default, invoke super-fold).
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Goal<TF> {
+    type Result = Goal<TTF>;
+
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        folder.fold_goal(self, binders)
+    }
+}
+
+/// Superfold folds recursively.
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> SuperFold<TF, TTF> for Goal<TF> {
+    fn super_fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        Ok(Goal::new(self.data().fold_with(folder, binders)?))
+    }
+}
+
+/// Folding a program clause invokes the `fold_program_clause`
+/// callback on the folder (which will, by default, invoke the
+/// `super_fold_with` method on the program clause).
+impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ProgramClause<TF> {
+    type Result = ProgramClause<TTF>;
+
+    fn fold_with(
+        &self,
+        folder: &mut dyn Folder<TF, TTF>,
+        binders: usize,
+    ) -> Fallible<Self::Result> {
+        folder.fold_program_clause(self, binders)
     }
 }

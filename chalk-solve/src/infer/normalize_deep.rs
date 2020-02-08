@@ -1,9 +1,7 @@
 use chalk_engine::fallible::*;
 use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{
-    DefaultFreeVarFolder, DefaultPlaceholderFolder, DefaultTypeFolder, Fold, InferenceFolder,
-};
+use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::*;
 
 use super::{EnaVariable, InferenceTable};
@@ -31,11 +29,11 @@ struct DeepNormalizer<'table, TF: TypeFamily> {
     table: &'table mut InferenceTable<TF>,
 }
 
-impl<TF: TypeFamily> DefaultTypeFolder for DeepNormalizer<'_, TF> {}
+impl<TF: TypeFamily> Folder<TF> for DeepNormalizer<'_, TF> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+        self
+    }
 
-impl<TF: TypeFamily> DefaultPlaceholderFolder for DeepNormalizer<'_, TF> {}
-
-impl<TF: TypeFamily> InferenceFolder<TF> for DeepNormalizer<'_, TF> {
     fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<TF>> {
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
@@ -55,10 +53,8 @@ impl<TF: TypeFamily> InferenceFolder<TF> for DeepNormalizer<'_, TF> {
             None => Ok(var.to_lifetime()), // FIXME shift
         }
     }
-}
 
-impl<TF: TypeFamily> DefaultFreeVarFolder for DeepNormalizer<'_, TF> {
-    fn forbid() -> bool {
+    fn forbid_free_vars(&self) -> bool {
         true
     }
 }
