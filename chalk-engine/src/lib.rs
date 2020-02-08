@@ -56,11 +56,6 @@
 #[macro_use]
 extern crate chalk_macros;
 
-#[cfg(feature = "stack_protection")]
-extern crate stacker;
-
-extern crate rustc_hash;
-
 use crate::context::Context;
 use std::cmp::min;
 use std::usize;

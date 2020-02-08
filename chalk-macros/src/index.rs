@@ -31,7 +31,7 @@ macro_rules! index_struct {
         }
 
         impl ::std::fmt::Debug for $n {
-            fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn fmt(&self, fmt: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(fmt, "{}({})", stringify!($n), self.value)
             }
         }

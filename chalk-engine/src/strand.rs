@@ -40,8 +40,8 @@ pub(crate) struct SelectedSubgoal<C: Context> {
     pub(crate) universe_map: C::UniverseMap,
 }
 
-impl<'table, C: Context> Debug for Strand<C> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+impl<C: Context> Debug for Strand<C> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         fmt.debug_struct("Strand")
             .field("ex_clause", &self.ex_clause)
             .field("selected_subgoal", &self.selected_subgoal)

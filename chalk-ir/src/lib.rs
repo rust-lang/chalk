@@ -15,7 +15,7 @@ macro_rules! impl_debugs {
     ($($id:ident), *) => {
         $(
             impl<I: Interner> std::fmt::Debug for $id<I> {
-                fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+                fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
                     write!(fmt, "{}({:?})", stringify!($id), self.0)
                 }
             }
