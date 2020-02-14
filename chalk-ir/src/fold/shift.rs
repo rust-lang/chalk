@@ -3,7 +3,7 @@ use crate::*;
 
 /// Methods for converting debruijn indices to move values into or out
 /// of binders.
-pub trait Shift<TF: TypeFamily>: Fold<TF, TF> {
+pub trait Shift<I: Interner>: Fold<I, I> {
     /// Shifts debruijn indices in `self` **up**, which is used when a
     /// value is being placed under additional levels of binders.
     ///
@@ -59,7 +59,7 @@ pub trait Shift<TF: TypeFamily>: Fold<TF, TF> {
     fn shifted_out(&self, adjustment: usize) -> Fallible<Self::Result>;
 }
 
-impl<T: Fold<TF, TF> + Eq, TF: TypeFamily> Shift<TF> for T {
+impl<T: Fold<I, I> + Eq, I: Interner> Shift<I> for T {
     fn shifted_in(&self, adjustment: usize) -> T::Result {
         self.fold_with(&mut Shifter { adjustment }, 0).unwrap()
     }
@@ -84,17 +84,17 @@ impl Shifter {
     }
 }
 
-impl<TF: TypeFamily> Folder<TF> for Shifter {
-    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+impl<I: Interner> Folder<I> for Shifter {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
-        Ok(TyData::<TF>::BoundVar(self.adjust(depth, binders)).intern())
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
+        Ok(TyData::<I>::BoundVar(self.adjust(depth, binders)).intern())
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
-        Ok(LifetimeData::<TF>::BoundVar(self.adjust(depth, binders)).intern())
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
+        Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)).intern())
     }
 }
 
@@ -124,16 +124,16 @@ impl DownShifter {
     }
 }
 
-impl<TF: TypeFamily> Folder<TF> for DownShifter {
-    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+impl<I: Interner> Folder<I> for DownShifter {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
-        Ok(TyData::<TF>::BoundVar(self.adjust(depth, binders)?).intern())
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
+        Ok(TyData::<I>::BoundVar(self.adjust(depth, binders)?).intern())
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
-        Ok(LifetimeData::<TF>::BoundVar(self.adjust(depth, binders)?).intern())
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
+        Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)?).intern())
     }
 }

@@ -2,10 +2,10 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
-use chalk_derive::{Fold, HasTypeFamily};
+use chalk_derive::{Fold, HasInterner};
 use chalk_ir::cast::Cast;
-use chalk_ir::family::{HasTypeFamily, TargetTypeFamily, TypeFamily};
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
+use chalk_ir::interner::{HasInterner, Interner, TargetInterner};
 use chalk_ir::{
     AliasEq, AliasTy, AssocTypeId, Binders, Identifier, ImplId, LifetimeData, Parameter,
     ParameterKind, QuantifiedWhereClause, RawId, StructId, Substitution, TraitId, TraitRef, Ty,
@@ -21,27 +21,27 @@ pub enum LangItem {}
 pub struct AssociatedTyValueId(pub RawId);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplDatum<TF: TypeFamily> {
+pub struct ImplDatum<I: Interner> {
     pub polarity: Polarity,
-    pub binders: Binders<ImplDatumBound<TF>>,
+    pub binders: Binders<ImplDatumBound<I>>,
     pub impl_type: ImplType,
     pub associated_ty_value_ids: Vec<AssociatedTyValueId>,
 }
 
-impl<TF: TypeFamily> ImplDatum<TF> {
+impl<I: Interner> ImplDatum<I> {
     pub fn is_positive(&self) -> bool {
         self.polarity.is_positive()
     }
 
-    pub fn trait_id(&self) -> TraitId<TF> {
+    pub fn trait_id(&self) -> TraitId<I> {
         self.binders.value.trait_ref.trait_id
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplDatumBound<TF: TypeFamily> {
-    pub trait_ref: TraitRef<TF>,
-    pub where_clauses: Vec<QuantifiedWhereClause<TF>>,
+pub struct ImplDatumBound<I: Interner> {
+    pub trait_ref: TraitRef<I>,
+    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -51,33 +51,33 @@ pub enum ImplType {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct DefaultImplDatum<TF: TypeFamily> {
-    pub binders: Binders<DefaultImplDatumBound<TF>>,
+pub struct DefaultImplDatum<I: Interner> {
+    pub binders: Binders<DefaultImplDatumBound<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct DefaultImplDatumBound<TF: TypeFamily> {
-    pub trait_ref: TraitRef<TF>,
-    pub accessible_tys: Vec<Ty<TF>>,
+pub struct DefaultImplDatumBound<I: Interner> {
+    pub trait_ref: TraitRef<I>,
+    pub accessible_tys: Vec<Ty<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StructDatum<TF: TypeFamily> {
-    pub binders: Binders<StructDatumBound<TF>>,
-    pub id: StructId<TF>,
+pub struct StructDatum<I: Interner> {
+    pub binders: Binders<StructDatumBound<I>>,
+    pub id: StructId<I>,
     pub flags: StructFlags,
 }
 
-impl<TF: TypeFamily> StructDatum<TF> {
-    pub fn name(&self) -> TypeName<TF> {
+impl<I: Interner> StructDatum<I> {
+    pub fn name(&self) -> TypeName<I> {
         self.id.cast()
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StructDatumBound<TF: TypeFamily> {
-    pub fields: Vec<Ty<TF>>,
-    pub where_clauses: Vec<QuantifiedWhereClause<TF>>,
+pub struct StructDatumBound<I: Interner> {
+    pub fields: Vec<Ty<I>>,
+    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -87,10 +87,10 @@ pub struct StructFlags {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TraitDatum<TF: TypeFamily> {
-    pub id: TraitId<TF>,
+pub struct TraitDatum<I: Interner> {
+    pub id: TraitId<I>,
 
-    pub binders: Binders<TraitDatumBound<TF>>,
+    pub binders: Binders<TraitDatumBound<I>>,
 
     /// "Flags" indicate special kinds of traits, like auto traits.
     /// In Rust syntax these are represented in different ways, but in
@@ -98,10 +98,10 @@ pub struct TraitDatum<TF: TypeFamily> {
     pub flags: TraitFlags,
 
     /// The id of each associated type defined in the trait.
-    pub associated_ty_ids: Vec<AssocTypeId<TF>>,
+    pub associated_ty_ids: Vec<AssocTypeId<I>>,
 }
 
-impl<TF: TypeFamily> TraitDatum<TF> {
+impl<I: Interner> TraitDatum<I> {
     pub fn is_auto_trait(&self) -> bool {
         self.flags.auto
     }
@@ -116,14 +116,14 @@ impl<TF: TypeFamily> TraitDatum<TF> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TraitDatumBound<TF: TypeFamily> {
+pub struct TraitDatumBound<I: Interner> {
     /// Where clauses defined on the trait:
     ///
     /// ```ignore
     /// trait Foo<T> where T: Debug { }
     ///              ^^^^^^^^^^^^^^
     /// ```
-    pub where_clauses: Vec<QuantifiedWhereClause<TF>>,
+    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -137,30 +137,30 @@ pub struct TraitFlags {
 }
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasTypeFamily)]
-pub enum InlineBound<TF: TypeFamily> {
-    TraitBound(TraitBound<TF>),
-    AliasEqBound(AliasEqBound<TF>),
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub enum InlineBound<I: Interner> {
+    TraitBound(TraitBound<I>),
+    AliasEqBound(AliasEqBound<I>),
 }
 
 #[allow(type_alias_bounds)]
-pub type QuantifiedInlineBound<TF: TypeFamily> = Binders<InlineBound<TF>>;
+pub type QuantifiedInlineBound<I: Interner> = Binders<InlineBound<I>>;
 
-pub trait IntoWhereClauses<TF: TypeFamily> {
+pub trait IntoWhereClauses<I: Interner> {
     type Output;
 
-    fn into_where_clauses(&self, self_ty: Ty<TF>) -> Vec<Self::Output>;
+    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<Self::Output>;
 }
 
-impl<TF: TypeFamily> IntoWhereClauses<TF> for InlineBound<TF> {
-    type Output = WhereClause<TF>;
+impl<I: Interner> IntoWhereClauses<I> for InlineBound<I> {
+    type Output = WhereClause<I>;
 
     /// Applies the `InlineBound` to `self_ty` and lowers to a
     /// [`chalk_ir::DomainGoal`].
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
-    fn into_where_clauses(&self, self_ty: Ty<TF>) -> Vec<WhereClause<TF>> {
+    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         match self {
             InlineBound::TraitBound(b) => b.into_where_clauses(self_ty),
             InlineBound::AliasEqBound(b) => b.into_where_clauses(self_ty),
@@ -168,10 +168,10 @@ impl<TF: TypeFamily> IntoWhereClauses<TF> for InlineBound<TF> {
     }
 }
 
-impl<TF: TypeFamily> IntoWhereClauses<TF> for QuantifiedInlineBound<TF> {
-    type Output = QuantifiedWhereClause<TF>;
+impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
+    type Output = QuantifiedWhereClause<I>;
 
-    fn into_where_clauses(&self, self_ty: Ty<TF>) -> Vec<QuantifiedWhereClause<TF>> {
+    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
         let self_ty = self_ty.shifted_in(self.binders.len());
         self.value
             .into_where_clauses(self_ty)
@@ -187,18 +187,18 @@ impl<TF: TypeFamily> IntoWhereClauses<TF> for QuantifiedInlineBound<TF> {
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-pub struct TraitBound<TF: TypeFamily> {
-    pub trait_id: TraitId<TF>,
-    pub args_no_self: Vec<Parameter<TF>>,
+pub struct TraitBound<I: Interner> {
+    pub trait_id: TraitId<I>,
+    pub args_no_self: Vec<Parameter<I>>,
 }
 
-impl<TF: TypeFamily> TraitBound<TF> {
-    fn into_where_clauses(&self, self_ty: Ty<TF>) -> Vec<WhereClause<TF>> {
+impl<I: Interner> TraitBound<I> {
+    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         let trait_ref = self.as_trait_ref(self_ty);
         vec![WhereClause::Implemented(trait_ref)]
     }
 
-    pub fn as_trait_ref(&self, self_ty: Ty<TF>) -> TraitRef<TF> {
+    pub fn as_trait_ref(&self, self_ty: Ty<I>) -> TraitRef<I> {
         TraitRef {
             trait_id: self.trait_id,
             substitution: Substitution::from(
@@ -211,16 +211,16 @@ impl<TF: TypeFamily> TraitBound<TF> {
 /// Represents an alias equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-pub struct AliasEqBound<TF: TypeFamily> {
-    pub trait_bound: TraitBound<TF>,
-    pub associated_ty_id: AssocTypeId<TF>,
+pub struct AliasEqBound<I: Interner> {
+    pub trait_bound: TraitBound<I>,
+    pub associated_ty_id: AssocTypeId<I>,
     /// Does not include trait parameters.
-    pub parameters: Vec<Parameter<TF>>,
-    pub value: Ty<TF>,
+    pub parameters: Vec<Parameter<I>>,
+    pub value: Ty<I>,
 }
 
-impl<TF: TypeFamily> AliasEqBound<TF> {
-    fn into_where_clauses(&self, self_ty: Ty<TF>) -> Vec<WhereClause<TF>> {
+impl<I: Interner> AliasEqBound<I> {
+    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         let trait_ref = self.trait_bound.as_trait_ref(self_ty);
 
         let substitution = Substitution::from(
@@ -263,11 +263,11 @@ pub trait ToParameter {
     /// the indices, and invoke `to_parameter()` on the `(binder,
     /// index)` pair. The result will be a reference to a bound
     /// variable of appropriate kind at the corresponding index.
-    fn to_parameter<TF: TypeFamily>(&self) -> Parameter<TF>;
+    fn to_parameter<I: Interner>(&self) -> Parameter<I>;
 }
 
 impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
-    fn to_parameter<TF: TypeFamily>(&self) -> Parameter<TF> {
+    fn to_parameter<I: Interner>(&self) -> Parameter<I> {
         let &(binder, index) = self;
         match *binder {
             ParameterKind::Lifetime(_) => LifetimeData::BoundVar(index).intern().cast(),
@@ -293,12 +293,12 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
 /// * The *where clauses* `where_clauses` are things that the impl can *assume* to be true
 ///   (but which projectors must prove).
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AssociatedTyDatum<TF: TypeFamily> {
+pub struct AssociatedTyDatum<I: Interner> {
     /// The trait this associated type is defined in.
-    pub trait_id: TraitId<TF>,
+    pub trait_id: TraitId<I>,
 
     /// The ID of this associated type
-    pub id: AssocTypeId<TF>,
+    pub id: AssocTypeId<I>,
 
     /// Name of this associated type.
     pub name: Identifier,
@@ -308,24 +308,24 @@ pub struct AssociatedTyDatum<TF: TypeFamily> {
     /// from `Bar` come first (corresponding to the de bruijn concept
     /// that "inner" binders are lower indices, although within a
     /// given binder we do not have an ordering).
-    pub binders: Binders<AssociatedTyDatumBound<TF>>,
+    pub binders: Binders<AssociatedTyDatumBound<I>>,
 }
 
 /// Encodes the parts of `AssociatedTyDatum` where the parameters
 /// `P0..Pm` are in scope (`bounds` and `where_clauses`).
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasTypeFamily)]
-pub struct AssociatedTyDatumBound<TF: TypeFamily> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub struct AssociatedTyDatumBound<I: Interner> {
     /// Bounds on the associated type itself.
     ///
     /// These must be proven by the implementer, for all possible parameters that
     /// would result in a well-formed projection.
-    pub bounds: Vec<QuantifiedInlineBound<TF>>,
+    pub bounds: Vec<QuantifiedInlineBound<I>>,
 
     /// Where clauses that must hold for the projection to be well-formed.
-    pub where_clauses: Vec<QuantifiedWhereClause<TF>>,
+    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
-impl<TF: TypeFamily> AssociatedTyDatum<TF> {
+impl<I: Interner> AssociatedTyDatum<I> {
     /// Returns the associated ty's bounds applied to the projection type, e.g.:
     ///
     /// ```notrust
@@ -334,7 +334,7 @@ impl<TF: TypeFamily> AssociatedTyDatum<TF> {
     ///
     /// these quantified where clauses are in the scope of the
     /// `binders` field.
-    pub fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause<TF>> {
+    pub fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause<I>> {
         let Binders { binders, value } = &self.binders;
 
         // Create a list `P0...Pn` of references to the binders in
@@ -371,7 +371,7 @@ impl<TF: TypeFamily> AssociatedTyDatum<TF> {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-pub struct AssociatedTyValue<TF: TypeFamily> {
+pub struct AssociatedTyValue<I: Interner> {
     /// Impl in which this associated type value is found.  You might
     /// need to look at this to find the generic parameters defined on
     /// the impl, for example.
@@ -381,7 +381,7 @@ pub struct AssociatedTyValue<TF: TypeFamily> {
     ///     type Item = XXX; // <-- (where this is self)
     /// }
     /// ```
-    pub impl_id: ImplId<TF>,
+    pub impl_id: ImplId<I>,
 
     /// Associated type being defined.
     ///
@@ -394,7 +394,7 @@ pub struct AssociatedTyValue<TF: TypeFamily> {
     ///     type Item; // <-- refers to this declaration here!
     /// }
     /// ```
-    pub associated_ty_id: AssocTypeId<TF>,
+    pub associated_ty_id: AssocTypeId<I>,
 
     /// Additional binders declared on the associated type itself,
     /// beyond those from the impl. This would be empty for normal
@@ -406,13 +406,13 @@ pub struct AssociatedTyValue<TF: TypeFamily> {
     ///           // ^^^^ refers to these generics here
     /// }
     /// ```
-    pub value: Binders<AssociatedTyValueBound<TF>>,
+    pub value: Binders<AssociatedTyValueBound<I>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasTypeFamily)]
-pub struct AssociatedTyValueBound<TF: TypeFamily> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub struct AssociatedTyValueBound<I: Interner> {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
-    pub ty: Ty<TF>,
+    pub ty: Ty<I>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

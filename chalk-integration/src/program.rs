@@ -1,6 +1,6 @@
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
     AliasTy, AssocTypeId, Identifier, ImplId, Parameter, ProgramClause, StructId, TraitId, TyData,

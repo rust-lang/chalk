@@ -2,17 +2,17 @@ use crate::coherence::{CoherenceError, CoherenceSolver};
 use crate::ext::*;
 use crate::Solution;
 use chalk_ir::cast::*;
-use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use itertools::Itertools;
 
-impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
+impl<I: Interner> CoherenceSolver<'_, I> {
     pub(super) fn visit_specializations_of_trait(
         &self,
-        mut record_specialization: impl FnMut(ImplId<TF>, ImplId<TF>),
-    ) -> Result<(), CoherenceError<TF>> {
+        mut record_specialization: impl FnMut(ImplId<I>, ImplId<I>),
+    ) -> Result<(), CoherenceError<I>> {
         // Ignore impls for marker traits as they are allowed to overlap.
         let trait_datum = self.db.trait_datum(self.trait_id);
         if trait_datum.flags.marker {
@@ -80,7 +80,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
     //  Generates:
     //      not { compatible { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } }
     //
-    fn disjoint(&self, lhs: &ImplDatum<TF>, rhs: &ImplDatum<TF>) -> bool {
+    fn disjoint(&self, lhs: &ImplDatum<I>, rhs: &ImplDatum<I>) -> bool {
         debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
 
         let lhs_len = lhs.binders.len();
@@ -117,7 +117,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
         // over the joined binders. This is our query.
         let goal = params_goals
             .chain(wc_goals)
-            .collect::<Box<Goal<TF>>>()
+            .collect::<Box<Goal<I>>>()
             .quantify(QuantifierKind::Exists, binders)
             .compatible()
             .negate();
@@ -156,7 +156,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
     //    }
     //  }
     // }
-    fn specializes(&self, less_special: &ImplDatum<TF>, more_special: &ImplDatum<TF>) -> bool {
+    fn specializes(&self, less_special: &ImplDatum<I>, more_special: &ImplDatum<I>) -> bool {
         debug_heading!(
             "specializes(less_special={:#?}, more_special={:#?})",
             less_special,
@@ -196,7 +196,7 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
         // Join all of the goals together.
         let goal = params_goals
             .chain(less_special_wc)
-            .collect::<Box<Goal<TF>>>()
+            .collect::<Box<Goal<I>>>()
             .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
             .implied_by(more_special_wc)
             .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
@@ -217,6 +217,6 @@ impl<TF: TypeFamily> CoherenceSolver<'_, TF> {
     }
 }
 
-fn params<TF: TypeFamily>(impl_datum: &ImplDatum<TF>) -> &[Parameter<TF>] {
+fn params<I: Interner>(impl_datum: &ImplDatum<I>) -> &[Parameter<I>] {
     impl_datum.binders.value.trait_ref.substitution.parameters()
 }

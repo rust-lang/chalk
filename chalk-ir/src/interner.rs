@@ -17,11 +17,11 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-/// A "type family" encapsulates the concrete representation of
+/// A "interner" encapsulates the concrete representation of
 /// certain "core types" from chalk-ir. All the types in chalk-ir are
-/// parameterized by a `TF: TypeFamily`, and so (e.g.) if they want to
-/// store a type, they don't store a `Ty<TF>` instance directly, but
-/// rather prefer a `Ty<TF>`. You can think of `TF::Type` as the
+/// parameterized by a `I: Interner`, and so (e.g.) if they want to
+/// store a type, they don't store a `Ty<I>` instance directly, but
+/// rather prefer a `Ty<I>`. You can think of `I::Type` as the
 /// interned representation (and, indeed, it may well be an interned
 /// pointer, e.g. in rustc).
 ///
@@ -32,7 +32,7 @@ use std::sync::Arc;
 /// (e.g., `SourceTF` and `TargetTF`) -- even if those type parameters
 /// wind up being mapped to the same underlying type families in the
 /// end.
-pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
+pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// "Interned" representation of types.  In normal user code,
     /// `Self::InternedType` is not referenced Instead, we refer to
     /// `Ty<Self>`, which wraps this type.
@@ -91,7 +91,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// Prints the debug representation of a type-kind-id. To get good
     /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific type-family (and hence
+    /// code without reference to a specific interner (and hence
     /// fully known types).
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
@@ -103,7 +103,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// Prints the debug representation of a type-kind-id. To get good
     /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific type-family (and hence
+    /// code without reference to a specific interner (and hence
     /// fully known types).
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
@@ -113,7 +113,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// Prints the debug representation of a type-kind-id. To get good
     /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific type-family (and hence
+    /// code without reference to a specific interner (and hence
     /// fully known types).
     fn debug_assoc_type_id(
         type_id: AssocTypeId<Self>,
@@ -122,7 +122,7 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
 
     /// Prints the debug representation of an alias. To get good
     /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific type-family (and hence
+    /// code without reference to a specific interner (and hence
     /// fully known types).
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
@@ -185,33 +185,32 @@ pub trait TypeFamily: Debug + Copy + Eq + Ord + Hash {
     fn substitution_data(substitution: &Self::InternedSubstitution) -> &[Parameter<Self>];
 }
 
-pub trait TargetTypeFamily<TF: TypeFamily>: TypeFamily {
-    fn transfer_def_id(def_id: TF::DefId) -> Self::DefId;
+pub trait TargetInterner<I: Interner>: Interner {
+    fn transfer_def_id(def_id: I::DefId) -> Self::DefId;
 }
 
-impl<TF: TypeFamily> TargetTypeFamily<TF> for TF {
-    fn transfer_def_id(def_id: TF::DefId) -> Self::DefId {
+impl<I: Interner> TargetInterner<I> for I {
+    fn transfer_def_id(def_id: I::DefId) -> Self::DefId {
         def_id
     }
 }
 
-/// Implemented by types that have an associated type family (which
+/// Implemented by types that have an associated interner (which
 /// are virtually all of the types in chalk-ir, for example).
-/// This lets us map from a type like `Ty<TF>` to the parameter `TF`.
+/// This lets us map from a type like `Ty<I>` to the parameter `I`.
 ///
-/// It's particularly useful for writing `Fold` impls for generic
-/// types like `Binder<T>`, since it allows us to figure out the type
-/// family of `T`.
-pub trait HasTypeFamily {
-    type TypeFamily: TypeFamily;
+/// It's particularly useful for writing `Fold` impls for generic types like
+/// `Binder<T>`, since it allows us to figure out the interner of `T`.
+pub trait HasInterner {
+    type Interner: Interner;
 }
 
-/// The default "type family" and the only type family used by chalk
-/// itself. In this family, no interning actually occurs.
+/// The default "interner" and the only interner used by chalk
+/// itself. In this interner, no interning actually occurs.
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct ChalkIr {}
 
-impl TypeFamily for ChalkIr {
+impl Interner for ChalkIr {
     type InternedType = Arc<TyData<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
     type InternedParameter = ParameterData<ChalkIr>;
@@ -296,43 +295,43 @@ impl TypeFamily for ChalkIr {
     }
 }
 
-impl HasTypeFamily for ChalkIr {
-    type TypeFamily = ChalkIr;
+impl HasInterner for ChalkIr {
+    type Interner = ChalkIr;
 }
 
-impl<T: HasTypeFamily> HasTypeFamily for [T] {
-    type TypeFamily = T::TypeFamily;
+impl<T: HasInterner> HasInterner for [T] {
+    type Interner = T::Interner;
 }
 
-impl<T: HasTypeFamily> HasTypeFamily for Vec<T> {
-    type TypeFamily = T::TypeFamily;
+impl<T: HasInterner> HasInterner for Vec<T> {
+    type Interner = T::Interner;
 }
 
-impl<T: HasTypeFamily> HasTypeFamily for Box<T> {
-    type TypeFamily = T::TypeFamily;
+impl<T: HasInterner> HasInterner for Box<T> {
+    type Interner = T::Interner;
 }
 
-impl<T: HasTypeFamily> HasTypeFamily for Arc<T> {
-    type TypeFamily = T::TypeFamily;
+impl<T: HasInterner> HasInterner for Arc<T> {
+    type Interner = T::Interner;
 }
 
-impl<T: HasTypeFamily + ?Sized> HasTypeFamily for &T {
-    type TypeFamily = T::TypeFamily;
+impl<T: HasInterner + ?Sized> HasInterner for &T {
+    type Interner = T::Interner;
 }
 
-impl<TF: TypeFamily> HasTypeFamily for PhantomData<TF> {
-    type TypeFamily = TF;
+impl<I: Interner> HasInterner for PhantomData<I> {
+    type Interner = I;
 }
 
-impl<A, B, TF> HasTypeFamily for (A, B)
+impl<A, B, I> HasInterner for (A, B)
 where
-    A: HasTypeFamily<TypeFamily = TF>,
-    B: HasTypeFamily<TypeFamily = TF>,
-    TF: TypeFamily,
+    A: HasInterner<Interner = I>,
+    B: HasInterner<Interner = I>,
+    I: Interner,
 {
-    type TypeFamily = TF;
+    type Interner = I;
 }
 
-impl<C: HasTypeFamily + Context> HasTypeFamily for ExClause<C> {
-    type TypeFamily = C::TypeFamily;
+impl<C: HasInterner + Context> HasInterner for ExClause<C> {
+    type Interner = C::Interner;
 }

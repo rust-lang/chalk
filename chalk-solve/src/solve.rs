@@ -1,7 +1,7 @@
 use crate::solve::slg::SlgContext;
 use crate::RustIrDatabase;
 use chalk_engine::forest::{Forest, SubstitutionResult};
-use chalk_ir::family::TypeFamily;
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::fmt;
 
@@ -10,38 +10,38 @@ mod truncate;
 
 /// A (possible) solution for a proposed goal.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Solution<TF: TypeFamily> {
+pub enum Solution<I: Interner> {
     /// The goal indeed holds, and there is a unique value for all existential
     /// variables. In this case, we also record a set of lifetime constraints
     /// which must also hold for the goal to be valid.
-    Unique(Canonical<ConstrainedSubst<TF>>),
+    Unique(Canonical<ConstrainedSubst<I>>),
 
     /// The goal may be provable in multiple ways, but regardless we may have some guidance
     /// for type inference. In this case, we don't return any lifetime
     /// constraints, since we have not "committed" to any particular solution
     /// yet.
-    Ambig(Guidance<TF>),
+    Ambig(Guidance<I>),
 }
 
 /// When a goal holds ambiguously (e.g., because there are multiple possible
 /// solutions), we issue a set of *guidance* back to type inference.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Guidance<TF: TypeFamily> {
+pub enum Guidance<I: Interner> {
     /// The existential variables *must* have the given values if the goal is
     /// ever to hold, but that alone isn't enough to guarantee the goal will
     /// actually hold.
-    Definite(Canonical<Substitution<TF>>),
+    Definite(Canonical<Substitution<I>>),
 
     /// There are multiple plausible values for the existentials, but the ones
     /// here are suggested as the preferred choice heuristically. These should
     /// be used for inference fallback only.
-    Suggested(Canonical<Substitution<TF>>),
+    Suggested(Canonical<Substitution<I>>),
 
     /// There's no useful information to feed back to type inference
     Unknown,
 }
 
-impl<TF: TypeFamily> Solution<TF> {
+impl<I: Interner> Solution<I> {
     pub fn is_unique(&self) -> bool {
         match *self {
             Solution::Unique(..) => true,
@@ -50,7 +50,7 @@ impl<TF: TypeFamily> Solution<TF> {
     }
 }
 
-impl<TF: TypeFamily> fmt::Display for Solution<TF> {
+impl<I: Interner> fmt::Display for Solution<I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
             Solution::Unique(constrained) => write!(f, "Unique; {}", constrained,),
@@ -84,7 +84,7 @@ impl SolverChoice {
     }
 
     /// Creates a solver state.
-    pub fn into_solver<TF: TypeFamily>(self) -> Solver<TF> {
+    pub fn into_solver<I: Interner>(self) -> Solver<I> {
         match self {
             SolverChoice::SLG {
                 max_size,
@@ -106,11 +106,11 @@ impl Default for SolverChoice {
 /// out what sets of types implement which traits. Also, between
 /// queries, this struct stores the cached state from previous solver
 /// attempts, which can then be re-used later.
-pub struct Solver<TF: TypeFamily> {
-    forest: Forest<SlgContext<TF>>,
+pub struct Solver<I: Interner> {
+    forest: Forest<SlgContext<I>>,
 }
 
-impl<TF: TypeFamily> Solver<TF> {
+impl<I: Interner> Solver<I> {
     /// Attempts to solve the given goal, which must be in canonical
     /// form. Returns a unique solution (if one exists).  This will do
     /// only as much work towards `goal` as it has to (and that work
@@ -131,9 +131,9 @@ impl<TF: TypeFamily> Solver<TF> {
     ///   although `solution` may reflect ambiguity and unknowns.
     pub fn solve(
         &mut self,
-        program: &dyn RustIrDatabase<TF>,
-        goal: &UCanonical<InEnvironment<Goal<TF>>>,
-    ) -> Option<Solution<TF>> {
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+    ) -> Option<Solution<I>> {
         let ops = self.forest.context().ops(program);
         self.forest.solve(&ops, goal, || true)
     }
@@ -162,10 +162,10 @@ impl<TF: TypeFamily> Solver<TF> {
     ///   although `solution` may reflect ambiguity and unknowns.
     pub fn solve_limited(
         &mut self,
-        program: &dyn RustIrDatabase<TF>,
-        goal: &UCanonical<InEnvironment<Goal<TF>>>,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
         should_continue: impl std::ops::Fn() -> bool,
-    ) -> Option<Solution<TF>> {
+    ) -> Option<Solution<I>> {
         let ops = self.forest.context().ops(program);
         self.forest.solve(&ops, goal, should_continue)
     }
@@ -194,16 +194,16 @@ impl<TF: TypeFamily> Solver<TF> {
     /// - `false` the function returned `false` and solutions were interrupted.
     pub fn solve_multiple(
         &mut self,
-        program: &dyn RustIrDatabase<TF>,
-        goal: &UCanonical<InEnvironment<Goal<TF>>>,
-        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<TF>>>, bool) -> bool,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool {
         let ops = self.forest.context().ops(program);
         self.forest.solve_multiple(&ops, goal, f)
     }
 }
 
-impl<TF: TypeFamily> std::fmt::Debug for Solver<TF> {
+impl<I: Interner> std::fmt::Debug for Solver<I> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(fmt, "Solver {{ .. }}")
     }

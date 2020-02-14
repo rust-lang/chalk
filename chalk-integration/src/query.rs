@@ -5,7 +5,7 @@ use crate::error::ChalkError;
 use crate::lowering::LowerProgram;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::TraitId;
 use chalk_solve::clauses::builder::ClauseBuilder;

@@ -4,9 +4,9 @@ Rust types are represented by the [`Ty`] and [`TyData`] types.
 You use [`Ty`] to represent "some Rust type". But to actually inspect
 what sort of type you have, you invoke the [`data`] method, which
 returns a [`TyData`]. As described earlier, the actual in-memory
-representation of types is controlled by the [`TypeFamily`] trait.
+representation of types is controlled by the [`Interner`] trait.
 
-[`TypeFamily`]: http://rust-lang.github.io/chalk/chalk_ir/family/trait.TypeFamily.html
+[`Interner`]: http://rust-lang.github.io/chalk/chalk_ir/interner/trait.Interner.html
 [`Ty`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html
 [`TyData`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyData.html
 [`data`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html#method.data
@@ -203,7 +203,7 @@ other type without any effect, and so forth.
 The rustc [`TyKind`] enum has a lot more variants than chalk. This
 section describes how the rustc types can be mapped to chalk
 types. The intention is that, at least when transitioning, rustc would
-implement the `TypeFamily` trait and would map from the [`TyKind`]
+implement the `Interner` trait and would map from the [`TyKind`]
 enum to chalk's `TyData` on the fly, when `data()` is invoked.
 
 [`TyKind`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc/ty/enum.TyKind.html

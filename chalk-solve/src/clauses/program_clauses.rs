@@ -1,7 +1,7 @@
 use crate::clauses::builder::ClauseBuilder;
 use crate::split::Split;
 use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::family::TypeFamily;
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::iter;
@@ -9,11 +9,11 @@ use std::iter;
 /// Trait for lowering a given piece of rust-ir source (e.g., an impl
 /// or struct definition) into its associated "program clauses" --
 /// that is, into the lowered, logical rules that it defines.
-pub trait ToProgramClauses<TF: TypeFamily> {
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, TF>);
+pub trait ToProgramClauses<I: Interner> {
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>);
 }
 
-impl<TF: TypeFamily> ToProgramClauses<TF> for ImplDatum<TF> {
+impl<I: Interner> ToProgramClauses<I> for ImplDatum<I> {
     /// Given `impl<T: Clone> Clone for Vec<T> { ... }`, generate:
     ///
     /// ```notrust
@@ -27,7 +27,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for ImplDatum<TF> {
     /// generate nothing -- this is just a way to *opt out* from the
     /// default auto trait impls, it doesn't have any positive effect
     /// on its own.
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, TF>) {
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         if self.is_positive() {
             let binders = self.binders.map_ref(|b| (&b.trait_ref, &b.where_clauses));
             builder.push_binders(&binders, |builder, (trait_ref, where_clauses)| {
@@ -37,7 +37,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for ImplDatum<TF> {
     }
 }
 
-impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyValue<TF> {
+impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
     /// Given the following trait:
     ///
     /// ```notrust
@@ -63,7 +63,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyValue<TF> {
     ///         Implemented(Iter<'a, T>: 'a).   // (2)
     /// }
     /// ```
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, TF>) {
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let impl_datum = builder.db.impl_datum(self.impl_id);
         let associated_ty = builder.db.associated_ty_data(self.associated_ty_id);
 
@@ -117,7 +117,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyValue<TF> {
     }
 }
 
-impl<TF: TypeFamily> ToProgramClauses<TF> for StructDatum<TF> {
+impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
     /// Given the following type definition: `struct Foo<T: Eq> { }`, generate:
     ///
     /// ```notrust
@@ -166,7 +166,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for StructDatum<TF> {
     /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
     /// ```
     ///
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, TF>) {
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         debug_heading!("StructDatum::to_program_clauses(self={:?})", self);
 
         let binders = self.binders.map_ref(|b| &b.where_clauses);
@@ -270,7 +270,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for StructDatum<TF> {
     }
 }
 
-impl<TF: TypeFamily> ToProgramClauses<TF> for TraitDatum<TF> {
+impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
     /// Given the following trait declaration: `trait Ord<T> where Self: Eq<T> { ... }`, generate:
     ///
     /// ```notrust
@@ -384,7 +384,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for TraitDatum<TF> {
     /// To implement fundamental traits, we simply just do not add the rule above that allows
     /// upstream types to implement upstream traits. Fundamental traits are not allowed to
     /// compatibly do that.
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, TF>) {
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         builder.push_binders(&binders, |builder, where_clauses| {
             let trait_ref = chalk_ir::TraitRef {
@@ -494,7 +494,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for TraitDatum<TF> {
     }
 }
 
-impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
+impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
     /// For each associated type, we define the "projection
     /// equality" rules. There are always two; one for a successful normalization,
     /// and one for the "fallback" notion of equality.
@@ -563,7 +563,7 @@ impl<TF: TypeFamily> ToProgramClauses<TF> for AssociatedTyDatum<TF> {
     ///     FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self, 'a,T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, TF>) {
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let binders = self.binders.map_ref(|b| (&b.where_clauses, &b.bounds));
         builder.push_binders(&binders, |builder, (where_clauses, bounds)| {
             let substitution = builder.substitution_in_scope();

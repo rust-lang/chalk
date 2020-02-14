@@ -5,10 +5,10 @@ use quote::{format_ident, quote};
 use syn::{parse_macro_input, Data, DeriveInput, GenericParam, Ident, TypeParamBound};
 
 /// Derives Fold for structs and enums for which one of the following is true:
-/// - It has a `#[has_type_family(TheTypeFamily)]` attribute
-/// - There is a single parameter `T: HasTypeFamily` (does not have to be named `T`)
-/// - There is a single parameter `TF: TypeFamily` (does not have to be named `TF`)
-#[proc_macro_derive(Fold, attributes(has_type_family))]
+/// - It has a `#[has_interner(TheTypeFamily)]` attribute
+/// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
+/// - There is a single parameter `I: Interner` (does not have to be named `I`)
+#[proc_macro_derive(Fold, attributes(has_interner))]
 pub fn derive_fold(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
@@ -16,19 +16,15 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     let type_name = input.ident;
     let body = derive_fold_body(&type_name, input.data);
 
-    if let Some(attr) = input
-        .attrs
-        .iter()
-        .find(|a| a.path.is_ident("has_type_family"))
-    {
-        // Hardcoded type-family:
+    if let Some(attr) = input.attrs.iter().find(|a| a.path.is_ident("has_interner")) {
+        // Hardcoded interner:
         //
         // impl Fold<ChalkIr, ChalkIr> for Type {
         //     type Result = Self;
         // }
         let arg = attr
             .parse_args::<proc_macro2::TokenStream>()
-            .expect("Expected has_type_family argument");
+            .expect("Expected has_interner argument");
 
         return TokenStream::from(quote! {
             impl #impl_generics Fold < #arg, #arg > for #type_name #ty_generics #where_clause_ref {
@@ -49,7 +45,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         1 => {}
 
         0 => {
-            panic!("Fold derive requires a single type parameter or a `#[has_type_family]` attr");
+            panic!("Fold derive requires a single type parameter or a `#[has_interner]` attr");
         }
 
         _ => {
@@ -59,26 +55,26 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
 
     let generic_param0 = &input.generics.params[0];
 
-    if let Some(param) = has_type_family(&generic_param0) {
-        // HasTypeFamily bound:
+    if let Some(param) = has_interner(&generic_param0) {
+        // HasInterner bound:
         //
         // Example:
         //
-        // impl<T, _TF, _TTF, _U> Fold<_TF, _TTF> for Binders<T>
+        // impl<T, _I, _TTF, _U> Fold<_I, _TTF> for Binders<T>
         // where
-        //     T: HasTypeFamily<TypeFamily = _TF>,
-        //     T: Fold<_TF, _TTF, Result = _U>,
-        //     U: HasTypeFamily<TypeFamily = _TTF>,
+        //     T: HasInterner<Interner = _I>,
+        //     T: Fold<_I, _TTF, Result = _U>,
+        //     U: HasInterner<Interner = _TTF>,
         // {
         //     type Result = Binders<_U>;
         // }
 
         let mut impl_generics = input.generics.clone();
         impl_generics.params.extend(vec![
-            GenericParam::Type(syn::parse(quote! { _TF: TypeFamily }.into()).unwrap()),
-            GenericParam::Type(syn::parse(quote! { _TTF: TargetTypeFamily<_TF> }.into()).unwrap()),
+            GenericParam::Type(syn::parse(quote! { _I: Interner }.into()).unwrap()),
+            GenericParam::Type(syn::parse(quote! { _TTF: TargetInterner<_I> }.into()).unwrap()),
             GenericParam::Type(
-                syn::parse(quote! { _U: HasTypeFamily<TypeFamily = _TTF> }.into()).unwrap(),
+                syn::parse(quote! { _U: HasInterner<Interner = _TTF> }.into()).unwrap(),
             ),
         ]);
 
@@ -87,20 +83,20 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
             .unwrap_or_else(|| syn::parse2(quote![where]).unwrap());
         where_clause
             .predicates
-            .push(syn::parse2(quote! { #param: HasTypeFamily<TypeFamily = _TF> }).unwrap());
+            .push(syn::parse2(quote! { #param: HasInterner<Interner = _I> }).unwrap());
         where_clause
             .predicates
-            .push(syn::parse2(quote! { #param: Fold<_TF, _TTF, Result = _U> }).unwrap());
+            .push(syn::parse2(quote! { #param: Fold<_I, _TTF, Result = _U> }).unwrap());
 
         return TokenStream::from(quote! {
-            impl #impl_generics Fold < _TF, _TTF > for #type_name < #param >
+            impl #impl_generics Fold < _I, _TTF > for #type_name < #param >
                 #where_clause
             {
                 type Result = #type_name < _U >;
 
                 fn fold_with(
                     &self,
-                    folder: &mut dyn Folder < _TF, _TTF >,
+                    folder: &mut dyn Folder < _I, _TTF >,
                     binders: usize,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                     #body
@@ -109,33 +105,33 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         });
     }
 
-    // TypeFamily bound:
+    // Interner bound:
     //
     // Example:
     //
-    // impl<TF, _TTF> Fold<TF, _TTF> for Foo<TF>
+    // impl<I, _TTF> Fold<I, _TTF> for Foo<I>
     // where
-    //     TF: HasTypeFamily,
-    //     _TTF: HasTypeFamily,
+    //     I: HasInterner,
+    //     _TTF: HasInterner,
     // {
     //     type Result = Foo<_TTF>;
     // }
 
-    if let Some(tf) = is_type_family(&generic_param0) {
+    if let Some(i) = is_interner(&generic_param0) {
         let mut impl_generics = input.generics.clone();
         impl_generics.params.extend(vec![GenericParam::Type(
-            syn::parse(quote! { _TTF: TargetTypeFamily<#tf> }.into()).unwrap(),
+            syn::parse(quote! { _TTF: TargetInterner<#i> }.into()).unwrap(),
         )]);
 
         return TokenStream::from(quote! {
-            impl #impl_generics Fold < #tf, _TTF > for #type_name < #tf >
+            impl #impl_generics Fold < #i, _TTF > for #type_name < #i >
                 #where_clause_ref
             {
                 type Result = #type_name < _TTF >;
 
                 fn fold_with(
                     &self,
-                    folder: &mut dyn Folder < #tf, _TTF >,
+                    folder: &mut dyn Folder < #i, _TTF >,
                     binders: usize,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                     #body
@@ -144,7 +140,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         });
     }
 
-    panic!("derive(Fold) requires a parameter that implements HasTypeFamily or TypeFamily");
+    panic!("derive(Fold) requires a parameter that implements HasInterner or Interner");
 }
 
 /// Generates the body of the Fold impl
@@ -207,30 +203,26 @@ fn derive_fold_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream {
     }
 }
 
-#[proc_macro_derive(HasTypeFamily, attributes(has_type_family))]
-pub fn derive_has_type_family(item: TokenStream) -> TokenStream {
+#[proc_macro_derive(HasInterner, attributes(has_interner))]
+pub fn derive_has_interner(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
 
     let type_name = input.ident;
 
-    if let Some(attr) = input
-        .attrs
-        .iter()
-        .find(|a| a.path.is_ident("has_type_family"))
-    {
-        // Hardcoded type-family:
+    if let Some(attr) = input.attrs.iter().find(|a| a.path.is_ident("has_interner")) {
+        // Hardcoded interner:
         //
-        // impl HasTypeFamily for Type {
+        // impl HasInterner for Type {
         //     type Result = XXX;
         // }
         let arg = attr
             .parse_args::<proc_macro2::TokenStream>()
-            .expect("Expected has_type_family argument");
+            .expect("Expected has_interner argument");
 
         return TokenStream::from(quote! {
-            impl #impl_generics HasTypeFamily for #type_name #ty_generics #where_clause_ref {
-                type TypeFamily = #arg;
+            impl #impl_generics HasInterner for #type_name #ty_generics #where_clause_ref {
+                type Interner = #arg;
             }
         });
     }
@@ -239,34 +231,32 @@ pub fn derive_has_type_family(item: TokenStream) -> TokenStream {
         1 => {}
 
         0 => {
-            panic!(
-                "TypeFamily derive requires a single type parameter or a `#[has_type_family]` attr"
-            );
+            panic!("Interner derive requires a single type parameter or a `#[has_interner]` attr");
         }
 
         _ => {
-            panic!("TypeFamily derive only works with a single type parameter");
+            panic!("Interner derive only works with a single type parameter");
         }
     };
 
     let generic_param0 = &input.generics.params[0];
 
-    if let Some(param) = has_type_family(&generic_param0) {
-        // HasTypeFamily bound:
+    if let Some(param) = has_interner(&generic_param0) {
+        // HasInterner bound:
         //
         // Example:
         //
-        // impl<T, _TF> HasTypeFamily for Binders<T>
+        // impl<T, _I> HasInterner for Binders<T>
         // where
-        //     T: HasTypeFamily<TypeFamily = _TF>,
-        //     _TF: TypeFamily,
+        //     T: HasInterner<Interner = _I>,
+        //     _I: Interner,
         // {
-        //     type Result = _TF;
+        //     type Result = _I;
         // }
 
         let mut impl_generics = input.generics.clone();
         impl_generics.params.extend(vec![GenericParam::Type(
-            syn::parse(quote! { _TF: TypeFamily }.into()).unwrap(),
+            syn::parse(quote! { _I: Interner }.into()).unwrap(),
         )]);
 
         let mut where_clause = where_clause_ref
@@ -274,51 +264,51 @@ pub fn derive_has_type_family(item: TokenStream) -> TokenStream {
             .unwrap_or_else(|| syn::parse2(quote![where]).unwrap());
         where_clause
             .predicates
-            .push(syn::parse2(quote! { #param: HasTypeFamily<TypeFamily = _TF> }).unwrap());
+            .push(syn::parse2(quote! { #param: HasInterner<Interner = _I> }).unwrap());
 
         return TokenStream::from(quote! {
-            impl #impl_generics HasTypeFamily for #type_name < #param >
+            impl #impl_generics HasInterner for #type_name < #param >
                 #where_clause
             {
-                type TypeFamily = _TF;
+                type Interner = _I;
             }
         });
     }
 
-    // TypeFamily bound:
+    // Interner bound:
     //
     // Example:
     //
-    // impl<TF> HasTypeFamily for Foo<TF>
+    // impl<I> HasInterner for Foo<I>
     // where
-    //     TF: TypeFamily,
+    //     I: Interner,
     // {
-    //     type TypeFamily = TF;
+    //     type Interner = I;
     // }
 
-    if let Some(tf) = is_type_family(&generic_param0) {
+    if let Some(i) = is_interner(&generic_param0) {
         let impl_generics = &input.generics;
 
         return TokenStream::from(quote! {
-            impl #impl_generics HasTypeFamily for #type_name < #tf >
+            impl #impl_generics HasInterner for #type_name < #i >
                 #where_clause_ref
             {
-                type TypeFamily = #tf;
+                type Interner = #i;
             }
         });
     }
 
-    panic!("derive(TypeFamily) requires a parameter that implements HasTypeFamily or TypeFamily");
+    panic!("derive(Interner) requires a parameter that implements HasInterner or Interner");
 }
 
-/// Checks whether a generic parameter has a `: HasTypeFamily` bound
-fn has_type_family(param: &GenericParam) -> Option<&Ident> {
-    bounded_by_trait(param, "HasTypeFamily")
+/// Checks whether a generic parameter has a `: HasInterner` bound
+fn has_interner(param: &GenericParam) -> Option<&Ident> {
+    bounded_by_trait(param, "HasInterner")
 }
 
-/// Checks whether a generic parameter has a `: TypeFamily` bound
-fn is_type_family(param: &GenericParam) -> Option<&Ident> {
-    bounded_by_trait(param, "TypeFamily")
+/// Checks whether a generic parameter has a `: Interner` bound
+fn is_interner(param: &GenericParam) -> Option<&Ident> {
+    bounded_by_trait(param, "Interner")
 }
 
 fn bounded_by_trait<'p>(param: &'p GenericParam, name: &str) -> Option<&'p Ident> {

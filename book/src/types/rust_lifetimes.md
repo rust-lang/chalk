@@ -1,8 +1,8 @@
 # Rust lifetimes
 
-Lifetimes are represented by the `Lifetime<TF>` and `LifetimeData<TF>`
+Lifetimes are represented by the `Lifetime<I>` and `LifetimeData<I>`
 types. As with types, the actual representation of a lifetime is
-defined by the associated type `TF::InternedLifetime`.
+defined by the associated type `I::InternedLifetime`.
 
 ### The `LifetimeData` variants
 

@@ -17,7 +17,7 @@ One of our goals is to create a type representation that can be
 readily embedded into a variety of contexts. Most specifically, we
 would like to be able to embed into rustc and rust-analyzer, and
 permit those two projects to use distinct memory management
-strategies. This is primarily achieved via the `TypeFamily` trait.
+strategies. This is primarily achieved via the `Interner` trait.
 
 Initially, at least in rustc, the goal is to be able to easily and
 "reasonably efficiently" convert back and forth between rustc's native
@@ -39,8 +39,8 @@ not been thoroughly discussed by the Rust compiler team as a whole.
 Here is a (partial) list of some things that have to be adapted in
 Chalk as of today to match this document:
 
-* `Parameter<TF>` needs to be renamed to `GenericArgument`
-* `Vec<Parameter<TF>>` needs to be replaced with `GenericArguments`
+* `Parameter<I>` needs to be renamed to `GenericArgument`
+* `Vec<Parameter<I>>` needs to be replaced with `GenericArguments`
 * Extract `TypeName` into something opaque to chalk-ir.
 * Dyn type equality should probably be driven by entailment.
 * Projections need to be renamed to aliases.

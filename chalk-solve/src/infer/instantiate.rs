@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use super::*;
 
-impl<TF: TypeFamily> InferenceTable<TF> {
+impl<I: Interner> InferenceTable<I> {
     /// Given the binders from a canonicalized value C, returns a
     /// substitution S mapping each free variable in C to a fresh
     /// inference variable. This substitution can then be applied to
@@ -12,7 +12,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     pub(crate) fn fresh_subst(
         &mut self,
         binders: &[ParameterKind<UniverseIndex>],
-    ) -> Substitution<TF> {
+    ) -> Substitution<I> {
         Substitution::from(binders.iter().map(|kind| {
             let param_infer_var = kind.map(|ui| self.new_variable(ui));
             param_infer_var.to_parameter()
@@ -22,7 +22,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     /// Variant on `instantiate` that takes a `Canonical<T>`.
     pub(crate) fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
     where
-        T: Fold<TF> + Debug,
+        T: Fold<I> + Debug,
     {
         let subst = self.fresh_subst(&bound.binders);
         bound.value.fold_with(&mut &subst, 0).unwrap()
@@ -40,7 +40,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
         arg: &T,
     ) -> T::Result
     where
-        T: Fold<TF>,
+        T: Fold<I>,
         U: IntoIterator<Item = ParameterKind<()>>,
     {
         let binders: Vec<_> = binders
@@ -57,7 +57,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
         arg: impl IntoBindersAndValue<Value = T>,
     ) -> T::Result
     where
-        T: Fold<TF>,
+        T: Fold<I>,
     {
         let (binders, value) = arg.into_binders_and_value();
         let max_universe = self.max_universe;
@@ -69,7 +69,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
         arg: impl IntoBindersAndValue<Value = T>,
     ) -> T::Result
     where
-        T: Fold<TF>,
+        T: Fold<I>,
     {
         let (binders, value) = arg.into_binders_and_value();
         let ui = self.new_universe();
@@ -80,10 +80,10 @@ impl<TF: TypeFamily> InferenceTable<TF> {
                 let placeholder_idx = PlaceholderIndex { ui, idx };
                 match pk {
                     ParameterKind::Lifetime(()) => {
-                        let lt = placeholder_idx.to_lifetime::<TF>();
+                        let lt = placeholder_idx.to_lifetime::<I>();
                         lt.cast()
                     }
-                    ParameterKind::Ty(()) => placeholder_idx.to_ty::<TF>().cast(),
+                    ParameterKind::Ty(()) => placeholder_idx.to_ty::<I>().cast(),
                 }
             })
             .collect();
@@ -107,12 +107,12 @@ impl<'a, T> IntoBindersAndValue for &'a Binders<T> {
     }
 }
 
-impl<'a, TF> IntoBindersAndValue for &'a Fn<TF>
+impl<'a, I> IntoBindersAndValue for &'a Fn<I>
 where
-    TF: TypeFamily,
+    I: Interner,
 {
     type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::ParameterKind<()>>;
-    type Value = &'a Vec<Parameter<TF>>;
+    type Value = &'a Vec<Parameter<I>>;
 
     fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
         fn make_lifetime(_: usize) -> ParameterKind<()> {

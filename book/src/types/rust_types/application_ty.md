@@ -19,7 +19,7 @@ more detail elsewhere. The point is that it represents, semantically,
 either the name of some user-defined type (like `Vec`) or builtin-types
 like `i32`. It may also represent types like "tuple of arity 2" (`(_,
 _)`) or "fixed-length array" `[_; _]`. Note that the precise set of
-these built-in types is defined by the `TypeFamily` and is unknown to
+these built-in types is defined by the `Interner` and is unknown to
 chalk-ir.
 
 [`TypeName`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TypeName.html

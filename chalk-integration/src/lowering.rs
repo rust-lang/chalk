@@ -1,5 +1,5 @@
 use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::family::ChalkIr;
+use chalk_ir::interner::ChalkIr;
 use chalk_ir::{self, AssocTypeId, ImplId, StructId, TraitId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;

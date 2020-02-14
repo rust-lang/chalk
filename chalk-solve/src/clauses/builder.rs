@@ -1,7 +1,7 @@
 use crate::cast::{Cast, CastTo};
 use crate::RustIrDatabase;
-use chalk_ir::family::{HasTypeFamily, TypeFamily};
 use chalk_ir::fold::Fold;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use std::marker::PhantomData;
@@ -10,15 +10,15 @@ use std::marker::PhantomData;
 /// program clauses. It takes ownership of the output vector while it
 /// lasts, and offers methods like `push_clause` and so forth to
 /// append to it.
-pub struct ClauseBuilder<'me, TF: TypeFamily> {
-    pub db: &'me dyn RustIrDatabase<TF>,
-    clauses: &'me mut Vec<ProgramClause<TF>>,
+pub struct ClauseBuilder<'me, I: Interner> {
+    pub db: &'me dyn RustIrDatabase<I>,
+    clauses: &'me mut Vec<ProgramClause<I>>,
     binders: Vec<ParameterKind<()>>,
-    parameters: Vec<Parameter<TF>>,
+    parameters: Vec<Parameter<I>>,
 }
 
-impl<'me, TF: TypeFamily> ClauseBuilder<'me, TF> {
-    pub fn new(db: &'me dyn RustIrDatabase<TF>, clauses: &'me mut Vec<ProgramClause<TF>>) -> Self {
+impl<'me, I: Interner> ClauseBuilder<'me, I> {
+    pub fn new(db: &'me dyn RustIrDatabase<I>, clauses: &'me mut Vec<ProgramClause<I>>) -> Self {
         Self {
             db,
             clauses,
@@ -31,7 +31,7 @@ impl<'me, TF: TypeFamily> ClauseBuilder<'me, TF> {
     /// program clauses, meaning something that we can assume to be
     /// true unconditionally. The `forall<..>` binders will be
     /// whichever binders have been pushed (see `push_binders`).
-    pub fn push_fact(&mut self, consequence: impl CastTo<DomainGoal<TF>>) {
+    pub fn push_fact(&mut self, consequence: impl CastTo<DomainGoal<I>>) {
         self.push_clause(consequence, None::<Goal<_>>);
     }
 
@@ -41,8 +41,8 @@ impl<'me, TF: TypeFamily> ClauseBuilder<'me, TF> {
     /// binders will be whichever binders have been pushed (see `push_binders`).
     pub fn push_clause(
         &mut self,
-        consequence: impl CastTo<DomainGoal<TF>>,
-        conditions: impl IntoIterator<Item = impl CastTo<Goal<TF>>>,
+        consequence: impl CastTo<DomainGoal<I>>,
+        conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
     ) {
         let clause = ProgramClauseImplication {
             consequence: consequence.cast(),
@@ -62,13 +62,13 @@ impl<'me, TF: TypeFamily> ClauseBuilder<'me, TF> {
     }
 
     /// Accesses the placeholders for the current list of parameters in scope.
-    pub fn placeholders_in_scope(&self) -> &[Parameter<TF>] {
+    pub fn placeholders_in_scope(&self) -> &[Parameter<I>] {
         &self.parameters
     }
 
     /// Accesses the placeholders for the current list of parameters in scope,
     /// in the form of a `Substitution`.
-    pub fn substitution_in_scope(&self) -> Substitution<TF> {
+    pub fn substitution_in_scope(&self) -> Substitution<I> {
         Substitution::from(self.placeholders_in_scope().iter().cloned())
     }
 
@@ -81,7 +81,7 @@ impl<'me, TF: TypeFamily> ClauseBuilder<'me, TF> {
     /// created referencing the *old* list of binders are still valid.
     pub fn push_binders<V>(&mut self, binders: &Binders<V>, op: impl FnOnce(&mut Self, V::Result))
     where
-        V: Fold<TF> + HasTypeFamily<TypeFamily = TF>,
+        V: Fold<I> + HasInterner<Interner = I>,
     {
         let old_len = self.binders.len();
         self.binders.extend(binders.binders.clone());
@@ -106,10 +106,10 @@ impl<'me, TF: TypeFamily> ClauseBuilder<'me, TF> {
     /// passing a type representing this new type variable in as an
     /// argument.
     #[allow(dead_code)]
-    pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<TF>)) {
+    pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
         let binders = Binders {
             binders: vec![ParameterKind::Ty(())],
-            value: PhantomData::<TF>,
+            value: PhantomData::<I>,
         };
         self.push_binders(&binders, |this, PhantomData| {
             let ty = this

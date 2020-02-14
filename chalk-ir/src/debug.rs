@@ -8,21 +8,21 @@ impl Debug for RawId {
     }
 }
 
-impl<TF: TypeFamily> Debug for TraitId<TF> {
+impl<I: Interner> Debug for TraitId<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_trait_id(*self, fmt).unwrap_or_else(|| write!(fmt, "TraitId({:?})", self.0))
+        I::debug_trait_id(*self, fmt).unwrap_or_else(|| write!(fmt, "TraitId({:?})", self.0))
     }
 }
 
-impl<TF: TypeFamily> Debug for StructId<TF> {
+impl<I: Interner> Debug for StructId<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_struct_id(*self, fmt).unwrap_or_else(|| write!(fmt, "StructId({:?})", self.0))
+        I::debug_struct_id(*self, fmt).unwrap_or_else(|| write!(fmt, "StructId({:?})", self.0))
     }
 }
 
-impl<TF: TypeFamily> Debug for AssocTypeId<TF> {
+impl<I: Interner> Debug for AssocTypeId<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_assoc_type_id(*self, fmt)
+        I::debug_assoc_type_id(*self, fmt)
             .unwrap_or_else(|| write!(fmt, "AssocTypeId({:?})", self.0))
     }
 }
@@ -39,7 +39,7 @@ impl Debug for UniverseIndex {
     }
 }
 
-impl<TF: TypeFamily> Debug for TypeName<TF> {
+impl<I: Interner> Debug for TypeName<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             TypeName::Struct(id) => write!(fmt, "{:?}", id),
@@ -48,13 +48,13 @@ impl<TF: TypeFamily> Debug for TypeName<TF> {
         }
     }
 }
-impl<TF: TypeFamily> Debug for Ty<TF> {
+impl<I: Interner> Debug for Ty<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "{:?}", self.data())
     }
 }
 
-impl<TF: TypeFamily> Debug for TyData<TF> {
+impl<I: Interner> Debug for TyData<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             TyData::BoundVar(depth) => write!(fmt, "^{}", depth),
@@ -68,7 +68,7 @@ impl<TF: TypeFamily> Debug for TyData<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for DynTy<TF> {
+impl<I: Interner> Debug for DynTy<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         let DynTy { bounds } = self;
         write!(fmt, "dyn {:?}", bounds)
@@ -81,7 +81,7 @@ impl Debug for InferenceVar {
     }
 }
 
-impl<TF: TypeFamily> Debug for Fn<TF> {
+impl<I: Interner> Debug for Fn<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         // FIXME -- we should introduce some names or something here
         let Fn {
@@ -92,13 +92,13 @@ impl<TF: TypeFamily> Debug for Fn<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for Lifetime<TF> {
+impl<I: Interner> Debug for Lifetime<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "{:?}", self.data())
     }
 }
 
-impl<TF: TypeFamily> Debug for LifetimeData<TF> {
+impl<I: Interner> Debug for LifetimeData<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             LifetimeData::BoundVar(depth) => write!(fmt, "'^{}", depth),
@@ -116,14 +116,14 @@ impl Debug for PlaceholderIndex {
     }
 }
 
-impl<TF: TypeFamily> Debug for ApplicationTy<TF> {
+impl<I: Interner> Debug for ApplicationTy<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         let ApplicationTy { name, substitution } = self;
         write!(fmt, "{:?}{:?}", name, substitution.with_angle())
     }
 }
 
-impl<TF: TypeFamily> TraitRef<TF> {
+impl<I: Interner> TraitRef<I> {
     /// Returns a "Debuggable" type that prints like `P0 as Trait<P1..>`
     pub fn with_as(&self) -> impl std::fmt::Debug + '_ {
         SeparatorTraitRef {
@@ -141,18 +141,18 @@ impl<TF: TypeFamily> TraitRef<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for TraitRef<TF> {
+impl<I: Interner> Debug for TraitRef<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         Debug::fmt(&self.with_as(), fmt)
     }
 }
 
-struct SeparatorTraitRef<'me, TF: TypeFamily> {
-    trait_ref: &'me TraitRef<TF>,
+struct SeparatorTraitRef<'me, I: Interner> {
+    trait_ref: &'me TraitRef<I>,
     separator: &'me str,
 }
 
-impl<TF: TypeFamily> Debug for SeparatorTraitRef<'_, TF> {
+impl<I: Interner> Debug for SeparatorTraitRef<'_, I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         let parameters = self.trait_ref.substitution.parameters();
         write!(
@@ -166,9 +166,9 @@ impl<TF: TypeFamily> Debug for SeparatorTraitRef<'_, TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for AliasTy<TF> {
+impl<I: Interner> Debug for AliasTy<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        TF::debug_alias(self, fmt).unwrap_or_else(|| {
+        I::debug_alias(self, fmt).unwrap_or_else(|| {
             write!(
                 fmt,
                 "({:?}){:?}",
@@ -198,19 +198,19 @@ impl<'a, T: Debug> Debug for Angle<'a, T> {
     }
 }
 
-impl<TF: TypeFamily> Debug for Normalize<TF> {
+impl<I: Interner> Debug for Normalize<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "Normalize({:?} -> {:?})", self.alias, self.ty)
     }
 }
 
-impl<TF: TypeFamily> Debug for AliasEq<TF> {
+impl<I: Interner> Debug for AliasEq<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "AliasEq({:?} = {:?})", self.alias, self.ty)
     }
 }
 
-impl<TF: TypeFamily> Debug for WhereClause<TF> {
+impl<I: Interner> Debug for WhereClause<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             WhereClause::Implemented(tr) => write!(fmt, "Implemented({:?})", tr.with_colon()),
@@ -219,7 +219,7 @@ impl<TF: TypeFamily> Debug for WhereClause<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for FromEnv<TF> {
+impl<I: Interner> Debug for FromEnv<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             FromEnv::Trait(t) => write!(fmt, "FromEnv({:?})", t.with_colon()),
@@ -228,7 +228,7 @@ impl<TF: TypeFamily> Debug for FromEnv<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for WellFormed<TF> {
+impl<I: Interner> Debug for WellFormed<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             WellFormed::Trait(t) => write!(fmt, "WellFormed({:?})", t.with_colon()),
@@ -237,7 +237,7 @@ impl<TF: TypeFamily> Debug for WellFormed<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for DomainGoal<TF> {
+impl<I: Interner> Debug for DomainGoal<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             DomainGoal::Holds(n) => write!(fmt, "{:?}", n),
@@ -256,13 +256,13 @@ impl<TF: TypeFamily> Debug for DomainGoal<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for EqGoal<TF> {
+impl<I: Interner> Debug for EqGoal<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "({:?} = {:?})", self.a, self.b)
     }
 }
 
-impl<TF: TypeFamily> Debug for Goal<TF> {
+impl<I: Interner> Debug for Goal<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self.data() {
             GoalData::Quantified(qkind, ref subgoal) => {
@@ -288,7 +288,7 @@ impl<TF: TypeFamily> Debug for Goal<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for Goals<TF> {
+impl<I: Interner> Debug for Goals<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "(")?;
         for (goal, index) in self.iter().zip(0..) {
@@ -325,7 +325,7 @@ impl<T: Debug> Debug for Binders<T> {
     }
 }
 
-impl<TF: TypeFamily> Debug for ProgramClause<TF> {
+impl<I: Interner> Debug for ProgramClause<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             ProgramClause::Implies(pc) => write!(fmt, "{:?}", pc),
@@ -334,7 +334,7 @@ impl<TF: TypeFamily> Debug for ProgramClause<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for ProgramClauseImplication<TF> {
+impl<I: Interner> Debug for ProgramClauseImplication<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "{:?}", self.consequence)?;
 
@@ -353,7 +353,7 @@ impl<TF: TypeFamily> Debug for ProgramClauseImplication<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for Environment<TF> {
+impl<I: Interner> Debug for Environment<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "Env({:?})", self.clauses)
     }
@@ -391,7 +391,7 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
     }
 }
 
-impl<TF: TypeFamily> Debug for Parameter<TF> {
+impl<I: Interner> Debug for Parameter<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self.data() {
             ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
@@ -400,7 +400,7 @@ impl<TF: TypeFamily> Debug for Parameter<TF> {
     }
 }
 
-impl<TF: TypeFamily> Debug for Constraint<TF> {
+impl<I: Interner> Debug for Constraint<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         match self {
             Constraint::LifetimeEq(a, b) => write!(fmt, "{:?} == {:?}", a, b),
@@ -408,7 +408,7 @@ impl<TF: TypeFamily> Debug for Constraint<TF> {
     }
 }
 
-impl<TF: TypeFamily> Display for ConstrainedSubst<TF> {
+impl<I: Interner> Display for ConstrainedSubst<I> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let ConstrainedSubst { subst, constraints } = self;
 
@@ -420,21 +420,21 @@ impl<TF: TypeFamily> Display for ConstrainedSubst<TF> {
     }
 }
 
-impl<TF: TypeFamily> Substitution<TF> {
+impl<I: Interner> Substitution<I> {
     /// Displays the substitution in the form `< P0, .. Pn >`, or (if
     /// the substitution is empty) as an empty string.
-    pub fn with_angle(&self) -> Angle<'_, Parameter<TF>> {
+    pub fn with_angle(&self) -> Angle<'_, Parameter<I>> {
         Angle(self.parameters())
     }
 }
 
-impl<TF: TypeFamily> Debug for Substitution<TF> {
+impl<I: Interner> Debug for Substitution<I> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         Display::fmt(self, fmt)
     }
 }
 
-impl<TF: TypeFamily> Display for Substitution<TF> {
+impl<I: Interner> Display for Substitution<I> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         let mut first = true;
 

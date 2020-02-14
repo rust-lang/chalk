@@ -3,16 +3,12 @@
 //!
 //! The more interesting impls of `Fold` remain in the `fold` module.
 
-use crate::family::TargetTypeFamily;
+use crate::interner::TargetInterner;
 use crate::*;
 
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Fn<TF> {
-    type Result = Fn<TTF>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Fn<I> {
+    type Result = Fn<TI>;
+    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
         let Fn {
             num_binders,
             ref parameters,
@@ -24,17 +20,13 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Fn<TF> {
     }
 }
 
-impl<T, TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Binders<T>
+impl<T, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Binders<T>
 where
-    T: Fold<TF, TTF>,
-    TF: TypeFamily,
+    T: Fold<I, TI>,
+    I: Interner,
 {
     type Result = Binders<T::Result>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
         let Binders {
             binders: ref self_binders,
             value: ref self_value,
@@ -47,18 +39,14 @@ where
     }
 }
 
-impl<T, TF, TTF> Fold<TF, TTF> for Canonical<T>
+impl<T, I, TI> Fold<I, TI> for Canonical<T>
 where
-    T: Fold<TF, TTF>,
-    TF: TypeFamily,
-    TTF: TargetTypeFamily<TF>,
+    T: Fold<I, TI>,
+    I: Interner,
+    TI: TargetInterner<I>,
 {
     type Result = Canonical<T::Result>;
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
         let Canonical {
             binders: ref self_binders,
             value: ref self_value,
