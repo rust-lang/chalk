@@ -2,7 +2,7 @@ use petgraph::prelude::*;
 
 use crate::solve::SolverChoice;
 use crate::RustIrDatabase;
-use chalk_ir::family::TypeFamily;
+use chalk_ir::interner::Interner;
 use chalk_ir::{self, ImplId, TraitId};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -11,19 +11,19 @@ use std::sync::Arc;
 pub mod orphan;
 mod solve;
 
-pub struct CoherenceSolver<'db, TF: TypeFamily> {
-    db: &'db dyn RustIrDatabase<TF>,
+pub struct CoherenceSolver<'db, I: Interner> {
+    db: &'db dyn RustIrDatabase<I>,
     solver_choice: SolverChoice,
-    trait_id: TraitId<TF>,
+    trait_id: TraitId<I>,
 }
 
 #[derive(Debug)]
-pub enum CoherenceError<TF: TypeFamily> {
-    OverlappingImpls(TraitId<TF>),
-    FailedOrphanCheck(TraitId<TF>),
+pub enum CoherenceError<I: Interner> {
+    OverlappingImpls(TraitId<I>),
+    FailedOrphanCheck(TraitId<I>),
 }
 
-impl<TF: TypeFamily> fmt::Display for CoherenceError<TF> {
+impl<I: Interner> fmt::Display for CoherenceError<I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CoherenceError::OverlappingImpls(id) => {
@@ -36,16 +36,16 @@ impl<TF: TypeFamily> fmt::Display for CoherenceError<TF> {
     }
 }
 
-impl<TF: TypeFamily> std::error::Error for CoherenceError<TF> {}
+impl<I: Interner> std::error::Error for CoherenceError<I> {}
 
 /// Stores the specialization priorities for a set of impls.
 /// This basically encodes which impls specialize one another.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct SpecializationPriorities<TF: TypeFamily> {
-    map: BTreeMap<ImplId<TF>, SpecializationPriority>,
+pub struct SpecializationPriorities<I: Interner> {
+    map: BTreeMap<ImplId<I>, SpecializationPriority>,
 }
 
-impl<TF: TypeFamily> SpecializationPriorities<TF> {
+impl<I: Interner> SpecializationPriorities<I> {
     pub fn new() -> Self {
         Self {
             map: BTreeMap::new(),
@@ -53,13 +53,13 @@ impl<TF: TypeFamily> SpecializationPriorities<TF> {
     }
 
     /// Lookup the priority of an impl in the set (panics if impl is not in set).
-    pub fn priority(&self, impl_id: ImplId<TF>) -> SpecializationPriority {
+    pub fn priority(&self, impl_id: ImplId<I>) -> SpecializationPriority {
         self.map[&impl_id]
     }
 
     /// Store the priority of an impl (used during construction).
     /// Panics if we have already stored the priority for this impl.
-    fn insert(&mut self, impl_id: ImplId<TF>, p: SpecializationPriority) {
+    fn insert(&mut self, impl_id: ImplId<I>, p: SpecializationPriority) {
         let old_value = self.map.insert(impl_id, p);
         assert!(old_value.is_none());
     }
@@ -71,15 +71,15 @@ impl<TF: TypeFamily> SpecializationPriorities<TF> {
 #[derive(Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub struct SpecializationPriority(usize);
 
-impl<'db, TF> CoherenceSolver<'db, TF>
+impl<'db, I> CoherenceSolver<'db, I>
 where
-    TF: TypeFamily,
+    I: Interner,
 {
     /// Constructs a new `CoherenceSolver`.
     pub fn new(
-        db: &'db dyn RustIrDatabase<TF>,
+        db: &'db dyn RustIrDatabase<I>,
         solver_choice: SolverChoice,
-        trait_id: TraitId<TF>,
+        trait_id: TraitId<I>,
     ) -> Self {
         Self {
             db,
@@ -90,8 +90,8 @@ where
 
     pub fn specialization_priorities(
         &self,
-    ) -> Result<Arc<SpecializationPriorities<TF>>, CoherenceError<TF>> {
-        let mut result = SpecializationPriorities::<TF>::new();
+    ) -> Result<Arc<SpecializationPriorities<I>>, CoherenceError<I>> {
+        let mut result = SpecializationPriorities::<I>::new();
 
         let forest = self.build_specialization_forest()?;
 
@@ -105,7 +105,7 @@ where
     }
 
     // Build the forest of specialization relationships.
-    fn build_specialization_forest(&self) -> Result<Graph<ImplId<TF>, ()>, CoherenceError<TF>> {
+    fn build_specialization_forest(&self) -> Result<Graph<ImplId<I>, ()>, CoherenceError<I>> {
         // The forest is returned as a graph but built as a GraphMap; this is
         // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraphMap::new();
@@ -124,9 +124,9 @@ where
     fn set_priorities(
         &self,
         idx: NodeIndex,
-        forest: &Graph<ImplId<TF>, ()>,
+        forest: &Graph<ImplId<I>, ()>,
         p: usize,
-        map: &mut SpecializationPriorities<TF>,
+        map: &mut SpecializationPriorities<I>,
     ) {
         // Get the impl datum recorded at this node and reset its priority
         {

@@ -3,7 +3,7 @@
 The [`Fold`] trait permits one to traverse a type or other term in the
 chalk-ir and make a copy of it, possibly making small substitutions or
 alterations along the way. Folding also allows copying a term from one
-type family to another.
+interner to another.
 
 [`Fold`]: http://rust-lang.github.io/chalk/chalk_ir/fold/trait.Fold.html
 
@@ -88,8 +88,8 @@ to require it. The derive for `Fold` is a bit cludgy and requires:
 
 * You must import `Fold` into scope.
 * The type you are deriving `Fold` on must have either:
-  * A type parameter that has a `TypeFamily` bound, like `TF: TypeFamily`
-  * A type parameter that has a `HasTypeFamily` bound, like `TF: HasTypeFamily`
-  * The `has_type_family(XXX)` attribute.
+  * A type parameter that has a `Interner` bound, like `I: Interner`
+  * A type parameter that has a `HasInterner` bound, like `I: HasInterner`
+  * The `has_interner(XXX)` attribute.
 
 

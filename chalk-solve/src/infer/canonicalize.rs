@@ -1,13 +1,13 @@
 use chalk_engine::fallible::*;
-use chalk_ir::family::{HasTypeFamily, TypeFamily};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{Fold, Folder};
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use std::cmp::max;
 
 use super::{EnaVariable, InferenceTable, ParameterEnaVariable};
 
-impl<TF: TypeFamily> InferenceTable<TF> {
+impl<I: Interner> InferenceTable<I> {
     /// Given a value `value` with variables in it, replaces those variables
     /// with their instantiated values; any variables not yet instantiated are
     /// replaced with a small integer index 0..N in order of appearance. The
@@ -28,8 +28,8 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     /// also returned.
     pub(crate) fn canonicalize<T>(&mut self, value: &T) -> Canonicalized<T::Result>
     where
-        T: Fold<TF>,
-        T::Result: HasTypeFamily<TypeFamily = TF>,
+        T: Fold<I>,
+        T::Result: HasInterner<Interner = I>,
     {
         debug!("canonicalize({:#?})", value);
         let mut q = Canonicalizer {
@@ -53,25 +53,25 @@ impl<TF: TypeFamily> InferenceTable<TF> {
 }
 
 #[derive(Debug)]
-pub(crate) struct Canonicalized<T: HasTypeFamily> {
+pub(crate) struct Canonicalized<T: HasInterner> {
     /// The canonicalized result.
     pub(crate) quantified: Canonical<T>,
 
     /// The free existential variables, along with the universes they inhabit.
-    pub(crate) free_vars: Vec<ParameterEnaVariable<T::TypeFamily>>,
+    pub(crate) free_vars: Vec<ParameterEnaVariable<T::Interner>>,
 
     /// The maximum universe of any universally quantified variables
     /// encountered.
     max_universe: UniverseIndex,
 }
 
-struct Canonicalizer<'q, TF: TypeFamily> {
-    table: &'q mut InferenceTable<TF>,
-    free_vars: Vec<ParameterEnaVariable<TF>>,
+struct Canonicalizer<'q, I: Interner> {
+    table: &'q mut InferenceTable<I>,
+    free_vars: Vec<ParameterEnaVariable<I>>,
     max_universe: UniverseIndex,
 }
 
-impl<'q, TF: TypeFamily> Canonicalizer<'q, TF> {
+impl<'q, I: Interner> Canonicalizer<'q, I> {
     fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
         let Canonicalizer {
             table,
@@ -84,7 +84,7 @@ impl<'q, TF: TypeFamily> Canonicalizer<'q, TF> {
             .collect()
     }
 
-    fn add(&mut self, free_var: ParameterEnaVariable<TF>) -> usize {
+    fn add(&mut self, free_var: ParameterEnaVariable<I>) -> usize {
         self.free_vars
             .iter()
             .position(|&v| v == free_var)
@@ -96,8 +96,8 @@ impl<'q, TF: TypeFamily> Canonicalizer<'q, TF> {
     }
 }
 
-impl<TF: TypeFamily> Folder<TF> for Canonicalizer<'_, TF> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
@@ -105,25 +105,25 @@ impl<TF: TypeFamily> Folder<TF> for Canonicalizer<'_, TF> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty<TF>> {
+    ) -> Fallible<Ty<I>> {
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_ty::<TF>())
+        Ok(universe.to_ty::<I>())
     }
 
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Lifetime<TF>> {
+    ) -> Fallible<Lifetime<I>> {
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_lifetime::<TF>())
+        Ok(universe.to_lifetime::<I>())
     }
 
     fn forbid_free_vars(&self) -> bool {
         true
     }
 
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<TF>> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<I>> {
         debug_heading!("fold_inference_ty(depth={:?}, binders={:?})", var, binders);
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
@@ -148,7 +148,7 @@ impl<TF: TypeFamily> Folder<TF> for Canonicalizer<'_, TF> {
         &mut self,
         var: InferenceVar,
         binders: usize,
-    ) -> Fallible<Lifetime<TF>> {
+    ) -> Fallible<Lifetime<I>> {
         debug_heading!(
             "fold_inference_lifetime(depth={:?}, binders={:?})",
             var,

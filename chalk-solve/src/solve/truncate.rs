@@ -2,20 +2,20 @@
 
 use crate::infer::InferenceTable;
 use chalk_engine::fallible::*;
-use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{Fold, Folder, SuperFold};
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::fmt::Debug;
 
-pub(crate) fn truncate<T, TF>(
-    infer: &mut InferenceTable<TF>,
+pub(crate) fn truncate<T, I>(
+    infer: &mut InferenceTable<I>,
     max_size: usize,
     value: &T,
 ) -> Truncated<T::Result>
 where
-    TF: TypeFamily,
-    T: Fold<TF>,
+    I: Interner,
+    T: Fold<I>,
     T::Result: Debug,
 {
     debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
@@ -45,15 +45,15 @@ pub(crate) struct Truncated<T> {
     pub(crate) value: T,
 }
 
-struct Truncater<'infer, TF: TypeFamily> {
-    infer: &'infer mut InferenceTable<TF>,
+struct Truncater<'infer, I: Interner> {
+    infer: &'infer mut InferenceTable<I>,
     current_size: usize,
     max_size: usize,
     overflow: bool,
 }
 
-impl<'infer, TF: TypeFamily> Truncater<'infer, TF> {
-    fn new(infer: &'infer mut InferenceTable<TF>, max_size: usize) -> Self {
+impl<'infer, I: Interner> Truncater<'infer, I> {
+    fn new(infer: &'infer mut InferenceTable<I>, max_size: usize) -> Self {
         Truncater {
             infer,
             current_size: 0,
@@ -62,7 +62,7 @@ impl<'infer, TF: TypeFamily> Truncater<'infer, TF> {
         }
     }
 
-    fn overflow(&mut self, pre_size: usize) -> Ty<TF> {
+    fn overflow(&mut self, pre_size: usize) -> Ty<I> {
         self.overflow = true;
         self.current_size = pre_size + 1;
         let universe = self.infer.max_universe();
@@ -70,12 +70,12 @@ impl<'infer, TF: TypeFamily> Truncater<'infer, TF> {
     }
 }
 
-impl<TF: TypeFamily> Folder<TF> for Truncater<'_, TF> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+impl<I: Interner> Folder<I> for Truncater<'_, I> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
-    fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TF>> {
+    fn fold_ty(&mut self, ty: &Ty<I>, binders: usize) -> Fallible<Ty<I>> {
         if let Some(normalized_ty) = self.infer.normalize_shallow(ty) {
             return self.fold_ty(&normalized_ty, binders);
         }
@@ -110,14 +110,14 @@ impl<TF: TypeFamily> Folder<TF> for Truncater<'_, TF> {
         Ok(result)
     }
 
-    fn fold_lifetime(&mut self, lifetime: &Lifetime<TF>, binders: usize) -> Fallible<Lifetime<TF>> {
+    fn fold_lifetime(&mut self, lifetime: &Lifetime<I>, binders: usize) -> Fallible<Lifetime<I>> {
         lifetime.super_fold_with(self, binders)
     }
 }
 
 #[test]
 fn truncate_types() {
-    let mut table = InferenceTable::<chalk_ir::family::ChalkIr>::new();
+    let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
     let environment0 = &Environment::new();
     let _u1 = table.new_universe();
 
@@ -159,7 +159,7 @@ fn truncate_types() {
 
 #[test]
 fn truncate_multiple_types() {
-    let mut table = InferenceTable::<chalk_ir::family::ChalkIr>::new();
+    let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
     let _u1 = table.new_universe();
 
     // Vec<Vec<Vec<Vec<T>>>>
@@ -206,7 +206,7 @@ fn truncate_multiple_types() {
 
 #[test]
 fn truncate_normalizes() {
-    let mut table = InferenceTable::<chalk_ir::family::ChalkIr>::new();
+    let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
 
     let environment0 = &Environment::new();
     let u1 = table.new_universe();
@@ -244,7 +244,7 @@ fn truncate_normalizes() {
 
 #[test]
 fn truncate_normalizes_under_binders() {
-    let mut table = InferenceTable::<chalk_ir::family::ChalkIr>::new();
+    let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
 
     let u0 = UniverseIndex::ROOT;
 

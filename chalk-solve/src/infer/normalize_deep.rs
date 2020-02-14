@@ -1,12 +1,12 @@
 use chalk_engine::fallible::*;
-use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{Fold, Folder};
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
 use super::{EnaVariable, InferenceTable};
 
-impl<TF: TypeFamily> InferenceTable<TF> {
+impl<I: Interner> InferenceTable<I> {
     /// Given a value `value` with variables in it, replaces those variables
     /// with their instantiated values (if any). Uninstantiated variables are
     /// left as-is.
@@ -18,23 +18,23 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     /// See also `InferenceTable::canonicalize`, which -- during real
     /// processing -- is often used to capture the "current state" of
     /// variables.
-    pub(crate) fn normalize_deep<T: Fold<TF>>(&mut self, value: &T) -> T::Result {
+    pub(crate) fn normalize_deep<T: Fold<I>>(&mut self, value: &T) -> T::Result {
         value
             .fold_with(&mut DeepNormalizer { table: self }, 0)
             .unwrap()
     }
 }
 
-struct DeepNormalizer<'table, TF: TypeFamily> {
-    table: &'table mut InferenceTable<TF>,
+struct DeepNormalizer<'table, I: Interner> {
+    table: &'table mut InferenceTable<I>,
 }
 
-impl<TF: TypeFamily> Folder<TF> for DeepNormalizer<'_, TF> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+impl<I: Interner> Folder<I> for DeepNormalizer<'_, I> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<TF>> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<I>> {
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
             Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(binders)), // FIXME shift
@@ -46,7 +46,7 @@ impl<TF: TypeFamily> Folder<TF> for DeepNormalizer<'_, TF> {
         &mut self,
         var: InferenceVar,
         binders: usize,
-    ) -> Fallible<Lifetime<TF>> {
+    ) -> Fallible<Lifetime<I>> {
         let var = EnaVariable::from(var);
         match self.table.probe_lifetime_var(var) {
             Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(binders)),

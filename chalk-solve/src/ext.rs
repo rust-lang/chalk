@@ -1,21 +1,21 @@
 use crate::infer::InferenceTable;
-use chalk_ir::family::{HasTypeFamily, TypeFamily};
 use chalk_ir::fold::Fold;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 
-pub trait CanonicalExt<T: HasTypeFamily, TF: TypeFamily> {
+pub trait CanonicalExt<T: HasInterner, I: Interner> {
     fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
-        T: Fold<TF>,
-        U: Fold<TF>,
-        U::Result: HasTypeFamily<TypeFamily = TF>;
+        T: Fold<I>,
+        U: Fold<I>,
+        U::Result: HasInterner<Interner = I>;
 }
 
-impl<T, TF> CanonicalExt<T, TF> for Canonical<T>
+impl<T, I> CanonicalExt<T, I> for Canonical<T>
 where
-    T: HasTypeFamily<TypeFamily = TF>,
-    TF: TypeFamily,
+    T: HasInterner<Interner = I>,
+    I: Interner,
 {
     /// Maps the contents using `op`, but preserving the binders.
     ///
@@ -27,9 +27,9 @@ where
     fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
-        T: Fold<TF>,
-        U: Fold<TF>,
-        U::Result: HasTypeFamily<TypeFamily = TF>,
+        T: Fold<I>,
+        U: Fold<I>,
+        U::Result: HasInterner<Interner = I>,
     {
         // Subtle: It is only quite rarely correct to apply `op` and
         // just re-use our existing binders. For that to be valid, the
@@ -50,19 +50,19 @@ where
     }
 }
 
-pub trait GoalExt<TF: TypeFamily> {
-    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<TF>>>;
-    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<TF>>>;
+pub trait GoalExt<I: Interner> {
+    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<I>>>;
+    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<I>>>;
 }
 
-impl<TF: TypeFamily> GoalExt<TF> for Goal<TF> {
+impl<I: Interner> GoalExt<I> for Goal<I> {
     /// Returns a canonical goal in which the outermost `exists<>` and
     /// `forall<>` quantifiers (as well as implications) have been
     /// "peeled" and are converted into free universal or existential
     /// variables. Assumes that this goal is a "closed goal" which
     /// does not -- at present -- contain any variables. Useful for
     /// REPLs and tests but not much else.
-    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<TF>>> {
+    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<I>>> {
         let mut infer = InferenceTable::new();
         let peeled_goal = {
             let mut env_goal = InEnvironment::new(&Environment::new(), self);
@@ -101,7 +101,7 @@ impl<TF: TypeFamily> GoalExt<TF> for Goal<TF> {
     /// # Panics
     ///
     /// Will panic if this goal does in fact contain free variables.
-    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<TF>>> {
+    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<I>>> {
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(), self);
         let canonical_goal = infer.canonicalize(&env_goal).quantified;

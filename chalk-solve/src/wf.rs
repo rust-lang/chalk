@@ -5,17 +5,17 @@ use crate::solve::SolverChoice;
 use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::*;
-use chalk_ir::family::{HasTypeFamily, TypeFamily};
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use chalk_rust_ir::*;
 
 #[derive(Debug)]
-pub enum WfError<TF: TypeFamily> {
-    IllFormedTypeDecl(chalk_ir::StructId<TF>),
-    IllFormedTraitImpl(chalk_ir::TraitId<TF>),
+pub enum WfError<I: Interner> {
+    IllFormedTypeDecl(chalk_ir::StructId<I>),
+    IllFormedTraitImpl(chalk_ir::TraitId<I>),
 }
 
-impl<TF: TypeFamily> fmt::Display for WfError<TF> {
+impl<I: Interner> fmt::Display for WfError<I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             WfError::IllFormedTypeDecl(id) => write!(
@@ -32,20 +32,20 @@ impl<TF: TypeFamily> fmt::Display for WfError<TF> {
     }
 }
 
-impl<TF: TypeFamily> std::error::Error for WfError<TF> {}
+impl<I: Interner> std::error::Error for WfError<I> {}
 
-pub struct WfSolver<'db, TF: TypeFamily> {
-    db: &'db dyn RustIrDatabase<TF>,
+pub struct WfSolver<'db, I: Interner> {
+    db: &'db dyn RustIrDatabase<I>,
     solver_choice: SolverChoice,
 }
 
 /// A trait for retrieving all types appearing in some Chalk construction.
-trait FoldInputTypes: HasTypeFamily {
-    fn fold(&self, accumulator: &mut Vec<Ty<Self::TypeFamily>>);
+trait FoldInputTypes: HasInterner {
+    fn fold(&self, accumulator: &mut Vec<Ty<Self::Interner>>);
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for [T] {
-    fn fold(&self, accumulator: &mut Vec<Ty<T::TypeFamily>>) {
+    fn fold(&self, accumulator: &mut Vec<Ty<T::Interner>>) {
         for f in self {
             f.fold(accumulator);
         }
@@ -53,29 +53,29 @@ impl<T: FoldInputTypes> FoldInputTypes for [T] {
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty<T::TypeFamily>>) {
+    fn fold(&self, accumulator: &mut Vec<Ty<T::Interner>>) {
         for f in self {
             f.fold(accumulator);
         }
     }
 }
 
-impl<TF: TypeFamily> FoldInputTypes for Parameter<TF> {
-    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
+impl<I: Interner> FoldInputTypes for Parameter<I> {
+    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
         if let ParameterKind::Ty(ty) = self.data() {
             ty.fold(accumulator)
         }
     }
 }
 
-impl<TF: TypeFamily> FoldInputTypes for Substitution<TF> {
-    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
+impl<I: Interner> FoldInputTypes for Substitution<I> {
+    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
         self.parameters().fold(accumulator)
     }
 }
 
-impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
-    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
+impl<I: Interner> FoldInputTypes for Ty<I> {
+    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
         match self.data() {
             TyData::Apply(app) => {
                 accumulator.push(self.clone());
@@ -113,21 +113,21 @@ impl<TF: TypeFamily> FoldInputTypes for Ty<TF> {
     }
 }
 
-impl<TF: TypeFamily> FoldInputTypes for TraitRef<TF> {
-    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
+impl<I: Interner> FoldInputTypes for TraitRef<I> {
+    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
         self.substitution.fold(accumulator);
     }
 }
 
-impl<TF: TypeFamily> FoldInputTypes for AliasEq<TF> {
-    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
+impl<I: Interner> FoldInputTypes for AliasEq<I> {
+    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
         TyData::Alias(self.alias.clone()).intern().fold(accumulator);
         self.ty.fold(accumulator);
     }
 }
 
-impl<TF: TypeFamily> FoldInputTypes for WhereClause<TF> {
-    fn fold(&self, accumulator: &mut Vec<Ty<TF>>) {
+impl<I: Interner> FoldInputTypes for WhereClause<I> {
+    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
         match self {
             WhereClause::Implemented(tr) => tr.fold(accumulator),
             WhereClause::AliasEq(p) => p.fold(accumulator),
@@ -136,21 +136,21 @@ impl<TF: TypeFamily> FoldInputTypes for WhereClause<TF> {
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty<T::TypeFamily>>) {
+    fn fold(&self, accumulator: &mut Vec<Ty<T::Interner>>) {
         self.value.fold(accumulator);
     }
 }
 
-impl<'db, TF> WfSolver<'db, TF>
+impl<'db, I> WfSolver<'db, I>
 where
-    TF: TypeFamily,
+    I: Interner,
 {
     /// Constructs a new `WfSolver`.
-    pub fn new(db: &'db dyn RustIrDatabase<TF>, solver_choice: SolverChoice) -> Self {
+    pub fn new(db: &'db dyn RustIrDatabase<I>, solver_choice: SolverChoice) -> Self {
         Self { db, solver_choice }
     }
 
-    pub fn verify_struct_decl(&self, struct_id: StructId<TF>) -> Result<(), WfError<TF>> {
+    pub fn verify_struct_decl(&self, struct_id: StructId<I>) -> Result<(), WfError<I>> {
         let struct_datum = self.db.struct_datum(struct_id);
 
         // We retrieve all the input types of the struct fields.
@@ -170,7 +170,7 @@ where
             .into_iter()
             .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
             .casted();
-        let goal = goals.collect::<Goal<TF>>();
+        let goal = goals.collect::<Goal<I>>();
 
         let hypotheses = struct_datum
             .binders
@@ -204,7 +204,7 @@ where
         }
     }
 
-    pub fn verify_trait_impl(&self, impl_id: ImplId<TF>) -> Result<(), WfError<TF>> {
+    pub fn verify_trait_impl(&self, impl_id: ImplId<I>) -> Result<(), WfError<I>> {
         let impl_datum = self.db.impl_datum(impl_id);
 
         if !impl_datum.is_positive() {
@@ -256,7 +256,7 @@ where
             .chain(assoc_ty_goals)
             .chain(Some(trait_ref_wf).cast());
 
-        let goal = goals.collect::<Goal<TF>>();
+        let goal = goals.collect::<Goal<I>>();
 
         // Assumptions: types appearing in the header which are not projection types are
         // assumed to be well-formed, and where clauses declared on the impl are assumed
@@ -327,7 +327,7 @@ where
     ///     forall<'a> { WellFormed(Box<&'a T>) },
     /// }
     /// ```
-    fn compute_assoc_ty_goal(&self, assoc_ty_id: AssociatedTyValueId) -> Option<Goal<TF>> {
+    fn compute_assoc_ty_goal(&self, assoc_ty_id: AssociatedTyValueId) -> Option<Goal<I>> {
         let assoc_ty = &self.db.associated_ty_value(assoc_ty_id);
 
         // The substitutions for the binders on this associated type
@@ -399,7 +399,7 @@ where
 
         // Concatenate the WF goals of inner types + the requirements from trait
         let goals = wf_goals.chain(bound_goals);
-        let goal: Goal<TF> = goals.collect();
+        let goal: Goal<I> = goals.collect();
         if goal.is_trivially_true() {
             return None;
         }

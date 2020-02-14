@@ -5,7 +5,7 @@ use crate::solve::slg::SlgContextOps;
 use crate::solve::slg::SubstitutionExt;
 use crate::solve::{Guidance, Solution};
 use chalk_ir::cast::Cast;
-use chalk_ir::family::TypeFamily;
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
 use chalk_engine::context::{self, AnswerResult, Context};
@@ -14,13 +14,13 @@ use std::fmt::Debug;
 
 /// Draws as many answers as it needs from `answers` (but
 /// no more!) in order to come up with a solution.
-impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_, TF> {
+impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> {
     fn make_solution(
         &self,
-        root_goal: &UCanonical<InEnvironment<Goal<TF>>>,
-        mut answers: impl context::AnswerStream<SlgContext<TF>>,
+        root_goal: &UCanonical<InEnvironment<Goal<I>>>,
+        mut answers: impl context::AnswerStream<SlgContext<I>>,
         should_continue: impl std::ops::Fn() -> bool,
-    ) -> Option<Solution<TF>> {
+    ) -> Option<Solution<I>> {
         let CompleteAnswer { subst, ambiguous } = match answers.next_answer(|| should_continue()) {
             AnswerResult::NoMoreSolutions => {
                 // No answers at all
@@ -112,11 +112,11 @@ impl<TF: TypeFamily> context::AggregateOps<SlgContext<TF>> for SlgContextOps<'_,
 /// than the old guidance. For example, if we had a guidance of `?0 =
 /// u32` and the new answer is `?0 = i32`, then the guidance would
 /// become `?0 = ?X` (where `?X` is some fresh variable).
-fn merge_into_guidance<TF: TypeFamily>(
-    root_goal: &Canonical<InEnvironment<Goal<TF>>>,
-    guidance: Canonical<Substitution<TF>>,
-    answer: &Canonical<ConstrainedSubst<TF>>,
-) -> Canonical<Substitution<TF>> {
+fn merge_into_guidance<I: Interner>(
+    root_goal: &Canonical<InEnvironment<Goal<I>>>,
+    guidance: Canonical<Substitution<I>>,
+    answer: &Canonical<ConstrainedSubst<I>>,
+) -> Canonical<Substitution<I>> {
     let mut infer = InferenceTable::new();
     let Canonical {
         value: ConstrainedSubst {
@@ -164,7 +164,7 @@ fn merge_into_guidance<TF: TypeFamily>(
     infer.canonicalize(&aggr_subst).quantified
 }
 
-fn is_trivial<TF: TypeFamily>(subst: &Canonical<Substitution<TF>>) -> bool {
+fn is_trivial<I: Interner>(subst: &Canonical<Substitution<I>>) -> bool {
     // A subst is trivial if..
     subst
         .value
@@ -191,13 +191,13 @@ fn is_trivial<TF: TypeFamily>(subst: &Canonical<Substitution<TF>>) -> bool {
 /// `Vec<?X>`. This is a **very simplistic** anti-unifier.
 ///
 /// [Anti-unification]: https://en.wikipedia.org/wiki/Anti-unification_(computer_science)
-struct AntiUnifier<'infer, TF: TypeFamily> {
-    infer: &'infer mut InferenceTable<TF>,
+struct AntiUnifier<'infer, I: Interner> {
+    infer: &'infer mut InferenceTable<I>,
     universe: UniverseIndex,
 }
 
-impl<TF: TypeFamily> AntiUnifier<'_, TF> {
-    fn aggregate_tys(&mut self, ty0: &Ty<TF>, ty1: &Ty<TF>) -> Ty<TF> {
+impl<I: Interner> AntiUnifier<'_, I> {
+    fn aggregate_tys(&mut self, ty0: &Ty<I>, ty1: &Ty<I>) -> Ty<I> {
         match (ty0.data(), ty1.data()) {
             // If we see bound things on either side, just drop in a
             // fresh variable. This means we will sometimes
@@ -239,9 +239,9 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
 
     fn aggregate_application_tys(
         &mut self,
-        apply1: &ApplicationTy<TF>,
-        apply2: &ApplicationTy<TF>,
-    ) -> Ty<TF> {
+        apply1: &ApplicationTy<I>,
+        apply2: &ApplicationTy<I>,
+    ) -> Ty<I> {
         let ApplicationTy {
             name: name1,
             substitution: substitution1,
@@ -262,7 +262,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         &mut self,
         index1: &PlaceholderIndex,
         index2: &PlaceholderIndex,
-    ) -> Ty<TF> {
+    ) -> Ty<I> {
         if index1 != index2 {
             self.new_variable()
         } else {
@@ -270,7 +270,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         }
     }
 
-    fn aggregate_alias_tys(&mut self, alias1: &AliasTy<TF>, alias2: &AliasTy<TF>) -> Ty<TF> {
+    fn aggregate_alias_tys(&mut self, alias1: &AliasTy<I>, alias2: &AliasTy<I>) -> Ty<I> {
         let AliasTy {
             associated_ty_id: name1,
             substitution: substitution1,
@@ -294,10 +294,10 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
     fn aggregate_name_and_substs<N>(
         &mut self,
         name1: N,
-        substitution1: &Substitution<TF>,
+        substitution1: &Substitution<I>,
         name2: N,
-        substitution2: &Substitution<TF>,
-    ) -> Option<(N, Substitution<TF>)>
+        substitution2: &Substitution<I>,
+    ) -> Option<(N, Substitution<I>)>
     where
         N: Copy + Eq + Debug,
     {
@@ -326,7 +326,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         Some((name, substitution))
     }
 
-    fn aggregate_parameters(&mut self, p1: &Parameter<TF>, p2: &Parameter<TF>) -> Parameter<TF> {
+    fn aggregate_parameters(&mut self, p1: &Parameter<I>, p2: &Parameter<I>) -> Parameter<I> {
         match (p1.data(), p2.data()) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2).cast(),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
@@ -338,7 +338,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         }
     }
 
-    fn aggregate_lifetimes(&mut self, l1: &Lifetime<TF>, l2: &Lifetime<TF>) -> Lifetime<TF> {
+    fn aggregate_lifetimes(&mut self, l1: &Lifetime<I>, l2: &Lifetime<I>) -> Lifetime<I> {
         match (l1.data(), l2.data()) {
             (LifetimeData::InferenceVar(_), _) | (_, LifetimeData::InferenceVar(_)) => {
                 self.new_lifetime_variable()
@@ -360,11 +360,11 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
         }
     }
 
-    fn new_variable(&mut self) -> Ty<TF> {
+    fn new_variable(&mut self) -> Ty<I> {
         self.infer.new_variable(self.universe).to_ty()
     }
 
-    fn new_lifetime_variable(&mut self) -> Lifetime<TF> {
+    fn new_lifetime_variable(&mut self) -> Lifetime<I> {
         self.infer.new_variable(self.universe).to_lifetime()
     }
 }
@@ -372,7 +372,7 @@ impl<TF: TypeFamily> AntiUnifier<'_, TF> {
 /// Test the equivalent of `Vec<i32>` vs `Vec<u32>`
 #[test]
 fn vec_i32_vs_vec_u32() {
-    use chalk_ir::family::ChalkIr;
+    use chalk_ir::interner::ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
         infer: &mut infer,
@@ -389,7 +389,7 @@ fn vec_i32_vs_vec_u32() {
 /// Test the equivalent of `Vec<i32>` vs `Vec<i32>`
 #[test]
 fn vec_i32_vs_vec_i32() {
-    use chalk_ir::family::ChalkIr;
+    use chalk_ir::interner::ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
         infer: &mut infer,
@@ -406,7 +406,7 @@ fn vec_i32_vs_vec_i32() {
 /// Test the equivalent of `Vec<X>` vs `Vec<Y>`
 #[test]
 fn vec_x_vs_vec_y() {
-    use chalk_ir::family::ChalkIr;
+    use chalk_ir::interner::ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
         infer: &mut infer,

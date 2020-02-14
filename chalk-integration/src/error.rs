@@ -1,4 +1,4 @@
-use chalk_ir::family::ChalkIr;
+use chalk_ir::interner::ChalkIr;
 use chalk_parse::ast::{Identifier, Kind};
 use chalk_rust_ir::LangItem;
 use chalk_solve::coherence::CoherenceError;

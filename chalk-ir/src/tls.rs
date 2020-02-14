@@ -1,4 +1,4 @@
-use crate::family::ChalkIr;
+use crate::interner::ChalkIr;
 use crate::{AliasTy, AssocTypeId, StructId, TraitId};
 use std::cell::RefCell;
 use std::fmt;

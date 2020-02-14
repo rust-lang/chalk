@@ -5,7 +5,7 @@ use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::Cast;
 use chalk_ir::could_match::CouldMatch;
-use chalk_ir::family::TypeFamily;
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
 
@@ -43,10 +43,10 @@ pub mod program_clauses;
 ///         Implemented(Box<Option<MyList<T>>>: Send).
 /// }
 /// ```
-pub fn push_auto_trait_impls<TF: TypeFamily>(
-    builder: &mut ClauseBuilder<'_, TF>,
-    auto_trait_id: TraitId<TF>,
-    struct_id: StructId<TF>,
+pub fn push_auto_trait_impls<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    auto_trait_id: TraitId<I>,
+    struct_id: StructId<I>,
 ) {
     debug_heading!(
         "push_auto_trait_impls({:?}, {:?})",
@@ -105,11 +105,11 @@ pub fn push_auto_trait_impls<TF: TypeFamily>(
 /// to this goal from the Rust program. So for example if the goal
 /// is `Implemented(T: Clone)`, then this function might return clauses
 /// derived from the trait `Clone` and its impls.
-pub(crate) fn program_clauses_for_goal<'db, TF: TypeFamily>(
-    db: &'db dyn RustIrDatabase<TF>,
-    environment: &Environment<TF>,
-    goal: &DomainGoal<TF>,
-) -> Vec<ProgramClause<TF>> {
+pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
+    db: &'db dyn RustIrDatabase<I>,
+    environment: &Environment<I>,
+    goal: &DomainGoal<I>,
+) -> Vec<ProgramClause<I>> {
     debug_heading!(
         "program_clauses_for_goal(goal={:?}, environment={:?})",
         goal,
@@ -131,11 +131,11 @@ pub(crate) fn program_clauses_for_goal<'db, TF: TypeFamily>(
 /// `goal`. This can be any superset of the correct set, but the
 /// more precise you can make it, the more efficient solving will
 /// be.
-fn program_clauses_that_could_match<TF: TypeFamily>(
-    db: &dyn RustIrDatabase<TF>,
-    environment: &Environment<TF>,
-    goal: &DomainGoal<TF>,
-    clauses: &mut Vec<ProgramClause<TF>>,
+fn program_clauses_that_could_match<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    environment: &Environment<I>,
+    goal: &DomainGoal<I>,
+    clauses: &mut Vec<ProgramClause<I>>,
 ) {
     let builder = &mut ClauseBuilder::new(db, clauses);
 
@@ -291,10 +291,10 @@ fn program_clauses_that_could_match<TF: TypeFamily>(
 ///     type Item = Bar; // <-- associated type value
 /// }
 /// ```
-fn push_program_clauses_for_associated_type_values_in_impls_of<TF: TypeFamily>(
-    builder: &mut ClauseBuilder<'_, TF>,
-    trait_id: TraitId<TF>,
-    trait_parameters: &[Parameter<TF>],
+fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    trait_id: TraitId<I>,
+    trait_parameters: &[Parameter<I>],
 ) {
     debug_heading!(
         "push_program_clauses_for_associated_type_values_in_impls_of(\
@@ -331,10 +331,10 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<TF: TypeFamily>(
 ///
 /// Note that the type `T` must not be an unbound inference variable;
 /// earlier parts of the logic should "flounder" in that case.
-fn match_ty<TF: TypeFamily>(
-    builder: &mut ClauseBuilder<'_, TF>,
-    environment: &Environment<TF>,
-    ty: &Ty<TF>,
+fn match_ty<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    environment: &Environment<I>,
+    ty: &Ty<I>,
 ) {
     match ty.data() {
         TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
@@ -354,7 +354,7 @@ fn match_ty<TF: TypeFamily>(
     }
 }
 
-fn match_type_name<TF: TypeFamily>(builder: &mut ClauseBuilder<'_, TF>, name: TypeName<TF>) {
+fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeName<I>) {
     match name {
         TypeName::Struct(struct_id) => match_struct(builder, struct_id),
         TypeName::Error => {}
@@ -365,17 +365,17 @@ fn match_type_name<TF: TypeFamily>(builder: &mut ClauseBuilder<'_, TF>, name: Ty
     }
 }
 
-fn match_struct<TF: TypeFamily>(builder: &mut ClauseBuilder<'_, TF>, struct_id: StructId<TF>) {
+fn match_struct<I: Interner>(builder: &mut ClauseBuilder<'_, I>, struct_id: StructId<I>) {
     builder
         .db
         .struct_datum(struct_id)
         .to_program_clauses(builder)
 }
 
-fn program_clauses_for_env<'db, TF: TypeFamily>(
-    db: &'db dyn RustIrDatabase<TF>,
-    environment: &Environment<TF>,
-    clauses: &mut Vec<ProgramClause<TF>>,
+fn program_clauses_for_env<'db, I: Interner>(
+    db: &'db dyn RustIrDatabase<I>,
+    environment: &Environment<I>,
+    clauses: &mut Vec<ProgramClause<I>>,
 ) {
     let mut last_round = FxHashSet::default();
     elaborate_env_clauses(db, &environment.clauses, &mut last_round);

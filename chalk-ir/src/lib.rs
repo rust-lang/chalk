@@ -1,7 +1,7 @@
 use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
-use chalk_derive::{Fold, HasTypeFamily};
+use chalk_derive::{Fold, HasInterner};
 use chalk_engine::fallible::*;
 use lalrpop_intern::InternedString;
 use std::collections::BTreeSet;
@@ -14,7 +14,7 @@ pub enum Void {}
 macro_rules! impl_debugs {
     ($($id:ident), *) => {
         $(
-            impl<TF: TypeFamily> std::fmt::Debug for $id<TF> {
+            impl<I: Interner> std::fmt::Debug for $id<I> {
                 fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
                     write!(fmt, "{}({:?})", stringify!($id), self.0)
                 }
@@ -37,8 +37,8 @@ pub mod fold;
 
 pub mod cast;
 
-pub mod family;
-use family::{HasTypeFamily, TargetTypeFamily, TypeFamily};
+pub mod interner;
+use interner::{HasInterner, Interner, TargetInterner};
 
 pub mod could_match;
 pub mod debug;
@@ -46,21 +46,21 @@ pub mod tls;
 
 pub type Identifier = InternedString;
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasInterner)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
-pub struct Environment<TF: TypeFamily> {
-    pub clauses: Vec<ProgramClause<TF>>,
+pub struct Environment<I: Interner> {
+    pub clauses: Vec<ProgramClause<I>>,
 }
 
-impl<TF: TypeFamily> Environment<TF> {
+impl<I: Interner> Environment<I> {
     pub fn new() -> Self {
         Environment { clauses: vec![] }
     }
 
-    pub fn add_clauses<I>(&self, clauses: I) -> Self
+    pub fn add_clauses<II>(&self, clauses: II) -> Self
     where
-        I: IntoIterator<Item = ProgramClause<TF>>,
+        II: IntoIterator<Item = ProgramClause<I>>,
     {
         let mut env = self.clone();
         let env_clauses: BTreeSet<_> = env.clauses.into_iter().chain(clauses).collect();
@@ -70,13 +70,13 @@ impl<TF: TypeFamily> Environment<TF> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
-pub struct InEnvironment<G: HasTypeFamily> {
-    pub environment: Environment<G::TypeFamily>,
+pub struct InEnvironment<G: HasInterner> {
+    pub environment: Environment<G::Interner>,
     pub goal: G,
 }
 
-impl<G: HasTypeFamily> InEnvironment<G> {
-    pub fn new(environment: &Environment<G::TypeFamily>, goal: G) -> Self {
+impl<G: HasInterner> InEnvironment<G> {
+    pub fn new(environment: &Environment<G::Interner>, goal: G) -> Self {
         InEnvironment {
             environment: environment.clone(),
             goal,
@@ -86,7 +86,7 @@ impl<G: HasTypeFamily> InEnvironment<G> {
     pub fn map<OP, H>(self, op: OP) -> InEnvironment<H>
     where
         OP: FnOnce(G) -> H,
-        H: HasTypeFamily<TypeFamily = G::TypeFamily>,
+        H: HasInterner<Interner = G::Interner>,
     {
         InEnvironment {
             environment: self.environment,
@@ -95,17 +95,17 @@ impl<G: HasTypeFamily> InEnvironment<G> {
     }
 }
 
-impl<G: HasTypeFamily> HasTypeFamily for InEnvironment<G> {
-    type TypeFamily = G::TypeFamily;
+impl<G: HasInterner> HasInterner for InEnvironment<G> {
+    type Interner = G::Interner;
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold)]
-pub enum TypeName<TF: TypeFamily> {
+pub enum TypeName<I: Interner> {
     /// a type like `Vec<T>`
-    Struct(StructId<TF>),
+    Struct(StructId<I>),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
-    AssociatedType(AssocTypeId<TF>),
+    AssociatedType(AssocTypeId<I>),
 
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.
@@ -143,19 +143,19 @@ impl UniverseIndex {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct StructId<TF: TypeFamily>(pub TF::DefId);
+pub struct StructId<I: Interner>(pub I::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TraitId<TF: TypeFamily>(pub TF::DefId);
+pub struct TraitId<I: Interner>(pub I::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ImplId<TF: TypeFamily>(pub TF::DefId);
+pub struct ImplId<I: Interner>(pub I::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ClauseId<TF: TypeFamily>(pub TF::DefId);
+pub struct ClauseId<I: Interner>(pub I::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AssocTypeId<TF: TypeFamily>(pub TF::DefId);
+pub struct AssocTypeId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
@@ -171,27 +171,27 @@ pub enum TypeSort {
     Trait,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-pub struct Ty<TF: TypeFamily> {
-    interned: TF::InternedType,
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct Ty<I: Interner> {
+    interned: I::InternedType,
 }
 
-impl<TF: TypeFamily> Ty<TF> {
-    pub fn new(data: impl CastTo<TyData<TF>>) -> Self {
+impl<I: Interner> Ty<I> {
+    pub fn new(data: impl CastTo<TyData<I>>) -> Self {
         Ty {
-            interned: TF::intern_ty(data.cast()),
+            interned: I::intern_ty(data.cast()),
         }
     }
 
-    pub fn data(&self) -> &TyData<TF> {
-        TF::ty_data(&self.interned)
+    pub fn data(&self) -> &TyData<I> {
+        I::ty_data(&self.interned)
     }
 
-    pub fn from_env(&self) -> FromEnv<TF> {
+    pub fn from_env(&self) -> FromEnv<I> {
         FromEnv::Ty(self.clone())
     }
 
-    pub fn well_formed(&self) -> WellFormed<TF> {
+    pub fn well_formed(&self) -> WellFormed<I> {
         WellFormed::Ty(self.clone())
     }
 
@@ -229,14 +229,14 @@ impl<TF: TypeFamily> Ty<TF> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-pub enum TyData<TF: TypeFamily> {
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub enum TyData<I: Interner> {
     /// An "application" type is one that applies the set of type
     /// arguments to some base type. For example, `Vec<u32>` would be
     /// "applying" the parameters `[u32]` to the code type `Vec`.
     /// This type is also used for base types like `u32` (which just apply
     /// an empty list).
-    Apply(ApplicationTy<TF>),
+    Apply(ApplicationTy<I>),
 
     /// instantiated form a universally quantified type, e.g., from
     /// `forall<T> { .. }`. Stands in as a representative of "some
@@ -250,19 +250,19 @@ pub enum TyData<TF: TypeFamily> {
     ///
     /// See the `Opaque` variant for a discussion about the use of
     /// binders here.
-    Dyn(DynTy<TF>),
+    Dyn(DynTy<I>),
 
     /// An "alias" type represents some form of type alias, such as:
     /// - An associated type projection like `<T as Iterator>::Item`
     /// - `impl Trait` types
     /// - Named type aliases like `type Foo<X> = Vec<X>`
-    Alias(AliasTy<TF>),
+    Alias(AliasTy<I>),
 
     /// A function type such as `for<'a> fn(&'a u32)`.
     /// Note that "higher-ranked" types (starting with `for<>`) are either
     /// function types or dyn types, and do not appear otherwise in Rust
     /// surface syntax.
-    Function(Fn<TF>),
+    Function(Fn<I>),
 
     /// References the binding at the given depth. The index is a [de
     /// Bruijn index], so it counts back through the in-scope binders,
@@ -278,8 +278,8 @@ pub enum TyData<TF: TypeFamily> {
     InferenceVar(InferenceVar),
 }
 
-impl<TF: TypeFamily> TyData<TF> {
-    pub fn intern(self) -> Ty<TF> {
+impl<I: Interner> TyData<I> {
+    pub fn intern(self) -> Ty<I> {
         Ty::new(self)
     }
 }
@@ -308,8 +308,8 @@ impl<TF: TypeFamily> TyData<TF> {
 /// a bound type with debruijn index 1 (i.e., skipping through one
 /// level of binder).
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
-pub struct DynTy<TF: TypeFamily> {
-    pub bounds: Binders<Vec<QuantifiedWhereClause<TF>>>,
+pub struct DynTy<I: Interner> {
+    pub bounds: Binders<Vec<QuantifiedWhereClause<I>>>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -328,37 +328,37 @@ impl InferenceVar {
         self.index
     }
 
-    pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
-        TyData::<TF>::InferenceVar(self).intern()
+    pub fn to_ty<I: Interner>(self) -> Ty<I> {
+        TyData::<I>::InferenceVar(self).intern()
     }
 
-    pub fn to_lifetime<TF: TypeFamily>(self) -> Lifetime<TF> {
-        LifetimeData::<TF>::InferenceVar(self).intern()
+    pub fn to_lifetime<I: Interner>(self) -> Lifetime<I> {
+        LifetimeData::<I>::InferenceVar(self).intern()
     }
 }
 
 /// for<'a...'z> X -- all binders are instantiated at once,
 /// and we use deBruijn indices within `self.ty`
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-pub struct Fn<TF: TypeFamily> {
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct Fn<I: Interner> {
     pub num_binders: usize,
-    pub parameters: Vec<Parameter<TF>>,
+    pub parameters: Vec<Parameter<I>>,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-pub struct Lifetime<TF: TypeFamily> {
-    interned: TF::InternedLifetime,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct Lifetime<I: Interner> {
+    interned: I::InternedLifetime,
 }
 
-impl<TF: TypeFamily> Lifetime<TF> {
-    pub fn new(data: impl CastTo<LifetimeData<TF>>) -> Self {
+impl<I: Interner> Lifetime<I> {
+    pub fn new(data: impl CastTo<LifetimeData<I>>) -> Self {
         Lifetime {
-            interned: TF::intern_lifetime(data.cast()),
+            interned: I::intern_lifetime(data.cast()),
         }
     }
 
-    pub fn data(&self) -> &LifetimeData<TF> {
-        TF::lifetime_data(&self.interned)
+    pub fn data(&self) -> &LifetimeData<I> {
+        I::lifetime_data(&self.interned)
     }
 
     /// If this is a `Lifetime::InferenceVar(d)`, returns `Some(d)` else `None`.
@@ -383,16 +383,16 @@ impl<TF: TypeFamily> Lifetime<TF> {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum LifetimeData<TF: TypeFamily> {
+pub enum LifetimeData<I: Interner> {
     /// See TyData::Var(_).
     BoundVar(usize),
     InferenceVar(InferenceVar),
     Placeholder(PlaceholderIndex),
-    Phantom(Void, PhantomData<TF>),
+    Phantom(Void, PhantomData<I>),
 }
 
-impl<TF: TypeFamily> LifetimeData<TF> {
-    pub fn intern(self) -> Lifetime<TF> {
+impl<I: Interner> LifetimeData<I> {
+    pub fn intern(self) -> Lifetime<I> {
         Lifetime::new(self)
     }
 }
@@ -409,33 +409,33 @@ pub struct PlaceholderIndex {
 }
 
 impl PlaceholderIndex {
-    pub fn to_lifetime<TF: TypeFamily>(self) -> Lifetime<TF> {
-        LifetimeData::<TF>::Placeholder(self).intern()
+    pub fn to_lifetime<I: Interner>(self) -> Lifetime<I> {
+        LifetimeData::<I>::Placeholder(self).intern()
     }
 
-    pub fn to_ty<TF: TypeFamily>(self) -> Ty<TF> {
-        let data: TyData<TF> = TyData::Placeholder(self);
+    pub fn to_ty<I: Interner>(self) -> Ty<I> {
+        let data: TyData<I> = TyData::Placeholder(self);
         data.intern()
     }
 }
 
 // Fold derive intentionally omitted, folded through Ty
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Fold, Ord, HasTypeFamily)]
-pub struct ApplicationTy<TF: TypeFamily> {
-    pub name: TypeName<TF>,
-    pub substitution: Substitution<TF>,
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Fold, Ord, HasInterner)]
+pub struct ApplicationTy<I: Interner> {
+    pub name: TypeName<I>,
+    pub substitution: Substitution<I>,
 }
 
-impl<TF: TypeFamily> ApplicationTy<TF> {
-    pub fn intern(self) -> Ty<TF> {
+impl<I: Interner> ApplicationTy<I> {
+    pub fn intern(self) -> Ty<I> {
         Ty::new(self)
     }
 
-    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
+    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<I>> + 'a {
         self.substitution.iter().filter_map(|p| p.ty()).cloned()
     }
 
-    pub fn first_type_parameter(&self) -> Option<Ty<TF>> {
+    pub fn first_type_parameter(&self) -> Option<Ty<I>> {
         self.type_parameters().next()
     }
 
@@ -507,28 +507,28 @@ impl<T, L> ParameterKind<T, L> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
-pub struct Parameter<TF: TypeFamily>(TF::InternedParameter);
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct Parameter<I: Interner>(I::InternedParameter);
 
-impl<TF: TypeFamily> Parameter<TF> {
-    pub fn new(data: ParameterData<TF>) -> Self {
-        let interned = TF::intern_parameter(data);
+impl<I: Interner> Parameter<I> {
+    pub fn new(data: ParameterData<I>) -> Self {
+        let interned = I::intern_parameter(data);
         Parameter(interned)
     }
 
-    pub fn data(&self) -> &ParameterData<TF> {
-        TF::parameter_data(&self.0)
+    pub fn data(&self) -> &ParameterData<I> {
+        I::parameter_data(&self.0)
     }
 
-    pub fn assert_ty_ref(&self) -> &Ty<TF> {
+    pub fn assert_ty_ref(&self) -> &Ty<I> {
         self.as_ref().ty().unwrap()
     }
 
-    pub fn assert_lifetime_ref(&self) -> &Lifetime<TF> {
+    pub fn assert_lifetime_ref(&self) -> &Lifetime<I> {
         self.as_ref().lifetime().unwrap()
     }
 
-    pub fn as_ref(&self) -> ParameterKind<&Ty<TF>, &Lifetime<TF>> {
+    pub fn as_ref(&self) -> ParameterKind<&Ty<I>, &Lifetime<I>> {
         match self.data() {
             ParameterKind::Ty(t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(l) => ParameterKind::Lifetime(l),
@@ -542,14 +542,14 @@ impl<TF: TypeFamily> Parameter<TF> {
         }
     }
 
-    pub fn ty(&self) -> Option<&Ty<TF>> {
+    pub fn ty(&self) -> Option<&Ty<I>> {
         match self.data() {
             ParameterKind::Ty(t) => Some(t),
             _ => None,
         }
     }
 
-    pub fn lifetime(&self) -> Option<&Lifetime<TF>> {
+    pub fn lifetime(&self) -> Option<&Lifetime<I>> {
         match self.data() {
             ParameterKind::Lifetime(t) => Some(t),
             _ => None,
@@ -558,59 +558,59 @@ impl<TF: TypeFamily> Parameter<TF> {
 }
 
 #[allow(type_alias_bounds)]
-pub type ParameterData<TF: TypeFamily> = ParameterKind<Ty<TF>, Lifetime<TF>>;
+pub type ParameterData<I: Interner> = ParameterKind<Ty<I>, Lifetime<I>>;
 
-impl<TF: TypeFamily> ParameterData<TF> {
-    pub fn intern(self) -> Parameter<TF> {
+impl<I: Interner> ParameterData<I> {
+    pub fn intern(self) -> Parameter<I> {
         Parameter::new(self)
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
-pub struct AliasTy<TF: TypeFamily> {
-    pub associated_ty_id: AssocTypeId<TF>,
-    pub substitution: Substitution<TF>,
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasInterner)]
+pub struct AliasTy<I: Interner> {
+    pub associated_ty_id: AssocTypeId<I>,
+    pub substitution: Substitution<I>,
 }
 
-impl<TF: TypeFamily> AliasTy<TF> {
-    pub fn intern(self) -> Ty<TF> {
+impl<I: Interner> AliasTy<I> {
+    pub fn intern(self) -> Ty<I> {
         Ty::new(self)
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
-pub struct TraitRef<TF: TypeFamily> {
-    pub trait_id: TraitId<TF>,
-    pub substitution: Substitution<TF>,
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasInterner)]
+pub struct TraitRef<I: Interner> {
+    pub trait_id: TraitId<I>,
+    pub substitution: Substitution<I>,
 }
 
-impl<TF: TypeFamily> TraitRef<TF> {
-    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<TF>> + 'a {
+impl<I: Interner> TraitRef<I> {
+    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<I>> + 'a {
         self.substitution.iter().filter_map(|p| p.ty()).cloned()
     }
 
-    pub fn self_type_parameter(&self) -> Ty<TF> {
+    pub fn self_type_parameter(&self) -> Ty<I> {
         self.type_parameters().next().unwrap()
     }
 
-    pub fn from_env(self) -> FromEnv<TF> {
+    pub fn from_env(self) -> FromEnv<I> {
         FromEnv::Trait(self)
     }
 
-    pub fn well_formed(self) -> WellFormed<TF> {
+    pub fn well_formed(self) -> WellFormed<I> {
         WellFormed::Trait(self)
     }
 }
 
 /// Where clauses that can be written by a Rust programmer.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
-pub enum WhereClause<TF: TypeFamily> {
-    Implemented(TraitRef<TF>),
-    AliasEq(AliasEq<TF>),
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasInterner)]
+pub enum WhereClause<I: Interner> {
+    Implemented(TraitRef<I>),
+    AliasEq(AliasEq<I>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
-pub enum WellFormed<TF: TypeFamily> {
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasInterner)]
+pub enum WellFormed<I: Interner> {
     /// A predicate which is true is some trait ref is well-formed.
     /// For example, given the following trait definitions:
     ///
@@ -624,7 +624,7 @@ pub enum WellFormed<TF: TypeFamily> {
     /// ```notrust
     /// WellFormed(?Self: Copy) :- ?Self: Copy, WellFormed(?Self: Clone)
     /// ```
-    Trait(TraitRef<TF>),
+    Trait(TraitRef<I>),
 
     /// A predicate which is true is some type is well-formed.
     /// For example, given the following type definition:
@@ -636,11 +636,11 @@ pub enum WellFormed<TF: TypeFamily> {
     /// ```
     ///
     /// then we have the following rule: `WellFormedTy(Set<K>) :- Implemented(K: Hash)`.
-    Ty(Ty<TF>),
+    Ty(Ty<I>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
-pub enum FromEnv<TF: TypeFamily> {
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasInterner)]
+pub enum FromEnv<I: Interner> {
     /// A predicate which enables deriving everything which should be true if we *know* that
     /// some trait ref is well-formed. For example given the above trait definitions, we can use
     /// `FromEnv(T: Copy)` to derive that `T: Clone`, like in:
@@ -652,7 +652,7 @@ pub enum FromEnv<TF: TypeFamily> {
     ///     }
     /// }
     /// ```
-    Trait(TraitRef<TF>),
+    Trait(TraitRef<I>),
 
     /// A predicate which enables deriving everything which should be true if we *know* that
     /// some type is well-formed. For example given the above type definition, we can use
@@ -665,31 +665,31 @@ pub enum FromEnv<TF: TypeFamily> {
     ///     }
     /// }
     /// ```
-    Ty(Ty<TF>),
+    Ty(Ty<I>),
 }
 
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
-pub enum DomainGoal<TF: TypeFamily> {
-    Holds(WhereClause<TF>),
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasInterner)]
+pub enum DomainGoal<I: Interner> {
+    Holds(WhereClause<I>),
 
-    WellFormed(WellFormed<TF>),
+    WellFormed(WellFormed<I>),
 
-    FromEnv(FromEnv<TF>),
+    FromEnv(FromEnv<I>),
 
-    Normalize(Normalize<TF>),
+    Normalize(Normalize<I>),
 
     /// True if a type is considered to have been "defined" by the current crate. This is true for
     /// a `struct Foo { }` but false for a `#[upstream] struct Foo { }`. However, for fundamental types
     /// like `Box<T>`, it is true if `T` is local.
-    IsLocal(Ty<TF>),
+    IsLocal(Ty<I>),
 
     /// True if a type is *not* considered to have been "defined" by the current crate. This is
     /// false for a `struct Foo { }` but true for a `#[upstream] struct Foo { }`. However, for
     /// fundamental types like `Box<T>`, it is true if `T` is upstream.
-    IsUpstream(Ty<TF>),
+    IsUpstream(Ty<I>),
 
     /// True if a type and its input types are fully visible, known types. That is, there are no
     /// unknown type parameters anywhere in this type.
@@ -704,7 +704,7 @@ pub enum DomainGoal<TF: TypeFamily> {
     ///
     /// Note that any of these types can have lifetimes in their parameters too, but we only
     /// consider type parameters.
-    IsFullyVisible(Ty<TF>),
+    IsFullyVisible(Ty<I>),
 
     /// Used to dictate when trait impls are allowed in the current (local) crate based on the
     /// orphan rules.
@@ -713,7 +713,7 @@ pub enum DomainGoal<TF: TypeFamily> {
     /// the current crate. Under the current rules, this is unconditionally true for all types if
     /// the Trait is considered to be "defined" in the current crate. If that is not the case, then
     /// `LocalImplAllowed(T: Trait)` can still be true if `IsLocal(T)` is true.
-    LocalImplAllowed(TraitRef<TF>),
+    LocalImplAllowed(TraitRef<I>),
 
     /// Used to activate the "compatible modality" rules. Rules that introduce predicates that have
     /// to do with "all compatible universes" should depend on this clause so that they only apply
@@ -731,17 +731,17 @@ pub enum DomainGoal<TF: TypeFamily> {
     /// forall<T> { if (DownstreamType(T)) { /* ... */ } }
     ///
     /// This makes a new type `T` available and makes `DownstreamType(T)` provable for that type.
-    DownstreamType(Ty<TF>),
+    DownstreamType(Ty<I>),
 }
 
-pub type QuantifiedWhereClause<TF> = Binders<WhereClause<TF>>;
+pub type QuantifiedWhereClause<I> = Binders<WhereClause<I>>;
 
-impl<TF: TypeFamily> WhereClause<TF> {
+impl<I: Interner> WhereClause<I> {
     /// Turn a where clause into the WF version of it i.e.:
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
     /// * `AliasEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
-    pub fn into_well_formed_goal(self) -> DomainGoal<TF> {
+    pub fn into_well_formed_goal(self) -> DomainGoal<I> {
         match self {
             WhereClause::Implemented(trait_ref) => WellFormed::Trait(trait_ref).cast(),
             wc => wc.cast(),
@@ -749,7 +749,7 @@ impl<TF: TypeFamily> WhereClause<TF> {
     }
 
     /// Same as `into_well_formed_goal` but with the `FromEnv` predicate instead of `WellFormed`.
-    pub fn into_from_env_goal(self) -> DomainGoal<TF> {
+    pub fn into_from_env_goal(self) -> DomainGoal<I> {
         match self {
             WhereClause::Implemented(trait_ref) => FromEnv::Trait(trait_ref).cast(),
             wc => wc.cast(),
@@ -757,12 +757,12 @@ impl<TF: TypeFamily> WhereClause<TF> {
     }
 }
 
-impl<TF: TypeFamily> QuantifiedWhereClause<TF> {
+impl<I: Interner> QuantifiedWhereClause<I> {
     /// As with `WhereClause::into_well_formed_goal`, but for a
     /// quantified where clause. For example, `forall<T> {
     /// Implemented(T: Trait)}` would map to `forall<T> {
     /// WellFormed(T: Trait) }`.
-    pub fn into_well_formed_goal(self) -> Binders<DomainGoal<TF>> {
+    pub fn into_well_formed_goal(self) -> Binders<DomainGoal<I>> {
         self.map(|wc| wc.into_well_formed_goal())
     }
 
@@ -770,15 +770,15 @@ impl<TF: TypeFamily> QuantifiedWhereClause<TF> {
     /// binders. For example, `forall<T> {
     /// Implemented(T: Trait)}` would map to `forall<T> {
     /// FromEnv(T: Trait) }`.
-    pub fn into_from_env_goal(self) -> Binders<DomainGoal<TF>> {
+    pub fn into_from_env_goal(self) -> Binders<DomainGoal<I>> {
         self.map(|wc| wc.into_from_env_goal())
     }
 }
 
-impl<TF: TypeFamily> DomainGoal<TF> {
+impl<I: Interner> DomainGoal<I> {
     /// Convert `Implemented(...)` into `FromEnv(...)`, but leave other
     /// goals unchanged.
-    pub fn into_from_env_goal(self) -> DomainGoal<TF> {
+    pub fn into_from_env_goal(self) -> DomainGoal<I> {
         match self {
             DomainGoal::Holds(wc) => wc.into_from_env_goal(),
             goal => goal,
@@ -787,9 +787,9 @@ impl<TF: TypeFamily> DomainGoal<TF> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
-pub struct EqGoal<TF: TypeFamily> {
-    pub a: Parameter<TF>,
-    pub b: Parameter<TF>,
+pub struct EqGoal<I: Interner> {
+    pub a: Parameter<I>,
+    pub b: Parameter<I>,
 }
 
 /// Proves that the given type alias **normalizes** to the given
@@ -797,22 +797,22 @@ pub struct EqGoal<TF: TypeFamily> {
 /// **match it to an impl** and that impl has a `type Foo = V` where
 /// `U = V`.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
-pub struct Normalize<TF: TypeFamily> {
-    pub alias: AliasTy<TF>,
-    pub ty: Ty<TF>,
+pub struct Normalize<I: Interner> {
+    pub alias: AliasTy<I>,
+    pub ty: Ty<I>,
 }
 
 /// Proves **equality** between a projection `T::Foo` and a type
 /// `U`. Equality can be proven via normalization, but we can also
 /// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold)]
-pub struct AliasEq<TF: TypeFamily> {
-    pub alias: AliasTy<TF>,
-    pub ty: Ty<TF>,
+pub struct AliasEq<I: Interner> {
+    pub alias: AliasTy<I>,
+    pub ty: Ty<I>,
 }
 
-impl<TF: TypeFamily> HasTypeFamily for AliasEq<TF> {
-    type TypeFamily = TF;
+impl<I: Interner> HasInterner for AliasEq<I> {
+    type Interner = I;
 }
 
 /// Indicates that the `value` is universally quantified over `N`
@@ -828,8 +828,8 @@ pub struct Binders<T> {
     pub value: T,
 }
 
-impl<T: HasTypeFamily> HasTypeFamily for Binders<T> {
-    type TypeFamily = T::TypeFamily;
+impl<T: HasInterner> HasInterner for Binders<T> {
+    type Interner = T::Interner;
 }
 
 impl<T> Binders<T> {
@@ -859,16 +859,16 @@ impl<T> Binders<T> {
     /// the result of the operator function applied.
     ///
     /// forall<?0, ?1> will become forall<?0, ?1, ?2> where ?0 is the fresh variable
-    pub fn with_fresh_type_var<U, TF>(
+    pub fn with_fresh_type_var<U, I>(
         self,
-        op: impl FnOnce(<T as Fold<TF, TF>>::Result, Ty<TF>) -> U,
+        op: impl FnOnce(<T as Fold<I, I>>::Result, Ty<I>) -> U,
     ) -> Binders<U>
     where
-        TF: TypeFamily,
-        T: Shift<TF>,
+        I: Interner,
+        T: Shift<I>,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
-        let new_var = TyData::<TF>::BoundVar(0).intern();
+        let new_var = TyData::<I>::BoundVar(0).intern();
         let value = op(self.value.shifted_in(1), new_var);
         Binders {
             binders: iter::once(ParameterKind::Ty(()))
@@ -883,16 +883,16 @@ impl<T> Binders<T> {
     }
 }
 
-impl<T, TF> Binders<T>
+impl<T, I> Binders<T>
 where
-    T: Fold<TF, TF> + HasTypeFamily<TypeFamily = TF>,
-    TF: TypeFamily,
+    T: Fold<I, I> + HasInterner<Interner = I>,
+    I: Interner,
 {
     /// Substitute `parameters` for the variables introduced by these
     /// binders. So if the binders represent (e.g.) `<X, Y> { T }` and
     /// parameters is the slice `[A, B]`, then returns `[X => A, Y =>
     /// B] T`.
-    pub fn substitute(&self, parameters: &(impl AsParameters<TF> + ?Sized)) -> T::Result {
+    pub fn substitute(&self, parameters: &(impl AsParameters<I> + ?Sized)) -> T::Result {
         let parameters = parameters.as_parameters();
         assert_eq!(self.binders.len(), parameters.len());
         Subst::apply(parameters, &self.value)
@@ -903,7 +903,7 @@ where
 /// element will be a `Binders<&T>`.
 impl<'a, V> IntoIterator for &'a Binders<V>
 where
-    V: HasTypeFamily,
+    V: HasInterner,
     &'a V: IntoIterator,
 {
     type Item = Binders<<&'a V as IntoIterator>::Item>;
@@ -946,20 +946,20 @@ impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasTypeFamily)]
-pub struct ProgramClauseImplication<TF: TypeFamily> {
-    pub consequence: DomainGoal<TF>,
-    pub conditions: Goals<TF>,
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasInterner)]
+pub struct ProgramClauseImplication<I: Interner> {
+    pub consequence: DomainGoal<I>,
+    pub conditions: Goals<I>,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ProgramClause<TF: TypeFamily> {
-    Implies(ProgramClauseImplication<TF>),
-    ForAll(Binders<ProgramClauseImplication<TF>>),
+pub enum ProgramClause<I: Interner> {
+    Implies(ProgramClauseImplication<I>),
+    ForAll(Binders<ProgramClauseImplication<I>>),
 }
 
-impl<TF: TypeFamily> ProgramClause<TF> {
-    pub fn into_from_env_clause(self) -> ProgramClause<TF> {
+impl<I: Interner> ProgramClause<I> {
+    pub fn into_from_env_clause(self) -> ProgramClause<I> {
         match self {
             ProgramClause::Implies(implication) => {
                 if implication.conditions.is_empty() {
@@ -1000,9 +1000,9 @@ pub struct UCanonical<T> {
 }
 
 impl<T> UCanonical<T> {
-    pub fn is_trivial_substitution<TF: TypeFamily>(
+    pub fn is_trivial_substitution<I: Interner>(
         &self,
-        canonical_subst: &Canonical<AnswerSubst<TF>>,
+        canonical_subst: &Canonical<AnswerSubst<I>>,
     ) -> bool {
         let subst = &canonical_subst.value.subst;
         assert_eq!(self.canonical.binders.len(), subst.parameters().len());
@@ -1010,36 +1010,36 @@ impl<T> UCanonical<T> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 /// A list of goals.
-pub struct Goals<TF: TypeFamily> {
-    goals: TF::InternedGoals,
+pub struct Goals<I: Interner> {
+    goals: I::InternedGoals,
 }
 
-impl<TF: TypeFamily> Goals<TF> {
+impl<I: Interner> Goals<I> {
     pub fn new() -> Self {
-        Self::from(None::<Goal<TF>>)
+        Self::from(None::<Goal<I>>)
     }
 
-    pub fn from(goals: impl IntoIterator<Item = impl CastTo<Goal<TF>>>) -> Self {
+    pub fn from(goals: impl IntoIterator<Item = impl CastTo<Goal<I>>>) -> Self {
         use crate::cast::Caster;
         Goals {
-            goals: TF::intern_goals(goals.into_iter().casted()),
+            goals: I::intern_goals(goals.into_iter().casted()),
         }
     }
 
     pub fn from_fallible<E>(
-        goals: impl IntoIterator<Item = Result<impl CastTo<Goal<TF>>, E>>,
+        goals: impl IntoIterator<Item = Result<impl CastTo<Goal<I>>, E>>,
     ) -> Result<Self, E> {
         use crate::cast::Caster;
         let goals = goals
             .into_iter()
             .casted()
-            .collect::<Result<Vec<Goal<TF>>, _>>()?;
+            .collect::<Result<Vec<Goal<I>>, _>>()?;
         Ok(Goals::from(goals))
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Goal<TF>> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Goal<I>> {
         self.as_slice().iter()
     }
 
@@ -1051,28 +1051,28 @@ impl<TF: TypeFamily> Goals<TF> {
         self.as_slice().len()
     }
 
-    pub fn as_slice(&self) -> &[Goal<TF>] {
-        TF::goals_data(&self.goals)
+    pub fn as_slice(&self) -> &[Goal<I>] {
+        I::goals_data(&self.goals)
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasTypeFamily)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
-pub struct Goal<TF: TypeFamily> {
-    interned: TF::InternedGoal,
+pub struct Goal<I: Interner> {
+    interned: I::InternedGoal,
 }
 
-impl<TF: TypeFamily> Goal<TF> {
-    pub fn new(interned: GoalData<TF>) -> Self {
-        let interned = TF::intern_goal(interned);
+impl<I: Interner> Goal<I> {
+    pub fn new(interned: GoalData<I>) -> Self {
+        let interned = I::intern_goal(interned);
         Self { interned }
     }
 
-    pub fn data(&self) -> &GoalData<TF> {
-        TF::goal_data(&self.interned)
+    pub fn data(&self) -> &GoalData<I> {
+        I::goal_data(&self.interned)
     }
 
-    pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal<TF> {
+    pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal<I> {
         GoalData::Quantified(
             kind,
             Binders {
@@ -1112,7 +1112,7 @@ impl<TF: TypeFamily> Goal<TF> {
         .intern()
     }
 
-    pub fn implied_by(self, predicates: Vec<ProgramClause<TF>>) -> Goal<TF> {
+    pub fn implied_by(self, predicates: Vec<ProgramClause<I>>) -> Goal<I> {
         GoalData::Implies(predicates, self).intern()
     }
 
@@ -1126,25 +1126,25 @@ impl<TF: TypeFamily> Goal<TF> {
     }
 }
 
-impl<TF> std::iter::FromIterator<Goal<TF>> for Box<Goal<TF>>
+impl<I> std::iter::FromIterator<Goal<I>> for Box<Goal<I>>
 where
-    TF: TypeFamily,
+    I: Interner,
 {
-    fn from_iter<I>(iter: I) -> Self
+    fn from_iter<II>(iter: II) -> Self
     where
-        I: IntoIterator<Item = Goal<TF>>,
+        II: IntoIterator<Item = Goal<I>>,
     {
         Box::new(iter.into_iter().collect())
     }
 }
 
-impl<TF> std::iter::FromIterator<Goal<TF>> for Goal<TF>
+impl<I> std::iter::FromIterator<Goal<I>> for Goal<I>
 where
-    TF: TypeFamily,
+    I: Interner,
 {
-    fn from_iter<I>(iter: I) -> Self
+    fn from_iter<II>(iter: II) -> Self
     where
-        I: IntoIterator<Item = Goal<TF>>,
+        II: IntoIterator<Item = Goal<I>>,
     {
         let mut iter = iter.into_iter();
         if let Some(goal0) = iter.next() {
@@ -1163,22 +1163,22 @@ where
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasInterner)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
-pub enum GoalData<TF: TypeFamily> {
+pub enum GoalData<I: Interner> {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
-    Quantified(QuantifierKind, Binders<Goal<TF>>),
-    Implies(Vec<ProgramClause<TF>>, Goal<TF>),
-    All(Goals<TF>),
-    Not(Goal<TF>),
+    Quantified(QuantifierKind, Binders<Goal<I>>),
+    Implies(Vec<ProgramClause<I>>, Goal<I>),
+    All(Goals<I>),
+    Not(Goal<I>),
 
     /// Make two things equal; the rules for doing so are well known to the logic
-    EqGoal(EqGoal<TF>),
+    EqGoal(EqGoal<I>),
 
     /// A "domain goal" indicates some base sort of goal that can be
     /// proven via program clauses
-    DomainGoal(DomainGoal<TF>),
+    DomainGoal(DomainGoal<I>),
 
     /// Indicates something that cannot be proven to be true or false
     /// definitively. This can occur with overflow but also with
@@ -1192,8 +1192,8 @@ pub enum GoalData<TF: TypeFamily> {
     CannotProve(()),
 }
 
-impl<TF: TypeFamily> GoalData<TF> {
-    pub fn intern(self) -> Goal<TF> {
+impl<I: Interner> GoalData<I> {
+    pub fn intern(self) -> Goal<I> {
         Goal::new(self)
     }
 }
@@ -1210,62 +1210,62 @@ pub enum QuantifierKind {
 /// lifetime constraints, instead gathering them up to return with our solution
 /// for later checking. This allows for decoupling between type and region
 /// checking in the compiler.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasTypeFamily)]
-pub enum Constraint<TF: TypeFamily> {
-    LifetimeEq(Lifetime<TF>, Lifetime<TF>),
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Fold, HasInterner)]
+pub enum Constraint<I: Interner> {
+    LifetimeEq(Lifetime<I>, Lifetime<I>),
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, HasTypeFamily)]
-pub struct Substitution<TF: TypeFamily> {
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, HasInterner)]
+pub struct Substitution<I: Interner> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
     /// the kind of the value.
-    parameters: TF::InternedSubstitution,
+    parameters: I::InternedSubstitution,
 }
 
-impl<TF: TypeFamily> Substitution<TF> {
-    pub fn from(parameters: impl IntoIterator<Item = impl CastTo<Parameter<TF>>>) -> Self {
+impl<I: Interner> Substitution<I> {
+    pub fn from(parameters: impl IntoIterator<Item = impl CastTo<Parameter<I>>>) -> Self {
         Self::from_fallible(
             parameters
                 .into_iter()
-                .map(|p| -> Result<Parameter<TF>, ()> { Ok(p.cast()) }),
+                .map(|p| -> Result<Parameter<I>, ()> { Ok(p.cast()) }),
         )
         .unwrap()
     }
 
     pub fn from_fallible<E>(
-        parameters: impl IntoIterator<Item = Result<impl CastTo<Parameter<TF>>, E>>,
+        parameters: impl IntoIterator<Item = Result<impl CastTo<Parameter<I>>, E>>,
     ) -> Result<Self, E> {
         use crate::cast::Caster;
         Ok(Substitution {
-            parameters: TF::intern_substitution(parameters.into_iter().casted())?,
+            parameters: I::intern_substitution(parameters.into_iter().casted())?,
         })
     }
 
     /// Index into the list of parameters
-    pub fn at(&self, index: usize) -> &Parameter<TF> {
+    pub fn at(&self, index: usize) -> &Parameter<I> {
         &self.parameters()[index]
     }
 
-    pub fn from1(parameter: impl CastTo<Parameter<TF>>) -> Self {
+    pub fn from1(parameter: impl CastTo<Parameter<I>>) -> Self {
         Self::from(Some(parameter))
     }
 
     pub fn empty() -> Self {
-        Self::from(None::<Parameter<TF>>)
+        Self::from(None::<Parameter<I>>)
     }
 
     pub fn is_empty(&self) -> bool {
         self.parameters().is_empty()
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Parameter<TF>> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Parameter<I>> {
         self.parameters().iter()
     }
 
-    pub fn parameters(&self) -> &[Parameter<TF>] {
-        TF::substitution_data(&self.parameters)
+    pub fn parameters(&self) -> &[Parameter<I>] {
+        I::substitution_data(&self.parameters)
     }
 
     pub fn len(&self) -> usize {
@@ -1300,67 +1300,67 @@ impl<TF: TypeFamily> Substitution<TF> {
     }
 }
 
-pub trait AsParameters<TF: TypeFamily> {
-    fn as_parameters(&self) -> &[Parameter<TF>];
+pub trait AsParameters<I: Interner> {
+    fn as_parameters(&self) -> &[Parameter<I>];
 }
 
-impl<TF: TypeFamily> AsParameters<TF> for Substitution<TF> {
-    fn as_parameters(&self) -> &[Parameter<TF>] {
+impl<I: Interner> AsParameters<I> for Substitution<I> {
+    fn as_parameters(&self) -> &[Parameter<I>] {
         self.parameters()
     }
 }
 
-impl<TF: TypeFamily> AsParameters<TF> for [Parameter<TF>] {
-    fn as_parameters(&self) -> &[Parameter<TF>] {
+impl<I: Interner> AsParameters<I> for [Parameter<I>] {
+    fn as_parameters(&self) -> &[Parameter<I>] {
         self
     }
 }
 
-impl<TF: TypeFamily> AsParameters<TF> for [Parameter<TF>; 1] {
-    fn as_parameters(&self) -> &[Parameter<TF>] {
+impl<I: Interner> AsParameters<I> for [Parameter<I>; 1] {
+    fn as_parameters(&self) -> &[Parameter<I>] {
         self
     }
 }
 
-impl<TF: TypeFamily> AsParameters<TF> for Vec<Parameter<TF>> {
-    fn as_parameters(&self) -> &[Parameter<TF>] {
+impl<I: Interner> AsParameters<I> for Vec<Parameter<I>> {
+    fn as_parameters(&self) -> &[Parameter<I>] {
         self
     }
 }
 
-impl<T, TF: TypeFamily> AsParameters<TF> for &T
+impl<T, I: Interner> AsParameters<I> for &T
 where
-    T: ?Sized + AsParameters<TF>,
+    T: ?Sized + AsParameters<I>,
 {
-    fn as_parameters(&self) -> &[Parameter<TF>] {
+    fn as_parameters(&self) -> &[Parameter<I>] {
         T::as_parameters(self)
     }
 }
 
-impl<'me, TF> std::iter::IntoIterator for &'me Substitution<TF>
+impl<'me, I> std::iter::IntoIterator for &'me Substitution<I>
 where
-    TF: TypeFamily,
+    I: Interner,
 {
-    type IntoIter = std::slice::Iter<'me, Parameter<TF>>;
-    type Item = &'me Parameter<TF>;
+    type IntoIter = std::slice::Iter<'me, Parameter<I>>;
+    type Item = &'me Parameter<I>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl<TF: TypeFamily> Folder<TF> for &Substitution<TF> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+impl<I: Interner> Folder<I> for &Substitution<I> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TF>> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
         let ty = self.at(depth);
         let ty = ty.assert_ty_ref();
         Ok(ty.shifted_in(binders))
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TF>> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
         let l = self.at(depth);
         let l = l.assert_lifetime_ref();
         Ok(l.shifted_in(binders))
@@ -1372,15 +1372,15 @@ impl<TF: TypeFamily> Folder<TF> for &Substitution<TF> {
 /// substitution stores the values for the query's unknown variables,
 /// and the constraints represents any region constraints that must
 /// additionally be solved.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasTypeFamily)]
-pub struct ConstrainedSubst<TF: TypeFamily> {
-    pub subst: Substitution<TF>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
-    pub constraints: Vec<InEnvironment<Constraint<TF>>>,
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasInterner)]
+pub struct ConstrainedSubst<I: Interner> {
+    pub subst: Substitution<I>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
+    pub constraints: Vec<InEnvironment<Constraint<I>>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasTypeFamily)]
-pub struct AnswerSubst<TF: TypeFamily> {
-    pub subst: Substitution<TF>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
-    pub constraints: Vec<InEnvironment<Constraint<TF>>>,
-    pub delayed_subgoals: Vec<InEnvironment<Goal<TF>>>,
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, HasInterner)]
+pub struct AnswerSubst<I: Interner> {
+    pub subst: Substitution<I>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
+    pub constraints: Vec<InEnvironment<Constraint<I>>>,
+    pub delayed_subgoals: Vec<InEnvironment<Goal<I>>>,
 }

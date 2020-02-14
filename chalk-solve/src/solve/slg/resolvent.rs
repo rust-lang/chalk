@@ -1,9 +1,9 @@
 use crate::infer::InferenceTable;
 use crate::solve::slg::{self, SlgContext, TruncatingInferenceTable};
 use chalk_engine::fallible::Fallible;
-use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
+use chalk_ir::interner::Interner;
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::*;
 
@@ -46,7 +46,7 @@ use chalk_engine::{ExClause, Literal, TimeStamp};
 //
 // is the SLG resolvent of G with C.
 
-impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferenceTable<TF> {
+impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTable<I> {
     /// Applies the SLG resolvent algorithm to incorporate a program
     /// clause into the main X-clause, producing a new X-clause that
     /// must be solved.
@@ -57,11 +57,11 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
     /// - `clause` is the program clause that may be useful to that end
     fn resolvent_clause(
         &mut self,
-        environment: &Environment<TF>,
-        goal: &DomainGoal<TF>,
-        subst: &Substitution<TF>,
-        clause: &ProgramClause<TF>,
-    ) -> Fallible<ExClause<SlgContext<TF>>> {
+        environment: &Environment<I>,
+        goal: &DomainGoal<I>,
+        subst: &Substitution<I>,
+        clause: &ProgramClause<I>,
+    ) -> Fallible<ExClause<SlgContext<I>>> {
         // Relating the above description to our situation:
         //
         // - `goal` G, except with binders for any existential variables.
@@ -201,10 +201,10 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
 
     fn apply_answer_subst(
         &mut self,
-        ex_clause: &mut ExClause<SlgContext<TF>>,
-        selected_goal: &InEnvironment<Goal<TF>>,
-        answer_table_goal: &Canonical<InEnvironment<Goal<TF>>>,
-        canonical_answer_subst: &Canonical<AnswerSubst<TF>>,
+        ex_clause: &mut ExClause<SlgContext<I>>,
+        selected_goal: &InEnvironment<Goal<I>>,
+        answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
+        canonical_answer_subst: &Canonical<AnswerSubst<I>>,
     ) -> Fallible<()> {
         debug_heading!("apply_answer_subst()");
         debug!("ex_clause={:?}", ex_clause);
@@ -256,21 +256,21 @@ impl<TF: TypeFamily> context::ResolventOps<SlgContext<TF>> for TruncatingInferen
     }
 }
 
-struct AnswerSubstitutor<'t, TF: TypeFamily> {
-    table: &'t mut InferenceTable<TF>,
-    environment: &'t Environment<TF>,
-    answer_subst: &'t Substitution<TF>,
+struct AnswerSubstitutor<'t, I: Interner> {
+    table: &'t mut InferenceTable<I>,
+    environment: &'t Environment<I>,
+    answer_subst: &'t Substitution<I>,
     answer_binders: usize,
     pending_binders: usize,
-    ex_clause: &'t mut ExClause<SlgContext<TF>>,
+    ex_clause: &'t mut ExClause<SlgContext<I>>,
 }
 
-impl<TF: TypeFamily> AnswerSubstitutor<'_, TF> {
-    fn substitute<T: Zip<TF>>(
-        table: &mut InferenceTable<TF>,
-        environment: &Environment<TF>,
-        answer_subst: &Substitution<TF>,
-        ex_clause: &mut ExClause<SlgContext<TF>>,
+impl<I: Interner> AnswerSubstitutor<'_, I> {
+    fn substitute<T: Zip<I>>(
+        table: &mut InferenceTable<I>,
+        environment: &Environment<I>,
+        answer_subst: &Substitution<I>,
+        ex_clause: &mut ExClause<SlgContext<I>>,
         answer: &T,
         pending: &T,
     ) -> Fallible<()> {
@@ -289,7 +289,7 @@ impl<TF: TypeFamily> AnswerSubstitutor<'_, TF> {
     fn unify_free_answer_var(
         &mut self,
         answer_depth: usize,
-        pending: ParameterKind<&Ty<TF>, &Lifetime<TF>>,
+        pending: ParameterKind<&Ty<I>, &Lifetime<I>>,
     ) -> Fallible<bool> {
         // This variable is bound in the answer, not free, so it
         // doesn't represent a reference into the answer substitution.
@@ -337,8 +337,8 @@ impl<TF: TypeFamily> AnswerSubstitutor<'_, TF> {
     }
 }
 
-impl<TF: TypeFamily> Zipper<TF> for AnswerSubstitutor<'_, TF> {
-    fn zip_tys(&mut self, answer: &Ty<TF>, pending: &Ty<TF>) -> Fallible<()> {
+impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
+    fn zip_tys(&mut self, answer: &Ty<I>, pending: &Ty<I>) -> Fallible<()> {
         if let Some(pending) = self.table.normalize_shallow(pending) {
             return Zip::zip_with(self, answer, &pending);
         }
@@ -396,7 +396,7 @@ impl<TF: TypeFamily> Zipper<TF> for AnswerSubstitutor<'_, TF> {
         }
     }
 
-    fn zip_lifetimes(&mut self, answer: &Lifetime<TF>, pending: &Lifetime<TF>) -> Fallible<()> {
+    fn zip_lifetimes(&mut self, answer: &Lifetime<I>, pending: &Lifetime<I>) -> Fallible<()> {
         if let Some(pending) = self.table.normalize_lifetime(pending) {
             return Zip::zip_with(self, answer, &pending);
         }
@@ -433,7 +433,7 @@ impl<TF: TypeFamily> Zipper<TF> for AnswerSubstitutor<'_, TF> {
 
     fn zip_binders<T>(&mut self, answer: &Binders<T>, pending: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<TF> + Fold<TF, Result = T>,
+        T: Zip<I> + Fold<I, Result = T>,
     {
         self.answer_binders += answer.binders.len();
         self.pending_binders += pending.binders.len();

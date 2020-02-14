@@ -1,6 +1,6 @@
 //! Traits for transforming bits of IR.
 
-use crate::family::TargetTypeFamily;
+use crate::interner::TargetInterner;
 use crate::*;
 use std::fmt::Debug;
 
@@ -19,12 +19,12 @@ pub use self::subst::Subst;
 /// `Folder`, will reconstruct itself, invoking the folder's methods
 /// to transform each of the types/lifetimes embedded within.
 ///
-/// # Type families
+/// # Interners
 ///
-/// The Folder trait has two type parameters, `TF` and `TTF`:
+/// The Folder trait has two type parameters, `I` and `TI`:
 ///
-/// * `TF` is the "source type family" that we are folding *from*
-/// * `TTF` is the "target type family" that we are folding *into*
+/// * `I` is the "source interner" that we are folding *from*
+/// * `TI` is the "target interner" that we are folding *into*
 ///
 /// Often, both are the same.
 ///
@@ -62,7 +62,7 @@ pub use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF> {
+pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
     /// Creates a `dyn` value from this folder. Unfortunately, this
     /// must be added manually to each impl of Folder; it permits the
     /// default implements below to create a `&mut dyn Folder` from
@@ -70,39 +70,35 @@ pub trait Folder<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF> {
     /// method). Effectively, this limits impls of `Folder` to types
     /// for which we are able to create a dyn value (i.e., not `[T]`
     /// types).
-    fn as_dyn(&mut self) -> &mut dyn Folder<TF, TTF>;
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, TI>;
 
-    /// Top-level callback: invoked for each `Ty<TF>` that is
+    /// Top-level callback: invoked for each `Ty<I>` that is
     /// encountered when folding. By default, invokes
     /// `super_fold_with`, which will in turn invoke the more
     /// specialized folding methods below, like `fold_free_var_ty`.
-    fn fold_ty(&mut self, ty: &Ty<TF>, binders: usize) -> Fallible<Ty<TTF>> {
+    fn fold_ty(&mut self, ty: &Ty<I>, binders: usize) -> Fallible<Ty<TI>> {
         ty.super_fold_with(self.as_dyn(), binders)
     }
 
-    /// Top-level callback: invoked for each `Lifetime<TF>` that is
+    /// Top-level callback: invoked for each `Lifetime<I>` that is
     /// encountered when folding. By default, invokes
     /// `super_fold_with`, which will in turn invoke the more
     /// specialized folding methods below, like `fold_free_lifetime_ty`.
-    fn fold_lifetime(
-        &mut self,
-        lifetime: &Lifetime<TF>,
-        binders: usize,
-    ) -> Fallible<Lifetime<TTF>> {
+    fn fold_lifetime(&mut self, lifetime: &Lifetime<I>, binders: usize) -> Fallible<Lifetime<TI>> {
         lifetime.super_fold_with(self.as_dyn(), binders)
     }
 
     /// Invoked for every program clause. By default, recursively folds the goals contents.
     fn fold_program_clause(
         &mut self,
-        clause: &ProgramClause<TF>,
+        clause: &ProgramClause<I>,
         binders: usize,
-    ) -> Fallible<ProgramClause<TTF>> {
+    ) -> Fallible<ProgramClause<TI>> {
         clause.super_fold_with(self.as_dyn(), binders)
     }
 
     /// Invoked for every goal. By default, recursively folds the goals contents.
-    fn fold_goal(&mut self, goal: &Goal<TF>, binders: usize) -> Fallible<Goal<TTF>> {
+    fn fold_goal(&mut self, goal: &Goal<I>, binders: usize) -> Fallible<Goal<TI>> {
         goal.super_fold_with(self.as_dyn(), binders)
     }
 
@@ -122,20 +118,20 @@ pub trait Folder<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF> {
     ///
     /// This should return a type suitable for a context with
     /// `binders` in scope.
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TTF>> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TI>> {
         if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(TyData::<TTF>::BoundVar(depth + binders).intern())
+            Ok(TyData::<TI>::BoundVar(depth + binders).intern())
         }
     }
 
     /// As `fold_free_var_ty`, but for lifetimes.
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TTF>> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TI>> {
         if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(LifetimeData::<TTF>::BoundVar(depth + binders).intern())
+            Ok(LifetimeData::<TI>::BoundVar(depth + binders).intern())
         }
     }
 
@@ -156,11 +152,11 @@ pub trait Folder<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty<TTF>> {
+    ) -> Fallible<Ty<TI>> {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
-            Ok(universe.to_ty::<TTF>())
+            Ok(universe.to_ty::<TI>())
         }
     }
 
@@ -169,11 +165,11 @@ pub trait Folder<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Lifetime<TTF>> {
+    ) -> Fallible<Lifetime<TI>> {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder lifetime `{:?}`", universe)
         } else {
-            Ok(universe.to_lifetime::<TTF>())
+            Ok(universe.to_lifetime::<TI>())
         }
     }
 
@@ -191,11 +187,11 @@ pub trait Folder<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF> {
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TTF>> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TI>> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
-            Ok(var.to_ty::<TTF>())
+            Ok(var.to_ty::<TI>())
         }
     }
 
@@ -204,31 +200,31 @@ pub trait Folder<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF> {
         &mut self,
         var: InferenceVar,
         _binders: usize,
-    ) -> Fallible<Lifetime<TTF>> {
+    ) -> Fallible<Lifetime<TI>> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference lifetime `'{:?}`", var)
         } else {
-            Ok(var.to_lifetime::<TTF>())
+            Ok(var.to_lifetime::<TI>())
         }
     }
 }
 
 /// Applies the given `Folder` to a value, producing a folded result
-/// of type `Self::Result`. The result is in the type family
-/// `TTF`. The result type is typically the same as the source type
-/// (modulo type family), but in some cases we convert from borrowed
+/// of type `Self::Result`. The result is in the interner
+/// `TI`. The result type is typically the same as the source type
+/// (modulo interner), but in some cases we convert from borrowed
 /// to owned as well (e.g., the folder for `&T` will fold to a fresh
 /// `T`; well, actually `T::Result`).
 ///
-/// # Type families
+/// # Interners
 ///
-/// The `Fold` trait has two type parameters, `TF` and `TTF`:
+/// The `Fold` trait has two type parameters, `I` and `TI`:
 ///
-/// * `TF` is the "source type family" that we are folding *from*
-/// * `TTF` is the "target type family" that we are folding *into*
+/// * `I` is the "source interner" that we are folding *from*
+/// * `TI` is the "target interner" that we are folding *into*
 ///
 /// Often, both are the same.
-pub trait Fold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Debug {
+pub trait Fold<I: Interner, TI: TargetInterner<I> = I>: Debug {
     /// The type of value that will be produced once folding is done.
     /// Typically this is `Self`, unless `Self` contains borrowed
     /// values, in which case owned values are produced (for example,
@@ -241,17 +237,16 @@ pub trait Fold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Debug {
     /// folder. Typically `binders` starts as 0, but is adjusted when
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
-    fn fold_with(&self, folder: &mut dyn Folder<TF, TTF>, binders: usize)
-        -> Fallible<Self::Result>;
+    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result>;
 }
 
 /// For types where "fold" invokes a callback on the `Folder`, the
 /// `SuperFold` trait captures the recursive behavior that folds all
 /// the contents of the type.
-pub trait SuperFold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Fold<TF, TTF> {
+pub trait SuperFold<I: Interner, TI: TargetInterner<I> = I>: Fold<I, TI> {
     fn super_fold_with(
         &self,
-        folder: &mut dyn Folder<TF, TTF>,
+        folder: &mut dyn Folder<I, TI>,
         binders: usize,
     ) -> Fallible<Self::Result>;
 }
@@ -259,35 +254,27 @@ pub trait SuperFold<TF: TypeFamily, TTF: TargetTypeFamily<TF> = TF>: Fold<TF, TT
 /// "Folding" a type invokes the `fold_ty` method on the folder; this
 /// usually (in turn) invokes `super_fold_ty` to fold the individual
 /// parts.
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Ty<TF> {
-    type Result = Ty<TTF>;
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Ty<I> {
+    type Result = Ty<TI>;
 
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
         folder.fold_ty(self, binders)
     }
 }
 
 /// "Super fold" for a type invokes te more detailed callbacks on the type
-impl<TF, TTF> SuperFold<TF, TTF> for Ty<TF>
+impl<I, TI> SuperFold<I, TI> for Ty<I>
 where
-    TF: TypeFamily,
-    TTF: TargetTypeFamily<TF>,
+    I: Interner,
+    TI: TargetInterner<I>,
 {
-    fn super_fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Ty<TTF>> {
+    fn super_fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Ty<TI>> {
         match self.data() {
             TyData::BoundVar(depth) => {
                 if *depth >= binders {
                     folder.fold_free_var_ty(*depth - binders, binders)
                 } else {
-                    Ok(TyData::<TTF>::BoundVar(*depth).intern())
+                    Ok(TyData::<TI>::BoundVar(*depth).intern())
                 }
             }
             TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
@@ -303,34 +290,30 @@ where
 /// "Folding" a lifetime invokes the `fold_lifetime` method on the folder; this
 /// usually (in turn) invokes `super_fold_lifetime` to fold the individual
 /// parts.
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Lifetime<TF> {
-    type Result = Lifetime<TTF>;
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Lifetime<I> {
+    type Result = Lifetime<TI>;
 
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
         folder.fold_lifetime(self, binders)
     }
 }
 
-impl<TF, TTF> SuperFold<TF, TTF> for Lifetime<TF>
+impl<I, TI> SuperFold<I, TI> for Lifetime<I>
 where
-    TF: TypeFamily,
-    TTF: TargetTypeFamily<TF>,
+    I: Interner,
+    TI: TargetInterner<I>,
 {
     fn super_fold_with(
         &self,
-        folder: &mut dyn Folder<TF, TTF>,
+        folder: &mut dyn Folder<I, TI>,
         binders: usize,
-    ) -> Fallible<Lifetime<TTF>> {
+    ) -> Fallible<Lifetime<TI>> {
         match self.data() {
             LifetimeData::BoundVar(depth) => {
                 if *depth >= binders {
                     folder.fold_free_var_lifetime(depth - binders, binders)
                 } else {
-                    Ok(LifetimeData::<TTF>::BoundVar(*depth).intern())
+                    Ok(LifetimeData::<TI>::BoundVar(*depth).intern())
                 }
             }
             LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
@@ -344,23 +327,19 @@ where
 
 /// Folding a goal invokes the `fold_goal` callback (which will, by
 /// default, invoke super-fold).
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for Goal<TF> {
-    type Result = Goal<TTF>;
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goal<I> {
+    type Result = Goal<TI>;
 
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
         folder.fold_goal(self, binders)
     }
 }
 
 /// Superfold folds recursively.
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> SuperFold<TF, TTF> for Goal<TF> {
+impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for Goal<I> {
     fn super_fold_with(
         &self,
-        folder: &mut dyn Folder<TF, TTF>,
+        folder: &mut dyn Folder<I, TI>,
         binders: usize,
     ) -> Fallible<Self::Result> {
         Ok(Goal::new(self.data().fold_with(folder, binders)?))
@@ -370,14 +349,10 @@ impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> SuperFold<TF, TTF> for Goal<TF> 
 /// Folding a program clause invokes the `fold_program_clause`
 /// callback on the folder (which will, by default, invoke the
 /// `super_fold_with` method on the program clause).
-impl<TF: TypeFamily, TTF: TargetTypeFamily<TF>> Fold<TF, TTF> for ProgramClause<TF> {
-    type Result = ProgramClause<TTF>;
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ProgramClause<I> {
+    type Result = ProgramClause<TI>;
 
-    fn fold_with(
-        &self,
-        folder: &mut dyn Folder<TF, TTF>,
-        binders: usize,
-    ) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
         folder.fold_program_clause(self, binders)
     }
 }

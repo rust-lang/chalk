@@ -3,7 +3,7 @@ use crate::lowering::LowerGoal;
 use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
 use chalk_engine::forest::SubstitutionResult;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::AssocTypeId;
 use chalk_ir::Canonical;

@@ -4,7 +4,7 @@ use chalk_integration::db::ChalkDatabase;
 use chalk_integration::lowering::LowerGoal;
 use chalk_integration::query::LoweringDatabase;
 use chalk_ir;
-use chalk_ir::family::ChalkIr;
+use chalk_ir::interner::ChalkIr;
 use chalk_solve::ext::*;
 use chalk_solve::{Solution, SolverChoice};
 

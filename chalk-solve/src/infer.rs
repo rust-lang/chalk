@@ -1,4 +1,4 @@
-use chalk_ir::family::TypeFamily;
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_ir::{cast::Cast, fold::Fold};
 
@@ -14,22 +14,22 @@ pub(crate) mod var;
 use self::var::*;
 
 #[derive(Clone)]
-pub(crate) struct InferenceTable<TF: TypeFamily> {
-    unify: ena::unify::InPlaceUnificationTable<EnaVariable<TF>>,
-    vars: Vec<EnaVariable<TF>>,
+pub(crate) struct InferenceTable<I: Interner> {
+    unify: ena::unify::InPlaceUnificationTable<EnaVariable<I>>,
+    vars: Vec<EnaVariable<I>>,
     max_universe: UniverseIndex,
 }
 
-pub(crate) struct InferenceSnapshot<TF: TypeFamily> {
-    unify_snapshot: ena::unify::Snapshot<ena::unify::InPlace<EnaVariable<TF>>>,
+pub(crate) struct InferenceSnapshot<I: Interner> {
+    unify_snapshot: ena::unify::Snapshot<ena::unify::InPlace<EnaVariable<I>>>,
     max_universe: UniverseIndex,
-    vars: Vec<EnaVariable<TF>>,
+    vars: Vec<EnaVariable<I>>,
 }
 
 #[allow(type_alias_bounds)]
-pub(crate) type ParameterEnaVariable<TF: TypeFamily> = ParameterKind<EnaVariable<TF>>;
+pub(crate) type ParameterEnaVariable<I: Interner> = ParameterKind<EnaVariable<I>>;
 
-impl<TF: TypeFamily> InferenceTable<TF> {
+impl<I: Interner> InferenceTable<I> {
     /// Create an empty inference table with no variables.
     pub(crate) fn new() -> Self {
         InferenceTable {
@@ -49,9 +49,9 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     pub(crate) fn from_canonical<T>(
         num_universes: usize,
         canonical: &Canonical<T>,
-    ) -> (Self, Substitution<TF>, T)
+    ) -> (Self, Substitution<I>, T)
     where
-        T: Fold<TF, Result = T> + Clone,
+        T: Fold<I, Result = T> + Clone,
     {
         let mut table = InferenceTable::new();
 
@@ -85,7 +85,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     /// Creates a new inference variable and returns its index. The
     /// kind of the variable should be known by the caller, but is not
     /// tracked directly by the inference table.
-    pub(crate) fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable<TF> {
+    pub(crate) fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable<I> {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
         debug!("new_variable: var={:?} ui={:?}", var, ui);
@@ -98,7 +98,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     /// must respect a stack discipline (i.e., rollback or commit
     /// snapshots in reverse order of that with which they were
     /// created).
-    pub(crate) fn snapshot(&mut self) -> InferenceSnapshot<TF> {
+    pub(crate) fn snapshot(&mut self) -> InferenceSnapshot<I> {
         let unify_snapshot = self.unify.snapshot();
         let vars = self.vars.clone();
         let max_universe = self.max_universe;
@@ -110,14 +110,14 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     }
 
     /// Restore the table to the state it had when the snapshot was taken.
-    pub(crate) fn rollback_to(&mut self, snapshot: InferenceSnapshot<TF>) {
+    pub(crate) fn rollback_to(&mut self, snapshot: InferenceSnapshot<I>) {
         self.unify.rollback_to(snapshot.unify_snapshot);
         self.vars = snapshot.vars;
         self.max_universe = snapshot.max_universe;
     }
 
     /// Make permanent the changes made since the snapshot was taken.
-    pub(crate) fn commit(&mut self, snapshot: InferenceSnapshot<TF>) {
+    pub(crate) fn commit(&mut self, snapshot: InferenceSnapshot<I>) {
         self.unify.commit(snapshot.unify_snapshot);
     }
 
@@ -127,7 +127,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     /// `binders` is the number of binders under which `leaf` appears;
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
-    pub(crate) fn normalize_shallow(&mut self, leaf: &Ty<TF>) -> Option<Ty<TF>> {
+    pub(crate) fn normalize_shallow(&mut self, leaf: &Ty<I>) -> Option<Ty<I>> {
         let var = EnaVariable::from(leaf.inference_var()?);
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
@@ -141,7 +141,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
-    pub(crate) fn normalize_lifetime(&mut self, leaf: &Lifetime<TF>) -> Option<Lifetime<TF>> {
+    pub(crate) fn normalize_lifetime(&mut self, leaf: &Lifetime<I>) -> Option<Lifetime<I>> {
         let var = EnaVariable::from(leaf.inference_var()?);
         let v1 = self.probe_lifetime_var(var)?;
         assert!(!v1.needs_shift());
@@ -164,7 +164,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     /// This method is only valid for inference variables of kind
     /// type. If this variable is of a different kind, then the
     /// function may panic.
-    fn probe_ty_var(&mut self, var: EnaVariable<TF>) -> Option<Ty<TF>> {
+    fn probe_ty_var(&mut self, var: EnaVariable<I>) -> Option<Ty<I>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().ty().unwrap().clone()),
@@ -178,7 +178,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     ///
     /// This method is only valid for inference variables of kind
     /// lifetime. If this variable is of a different kind, then the function may panic.
-    fn probe_lifetime_var(&mut self, var: EnaVariable<TF>) -> Option<Lifetime<TF>> {
+    fn probe_lifetime_var(&mut self, var: EnaVariable<I>) -> Option<Lifetime<I>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => Some(val.as_ref().lifetime().unwrap().clone()),
@@ -190,7 +190,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     /// # Panics
     ///
     /// Panics if the variable is bound.
-    fn universe_of_unbound_var(&mut self, var: EnaVariable<TF>) -> UniverseIndex {
+    fn universe_of_unbound_var(&mut self, var: EnaVariable<I>) -> UniverseIndex {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(ui) => ui,
             InferenceValue::Bound(_) => panic!("var_universe invoked on bound variable"),
@@ -198,12 +198,12 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     }
 }
 
-pub(crate) trait ParameterEnaVariableExt<TF: TypeFamily> {
-    fn to_parameter(self) -> Parameter<TF>;
+pub(crate) trait ParameterEnaVariableExt<I: Interner> {
+    fn to_parameter(self) -> Parameter<I>;
 }
 
-impl<TF: TypeFamily> ParameterEnaVariableExt<TF> for ParameterEnaVariable<TF> {
-    fn to_parameter(self) -> Parameter<TF> {
+impl<I: Interner> ParameterEnaVariableExt<I> for ParameterEnaVariable<I> {
+    fn to_parameter(self) -> Parameter<I> {
         match self {
             ParameterKind::Ty(v) => v.to_ty().cast(),
             ParameterKind::Lifetime(v) => v.to_lifetime().cast(),

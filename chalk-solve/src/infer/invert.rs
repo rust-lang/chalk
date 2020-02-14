@@ -1,15 +1,15 @@
 use chalk_engine::fallible::*;
-use chalk_ir::family::HasTypeFamily;
-use chalk_ir::family::TypeFamily;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{Fold, Folder};
+use chalk_ir::interner::HasInterner;
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::collections::HashMap;
 
 use super::canonicalize::Canonicalized;
 use super::{EnaVariable, InferenceTable};
 
-impl<TF: TypeFamily> InferenceTable<TF> {
+impl<I: Interner> InferenceTable<I> {
     /// Converts `value` into a "negation" value -- meaning one that,
     /// if we can find any answer to it, then the negation fails. For
     /// goals that do not contain any free variables, then this is a
@@ -74,7 +74,7 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     /// `None`) until the second unification has occurred.)
     pub(crate) fn invert<T>(&mut self, value: &T) -> Option<T::Result>
     where
-        T: Fold<TF, Result = T> + HasTypeFamily<TypeFamily = TF>,
+        T: Fold<I, Result = T> + HasInterner<Interner = I>,
     {
         let Canonicalized {
             free_vars,
@@ -97,14 +97,14 @@ impl<TF: TypeFamily> InferenceTable<TF> {
     }
 }
 
-struct Inverter<'q, TF: TypeFamily> {
-    table: &'q mut InferenceTable<TF>,
-    inverted_ty: HashMap<PlaceholderIndex, EnaVariable<TF>>,
-    inverted_lifetime: HashMap<PlaceholderIndex, EnaVariable<TF>>,
+struct Inverter<'q, I: Interner> {
+    table: &'q mut InferenceTable<I>,
+    inverted_ty: HashMap<PlaceholderIndex, EnaVariable<I>>,
+    inverted_lifetime: HashMap<PlaceholderIndex, EnaVariable<I>>,
 }
 
-impl<'q, TF: TypeFamily> Inverter<'q, TF> {
-    fn new(table: &'q mut InferenceTable<TF>) -> Self {
+impl<'q, I: Interner> Inverter<'q, I> {
+    fn new(table: &'q mut InferenceTable<I>) -> Self {
         Inverter {
             table,
             inverted_ty: HashMap::new(),
@@ -113,8 +113,8 @@ impl<'q, TF: TypeFamily> Inverter<'q, TF> {
     }
 }
 
-impl<TF: TypeFamily> Folder<TF> for Inverter<'_, TF> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<TF> {
+impl<I: Interner> Folder<I> for Inverter<'_, I> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
@@ -122,7 +122,7 @@ impl<TF: TypeFamily> Folder<TF> for Inverter<'_, TF> {
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Ty<TF>> {
+    ) -> Fallible<Ty<I>> {
         let table = &mut self.table;
         Ok(self
             .inverted_ty
@@ -136,7 +136,7 @@ impl<TF: TypeFamily> Folder<TF> for Inverter<'_, TF> {
         &mut self,
         universe: PlaceholderIndex,
         binders: usize,
-    ) -> Fallible<Lifetime<TF>> {
+    ) -> Fallible<Lifetime<I>> {
         let table = &mut self.table;
         Ok(self
             .inverted_lifetime
