@@ -5,7 +5,7 @@ use quote::{format_ident, quote};
 use syn::{parse_macro_input, Data, DeriveInput, GenericParam, Ident, TypeParamBound};
 
 /// Derives Fold for structs and enums for which one of the following is true:
-/// - It has a `#[has_interner(TheTypeFamily)]` attribute
+/// - It has a `#[has_interner(TheInterner)]` attribute
 /// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
 /// - There is a single parameter `I: Interner` (does not have to be named `I`)
 #[proc_macro_derive(Fold, attributes(has_interner))]
@@ -60,11 +60,11 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         //
         // Example:
         //
-        // impl<T, _I, _TTF, _U> Fold<_I, _TTF> for Binders<T>
+        // impl<T, _I, _TI, _U> Fold<_I, _TI> for Binders<T>
         // where
         //     T: HasInterner<Interner = _I>,
-        //     T: Fold<_I, _TTF, Result = _U>,
-        //     U: HasInterner<Interner = _TTF>,
+        //     T: Fold<_I, _TI, Result = _U>,
+        //     U: HasInterner<Interner = _TI>,
         // {
         //     type Result = Binders<_U>;
         // }
@@ -72,9 +72,9 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
         let mut impl_generics = input.generics.clone();
         impl_generics.params.extend(vec![
             GenericParam::Type(syn::parse(quote! { _I: Interner }.into()).unwrap()),
-            GenericParam::Type(syn::parse(quote! { _TTF: TargetInterner<_I> }.into()).unwrap()),
+            GenericParam::Type(syn::parse(quote! { _TI: TargetInterner<_I> }.into()).unwrap()),
             GenericParam::Type(
-                syn::parse(quote! { _U: HasInterner<Interner = _TTF> }.into()).unwrap(),
+                syn::parse(quote! { _U: HasInterner<Interner = _TI> }.into()).unwrap(),
             ),
         ]);
 
@@ -86,17 +86,17 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
             .push(syn::parse2(quote! { #param: HasInterner<Interner = _I> }).unwrap());
         where_clause
             .predicates
-            .push(syn::parse2(quote! { #param: Fold<_I, _TTF, Result = _U> }).unwrap());
+            .push(syn::parse2(quote! { #param: Fold<_I, _TI, Result = _U> }).unwrap());
 
         return TokenStream::from(quote! {
-            impl #impl_generics Fold < _I, _TTF > for #type_name < #param >
+            impl #impl_generics Fold < _I, _TI > for #type_name < #param >
                 #where_clause
             {
                 type Result = #type_name < _U >;
 
                 fn fold_with(
                     &self,
-                    folder: &mut dyn Folder < _I, _TTF >,
+                    folder: &mut dyn Folder < _I, _TI >,
                     binders: usize,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                     #body
@@ -109,29 +109,29 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
     //
     // Example:
     //
-    // impl<I, _TTF> Fold<I, _TTF> for Foo<I>
+    // impl<I, _TI> Fold<I, _TI> for Foo<I>
     // where
     //     I: HasInterner,
-    //     _TTF: HasInterner,
+    //     _TI: HasInterner,
     // {
-    //     type Result = Foo<_TTF>;
+    //     type Result = Foo<_TI>;
     // }
 
     if let Some(i) = is_interner(&generic_param0) {
         let mut impl_generics = input.generics.clone();
         impl_generics.params.extend(vec![GenericParam::Type(
-            syn::parse(quote! { _TTF: TargetInterner<#i> }.into()).unwrap(),
+            syn::parse(quote! { _TI: TargetInterner<#i> }.into()).unwrap(),
         )]);
 
         return TokenStream::from(quote! {
-            impl #impl_generics Fold < #i, _TTF > for #type_name < #i >
+            impl #impl_generics Fold < #i, _TI > for #type_name < #i >
                 #where_clause_ref
             {
-                type Result = #type_name < _TTF >;
+                type Result = #type_name < _TI >;
 
                 fn fold_with(
                     &self,
-                    folder: &mut dyn Folder < #i, _TTF >,
+                    folder: &mut dyn Folder < #i, _TI >,
                     binders: usize,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                     #body
