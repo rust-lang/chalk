@@ -51,7 +51,7 @@ impl<I: Interner> Solution<I> {
 }
 
 impl<I: Interner> fmt::Display for Solution<I> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Solution::Unique(constrained) => write!(f, "Unique; {}", constrained,),
             Solution::Ambig(Guidance::Definite(subst)) => {

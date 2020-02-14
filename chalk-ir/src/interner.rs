@@ -42,7 +42,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// converted back (by the [`ty_data`] method). The interned form
     /// must also introduce indirection, either via a `Box`, `&`, or
     /// other pointer type.
-    type InternedType: Debug + Clone + Eq + Ord + Hash;
+    type InternedType: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of lifetimes.  In normal user code,
     /// `Self::InternedLifetime` is not referenced Instead, we refer to
@@ -51,7 +51,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// An `InternedLifetime` must be something that can be created
     /// from a `LifetimeData` (by the [`intern_lifetime`] method) and
     /// then later converted back (by the [`lifetime_data`] method).
-    type InternedLifetime: Debug + Clone + Eq + Ord + Hash;
+    type InternedLifetime: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "generic parameter", which can
     /// be either a type or a lifetime.  In normal user code,
@@ -60,7 +60,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// An `InternedType` is created by `intern_parameter` and can be
     /// converted back to its underlying data via `parameter_data`.
-    type InternedParameter: Debug + Clone + Eq + Ord + Hash;
+    type InternedParameter: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "goal".  In normal user code,
     /// `Self::InternedGoal` is not referenced. Instead, we refer to
@@ -68,7 +68,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// An `InternedGoal` is created by `intern_goal` and can be
     /// converted back to its underlying data via `goal_data`.
-    type InternedGoal: Debug + Clone + Eq + Ord + Hash;
+    type InternedGoal: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a list of goals.  In normal user code,
     /// `Self::InternedGoals` is not referenced. Instead, we refer to
@@ -76,7 +76,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// An `InternedGoals` is created by `intern_goals` and can be
     /// converted back to its underlying data via `goals_data`.
-    type InternedGoals: Debug + Clone + Eq + Ord + Hash;
+    type InternedGoals: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "substitution".  In normal user code,
     /// `Self::InternedSubstitution` is not referenced. Instead, we refer to
@@ -84,7 +84,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// An `InternedSubstitution` is created by `intern_substitution` and can be
     /// converted back to its underlying data via `substitution_data`.
-    type InternedSubstitution: Debug + Clone + Eq + Ord + Hash;
+    type InternedSubstitution: Debug + Clone + Eq + Hash;
 
     /// The core "id" type used for struct-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;

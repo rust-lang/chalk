@@ -4,7 +4,7 @@ use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::HasInterner;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use super::canonicalize::Canonicalized;
 use super::{EnaVariable, InferenceTable};
@@ -99,16 +99,16 @@ impl<I: Interner> InferenceTable<I> {
 
 struct Inverter<'q, I: Interner> {
     table: &'q mut InferenceTable<I>,
-    inverted_ty: HashMap<PlaceholderIndex, EnaVariable<I>>,
-    inverted_lifetime: HashMap<PlaceholderIndex, EnaVariable<I>>,
+    inverted_ty: FxHashMap<PlaceholderIndex, EnaVariable<I>>,
+    inverted_lifetime: FxHashMap<PlaceholderIndex, EnaVariable<I>>,
 }
 
 impl<'q, I: Interner> Inverter<'q, I> {
     fn new(table: &'q mut InferenceTable<I>) -> Self {
         Inverter {
             table,
-            inverted_ty: HashMap::new(),
-            inverted_lifetime: HashMap::new(),
+            inverted_ty: FxHashMap::default(),
+            inverted_lifetime: FxHashMap::default(),
         }
     }
 }

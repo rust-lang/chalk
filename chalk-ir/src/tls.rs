@@ -12,25 +12,25 @@ pub trait DebugContext {
     fn debug_struct_id(
         &self,
         id: StructId<ChalkIr>,
-        fmt: &mut fmt::Formatter,
+        fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
     fn debug_trait_id(
         &self,
         id: TraitId<ChalkIr>,
-        fmt: &mut fmt::Formatter,
+        fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
     fn debug_assoc_type_id(
         &self,
         id: AssocTypeId<ChalkIr>,
-        fmt: &mut fmt::Formatter,
+        fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
     fn debug_alias(
         &self,
         alias: &AliasTy<ChalkIr>,
-        fmt: &mut fmt::Formatter,
+        fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 }
 
