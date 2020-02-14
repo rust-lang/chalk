@@ -29,7 +29,7 @@ use std::sync::Arc;
 /// where the concrete representation of core types varies. They also
 /// allow us to write generic code that reasons about multiple
 /// distinct sets of types by using distinct generic type parameters
-/// (e.g., `SourceTF` and `TargetTF`) -- even if those type parameters
+/// (e.g., `SourceI` and `TargetI`) -- even if those type parameters
 /// wind up being mapped to the same underlying type families in the
 /// end.
 pub trait Interner: Debug + Copy + Eq + Ord + Hash {
