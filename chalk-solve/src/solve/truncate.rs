@@ -9,6 +9,7 @@ use chalk_ir::*;
 use std::fmt::Debug;
 
 pub(crate) fn truncate<T, I>(
+    interner: &I,
     infer: &mut InferenceTable<I>,
     max_size: usize,
     value: &T,
@@ -20,7 +21,7 @@ where
 {
     debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
 
-    let mut truncater = Truncater::new(infer, max_size);
+    let mut truncater = Truncater::new(interner, infer, max_size);
     let value = value
         .fold_with(&mut truncater, 0)
         .expect("Truncater is infallible");
@@ -45,20 +46,22 @@ pub(crate) struct Truncated<T> {
     pub(crate) value: T,
 }
 
-struct Truncater<'infer, I: Interner> {
+struct Truncater<'infer, 'i, I: Interner> {
     infer: &'infer mut InferenceTable<I>,
     current_size: usize,
     max_size: usize,
     overflow: bool,
+    interner: &'i I,
 }
 
-impl<'infer, I: Interner> Truncater<'infer, I> {
-    fn new(infer: &'infer mut InferenceTable<I>, max_size: usize) -> Self {
+impl<'infer, 'i, I: Interner> Truncater<'infer, 'i, I> {
+    fn new(interner: &'i I, infer: &'infer mut InferenceTable<I>, max_size: usize) -> Self {
         Truncater {
             infer,
             current_size: 0,
             max_size,
             overflow: false,
+            interner,
         }
     }
 
@@ -66,17 +69,17 @@ impl<'infer, I: Interner> Truncater<'infer, I> {
         self.overflow = true;
         self.current_size = pre_size + 1;
         let universe = self.infer.max_universe();
-        self.infer.new_variable(universe).to_ty()
+        self.infer.new_variable(universe).to_ty(self.interner())
     }
 }
 
-impl<I: Interner> Folder<I> for Truncater<'_, I> {
+impl<I: Interner> Folder<I> for Truncater<'_, '_, I> {
     fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
     fn fold_ty(&mut self, ty: &Ty<I>, binders: usize) -> Fallible<Ty<I>> {
-        if let Some(normalized_ty) = self.infer.normalize_shallow(ty) {
+        if let Some(normalized_ty) = self.infer.normalize_shallow(self.interner, ty) {
             return self.fold_ty(&normalized_ty, binders);
         }
 
@@ -96,7 +99,7 @@ impl<I: Interner> Folder<I> for Truncater<'_, I> {
         // a fresh existential variable (in the innermost universe).
         let post_size = self.current_size;
         let result = if pre_size < self.max_size && post_size > self.max_size {
-            self.overflow(pre_size).shifted_in(binders)
+            self.overflow(pre_size).shifted_in(self.interner(), binders)
         } else {
             result
         };
@@ -112,6 +115,14 @@ impl<I: Interner> Folder<I> for Truncater<'_, I> {
 
     fn fold_lifetime(&mut self, lifetime: &Lifetime<I>, binders: usize) -> Fallible<Lifetime<I>> {
         lifetime.super_fold_with(self, binders)
+    }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
     }
 }
 

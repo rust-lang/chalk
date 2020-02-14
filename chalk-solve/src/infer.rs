@@ -47,6 +47,7 @@ impl<I: Interner> InferenceTable<I> {
     /// corresponding existential variable, along with the
     /// instantiated result.
     pub(crate) fn from_canonical<T>(
+        interner: &I,
         num_universes: usize,
         canonical: &Canonical<T>,
     ) -> (Self, Substitution<I>, T)
@@ -60,8 +61,9 @@ impl<I: Interner> InferenceTable<I> {
             table.new_universe();
         }
 
-        let subst = table.fresh_subst(&canonical.binders);
-        let value = canonical.value.fold_with(&mut &subst, 0).unwrap();
+        let subst = table.fresh_subst(interner, &canonical.binders);
+        let value = subst.apply(&canonical.value, interner);
+        // let value = canonical.value.fold_with(&mut &subst, 0).unwrap();
 
         (table, subst, value)
     }
@@ -127,13 +129,13 @@ impl<I: Interner> InferenceTable<I> {
     /// `binders` is the number of binders under which `leaf` appears;
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
-    pub(crate) fn normalize_shallow(&mut self, leaf: &Ty<I>) -> Option<Ty<I>> {
+    pub(crate) fn normalize_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
         let var = EnaVariable::from(leaf.inference_var()?);
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => {
                 let ty = val.as_ref().ty().unwrap().clone();
-                assert!(!ty.needs_shift());
+                assert!(!ty.needs_shift(interner));
                 Some(ty)
             }
         }
@@ -199,13 +201,13 @@ impl<I: Interner> InferenceTable<I> {
 }
 
 pub(crate) trait ParameterEnaVariableExt<I: Interner> {
-    fn to_parameter(self) -> Parameter<I>;
+    fn to_parameter(self, interner: &I) -> Parameter<I>;
 }
 
 impl<I: Interner> ParameterEnaVariableExt<I> for ParameterEnaVariable<I> {
-    fn to_parameter(self) -> Parameter<I> {
+    fn to_parameter(self, interner: &I) -> Parameter<I> {
         match self {
-            ParameterKind::Ty(v) => v.to_ty().cast(),
+            ParameterKind::Ty(v) => v.to_ty(interner).cast(),
             ParameterKind::Lifetime(v) => v.to_lifetime().cast(),
         }
     }

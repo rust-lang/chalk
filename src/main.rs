@@ -9,7 +9,7 @@ use chalk_integration::db::ChalkDatabase;
 use chalk_integration::lowering::*;
 use chalk_integration::query::LoweringDatabase;
 use chalk_solve::ext::*;
-use chalk_solve::SolverChoice;
+use chalk_solve::{RustIrDatabase, SolverChoice};
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
 
@@ -64,7 +64,7 @@ impl LoadedProgram {
     ) -> Result<()> {
         let program = self.db.checked_program()?;
         let goal = chalk_parse::parse_goal(text)?.lower(&*program)?;
-        let peeled_goal = goal.into_peeled_goal();
+        let peeled_goal = goal.into_peeled_goal(self.db.interner());
         if multiple_answers {
             if self.db.solve_multiple(&peeled_goal, |v, has_next| {
                 println!("{}\n", v);

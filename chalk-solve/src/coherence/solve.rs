@@ -91,7 +91,9 @@ impl<I: Interner> CoherenceSolver<'_, I> {
 
         // Upshift the rhs variables in params to account for the joined binders
         let lhs_params = params(lhs).iter().cloned();
-        let rhs_params = params(rhs).iter().map(|param| param.shifted_in(lhs_len));
+        let rhs_params = params(rhs)
+            .iter()
+            .map(|param| param.shifted_in(self.db.interner(), lhs_len));
 
         // Create an equality goal for every input type the trait, attempting
         // to unify the inputs to both impls with one another
@@ -106,7 +108,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .value
             .where_clauses
             .iter()
-            .map(|wc| wc.shifted_in(lhs_len));
+            .map(|wc| wc.shifted_in(self.db.interner(), lhs_len));
 
         // Create a goal for each clause in both where clauses
         let wc_goals = lhs_where_clauses
@@ -119,10 +121,10 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .chain(wc_goals)
             .collect::<Box<Goal<I>>>()
             .quantify(QuantifierKind::Exists, binders)
-            .compatible()
+            .compatible(self.db.interner())
             .negate();
 
-        let canonical_goal = &goal.into_closed_goal();
+        let canonical_goal = &goal.into_closed_goal(self.db.interner());
         let solution = self
             .solver_choice
             .into_solver()
@@ -172,7 +174,9 @@ impl<I: Interner> CoherenceSolver<'_, I> {
 
         // Create parameter equality goals.
         let more_special_params = params(more_special).iter().cloned();
-        let less_special_params = params(less_special).iter().map(|p| p.shifted_in(more_len));
+        let less_special_params = params(less_special)
+            .iter()
+            .map(|p| p.shifted_in(self.db.interner(), more_len));
         let params_goals = more_special_params
             .zip(less_special_params)
             .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern());
@@ -191,7 +195,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .value
             .where_clauses
             .iter()
-            .map(|wc| wc.shifted_in(more_len).cast());
+            .map(|wc| wc.shifted_in(self.db.interner(), more_len).cast());
 
         // Join all of the goals together.
         let goal = params_goals
@@ -201,7 +205,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .implied_by(more_special_wc)
             .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
-        let canonical_goal = &goal.into_closed_goal();
+        let canonical_goal = &goal.into_closed_goal(self.db.interner());
         let result = match self
             .solver_choice
             .into_solver()

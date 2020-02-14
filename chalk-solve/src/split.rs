@@ -133,7 +133,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         let trait_ref = {
             let impl_trait_ref = impl_datum.binders.map_ref(|b| &b.trait_ref);
             debug!("impl_trait_ref: {:?}", impl_trait_ref);
-            impl_trait_ref.substitute(impl_parameters)
+            impl_trait_ref.substitute(self.interner(), impl_parameters)
         };
 
         // Create the parameters for the projection -- in our example

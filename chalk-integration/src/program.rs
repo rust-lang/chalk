@@ -208,4 +208,8 @@ impl RustIrDatabase<ChalkIr> for Program {
                 }
         })
     }
+
+    fn interner(&self) -> &ChalkIr {
+        &ChalkIr
+    }
 }

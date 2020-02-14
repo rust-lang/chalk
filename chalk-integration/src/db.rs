@@ -136,4 +136,8 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
             .unwrap()
             .impl_provided_for(auto_trait_id, struct_id)
     }
+
+    fn interner(&self) -> &ChalkIr {
+        &ChalkIr
+    }
 }

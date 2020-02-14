@@ -65,6 +65,8 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// based on the field types (otherwise, we rely on the impls the
     /// user gave).
     fn impl_provided_for(&self, auto_trait_id: TraitId<I>, struct_id: StructId<I>) -> bool;
+
+    fn interner(&self) -> &I;
 }
 
 pub use solve::Guidance;

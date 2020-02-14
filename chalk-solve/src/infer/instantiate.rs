@@ -11,21 +11,26 @@ impl<I: Interner> InferenceTable<I> {
     /// `self.instantiate_canonical(v)`.
     pub(crate) fn fresh_subst(
         &mut self,
+        interner: &I,
         binders: &[ParameterKind<UniverseIndex>],
     ) -> Substitution<I> {
         Substitution::from(binders.iter().map(|kind| {
             let param_infer_var = kind.map(|ui| self.new_variable(ui));
-            param_infer_var.to_parameter()
+            param_infer_var.to_parameter(interner)
         }))
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.
-    pub(crate) fn instantiate_canonical<T>(&mut self, bound: &Canonical<T>) -> T::Result
+    pub(crate) fn instantiate_canonical<T>(
+        &mut self,
+        interner: &I,
+        bound: &Canonical<T>,
+    ) -> T::Result
     where
         T: Fold<I> + Debug,
     {
-        let subst = self.fresh_subst(&bound.binders);
-        bound.value.fold_with(&mut &subst, 0).unwrap()
+        let subst = self.fresh_subst(interner, &bound.binders);
+        subst.apply(&bound.value, interner)
     }
 
     /// Instantiates `arg` with fresh existential variables in the
@@ -35,6 +40,7 @@ impl<I: Interner> InferenceTable<I> {
     /// argument is referring to `X, 'Y`.
     pub(crate) fn instantiate_in<U, T>(
         &mut self,
+        interner: &I,
         universe: UniverseIndex,
         binders: U,
         arg: &T,
@@ -47,13 +53,14 @@ impl<I: Interner> InferenceTable<I> {
             .into_iter()
             .map(|pk| pk.map(|()| universe))
             .collect();
-        let subst = self.fresh_subst(&binders);
-        arg.fold_with(&mut &subst, 0).unwrap()
+        let subst = self.fresh_subst(interner, &binders);
+        subst.apply(&arg, interner)
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
     pub(crate) fn instantiate_binders_existentially<T>(
         &mut self,
+        interner: &I,
         arg: impl IntoBindersAndValue<Value = T>,
     ) -> T::Result
     where
@@ -61,11 +68,12 @@ impl<I: Interner> InferenceTable<I> {
     {
         let (binders, value) = arg.into_binders_and_value();
         let max_universe = self.max_universe;
-        self.instantiate_in(max_universe, binders, &value)
+        self.instantiate_in(interner, max_universe, binders, &value)
     }
 
     pub(crate) fn instantiate_binders_universally<T>(
         &mut self,
+        interner: &I,
         arg: impl IntoBindersAndValue<Value = T>,
     ) -> T::Result
     where
@@ -83,11 +91,11 @@ impl<I: Interner> InferenceTable<I> {
                         let lt = placeholder_idx.to_lifetime::<I>();
                         lt.cast()
                     }
-                    ParameterKind::Ty(()) => placeholder_idx.to_ty::<I>().cast(),
+                    ParameterKind::Ty(()) => placeholder_idx.to_ty::<I>(interner).cast(),
                 }
             })
             .collect();
-        Subst::apply(&parameters, &value)
+        Subst::apply(interner, &parameters, &value)
     }
 }
 

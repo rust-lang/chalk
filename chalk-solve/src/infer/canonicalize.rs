@@ -26,7 +26,7 @@ impl<I: Interner> InferenceTable<I> {
     ///
     /// A substitution mapping from the free variables to their re-bound form is
     /// also returned.
-    pub(crate) fn canonicalize<T>(&mut self, value: &T) -> Canonicalized<T::Result>
+    pub(crate) fn canonicalize<T>(&mut self, interner: &I, value: &T) -> Canonicalized<T::Result>
     where
         T: Fold<I>,
         T::Result: HasInterner<Interner = I>,
@@ -36,6 +36,7 @@ impl<I: Interner> InferenceTable<I> {
             table: self,
             free_vars: Vec::new(),
             max_universe: UniverseIndex::root(),
+            interner,
         };
         let value = value.fold_with(&mut q, 0).unwrap();
         let free_vars = q.free_vars.clone();
@@ -69,14 +70,13 @@ struct Canonicalizer<'q, I: Interner> {
     table: &'q mut InferenceTable<I>,
     free_vars: Vec<ParameterEnaVariable<I>>,
     max_universe: UniverseIndex,
+    interner: &'q I,
 }
 
 impl<'q, I: Interner> Canonicalizer<'q, I> {
     fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
         let Canonicalizer {
-            table,
-            free_vars,
-            max_universe: _,
+            table, free_vars, ..
         } = self;
         free_vars
             .into_iter()
@@ -107,7 +107,7 @@ impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
         _binders: usize,
     ) -> Fallible<Ty<I>> {
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_ty::<I>())
+        Ok(universe.to_ty::<I>(self.interner()))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -129,7 +129,7 @@ impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
         match self.table.probe_ty_var(var) {
             Some(ty) => {
                 debug!("bound to {:?}", ty);
-                Ok(ty.fold_with(self, 0)?.shifted_in(binders))
+                Ok(ty.fold_with(self, 0)?.shifted_in(self.interner(), binders))
             }
             None => {
                 // If this variable is not yet bound, find its
@@ -139,7 +139,7 @@ impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(TyData::BoundVar(position + binders).intern())
+                Ok(TyData::BoundVar(position + binders).intern(self.interner()))
             }
         }
     }
@@ -158,7 +158,7 @@ impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
         match self.table.probe_lifetime_var(var) {
             Some(l) => {
                 debug!("bound to {:?}", l);
-                Ok(l.fold_with(self, 0)?.shifted_in(binders))
+                Ok(l.fold_with(self, 0)?.shifted_in(self.interner(), binders))
             }
             None => {
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
@@ -167,5 +167,13 @@ impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
                 Ok(LifetimeData::BoundVar(position + binders).intern())
             }
         }
+    }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
     }
 }

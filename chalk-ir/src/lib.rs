@@ -158,9 +158,9 @@ pub struct Ty<I: Interner> {
 }
 
 impl<I: Interner> Ty<I> {
-    pub fn new(data: impl CastTo<TyData<I>>) -> Self {
+    pub fn new(interner: &I, data: impl CastTo<TyData<I>>) -> Self {
         Ty {
-            interned: I::intern_ty(data.cast()),
+            interned: I::intern_ty(interner, data.cast()),
         }
     }
 
@@ -204,9 +204,9 @@ impl<I: Interner> Ty<I> {
     /// True if this type contains "bound" types/lifetimes, and hence
     /// needs to be shifted across binders. This is a very inefficient
     /// check, intended only for debug assertions, because I am lazy.
-    pub fn needs_shift(&self) -> bool {
+    pub fn needs_shift(&self, interner: &I) -> bool {
         let ty = self.clone();
-        ty != ty.shifted_in(1)
+        ty != ty.shifted_in(interner, 1)
     }
 }
 
@@ -260,8 +260,8 @@ pub enum TyData<I: Interner> {
 }
 
 impl<I: Interner> TyData<I> {
-    pub fn intern(self) -> Ty<I> {
-        Ty::new(self)
+    pub fn intern(self, interner: &I) -> Ty<I> {
+        Ty::new(interner, self)
     }
 }
 
@@ -309,8 +309,8 @@ impl InferenceVar {
         self.index
     }
 
-    pub fn to_ty<I: Interner>(self) -> Ty<I> {
-        TyData::<I>::InferenceVar(self).intern()
+    pub fn to_ty<I: Interner>(self, interner: &I) -> Ty<I> {
+        TyData::<I>::InferenceVar(self).intern(interner)
     }
 
     pub fn to_lifetime<I: Interner>(self) -> Lifetime<I> {
@@ -394,9 +394,9 @@ impl PlaceholderIndex {
         LifetimeData::<I>::Placeholder(self).intern()
     }
 
-    pub fn to_ty<I: Interner>(self) -> Ty<I> {
+    pub fn to_ty<I: Interner>(self, interner: &I) -> Ty<I> {
         let data: TyData<I> = TyData::Placeholder(self);
-        data.intern()
+        data.intern(interner)
     }
 }
 
@@ -408,8 +408,8 @@ pub struct ApplicationTy<I: Interner> {
 }
 
 impl<I: Interner> ApplicationTy<I> {
-    pub fn intern(self) -> Ty<I> {
-        Ty::new(self)
+    pub fn intern(self, interner: &I) -> Ty<I> {
+        Ty::new(interner, self)
     }
 
     pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<I>> + 'a {
@@ -564,8 +564,8 @@ pub struct AliasTy<I: Interner> {
 }
 
 impl<I: Interner> AliasTy<I> {
-    pub fn intern(self) -> Ty<I> {
-        Ty::new(self)
+    pub fn intern(self, interner: &I) -> Ty<I> {
+        Ty::new(interner, self)
     }
 }
 
@@ -852,6 +852,7 @@ impl<T> Binders<T> {
     /// forall<?0, ?1> will become forall<?0, ?1, ?2> where ?0 is the fresh variable
     pub fn with_fresh_type_var<U, I>(
         self,
+        interner: &I,
         op: impl FnOnce(<T as Fold<I, I>>::Result, Ty<I>) -> U,
     ) -> Binders<U>
     where
@@ -859,8 +860,8 @@ impl<T> Binders<T> {
         T: Shift<I>,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
-        let new_var = TyData::<I>::BoundVar(0).intern();
-        let value = op(self.value.shifted_in(1), new_var);
+        let new_var = TyData::<I>::BoundVar(0).intern(interner);
+        let value = op(self.value.shifted_in(interner, 1), new_var);
         Binders {
             binders: iter::once(ParameterKind::Ty(()))
                 .chain(self.binders.iter().cloned())
@@ -883,10 +884,14 @@ where
     /// binders. So if the binders represent (e.g.) `<X, Y> { T }` and
     /// parameters is the slice `[A, B]`, then returns `[X => A, Y =>
     /// B] T`.
-    pub fn substitute(&self, parameters: &(impl AsParameters<I> + ?Sized)) -> T::Result {
+    pub fn substitute(
+        &self,
+        interner: &I,
+        parameters: &(impl AsParameters<I> + ?Sized),
+    ) -> T::Result {
         let parameters = parameters.as_parameters();
         assert_eq!(self.binders.len(), parameters.len());
-        Subst::apply(parameters, &self.value)
+        Subst::apply(interner, parameters, &self.value)
     }
 }
 
@@ -1080,7 +1085,7 @@ impl<I: Interner> Goal<I> {
     }
 
     /// Takes a goal `G` and turns it into `compatible { G }`
-    pub fn compatible(self) -> Self {
+    pub fn compatible(self, interner: &I) -> Self {
         // compatible { G } desugars into: forall<T> { if (Compatible, DownstreamType(T)) { G } }
         // This activates the compatible modality rules and introduces an anonymous downstream type
         GoalData::Quantified(
@@ -1089,7 +1094,7 @@ impl<I: Interner> Goal<I> {
                 value: self,
                 binders: Vec::new(),
             }
-            .with_fresh_type_var(|goal, ty| {
+            .with_fresh_type_var(interner, |goal, ty| {
                 GoalData::Implies(
                     vec![
                         DomainGoal::Compatible(()).cast(),
@@ -1289,6 +1294,33 @@ impl<I: Interner> Substitution<I> {
                 },
             })
     }
+
+    pub fn apply<T>(&self, value: &T, interner: &I) -> T::Result
+    where
+        T: Fold<I, I>,
+    {
+        value
+            .fold_with(
+                &mut &SubstFolder {
+                    interner,
+                    subst: self,
+                },
+                0,
+            )
+            .unwrap()
+    }
+}
+
+struct SubstFolder<'i, I: Interner> {
+    interner: &'i I,
+    subst: &'i Substitution<I>,
+}
+
+impl<I: Interner> SubstFolder<'_, I> {
+    /// Index into the list of parameters
+    pub fn at(&self, index: usize) -> &Parameter<I> {
+        &self.subst.parameters()[index]
+    }
 }
 
 pub trait AsParameters<I: Interner> {
@@ -1340,7 +1372,7 @@ where
     }
 }
 
-impl<I: Interner> Folder<I> for &Substitution<I> {
+impl<I: Interner> Folder<I> for &SubstFolder<'_, I> {
     fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
@@ -1348,13 +1380,21 @@ impl<I: Interner> Folder<I> for &Substitution<I> {
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
         let ty = self.at(depth);
         let ty = ty.assert_ty_ref();
-        Ok(ty.shifted_in(binders))
+        Ok(ty.shifted_in(self.interner(), binders))
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
         let l = self.at(depth);
         let l = l.assert_lifetime_ref();
-        Ok(l.shifted_in(binders))
+        Ok(l.shifted_in(self.interner(), binders))
+    }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
     }
 }
 

@@ -35,6 +35,12 @@ struct Env<'k> {
     parameter_map: ParameterMap,
 }
 
+impl<'k> Env<'k> {
+    fn interner(&self) -> &ChalkIr {
+        &ChalkIr
+    }
+}
+
 /// Information about an associated type **declaration** (i.e., an
 /// `AssociatedTyDatum`). This information is gathered in the first
 /// phase of creating the Rust IR and is then later used to lookup the
@@ -396,7 +402,7 @@ trait LowerParameterMap {
             .anonymize()
             .iter()
             .zip(0..)
-            .map(|p| p.to_parameter())
+            .map(|p| p.to_parameter(self.interner()))
             .collect()
     }
 
@@ -411,6 +417,10 @@ trait LowerParameterMap {
         // as an object. Actually the handling of object types is
         // probably just kind of messed up right now. That's ok.
         self.all_parameters().into_iter().zip(0..).collect()
+    }
+
+    fn interner(&self) -> &ChalkIr {
+        &ChalkIr
     }
 }
 
@@ -961,10 +971,12 @@ impl LowerTy for Ty {
                             name: chalk_ir::TypeName::Struct(id),
                             substitution: chalk_ir::Substitution::empty(),
                         })
-                        .intern())
+                        .intern(env.interner()))
                     }
                 }
-                TypeLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d).intern()),
+                TypeLookup::Parameter(d) => {
+                    Ok(chalk_ir::TyData::BoundVar(d).intern(env.interner()))
+                }
             },
 
             Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
@@ -976,13 +988,16 @@ impl LowerTy for Ty {
                             .lower(env)?
                             .iter()
                             .flat_map(|qil| {
-                                qil.into_where_clauses(chalk_ir::TyData::BoundVar(0).intern())
+                                qil.into_where_clauses(
+                                    env.interner(),
+                                    chalk_ir::TyData::BoundVar(0).intern(env.interner()),
+                                )
                             })
                             .collect())
                     },
                 )?,
             })
-            .intern()),
+            .intern(env.interner())),
 
             Ty::Apply { name, ref args } => {
                 let id = match env.lookup_type(name)? {
@@ -1016,10 +1031,12 @@ impl LowerTy for Ty {
                     name: chalk_ir::TypeName::Struct(id),
                     substitution: substitution,
                 })
-                .intern())
+                .intern(env.interner()))
             }
 
-            Ty::Alias { ref alias } => Ok(chalk_ir::TyData::Alias(alias.lower(env)?).intern()),
+            Ty::Alias { ref alias } => {
+                Ok(chalk_ir::TyData::Alias(alias.lower(env)?).intern(env.interner()))
+            }
 
             Ty::ForAll {
                 ref lifetime_names,
@@ -1035,7 +1052,7 @@ impl LowerTy for Ty {
                     num_binders: lifetime_names.len(),
                     parameters: vec![ty.lower(&quantified_env)?.cast()],
                 };
-                Ok(chalk_ir::TyData::Function(function).intern())
+                Ok(chalk_ir::TyData::Function(function).intern(env.interner()))
             }
         }
     }
@@ -1272,7 +1289,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(chalk_ir::GoalData::All(goals).intern())
             }
             Goal::Not(g) => Ok(chalk_ir::GoalData::Not(g.lower(env)?).intern()),
-            Goal::Compatible(g) => Ok(g.lower(env)?.compatible()),
+            Goal::Compatible(g) => Ok(g.lower(env)?.compatible(env.interner())),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
                 Ok(leaf.lower(env)?)

@@ -72,7 +72,7 @@ impl<I: Interner> InferenceTable<I> {
     /// `?T: Clone` in the case where `?T = Vec<i32>`. The current
     /// version would delay processing the negative goal (i.e., return
     /// `None`) until the second unification has occurred.)
-    pub(crate) fn invert<T>(&mut self, value: &T) -> Option<T::Result>
+    pub(crate) fn invert<T>(&mut self, interner: &I, value: &T) -> Option<T::Result>
     where
         T: Fold<I, Result = T> + HasInterner<Interner = I>,
     {
@@ -80,7 +80,7 @@ impl<I: Interner> InferenceTable<I> {
             free_vars,
             quantified,
             ..
-        } = self.canonicalize(&value);
+        } = self.canonicalize(interner, &value);
 
         // If the original contains free existential variables, give up.
         if !free_vars.is_empty() {
@@ -91,7 +91,7 @@ impl<I: Interner> InferenceTable<I> {
         assert!(quantified.binders.is_empty());
         let inverted = quantified
             .value
-            .fold_with(&mut Inverter::new(self), 0)
+            .fold_with(&mut Inverter::new(interner, self), 0)
             .unwrap();
         Some(inverted)
     }
@@ -101,14 +101,16 @@ struct Inverter<'q, I: Interner> {
     table: &'q mut InferenceTable<I>,
     inverted_ty: FxHashMap<PlaceholderIndex, EnaVariable<I>>,
     inverted_lifetime: FxHashMap<PlaceholderIndex, EnaVariable<I>>,
+    interner: &'q I,
 }
 
 impl<'q, I: Interner> Inverter<'q, I> {
-    fn new(table: &'q mut InferenceTable<I>) -> Self {
+    fn new(interner: &'q I, table: &'q mut InferenceTable<I>) -> Self {
         Inverter {
             table,
             inverted_ty: FxHashMap::default(),
             inverted_lifetime: FxHashMap::default(),
+            interner,
         }
     }
 }
@@ -128,8 +130,8 @@ impl<I: Interner> Folder<I> for Inverter<'_, I> {
             .inverted_ty
             .entry(universe)
             .or_insert_with(|| table.new_variable(universe.ui))
-            .to_ty()
-            .shifted_in(binders))
+            .to_ty(self.interner())
+            .shifted_in(self.interner(), binders))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -143,7 +145,7 @@ impl<I: Interner> Folder<I> for Inverter<'_, I> {
             .entry(universe)
             .or_insert_with(|| table.new_variable(universe.ui))
             .to_lifetime()
-            .shifted_in(binders))
+            .shifted_in(self.interner(), binders))
     }
 
     fn forbid_free_vars(&self) -> bool {
@@ -152,5 +154,13 @@ impl<I: Interner> Folder<I> for Inverter<'_, I> {
 
     fn forbid_inference_vars(&self) -> bool {
         true
+    }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
     }
 }

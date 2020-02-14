@@ -18,18 +18,25 @@ impl<I: Interner> InferenceTable<I> {
     /// See also `InferenceTable::canonicalize`, which -- during real
     /// processing -- is often used to capture the "current state" of
     /// variables.
-    pub(crate) fn normalize_deep<T: Fold<I>>(&mut self, value: &T) -> T::Result {
+    pub(crate) fn normalize_deep<T: Fold<I>>(&mut self, interner: &I, value: &T) -> T::Result {
         value
-            .fold_with(&mut DeepNormalizer { table: self }, 0)
+            .fold_with(
+                &mut DeepNormalizer {
+                    interner,
+                    table: self,
+                },
+                0,
+            )
             .unwrap()
     }
 }
 
-struct DeepNormalizer<'table, I: Interner> {
+struct DeepNormalizer<'table, 'i, I: Interner> {
     table: &'table mut InferenceTable<I>,
+    interner: &'i I,
 }
 
-impl<I: Interner> Folder<I> for DeepNormalizer<'_, I> {
+impl<I: Interner> Folder<I> for DeepNormalizer<'_, '_, I> {
     fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
@@ -37,8 +44,8 @@ impl<I: Interner> Folder<I> for DeepNormalizer<'_, I> {
     fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<I>> {
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
-            Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(binders)), // FIXME shift
-            None => Ok(var.to_ty()),
+            Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(self.interner(), binders)), // FIXME shift
+            None => Ok(var.to_ty(self.interner())),
         }
     }
 
@@ -49,12 +56,20 @@ impl<I: Interner> Folder<I> for DeepNormalizer<'_, I> {
     ) -> Fallible<Lifetime<I>> {
         let var = EnaVariable::from(var);
         match self.table.probe_lifetime_var(var) {
-            Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(binders)),
+            Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(self.interner(), binders)),
             None => Ok(var.to_lifetime()), // FIXME shift
         }
     }
 
     fn forbid_free_vars(&self) -> bool {
         true
+    }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
     }
 }
