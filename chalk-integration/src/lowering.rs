@@ -19,6 +19,7 @@ use crate::{Identifier as Ident, RawId, TypeKind, TypeSort};
 
 type StructIds = BTreeMap<Ident, chalk_ir::StructId<ChalkIr>>;
 type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
+type ImplTraitIds = BTreeMap<Ident, chalk_ir::ImplTraitId<ChalkIr>>;
 type StructKinds = BTreeMap<chalk_ir::StructId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
@@ -34,6 +35,7 @@ struct Env<'k> {
     struct_kinds: &'k StructKinds,
     trait_ids: &'k TraitIds,
     trait_kinds: &'k TraitKinds,
+    impl_trait_ids: &'k ImplTraitIds,
     associated_ty_lookups: &'k AssociatedTyLookups,
     /// Parameter identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
@@ -68,6 +70,7 @@ struct AssociatedTyLookup {
 enum TypeLookup {
     Struct(chalk_ir::StructId<ChalkIr>),
     Parameter(BoundVar),
+    ImplTrait(chalk_ir::ImplTraitId<ChalkIr>),
 }
 
 enum LifetimeLookup {
@@ -90,6 +93,9 @@ impl<'k> Env<'k> {
             return Ok(TypeLookup::Struct(*id));
         }
 
+        if let Some(id) = self.impl_trait_ids.get(&name.str) {
+            return Ok(TypeLookup::ImplTrait(*id));
+        }
         if let Some(_) = self.trait_ids.get(&name.str) {
             return Err(RustIrError::NotStruct(name));
         }
@@ -225,9 +231,10 @@ impl LowerProgram for Program {
 
         let mut struct_ids = BTreeMap::new();
         let mut trait_ids = BTreeMap::new();
+        let mut impl_trait_ids = BTreeMap::new();
         let mut struct_kinds = BTreeMap::new();
         let mut trait_kinds = BTreeMap::new();
-        let mut impl_trait_ids = BTreeMap::new();
+        let mut impl_trait_kinds = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             match item {
                 Item::StructDefn(defn) => {
@@ -242,8 +249,11 @@ impl LowerProgram for Program {
                     trait_ids.insert(type_kind.name, id);
                     trait_kinds.insert(id, type_kind);
                 }
-                Item::ImplTrait(impl_trait) => {
-                    impl_trait_ids.insert(impl_trait.identifier.str, ImplTraitId(raw_id));
+                Item::OpaqueTyDefn(defn) => {
+                    let type_kind = defn.lower_type_kind()?;
+                    let id = ImplTraitId(raw_id);
+                    impl_trait_ids.insert(defn.identifier.str, id);
+                    impl_trait_kinds.insert(id, type_kind);
                 }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
@@ -264,6 +274,7 @@ impl LowerProgram for Program {
                 struct_kinds: &struct_kinds,
                 trait_ids: &trait_ids,
                 trait_kinds: &trait_kinds,
+                impl_trait_ids: &impl_trait_ids,
                 associated_ty_lookups: &associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
             };
@@ -368,13 +379,13 @@ impl LowerProgram for Program {
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
                 }
-                Item::ImplTrait(ref impl_trait) => {
-                    if let Some(&value) = impl_trait_ids.get(&impl_trait.identifier.str) {
+                Item::OpaqueTyDefn(ref opaque_ty) => {
+                    if let Some(&value) = impl_trait_ids.get(&opaque_ty.identifier.str) {
                         impl_trait_data.insert(
                             value,
                             Arc::new(ImplTraitDatum {
                                 impl_trait_id: value,
-                                bounds: impl_trait
+                                bounds: opaque_ty
                                     .bounds
                                     .iter()
                                     .map(|b| b.lower(&empty_env))
@@ -571,6 +582,19 @@ impl LowerTypeKind for TraitDefn {
                 binders.anonymize(),
                 (),
             ),
+        })
+    }
+}
+
+impl LowerTypeKind for OpaqueTyDefn {
+    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
+        Ok(TypeKind {
+            sort: TypeSort::ImplTrait,
+            name: self.identifier.str,
+            binders: chalk_ir::Binders {
+                binders: vec![], //TODO do we need binders here?
+                value: (),
+            },
         })
     }
 }
@@ -1017,6 +1041,13 @@ impl LowerTy for Ty {
                     }
                 }
                 TypeLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d).intern(interner)),
+                TypeLookup::ImplTrait(id) => Ok(chalk_ir::TyData::Alias(
+                    chalk_ir::AliasTy::ImplTrait(chalk_ir::ImplTraitTy {
+                        impl_trait_id: id,
+                        substitution: chalk_ir::Substitution::empty(interner),
+                    }),
+                )
+                .intern(interner)),
             },
 
             Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
@@ -1045,7 +1076,9 @@ impl LowerTy for Ty {
             Ty::Apply { name, ref args } => {
                 let id = match env.lookup_type(name)? {
                     TypeLookup::Struct(id) => id,
-                    TypeLookup::Parameter(_) => Err(RustIrError::CannotApplyTypeParameter(name))?,
+                    TypeLookup::Parameter(_) | TypeLookup::ImplTrait(_) => {
+                        Err(RustIrError::CannotApplyTypeParameter(name))?
+                    }
                 };
 
                 let k = env.struct_kind(id);
@@ -1312,6 +1345,7 @@ impl LowerGoal<LoweredProgram> for Goal {
         let env = Env {
             struct_ids: &program.struct_ids,
             trait_ids: &program.trait_ids,
+            impl_trait_ids: &program.impl_trait_ids,
             struct_kinds: &program.struct_kinds,
             trait_kinds: &program.trait_kinds,
             associated_ty_lookups: &associated_ty_lookups,

@@ -3,6 +3,25 @@
 use super::*;
 
 #[test]
+fn opaque_bounds() {
+    test! {
+        program {
+            trait Trait { }
+            struct Ty { }
+            impl Trait for Ty { }
+
+            opaque type T: Trait = Ty;
+        }
+
+        goal {
+            T: Trait
+        } yields {
+            "Unique; substitution []"
+        }
+    }
+}
+
+#[test]
 fn dyn_Clone_is_Clone() {
     test! {
         program {

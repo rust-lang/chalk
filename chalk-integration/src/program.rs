@@ -294,7 +294,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.associated_ty_values[&id].clone()
     }
 
-    fn impl_trait_datum(&self, id: ImplTraitId<ChalkIr>) -> Arc<ImplTraitDatum<ChalkIr>> {
+    fn impl_trait_data(&self, id: ImplTraitId<ChalkIr>) -> Arc<ImplTraitDatum<ChalkIr>> {
         self.impl_trait_data[&id].clone()
     }
 

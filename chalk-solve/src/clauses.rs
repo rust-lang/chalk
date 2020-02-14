@@ -273,7 +273,7 @@ fn program_clauses_that_could_match<I: Interner>(
                 .associated_ty_data(proj.associated_ty_id)
                 .to_program_clauses(builder),
             AliasTy::ImplTrait(impl_trait) => db
-                .impl_trait_datum(impl_trait.impl_trait_id)
+                .impl_trait_data(impl_trait.impl_trait_id)
                 .to_program_clauses(builder),
         },
         DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
@@ -403,7 +403,7 @@ fn match_ty<I: Interner>(
             .to_program_clauses(builder),
         TyData::Alias(AliasTy::ImplTrait(impl_trait)) => builder
             .db
-            .impl_trait_datum(impl_trait.impl_trait_id)
+            .impl_trait_data(impl_trait.impl_trait_id)
             .to_program_clauses(builder),
         TyData::Function(quantified_ty) => {
             builder.push_fact(WellFormed::Ty(ty.clone()));
@@ -424,7 +424,7 @@ fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeNa
         TypeName::Struct(struct_id) => match_struct(builder, struct_id),
         TypeName::ImplTrait(impl_trait_id) => builder
             .db
-            .impl_trait_datum(impl_trait_id)
+            .impl_trait_data(impl_trait_id)
             .to_program_clauses(builder),
         TypeName::Error => {}
         TypeName::AssociatedType(type_id) => builder

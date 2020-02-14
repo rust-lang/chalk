@@ -22,9 +22,9 @@ pub struct Program {
 pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
+    OpaqueTyDefn(OpaqueTyDefn),
     Impl(Impl),
     Clause(Clause),
-    ImplTrait(ImplTrait),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -79,7 +79,8 @@ pub struct AssocTyDefn {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct ImplTrait {
+pub struct OpaqueTyDefn {
+    pub ty: Ty,
     pub identifier: Identifier,
     pub bounds: Vec<TraitBound>,
 }

@@ -106,8 +106,8 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().associated_ty_values[&id].clone()
     }
 
-    fn impl_trait_datum(&self, id: ImplTraitId<ChalkIr>) -> Arc<ImplTraitDatum<ChalkIr>> {
-        self.program_ir().unwrap().impl_trait_data[&id].clone()
+    fn impl_trait_data(&self, id: ImplTraitId<ChalkIr>) -> Arc<ImplTraitDatum<ChalkIr>> {
+        self.program_ir().unwrap().impl_trait_data(id)
     }
 
     fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {
