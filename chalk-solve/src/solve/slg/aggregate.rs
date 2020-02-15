@@ -70,6 +70,10 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
                 break Guidance::Unknown;
             }
 
+            if let AnswerResult::Floundered = answers.peek_answer(|| should_continue()) {
+                break Guidance::Unknown;
+            }
+
             if !answers
                 .any_future_answer(|ref mut new_subst| new_subst.may_invalidate(interner, &subst))
             {
