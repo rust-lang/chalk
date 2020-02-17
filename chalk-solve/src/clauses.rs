@@ -321,7 +321,7 @@ fn program_clauses_that_could_match<I: Interner>(
                     trait_parameters,
                 );
             }
-            _ => todo!(),
+            AliasTy::ImplTrait(_) => (),
         },
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)

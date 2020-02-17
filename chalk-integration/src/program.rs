@@ -121,7 +121,7 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         if let Some(d) = self.impl_trait_data.get(&impl_trait_id) {
-            write!(fmt, "type {:?} = impl {:?}", d.impl_trait_id, d.bounds)
+            write!(fmt, "{:?}", d.bounds)
         } else {
             fmt.debug_struct("InvalidItemId")
                 .field("index", &impl_trait_id.0)

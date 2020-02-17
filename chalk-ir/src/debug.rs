@@ -494,7 +494,7 @@ impl<'a, I: Interner> Debug for ImplTraitTyDebug<'a, I> {
         } = self;
         write!(
             fmt,
-            "(impl {:?}){:?}",
+            "{:?}{:?}",
             impl_trait_ty.impl_trait_id,
             impl_trait_ty.substitution.with_angle(interner)
         )
