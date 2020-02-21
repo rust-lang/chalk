@@ -301,9 +301,13 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     fn unify_free_answer_var(
         &mut self,
         interner: &I,
-        answer_depth: DebruijnIndex,
+        answer_var: BoundVar,
         pending: ParameterKind<&Ty<I>, &Lifetime<I>>,
     ) -> Fallible<bool> {
+        let BoundVar {
+            debruijn: answer_depth,
+        } = answer_var;
+
         // This variable is bound in the answer, not free, so it
         // doesn't represent a reference into the answer substitution.
         if answer_depth.within(self.answer_binders) {
@@ -311,7 +315,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
         }
 
         let answer_index = answer_depth.shifted_out(self.answer_binders).as_usize();
-        let answer_param = self.answer_subst.at(answer_index);
+        let answer_param = self.answer_subst.at(interner, answer_index);
 
         let pending_shifted = pending
             .shifted_out(interner, self.pending_binders)
@@ -344,9 +348,15 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     /// case.
     fn assert_matching_vars(
         &mut self,
-        answer_depth: DebruijnIndex,
-        pending_depth: DebruijnIndex,
+        answer_var: BoundVar,
+        pending_var: BoundVar,
     ) -> Fallible<()> {
+        let BoundVar {
+            debruijn: answer_depth,
+        } = answer_var;
+        let BoundVar {
+            debruijn: pending_depth,
+        } = pending_var;
         assert!(answer_depth.within(self.answer_binders));
         assert!(pending_depth.within(self.pending_binders));
         assert_eq!(

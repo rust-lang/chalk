@@ -35,7 +35,7 @@ macro_rules! ty {
     };
 
     (bound $b:expr) => {
-        $crate::TyData::BoundVar($crate::DebruijnIndex::from_u32($b)).intern(&chalk_ir::interner::ChalkIr)
+        $crate::TyData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::from_u32($b))).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (expr $b:expr) => {
@@ -71,7 +71,7 @@ macro_rules! lifetime {
     };
 
     (bound $b:expr) => {
-        $crate::LifetimeData::BoundVar($crate::DebruijnIndex::from_u32($b)).intern(&chalk_ir::interner::ChalkIr)
+        $crate::LifetimeData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::from_u32($b))).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (placeholder $b:expr) => {

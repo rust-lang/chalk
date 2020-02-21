@@ -1,6 +1,6 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::ChalkIr;
-use chalk_ir::{self, AssocTypeId, DebruijnIndex, ImplId, StructId, TraitId};
+use chalk_ir::{self, AssocTypeId, BoundVar, DebruijnIndex, ImplId, StructId, TraitId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
@@ -19,7 +19,7 @@ type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
-type ParameterMap = BTreeMap<chalk_ir::ParameterKind<Ident>, DebruijnIndex>;
+type ParameterMap = BTreeMap<chalk_ir::ParameterKind<Ident>, BoundVar>;
 
 pub type LowerResult<T> = Result<T, RustIrError>;
 
@@ -62,11 +62,11 @@ struct AssociatedTyLookup {
 
 enum TypeLookup {
     Struct(chalk_ir::StructId<ChalkIr>),
-    Parameter(DebruijnIndex),
+    Parameter(BoundVar),
 }
 
 enum LifetimeLookup {
-    Parameter(DebruijnIndex),
+    Parameter(BoundVar),
 }
 
 const SELF: &str = "Self";
@@ -141,7 +141,7 @@ impl<'k> Env<'k> {
         let binders = binders
             .into_iter()
             .enumerate()
-            .map(|(i, k)| (k, DebruijnIndex::from(i)));
+            .map(|(i, k)| (k, BoundVar::new(DebruijnIndex::from(i))));
         let len = binders.len();
         let parameter_map: ParameterMap = self
             .parameter_map
@@ -421,7 +421,7 @@ trait LowerParameterMap {
         // probably just kind of messed up right now. That's ok.
         self.all_parameters()
             .into_iter()
-            .zip((0..).map(DebruijnIndex::from_u32))
+            .zip((0..).map(|i| BoundVar::new(DebruijnIndex::from_u32(i))))
             .collect()
     }
 
@@ -1003,8 +1003,10 @@ impl LowerTy for Ty {
                             .flat_map(|qil| {
                                 qil.into_where_clauses(
                                     interner,
-                                    chalk_ir::TyData::BoundVar(DebruijnIndex::INNERMOST)
-                                        .intern(interner),
+                                    chalk_ir::TyData::BoundVar(BoundVar::new(
+                                        DebruijnIndex::INNERMOST,
+                                    ))
+                                    .intern(interner),
                                 )
                             })
                             .collect())

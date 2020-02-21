@@ -83,7 +83,6 @@ impl<T: Fold<I, I> + Eq, I: Interner> Shift<I> for T {
 }
 
 /// A folder that adjusts debruijn indices by a certain amount.
-///
 struct Shifter<'i, I> {
     adjustment: usize,
     interner: &'i I,
@@ -93,8 +92,8 @@ impl<I> Shifter<'_, I> {
     /// Given a free variable at `depth`, shifts that depth to `depth
     /// + self.adjustment`, and then wraps *that* within the internal
     /// set `binders`.
-    fn adjust(&self, depth: usize, binders: usize) -> DebruijnIndex {
-        DebruijnIndex::from(depth + self.adjustment + binders)
+    fn adjust(&self, bound_var: BoundVar, binders: usize) -> BoundVar {
+        bound_var.shifted_in(self.adjustment + binders)
     }
 }
 
@@ -103,12 +102,16 @@ impl<'i, I: Interner> Folder<'i, I> for Shifter<'i, I> {
         self
     }
 
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
-        Ok(TyData::<I>::BoundVar(self.adjust(depth, binders)).intern(self.interner()))
+    fn fold_free_var_ty(&mut self, bound_var: BoundVar, binders: usize) -> Fallible<Ty<I>> {
+        Ok(TyData::<I>::BoundVar(self.adjust(bound_var, binders)).intern(self.interner()))
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
-        Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)).intern(self.interner()))
+    fn fold_free_var_lifetime(
+        &mut self,
+        bound_var: BoundVar,
+        binders: usize,
+    ) -> Fallible<Lifetime<I>> {
+        Ok(LifetimeData::<I>::BoundVar(self.adjust(bound_var, binders)).intern(self.interner()))
     }
 
     fn interner(&self) -> &'i I {
@@ -139,9 +142,9 @@ impl<I> DownShifter<'_, I> {
     /// those internal binders (i.e., `depth < self.adjustment`) the
     /// this will fail with `Err`. Otherwise, returns the variable at
     /// this new depth (but adjusted to appear within `binders`).
-    fn adjust(&self, depth: usize, binders: usize) -> Fallible<DebruijnIndex> {
-        match depth.checked_sub(self.adjustment) {
-            Some(new_depth) => Ok(DebruijnIndex::from(new_depth + binders)),
+    fn adjust(&self, bound_var: BoundVar, binders: usize) -> Fallible<BoundVar> {
+        match bound_var.debruijn.checked_shifted_out(self.adjustment) {
+            Some(new_depth) => Ok(BoundVar::new(new_depth.shifted_in(binders))),
             None => Err(NoSolution),
         }
     }
@@ -152,12 +155,16 @@ impl<'i, I: Interner> Folder<'i, I> for DownShifter<'i, I> {
         self
     }
 
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
-        Ok(TyData::<I>::BoundVar(self.adjust(depth, binders)?).intern(self.interner()))
+    fn fold_free_var_ty(&mut self, bound_var: BoundVar, binders: usize) -> Fallible<Ty<I>> {
+        Ok(TyData::<I>::BoundVar(self.adjust(bound_var, binders)?).intern(self.interner()))
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
-        Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)?).intern(self.interner()))
+    fn fold_free_var_lifetime(
+        &mut self,
+        bound_var: BoundVar,
+        binders: usize,
+    ) -> Fallible<Lifetime<I>> {
+        Ok(LifetimeData::<I>::BoundVar(self.adjust(bound_var, binders)?).intern(self.interner()))
     }
 
     fn interner(&self) -> &'i I {

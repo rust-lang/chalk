@@ -28,26 +28,32 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
         self
     }
 
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
+    fn fold_free_var_ty(&mut self, bound_var: BoundVar, binders: usize) -> Fallible<Ty<I>> {
         let interner = self.interner();
-        if depth >= self.parameters.len() {
-            let debruijn = DebruijnIndex::from(depth - self.parameters.len() + binders);
-            Ok(TyData::<I>::BoundVar(debruijn).intern(interner))
+        let index = bound_var.index();
+        if index >= self.parameters.len() {
+            let debruijn = DebruijnIndex::from(index - self.parameters.len()).shifted_in(binders);
+            Ok(TyData::<I>::BoundVar(BoundVar::new(debruijn)).intern(interner))
         } else {
-            match self.parameters[depth].data(interner) {
+            match self.parameters[index].data(interner) {
                 ParameterKind::Ty(t) => Ok(t.shifted_in(interner, binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         }
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
+    fn fold_free_var_lifetime(
+        &mut self,
+        bound_var: BoundVar,
+        binders: usize,
+    ) -> Fallible<Lifetime<I>> {
         let interner = self.interner();
-        if depth >= self.parameters.len() {
-            let debruijn = DebruijnIndex::from(depth - self.parameters.len() + binders);
-            Ok(LifetimeData::<I>::BoundVar(debruijn).intern(interner))
+        let index = bound_var.index();
+        if index >= self.parameters.len() {
+            let debruijn = DebruijnIndex::from(index - self.parameters.len()).shifted_in(binders);
+            Ok(LifetimeData::<I>::BoundVar(BoundVar::new(debruijn)).intern(interner))
         } else {
-            match self.parameters[depth].data(interner) {
+            match self.parameters[index].data(interner) {
                 ParameterKind::Lifetime(l) => Ok(l.shifted_in(interner, binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
