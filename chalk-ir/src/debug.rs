@@ -123,7 +123,7 @@ impl<I: Interner> Debug for TypeName<I> {
 impl<I: Interner> Debug for TyData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            TyData::BoundVar(depth) => write!(fmt, "^{}", depth),
+            TyData::BoundVar(db) => write!(fmt, "{:?}", db),
             TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
             TyData::InferenceVar(var) => write!(fmt, "{:?}", var),
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
@@ -131,6 +131,13 @@ impl<I: Interner> Debug for TyData<I> {
             TyData::Placeholder(index) => write!(fmt, "{:?}", index),
             TyData::Function(function) => write!(fmt, "{:?}", function),
         }
+    }
+}
+
+impl Debug for DebruijnIndex {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let DebruijnIndex { depth } = self;
+        write!(fmt, "^{}", depth)
     }
 }
 
@@ -161,7 +168,7 @@ impl<I: Interner> Debug for Fn<I> {
 impl<I: Interner> Debug for LifetimeData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            LifetimeData::BoundVar(depth) => write!(fmt, "'^{}", depth),
+            LifetimeData::BoundVar(db) => write!(fmt, "'{:?}", db),
             LifetimeData::InferenceVar(var) => write!(fmt, "'{:?}", var),
             LifetimeData::Placeholder(index) => write!(fmt, "'{:?}", index),
             LifetimeData::Phantom(..) => unreachable!(),

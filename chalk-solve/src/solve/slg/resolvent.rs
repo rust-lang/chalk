@@ -301,18 +301,17 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     fn unify_free_answer_var(
         &mut self,
         interner: &I,
-        answer_depth: usize,
+        answer_depth: DebruijnIndex,
         pending: ParameterKind<&Ty<I>, &Lifetime<I>>,
     ) -> Fallible<bool> {
         // This variable is bound in the answer, not free, so it
         // doesn't represent a reference into the answer substitution.
-        if answer_depth < self.answer_binders {
+        if answer_depth.within(self.answer_binders) {
             return Ok(false);
         }
 
-        let answer_param = self
-            .answer_subst
-            .at(interner, answer_depth - self.answer_binders);
+        let answer_index = answer_depth.shifted_out(self.answer_binders).as_usize();
+        let answer_param = self.answer_subst.at(answer_index);
 
         let pending_shifted = pending
             .shifted_out(interner, self.pending_binders)
@@ -343,12 +342,16 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     /// that case, there should be a corresponding bound variable in
     /// the pending goal. This bit of code just checks that latter
     /// case.
-    fn assert_matching_vars(&mut self, answer_depth: usize, pending_depth: usize) -> Fallible<()> {
-        assert!(answer_depth < self.answer_binders);
-        assert!(pending_depth < self.pending_binders);
+    fn assert_matching_vars(
+        &mut self,
+        answer_depth: DebruijnIndex,
+        pending_depth: DebruijnIndex,
+    ) -> Fallible<()> {
+        assert!(answer_depth.within(self.answer_binders));
+        assert!(pending_depth.within(self.pending_binders));
         assert_eq!(
-            self.answer_binders - answer_depth,
-            self.pending_binders - pending_depth
+            self.answer_binders - answer_depth.as_usize(),
+            self.pending_binders - pending_depth.as_usize()
         );
         Ok(())
     }

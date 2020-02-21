@@ -93,8 +93,8 @@ impl<I> Shifter<'_, I> {
     /// Given a free variable at `depth`, shifts that depth to `depth
     /// + self.adjustment`, and then wraps *that* within the internal
     /// set `binders`.
-    fn adjust(&self, depth: usize, binders: usize) -> usize {
-        depth + self.adjustment + binders
+    fn adjust(&self, depth: usize, binders: usize) -> DebruijnIndex {
+        DebruijnIndex::from(depth + self.adjustment + binders)
     }
 }
 
@@ -139,9 +139,9 @@ impl<I> DownShifter<'_, I> {
     /// those internal binders (i.e., `depth < self.adjustment`) the
     /// this will fail with `Err`. Otherwise, returns the variable at
     /// this new depth (but adjusted to appear within `binders`).
-    fn adjust(&self, depth: usize, binders: usize) -> Fallible<usize> {
+    fn adjust(&self, depth: usize, binders: usize) -> Fallible<DebruijnIndex> {
         match depth.checked_sub(self.adjustment) {
-            Some(new_depth) => Ok(new_depth + binders),
+            Some(new_depth) => Ok(DebruijnIndex::from(new_depth + binders)),
             None => Err(NoSolution),
         }
     }

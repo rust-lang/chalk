@@ -189,7 +189,7 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
             // variables.
             ParameterKind::Ty(t) => match t.bound(interner) {
                 None => false,
-                Some(depth) => depth == index,
+                Some(depth) => depth.as_usize() == index,
             },
 
             // And no lifetime mappings. (This is too strict, but we never

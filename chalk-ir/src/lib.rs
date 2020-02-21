@@ -183,7 +183,7 @@ impl<I: Interner> Ty<I> {
     }
 
     /// If this is a `TyData::BoundVar(d)`, returns `Some(d)` else `None`.
-    pub fn bound(&self, interner: &I) -> Option<usize> {
+    pub fn bound(&self, interner: &I) -> Option<DebruijnIndex> {
         if let TyData::BoundVar(depth) = self.data(interner) {
             Some(*depth)
         } else {
@@ -252,14 +252,8 @@ pub enum TyData<I: Interner> {
     Function(Fn<I>),
 
     /// References the binding at the given depth. The index is a [de
-    /// Bruijn index], so it counts back through the in-scope binders,
-    /// with 0 being the innermost binder. This is used in impls and
-    /// the like. For example, if we had a rule like `for<T> { (T:
-    /// Clone) :- (T: Copy) }`, then `T` would be represented as a
-    /// `BoundVar(0)` (as the `for` is the innermost binder).
-    ///
-    /// [de Bruijn index]: https://en.wikipedia.org/wiki/De_Bruijn_index
-    BoundVar(usize),
+    /// Bruijn index], so it counts back through the in-scope binders.
+    BoundVar(DebruijnIndex),
 
     /// Inference variable defined in the current inference context.
     InferenceVar(InferenceVar),
@@ -268,6 +262,128 @@ pub enum TyData<I: Interner> {
 impl<I: Interner> TyData<I> {
     pub fn intern(self, interner: &I) -> Ty<I> {
         Ty::new(interner, self)
+    }
+}
+
+/// References the binding at the given depth. The index is a [de
+/// Bruijn index], so it counts back through the in-scope binders,
+/// with 0 being the innermost binder. This is used in impls and
+/// the like. For example, if we had a rule like `for<T> { (T:
+/// Clone) :- (T: Copy) }`, then `T` would be represented as a
+/// `BoundVar(0)` (as the `for` is the innermost binder).
+///
+/// [de Bruijn index]: https://en.wikipedia.org/wiki/De_Bruijn_index
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct DebruijnIndex {
+    depth: u32,
+}
+
+impl From<u32> for DebruijnIndex {
+    fn from(depth: u32) -> Self {
+        Self::from_u32(depth)
+    }
+}
+
+impl From<usize> for DebruijnIndex {
+    fn from(depth: usize) -> Self {
+        assert!(depth < (std::u32::MAX as usize));
+        Self::from_u32(depth as u32)
+    }
+}
+
+impl DebruijnIndex {
+    pub const INNERMOST: DebruijnIndex = DebruijnIndex { depth: 0 };
+
+    pub fn from_u32(depth: u32) -> Self {
+        DebruijnIndex { depth }
+    }
+
+    pub fn as_u32(self) -> u32 {
+        self.depth
+    }
+
+    pub fn as_usize(self) -> usize {
+        self.depth as usize
+    }
+
+    /// True if this represents a binder that is "within" the
+    /// `binders` innermost binders.
+    ///
+    /// # Example
+    ///
+    /// Imagine you have the following binders in scope
+    ///
+    /// ```ignore
+    /// forall<a> forall<b> forall<c>
+    /// ```
+    ///
+    /// then the Debruijn index for `c` would be `0`, the index for
+    /// `b` would be 1, and so on. Now consider the following calls:
+    ///
+    /// * `c.within(0) = false` -- nothing is within the 0 innermost binders
+    /// * `c.within(1) = true` -- but c is within the innermost binder
+    /// * `b.within(1) = false` -- b is not
+    /// * `b.within(2) = true` -- b is within the 2 innermost binders
+    /// * `b.within(3) = true` -- b is also within the 3 innermost binders
+    pub fn within(self, binders: usize) -> bool {
+        self.as_usize() < binders
+    }
+
+    /// Returns the resulting index when this value is moved into
+    /// `amount` number of new binders. So, e.g., if you had
+    ///
+    ///    for<'a> fn(&'a x)
+    ///
+    /// and you wanted to change it to
+    ///
+    ///    for<'a> fn(for<'b> fn(&'a x))
+    ///
+    /// you would need to shift the index for `'a` into a new binder.
+    #[must_use]
+    pub fn shifted_in(self, amount: usize) -> DebruijnIndex {
+        DebruijnIndex::from(self.as_usize() + amount)
+    }
+
+    /// Update this index in place by shifting it "in" through
+    /// `amount` number of binders.
+    pub fn shift_in(&mut self, amount: usize) {
+        *self = self.shifted_in(amount);
+    }
+
+    /// Returns the resulting index when this value is moved out from
+    /// `amount` number of new binders.
+    #[must_use]
+    pub fn shifted_out(self, amount: usize) -> DebruijnIndex {
+        DebruijnIndex::from(self.as_usize() - amount)
+    }
+
+    /// Update in place by shifting out from `amount` binders.
+    pub fn shift_out(&mut self, amount: usize) {
+        *self = self.shifted_out(amount);
+    }
+
+    /// Adjusts any De Bruijn indices so as to make `to_binder` the
+    /// innermost binder. That is, if we have something bound at `to_binder`,
+    /// it will now be bound at INNERMOST. This is an appropriate thing to do
+    /// when moving a region out from inside binders:
+    ///
+    /// ```ignore
+    ///             for<'a>   fn(for<'b>   for<'c>   fn(&'a u32), _)
+    /// // Binder:  D3           D2        D1            ^^
+    /// ```
+    ///
+    /// Here, the region `'a` would have the De Bruijn index D3,
+    /// because it is the bound 3 binders out. However, if we wanted
+    /// to refer to that region `'a` in the second argument (the `_`),
+    /// those two binders would not be in scope. In that case, we
+    /// might invoke `shift_out_to_binder(D3)`. This would adjust the
+    /// De Bruijn index of `'a` to D1 (the innermost binder).
+    ///
+    /// If we invoke `shift_out_to_binder` and the region is in fact
+    /// bound by one of the binders we are shifting out of, that is an
+    /// error (and should fail an assertion failure).
+    pub fn shifted_out_to_binder(self, to_binder: DebruijnIndex) -> Self {
+        self.shifted_out(to_binder.as_usize() - Self::INNERMOST.as_usize())
     }
 }
 
@@ -372,7 +488,7 @@ impl<I: Interner> Lifetime<I> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub enum LifetimeData<I: Interner> {
     /// See TyData::Var(_).
-    BoundVar(usize),
+    BoundVar(DebruijnIndex),
     InferenceVar(InferenceVar),
     Placeholder(PlaceholderIndex),
     Phantom(Void, PhantomData<I>),
@@ -872,7 +988,7 @@ impl<T> Binders<T> {
         T: Shift<I>,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
-        let new_var = TyData::<I>::BoundVar(0).intern(interner);
+        let new_var = TyData::<I>::BoundVar(DebruijnIndex::INNERMOST).intern(interner);
         let value = op(self.value.shifted_in(interner, 1), new_var);
         Binders {
             binders: iter::once(ParameterKind::Ty(()))
@@ -1306,18 +1422,19 @@ impl<I: Interner> Substitution<I> {
     /// Basically, each value is mapped to a type or lifetime with its
     /// same index.
     pub fn is_identity_subst(&self, interner: &I) -> bool {
-        self.iter(interner)
-            .zip(0..)
-            .all(|(parameter, index)| match parameter.data(interner) {
-                ParameterKind::Ty(ty) => match ty.data(interner) {
-                    TyData::BoundVar(depth) => index == *depth,
+        self.iter(interner).zip(0..).all(|(parameter, index)| {
+            let index_db = DebruijnIndex::from_u32(index);
+            match parameter.data() {
+                ParameterKind::Ty(ty) => match ty.data() {
+                    TyData::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },
                 ParameterKind::Lifetime(lifetime) => match lifetime.data(interner) {
-                    LifetimeData::BoundVar(depth) => index == *depth,
+                    LifetimeData::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },
-            })
+            }
+        })
     }
 
     pub fn apply<T>(&self, value: &T, interner: &I) -> T::Result

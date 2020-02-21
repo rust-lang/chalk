@@ -190,6 +190,7 @@ copy_fold!(UniverseIndex);
 copy_fold!(usize);
 copy_fold!(PlaceholderIndex);
 copy_fold!(QuantifierKind);
+copy_fold!(DebruijnIndex);
 copy_fold!(chalk_engine::TableIndex);
 copy_fold!(chalk_engine::TimeStamp);
 copy_fold!(());

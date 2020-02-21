@@ -126,7 +126,8 @@ where
         if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(TyData::<TI>::BoundVar(depth + binders).intern(self.target_interner()))
+            let debruijn = DebruijnIndex::from(depth).shifted_in(binders);
+            Ok(TyData::<TI>::BoundVar(debruijn).intern(self.target_interner()))
         }
     }
 
@@ -135,7 +136,8 @@ where
         if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(LifetimeData::<TI>::BoundVar(depth + binders).intern(self.target_interner()))
+            let debruijn = DebruijnIndex::from(depth).shifted_in(binders);
+            Ok(LifetimeData::<TI>::BoundVar(debruijn).intern(self.target_interner()))
         }
     }
 
@@ -304,11 +306,18 @@ where
         TI: 'i,
     {
         match self.data(folder.interner()) {
-            TyData::BoundVar(depth) => {
-                if *depth >= binders {
-                    folder.fold_free_var_ty(*depth - binders, binders)
+            TyData::BoundVar(debruijn) => {
+                let debruijn = *debruijn;
+                if debruijn.within(binders) {
+                    // If `debruijn` refers to one of the binders that
+                    // we folded over, then just return a bound
+                    // variable.
+                    Ok(TyData::<TI>::BoundVar(debruijn).intern(folder.target_interner()))
                 } else {
-                    Ok(TyData::<TI>::BoundVar(*depth).intern(folder.target_interner()))
+                    // Otherwise, this variable was bound outside the
+                    // folded term, so invoke `fold_free_var_ty`.
+                    let index = debruijn.shifted_out(binders).as_usize();
+                    folder.fold_free_var_ty(index, binders)
                 }
             }
             TyData::Dyn(clauses) => {
@@ -368,11 +377,18 @@ where
         let interner = folder.interner();
         let target_interner = folder.target_interner();
         match self.data(interner) {
-            LifetimeData::BoundVar(depth) => {
-                if *depth >= binders {
-                    folder.fold_free_var_lifetime(depth - binders, binders)
+            LifetimeData::BoundVar(debruijn) => {
+                let debruijn = *debruijn;
+                if debruijn.within(binders) {
+                    // If `debruijn` refers to one of the binders that
+                    // we folded over, then just return a bound
+                    // variable.
+                    Ok(LifetimeData::<TI>::BoundVar(debruijn).intern(target_interner))
                 } else {
-                    Ok(LifetimeData::<TI>::BoundVar(*depth).intern(target_interner))
+                    // Otherwise, this variable was bound outside the
+                    // folded term, so invoke `fold_free_var_lifetime`.
+                    let index = debruijn.shifted_out(binders).as_usize();
+                    folder.fold_free_var_lifetime(index, binders)
                 }
             }
             LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),

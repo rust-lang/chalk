@@ -7,9 +7,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, ImplId, LifetimeData, Parameter, ParameterKind,
-    QuantifiedWhereClause, StructId, Substitution, TraitId, TraitRef, Ty, TyData, TypeName,
-    WhereClause,
+    AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, ImplId, LifetimeData, Parameter,
+    ParameterKind, QuantifiedWhereClause, StructId, Substitution, TraitId, TraitRef, Ty, TyData,
+    TypeName, WhereClause,
 };
 use std::iter;
 
@@ -271,11 +271,12 @@ pub trait ToParameter {
 impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
     fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I> {
         let &(binder, index) = self;
+        let debruijn = DebruijnIndex::from(index);
         match *binder {
-            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(index)
+            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(debruijn)
                 .intern(interner)
                 .cast(interner),
-            ParameterKind::Ty(_) => TyData::BoundVar(index).intern(interner).cast(interner),
+            ParameterKind::Ty(_) => TyData::BoundVar(debruijn).intern(interner).cast(interner),
         }
     }
 }
