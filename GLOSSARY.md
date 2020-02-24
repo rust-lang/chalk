@@ -72,8 +72,8 @@ literal is given the number of its binder. The indices start at zero from the
 innermost binder increasing from the inside out.
 
 Given the example `forall<T> { exists<U> { T: Foo<Item=U> } }` the
-literal names `U` and `T` are replaced with `0` and `1` respectively: `forall<0>
-{ exists<1> { 0: Foo<Item=1> } }`.
+literal names `U` and `T` are replaced with `0` and `1` respectively and the names are erased from the binders: `forall<_>
+{ exists<_> { 1: Foo<Item=0> } }`.
 
 ## Formula
 A formula is a logical expression consisting of literals and constants connected
