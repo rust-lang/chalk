@@ -137,7 +137,7 @@ pub enum SubstitutionResult<S> {
 }
 
 impl<S: Display> Display for SubstitutionResult<S> {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SubstitutionResult::Definite(subst) => write!(fmt, "{}", subst),
             SubstitutionResult::Ambiguous(subst) => write!(fmt, "Ambiguous({})", subst),

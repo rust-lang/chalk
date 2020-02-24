@@ -124,7 +124,7 @@ impl<I: Interner> UnifyValue for InferenceValue<I> {
 }
 
 impl<I: Interner> fmt::Debug for EnaVariable<I> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(fmt, "{:?}", self.var)
     }
 }

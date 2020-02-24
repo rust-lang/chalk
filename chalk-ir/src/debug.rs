@@ -3,44 +3,44 @@ use std::fmt::{Debug, Display, Error, Formatter};
 use super::*;
 
 impl Debug for RawId {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "#{}", self.index)
     }
 }
 
 impl<I: Interner> Debug for TraitId<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_trait_id(*self, fmt).unwrap_or_else(|| write!(fmt, "TraitId({:?})", self.0))
     }
 }
 
 impl<I: Interner> Debug for StructId<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_struct_id(*self, fmt).unwrap_or_else(|| write!(fmt, "StructId({:?})", self.0))
     }
 }
 
 impl<I: Interner> Debug for AssocTypeId<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_assoc_type_id(*self, fmt)
             .unwrap_or_else(|| write!(fmt, "AssocTypeId({:?})", self.0))
     }
 }
 
 impl Display for UniverseIndex {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "U{}", self.counter)
     }
 }
 
 impl Debug for UniverseIndex {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "U{}", self.counter)
     }
 }
 
 impl<I: Interner> Debug for TypeName<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
@@ -49,13 +49,13 @@ impl<I: Interner> Debug for TypeName<I> {
     }
 }
 impl<I: Interner> Debug for Ty<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "{:?}", self.data())
     }
 }
 
 impl<I: Interner> Debug for TyData<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             TyData::BoundVar(depth) => write!(fmt, "^{}", depth),
             TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
@@ -69,20 +69,20 @@ impl<I: Interner> Debug for TyData<I> {
 }
 
 impl<I: Interner> Debug for DynTy<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let DynTy { bounds } = self;
         write!(fmt, "dyn {:?}", bounds)
     }
 }
 
 impl Debug for InferenceVar {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "?{}", self.index)
     }
 }
 
 impl<I: Interner> Debug for Fn<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         // FIXME -- we should introduce some names or something here
         let Fn {
             num_binders,
@@ -93,13 +93,13 @@ impl<I: Interner> Debug for Fn<I> {
 }
 
 impl<I: Interner> Debug for Lifetime<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "{:?}", self.data())
     }
 }
 
 impl<I: Interner> Debug for LifetimeData<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             LifetimeData::BoundVar(depth) => write!(fmt, "'^{}", depth),
             LifetimeData::InferenceVar(var) => write!(fmt, "'{:?}", var),
@@ -110,14 +110,14 @@ impl<I: Interner> Debug for LifetimeData<I> {
 }
 
 impl Debug for PlaceholderIndex {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let PlaceholderIndex { ui, idx } = self;
         write!(fmt, "!{}_{}", ui.counter, idx)
     }
 }
 
 impl<I: Interner> Debug for ApplicationTy<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let ApplicationTy { name, substitution } = self;
         write!(fmt, "{:?}{:?}", name, substitution.with_angle())
     }
@@ -142,7 +142,7 @@ impl<I: Interner> TraitRef<I> {
 }
 
 impl<I: Interner> Debug for TraitRef<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         Debug::fmt(&self.with_as(), fmt)
     }
 }
@@ -153,7 +153,7 @@ struct SeparatorTraitRef<'me, I: Interner> {
 }
 
 impl<I: Interner> Debug for SeparatorTraitRef<'_, I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let parameters = self.trait_ref.substitution.parameters();
         write!(
             fmt,
@@ -167,7 +167,7 @@ impl<I: Interner> Debug for SeparatorTraitRef<'_, I> {
 }
 
 impl<I: Interner> Debug for AliasTy<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_alias(self, fmt).unwrap_or_else(|| {
             write!(
                 fmt,
@@ -179,10 +179,10 @@ impl<I: Interner> Debug for AliasTy<I> {
     }
 }
 
-pub struct Angle<'a, T: 'a>(pub &'a [T]);
+pub struct Angle<'a, T>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         if self.0.len() > 0 {
             write!(fmt, "<")?;
             for (index, elem) in self.0.iter().enumerate() {
@@ -199,19 +199,19 @@ impl<'a, T: Debug> Debug for Angle<'a, T> {
 }
 
 impl<I: Interner> Debug for Normalize<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "Normalize({:?} -> {:?})", self.alias, self.ty)
     }
 }
 
 impl<I: Interner> Debug for AliasEq<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "AliasEq({:?} = {:?})", self.alias, self.ty)
     }
 }
 
 impl<I: Interner> Debug for WhereClause<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             WhereClause::Implemented(tr) => write!(fmt, "Implemented({:?})", tr.with_colon()),
             WhereClause::AliasEq(a) => write!(fmt, "{:?}", a),
@@ -220,7 +220,7 @@ impl<I: Interner> Debug for WhereClause<I> {
 }
 
 impl<I: Interner> Debug for FromEnv<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             FromEnv::Trait(t) => write!(fmt, "FromEnv({:?})", t.with_colon()),
             FromEnv::Ty(t) => write!(fmt, "FromEnv({:?})", t),
@@ -229,7 +229,7 @@ impl<I: Interner> Debug for FromEnv<I> {
 }
 
 impl<I: Interner> Debug for WellFormed<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             WellFormed::Trait(t) => write!(fmt, "WellFormed({:?})", t.with_colon()),
             WellFormed::Ty(t) => write!(fmt, "WellFormed({:?})", t),
@@ -238,7 +238,7 @@ impl<I: Interner> Debug for WellFormed<I> {
 }
 
 impl<I: Interner> Debug for DomainGoal<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             DomainGoal::Holds(n) => write!(fmt, "{:?}", n),
             DomainGoal::WellFormed(n) => write!(fmt, "{:?}", n),
@@ -257,13 +257,13 @@ impl<I: Interner> Debug for DomainGoal<I> {
 }
 
 impl<I: Interner> Debug for EqGoal<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "({:?} = {:?})", self.a, self.b)
     }
 }
 
 impl<I: Interner> Debug for Goal<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self.data() {
             GoalData::Quantified(qkind, ref subgoal) => {
                 write!(fmt, "{:?}<", qkind)?;
@@ -289,7 +289,7 @@ impl<I: Interner> Debug for Goal<I> {
 }
 
 impl<I: Interner> Debug for Goals<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "(")?;
         for (goal, index) in self.iter().zip(0..) {
             if index > 0 {
@@ -303,7 +303,7 @@ impl<I: Interner> Debug for Goals<I> {
 }
 
 impl<T: Debug> Debug for Binders<T> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let Binders {
             ref binders,
             ref value,
@@ -326,7 +326,7 @@ impl<T: Debug> Debug for Binders<T> {
 }
 
 impl<I: Interner> Debug for ProgramClause<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             ProgramClause::Implies(pc) => write!(fmt, "{:?}", pc),
             ProgramClause::ForAll(pc) => write!(fmt, "{:?}", pc),
@@ -335,7 +335,7 @@ impl<I: Interner> Debug for ProgramClause<I> {
 }
 
 impl<I: Interner> Debug for ProgramClauseImplication<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "{:?}", self.consequence)?;
 
         let conditions = self.conditions.as_slice();
@@ -354,13 +354,13 @@ impl<I: Interner> Debug for ProgramClauseImplication<I> {
 }
 
 impl<I: Interner> Debug for Environment<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "Env({:?})", self.clauses)
     }
 }
 
 impl<T: Display> Display for Canonical<T> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         let Canonical { binders, value } = self;
 
         if binders.is_empty() {
@@ -383,7 +383,7 @@ impl<T: Display> Display for Canonical<T> {
 }
 
 impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match *self {
             ParameterKind::Ty(ref n) => write!(fmt, "Ty({:?})", n),
             ParameterKind::Lifetime(ref n) => write!(fmt, "Lifetime({:?})", n),
@@ -392,7 +392,7 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
 }
 
 impl<I: Interner> Debug for Parameter<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self.data() {
             ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
             ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
@@ -401,7 +401,7 @@ impl<I: Interner> Debug for Parameter<I> {
 }
 
 impl<I: Interner> Debug for Constraint<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             Constraint::LifetimeEq(a, b) => write!(fmt, "{:?} == {:?}", a, b),
         }
@@ -409,7 +409,7 @@ impl<I: Interner> Debug for Constraint<I> {
 }
 
 impl<I: Interner> Display for ConstrainedSubst<I> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         let ConstrainedSubst { subst, constraints } = self;
 
         write!(
@@ -429,13 +429,13 @@ impl<I: Interner> Substitution<I> {
 }
 
 impl<I: Interner> Debug for Substitution<I> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         Display::fmt(self, fmt)
     }
 }
 
 impl<I: Interner> Display for Substitution<I> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         let mut first = true;
 
         write!(f, "[")?;
