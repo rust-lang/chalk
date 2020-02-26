@@ -119,38 +119,48 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
 }
 
 impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
-    /// Given `type Foo = impl A + B;`, we generate:
+    /// Given `opaque type T<..>: A + B = HiddenTy;`, we generate:
     ///
     /// ```notrust
-    /// Implemented(Foo: A),
-    /// Implemented(Foo: B),
-    /// Implemented(Foo: Send) :- Implemented(A + B: Send). // For all auto traits
+    /// AliasEq(T<..> = HiddenTy) :- Reveal.
+    /// AliasEq(T<..> = !T).
+    /// Implemented(!T: A).
+    /// Implemented(!T: B).
+    /// Implemented(!T: Send) :- Implemented(A + B: Send). // For all auto traits
     /// ```
+    /// where `!T` is the placeholder for the unnormalized type `T<..>`.
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let interner = builder.interner();
-        let ty = Ty::new(
-            interner,
-            AliasTy::ImplTrait(ImplTraitTy {
-                impl_trait_id: self.impl_trait_id,
-                substitution: builder.substitution_in_scope(),
-            }),
-        );
+        // TODO add this to the env elsewhere
+        builder.push_fact(DomainGoal::Reveal(()));
+
+        let alias = AliasTy::ImplTrait(ImplTraitTy {
+            impl_trait_id: self.impl_trait_id,
+            substitution: builder.substitution_in_scope(),
+        });
+
+        builder.push_fact(DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+            alias: alias.clone(),
+            ty: self.ty.clone(),
+        })));
+
+        let alias_ty = Ty::new(interner, alias);
 
         for bound in &self.bounds {
-            builder.push_fact(bound.as_trait_ref(interner, ty.clone()));
+            builder.push_fact(bound.as_trait_ref(interner, alias_ty.clone()));
         }
 
         for auto_trait_id in builder.db.auto_traits() {
             builder.push_clause(
                 TraitRef {
                     trait_id: auto_trait_id,
-                    substitution: Substitution::from1(interner, ty.clone()),
+                    substitution: Substitution::from1(interner, alias_ty.clone()),
                 },
                 iter::once(TraitRef {
                     trait_id: auto_trait_id,
                     substitution: Substitution::from(
                         interner,
-                        iter::once(ty.clone().cast(interner)).chain(
+                        iter::once(alias_ty.clone().cast(interner)).chain(
                             self.bounds
                                 .iter()
                                 .flat_map(|b| b.args_no_self.iter().cloned()),

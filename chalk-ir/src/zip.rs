@@ -341,7 +341,8 @@ enum_zip!(impl<I> for DomainGoal<I> {
     IsFullyVisible,
     LocalImplAllowed,
     Compatible,
-    DownstreamType
+    DownstreamType,
+    Reveal,
 });
 enum_zip!(impl<I> for ProgramClauseData<I> { Implies, ForAll });
 enum_zip!(impl<I> for AliasTy<I> { Projection, ImplTrait });

@@ -390,6 +390,7 @@ impl LowerProgram for Program {
                                     .iter()
                                     .map(|b| b.lower(&empty_env))
                                     .collect::<Result<Vec<_>, _>>()?,
+                                ty: opaque_ty.ty.lower(&empty_env)?,
                             }),
                         );
                     }

@@ -1036,6 +1036,10 @@ pub enum DomainGoal<I: Interner> {
     ///
     /// This makes a new type `T` available and makes `DownstreamType(T)` provable for that type.
     DownstreamType(Ty<I>),
+
+    /// Used to activate the "reveal mode", in which opaque (`impl Trait`) types can be equated
+    /// to their actual type.
+    Reveal(()),
 }
 
 pub type QuantifiedWhereClause<I> = Binders<WhereClause<I>>;

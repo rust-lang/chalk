@@ -327,6 +327,7 @@ fn program_clauses_that_could_match<I: Interner>(
             .trait_datum(trait_ref.trait_id)
             .to_program_clauses(builder),
         DomainGoal::Compatible(()) => (),
+        DomainGoal::Reveal(()) => (),
     };
 
     Ok(())
