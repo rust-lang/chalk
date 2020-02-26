@@ -8,7 +8,7 @@ See [chalk#248] for details. The short version is that we fail to handle a case 
 
 [chalk#248]: https://github.com/rust-lang/chalk/issues/248
 
-```
+```notrust
 C1 :- C2, C3.
 C2 :- C1.
 ```
@@ -30,7 +30,7 @@ Now we incorrectly have a result that `C2` is true -- but that result was made o
 
 One thing to consider is that even when we have "coinduction obligations" to prove, we have to remember their substitutions too:
 
-```
+```notrust
 C1(X) :- C2(Y), X = 22.
 C2(X) :- C3(X), X = 44.
 C3(X) :- C1(X), C2(X).
@@ -49,7 +49,7 @@ In this case, it's not enough that C1 and C2 are provable at all, they have to b
 
 ### Non-trivial self-cycles
 
-```
+```notrust
 C1(A) :- C1(B), B = 22, C2(A).
 C2(44).
 ```
@@ -60,7 +60,7 @@ Actually I have to think about the best way to handle this case, as my proposed 
 
 ### Delayed trivial cycles
 
-```
+```notrust
 C1(A, B) :- C2(A, B), A = 22, B = 22.
 C2(A, B) :- C1(B, A).
 ```
@@ -70,7 +70,7 @@ This should be provable, but the cycle from C2 to C1 is not immediately visible 
 
 ### Delayed trivial cycles, variant 2
 
-```
+```notrust
 C1(A, B) :- C2(A, B), A = 22.
 C2(A, B) :- C1(B, A).
 ```
@@ -79,7 +79,7 @@ As above, here the only complete answer is `C1(22, 22)`. This is because the `C1
 
 ### Delayed trivial cycles, variant 3
 
-```
+```notrust
 C1(A, B) :- C1(B, A).
 ```
 
@@ -115,7 +115,7 @@ This is true for all `A, B`
 
 Currently `Answer` has a "constrained substitution" that includes values for the table's substitution + region constraints:
 
-```rust
+```notrust
 struct Answer {
     constrained_subst: Canonical<ConstrainedSubst>,
     is_ambiguous: bool
@@ -129,7 +129,7 @@ struct ConstrainedSubst {
 
 we would first extend `ConstrainedSubst` to include as yet unproven co-inductive subgoals (this might actually be better done as a new type): 
 
-```rust
+```rust,ignore
 struct ConstrainedSubst {
     substitution: Substitution,
     delayed_subgoals: Vec<Literal>,
@@ -139,7 +139,7 @@ struct ConstrainedSubst {
 
 then we would extend `Answer` slightly as well so it can be "ok" or ambiguous, as today, but also an *error* case
 
-```rust
+```rust,ignore
 enum AnswerMode {
     OK,
     Ambiguous,
@@ -166,7 +166,7 @@ When we reach the end of the list of subgoals, we can create an answer that cont
 
 So the answer to `C2` would be
 
-```
+```notrust
 substitution: [] // no variables
 delayed_subgoals: ["C1"]
 region_constraints: []
@@ -180,13 +180,13 @@ When a table gets back an answer that has deferred sub-goals, they get added to 
 
 So e.g. in our case, we had a `ExClause` like:
 
-```
+```notrust
 C1 :- | C2, C3
 ```
 
 and we get the answer `C2 :- C1 |`, so we would convert it to
 
-```
+```notrust
 C1 :- | C3, C1
 ```
 
@@ -218,7 +218,7 @@ We introduced the idea of an "error answer"...how do we handle that? It's fairly
 
 ### Walk through: delayed trivial self cycle, variant 2
 
-```
+```notrust
 C1(A, B) :- C2(A, B), A = 22.
 C2(A, B) :- C1(B, A).
 ```
@@ -256,7 +256,7 @@ C2(A, B) :- C1(B, A).
 
 ### Walk through: delayed trivial self cycle, variant 3
 
-```
+```notrust
 C1(A, B) :- C1(B, A).
 ```
 
@@ -280,14 +280,14 @@ This example is interesting because it shows that we have to incorporate non-tri
 
 Let's walk through one more case, the non-trivial self cycle.
 
-```
+```notrust
 C1(A) :- C1(B), B = 22, C2(A).
 C2(44).
 ```
 
 What happens here is that we get an initial answer from `C1` that looks like:
 
-```
+```notrust
 C1(44) :- C1(22) |
 ```
 
