@@ -16,4 +16,5 @@
 - [How does the engine work](./engine.md)
     - [Major concepts](./engine/major_concepts.md)
     - [Logic](./engine/logic.md)
+        - [Coinduction](./engine/logic/coinduction.md)
 - [Glossary and terminology](./glossary.md)

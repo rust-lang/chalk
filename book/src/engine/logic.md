@@ -2,7 +2,7 @@
 
 ## Overview
 
-`chalk-engine` solves a `Goal` using a depth-first search. When asked to solve a
+`chalk-engine` solves a `Goal` using a hybrid search strategy with elements of depth- and breadth-first search. When asked to solve a
 particular `Goal` it hasn't seen before, it will first ask the [`Context`] to
 generate a set of program clauses, that get turned into [`Strand`]s, that could
 solve that goal. Otherwise, if asked to solve a `Goal` it has seen before, it
@@ -45,7 +45,7 @@ is called and each clause is converted into a `Strand` and can be followed.
 The [`root_answer`](https://rust-lang.github.io/chalk/chalk_engine/forest/struct.Forest.html#method.root_answer) function is the entry point to solve a `Goal`. Up until now,
 the idea of `Answer` versus `CompleteAnswer` have been ignored. However, in
 reality `Answer`s to `Goal`s may actually have delayed subgoals (see `ExClause`
-and `Coinduction and refinement strands`), whereas [`CompleteAnswer`]s may not.
+and [Coinduction and refinement strands]), whereas [`CompleteAnswer`]s may not.
 `root_answer` essentially just wraps [`ensure_root_answer`](https://rust-lang.github.io/chalk/chalk_engine/forest/struct.Forest.html#method.ensure_root_answer) and converts the
 `Goal`'s [`Answer`] to a [`CompleteAnswer`].
 
@@ -93,6 +93,7 @@ encounter a cycle, then we know that the current selected `Goal` has no more
 answers.
 
 ## Coinduction and refinement strands
+[Coinduction and refinement strands]: #coinduction-and-refinement-strands
 
 Coinduction basically means that two statements can rely on each other being
 true, unless either is proven false.
@@ -116,6 +117,8 @@ only subgoals are the delayed coinductive subgoals. If this new `Strand` can be
 proven, then any `Answer`s from that are valid answers for the root `Goal`.
 However, since there are currently delayed coinductive subgoals, there are no
 answers available yet.
+
+For much more in-depth 
 
 
 [`Strand`]: https://rust-lang.github.io/chalk/chalk_engine/strand/struct.Strand.html
