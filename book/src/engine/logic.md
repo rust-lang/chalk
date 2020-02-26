@@ -4,7 +4,7 @@
 
 `chalk-engine` solves a `Goal` using a depth-first search. When asked to solve a
 particular `Goal` it hasn't seen before, it will first ask the [`Context`] to
-generate a set of program clauses, that get turned into `Strand`s, that could
+generate a set of program clauses, that get turned into [`Strand`]s, that could
 solve that goal. Otherwise, if asked to solve a `Goal` it has seen before, it
 will select the existing table.
 
@@ -21,19 +21,19 @@ something to be unsolvable), the solving is restarted at the root `Goal`.
 ## The stack
 
 In order to detect cycles (talked more about later), as well as keep track of
-the selected `Strand` for each table, `chalk-engine` stores a [`Stack`] on the
-`Forest`. Whenever a new goal is selected, a `StackEntry` is pushed onto the
+the selected [`Strand`] for each table, `chalk-engine` stores a [`Stack`] on the
+`Forest`. Whenever a new goal is selected, a [`StackEntry`] is pushed onto the
 `Stack`, as well as the the "time" (which also gets incremented) that it was
 pushed. This "time" can be compared later to check if all the `Strands` of a
-`Table` have been checked in a single solve.
+[`Table`] have been checked in a single solve.
 
 As either `Answer`s are found for the selected `Table`, entries on the stack are
 `pop`ed. If something is found to be unsolvable, the complete stack is unwound.
 
 ## Table creation
 
-As mentioned before, whenever a new `Goal` is encounted, a new `Table` is
-created to store current and future answers. First, the `Goal` is converted into
+As mentioned before, whenever a new `Goal` is encounted, a new [`Table`] is
+created to store current and future answers. First, the [`Goal`] is converted into
 an [`HhGoal`]. If it can be simplified, then a `Strand` with one or more
 subgoals will be generated and can be followed as above. Otherwise, if it is a
 `DomainGoal` (see above), then
@@ -42,14 +42,14 @@ is called and each clause is converted into a `Strand` and can be followed.
 
 ## `root_answer` and `ensure_root_answer`
 
-The `root_answer` function is the entry point to solve a `Goal`. Up until now,
+The [`root_answer`](https://rust-lang.github.io/chalk/chalk_engine/forest/struct.Forest.html#method.root_answer) function is the entry point to solve a `Goal`. Up until now,
 the idea of `Answer` versus `CompleteAnswer` have been ignored. However, in
 reality `Answer`s to `Goal`s may actually have delayed subgoals (see `ExClause`
-and `Coinduction and refinement strands`), whereas `CompleteAnswer`s may not.
-`root_answer` essentially just wraps `ensure_root_answer` and converts the
-`Goal`'s `Answer` to a `CompleteAnswer`.
+and `Coinduction and refinement strands`), whereas [`CompleteAnswer`]s may not.
+`root_answer` essentially just wraps [`ensure_root_answer`](https://rust-lang.github.io/chalk/chalk_engine/forest/struct.Forest.html#method.ensure_root_answer) and converts the
+`Goal`'s [`Answer`] to a [`CompleteAnswer`].
 
-The `ensure_root_answer` function contains the core skeleton of the logic around
+The [`ensure_root_answer`](https://rust-lang.github.io/chalk/chalk_engine/forest/struct.Forest.html#method.ensure_root_answer) function contains the core skeleton of the logic around
 `Strand` and subgoal selection. The majority of the logic, however, is split out
 into separate functions that branch out from `ensure_root_answer`.
 
@@ -118,6 +118,12 @@ However, since there are currently delayed coinductive subgoals, there are no
 answers available yet.
 
 
+[`Strand`]: https://rust-lang.github.io/chalk/chalk_engine/strand/struct.Strand.html
 [`Context`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.Context.html
 [`HhGoal`]: https://rust-lang.github.io/chalk/chalk_engine/hh/enum.HhGoal.html
 [`Stack`]: https://rust-lang.github.io/chalk/chalk_engine/stack/struct.Stack.html
+[`StackEntry`]: https://rust-lang.github.io/chalk/chalk_engine/stack/struct.StackEntry.html
+[`Table`]: https://rust-lang.github.io/chalk/chalk_engine/table/struct.Table.html
+[`Goal`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.Context.html#associatedtype.Goal
+[`Answer`]: https://rust-lang.github.io/chalk/chalk_engine/struct.Answer.html
+[`CompleteAnswer`]: https://rust-lang.github.io/chalk/chalk_engine/struct.CompleteAnswer.html
