@@ -1,14 +1,14 @@
+use crate::{Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AliasTy, AssocTypeId, Identifier, ImplId, Parameter, ProgramClause, StructId, TraitId, TyData,
-    TypeName,
+    AliasTy, AssocTypeId, ImplId, Parameter, ProgramClause, StructId, TraitId, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
-    TraitDatum, TypeKind,
+    TraitDatum,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;

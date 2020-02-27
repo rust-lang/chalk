@@ -1,4 +1,3 @@
-use crate::tls;
 use crate::AliasTy;
 use crate::AssocTypeId;
 use crate::Goal;
@@ -6,7 +5,6 @@ use crate::GoalData;
 use crate::LifetimeData;
 use crate::Parameter;
 use crate::ParameterData;
-use crate::RawId;
 use crate::StructId;
 use crate::TraitId;
 use crate::TyData;
@@ -16,6 +14,9 @@ use std::fmt::{self, Debug};
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::sync::Arc;
+
+#[cfg(any(test, feature = "default-interner"))]
+pub use default::*;
 
 /// A "interner" encapsulates the concrete representation of
 /// certain "core types" from chalk-ir. All the types in chalk-ir are
@@ -88,6 +89,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// The core "id" type used for struct-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
+
+    type Identifier: Debug + Clone + Eq + Hash;
 
     /// Prints the debug representation of a type-kind-id. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -205,98 +208,112 @@ pub trait HasInterner {
     type Interner: Interner;
 }
 
-/// The default "interner" and the only interner used by chalk
-/// itself. In this interner, no interning actually occurs.
-#[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct ChalkIr {}
+#[cfg(any(test, feature = "default-interner"))]
+mod default {
+    use super::*;
+    use crate::tls;
+    use crate::RawId;
+    use lalrpop_intern::InternedString;
 
-impl Interner for ChalkIr {
-    type InternedType = Arc<TyData<ChalkIr>>;
-    type InternedLifetime = LifetimeData<ChalkIr>;
-    type InternedParameter = ParameterData<ChalkIr>;
-    type InternedGoal = Arc<GoalData<ChalkIr>>;
-    type InternedGoals = Vec<Goal<ChalkIr>>;
-    type InternedSubstitution = Vec<Parameter<ChalkIr>>;
-    type DefId = RawId;
+    pub type Identifier = InternedString;
 
-    fn debug_struct_id(
-        type_kind_id: StructId<ChalkIr>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result> {
-        tls::with_current_program(|prog| Some(prog?.debug_struct_id(type_kind_id, fmt)))
+    /// The default "interner" and the only interner used by chalk
+    /// itself. In this interner, no interning actually occurs.
+    #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+    pub struct ChalkIr {}
+
+    impl Interner for ChalkIr {
+        type InternedType = Arc<TyData<ChalkIr>>;
+        type InternedLifetime = LifetimeData<ChalkIr>;
+        type InternedParameter = ParameterData<ChalkIr>;
+        type InternedGoal = Arc<GoalData<ChalkIr>>;
+        type InternedGoals = Vec<Goal<ChalkIr>>;
+        type InternedSubstitution = Vec<Parameter<ChalkIr>>;
+        type DefId = RawId;
+        type Identifier = Identifier;
+
+        fn debug_struct_id(
+            type_kind_id: StructId<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_struct_id(type_kind_id, fmt)))
+        }
+
+        fn debug_trait_id(
+            type_kind_id: TraitId<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_trait_id(type_kind_id, fmt)))
+        }
+
+        fn debug_assoc_type_id(
+            id: AssocTypeId<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_assoc_type_id(id, fmt)))
+        }
+
+        fn debug_alias(
+            alias: &AliasTy<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_alias(alias, fmt)))
+        }
+
+        fn intern_ty(ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
+            Arc::new(ty)
+        }
+
+        fn ty_data(ty: &Arc<TyData<ChalkIr>>) -> &TyData<Self> {
+            ty
+        }
+
+        fn intern_lifetime(lifetime: LifetimeData<ChalkIr>) -> LifetimeData<ChalkIr> {
+            lifetime
+        }
+
+        fn lifetime_data(lifetime: &LifetimeData<ChalkIr>) -> &LifetimeData<ChalkIr> {
+            lifetime
+        }
+
+        fn intern_parameter(parameter: ParameterData<ChalkIr>) -> ParameterData<ChalkIr> {
+            parameter
+        }
+
+        fn parameter_data(parameter: &ParameterData<ChalkIr>) -> &ParameterData<ChalkIr> {
+            parameter
+        }
+
+        fn intern_goal(goal: GoalData<ChalkIr>) -> Arc<GoalData<ChalkIr>> {
+            Arc::new(goal)
+        }
+
+        fn goal_data(goal: &Arc<GoalData<ChalkIr>>) -> &GoalData<ChalkIr> {
+            goal
+        }
+
+        fn intern_goals(data: impl IntoIterator<Item = Goal<ChalkIr>>) -> Vec<Goal<ChalkIr>> {
+            data.into_iter().collect()
+        }
+
+        fn goals_data(goals: &Vec<Goal<ChalkIr>>) -> &[Goal<ChalkIr>] {
+            goals
+        }
+
+        fn intern_substitution<E>(
+            data: impl IntoIterator<Item = Result<Parameter<ChalkIr>, E>>,
+        ) -> Result<Vec<Parameter<ChalkIr>>, E> {
+            data.into_iter().collect()
+        }
+
+        fn substitution_data(substitution: &Vec<Parameter<ChalkIr>>) -> &[Parameter<ChalkIr>] {
+            substitution
+        }
     }
 
-    fn debug_trait_id(
-        type_kind_id: TraitId<ChalkIr>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result> {
-        tls::with_current_program(|prog| Some(prog?.debug_trait_id(type_kind_id, fmt)))
+    impl HasInterner for ChalkIr {
+        type Interner = ChalkIr;
     }
-
-    fn debug_assoc_type_id(
-        id: AssocTypeId<ChalkIr>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result> {
-        tls::with_current_program(|prog| Some(prog?.debug_assoc_type_id(id, fmt)))
-    }
-
-    fn debug_alias(alias: &AliasTy<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
-        tls::with_current_program(|prog| Some(prog?.debug_alias(alias, fmt)))
-    }
-
-    fn intern_ty(ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
-        Arc::new(ty)
-    }
-
-    fn ty_data(ty: &Arc<TyData<ChalkIr>>) -> &TyData<Self> {
-        ty
-    }
-
-    fn intern_lifetime(lifetime: LifetimeData<ChalkIr>) -> LifetimeData<ChalkIr> {
-        lifetime
-    }
-
-    fn lifetime_data(lifetime: &LifetimeData<ChalkIr>) -> &LifetimeData<ChalkIr> {
-        lifetime
-    }
-
-    fn intern_parameter(parameter: ParameterData<ChalkIr>) -> ParameterData<ChalkIr> {
-        parameter
-    }
-
-    fn parameter_data(parameter: &ParameterData<ChalkIr>) -> &ParameterData<ChalkIr> {
-        parameter
-    }
-
-    fn intern_goal(goal: GoalData<ChalkIr>) -> Arc<GoalData<ChalkIr>> {
-        Arc::new(goal)
-    }
-
-    fn goal_data(goal: &Arc<GoalData<ChalkIr>>) -> &GoalData<ChalkIr> {
-        goal
-    }
-
-    fn intern_goals(data: impl IntoIterator<Item = Goal<ChalkIr>>) -> Vec<Goal<ChalkIr>> {
-        data.into_iter().collect()
-    }
-
-    fn goals_data(goals: &Vec<Goal<ChalkIr>>) -> &[Goal<ChalkIr>] {
-        goals
-    }
-
-    fn intern_substitution<E>(
-        data: impl IntoIterator<Item = Result<Parameter<ChalkIr>, E>>,
-    ) -> Result<Vec<Parameter<ChalkIr>>, E> {
-        data.into_iter().collect()
-    }
-
-    fn substitution_data(substitution: &Vec<Parameter<ChalkIr>>) -> &[Parameter<ChalkIr>] {
-        substitution
-    }
-}
-
-impl HasInterner for ChalkIr {
-    type Interner = ChalkIr;
 }
 
 impl<T: HasInterner> HasInterner for [T] {

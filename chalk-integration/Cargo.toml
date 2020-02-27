@@ -27,6 +27,7 @@ path = "../chalk-parse"
 [dependencies.chalk-ir]
 version = "0.1.0"
 path = "../chalk-ir"
+features = ["default-interner"]
 
 [dependencies.chalk-rust-ir]
 version = "0.1.0"
