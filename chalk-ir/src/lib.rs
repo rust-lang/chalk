@@ -152,12 +152,6 @@ pub struct AssocTypeId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[allow(non_camel_case_types)]
-pub struct RawId {
-    pub index: u32,
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Ty<I: Interner> {
     interned: I::InternedType,

@@ -10,14 +10,15 @@ use std::sync::Arc;
 
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
-use crate::{Identifier as Ident, TypeKind, TypeSort};
+use crate::{Identifier as Ident, RawId, TypeKind, TypeSort};
 
 type StructIds = BTreeMap<Ident, chalk_ir::StructId<ChalkIr>>;
 type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
 type StructKinds = BTreeMap<chalk_ir::StructId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
-type AssociatedTyValueIds = BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId>;
+type AssociatedTyValueIds =
+    BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
 type ParameterMap = BTreeMap<chalk_ir::ParameterKind<Ident>, usize>;
 
 pub type LowerResult<T> = Result<T, RustIrError>;
@@ -171,10 +172,10 @@ pub(crate) trait LowerProgram {
 impl LowerProgram for Program {
     fn lower(&self) -> LowerResult<LoweredProgram> {
         let mut index = 0;
-        let mut next_item_id = || -> chalk_ir::RawId {
+        let mut next_item_id = || -> RawId {
             let i = index;
             index += 1;
-            chalk_ir::RawId { index: i }
+            RawId { index: i }
         };
 
         // Make a vector mapping each thing in `items` to an id,

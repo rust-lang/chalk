@@ -11,7 +11,7 @@ pub mod program;
 pub mod program_environment;
 pub mod query;
 
-pub use chalk_ir::interner::Identifier;
+pub use chalk_ir::interner::{Identifier, RawId};
 use chalk_ir::Binders;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

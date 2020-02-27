@@ -212,10 +212,21 @@ pub trait HasInterner {
 mod default {
     use super::*;
     use crate::tls;
-    use crate::RawId;
     use lalrpop_intern::InternedString;
+    use std::fmt;
 
     pub type Identifier = InternedString;
+
+    #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct RawId {
+        pub index: u32,
+    }
+
+    impl Debug for RawId {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "#{}", self.index)
+        }
+    }
 
     /// The default "interner" and the only interner used by chalk
     /// itself. In this interner, no interning actually occurs.

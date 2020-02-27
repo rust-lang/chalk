@@ -8,7 +8,7 @@ use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner, TargetInterner};
 use chalk_ir::{
     AliasEq, AliasTy, AssocTypeId, Binders, ImplId, LifetimeData, Parameter, ParameterKind,
-    QuantifiedWhereClause, RawId, StructId, Substitution, TraitId, TraitRef, Ty, TyData, TypeName,
+    QuantifiedWhereClause, StructId, Substitution, TraitId, TraitRef, Ty, TyData, TypeName,
     WhereClause,
 };
 use std::iter;
@@ -18,14 +18,14 @@ pub enum LangItem {}
 
 /// Identifier for an "associated type value" found in some impl.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AssociatedTyValueId(pub RawId);
+pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum<I: Interner> {
     pub polarity: Polarity,
     pub binders: Binders<ImplDatumBound<I>>,
     pub impl_type: ImplType,
-    pub associated_ty_value_ids: Vec<AssociatedTyValueId>,
+    pub associated_ty_value_ids: Vec<AssociatedTyValueId<I>>,
 }
 
 impl<I: Interner> ImplDatum<I> {

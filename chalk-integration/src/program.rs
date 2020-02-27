@@ -37,7 +37,8 @@ pub struct Program {
     pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
 
     /// For each associated ty value `type Foo = XXX` found in an impl:
-    pub associated_ty_values: BTreeMap<AssociatedTyValueId, Arc<AssociatedTyValue<ChalkIr>>>,
+    pub associated_ty_values:
+        BTreeMap<AssociatedTyValueId<ChalkIr>, Arc<AssociatedTyValue<ChalkIr>>>,
 
     /// For each trait:
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
@@ -138,7 +139,10 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.impl_data[&id].clone()
     }
 
-    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue<ChalkIr>> {
+    fn associated_ty_value(
+        &self,
+        id: AssociatedTyValueId<ChalkIr>,
+    ) -> Arc<AssociatedTyValue<ChalkIr>> {
         self.associated_ty_values[&id].clone()
     }
 

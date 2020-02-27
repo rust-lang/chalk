@@ -2,12 +2,6 @@ use std::fmt::{Debug, Display, Error, Formatter};
 
 use super::*;
 
-impl Debug for RawId {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "#{}", self.index)
-    }
-}
-
 impl<I: Interner> Debug for TraitId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_trait_id(*self, fmt).unwrap_or_else(|| write!(fmt, "TraitId({:?})", self.0))
