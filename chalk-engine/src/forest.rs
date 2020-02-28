@@ -1,15 +1,19 @@
 use crate::context::{AnswerResult, AnswerStream, Context, ContextOps};
 use crate::logic::RootSearchFail;
-use crate::stack::{Stack, StackIndex};
 use crate::table::AnswerIndex;
 use crate::tables::Tables;
-use crate::TableIndex;
+use crate::{TableIndex, TimeStamp};
 use std::fmt::Display;
 
 pub struct Forest<C: Context> {
     context: C,
     pub(crate) tables: Tables<C>,
-    pub(crate) stack: Stack<C>,
+
+    /// This is a clock which always increases. It is
+    /// incremented every time a new subgoal is followed.
+    /// This effectively gives us way to track what depth
+    /// and loop a table or strand was last followed.
+    pub(crate) clock: TimeStamp,
 }
 
 impl<C: Context> Forest<C> {
@@ -17,7 +21,7 @@ impl<C: Context> Forest<C> {
         Forest {
             context,
             tables: Tables::new(),
-            stack: Stack::default(),
+            clock: TimeStamp::default(),
         }
     }
 
@@ -29,6 +33,12 @@ impl<C: Context> Forest<C> {
     /// term in here).
     pub fn context(&self) -> &C {
         &self.context
+    }
+
+    // Gets the next clock TimeStamp. This will never decrease.
+    pub(crate) fn increment_clock(&mut self) -> TimeStamp {
+        self.clock.increment();
+        self.clock
     }
 
     /// Returns a "solver" for a given goal in the form of an
@@ -93,39 +103,6 @@ impl<C: Context> Forest<C> {
                 return false;
             }
         }
-    }
-
-    /// True if all the tables on the stack starting from `depth` and
-    /// continuing until the top of the stack are coinductive.
-    ///
-    /// Example: Given a program like:
-    ///
-    /// ```notrust
-    /// struct Foo { a: Option<Box<Bar>> }
-    /// struct Bar { a: Option<Box<Foo>> }
-    /// trait XXX { }
-    /// impl<T: Send> XXX for T { }
-    /// ```
-    ///
-    /// and then a goal of `Foo: XXX`, we would eventually wind up
-    /// with a stack like this:
-    ///
-    /// | StackIndex | Table Goal  |
-    /// | ---------- | ----------- |
-    /// | 0          | `Foo: XXX`  |
-    /// | 1          | `Foo: Send` |
-    /// | 2          | `Bar: Send` |
-    ///
-    /// Here, the top of the stack is `Bar: Send`. And now we are
-    /// asking `top_of_stack_is_coinductive_from(1)` -- the answer
-    /// would be true, since `Send` is an auto trait, which yields a
-    /// coinductive goal. But `top_of_stack_is_coinductive_from(0)` is
-    /// false, since `XXX` is not an auto trait.
-    pub(super) fn top_of_stack_is_coinductive_from(&self, depth: StackIndex) -> bool {
-        StackIndex::iterate_range(self.stack.top_of_stack_from(depth)).all(|d| {
-            let table = self.stack[d].table;
-            self.tables[table].coinductive_goal
-        })
     }
 }
 
