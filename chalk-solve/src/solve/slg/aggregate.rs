@@ -399,8 +399,10 @@ fn vec_i32_vs_vec_u32() {
 #[test]
 fn vec_i32_vs_vec_i32() {
     use chalk_ir::interner::ChalkIr;
+    let interner = &ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
+        interner,
         infer: &mut infer,
         universe: UniverseIndex::root(),
     };
@@ -416,8 +418,10 @@ fn vec_i32_vs_vec_i32() {
 #[test]
 fn vec_x_vs_vec_y() {
     use chalk_ir::interner::ChalkIr;
+    let interner = &ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
+        interner,
         infer: &mut infer,
         universe: UniverseIndex::root(),
     };

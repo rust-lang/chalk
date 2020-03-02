@@ -6,36 +6,36 @@ macro_rules! ty {
         $crate::TyData::Apply(ApplicationTy {
             name: ty_name!($n),
             substitution: $crate::Substitution::from(vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
-        }).intern()
+        }).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (function $n:tt $($arg:tt)*) => {
         $crate::TyData::Function(Fn {
             num_binders: $n,
             parameters: vec![$(arg!($arg)),*],
-        }).intern()
+        }).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (placeholder $n:expr) => {
         $crate::TyData::Placeholder(PlaceholderIndex {
             ui: UniverseIndex { counter: $n },
             idx: 0,
-        }).intern()
+        }).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (alias (item $n:tt) $($arg:tt)*) => {
         $crate::TyData::Alias(AliasTy {
             associated_ty_id: AssocTypeId(chalk_ir::interner::RawId { index: $n }),
             substitution: $crate::Substitution::from(vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
-        }).intern()
+        }).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (infer $b:expr) => {
-        $crate::TyData::InferenceVar($crate::InferenceVar::from($b)).intern()
+        $crate::TyData::InferenceVar($crate::InferenceVar::from($b)).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (bound $b:expr) => {
-        $crate::TyData::BoundVar($b).intern()
+        $crate::TyData::BoundVar($b).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (expr $b:expr) => {

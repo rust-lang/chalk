@@ -128,6 +128,8 @@ impl<I: Interner> Folder<I> for Truncater<'_, '_, I> {
 
 #[test]
 fn truncate_types() {
+    use chalk_ir::interner::ChalkIr;
+    let interner = &ChalkIr;
     let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
     let environment0 = &Environment::new();
     let _u1 = table.new_universe();
@@ -143,7 +145,7 @@ fn truncate_types() {
     let Truncated {
         overflow,
         value: ty_no_overflow,
-    } = truncate(&mut table, 5, &ty0);
+    } = truncate(interner, &mut table, 5, &ty0);
     assert!(!overflow);
     assert_eq!(ty0, ty_no_overflow);
 
@@ -154,7 +156,7 @@ fn truncate_types() {
     let Truncated {
         overflow,
         value: ty_overflow,
-    } = truncate(&mut table, 3, &ty0);
+    } = truncate(interner, &mut table, 3, &ty0);
     assert!(overflow);
     assert_eq!(ty_expect, ty_overflow);
 
@@ -164,12 +166,14 @@ fn truncate_types() {
                        (apply (item 0)
                         (placeholder 2)));
     table
-        .unify(environment0, &ty_overflow, &ty_in_u2)
+        .unify(interner, environment0, &ty_overflow, &ty_in_u2)
         .unwrap_err();
 }
 
 #[test]
 fn truncate_multiple_types() {
+    use chalk_ir::interner::ChalkIr;
+    let interner = &ChalkIr;
     let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
     let _u1 = table.new_universe();
 
@@ -185,7 +189,7 @@ fn truncate_multiple_types() {
     let Truncated {
         overflow,
         value: ty_no_overflow,
-    } = truncate(&mut table, 5, &ty0_3);
+    } = truncate(interner, &mut table, 5, &ty0_3);
     assert!(!overflow);
     assert_eq!(ty0_3, ty_no_overflow);
 
@@ -194,7 +198,7 @@ fn truncate_multiple_types() {
     let Truncated {
         overflow,
         value: ty_no_overflow,
-    } = truncate(&mut table, 6, &ty0_3);
+    } = truncate(interner, &mut table, 6, &ty0_3);
     assert!(!overflow);
     assert_eq!(ty0_3, ty_no_overflow);
 
@@ -203,7 +207,7 @@ fn truncate_multiple_types() {
     let Truncated {
         overflow,
         value: ty_overflow,
-    } = truncate(&mut table, 3, &ty0_3);
+    } = truncate(interner, &mut table, 3, &ty0_3);
     assert!(overflow);
     assert_eq!(
         vec![
@@ -217,6 +221,8 @@ fn truncate_multiple_types() {
 
 #[test]
 fn truncate_normalizes() {
+    use chalk_ir::interner::ChalkIr;
+    let interner = &ChalkIr;
     let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
 
     let environment0 = &Environment::new();
@@ -234,16 +240,16 @@ fn truncate_normalizes() {
                    (placeholder 1)));
 
     // test: truncating *before* unifying has no effect
-    assert!(!truncate(&mut table, 3, &ty0).overflow);
+    assert!(!truncate(interner, &mut table, 3, &ty0).overflow);
 
     // unify X and ty1
-    table.unify(environment0, &v0.to_ty(), &ty1).unwrap();
+    table.unify(interner, environment0, &v0.to_ty(interner), &ty1).unwrap();
 
     // test: truncating *after* triggers
     let Truncated {
         overflow,
         value: ty_overflow,
-    } = truncate(&mut table, 3, &ty0);
+    } = truncate(interner, &mut table, 3, &ty0);
     assert!(overflow);
     assert_eq!(
         ty!(apply (item 0)
@@ -255,6 +261,8 @@ fn truncate_normalizes() {
 
 #[test]
 fn truncate_normalizes_under_binders() {
+    use chalk_ir::interner::ChalkIr;
+    let interner = &ChalkIr;
     let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
 
     let u0 = UniverseIndex::ROOT;
@@ -268,5 +276,5 @@ fn truncate_normalizes_under_binders() {
                    (apply (item 0)
                     (infer 0))));
 
-    assert!(!truncate(&mut table, 4, &ty0).overflow);
+    assert!(!truncate(interner, &mut table, 4, &ty0).overflow);
 }
