@@ -197,7 +197,7 @@ fn program_clauses_that_could_match<I: Interner>(
             // ```
             // dyn(exists<T> {
             //     forall<'a> { Implemented(T: Fn<'a>) },
-            //     forall<'a> { ProjectionEq(<T as Fn<'a>>::Output, ()) },
+            //     forall<'a> { AliasEq(<T as Fn<'a>>::Output, ()) },
             // })
             // ```
             //
@@ -212,7 +212,7 @@ fn program_clauses_that_could_match<I: Interner>(
             // and
             //
             // ```
-            // forall<'a> { ProjectionEq(<dyn Fn(&u8) as Fn<'a>>::Output, ()) },
+            // forall<'a> { AliasEq(<dyn Fn(&u8) as Fn<'a>>::Output, ()) },
             // ```
             //
             // FIXME. This is presently rather wasteful, in that we

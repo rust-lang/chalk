@@ -23,8 +23,8 @@ macro_rules! ty {
         }).intern(&chalk_ir::interner::ChalkIr)
     };
 
-    (alias (item $n:tt) $($arg:tt)*) => {
-        chalk_ir::AliasTy::Projection(chalk_ir::ProjectionTy  {
+    (projection (item $n:tt) $($arg:tt)*) => {
+            chalk_ir::AliasTy::Projection(chalk_ir::ProjectionTy  {
             associated_ty_id: AssocTypeId(chalk_ir::interner::RawId { index: $n }),
             substitution: $crate::Substitution::from(&chalk_ir::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
         }).intern(&chalk_ir::interner::ChalkIr)
