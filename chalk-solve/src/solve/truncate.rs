@@ -243,7 +243,9 @@ fn truncate_normalizes() {
     assert!(!truncate(interner, &mut table, 3, &ty0).overflow);
 
     // unify X and ty1
-    table.unify(interner, environment0, &v0.to_ty(interner), &ty1).unwrap();
+    table
+        .unify(interner, environment0, &v0.to_ty(interner), &ty1)
+        .unwrap();
 
     // test: truncating *after* triggers
     let Truncated {

@@ -14,7 +14,10 @@ fn infer() {
     table
         .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
-    assert_eq!(table.normalize_deep(interner, &a), ty!(apply (item 0) (expr b)));
+    assert_eq!(
+        table.normalize_deep(interner, &a),
+        ty!(apply (item 0) (expr b))
+    );
     table
         .unify(interner, &environment0, &b, &ty!(apply (item 1)))
         .unwrap();
@@ -75,7 +78,9 @@ fn universe_error_indirect_1() {
     let environment0 = Environment::new();
     let a = table.new_variable(U0).to_ty(interner);
     let b = table.new_variable(U1).to_ty(interner);
-    table.unify(interner, &environment0, &b, &ty!(placeholder 1)).unwrap();
+    table
+        .unify(interner, &environment0, &b, &ty!(placeholder 1))
+        .unwrap();
     table.unify(interner, &environment0, &a, &b).unwrap_err();
 }
 
@@ -105,7 +110,12 @@ fn universe_promote() {
         .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
     table
-        .unify(interner, &environment0, &a, &ty!(apply (item 0) (apply (item 1))))
+        .unify(
+            interner,
+            &environment0,
+            &a,
+            &ty!(apply (item 0) (apply (item 1))),
+        )
         .unwrap();
 }
 
@@ -138,7 +148,8 @@ fn projection_eq() {
     // expect an error ("cycle during unification")
     table
         .unify(
-            interner, &environment0,
+            interner,
+            &environment0,
             &a,
             &ty!(apply (item 0) (alias (item 1) (expr a))),
         )
@@ -192,7 +203,8 @@ fn quantify_bound() {
 
     table
         .unify(
-            interner, &environment0,
+            interner,
+            &environment0,
             &v2b,
             &ty!(apply (item 1) (expr v1) (expr v0)),
         )
@@ -200,7 +212,10 @@ fn quantify_bound() {
 
     assert_eq!(
         table
-            .canonicalize(interner, &ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0)))
+            .canonicalize(
+                interner,
+                &ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0))
+            )
             .quantified,
         Canonical {
             value: ty!(apply (item 0) (apply (item 1) (bound 0) (bound 1)) (bound 2) (bound 0) (bound 1)),
@@ -224,7 +239,12 @@ fn quantify_ty_under_binder() {
     // Unify v0 and v1.
     let environment0 = Environment::new();
     table
-        .unify(interner, &environment0, &v0.to_ty(interner), &v1.to_ty(interner))
+        .unify(
+            interner,
+            &environment0,
+            &v0.to_ty(interner),
+            &v1.to_ty(interner),
+        )
         .unwrap();
 
     // Here: the `function` introduces 3 binders, so in the result,
@@ -234,7 +254,8 @@ fn quantify_ty_under_binder() {
     assert_eq!(
         table
             .canonicalize(
-                interner, &ty!(function 3 (apply (item 0) (bound 1) (infer 0) (infer 1) (lifetime (infer 2))))
+                interner,
+                &ty!(function 3 (apply (item 0) (bound 1) (infer 0) (infer 1) (lifetime (infer 2))))
             )
             .quantified,
         Canonical {
@@ -259,7 +280,8 @@ fn lifetime_constraint_indirect() {
     // '!1.
     let t_a = ty!(apply (item 0) (lifetime (placeholder 1)));
     let t_b = ty!(apply (item 0) (lifetime (infer 1)));
-    let UnificationResult { goals, constraints } = table.unify(interner, &environment0, &t_a, &t_b).unwrap();
+    let UnificationResult { goals, constraints } =
+        table.unify(interner, &environment0, &t_a, &t_b).unwrap();
     assert!(goals.is_empty());
     assert!(constraints.is_empty());
 
@@ -269,7 +291,8 @@ fn lifetime_constraint_indirect() {
     // we will replace `'!1` with a new variable `'?2` and introduce a
     // (likely unsatisfiable) constraint relating them.
     let t_c = ty!(infer 0);
-    let UnificationResult { goals, constraints } = table.unify(interner, &environment0, &t_c, &t_b).unwrap();
+    let UnificationResult { goals, constraints } =
+        table.unify(interner, &environment0, &t_c, &t_b).unwrap();
     assert!(goals.is_empty());
     assert_eq!(constraints.len(), 1);
     assert_eq!(
