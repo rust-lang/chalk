@@ -14,9 +14,17 @@ fn opaque_bounds() {
         }
 
         goal {
-            T: Trait
+            if (Reveal) {
+                T: Trait
+            }
         } yields {
             "Unique; substitution []"
+        }
+
+        goal {
+            T: Trait
+        } yields {
+            "No possible solution"
         }
     }
 }

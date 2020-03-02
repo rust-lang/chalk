@@ -705,6 +705,7 @@ impl LowerDomainGoal for DomainGoal {
             DomainGoal::DownstreamType { ty } => {
                 vec![chalk_ir::DomainGoal::DownstreamType(ty.lower(env)?)]
             }
+            DomainGoal::Reveal => vec![chalk_ir::DomainGoal::Reveal(())],
         };
         Ok(goals)
     }

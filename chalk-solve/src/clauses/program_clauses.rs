@@ -131,9 +131,6 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
     /// where `!T` is the placeholder for the unnormalized type `T<..>`.
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let interner = builder.interner();
-        // TODO add this to the env elsewhere
-        builder.push_fact(DomainGoal::Reveal(()));
-
         let alias = AliasTy::ImplTrait(ImplTraitTy {
             impl_trait_id: self.impl_trait_id,
             substitution: builder.substitution_in_scope(),

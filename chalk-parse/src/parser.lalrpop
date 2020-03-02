@@ -323,6 +323,8 @@ DomainGoal: DomainGoal = {
 
     "Compatible" => DomainGoal::Compatible,
     "DownstreamType" "(" <ty:Ty> ")" => DomainGoal::DownstreamType { ty },
+
+    "Reveal" => DomainGoal::Reveal,
 };
 
 LeafGoal: LeafGoal = {

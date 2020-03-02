@@ -257,6 +257,7 @@ pub enum DomainGoal {
     LocalImplAllowed { trait_ref: TraitRef },
     Compatible,
     DownstreamType { ty: Ty },
+    Reveal,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
