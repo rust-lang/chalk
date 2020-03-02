@@ -373,7 +373,9 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     }
 
     fn new_lifetime_variable(&mut self) -> Lifetime<I> {
-        self.infer.new_variable(self.universe).to_lifetime(self.interner)
+        self.infer
+            .new_variable(self.universe)
+            .to_lifetime(self.interner)
     }
 }
 

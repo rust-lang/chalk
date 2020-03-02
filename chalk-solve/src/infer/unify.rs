@@ -422,8 +422,10 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
             // exists<'x> forall<'b> ?T = Foo<'x>, where 'x = 'b
 
             let tick_x = self.unifier.table.new_variable(self.universe_index);
-            self.unifier
-                .push_lifetime_eq_constraint(tick_x.to_lifetime(self.interner()), ui.to_lifetime(self.interner()));
+            self.unifier.push_lifetime_eq_constraint(
+                tick_x.to_lifetime(self.interner()),
+                ui.to_lifetime(self.interner()),
+            );
             Ok(tick_x.to_lifetime(self.interner()))
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name
