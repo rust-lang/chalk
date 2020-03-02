@@ -25,7 +25,7 @@ macro_rules! ty {
 
     (alias (item $n:tt) $($arg:tt)*) => {
         $crate::TyData::Alias(AliasTy {
-            associated_ty_id: AssocTypeId(RawId { index: $n }),
+            associated_ty_id: AssocTypeId(chalk_ir::interner::RawId { index: $n }),
             substitution: $crate::Substitution::from(vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
         }).intern()
     };
@@ -84,6 +84,6 @@ macro_rules! lifetime {
 #[macro_export]
 macro_rules! ty_name {
     ((item $n:expr)) => {
-        $crate::TypeName::Struct(StructId(RawId { index: $n }))
+        $crate::TypeName::Struct(StructId(chalk_ir::interner::RawId { index: $n }))
     };
 }

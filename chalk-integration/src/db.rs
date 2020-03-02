@@ -96,7 +96,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().impl_datum(id)
     }
 
-    fn associated_ty_value(&self, id: AssociatedTyValueId) -> Arc<AssociatedTyValue<ChalkIr>> {
+    fn associated_ty_value(
+        &self,
+        id: AssociatedTyValueId<ChalkIr>,
+    ) -> Arc<AssociatedTyValue<ChalkIr>> {
         self.program_ir().unwrap().associated_ty_values[&id].clone()
     }
 

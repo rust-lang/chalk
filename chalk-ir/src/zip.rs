@@ -158,7 +158,6 @@ eq_zip!(I => StructId<I>);
 eq_zip!(I => TraitId<I>);
 eq_zip!(I => AssocTypeId<I>);
 eq_zip!(I => TypeName<I>);
-eq_zip!(I => Identifier);
 eq_zip!(I => QuantifierKind);
 eq_zip!(I => PhantomData<I>);
 eq_zip!(I => PlaceholderIndex);

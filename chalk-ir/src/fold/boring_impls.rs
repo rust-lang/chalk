@@ -109,7 +109,6 @@ macro_rules! copy_fold {
     };
 }
 
-copy_fold!(Identifier);
 copy_fold!(UniverseIndex);
 copy_fold!(usize);
 copy_fold!(PlaceholderIndex);

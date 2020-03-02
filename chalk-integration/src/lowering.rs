@@ -10,16 +10,16 @@ use std::sync::Arc;
 
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
+use crate::{Identifier as Ident, RawId, TypeKind, TypeSort};
 
-type StructIds = BTreeMap<chalk_ir::Identifier, chalk_ir::StructId<ChalkIr>>;
-type TraitIds = BTreeMap<chalk_ir::Identifier, chalk_ir::TraitId<ChalkIr>>;
-type StructKinds = BTreeMap<chalk_ir::StructId<ChalkIr>, rust_ir::TypeKind>;
-type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, rust_ir::TypeKind>;
-type AssociatedTyLookups =
-    BTreeMap<(chalk_ir::TraitId<ChalkIr>, chalk_ir::Identifier), AssociatedTyLookup>;
+type StructIds = BTreeMap<Ident, chalk_ir::StructId<ChalkIr>>;
+type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
+type StructKinds = BTreeMap<chalk_ir::StructId<ChalkIr>, TypeKind>;
+type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
+type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
-    BTreeMap<(chalk_ir::ImplId<ChalkIr>, chalk_ir::Identifier), AssociatedTyValueId>;
-type ParameterMap = BTreeMap<chalk_ir::ParameterKind<chalk_ir::Identifier>, usize>;
+    BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
+type ParameterMap = BTreeMap<chalk_ir::ParameterKind<Ident>, usize>;
 
 pub type LowerResult<T> = Result<T, RustIrError>;
 
@@ -116,11 +116,11 @@ impl<'k> Env<'k> {
         Err(RustIrError::InvalidLifetimeName(name))
     }
 
-    fn struct_kind(&self, id: chalk_ir::StructId<ChalkIr>) -> &rust_ir::TypeKind {
+    fn struct_kind(&self, id: chalk_ir::StructId<ChalkIr>) -> &TypeKind {
         &self.struct_kinds[&id]
     }
 
-    fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &rust_ir::TypeKind {
+    fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
         &self.trait_kinds[&id]
     }
 
@@ -129,7 +129,7 @@ impl<'k> Env<'k> {
     /// will be assigned in order as they are iterated.
     fn introduce<I>(&self, binders: I) -> LowerResult<Self>
     where
-        I: IntoIterator<Item = chalk_ir::ParameterKind<chalk_ir::Identifier>>,
+        I: IntoIterator<Item = chalk_ir::ParameterKind<Ident>>,
         I::IntoIter: ExactSizeIterator,
     {
         let binders = binders.into_iter().enumerate().map(|(i, k)| (k, i));
@@ -151,7 +151,7 @@ impl<'k> Env<'k> {
 
     fn in_binders<I, T, OP>(&self, binders: I, op: OP) -> LowerResult<chalk_ir::Binders<T>>
     where
-        I: IntoIterator<Item = chalk_ir::ParameterKind<chalk_ir::Identifier>>,
+        I: IntoIterator<Item = chalk_ir::ParameterKind<Ident>>,
         I::IntoIter: ExactSizeIterator,
         OP: FnOnce(&Self) -> LowerResult<T>,
     {
@@ -172,10 +172,10 @@ pub(crate) trait LowerProgram {
 impl LowerProgram for Program {
     fn lower(&self) -> LowerResult<LoweredProgram> {
         let mut index = 0;
-        let mut next_item_id = || -> chalk_ir::RawId {
+        let mut next_item_id = || -> RawId {
             let i = index;
             index += 1;
-            chalk_ir::RawId { index: i }
+            RawId { index: i }
         };
 
         // Make a vector mapping each thing in `items` to an id,
@@ -369,13 +369,13 @@ impl LowerProgram for Program {
 }
 
 trait LowerTypeKind {
-    fn lower_type_kind(&self) -> LowerResult<rust_ir::TypeKind>;
+    fn lower_type_kind(&self) -> LowerResult<TypeKind>;
 }
 
 trait LowerParameterMap {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<chalk_ir::Identifier>>;
+    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>>;
     fn declared_parameters(&self) -> &[ParameterKind];
-    fn all_parameters(&self) -> Vec<chalk_ir::ParameterKind<chalk_ir::Identifier>> {
+    fn all_parameters(&self) -> Vec<chalk_ir::ParameterKind<Ident>> {
         self.synthetic_parameters()
             .into_iter()
             .chain(self.declared_parameters().iter().map(|id| id.lower()))
@@ -415,7 +415,7 @@ trait LowerParameterMap {
 }
 
 impl LowerParameterMap for StructDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<chalk_ir::Identifier>> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>> {
         None
     }
 
@@ -425,7 +425,7 @@ impl LowerParameterMap for StructDefn {
 }
 
 impl LowerParameterMap for Impl {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<chalk_ir::Identifier>> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>> {
         None
     }
 
@@ -435,7 +435,7 @@ impl LowerParameterMap for Impl {
 }
 
 impl LowerParameterMap for AssocTyDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<chalk_ir::Identifier>> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>> {
         None
     }
 
@@ -445,7 +445,7 @@ impl LowerParameterMap for AssocTyDefn {
 }
 
 impl LowerParameterMap for AssocTyValue {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<chalk_ir::Identifier>> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>> {
         None
     }
 
@@ -455,7 +455,7 @@ impl LowerParameterMap for AssocTyValue {
 }
 
 impl LowerParameterMap for TraitDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<chalk_ir::Identifier>> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>> {
         Some(chalk_ir::ParameterKind::Ty(intern(SELF)))
     }
 
@@ -465,7 +465,7 @@ impl LowerParameterMap for TraitDefn {
 }
 
 impl LowerParameterMap for Clause {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<chalk_ir::Identifier>> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>> {
         None
     }
 
@@ -475,11 +475,11 @@ impl LowerParameterMap for Clause {
 }
 
 trait LowerParameterKind {
-    fn lower(&self) -> chalk_ir::ParameterKind<chalk_ir::Identifier>;
+    fn lower(&self) -> chalk_ir::ParameterKind<Ident>;
 }
 
 impl LowerParameterKind for ParameterKind {
-    fn lower(&self) -> chalk_ir::ParameterKind<chalk_ir::Identifier> {
+    fn lower(&self) -> chalk_ir::ParameterKind<Ident> {
         match *self {
             ParameterKind::Ty(ref n) => chalk_ir::ParameterKind::Ty(n.str),
             ParameterKind::Lifetime(ref n) => chalk_ir::ParameterKind::Lifetime(n.str),
@@ -499,9 +499,9 @@ trait LowerWhereClauses {
 }
 
 impl LowerTypeKind for StructDefn {
-    fn lower_type_kind(&self) -> LowerResult<rust_ir::TypeKind> {
-        Ok(rust_ir::TypeKind {
-            sort: rust_ir::TypeSort::Struct,
+    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
+        Ok(TypeKind {
+            sort: TypeSort::Struct,
             name: self.name.str,
             binders: chalk_ir::Binders {
                 binders: self.all_parameters().anonymize(),
@@ -518,10 +518,10 @@ impl LowerWhereClauses for StructDefn {
 }
 
 impl LowerTypeKind for TraitDefn {
-    fn lower_type_kind(&self) -> LowerResult<rust_ir::TypeKind> {
+    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
         let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
-        Ok(rust_ir::TypeKind {
-            sort: rust_ir::TypeSort::Trait,
+        Ok(TypeKind {
+            sort: TypeSort::Trait,
             name: self.name.str,
             binders: chalk_ir::Binders {
                 // for the purposes of the *type*, ignore `Self`:
@@ -728,7 +728,7 @@ impl LowerTraitBound for TraitBound {
         let trait_id = env.lookup_trait(self.trait_name)?;
 
         let k = env.trait_kind(trait_id);
-        if k.sort != rust_ir::TypeSort::Trait {
+        if k.sort != TypeSort::Trait {
             Err(RustIrError::NotTrait(self.trait_name))?;
         }
 

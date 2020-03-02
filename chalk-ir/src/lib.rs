@@ -3,7 +3,6 @@ use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
 use chalk_derive::{Fold, HasInterner};
 use chalk_engine::fallible::*;
-use lalrpop_intern::InternedString;
 use std::iter;
 use std::marker::PhantomData;
 
@@ -38,9 +37,8 @@ use interner::{HasInterner, Interner, TargetInterner};
 
 pub mod could_match;
 pub mod debug;
+#[cfg(any(test, feature = "default-interner"))]
 pub mod tls;
-
-pub type Identifier = InternedString;
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner)]
 /// The set of assumptions we've made so far, and the current number of
@@ -153,18 +151,6 @@ pub struct ClauseId<I: Interner>(pub I::DefId);
 pub struct AssocTypeId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[allow(non_camel_case_types)]
-pub struct RawId {
-    pub index: u32,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum TypeSort {
-    Struct,
-    Trait,
-}
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Ty<I: Interner> {
@@ -456,6 +442,16 @@ impl<T> ParameterKind<T> {
     pub fn map<OP, U>(self, op: OP) -> ParameterKind<U>
     where
         OP: FnOnce(T) -> U,
+    {
+        match self {
+            ParameterKind::Ty(t) => ParameterKind::Ty(op(t)),
+            ParameterKind::Lifetime(t) => ParameterKind::Lifetime(op(t)),
+        }
+    }
+
+    pub fn map_ref<OP, U>(&self, op: OP) -> ParameterKind<U>
+    where
+        OP: FnOnce(&T) -> U,
     {
         match self {
             ParameterKind::Ty(t) => ParameterKind::Ty(op(t)),

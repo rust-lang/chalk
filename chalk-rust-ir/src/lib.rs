@@ -7,9 +7,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, Identifier, ImplId, LifetimeData, Parameter,
-    ParameterKind, QuantifiedWhereClause, RawId, StructId, Substitution, TraitId, TraitRef, Ty,
-    TyData, TypeName, WhereClause,
+    AliasEq, AliasTy, AssocTypeId, Binders, ImplId, LifetimeData, Parameter, ParameterKind,
+    QuantifiedWhereClause, StructId, Substitution, TraitId, TraitRef, Ty, TyData, TypeName,
+    WhereClause,
 };
 use std::iter;
 
@@ -18,14 +18,14 @@ pub enum LangItem {}
 
 /// Identifier for an "associated type value" found in some impl.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AssociatedTyValueId(pub RawId);
+pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum<I: Interner> {
     pub polarity: Polarity,
     pub binders: Binders<ImplDatumBound<I>>,
     pub impl_type: ImplType,
-    pub associated_ty_value_ids: Vec<AssociatedTyValueId>,
+    pub associated_ty_value_ids: Vec<AssociatedTyValueId<I>>,
 }
 
 impl<I: Interner> ImplDatum<I> {
@@ -245,15 +245,15 @@ impl<I: Interner> AliasEqBound<I> {
 
 pub trait Anonymize {
     /// Utility function that converts from a list of generic parameters
-    /// which *have* names (`ParameterKind<Identifier>`) to a list of
+    /// which *have* names (`ParameterKind<T>`) to a list of
     /// "anonymous" generic parameters that just preserves their
     /// kinds (`ParameterKind<()>`). Often convenient in lowering.
     fn anonymize(&self) -> Vec<ParameterKind<()>>;
 }
 
-impl Anonymize for [ParameterKind<Identifier>] {
+impl<T> Anonymize for [ParameterKind<T>] {
     fn anonymize(&self) -> Vec<ParameterKind<()>> {
-        self.iter().map(|pk| pk.map(|_| ())).collect()
+        self.iter().map(|pk| pk.map_ref(|_| ())).collect()
     }
 }
 
@@ -301,7 +301,7 @@ pub struct AssociatedTyDatum<I: Interner> {
     pub id: AssocTypeId<I>,
 
     /// Name of this associated type.
-    pub name: Identifier,
+    pub name: I::Identifier,
 
     /// These binders represent the `P0...Pm` variables.  The binders
     /// are in the order `[Pn..Pm; P0..Pn]`. That is, the variables
@@ -413,19 +413,6 @@ pub struct AssociatedTyValue<I: Interner> {
 pub struct AssociatedTyValueBound<I: Interner> {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<I>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TypeKind {
-    pub sort: TypeSort,
-    pub name: Identifier,
-    pub binders: Binders<()>,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum TypeSort {
-    Struct,
-    Trait,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]

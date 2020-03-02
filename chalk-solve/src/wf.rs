@@ -327,7 +327,7 @@ where
     ///     forall<'a> { WellFormed(Box<&'a T>) },
     /// }
     /// ```
-    fn compute_assoc_ty_goal(&self, assoc_ty_id: AssociatedTyValueId) -> Option<Goal<I>> {
+    fn compute_assoc_ty_goal(&self, assoc_ty_id: AssociatedTyValueId<I>) -> Option<Goal<I>> {
         let assoc_ty = &self.db.associated_ty_value(assoc_ty_id);
 
         // The substitutions for the binders on this associated type
