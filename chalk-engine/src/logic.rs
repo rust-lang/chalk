@@ -181,8 +181,12 @@ impl<C: Context> Forest<C> {
 
         // Subgoal abstraction:
         let (ucanonical_subgoal, universe_map) = match subgoal {
-            Literal::Positive(subgoal) => Forest::abstract_positive_literal(context, infer, subgoal)?,
-            Literal::Negative(subgoal) => Forest::abstract_negative_literal(context, infer, subgoal)?,
+            Literal::Positive(subgoal) => {
+                Forest::abstract_positive_literal(context, infer, subgoal)?
+            }
+            Literal::Negative(subgoal) => {
+                Forest::abstract_negative_literal(context, infer, subgoal)?
+            }
         };
 
         debug!("ucanonical_subgoal={:?}", ucanonical_subgoal);
@@ -258,9 +262,13 @@ impl<C: Context> Forest<C> {
                         for clause in clauses {
                             info!("program clause = {:#?}", clause);
                             let mut infer = infer.clone();
-                            if let Ok(resolvent) =
-                                infer.resolvent_clause(context.interner(), &environment, &domain_goal, &subst, &clause)
-                            {
+                            if let Ok(resolvent) = infer.resolvent_clause(
+                                context.interner(),
+                                &environment,
+                                &domain_goal,
+                                &subst,
+                                &clause,
+                            ) {
                                 info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
                                 let strand = Strand {
                                     infer,
@@ -289,9 +297,13 @@ impl<C: Context> Forest<C> {
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
-                if let Ok(ex_clause) =
-                    Self::simplify_hh_goal(context.interner(), &mut infer, subst, environment, hh_goal)
-                {
+                if let Ok(ex_clause) = Self::simplify_hh_goal(
+                    context.interner(),
+                    &mut infer,
+                    subst,
+                    environment,
+                    hh_goal,
+                ) {
                     info!(
                         "pushing initial strand with ex-clause: {:#?}",
                         infer.debug_ex_clause(context.interner(), &ex_clause),
@@ -397,7 +409,8 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> Drop
         if !self.stack.is_empty() {
             if let Some(active_strand) = self.stack.top().active_strand.take() {
                 let table = self.stack.top().table;
-                let canonical_active_strand = Forest::canonicalize_strand(self.context, active_strand);
+                let canonical_active_strand =
+                    Forest::canonicalize_strand(self.context, active_strand);
                 self.forest.tables[table].enqueue_strand(canonical_active_strand);
             }
             self.unwind_stack();
@@ -523,10 +536,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
     /// answer into the provided `Strand`.
     /// On success, `Ok` is returned and the `Strand` can be continued to process
     /// On failure, `Err` is returned and the `Strand` should be discarded
-    fn merge_answer_into_strand(
-        &mut self,
-        strand: &mut Strand<C>,
-    ) -> RootSearchResult<()> {
+    fn merge_answer_into_strand(&mut self, strand: &mut Strand<C>) -> RootSearchResult<()> {
         // At this point, we know we have an answer for
         // the selected subgoal of the strand.
         // Now, we have to unify that answer onto the strand.
@@ -811,10 +821,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
     ///
     /// * `Ok` if we should keep searching.
     /// * `Err` if the subgoal failed in some way such that the strand can be abandoned.
-    fn on_subgoal_selected(
-        &mut self,
-        mut strand: Strand<C>,
-    ) -> Result<(), RootSearchFail> {
+    fn on_subgoal_selected(&mut self, mut strand: Strand<C>) -> Result<(), RootSearchFail> {
         // This may be a newly selected subgoal or an existing selected subgoal.
 
         let SelectedSubgoal {
@@ -1013,10 +1020,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
         Some(Forest::canonicalize_strand(self.context, strand))
     }
 
-    fn on_subgoal_selection_flounder(
-        &mut self,
-        strand: Strand<C>,
-    ) -> RootSearchFail {
+    fn on_subgoal_selection_flounder(&mut self, strand: Strand<C>) -> RootSearchFail {
         debug!("all subgoals floundered");
 
         // We were unable to select a subgoal for this strand
@@ -1187,7 +1191,8 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
             match self.stack.pop_and_take_caller_strand() {
                 Some(active_strand) => {
                     let table = self.stack.top().table;
-                    let canonical_active_strand = Forest::canonicalize_strand(self.context, active_strand);
+                    let canonical_active_strand =
+                        Forest::canonicalize_strand(self.context, active_strand);
                     self.forest.tables[table].enqueue_strand(canonical_active_strand);
                 }
 
@@ -1293,10 +1298,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
     ///   strand led nowhere of interest.
     /// - the strand may represent a new answer, in which case it is
     ///   added to the table and `Some(())` is returned.
-    fn pursue_answer(
-        &mut self,
-        strand: Strand<C>,
-    ) -> Option<AnswerIndex> {
+    fn pursue_answer(&mut self, strand: Strand<C>) -> Option<AnswerIndex> {
         let table = self.stack.top().table;
         let Strand {
             mut infer,
@@ -1333,7 +1335,10 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
         // Ultimately, the current decision to flounder the entire table mostly boils
         // down to "it works as we expect for the current tests". And, we likely don't
         // even *need* the added complexity just for potentially more answers.
-        if infer.truncate_answer(self.context.interner(), &subst).is_some() {
+        if infer
+            .truncate_answer(self.context.interner(), &subst)
+            .is_some()
+        {
             self.forest.tables[table].mark_floundered();
             return None;
         }
