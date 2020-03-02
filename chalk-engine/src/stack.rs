@@ -8,20 +8,11 @@ use std::ops::{Index, IndexMut, Range};
 pub(crate) struct Stack<C: Context> {
     /// Stack: as described above, stores the in-progress goals.
     stack: Vec<StackEntry<C>>,
-
-    /// This is a clock which always increases. It is
-    /// incremented every time a new subgoal is followed.
-    /// This effectively gives us way to track what depth
-    /// and loop a table or strand was last followed.
-    clock: TimeStamp,
 }
 
 impl<C: Context> Default for Stack<C> {
     fn default() -> Self {
-        Stack {
-            stack: vec![],
-            clock: Default::default(),
-        }
+        Stack { stack: vec![] }
     }
 }
 
@@ -76,15 +67,13 @@ impl<C: Context> Stack<C> {
         depth..StackIndex::from(self.stack.len())
     }
 
-    // Gets the next clock TimeStamp. This will never decrease.
-    fn increment_clock(&mut self) -> TimeStamp {
-        self.clock.increment();
-        self.clock
-    }
-
-    pub(super) fn push(&mut self, table: TableIndex, cyclic_minimums: Minimums) -> StackIndex {
+    pub(super) fn push(
+        &mut self,
+        table: TableIndex,
+        cyclic_minimums: Minimums,
+        clock: TimeStamp,
+    ) -> StackIndex {
         let old_len = self.stack.len();
-        let clock = self.increment_clock();
         self.stack.push(StackEntry {
             table,
             clock,
