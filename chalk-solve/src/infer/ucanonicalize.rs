@@ -8,6 +8,7 @@ use super::InferenceTable;
 impl<I: Interner> InferenceTable<I> {
     pub(crate) fn u_canonicalize<T: Fold<I>>(
         &mut self,
+        interner: &I,
         value0: &Canonical<T>,
     ) -> UCanonicalized<T::Result> {
         debug!("u_canonicalize({:#?})", value0);
@@ -19,6 +20,7 @@ impl<I: Interner> InferenceTable<I> {
             .fold_with(
                 &mut UCollector {
                     universes: &mut universes,
+                    interner,
                 },
                 0,
             )
@@ -32,6 +34,7 @@ impl<I: Interner> InferenceTable<I> {
             .fold_with(
                 &mut UMapToCanonical {
                     universes: &universes,
+                    interner,
                 },
                 0,
             )
@@ -210,7 +213,7 @@ impl UniverseMap {
     /// of universes, since that determines visibility, and (b) that
     /// the universe we produce does not correspond to any of the
     /// other original universes.
-    pub(crate) fn map_from_canonical<T, I>(&self, value: &T) -> T::Result
+    pub(crate) fn map_from_canonical<T, I>(&self, interner: &I, value: &T) -> T::Result
     where
         T: Fold<I>,
         I: Interner,
@@ -218,18 +221,25 @@ impl UniverseMap {
         debug!("map_from_canonical(value={:?})", value);
         debug!("map_from_canonical: universes = {:?}", self.universes);
         value
-            .fold_with(&mut UMapFromCanonical { universes: self }, 0)
+            .fold_with(
+                &mut UMapFromCanonical {
+                    interner,
+                    universes: self,
+                },
+                0,
+            )
             .unwrap()
     }
 }
 
 /// The `UCollector` is a "no-op" in terms of the value, but along the
 /// way it collects all universes that were found into a vector.
-struct UCollector<'q> {
+struct UCollector<'q, 'i, I> {
     universes: &'q mut UniverseMap,
+    interner: &'i I,
 }
 
-impl<I: Interner> Folder<I> for UCollector<'_> {
+impl<I: Interner> Folder<I> for UCollector<'_, '_, I> {
     fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
@@ -240,7 +250,7 @@ impl<I: Interner> Folder<I> for UCollector<'_> {
         _binders: usize,
     ) -> Fallible<Ty<I>> {
         self.universes.add(universe.ui);
-        Ok(universe.to_ty::<I>())
+        Ok(universe.to_ty::<I>(self.interner()))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -255,13 +265,22 @@ impl<I: Interner> Folder<I> for UCollector<'_> {
     fn forbid_inference_vars(&self) -> bool {
         true
     }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
+    }
 }
 
-struct UMapToCanonical<'q> {
+struct UMapToCanonical<'q, I> {
+    interner: &'q I,
     universes: &'q UniverseMap,
 }
 
-impl<I: Interner> Folder<I> for UMapToCanonical<'_> {
+impl<I: Interner> Folder<I> for UMapToCanonical<'_, I> {
     fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
@@ -280,7 +299,7 @@ impl<I: Interner> Folder<I> for UMapToCanonical<'_> {
             ui,
             idx: universe0.idx,
         }
-        .to_ty::<I>())
+        .to_ty::<I>(self.interner()))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -295,13 +314,22 @@ impl<I: Interner> Folder<I> for UMapToCanonical<'_> {
         }
         .to_lifetime::<I>())
     }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
+    }
 }
 
-struct UMapFromCanonical<'q> {
+struct UMapFromCanonical<'q, I> {
+    interner: &'q I,
     universes: &'q UniverseMap,
 }
 
-impl<I: Interner> Folder<I> for UMapFromCanonical<'_> {
+impl<I: Interner> Folder<I> for UMapFromCanonical<'_, I> {
     fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
@@ -316,7 +344,7 @@ impl<I: Interner> Folder<I> for UMapFromCanonical<'_> {
             ui,
             idx: universe0.idx,
         }
-        .to_ty::<I>())
+        .to_ty::<I>(self.interner()))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -334,5 +362,13 @@ impl<I: Interner> Folder<I> for UMapFromCanonical<'_> {
 
     fn forbid_inference_vars(&self) -> bool {
         true
+    }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
     }
 }

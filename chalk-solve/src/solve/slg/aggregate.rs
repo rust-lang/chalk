@@ -8,7 +8,7 @@ use chalk_ir::cast::Cast;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
-use chalk_engine::context::{self, AnswerResult, Context};
+use chalk_engine::context::{self, AnswerResult, Context, ContextOps};
 use chalk_engine::CompleteAnswer;
 use std::fmt::Debug;
 
@@ -28,7 +28,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
             }
             AnswerResult::Answer(answer) => answer,
             AnswerResult::Floundered => CompleteAnswer {
-                subst: SlgContext::identity_constrained_subst(root_goal),
+                subst: self.identity_constrained_subst(root_goal),
                 ambiguous: true,
             },
             AnswerResult::QuantumExceeded => {
@@ -40,7 +40,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
         let next_answer = answers.peek_answer(|| should_continue());
         if next_answer.is_quantum_exceeded() {
             return Some(Solution::Ambig(Guidance::Suggested(
-                subst.map(|cs| cs.subst),
+                subst.map(self.program.interner(), |cs| cs.subst),
             )));
         }
         if next_answer.is_no_more_solutions() && !ambiguous {
@@ -59,7 +59,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
         // cases into an `OR` region constraint at some point, but I
         // leave that for future work. This is basically
         // rust-lang/rust#21974.
-        let mut subst = subst.map(|cs| cs.subst);
+        let mut subst = subst.map(self.program.interner(), |cs| cs.subst);
 
         // Extract answers and merge them into `subst`. Stop once we have
         // a trivial subst (or run out of answers).
@@ -83,7 +83,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
                 AnswerResult::Answer(answer1) => answer1.subst,
                 AnswerResult::Floundered => {
                     // FIXME: this doesn't trigger for any current tests
-                    SlgContext::identity_constrained_subst(root_goal)
+                    self.identity_constrained_subst(root_goal)
                 }
                 AnswerResult::NoMoreSolutions => {
                     break Guidance::Definite(subst);
@@ -92,7 +92,12 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
                     break Guidance::Suggested(subst);
                 }
             };
-            subst = merge_into_guidance(SlgContext::canonical(root_goal), subst, &new_subst);
+            subst = merge_into_guidance(
+                self.program.interner(),
+                SlgContext::canonical(root_goal),
+                subst,
+                &new_subst,
+            );
             num_answers += 1;
         };
 
@@ -113,6 +118,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
 /// u32` and the new answer is `?0 = i32`, then the guidance would
 /// become `?0 = ?X` (where `?X` is some fresh variable).
 fn merge_into_guidance<I: Interner>(
+    interner: &I,
     root_goal: &Canonical<InEnvironment<Goal<I>>>,
     guidance: Canonical<Substitution<I>>,
     answer: &Canonical<ConstrainedSubst<I>>,
@@ -154,6 +160,7 @@ fn merge_into_guidance<I: Interner>(
             let mut aggr = AntiUnifier {
                 infer: &mut infer,
                 universe,
+                interner,
             };
             aggr.aggregate_tys(&ty, ty1).cast()
         })
@@ -161,7 +168,7 @@ fn merge_into_guidance<I: Interner>(
 
     let aggr_subst = Substitution::from(aggr_parameters);
 
-    infer.canonicalize(&aggr_subst).quantified
+    infer.canonicalize(interner, &aggr_subst).quantified
 }
 
 fn is_trivial<I: Interner>(subst: &Canonical<Substitution<I>>) -> bool {
@@ -191,12 +198,13 @@ fn is_trivial<I: Interner>(subst: &Canonical<Substitution<I>>) -> bool {
 /// `Vec<?X>`. This is a **very simplistic** anti-unifier.
 ///
 /// [Anti-unification]: https://en.wikipedia.org/wiki/Anti-unification_(computer_science)
-struct AntiUnifier<'infer, I: Interner> {
+struct AntiUnifier<'infer, 'intern, I: Interner> {
     infer: &'infer mut InferenceTable<I>,
     universe: UniverseIndex,
+    interner: &'intern I,
 }
 
-impl<I: Interner> AntiUnifier<'_, I> {
+impl<I: Interner> AntiUnifier<'_, '_, I> {
     fn aggregate_tys(&mut self, ty0: &Ty<I>, ty1: &Ty<I>) -> Ty<I> {
         match (ty0.data(), ty1.data()) {
             // If we see bound things on either side, just drop in a
@@ -253,7 +261,7 @@ impl<I: Interner> AntiUnifier<'_, I> {
 
         self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
             .map(|(&name, substitution)| {
-                TyData::Apply(ApplicationTy { name, substitution }).intern()
+                TyData::Apply(ApplicationTy { name, substitution }).intern(self.interner)
             })
             .unwrap_or_else(|| self.new_variable())
     }
@@ -266,7 +274,7 @@ impl<I: Interner> AntiUnifier<'_, I> {
         if index1 != index2 {
             self.new_variable()
         } else {
-            TyData::Placeholder(index1.clone()).intern()
+            TyData::Placeholder(index1.clone()).intern(self.interner)
         }
     }
 
@@ -286,7 +294,7 @@ impl<I: Interner> AntiUnifier<'_, I> {
                     associated_ty_id,
                     substitution,
                 })
-                .intern()
+                .intern(self.interner)
             })
             .unwrap_or_else(|| self.new_variable())
     }
@@ -361,7 +369,7 @@ impl<I: Interner> AntiUnifier<'_, I> {
     }
 
     fn new_variable(&mut self) -> Ty<I> {
-        self.infer.new_variable(self.universe).to_ty()
+        self.infer.new_variable(self.universe).to_ty(self.interner)
     }
 
     fn new_lifetime_variable(&mut self) -> Lifetime<I> {
@@ -377,6 +385,7 @@ fn vec_i32_vs_vec_u32() {
     let mut anti_unifier = AntiUnifier {
         infer: &mut infer,
         universe: UniverseIndex::root(),
+        interner: &ChalkIr,
     };
 
     let ty = anti_unifier.aggregate_tys(
@@ -390,8 +399,10 @@ fn vec_i32_vs_vec_u32() {
 #[test]
 fn vec_i32_vs_vec_i32() {
     use chalk_ir::interner::ChalkIr;
+    let interner = &ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
+        interner,
         infer: &mut infer,
         universe: UniverseIndex::root(),
     };
@@ -407,8 +418,10 @@ fn vec_i32_vs_vec_i32() {
 #[test]
 fn vec_x_vs_vec_y() {
     use chalk_ir::interner::ChalkIr;
+    let interner = &ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
+        interner,
         infer: &mut infer,
         universe: UniverseIndex::root(),
     };

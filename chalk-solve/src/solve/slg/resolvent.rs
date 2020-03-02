@@ -57,6 +57,7 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
     /// - `clause` is the program clause that may be useful to that end
     fn resolvent_clause(
         &mut self,
+        interner: &I,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
         subst: &Substitution<I>,
@@ -84,15 +85,17 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
             conditions,
         } = match clause {
             ProgramClause::Implies(implication) => implication.clone(),
-            ProgramClause::ForAll(implication) => {
-                self.infer.instantiate_binders_existentially(implication)
-            }
+            ProgramClause::ForAll(implication) => self
+                .infer
+                .instantiate_binders_existentially(interner, implication),
         };
         debug!("consequence = {:?}", consequence);
         debug!("conditions = {:?}", conditions);
 
         // Unify the selected literal Li with C'.
-        let unification_result = self.infer.unify(environment, goal, &consequence)?;
+        let unification_result = self
+            .infer
+            .unify(interner, environment, goal, &consequence)?;
 
         // Final X-clause that we will return.
         let mut ex_clause = ExClause {
@@ -201,6 +204,7 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
 
     fn apply_answer_subst(
         &mut self,
+        interner: &I,
         ex_clause: &mut ExClause<SlgContext<I>>,
         selected_goal: &InEnvironment<Goal<I>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
@@ -210,7 +214,7 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
         debug!("ex_clause={:?}", ex_clause);
         debug!(
             "selected_goal={:?}",
-            self.infer.normalize_deep(selected_goal)
+            self.infer.normalize_deep(interner, selected_goal)
         );
         debug!("answer_table_goal={:?}", answer_table_goal);
         debug!("canonical_answer_subst={:?}", canonical_answer_subst);
@@ -227,11 +231,16 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
             constraints: answer_constraints,
 
             delayed_subgoals,
-        } = self.infer.instantiate_canonical(&canonical_answer_subst);
+        } = self
+            .infer
+            .instantiate_canonical(interner, &canonical_answer_subst);
 
-        let table_goal = self.infer.instantiate_canonical(&answer_table_goal);
+        let table_goal = self
+            .infer
+            .instantiate_canonical(interner, &answer_table_goal);
 
         AnswerSubstitutor::substitute(
+            interner,
             &mut self.infer,
             &selected_goal.environment,
             &answer_subst,
@@ -263,10 +272,12 @@ struct AnswerSubstitutor<'t, I: Interner> {
     answer_binders: usize,
     pending_binders: usize,
     ex_clause: &'t mut ExClause<SlgContext<I>>,
+    interner: &'t I,
 }
 
 impl<I: Interner> AnswerSubstitutor<'_, I> {
     fn substitute<T: Zip<I>>(
+        interner: &I,
         table: &mut InferenceTable<I>,
         environment: &Environment<I>,
         answer_subst: &Substitution<I>,
@@ -275,6 +286,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
         pending: &T,
     ) -> Fallible<()> {
         let mut this = AnswerSubstitutor {
+            interner,
             table,
             environment,
             answer_subst,
@@ -288,6 +300,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
 
     fn unify_free_answer_var(
         &mut self,
+        interner: &I,
         answer_depth: usize,
         pending: ParameterKind<&Ty<I>, &Lifetime<I>>,
     ) -> Fallible<bool> {
@@ -300,7 +313,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
         let answer_param = self.answer_subst.at(answer_depth - self.answer_binders);
 
         let pending_shifted = pending
-            .shifted_out(self.pending_binders)
+            .shifted_out(interner, self.pending_binders)
             .unwrap_or_else(|_| {
                 panic!(
                     "truncate extracted a pending value that references internal binder: {:?}",
@@ -310,6 +323,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
 
         slg::into_ex_clause(
             self.table.unify(
+                interner,
                 &self.environment,
                 answer_param,
                 &Parameter::new(pending_shifted),
@@ -339,7 +353,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
 
 impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
     fn zip_tys(&mut self, answer: &Ty<I>, pending: &Ty<I>) -> Fallible<()> {
-        if let Some(pending) = self.table.normalize_shallow(pending) {
+        if let Some(pending) = self.table.normalize_shallow(self.interner, pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
@@ -348,7 +362,11 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
         // resulting answer that the subgoal found and unify it with
         // the value from our "pending subgoal".
         if let TyData::BoundVar(answer_depth) = answer.data() {
-            if self.unify_free_answer_var(*answer_depth, ParameterKind::Ty(pending))? {
+            if self.unify_free_answer_var(
+                self.interner,
+                *answer_depth,
+                ParameterKind::Ty(pending),
+            )? {
                 return Ok(());
             }
         }
@@ -402,7 +420,11 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
         }
 
         if let LifetimeData::BoundVar(answer_depth) = answer.data() {
-            if self.unify_free_answer_var(*answer_depth, ParameterKind::Lifetime(pending))? {
+            if self.unify_free_answer_var(
+                self.interner,
+                *answer_depth,
+                ParameterKind::Lifetime(pending),
+            )? {
                 return Ok(());
             }
         }

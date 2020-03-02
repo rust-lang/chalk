@@ -41,55 +41,55 @@ pub struct WfSolver<'db, I: Interner> {
 
 /// A trait for retrieving all types appearing in some Chalk construction.
 trait FoldInputTypes: HasInterner {
-    fn fold(&self, accumulator: &mut Vec<Ty<Self::Interner>>);
+    fn fold(&self, interner: &Self::Interner, accumulator: &mut Vec<Ty<Self::Interner>>);
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for [T] {
-    fn fold(&self, accumulator: &mut Vec<Ty<T::Interner>>) {
+    fn fold(&self, interner: &T::Interner, accumulator: &mut Vec<Ty<T::Interner>>) {
         for f in self {
-            f.fold(accumulator);
+            f.fold(interner, accumulator);
         }
     }
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty<T::Interner>>) {
+    fn fold(&self, interner: &T::Interner, accumulator: &mut Vec<Ty<T::Interner>>) {
         for f in self {
-            f.fold(accumulator);
+            f.fold(interner, accumulator);
         }
     }
 }
 
 impl<I: Interner> FoldInputTypes for Parameter<I> {
-    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
+    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
         if let ParameterKind::Ty(ty) = self.data() {
-            ty.fold(accumulator)
+            ty.fold(interner, accumulator)
         }
     }
 }
 
 impl<I: Interner> FoldInputTypes for Substitution<I> {
-    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
-        self.parameters().fold(accumulator)
+    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
+        self.parameters().fold(interner, accumulator)
     }
 }
 
 impl<I: Interner> FoldInputTypes for Ty<I> {
-    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
+    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
         match self.data() {
             TyData::Apply(app) => {
                 accumulator.push(self.clone());
-                app.substitution.fold(accumulator);
+                app.substitution.fold(interner, accumulator);
             }
 
             TyData::Dyn(qwc) => {
                 accumulator.push(self.clone());
-                qwc.bounds.fold(accumulator);
+                qwc.bounds.fold(interner, accumulator);
             }
 
             TyData::Alias(alias) => {
                 accumulator.push(self.clone());
-                alias.substitution.fold(accumulator);
+                alias.substitution.fold(interner, accumulator);
             }
 
             TyData::Placeholder(_) => {
@@ -114,30 +114,32 @@ impl<I: Interner> FoldInputTypes for Ty<I> {
 }
 
 impl<I: Interner> FoldInputTypes for TraitRef<I> {
-    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
-        self.substitution.fold(accumulator);
+    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
+        self.substitution.fold(interner, accumulator);
     }
 }
 
 impl<I: Interner> FoldInputTypes for AliasEq<I> {
-    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
-        TyData::Alias(self.alias.clone()).intern().fold(accumulator);
-        self.ty.fold(accumulator);
+    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
+        TyData::Alias(self.alias.clone())
+            .intern(interner)
+            .fold(interner, accumulator);
+        self.ty.fold(interner, accumulator);
     }
 }
 
 impl<I: Interner> FoldInputTypes for WhereClause<I> {
-    fn fold(&self, accumulator: &mut Vec<Ty<I>>) {
+    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
         match self {
-            WhereClause::Implemented(tr) => tr.fold(accumulator),
-            WhereClause::AliasEq(p) => p.fold(accumulator),
+            WhereClause::Implemented(tr) => tr.fold(interner, accumulator),
+            WhereClause::AliasEq(p) => p.fold(interner, accumulator),
         }
     }
 }
 
 impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
-    fn fold(&self, accumulator: &mut Vec<Ty<T::Interner>>) {
-        self.value.fold(accumulator);
+    fn fold(&self, interner: &T::Interner, accumulator: &mut Vec<Ty<T::Interner>>) {
+        self.value.fold(interner, accumulator);
     }
 }
 
@@ -155,12 +157,16 @@ where
 
         // We retrieve all the input types of the struct fields.
         let mut input_types = Vec::new();
-        struct_datum.binders.value.fields.fold(&mut input_types);
+        struct_datum
+            .binders
+            .value
+            .fields
+            .fold(self.db.interner(), &mut input_types);
         struct_datum
             .binders
             .value
             .where_clauses
-            .fold(&mut input_types);
+            .fold(self.db.interner(), &mut input_types);
 
         if input_types.is_empty() {
             return Ok(());
@@ -191,7 +197,7 @@ where
         let is_legal = match self
             .solver_choice
             .into_solver()
-            .solve(self.db, &goal.into_closed_goal())
+            .solve(self.db, &goal.into_closed_goal(self.db.interner()))
         {
             Some(sol) => sol.is_unique(),
             None => false,
@@ -224,7 +230,7 @@ where
             .binders
             .value
             .where_clauses
-            .fold(&mut input_types);
+            .fold(self.db.interner(), &mut input_types);
 
         // We retrieve all the input types of the type on which we implement the trait: we will
         // *assume* that these types are well-formed, e.g. we will be able to derive that
@@ -240,7 +246,7 @@ where
         // ```
         let mut header_input_types = Vec::new();
         let trait_ref = &impl_datum.binders.value.trait_ref;
-        trait_ref.fold(&mut header_input_types);
+        trait_ref.fold(self.db.interner(), &mut header_input_types);
 
         let assoc_ty_goals = impl_datum
             .associated_ty_value_ids
@@ -286,7 +292,7 @@ where
         let is_legal = match self
             .solver_choice
             .into_solver()
-            .solve(self.db, &goal.into_closed_goal())
+            .solve(self.db, &goal.into_closed_goal(self.db.interner()))
         {
             Some(sol) => sol.is_unique(),
             None => false,
@@ -342,7 +348,7 @@ where
             .binders
             .iter()
             .zip(0..)
-            .map(|p| p.to_parameter())
+            .map(|p| p.to_parameter(self.db.interner()))
             .collect();
 
         // Get the projection for this associated type:
@@ -353,10 +359,12 @@ where
             .impl_parameters_and_projection_from_associated_ty_value(&all_parameters, assoc_ty);
 
         // Get the ty that the impl is using -- `Box<&'!a !T>`, in our example
-        let AssociatedTyValueBound { ty: value_ty } = assoc_ty.value.substitute(&all_parameters);
+        let AssociatedTyValueBound { ty: value_ty } = assoc_ty
+            .value
+            .substitute(self.db.interner(), &all_parameters);
 
         let mut input_types = Vec::new();
-        value_ty.fold(&mut input_types);
+        value_ty.fold(self.db.interner(), &mut input_types);
 
         // We require that `WellFormed(T)` for each type that appears in the value
         let wf_goals = input_types
@@ -381,7 +389,9 @@ where
         let AssociatedTyDatumBound {
             bounds: defn_bounds,
             where_clauses: defn_where_clauses,
-        } = assoc_ty_datum.binders.substitute(&projection.substitution);
+        } = assoc_ty_datum
+            .binders
+            .substitute(self.db.interner(), &projection.substitution);
 
         // Check that the `value_ty` meets the bounds from the trait.
         // Here we take the substituted bounds (`defn_bounds`) and we
@@ -393,7 +403,7 @@ where
         let bound_goals = defn_bounds
             .iter()
             .cloned()
-            .flat_map(|qb| qb.into_where_clauses(value_ty.clone()))
+            .flat_map(|qb| qb.into_where_clauses(self.db.interner(), value_ty.clone()))
             .map(|qwc| qwc.into_well_formed_goal())
             .casted();
 

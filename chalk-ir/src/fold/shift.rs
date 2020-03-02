@@ -33,7 +33,7 @@ pub trait Shift<I: Interner>: Fold<I, I> {
     ///                  ^^           ^^ refers to `?X`
     ///                  refers to `U`
     /// ```
-    fn shifted_in(&self, adjustment: usize) -> Self::Result;
+    fn shifted_in(&self, interner: &I, adjustment: usize) -> Self::Result;
 
     /// Shifts debruijn indices in `self` **down**, hence **removing**
     /// a value from binders. This will fail with `Err(NoSolution)` in
@@ -56,26 +56,40 @@ pub trait Shift<I: Interner>: Fold<I, I> {
     /// But if we try to `down_shift` the `T = ?0` goal by 1, we will
     /// get `Err`, because it refers to the type bound by the
     /// `exists`.
-    fn shifted_out(&self, adjustment: usize) -> Fallible<Self::Result>;
+    fn shifted_out(&self, interner: &I, adjustment: usize) -> Fallible<Self::Result>;
 }
 
 impl<T: Fold<I, I> + Eq, I: Interner> Shift<I> for T {
-    fn shifted_in(&self, adjustment: usize) -> T::Result {
-        self.fold_with(&mut Shifter { adjustment }, 0).unwrap()
+    fn shifted_in(&self, interner: &I, adjustment: usize) -> T::Result {
+        self.fold_with(
+            &mut Shifter {
+                adjustment,
+                interner,
+            },
+            0,
+        )
+        .unwrap()
     }
 
-    fn shifted_out(&self, adjustment: usize) -> Fallible<T::Result> {
-        self.fold_with(&mut DownShifter { adjustment }, 0)
+    fn shifted_out(&self, interner: &I, adjustment: usize) -> Fallible<T::Result> {
+        self.fold_with(
+            &mut DownShifter {
+                adjustment,
+                interner,
+            },
+            0,
+        )
     }
 }
 
 /// A folder that adjusts debruijn indices by a certain amount.
 ///
-struct Shifter {
+struct Shifter<'i, I> {
     adjustment: usize,
+    interner: &'i I,
 }
 
-impl Shifter {
+impl<I> Shifter<'_, I> {
     /// Given a free variable at `depth`, shifts that depth to `depth
     /// + self.adjustment`, and then wraps *that* within the internal
     /// set `binders`.
@@ -84,17 +98,25 @@ impl Shifter {
     }
 }
 
-impl<I: Interner> Folder<I> for Shifter {
+impl<I: Interner> Folder<I> for Shifter<'_, I> {
     fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
-        Ok(TyData::<I>::BoundVar(self.adjust(depth, binders)).intern())
+        Ok(TyData::<I>::BoundVar(self.adjust(depth, binders)).intern(self.interner()))
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
         Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)).intern())
+    }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
     }
 }
 
@@ -103,11 +125,12 @@ impl<I: Interner> Folder<I> for Shifter {
 /// A shifter that reduces debruijn indices -- in other words, which lifts a value
 /// *out* from binders. Consider this example:
 ///
-struct DownShifter {
+struct DownShifter<'i, I> {
     adjustment: usize,
+    interner: &'i I,
 }
 
-impl DownShifter {
+impl<I> DownShifter<'_, I> {
     /// Given a reference to a free variable at depth `depth`
     /// (appearing within `binders` internal binders), attempts to
     /// lift that free variable out from `adjustment` levels of
@@ -124,16 +147,24 @@ impl DownShifter {
     }
 }
 
-impl<I: Interner> Folder<I> for DownShifter {
+impl<I: Interner> Folder<I> for DownShifter<'_, I> {
     fn as_dyn(&mut self) -> &mut dyn Folder<I> {
         self
     }
 
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
-        Ok(TyData::<I>::BoundVar(self.adjust(depth, binders)?).intern())
+        Ok(TyData::<I>::BoundVar(self.adjust(depth, binders)?).intern(self.interner()))
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
         Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)?).intern())
+    }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
     }
 }

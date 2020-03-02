@@ -122,7 +122,7 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(TyData::<TI>::BoundVar(depth + binders).intern())
+            Ok(TyData::<TI>::BoundVar(depth + binders).intern(self.target_interner()))
         }
     }
 
@@ -156,7 +156,7 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
-            Ok(universe.to_ty::<TI>())
+            Ok(universe.to_ty::<TI>(self.target_interner()))
         }
     }
 
@@ -191,7 +191,7 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
-            Ok(var.to_ty::<TI>())
+            Ok(var.to_ty::<TI>(self.target_interner()))
         }
     }
 
@@ -207,6 +207,10 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
             Ok(var.to_lifetime::<TI>())
         }
     }
+
+    fn interner(&self) -> &I;
+
+    fn target_interner(&self) -> &TI;
 }
 
 /// Applies the given `Folder` to a value, producing a folded result
@@ -274,15 +278,26 @@ where
                 if *depth >= binders {
                     folder.fold_free_var_ty(*depth - binders, binders)
                 } else {
-                    Ok(TyData::<TI>::BoundVar(*depth).intern())
+                    Ok(TyData::<TI>::BoundVar(*depth).intern(folder.target_interner()))
                 }
             }
-            TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, binders)?).intern()),
+            TyData::Dyn(clauses) => {
+                Ok(TyData::Dyn(clauses.fold_with(folder, binders)?)
+                    .intern(folder.target_interner()))
+            }
             TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
-            TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, binders)?).intern()),
+            TyData::Apply(apply) => {
+                Ok(TyData::Apply(apply.fold_with(folder, binders)?)
+                    .intern(folder.target_interner()))
+            }
             TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, binders)?),
-            TyData::Alias(proj) => Ok(TyData::Alias(proj.fold_with(folder, binders)?).intern()),
-            TyData::Function(fun) => Ok(TyData::Function(fun.fold_with(folder, binders)?).intern()),
+            TyData::Alias(proj) => Ok(
+                TyData::Alias(proj.fold_with(folder, binders)?).intern(folder.target_interner())
+            ),
+            TyData::Function(fun) => {
+                Ok(TyData::Function(fun.fold_with(folder, binders)?)
+                    .intern(folder.target_interner()))
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ use chalk_integration::query::LoweringDatabase;
 use chalk_ir;
 use chalk_ir::interner::ChalkIr;
 use chalk_solve::ext::*;
+use chalk_solve::RustIrDatabase;
 use chalk_solve::{Solution, SolverChoice};
 
 #[cfg(feature = "bench")]
@@ -214,7 +215,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                 .unwrap();
 
             println!("using solver: {:?}", solver_choice);
-            let peeled_goal = goal.into_peeled_goal();
+            let peeled_goal = goal.into_peeled_goal(db.interner());
             match expected {
                 TestGoal::Aggregated(expected) => {
                     let result = db.solve(&peeled_goal);

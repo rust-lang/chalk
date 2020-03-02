@@ -11,6 +11,7 @@ use std::fmt::Debug;
 impl<I: Interner> InferenceTable<I> {
     pub(crate) fn unify<T>(
         &mut self,
+        interner: &I,
         environment: &Environment<I>,
         a: &T,
         b: &T,
@@ -25,7 +26,7 @@ impl<I: Interner> InferenceTable<I> {
             b
         );
         let snapshot = self.snapshot();
-        match Unifier::new(self, environment).unify(a, b) {
+        match Unifier::new(interner, self, environment).unify(a, b) {
             Ok(r) => {
                 self.commit(snapshot);
                 Ok(r)
@@ -43,6 +44,7 @@ struct Unifier<'t, I: Interner> {
     environment: &'t Environment<I>,
     goals: Vec<InEnvironment<DomainGoal<I>>>,
     constraints: Vec<InEnvironment<Constraint<I>>>,
+    interner: &'t I,
 }
 
 #[derive(Debug)]
@@ -52,12 +54,18 @@ pub(crate) struct UnificationResult<I: Interner> {
 }
 
 impl<'t, I: Interner> Unifier<'t, I> {
-    fn new(table: &'t mut InferenceTable<I>, environment: &'t Environment<I>) -> Self {
+    #[allow(unreachable_code)]
+    fn new(
+        interner: &'t I,
+        table: &'t mut InferenceTable<I>,
+        environment: &'t Environment<I>,
+    ) -> Self {
         Unifier {
             environment: environment,
             table: table,
             goals: vec![],
             constraints: vec![],
+            interner,
         }
     }
 
@@ -77,9 +85,9 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
     fn unify_ty_ty<'a>(&mut self, a: &'a Ty<I>, b: &'a Ty<I>) -> Fallible<()> {
         //         ^^                 ^^         ^^ FIXME rustc bug
-        if let Some(n_a) = self.table.normalize_shallow(a) {
+        if let Some(n_a) = self.table.normalize_shallow(self.interner, a) {
             return self.unify_ty_ty(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_shallow(b) {
+        } else if let Some(n_b) = self.table.normalize_shallow(self.interner, b) {
             return self.unify_ty_ty(a, &n_b);
         }
 
@@ -197,14 +205,18 @@ impl<'t, I: Interner> Unifier<'t, I> {
         debug!("unify_binders({:?}, {:?})", a, b);
 
         {
-            let a_universal = self.table.instantiate_binders_universally(a);
-            let b_existential = self.table.instantiate_binders_existentially(b);
+            let a_universal = self.table.instantiate_binders_universally(self.interner, a);
+            let b_existential = self
+                .table
+                .instantiate_binders_existentially(self.interner, b);
             Zip::zip_with(self, &a_universal, &b_existential)?;
         }
 
         {
-            let b_universal = self.table.instantiate_binders_universally(b);
-            let a_existential = self.table.instantiate_binders_existentially(a);
+            let b_universal = self.table.instantiate_binders_universally(self.interner, b);
+            let a_existential = self
+                .table
+                .instantiate_binders_existentially(self.interner, a);
             Zip::zip_with(self, &a_existential, &b_universal)
         }
     }
@@ -386,7 +398,7 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
-            Ok(universe.to_ty::<I>()) // no need to shift, not relative to depth
+            Ok(universe.to_ty::<I>(self.interner())) // no need to shift, not relative to depth
         }
     }
 
@@ -427,7 +439,7 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
             InferenceValue::Bound(normalized_ty) => {
                 let normalized_ty = normalized_ty.ty().unwrap();
                 let normalized_ty = normalized_ty.fold_with(self, 0)?;
-                assert!(!normalized_ty.needs_shift());
+                assert!(!normalized_ty.needs_shift(self.interner()));
                 Ok(normalized_ty)
             }
 
@@ -453,7 +465,7 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
                         .unwrap();
                 }
 
-                Ok(var.to_ty())
+                Ok(var.to_ty(self.interner()))
             }
         }
     }
@@ -495,5 +507,13 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
 
     fn forbid_free_vars(&self) -> bool {
         true
+    }
+
+    fn interner(&self) -> &I {
+        self.unifier.interner
+    }
+
+    fn target_interner(&self) -> &I {
+        self.interner()
     }
 }

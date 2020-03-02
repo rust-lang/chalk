@@ -82,11 +82,12 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
             // This comes in two parts, marked as (1) and (2) in doc above:
             //
             // 1. require that the where clauses from the impl apply
+            let interner = builder.db.interner();
             let impl_where_clauses = impl_datum
                 .binders
                 .map_ref(|b| &b.where_clauses)
                 .into_iter()
-                .map(|wc| wc.substitute(impl_params));
+                .map(|wc| wc.substitute(interner, impl_params));
 
             // 2. any where-clauses from the `type` declaration in the trait: the
             //    parameters must be substituted with those of the impl
@@ -94,7 +95,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
                 .binders
                 .map_ref(|b| &b.where_clauses)
                 .into_iter()
-                .map(|wc| wc.substitute(&projection.substitution));
+                .map(|wc| wc.substitute(interner, &projection.substitution));
 
             // Create the final program clause:
             //
@@ -175,7 +176,7 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
                 name: self.id.cast(),
                 substitution: builder.substitution_in_scope(),
             };
-            let self_ty = self_appl_ty.clone().intern();
+            let self_ty = self_appl_ty.clone().intern(builder.interner());
 
             // forall<T> {
             //     WF(Foo<T>) :- WF(T: Eq).
@@ -572,7 +573,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                 associated_ty_id: self.id,
                 substitution: substitution.clone(),
             };
-            let projection_ty = alias.clone().intern();
+            let projection_ty = alias.clone().intern(builder.interner());
 
             // Retrieve the trait ref embedding the associated type
             let trait_ref = builder.db.trait_ref_from_projection(&alias);
@@ -583,7 +584,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                 name: TypeName::AssociatedType(self.id),
                 substitution,
             }
-            .intern();
+            .intern(builder.interner());
 
             let alias_eq = AliasEq {
                 alias: alias.clone(),
@@ -642,7 +643,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             //    }
             for quantified_bound in &bounds {
                 builder.push_binders(quantified_bound, |builder, bound| {
-                    for wc in bound.into_where_clauses(projection_ty.clone()) {
+                    for wc in bound.into_where_clauses(builder.interner(), projection_ty.clone()) {
                         builder.push_clause(
                             wc.into_from_env_goal(),
                             iter::once(FromEnv::Trait(trait_ref.clone()).cast::<Goal<_>>())

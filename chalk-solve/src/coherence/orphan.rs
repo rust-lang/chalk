@@ -31,7 +31,7 @@ pub fn perform_orphan_check<I: Interner>(
         })
         .cast();
 
-    let canonical_goal = &impl_allowed.into_closed_goal();
+    let canonical_goal = &impl_allowed.into_closed_goal(db.interner());
     let is_allowed = solver_choice
         .into_solver()
         .solve(db, canonical_goal)

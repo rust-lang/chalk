@@ -6,19 +6,23 @@ use chalk_ir::interner::ChalkIr;
 
 #[test]
 fn infer() {
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
-    let a = table.new_variable(U0).to_ty();
-    let b = table.new_variable(U0).to_ty();
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U0).to_ty(interner);
     table
-        .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
-        .unwrap();
-    assert_eq!(table.normalize_deep(&a), ty!(apply (item 0) (expr b)));
-    table
-        .unify(&environment0, &b, &ty!(apply (item 1)))
+        .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
     assert_eq!(
-        table.normalize_deep(&a),
+        table.normalize_deep(interner, &a),
+        ty!(apply (item 0) (expr b))
+    );
+    table
+        .unify(interner, &environment0, &b, &ty!(apply (item 1)))
+        .unwrap();
+    assert_eq!(
+        table.normalize_deep(interner, &a),
         ty!(apply (item 0) (apply (item 1)))
     );
 }
@@ -26,94 +30,108 @@ fn infer() {
 #[test]
 fn universe_error() {
     // exists(A -> forall(X -> A = X)) ---> error
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
-    let a = table.new_variable(U0).to_ty();
+    let a = table.new_variable(U0).to_ty(interner);
     table
-        .unify(&environment0, &a, &ty!(placeholder 1))
+        .unify(interner, &environment0, &a, &ty!(placeholder 1))
         .unwrap_err();
 }
 
 #[test]
 fn cycle_error() {
     // exists(A -> A = foo A) ---> error
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
-    let a = table.new_variable(U0).to_ty();
+    let a = table.new_variable(U0).to_ty(interner);
     table
-        .unify(&environment0, &a, &ty!(apply (item 0) (expr a)))
+        .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr a)))
         .unwrap_err();
 
     // exists(A -> A = for<'a> A)
     table
-        .unify(&environment0, &a, &ty!(function 1 (infer 0)))
+        .unify(interner, &environment0, &a, &ty!(function 1 (infer 0)))
         .unwrap_err();
 }
 
 #[test]
 fn cycle_indirect() {
     // exists(A -> A = foo B, A = B) ---> error
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
-    let a = table.new_variable(U0).to_ty();
-    let b = table.new_variable(U0).to_ty();
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U0).to_ty(interner);
     table
-        .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
+        .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
-    table.unify(&environment0, &a, &b).unwrap_err();
+    table.unify(interner, &environment0, &a, &b).unwrap_err();
 }
 
 #[test]
 fn universe_error_indirect_1() {
     // exists(A -> forall(X -> exists(B -> B = X, A = B))) ---> error
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
-    let a = table.new_variable(U0).to_ty();
-    let b = table.new_variable(U1).to_ty();
-    table.unify(&environment0, &b, &ty!(placeholder 1)).unwrap();
-    table.unify(&environment0, &a, &b).unwrap_err();
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U1).to_ty(interner);
+    table
+        .unify(interner, &environment0, &b, &ty!(placeholder 1))
+        .unwrap();
+    table.unify(interner, &environment0, &a, &b).unwrap_err();
 }
 
 #[test]
 fn universe_error_indirect_2() {
     // exists(A -> forall(X -> exists(B -> B = A, B = X))) ---> error
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
-    let a = table.new_variable(U0).to_ty();
-    let b = table.new_variable(U1).to_ty();
-    table.unify(&environment0, &a, &b).unwrap();
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U1).to_ty(interner);
+    table.unify(interner, &environment0, &a, &b).unwrap();
     table
-        .unify(&environment0, &b, &ty!(placeholder 1))
+        .unify(interner, &environment0, &b, &ty!(placeholder 1))
         .unwrap_err();
 }
 
 #[test]
 fn universe_promote() {
     // exists(A -> forall(X -> exists(B -> A = foo(B), A = foo(i32)))) ---> OK
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
-    let a = table.new_variable(U0).to_ty();
-    let b = table.new_variable(U1).to_ty();
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U1).to_ty(interner);
     table
-        .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
+        .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
     table
-        .unify(&environment0, &a, &ty!(apply (item 0) (apply (item 1))))
+        .unify(
+            interner,
+            &environment0,
+            &a,
+            &ty!(apply (item 0) (apply (item 1))),
+        )
         .unwrap();
 }
 
 #[test]
 fn universe_promote_bad() {
     // exists(A -> forall(X -> exists(B -> A = foo(B), B = X))) ---> error
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
-    let a = table.new_variable(U0).to_ty();
-    let b = table.new_variable(U1).to_ty();
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U1).to_ty(interner);
     table
-        .unify(&environment0, &a, &ty!(apply (item 0) (expr b)))
+        .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
     table
-        .unify(&environment0, &b, &ty!(placeholder 1))
+        .unify(interner, &environment0, &b, &ty!(placeholder 1))
         .unwrap_err();
 }
 
@@ -122,13 +140,15 @@ fn projection_eq() {
     // exists(A -> A = Item0<<A as Item1>::foo>)
     //                       ^^^^^^^^^^^^ Can A repeat here? For now,
     //                       we say no, but it's an interesting question.
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new();
-    let a = table.new_variable(U0).to_ty();
+    let a = table.new_variable(U0).to_ty(interner);
 
     // expect an error ("cycle during unification")
     table
         .unify(
+            interner,
             &environment0,
             &a,
             &ty!(apply (item 0) (alias (item 1) (expr a))),
@@ -149,6 +169,7 @@ fn make_table() -> InferenceTable<ChalkIr> {
 
 #[test]
 fn quantify_simple() {
+    let interner = &ChalkIr;
     let mut table = make_table();
     let _ = table.new_variable(U0);
     let _ = table.new_variable(U1);
@@ -156,7 +177,7 @@ fn quantify_simple() {
 
     assert_eq!(
         table
-            .canonicalize(&ty!(apply (item 0) (infer 2) (infer 1) (infer 0)))
+            .canonicalize(interner, &ty!(apply (item 0) (infer 2) (infer 1) (infer 0)))
             .quantified,
         Canonical {
             value: ty!(apply (item 0) (bound 0) (bound 1) (bound 2)),
@@ -171,16 +192,18 @@ fn quantify_simple() {
 
 #[test]
 fn quantify_bound() {
+    let interner = &ChalkIr;
     let mut table = make_table();
     let environment0 = Environment::new();
 
-    let v0 = table.new_variable(U0).to_ty();
-    let v1 = table.new_variable(U1).to_ty();
-    let v2a = table.new_variable(U2).to_ty();
-    let v2b = table.new_variable(U2).to_ty();
+    let v0 = table.new_variable(U0).to_ty(interner);
+    let v1 = table.new_variable(U1).to_ty(interner);
+    let v2a = table.new_variable(U2).to_ty(interner);
+    let v2b = table.new_variable(U2).to_ty(interner);
 
     table
         .unify(
+            interner,
             &environment0,
             &v2b,
             &ty!(apply (item 1) (expr v1) (expr v0)),
@@ -189,7 +212,10 @@ fn quantify_bound() {
 
     assert_eq!(
         table
-            .canonicalize(&ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0)))
+            .canonicalize(
+                interner,
+                &ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0))
+            )
             .quantified,
         Canonical {
             value: ty!(apply (item 0) (apply (item 1) (bound 0) (bound 1)) (bound 2) (bound 0) (bound 1)),
@@ -204,6 +230,7 @@ fn quantify_bound() {
 
 #[test]
 fn quantify_ty_under_binder() {
+    let interner = &ChalkIr;
     let mut table = make_table();
     let v0 = table.new_variable(U0);
     let v1 = table.new_variable(U0);
@@ -212,7 +239,12 @@ fn quantify_ty_under_binder() {
     // Unify v0 and v1.
     let environment0 = Environment::new();
     table
-        .unify(&environment0, &v0.to_ty(), &v1.to_ty())
+        .unify(
+            interner,
+            &environment0,
+            &v0.to_ty(interner),
+            &v1.to_ty(interner),
+        )
         .unwrap();
 
     // Here: the `function` introduces 3 binders, so in the result,
@@ -222,6 +254,7 @@ fn quantify_ty_under_binder() {
     assert_eq!(
         table
             .canonicalize(
+                interner,
                 &ty!(function 3 (apply (item 0) (bound 1) (infer 0) (infer 1) (lifetime (infer 2))))
             )
             .quantified,
@@ -234,6 +267,7 @@ fn quantify_ty_under_binder() {
 
 #[test]
 fn lifetime_constraint_indirect() {
+    let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let _ = table.new_universe(); // U1
 
@@ -246,7 +280,8 @@ fn lifetime_constraint_indirect() {
     // '!1.
     let t_a = ty!(apply (item 0) (lifetime (placeholder 1)));
     let t_b = ty!(apply (item 0) (lifetime (infer 1)));
-    let UnificationResult { goals, constraints } = table.unify(&environment0, &t_a, &t_b).unwrap();
+    let UnificationResult { goals, constraints } =
+        table.unify(interner, &environment0, &t_a, &t_b).unwrap();
     assert!(goals.is_empty());
     assert!(constraints.is_empty());
 
@@ -256,7 +291,8 @@ fn lifetime_constraint_indirect() {
     // we will replace `'!1` with a new variable `'?2` and introduce a
     // (likely unsatisfiable) constraint relating them.
     let t_c = ty!(infer 0);
-    let UnificationResult { goals, constraints } = table.unify(&environment0, &t_c, &t_b).unwrap();
+    let UnificationResult { goals, constraints } =
+        table.unify(interner, &environment0, &t_c, &t_b).unwrap();
     assert!(goals.is_empty());
     assert_eq!(constraints.len(), 1);
     assert_eq!(

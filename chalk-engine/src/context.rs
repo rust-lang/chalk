@@ -119,6 +119,9 @@ pub trait Context: Clone + Debug {
     /// the equality relation.
     type Variance;
 
+    /// The type used to store concrete representations of "core types" from chalk-ir.
+    type Interner;
+
     /// Given an environment and a goal, glue them together to create
     /// a `GoalInEnvironment`.
     fn goal_in_environment(
@@ -154,29 +157,7 @@ pub trait Context: Clone + Debug {
         canonical_subst: &Self::CanonicalAnswerSubst,
     ) -> Self::CanonicalConstrainedSubst;
 
-    /// Convert a goal G *from* the canonical universes *into* our
-    /// local universes. This will yield a goal G' that is the same
-    /// but for the universes of universally quantified names.
-    fn map_goal_from_canonical(
-        _: &Self::UniverseMap,
-        value: &Self::CanonicalGoalInEnvironment,
-    ) -> Self::CanonicalGoalInEnvironment;
-
-    /// Convert a substitution *from* the canonical universes *into*
-    /// our local universes. This will yield a substitution S' that is
-    /// the same but for the universes of universally quantified
-    /// names.
-    fn map_subst_from_canonical(
-        _: &Self::UniverseMap,
-        value: &Self::CanonicalAnswerSubst,
-    ) -> Self::CanonicalAnswerSubst;
-
     fn goal_from_goal_in_environment(goal: &Self::GoalInEnvironment) -> &Self::Goal;
-
-    /// Returns a identity substitution.
-    fn identity_constrained_subst(
-        goal: &Self::UCanonicalGoalInEnvironment,
-    ) -> Self::CanonicalConstrainedSubst;
 
     /// Convert the context's goal type into the `HhGoal` type that
     /// the SLG solver understands. The expectation is that the
@@ -257,6 +238,33 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         &self,
         answer: CompleteAnswer<C>,
     ) -> C::CanonicalConstrainedSubst;
+
+    /// Returns a identity substitution.
+    fn identity_constrained_subst(
+        &self,
+        goal: &C::UCanonicalGoalInEnvironment,
+    ) -> C::CanonicalConstrainedSubst;
+
+    /// Convert a goal G *from* the canonical universes *into* our
+    /// local universes. This will yield a goal G' that is the same
+    /// but for the universes of universally quantified names.
+    fn map_goal_from_canonical(
+        &self,
+        _: &C::UniverseMap,
+        value: &C::CanonicalGoalInEnvironment,
+    ) -> C::CanonicalGoalInEnvironment;
+
+    /// Convert a substitution *from* the canonical universes *into*
+    /// our local universes. This will yield a substitution S' that is
+    /// the same but for the universes of universally quantified
+    /// names.
+    fn map_subst_from_canonical(
+        &self,
+        _: &C::UniverseMap,
+        value: &C::CanonicalAnswerSubst,
+    ) -> C::CanonicalAnswerSubst;
+
+    fn interner(&self) -> &C::Interner;
 }
 
 /// Methods for combining solutions to yield an aggregate solution.
@@ -281,26 +289,44 @@ pub struct Floundered;
 /// Methods for unifying and manipulating terms and binders.
 pub trait UnificationOps<C: Context> {
     // Used by: simplify
-    fn instantiate_binders_universally(&mut self, arg: &C::BindersGoal) -> C::Goal;
+    fn instantiate_binders_universally(
+        &mut self,
+        interner: &C::Interner,
+        arg: &C::BindersGoal,
+    ) -> C::Goal;
 
     // Used by: simplify
-    fn instantiate_binders_existentially(&mut self, arg: &C::BindersGoal) -> C::Goal;
+    fn instantiate_binders_existentially(
+        &mut self,
+        interner: &C::Interner,
+        arg: &C::BindersGoal,
+    ) -> C::Goal;
 
     // Used by: logic (but for debugging only)
-    fn debug_ex_clause<'v>(&mut self, value: &'v ExClause<C>) -> Box<dyn Debug + 'v>;
+    fn debug_ex_clause<'v>(
+        &mut self,
+        interner: &C::Interner,
+        value: &'v ExClause<C>,
+    ) -> Box<dyn Debug + 'v>;
 
     // Used by: logic
     fn fully_canonicalize_goal(
         &mut self,
+        interner: &C::Interner,
         value: &C::GoalInEnvironment,
     ) -> (C::UCanonicalGoalInEnvironment, C::UniverseMap);
 
     // Used by: logic
-    fn canonicalize_ex_clause(&mut self, value: &ExClause<C>) -> C::CanonicalExClause;
+    fn canonicalize_ex_clause(
+        &mut self,
+        interner: &C::Interner,
+        value: &ExClause<C>,
+    ) -> C::CanonicalExClause;
 
     // Used by: logic
     fn canonicalize_constrained_subst(
         &mut self,
+        interner: &C::Interner,
         subst: C::Substitution,
         constraints: Vec<C::RegionConstraint>,
     ) -> C::CanonicalConstrainedSubst;
@@ -308,13 +334,18 @@ pub trait UnificationOps<C: Context> {
     // Used by: logic
     fn canonicalize_answer_subst(
         &mut self,
+        interner: &C::Interner,
         subst: C::Substitution,
         constraints: Vec<C::RegionConstraint>,
         delayed_subgoals: Vec<C::GoalInEnvironment>,
     ) -> C::CanonicalAnswerSubst;
 
     // Used by: logic
-    fn invert_goal(&mut self, value: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
+    fn invert_goal(
+        &mut self,
+        interner: &C::Interner,
+        value: &C::GoalInEnvironment,
+    ) -> Option<C::GoalInEnvironment>;
 
     /// First unify the parameters, then add the residual subgoals
     /// as new subgoals of the ex-clause.
@@ -324,6 +355,7 @@ pub trait UnificationOps<C: Context> {
     // Used by: simplify
     fn unify_parameters_into_ex_clause(
         &mut self,
+        interner: &C::Interner,
         environment: &C::Environment,
         variance: C::Variance,
         a: &C::Parameter,
@@ -348,11 +380,19 @@ pub trait UnificationOps<C: Context> {
 pub trait TruncateOps<C: Context> {
     /// If `subgoal` is too large, return a truncated variant (else
     /// return `None`).
-    fn truncate_goal(&mut self, subgoal: &C::GoalInEnvironment) -> Option<C::GoalInEnvironment>;
+    fn truncate_goal(
+        &mut self,
+        interner: &C::Interner,
+        subgoal: &C::GoalInEnvironment,
+    ) -> Option<C::GoalInEnvironment>;
 
     /// If `subst` is too large, return a truncated variant (else
     /// return `None`).
-    fn truncate_answer(&mut self, subst: &C::Substitution) -> Option<C::Substitution>;
+    fn truncate_answer(
+        &mut self,
+        interner: &C::Interner,
+        subst: &C::Substitution,
+    ) -> Option<C::Substitution>;
 }
 
 pub trait ResolventOps<C: Context> {
@@ -363,6 +403,7 @@ pub trait ResolventOps<C: Context> {
     /// The bindings in `infer` are unaffected by this operation.
     fn resolvent_clause(
         &mut self,
+        interner: &C::Interner,
         environment: &C::Environment,
         goal: &C::DomainGoal,
         subst: &C::Substitution,
@@ -371,6 +412,7 @@ pub trait ResolventOps<C: Context> {
 
     fn apply_answer_subst(
         &mut self,
+        interner: &C::Interner,
         ex_clause: &mut ExClause<C>,
         selected_goal: &C::GoalInEnvironment,
         answer_table_goal: &C::CanonicalGoalInEnvironment,

@@ -9,6 +9,7 @@ impl<C: Context> Forest<C> {
     /// and negative HH goals. This operation may fail if the HH goal
     /// includes unifications that cannot be completed.
     pub(super) fn simplify_hh_goal(
+        interner: &C::Interner,
         infer: &mut dyn InferenceTable<C>,
         subst: C::Substitution,
         initial_environment: C::Environment,
@@ -30,11 +31,11 @@ impl<C: Context> Forest<C> {
         while let Some((environment, hh_goal)) = pending_goals.pop() {
             match hh_goal {
                 HhGoal::ForAll(subgoal) => {
-                    let subgoal = infer.instantiate_binders_universally(&subgoal);
+                    let subgoal = infer.instantiate_binders_universally(interner, &subgoal);
                     pending_goals.push((environment, C::into_hh_goal(subgoal)));
                 }
                 HhGoal::Exists(subgoal) => {
-                    let subgoal = infer.instantiate_binders_existentially(&subgoal);
+                    let subgoal = infer.instantiate_binders_existentially(interner, &subgoal);
                     pending_goals.push((environment, C::into_hh_goal(subgoal)))
                 }
                 HhGoal::Implies(wc, subgoal) => {
@@ -55,6 +56,7 @@ impl<C: Context> Forest<C> {
                         )));
                 }
                 HhGoal::Unify(variance, a, b) => infer.unify_parameters_into_ex_clause(
+                    interner,
                     &environment,
                     variance,
                     &a,

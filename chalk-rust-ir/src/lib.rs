@@ -149,7 +149,7 @@ pub type QuantifiedInlineBound<I: Interner> = Binders<InlineBound<I>>;
 pub trait IntoWhereClauses<I: Interner> {
     type Output;
 
-    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<Self::Output>;
+    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<Self::Output>;
 }
 
 impl<I: Interner> IntoWhereClauses<I> for InlineBound<I> {
@@ -160,7 +160,7 @@ impl<I: Interner> IntoWhereClauses<I> for InlineBound<I> {
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
-    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
+    fn into_where_clauses(&self, _interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         match self {
             InlineBound::TraitBound(b) => b.into_where_clauses(self_ty),
             InlineBound::AliasEqBound(b) => b.into_where_clauses(self_ty),
@@ -171,10 +171,10 @@ impl<I: Interner> IntoWhereClauses<I> for InlineBound<I> {
 impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
     type Output = QuantifiedWhereClause<I>;
 
-    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
-        let self_ty = self_ty.shifted_in(self.binders.len());
+    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
+        let self_ty = self_ty.shifted_in(interner, self.binders.len());
         self.value
-            .into_where_clauses(self_ty)
+            .into_where_clauses(interner, self_ty)
             .into_iter()
             .map(|wc| Binders {
                 binders: self.binders.clone(),
@@ -263,15 +263,15 @@ pub trait ToParameter {
     /// the indices, and invoke `to_parameter()` on the `(binder,
     /// index)` pair. The result will be a reference to a bound
     /// variable of appropriate kind at the corresponding index.
-    fn to_parameter<I: Interner>(&self) -> Parameter<I>;
+    fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I>;
 }
 
 impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
-    fn to_parameter<I: Interner>(&self) -> Parameter<I> {
+    fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I> {
         let &(binder, index) = self;
         match *binder {
             ParameterKind::Lifetime(_) => LifetimeData::BoundVar(index).intern().cast(),
-            ParameterKind::Ty(_) => TyData::BoundVar(index).intern().cast(),
+            ParameterKind::Ty(_) => TyData::BoundVar(index).intern(interner).cast(),
         }
     }
 }
@@ -334,19 +334,20 @@ impl<I: Interner> AssociatedTyDatum<I> {
     ///
     /// these quantified where clauses are in the scope of the
     /// `binders` field.
-    pub fn bounds_on_self(&self) -> Vec<QuantifiedWhereClause<I>> {
+    pub fn bounds_on_self(&self, interner: &I) -> Vec<QuantifiedWhereClause<I>> {
         let Binders { binders, value } = &self.binders;
 
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:
-        let substitution = Substitution::from(binders.iter().zip(0..).map(|p| p.to_parameter()));
+        let substitution =
+            Substitution::from(binders.iter().zip(0..).map(|p| p.to_parameter(interner)));
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
         let self_ty = TyData::Alias(AliasTy {
             associated_ty_id: self.id,
             substitution,
         })
-        .intern();
+        .intern(interner);
 
         // Now use that as the self type for the bounds, transforming
         // something like `type Bar<Pn..Pm>: Debug` into
@@ -357,7 +358,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
         value
             .bounds
             .iter()
-            .flat_map(|b| b.into_where_clauses(self_ty.clone()))
+            .flat_map(|b| b.into_where_clauses(interner, self_ty.clone()))
             .collect()
     }
 }

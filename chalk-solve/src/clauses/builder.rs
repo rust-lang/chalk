@@ -85,15 +85,15 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     {
         let old_len = self.binders.len();
         self.binders.extend(binders.binders.clone());
-        self.parameters.extend(
-            binders
-                .binders
-                .iter()
-                .zip(old_len..)
-                .map(|p| p.to_parameter()),
-        );
+        let params: Vec<_> = binders
+            .binders
+            .iter()
+            .zip(old_len..)
+            .map(|p| p.to_parameter(self.interner()))
+            .collect();
+        self.parameters.extend(params);
 
-        let value = binders.substitute(&self.parameters[old_len..]);
+        let value = binders.substitute(self.interner(), &self.parameters[old_len..]);
         op(self, value);
 
         self.binders.truncate(old_len);
@@ -120,5 +120,9 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .clone();
             op(this, ty)
         });
+    }
+
+    pub fn interner(&self) -> &I {
+        self.db.interner()
     }
 }

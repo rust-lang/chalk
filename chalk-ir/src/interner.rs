@@ -135,7 +135,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyData::intern` (which
     /// will ultimately call this method).
-    fn intern_ty(ty: TyData<Self>) -> Self::InternedType;
+    fn intern_ty(&self, ty: TyData<Self>) -> Self::InternedType;
 
     /// Lookup the `TyData` from an interned type.
     fn ty_data(ty: &Self::InternedType) -> &TyData<Self>;
@@ -231,7 +231,7 @@ mod default {
     /// The default "interner" and the only interner used by chalk
     /// itself. In this interner, no interning actually occurs.
     #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-    pub struct ChalkIr {}
+    pub struct ChalkIr;
 
     impl Interner for ChalkIr {
         type InternedType = Arc<TyData<ChalkIr>>;
@@ -271,7 +271,7 @@ mod default {
             tls::with_current_program(|prog| Some(prog?.debug_alias(alias, fmt)))
         }
 
-        fn intern_ty(ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
+        fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
             Arc::new(ty)
         }
 
@@ -361,5 +361,5 @@ where
 }
 
 impl<C: HasInterner + Context> HasInterner for ExClause<C> {
-    type Interner = C::Interner;
+    type Interner = <C as HasInterner>::Interner;
 }

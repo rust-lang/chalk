@@ -76,7 +76,7 @@ pub fn push_auto_trait_impls<I: Interner>(
             name: struct_id.cast(),
             substitution: builder.substitution_in_scope(),
         }
-        .intern();
+        .intern(builder.interner());
 
         // trait_ref = `MyStruct<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
@@ -224,7 +224,7 @@ fn program_clauses_that_could_match<I: Interner>(
                     // ```
                     // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
                     // ```
-                    let qwc = exists_qwc.substitute(&[self_ty.clone().cast()]);
+                    let qwc = exists_qwc.substitute(db.interner(), &[self_ty.clone().cast()]);
 
                     builder.push_binders(&qwc, |builder, wc| {
                         builder.push_fact(wc);

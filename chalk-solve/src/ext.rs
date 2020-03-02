@@ -4,7 +4,7 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 
 pub trait CanonicalExt<T: HasInterner, I: Interner> {
-    fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
+    fn map<OP, U>(self, interner: &I, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
         T: Fold<I>,
@@ -24,7 +24,7 @@ where
     /// inference context) are used in place of the quantified free
     /// variables. The result should be in terms of those same
     /// inference variables and will be re-canonicalized.
-    fn map<OP, U>(self, op: OP) -> Canonical<U::Result>
+    fn map<OP, U>(self, interner: &I, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
         T: Fold<I>,
@@ -42,17 +42,17 @@ where
         // `Canonical` type (indeed, its entire reason for existence).
         let mut infer = InferenceTable::new();
         let snapshot = infer.snapshot();
-        let instantiated_value = infer.instantiate_canonical(&self);
+        let instantiated_value = infer.instantiate_canonical(interner, &self);
         let mapped_value = op(instantiated_value);
-        let result = infer.canonicalize(&mapped_value);
+        let result = infer.canonicalize(interner, &mapped_value);
         infer.rollback_to(snapshot);
         result.quantified
     }
 }
 
 pub trait GoalExt<I: Interner> {
-    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<I>>>;
-    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<I>>>;
+    fn into_peeled_goal(self, interner: &I) -> UCanonical<InEnvironment<Goal<I>>>;
+    fn into_closed_goal(self, interner: &I) -> UCanonical<InEnvironment<Goal<I>>>;
 }
 
 impl<I: Interner> GoalExt<I> for Goal<I> {
@@ -62,7 +62,7 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
     /// variables. Assumes that this goal is a "closed goal" which
     /// does not -- at present -- contain any variables. Useful for
     /// REPLs and tests but not much else.
-    fn into_peeled_goal(self) -> UCanonical<InEnvironment<Goal<I>>> {
+    fn into_peeled_goal(self, interner: &I) -> UCanonical<InEnvironment<Goal<I>>> {
         let mut infer = InferenceTable::new();
         let peeled_goal = {
             let mut env_goal = InEnvironment::new(&Environment::new(), self);
@@ -70,12 +70,12 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
                 let InEnvironment { environment, goal } = env_goal;
                 match goal.data() {
                     GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
-                        let subgoal = infer.instantiate_binders_universally(subgoal);
+                        let subgoal = infer.instantiate_binders_universally(interner, subgoal);
                         env_goal = InEnvironment::new(&environment, subgoal);
                     }
 
                     GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
-                        let subgoal = infer.instantiate_binders_existentially(subgoal);
+                        let subgoal = infer.instantiate_binders_existentially(interner, subgoal);
                         env_goal = InEnvironment::new(&environment, subgoal);
                     }
 
@@ -88,8 +88,8 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
                 }
             }
         };
-        let canonical = infer.canonicalize(&peeled_goal).quantified;
-        infer.u_canonicalize(&canonical).quantified
+        let canonical = infer.canonicalize(interner, &peeled_goal).quantified;
+        infer.u_canonicalize(interner, &canonical).quantified
     }
 
     /// Given a goal with no free variables (a "closed" goal), creates
@@ -101,10 +101,10 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
     /// # Panics
     ///
     /// Will panic if this goal does in fact contain free variables.
-    fn into_closed_goal(self) -> UCanonical<InEnvironment<Goal<I>>> {
+    fn into_closed_goal(self, interner: &I) -> UCanonical<InEnvironment<Goal<I>>> {
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(), self);
-        let canonical_goal = infer.canonicalize(&env_goal).quantified;
-        infer.u_canonicalize(&canonical_goal).quantified
+        let canonical_goal = infer.canonicalize(interner, &env_goal).quantified;
+        infer.u_canonicalize(interner, &canonical_goal).quantified
     }
 }
