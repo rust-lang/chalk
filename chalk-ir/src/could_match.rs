@@ -15,11 +15,13 @@ where
     fn could_match(&self, other: &T) -> bool {
         return Zip::zip_with(&mut MatchZipper, self, other).is_ok();
 
-        struct MatchZipper;
+        struct MatchZipper<'i, I> {
+            interner: &'i I,
+        };
 
-        impl<I: Interner> Zipper<I> for MatchZipper {
+        impl<I: Interner> Zipper<I> for MatchZipper<'_, I> {
             fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
-                let could_match = match (a.data(), b.data()) {
+                let could_match = match (a.data(self.interner), b.data(self.interner)) {
                     (&TyData::Apply(ref a), &TyData::Apply(ref b)) => {
                         let names_could_match = a.name == b.name;
 

@@ -168,8 +168,8 @@ impl<I: Interner> Ty<I> {
         }
     }
 
-    pub fn data(&self) -> &TyData<I> {
-        I::ty_data(&self.interned)
+    pub fn data(&self, interner: &I) -> &TyData<I> {
+        I::ty_data(interner, &self.interned)
     }
 
     pub fn from_env(&self) -> FromEnv<I> {
@@ -181,8 +181,8 @@ impl<I: Interner> Ty<I> {
     }
 
     /// If this is a `TyData::BoundVar(d)`, returns `Some(d)` else `None`.
-    pub fn bound(&self) -> Option<usize> {
-        if let TyData::BoundVar(depth) = self.data() {
+    pub fn bound(&self, interner: &I) -> Option<usize> {
+        if let TyData::BoundVar(depth) = self.data(interner) {
             Some(*depth)
         } else {
             None
@@ -190,16 +190,16 @@ impl<I: Interner> Ty<I> {
     }
 
     /// If this is a `TyData::InferenceVar(d)`, returns `Some(d)` else `None`.
-    pub fn inference_var(&self) -> Option<InferenceVar> {
-        if let TyData::InferenceVar(depth) = self.data() {
+    pub fn inference_var(&self, interner: &I) -> Option<InferenceVar> {
+        if let TyData::InferenceVar(depth) = self.data(interner) {
             Some(*depth)
         } else {
             None
         }
     }
 
-    pub fn is_alias(&self) -> bool {
-        match self.data() {
+    pub fn is_alias(&self, interner: &I) -> bool {
+        match self.data(interner) {
             TyData::Alias(..) => true,
             _ => false,
         }
@@ -1009,11 +1009,12 @@ pub struct UCanonical<T> {
 impl<T> UCanonical<T> {
     pub fn is_trivial_substitution<I: Interner>(
         &self,
+        interner: &I,
         canonical_subst: &Canonical<AnswerSubst<I>>,
     ) -> bool {
         let subst = &canonical_subst.value.subst;
         assert_eq!(self.canonical.binders.len(), subst.parameters().len());
-        subst.is_identity_subst()
+        subst.is_identity_subst(interner)
     }
 }
 
@@ -1293,11 +1294,11 @@ impl<I: Interner> Substitution<I> {
     ///
     /// Basically, each value is mapped to a type or lifetime with its
     /// same index.
-    pub fn is_identity_subst(&self) -> bool {
+    pub fn is_identity_subst(&self, interner: &I) -> bool {
         self.iter()
             .zip(0..)
             .all(|(parameter, index)| match parameter.data() {
-                ParameterKind::Ty(ty) => match ty.data() {
+                ParameterKind::Ty(ty) => match ty.data(interner) {
                     TyData::BoundVar(depth) => index == *depth,
                     _ => false,
                 },

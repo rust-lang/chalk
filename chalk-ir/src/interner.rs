@@ -138,7 +138,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     fn intern_ty(&self, ty: TyData<Self>) -> Self::InternedType;
 
     /// Lookup the `TyData` from an interned type.
-    fn ty_data(ty: &Self::InternedType) -> &TyData<Self>;
+    fn ty_data<'a>(&self, ty: &'a Self::InternedType) -> &'a TyData<Self>;
 
     /// Create an "interned" lifetime from `lifetime`. This is not
     /// normally invoked directly; instead, you invoke
@@ -276,7 +276,7 @@ mod default {
             Arc::new(ty)
         }
 
-        fn ty_data(ty: &Arc<TyData<ChalkIr>>) -> &TyData<Self> {
+        fn ty_data<'a>(&self, ty: &'a Arc<TyData<ChalkIr>>) -> &'a TyData<Self> {
             ty
         }
 

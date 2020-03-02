@@ -303,7 +303,7 @@ where
         I: 'i,
         TI: 'i,
     {
-        match self.data() {
+        match self.data(folder.interner()) {
             TyData::BoundVar(depth) => {
                 if *depth >= binders {
                     folder.fold_free_var_ty(*depth - binders, binders)
