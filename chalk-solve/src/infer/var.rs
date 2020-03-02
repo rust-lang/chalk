@@ -55,14 +55,14 @@ impl<I: Interner> EnaVariable<I> {
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a type (we can't check it).
     pub(crate) fn to_ty(self, interner: &I) -> Ty<I> {
-        self.var.to_ty::<I>(interner)
+        self.var.to_ty(interner)
     }
 
     /// Convert this inference variable into a lifetime. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a lifetime (we can't check it).
-    pub(crate) fn to_lifetime(self) -> Lifetime<I> {
-        self.var.to_lifetime::<I>()
+    pub(crate) fn to_lifetime(self, interner: &I) -> Lifetime<I> {
+        self.var.to_lifetime(interner)
     }
 }
 

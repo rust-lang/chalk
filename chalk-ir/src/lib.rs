@@ -313,8 +313,8 @@ impl InferenceVar {
         TyData::<I>::InferenceVar(self).intern(interner)
     }
 
-    pub fn to_lifetime<I: Interner>(self) -> Lifetime<I> {
-        LifetimeData::<I>::InferenceVar(self).intern()
+    pub fn to_lifetime<I: Interner>(self, interner: &I) -> Lifetime<I> {
+        LifetimeData::<I>::InferenceVar(self).intern(interner)
     }
 }
 
@@ -332,9 +332,9 @@ pub struct Lifetime<I: Interner> {
 }
 
 impl<I: Interner> Lifetime<I> {
-    pub fn new(data: impl CastTo<LifetimeData<I>>) -> Self {
+    pub fn new(interner: &I, data: impl CastTo<LifetimeData<I>>) -> Self {
         Lifetime {
-            interned: I::intern_lifetime(data.cast()),
+            interned: I::intern_lifetime(interner, data.cast()),
         }
     }
 
@@ -373,8 +373,8 @@ pub enum LifetimeData<I: Interner> {
 }
 
 impl<I: Interner> LifetimeData<I> {
-    pub fn intern(self) -> Lifetime<I> {
-        Lifetime::new(self)
+    pub fn intern(self, interner: &I) -> Lifetime<I> {
+        Lifetime::new(interner, self)
     }
 }
 
@@ -390,8 +390,8 @@ pub struct PlaceholderIndex {
 }
 
 impl PlaceholderIndex {
-    pub fn to_lifetime<I: Interner>(self) -> Lifetime<I> {
-        LifetimeData::<I>::Placeholder(self).intern()
+    pub fn to_lifetime<I: Interner>(self, interner: &I) -> Lifetime<I> {
+        LifetimeData::<I>::Placeholder(self).intern(interner)
     }
 
     pub fn to_ty<I: Interner>(self, interner: &I) -> Ty<I> {

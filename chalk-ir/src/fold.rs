@@ -131,7 +131,7 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
-            Ok(LifetimeData::<TI>::BoundVar(depth + binders).intern())
+            Ok(LifetimeData::<TI>::BoundVar(depth + binders).intern(self.target_interner()))
         }
     }
 
@@ -169,7 +169,7 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder lifetime `{:?}`", universe)
         } else {
-            Ok(universe.to_lifetime::<TI>())
+            Ok(universe.to_lifetime(self.target_interner()))
         }
     }
 
@@ -191,7 +191,7 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
-            Ok(var.to_ty::<TI>(self.target_interner()))
+            Ok(var.to_ty(self.target_interner()))
         }
     }
 
@@ -204,7 +204,7 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference lifetime `'{:?}`", var)
         } else {
-            Ok(var.to_lifetime::<TI>())
+            Ok(var.to_lifetime(self.target_interner()))
         }
     }
 
@@ -328,7 +328,7 @@ where
                 if *depth >= binders {
                     folder.fold_free_var_lifetime(depth - binders, binders)
                 } else {
-                    Ok(LifetimeData::<TI>::BoundVar(*depth).intern())
+                    Ok(LifetimeData::<TI>::BoundVar(*depth).intern(folder.target_interner()))
                 }
             }
             LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),

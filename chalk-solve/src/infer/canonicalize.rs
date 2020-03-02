@@ -107,7 +107,7 @@ impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
         _binders: usize,
     ) -> Fallible<Ty<I>> {
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_ty::<I>(self.interner()))
+        Ok(universe.to_ty(self.interner()))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -116,7 +116,7 @@ impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
         _binders: usize,
     ) -> Fallible<Lifetime<I>> {
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_lifetime::<I>())
+        Ok(universe.to_lifetime(self.interner()))
     }
 
     fn forbid_free_vars(&self) -> bool {
@@ -164,7 +164,7 @@ impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(LifetimeData::BoundVar(position + binders).intern())
+                Ok(LifetimeData::BoundVar(position + binders).intern(self.interner()))
             }
         }
     }

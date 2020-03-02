@@ -108,7 +108,7 @@ impl<I: Interner> Folder<I> for Shifter<'_, I> {
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
-        Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)).intern())
+        Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)).intern(self.interner()))
     }
 
     fn interner(&self) -> &I {
@@ -157,7 +157,7 @@ impl<I: Interner> Folder<I> for DownShifter<'_, I> {
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
-        Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)?).intern())
+        Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)?).intern(self.interner()))
     }
 
     fn interner(&self) -> &I {

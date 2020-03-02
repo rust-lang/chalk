@@ -144,7 +144,7 @@ impl<I: Interner> Folder<I> for Inverter<'_, I> {
             .inverted_lifetime
             .entry(universe)
             .or_insert_with(|| table.new_variable(universe.ui))
-            .to_lifetime()
+            .to_lifetime(self.interner())
             .shifted_in(self.interner(), binders))
     }
 

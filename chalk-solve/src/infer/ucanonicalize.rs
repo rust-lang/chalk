@@ -259,7 +259,7 @@ impl<I: Interner> Folder<I> for UCollector<'_, '_, I> {
         _binders: usize,
     ) -> Fallible<Lifetime<I>> {
         self.universes.add(universe.ui);
-        Ok(universe.to_lifetime::<I>())
+        Ok(universe.to_lifetime(self.interner()))
     }
 
     fn forbid_inference_vars(&self) -> bool {
@@ -299,7 +299,7 @@ impl<I: Interner> Folder<I> for UMapToCanonical<'_, I> {
             ui,
             idx: universe0.idx,
         }
-        .to_ty::<I>(self.interner()))
+        .to_ty(self.interner()))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -312,7 +312,7 @@ impl<I: Interner> Folder<I> for UMapToCanonical<'_, I> {
             ui: universe,
             idx: universe0.idx,
         }
-        .to_lifetime::<I>())
+        .to_lifetime(self.interner()))
     }
 
     fn interner(&self) -> &I {
@@ -344,7 +344,7 @@ impl<I: Interner> Folder<I> for UMapFromCanonical<'_, I> {
             ui,
             idx: universe0.idx,
         }
-        .to_ty::<I>(self.interner()))
+        .to_ty(self.interner()))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -357,7 +357,7 @@ impl<I: Interner> Folder<I> for UMapFromCanonical<'_, I> {
             ui: universe,
             idx: universe0.idx,
         }
-        .to_lifetime::<I>())
+        .to_lifetime(self.interner()))
     }
 
     fn forbid_inference_vars(&self) -> bool {

@@ -1079,7 +1079,7 @@ impl LowerLifetime for Lifetime {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>> {
         match *self {
             Lifetime::Id { name } => match env.lookup_lifetime(name)? {
-                LifetimeLookup::Parameter(d) => Ok(chalk_ir::LifetimeData::BoundVar(d).intern()),
+                LifetimeLookup::Parameter(d) => Ok(chalk_ir::LifetimeData::BoundVar(d).intern(env.interner())),
             },
         }
     }
