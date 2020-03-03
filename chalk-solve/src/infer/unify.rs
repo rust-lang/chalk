@@ -297,7 +297,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                         "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
                         var, var_ui, idx.ui
                     );
-                    let v = LifetimeData::Placeholder(idx).intern();
+                    let v = LifetimeData::Placeholder(idx).intern(self.interner);
                     self.table
                         .unify
                         .unify_var_value(var, InferenceValue::from(v))
@@ -398,7 +398,7 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
-            Ok(universe.to_ty::<I>(self.interner())) // no need to shift, not relative to depth
+            Ok(universe.to_ty(self.interner())) // no need to shift, not relative to depth
         }
     }
 
@@ -422,13 +422,15 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
             // exists<'x> forall<'b> ?T = Foo<'x>, where 'x = 'b
 
             let tick_x = self.unifier.table.new_variable(self.universe_index);
-            self.unifier
-                .push_lifetime_eq_constraint(tick_x.to_lifetime(), ui.to_lifetime::<I>());
-            Ok(tick_x.to_lifetime())
+            self.unifier.push_lifetime_eq_constraint(
+                tick_x.to_lifetime(self.interner()),
+                ui.to_lifetime(self.interner()),
+            );
+            Ok(tick_x.to_lifetime(self.interner()))
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name
             // this lifetime, no problem.
-            Ok(ui.to_lifetime::<I>()) // no need to shift, not relative to depth
+            Ok(ui.to_lifetime(self.interner())) // no need to shift, not relative to depth
         }
     }
 
@@ -493,7 +495,7 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
                         .unify_var_value(var, InferenceValue::Unbound(self.universe_index))
                         .unwrap();
                 }
-                Ok(var.to_lifetime())
+                Ok(var.to_lifetime(self.interner()))
             }
 
             InferenceValue::Bound(l) => {

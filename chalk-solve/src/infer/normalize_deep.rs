@@ -57,7 +57,7 @@ impl<I: Interner> Folder<I> for DeepNormalizer<'_, '_, I> {
         let var = EnaVariable::from(var);
         match self.table.probe_lifetime_var(var) {
             Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(self.interner(), binders)),
-            None => Ok(var.to_lifetime()), // FIXME shift
+            None => Ok(var.to_lifetime(self.interner())), // FIXME shift
         }
     }
 

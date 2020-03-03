@@ -61,15 +61,15 @@ macro_rules! arg {
 #[macro_export]
 macro_rules! lifetime {
     (infer $b:expr) => {
-        $crate::LifetimeData::InferenceVar($crate::InferenceVar::from($b)).intern()
+        $crate::LifetimeData::InferenceVar($crate::InferenceVar::from($b)).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (bound $b:expr) => {
-        $crate::LifetimeData::BoundVar($b).intern()
+        $crate::LifetimeData::BoundVar($b).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (placeholder $b:expr) => {
-        $crate::LifetimeData::Placeholder(PlaceholderIndex { ui: UniverseIndex { counter: $b }, idx: 0}).intern()
+        $crate::LifetimeData::Placeholder(PlaceholderIndex { ui: UniverseIndex { counter: $b }, idx: 0}).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (expr $b:expr) => {

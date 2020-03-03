@@ -208,7 +208,7 @@ impl<I: Interner> ParameterEnaVariableExt<I> for ParameterEnaVariable<I> {
     fn to_parameter(self, interner: &I) -> Parameter<I> {
         match self {
             ParameterKind::Ty(v) => v.to_ty(interner).cast(),
-            ParameterKind::Lifetime(v) => v.to_lifetime().cast(),
+            ParameterKind::Lifetime(v) => v.to_lifetime(interner).cast(),
         }
     }
 }

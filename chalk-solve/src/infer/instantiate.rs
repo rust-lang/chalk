@@ -88,10 +88,10 @@ impl<I: Interner> InferenceTable<I> {
                 let placeholder_idx = PlaceholderIndex { ui, idx };
                 match pk {
                     ParameterKind::Lifetime(()) => {
-                        let lt = placeholder_idx.to_lifetime::<I>();
+                        let lt = placeholder_idx.to_lifetime(interner);
                         lt.cast()
                     }
-                    ParameterKind::Ty(()) => placeholder_idx.to_ty::<I>(interner).cast(),
+                    ParameterKind::Ty(()) => placeholder_idx.to_ty(interner).cast(),
                 }
             })
             .collect();

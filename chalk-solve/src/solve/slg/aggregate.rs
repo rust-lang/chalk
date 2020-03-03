@@ -150,7 +150,7 @@ fn merge_into_guidance<I: Interner>(
                 ParameterKind::Lifetime(_) => {
                     // Ignore the lifetimes from the substitution: we're just
                     // creating guidance here anyway.
-                    return infer.new_variable(universe).to_lifetime().cast();
+                    return infer.new_variable(universe).to_lifetime(interner).cast();
                 }
             };
 
@@ -373,7 +373,9 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     }
 
     fn new_lifetime_variable(&mut self) -> Lifetime<I> {
-        self.infer.new_variable(self.universe).to_lifetime()
+        self.infer
+            .new_variable(self.universe)
+            .to_lifetime(self.interner)
     }
 }
 

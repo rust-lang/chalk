@@ -44,7 +44,10 @@ impl<I: Interner> Folder<I> for Subst<'_, '_, I> {
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
         if depth >= self.parameters.len() {
-            Ok(LifetimeData::<I>::BoundVar(depth - self.parameters.len() + binders).intern())
+            Ok(
+                LifetimeData::<I>::BoundVar(depth - self.parameters.len() + binders)
+                    .intern(self.interner()),
+            )
         } else {
             match self.parameters[depth].data() {
                 ParameterKind::Lifetime(l) => Ok(l.shifted_in(self.interner(), binders)),
