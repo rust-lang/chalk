@@ -44,9 +44,9 @@ pub trait Context: Clone + Debug {
 
     /// A canonicalized `GoalInEnvironment` -- that is, one where all
     /// free inference variables have been bound into the canonical
-    /// binder. See [the rustc-guide] for more information.
+    /// binder. See [the rustc-dev-guide] for more information.
     ///
-    /// [the rustc-guide]: https://rust-lang.github.io/rustc-guide/traits/canonicalization.html
+    /// [the rustc-dev-guide]: https://rust-lang.github.io/rustc-dev-guide/traits/canonicalization.html
     type CanonicalGoalInEnvironment: Debug;
 
     /// A u-canonicalized `GoalInEnvironment` -- this is one where the
