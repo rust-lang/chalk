@@ -234,7 +234,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 alias: alias.clone(),
                 ty: ty.clone(),
             }
-            .cast(),
+            .cast(self.interner),
         )))
     }
 

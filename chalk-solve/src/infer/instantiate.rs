@@ -14,7 +14,7 @@ impl<I: Interner> InferenceTable<I> {
         interner: &I,
         binders: &[ParameterKind<UniverseIndex>],
     ) -> Substitution<I> {
-        Substitution::from(binders.iter().map(|kind| {
+        Substitution::from(interner, binders.iter().map(|kind| {
             let param_infer_var = kind.map(|ui| self.new_variable(ui));
             param_infer_var.to_parameter(interner)
         }))
@@ -89,9 +89,9 @@ impl<I: Interner> InferenceTable<I> {
                 match pk {
                     ParameterKind::Lifetime(()) => {
                         let lt = placeholder_idx.to_lifetime(interner);
-                        lt.cast()
+                        lt.cast(interner)
                     }
-                    ParameterKind::Ty(()) => placeholder_idx.to_ty(interner).cast(),
+                    ParameterKind::Ty(()) => placeholder_idx.to_ty(interner).cast(interner),
                 }
             })
             .collect();

@@ -173,7 +173,7 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         builder.push_binders(&binders, |builder, where_clauses| {
             let self_appl_ty = &ApplicationTy {
-                name: self.id.cast(),
+                name: self.id.cast(builder.interner()),
                 substitution: builder.substitution_in_scope(),
             };
             let self_ty = self_appl_ty.clone().intern(builder.interner());
@@ -186,7 +186,7 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
                 where_clauses
                     .iter()
                     .cloned()
-                    .map(|qwc| qwc.into_well_formed_goal()),
+                    .map(|qwc| qwc.into_well_formed_goal(builder.interner())),
             );
 
             // forall<T> {
@@ -196,7 +196,7 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
                 DomainGoal::IsFullyVisible(self_ty.clone()),
                 self_appl_ty
                     .type_parameters()
-                    .map(|ty| DomainGoal::IsFullyVisible(ty).cast::<Goal<_>>()),
+                    .map(|ty| DomainGoal::IsFullyVisible(ty).cast::<Goal<_>>(builder.interner())),
             );
 
             // Fundamental types often have rules in the form of:
@@ -264,7 +264,10 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
                 // for any `'a` *if* you are assuming that `Foo<T>` is
                 // well formed.
                 builder.push_binders(&qwc, |builder, wc| {
-                    builder.push_clause(wc.into_from_env_goal(), Some(self_ty.clone().from_env()));
+                    builder.push_clause(
+                        wc.into_from_env_goal(builder.interner()),
+                        Some(self_ty.clone().from_env()),
+                    );
                 });
             }
         });
@@ -398,9 +401,9 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                 where_clauses
                     .iter()
                     .cloned()
-                    .map(|qwc| qwc.into_well_formed_goal())
-                    .casted::<Goal<_>>()
-                    .chain(Some(trait_ref.clone().cast())),
+                    .map(|qwc| qwc.into_well_formed_goal(builder.interner()))
+                    .casted::<Goal<_>>(builder.interner())
+                    .chain(Some(trait_ref.clone().cast(builder.interner()))),
             );
 
             // The number of parameters will always be at least 1
@@ -417,15 +420,17 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                     where_clauses
                         .iter()
                         .cloned()
-                        .casted()
-                        .chain(iter::once(DomainGoal::Compatible(()).cast()))
-                        .chain(
-                            (0..i).map(|j| {
-                                DomainGoal::IsFullyVisible(type_parameters[j].clone()).cast()
-                            }),
-                        )
+                        .casted(builder.interner())
                         .chain(iter::once(
-                            DomainGoal::DownstreamType(type_parameters[i].clone()).cast(),
+                            DomainGoal::Compatible(()).cast(builder.interner()),
+                        ))
+                        .chain((0..i).map(|j| {
+                            DomainGoal::IsFullyVisible(type_parameters[j].clone())
+                                .cast(builder.interner())
+                        }))
+                        .chain(iter::once(
+                            DomainGoal::DownstreamType(type_parameters[i].clone())
+                                .cast(builder.interner()),
                         ))
                         .chain(iter::once(GoalData::CannotProve(()).intern())),
                 );
@@ -455,12 +460,14 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                     where_clauses
                         .iter()
                         .cloned()
-                        .casted()
-                        .chain(iter::once(DomainGoal::Compatible(()).cast()))
+                        .casted(builder.interner())
+                        .chain(iter::once(
+                            DomainGoal::Compatible(()).cast(builder.interner()),
+                        ))
                         .chain(
                             trait_ref
                                 .type_parameters()
-                                .map(|ty| DomainGoal::IsUpstream(ty).cast()),
+                                .map(|ty| DomainGoal::IsUpstream(ty).cast(builder.interner())),
                         )
                         .chain(iter::once(GoalData::CannotProve(()).intern())),
                 );
@@ -480,8 +487,10 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
             // ```
             for qwc in &where_clauses {
                 builder.push_binders(qwc, |builder, wc| {
-                    builder
-                        .push_clause(wc.into_from_env_goal(), Some(trait_ref.clone().from_env()));
+                    builder.push_clause(
+                        wc.into_from_env_goal(builder.interner()),
+                        Some(trait_ref.clone().from_env()),
+                    );
                 });
             }
 
@@ -606,12 +615,15 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             //    }
             builder.push_clause(
                 WellFormed::Ty(app_ty.clone()),
-                iter::once(WellFormed::Trait(trait_ref.clone()).cast::<Goal<_>>()).chain(
+                iter::once(
+                    WellFormed::Trait(trait_ref.clone()).cast::<Goal<_>>(builder.interner()),
+                )
+                .chain(
                     where_clauses
                         .iter()
                         .cloned()
-                        .map(|qwc| qwc.into_well_formed_goal())
-                        .casted(),
+                        .map(|qwc| qwc.into_well_formed_goal(builder.interner()))
+                        .casted(builder.interner()),
                 ),
             );
 
@@ -632,7 +644,10 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             // This is really a family of clauses, one for each where clause.
             for qwc in &where_clauses {
                 builder.push_binders(qwc, |builder, wc| {
-                    builder.push_clause(wc.into_from_env_goal(), Some(FromEnv::Ty(app_ty.clone())));
+                    builder.push_clause(
+                        wc.into_from_env_goal(builder.interner()),
+                        Some(FromEnv::Ty(app_ty.clone())),
+                    );
                 });
             }
 
@@ -645,9 +660,12 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                 builder.push_binders(quantified_bound, |builder, bound| {
                     for wc in bound.into_where_clauses(builder.interner(), projection_ty.clone()) {
                         builder.push_clause(
-                            wc.into_from_env_goal(),
-                            iter::once(FromEnv::Trait(trait_ref.clone()).cast::<Goal<_>>())
-                                .chain(where_clauses.iter().cloned().casted()),
+                            wc.into_from_env_goal(builder.interner()),
+                            iter::once(
+                                FromEnv::Trait(trait_ref.clone())
+                                    .cast::<Goal<_>>(builder.interner()),
+                            )
+                            .chain(where_clauses.iter().cloned().casted(builder.interner())),
                         );
                     }
                 });

@@ -105,6 +105,10 @@ pub enum TypeName<I: Interner> {
     Error,
 }
 
+impl<I: Interner> HasInterner for TypeName<I> {
+    type Interner = I;
+}
+
 /// An universe index is how a universally quantified parameter is
 /// represented when it's binder is moved into the environment.
 /// An example chain of transformations would be:
@@ -160,7 +164,7 @@ pub struct Ty<I: Interner> {
 impl<I: Interner> Ty<I> {
     pub fn new(interner: &I, data: impl CastTo<TyData<I>>) -> Self {
         Ty {
-            interned: I::intern_ty(interner, data.cast()),
+            interned: I::intern_ty(interner, data.cast(interner)),
         }
     }
 
@@ -334,7 +338,7 @@ pub struct Lifetime<I: Interner> {
 impl<I: Interner> Lifetime<I> {
     pub fn new(interner: &I, data: impl CastTo<LifetimeData<I>>) -> Self {
         Lifetime {
-            interned: I::intern_lifetime(interner, data.cast()),
+            interned: I::intern_lifetime(interner, data.cast(interner)),
         }
     }
 
@@ -363,7 +367,7 @@ impl<I: Interner> Lifetime<I> {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub enum LifetimeData<I: Interner> {
     /// See TyData::Var(_).
     BoundVar(usize),
@@ -502,8 +506,8 @@ impl<T, L> ParameterKind<T, L> {
 pub struct Parameter<I: Interner>(I::InternedParameter);
 
 impl<I: Interner> Parameter<I> {
-    pub fn new(data: ParameterData<I>) -> Self {
-        let interned = I::intern_parameter(data);
+    pub fn new(interner: &I, data: ParameterData<I>) -> Self {
+        let interned = I::intern_parameter(interner, data);
         Parameter(interned)
     }
 
@@ -552,8 +556,8 @@ impl<I: Interner> Parameter<I> {
 pub type ParameterData<I: Interner> = ParameterKind<Ty<I>, Lifetime<I>>;
 
 impl<I: Interner> ParameterData<I> {
-    pub fn intern(self) -> Parameter<I> {
-        Parameter::new(self)
+    pub fn intern(self, interner: &I) -> Parameter<I> {
+        Parameter::new(interner, self)
     }
 }
 
@@ -732,18 +736,18 @@ impl<I: Interner> WhereClause<I> {
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
     /// * `AliasEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
-    pub fn into_well_formed_goal(self) -> DomainGoal<I> {
+    pub fn into_well_formed_goal(self, interner: &I) -> DomainGoal<I> {
         match self {
-            WhereClause::Implemented(trait_ref) => WellFormed::Trait(trait_ref).cast(),
-            wc => wc.cast(),
+            WhereClause::Implemented(trait_ref) => WellFormed::Trait(trait_ref).cast(interner),
+            wc => wc.cast(interner),
         }
     }
 
     /// Same as `into_well_formed_goal` but with the `FromEnv` predicate instead of `WellFormed`.
-    pub fn into_from_env_goal(self) -> DomainGoal<I> {
+    pub fn into_from_env_goal(self, interner: &I) -> DomainGoal<I> {
         match self {
-            WhereClause::Implemented(trait_ref) => FromEnv::Trait(trait_ref).cast(),
-            wc => wc.cast(),
+            WhereClause::Implemented(trait_ref) => FromEnv::Trait(trait_ref).cast(interner),
+            wc => wc.cast(interner),
         }
     }
 }
@@ -753,25 +757,25 @@ impl<I: Interner> QuantifiedWhereClause<I> {
     /// quantified where clause. For example, `forall<T> {
     /// Implemented(T: Trait)}` would map to `forall<T> {
     /// WellFormed(T: Trait) }`.
-    pub fn into_well_formed_goal(self) -> Binders<DomainGoal<I>> {
-        self.map(|wc| wc.into_well_formed_goal())
+    pub fn into_well_formed_goal(self, interner: &I) -> Binders<DomainGoal<I>> {
+        self.map(|wc| wc.into_well_formed_goal(interner))
     }
 
     /// As with `WhereClause::into_from_env_goal`, but mapped over any
     /// binders. For example, `forall<T> {
     /// Implemented(T: Trait)}` would map to `forall<T> {
     /// FromEnv(T: Trait) }`.
-    pub fn into_from_env_goal(self) -> Binders<DomainGoal<I>> {
-        self.map(|wc| wc.into_from_env_goal())
+    pub fn into_from_env_goal(self, interner: &I) -> Binders<DomainGoal<I>> {
+        self.map(|wc| wc.into_from_env_goal(interner))
     }
 }
 
 impl<I: Interner> DomainGoal<I> {
     /// Convert `Implemented(...)` into `FromEnv(...)`, but leave other
     /// goals unchanged.
-    pub fn into_from_env_goal(self) -> DomainGoal<I> {
+    pub fn into_from_env_goal(self, interner: &I) -> DomainGoal<I> {
         match self {
-            DomainGoal::Holds(wc) => wc.into_from_env_goal(),
+            DomainGoal::Holds(wc) => wc.into_from_env_goal(interner),
             goal => goal,
         }
     }
@@ -954,14 +958,18 @@ pub enum ProgramClause<I: Interner> {
     ForAll(Binders<ProgramClauseImplication<I>>),
 }
 
+impl<I: Interner> HasInterner for ProgramClause<I> {
+    type Interner = I;
+}
+
 impl<I: Interner> ProgramClause<I> {
-    pub fn into_from_env_clause(self) -> ProgramClause<I> {
+    pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
         match self {
             ProgramClause::Implies(implication) => {
                 if implication.conditions.is_empty() {
                     ProgramClause::Implies(ProgramClauseImplication {
-                        consequence: implication.consequence.into_from_env_goal(),
-                        conditions: Goals::new(),
+                        consequence: implication.consequence.into_from_env_goal(interner),
+                        conditions: Goals::new(interner),
                     })
                 } else {
                     ProgramClause::Implies(implication)
@@ -981,6 +989,13 @@ impl<I: Interner> ProgramClause<I> {
 pub struct Canonical<T> {
     pub value: T,
     pub binders: Vec<ParameterKind<UniverseIndex>>,
+}
+
+impl<T> HasInterner for Canonical<T>
+where
+    T: HasInterner,
+{
+    type Interner = T::Interner;
 }
 
 /// A "universe canonical" value. This is a wrapper around a
@@ -1013,26 +1028,27 @@ pub struct Goals<I: Interner> {
 }
 
 impl<I: Interner> Goals<I> {
-    pub fn new() -> Self {
-        Self::from(None::<Goal<I>>)
+    pub fn new(interner: &I) -> Self {
+        Self::from(interner, None::<Goal<I>>)
     }
 
-    pub fn from(goals: impl IntoIterator<Item = impl CastTo<Goal<I>>>) -> Self {
+    pub fn from(interner: &I, goals: impl IntoIterator<Item = impl CastTo<Goal<I>>>) -> Self {
         use crate::cast::Caster;
         Goals {
-            goals: I::intern_goals(goals.into_iter().casted()),
+            goals: I::intern_goals(goals.into_iter().casted(interner)),
         }
     }
 
     pub fn from_fallible<E>(
+        interner: &I,
         goals: impl IntoIterator<Item = Result<impl CastTo<Goal<I>>, E>>,
     ) -> Result<Self, E> {
         use crate::cast::Caster;
         let goals = goals
             .into_iter()
-            .casted()
+            .casted(interner)
             .collect::<Result<Vec<Goal<I>>, _>>()?;
-        Ok(Goals::from(goals))
+        Ok(Goals::from(interner, goals))
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, Goal<I>> {
@@ -1097,8 +1113,8 @@ impl<I: Interner> Goal<I> {
             .with_fresh_type_var(interner, |goal, ty| {
                 GoalData::Implies(
                     vec![
-                        DomainGoal::Compatible(()).cast(),
-                        DomainGoal::DownstreamType(ty).cast(),
+                        DomainGoal::Compatible(()).cast(interner),
+                        DomainGoal::DownstreamType(ty).cast(interner),
                     ],
                     goal,
                 )
@@ -1122,23 +1138,11 @@ impl<I: Interner> Goal<I> {
     }
 }
 
-impl<I> std::iter::FromIterator<Goal<I>> for Box<Goal<I>>
+impl<I> Goal<I>
 where
     I: Interner,
 {
-    fn from_iter<II>(iter: II) -> Self
-    where
-        II: IntoIterator<Item = Goal<I>>,
-    {
-        Box::new(iter.into_iter().collect())
-    }
-}
-
-impl<I> std::iter::FromIterator<Goal<I>> for Goal<I>
-where
-    I: Interner,
-{
-    fn from_iter<II>(iter: II) -> Self
+    pub fn all<II>(interner: &I, iter: II) -> Self
     where
         II: IntoIterator<Item = Goal<I>>,
     {
@@ -1146,7 +1150,10 @@ where
         if let Some(goal0) = iter.next() {
             if let Some(goal1) = iter.next() {
                 // More than one goal to prove
-                let goals = Goals::from(Some(goal0).into_iter().chain(Some(goal1)).chain(iter));
+                let goals = Goals::from(
+                    interner,
+                    Some(goal0).into_iter().chain(Some(goal1)).chain(iter),
+                );
                 GoalData::All(goals).intern()
             } else {
                 // One goal to prove
@@ -1154,7 +1161,7 @@ where
             }
         } else {
             // No goals to prove, always true
-            GoalData::All(Goals::new()).intern()
+            GoalData::All(Goals::new(interner)).intern()
         }
     }
 }
@@ -1221,21 +1228,26 @@ pub struct Substitution<I: Interner> {
 }
 
 impl<I: Interner> Substitution<I> {
-    pub fn from(parameters: impl IntoIterator<Item = impl CastTo<Parameter<I>>>) -> Self {
+    pub fn from(
+        interner: &I,
+        parameters: impl IntoIterator<Item = impl CastTo<Parameter<I>>>,
+    ) -> Self {
         Self::from_fallible(
+            interner,
             parameters
                 .into_iter()
-                .map(|p| -> Result<Parameter<I>, ()> { Ok(p.cast()) }),
+                .map(|p| -> Result<Parameter<I>, ()> { Ok(p.cast(interner)) }),
         )
         .unwrap()
     }
 
     pub fn from_fallible<E>(
+        interner: &I,
         parameters: impl IntoIterator<Item = Result<impl CastTo<Parameter<I>>, E>>,
     ) -> Result<Self, E> {
         use crate::cast::Caster;
         Ok(Substitution {
-            parameters: I::intern_substitution(parameters.into_iter().casted())?,
+            parameters: I::intern_substitution(parameters.into_iter().casted(interner))?,
         })
     }
 
@@ -1244,12 +1256,12 @@ impl<I: Interner> Substitution<I> {
         &self.parameters()[index]
     }
 
-    pub fn from1(parameter: impl CastTo<Parameter<I>>) -> Self {
-        Self::from(Some(parameter))
+    pub fn from1(interner: &I, parameter: impl CastTo<Parameter<I>>) -> Self {
+        Self::from(interner, Some(parameter))
     }
 
-    pub fn empty() -> Self {
-        Self::from(None::<Parameter<I>>)
+    pub fn empty(interner: &I) -> Self {
+        Self::from(interner, None::<Parameter<I>>)
     }
 
     pub fn is_empty(&self) -> bool {

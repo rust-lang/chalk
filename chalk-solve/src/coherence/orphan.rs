@@ -29,7 +29,7 @@ pub fn perform_orphan_check<I: Interner>(
             // Ignoring the polarization of the impl's polarized trait ref
             DomainGoal::LocalImplAllowed(bound_impl.trait_ref.clone())
         })
-        .cast();
+        .cast(db.interner());
 
     let canonical_goal = &impl_allowed.into_closed_goal(db.interner());
     let is_allowed = solver_choice

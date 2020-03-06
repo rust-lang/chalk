@@ -113,13 +113,11 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         // Create a goal for each clause in both where clauses
         let wc_goals = lhs_where_clauses
             .chain(rhs_where_clauses)
-            .map(|wc| wc.cast());
+            .map(|wc| wc.cast(self.db.interner()));
 
         // Join all the goals we've created together with And, then quantify them
         // over the joined binders. This is our query.
-        let goal = params_goals
-            .chain(wc_goals)
-            .collect::<Box<Goal<I>>>()
+        let goal = Box::new(Goal::all(self.db.interner(), params_goals.chain(wc_goals)))
             .quantify(QuantifierKind::Exists, binders)
             .compatible(self.db.interner())
             .negate();
@@ -188,22 +186,21 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .where_clauses
             .iter()
             .cloned()
-            .casted()
+            .casted(self.db.interner())
             .collect();
-        let less_special_wc = less_special
-            .binders
-            .value
-            .where_clauses
-            .iter()
-            .map(|wc| wc.shifted_in(self.db.interner(), more_len).cast());
+        let less_special_wc = less_special.binders.value.where_clauses.iter().map(|wc| {
+            wc.shifted_in(self.db.interner(), more_len)
+                .cast(self.db.interner())
+        });
 
         // Join all of the goals together.
-        let goal = params_goals
-            .chain(less_special_wc)
-            .collect::<Box<Goal<I>>>()
-            .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
-            .implied_by(more_special_wc)
-            .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
+        let goal = Box::new(Goal::all(
+            self.db.interner(),
+            params_goals.chain(less_special_wc),
+        ))
+        .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
+        .implied_by(more_special_wc)
+        .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
         let canonical_goal = &goal.into_closed_goal(self.db.interner());
         let result = match self

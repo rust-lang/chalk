@@ -153,7 +153,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `ParameterData::intern` (which will ultimately call this
     /// method).
-    fn intern_parameter(data: ParameterData<Self>) -> Self::InternedParameter;
+    fn intern_parameter(&self, data: ParameterData<Self>) -> Self::InternedParameter;
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
     fn parameter_data(lifetime: &Self::InternedParameter) -> &ParameterData<Self>;
@@ -287,7 +287,7 @@ mod default {
             lifetime
         }
 
-        fn intern_parameter(parameter: ParameterData<ChalkIr>) -> ParameterData<ChalkIr> {
+        fn intern_parameter(&self, parameter: ParameterData<ChalkIr>) -> ParameterData<ChalkIr> {
             parameter
         }
 
