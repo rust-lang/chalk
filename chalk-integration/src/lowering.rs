@@ -1196,11 +1196,7 @@ impl LowerClause for Clause {
             .into_iter()
             .map(
                 |implication: chalk_ir::Binders<chalk_ir::ProgramClauseImplication<ChalkIr>>| {
-                    if implication.binders.is_empty() {
-                        chalk_ir::ProgramClause::Implies(implication.value)
-                    } else {
-                        chalk_ir::ProgramClause::ForAll(implication)
-                    }
+                    chalk_ir::ProgramClause::ForAll(implication)
                 },
             )
             .collect();
