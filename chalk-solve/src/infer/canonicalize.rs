@@ -84,17 +84,15 @@ impl<'q, I: Interner> Canonicalizer<'q, I> {
             .collect()
     }
 
-    fn add(&mut self, free_var: ParameterEnaVariable<I>) -> DebruijnIndex {
-        DebruijnIndex::from(
-            self.free_vars
-                .iter()
-                .position(|&v| v == free_var)
-                .unwrap_or_else(|| {
-                    let next_index = self.free_vars.len();
-                    self.free_vars.push(free_var);
-                    next_index
-                }),
-        )
+    fn add(&mut self, free_var: ParameterEnaVariable<I>) -> usize {
+        self.free_vars
+            .iter()
+            .position(|&v| v == free_var)
+            .unwrap_or_else(|| {
+                let next_index = self.free_vars.len();
+                self.free_vars.push(free_var);
+                next_index
+            })
     }
 }
 
@@ -145,7 +143,7 @@ where
                 // and then map `root_var` to a fresh index that is
                 // unique to this quantification.
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
-                let bound_var = BoundVar::new(self.add(free_var));
+                let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);
                 Ok(TyData::BoundVar(bound_var.shifted_in(binders)).intern(interner))
             }
@@ -171,7 +169,7 @@ where
             }
             None => {
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
-                let bound_var = BoundVar::new(self.add(free_var));
+                let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);
                 Ok(LifetimeData::BoundVar(bound_var.shifted_in(binders)).intern(interner))
             }

@@ -19,11 +19,11 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Fn<I> {
     {
         let Fn {
             num_binders,
-            ref parameters,
-        } = *self;
+            parameters,
+        } = self;
         Ok(Fn {
-            num_binders,
-            parameters: parameters.fold_with(folder, binders + num_binders)?,
+            num_binders: num_binders.clone(),
+            parameters: parameters.fold_with(folder, binders + 1)?,
         })
     }
 }
@@ -44,10 +44,10 @@ where
         TI: 'i,
     {
         let Binders {
-            binders: ref self_binders,
-            value: ref self_value,
-        } = *self;
-        let value = self_value.fold_with(folder, binders + self_binders.len())?;
+            binders: self_binders,
+            value: self_value,
+        } = self;
+        let value = self_value.fold_with(folder, binders + 1)?;
         Ok(Binders {
             binders: self_binders.clone(),
             value: value,
@@ -72,10 +72,10 @@ where
         TI: 'i,
     {
         let Canonical {
-            binders: ref self_binders,
-            value: ref self_value,
-        } = *self;
-        let value = self_value.fold_with(folder, binders + self_binders.len())?;
+            binders: self_binders,
+            value: self_value,
+        } = self;
+        let value = self_value.fold_with(folder, binders + 1)?;
         Ok(Canonical {
             binders: self_binders.clone(),
             value: value,

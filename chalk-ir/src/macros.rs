@@ -34,8 +34,12 @@ macro_rules! ty {
         $crate::TyData::InferenceVar($crate::InferenceVar::from($b)).intern(&chalk_ir::interner::ChalkIr)
     };
 
+    (bound $d:tt $b:tt) => {
+        $crate::TyData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::INNERMOST.shifted_in($d), $b)).intern(&chalk_ir::interner::ChalkIr)
+    };
+
     (bound $b:expr) => {
-        $crate::TyData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::from_u32($b))).intern(&chalk_ir::interner::ChalkIr)
+        $crate::TyData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::INNERMOST, $b)).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (expr $b:expr) => {
@@ -70,8 +74,12 @@ macro_rules! lifetime {
         $crate::LifetimeData::InferenceVar($crate::InferenceVar::from($b)).intern(&chalk_ir::interner::ChalkIr)
     };
 
+    (bound $d:tt $b:tt) => {
+        $crate::LifetimeData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::INNERMOST.shifted_in($d), $b)).intern(&chalk_ir::interner::ChalkIr)
+    };
+
     (bound $b:expr) => {
-        $crate::LifetimeData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::from_u32($b))).intern(&chalk_ir::interner::ChalkIr)
+        $crate::LifetimeData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::INNERMOST, $b)).intern(&chalk_ir::interner::ChalkIr)
     };
 
     (placeholder $b:expr) => {

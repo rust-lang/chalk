@@ -292,28 +292,60 @@ impl<I: Interner> TyData<I> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BoundVar {
     pub debruijn: DebruijnIndex,
+    pub index: usize,
 }
 
 impl BoundVar {
-    pub fn new(debruijn: DebruijnIndex) -> Self {
-        Self { debruijn }
+    pub fn new(debruijn: DebruijnIndex, index: usize) -> Self {
+        Self { debruijn, index }
     }
 
-    /// Convert bound var into an index its binder.
-    pub fn index(&self) -> usize {
-        self.debruijn.as_usize()
+    pub fn to_ty<I: Interner>(self, interner: &I) -> Ty<I> {
+        TyData::<I>::BoundVar(self).intern(interner)
+    }
+
+    pub fn to_lifetime<I: Interner>(self, interner: &I) -> Lifetime<I> {
+        LifetimeData::<I>::BoundVar(self).intern(interner)
+    }
+
+    /// True if this variable is bound within the `amount` innermost binders.
+    pub fn bound_within(self, amount: usize) -> bool {
+        self.debruijn.within(amount)
     }
 
     /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
     #[must_use]
     pub fn shifted_in(self, amount: usize) -> Self {
-        BoundVar::new(self.debruijn.shifted_in(amount))
+        BoundVar::new(self.debruijn.shifted_in(amount), self.index)
     }
 
     /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_out`]).
     #[must_use]
     pub fn shifted_out(self, amount: usize) -> Self {
-        BoundVar::new(self.debruijn.shifted_out(amount))
+        BoundVar::new(self.debruijn.shifted_out(amount), self.index)
+    }
+
+    /// Shift out this variable by `amount` binders, returning `None`
+    /// if not enclosed in that many levels of binders.
+    pub fn checked_shifted_out(self, amount: usize) -> Option<Self> {
+        let debruijn = self.debruijn.checked_shifted_out(amount)?;
+        Some(BoundVar::new(debruijn, self.index))
+    }
+
+    /// Return the index of the bound variable, but only if it is bound
+    /// at the innermost binder. Otherwise, returns `None`.
+    pub fn index_if_innermost(self) -> Option<usize> {
+        self.index_if_bound_at(DebruijnIndex::INNERMOST)
+    }
+
+    /// Return the index of the bound variable, but only if it is bound
+    /// at the innermost binder. Otherwise, returns `None`.
+    pub fn index_if_bound_at(self, debruijn: DebruijnIndex) -> Option<usize> {
+        if self.debruijn == debruijn {
+            Some(self.index)
+        } else {
+            None
+        }
     }
 }
 
@@ -381,6 +413,28 @@ impl DebruijnIndex {
         self.as_usize() < binders
     }
 
+    /// True if the binder identified by this index is within the
+    /// binder identified by the index `binder`.
+    ///
+    /// # Example
+    ///
+    /// Imagine you have the following binders in scope
+    ///
+    /// ```ignore
+    /// forall<a> forall<b> forall<c>
+    /// ```
+    ///
+    /// then the Debruijn index for `c` would be `0`, the index for
+    /// `b` would be 1, and so on. Now consider the following calls:
+    ///
+    /// * `c.within(a) = true`
+    /// * `b.within(a) = true`
+    /// * `a.within(a) = false`
+    /// * `a.within(c) = false`
+    pub fn within_binder(self, binder: DebruijnIndex) -> bool {
+        self < binder
+    }
+
     /// Returns the resulting index when this value is moved into
     /// `amount` number of new binders. So, e.g., if you had
     ///
@@ -413,9 +467,9 @@ impl DebruijnIndex {
     #[must_use]
     pub fn checked_shifted_out(self, amount: usize) -> Option<DebruijnIndex> {
         if self.within(amount) {
-            Some(self.shifted_out(amount))
-        } else {
             None
+        } else {
+            Some(self.shifted_out(amount))
         }
     }
 
@@ -1036,27 +1090,22 @@ impl<T> Binders<T> {
         }
     }
 
-    /// Introduces a fresh type variable at the start of the binders and returns new Binders with
-    /// the result of the operator function applied.
+    /// Creates a fresh binders that contains a single type
+    /// variable. The result of the closure will be embedded in this
+    /// binder. Note that you should be careful with what you return
+    /// from the closure to account for the binder that will be added.
     ///
-    /// forall<?0, ?1> will become forall<?0, ?1, ?2> where ?0 is the fresh variable
-    pub fn with_fresh_type_var<U, I>(
-        self,
-        interner: &I,
-        op: impl FnOnce(<T as Fold<I, I>>::Result, Ty<I>) -> U,
-    ) -> Binders<U>
+    /// XXX FIXME -- this is potentially a pretty footgun-y function.
+    pub fn with_fresh_type_var<I>(interner: &I, op: impl FnOnce(Ty<I>) -> T) -> Binders<T>
     where
         I: Interner,
-        T: Shift<I>,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
         let new_var =
-            TyData::<I>::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST)).intern(interner);
-        let value = op(self.value.shifted_in(interner, 1), new_var);
+            TyData::<I>::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner);
+        let value = op(new_var);
         Binders {
-            binders: iter::once(ParameterKind::Ty(()))
-                .chain(self.binders.iter().cloned())
-                .collect(),
+            binders: iter::once(ParameterKind::Ty(())).collect(),
             value,
         }
     }
@@ -1300,23 +1349,19 @@ impl<I: Interner> Goal<I> {
         GoalData::Not(self).intern(interner)
     }
 
-    /// Takes a goal `G` and turns it into `compatible { G }`
+    /// Takes a goal `G` and turns it into `compatible { G }`.
     pub fn compatible(self, interner: &I) -> Self {
         // compatible { G } desugars into: forall<T> { if (Compatible, DownstreamType(T)) { G } }
         // This activates the compatible modality rules and introduces an anonymous downstream type
         GoalData::Quantified(
             QuantifierKind::ForAll,
-            Binders {
-                value: self,
-                binders: Vec::new(),
-            }
-            .with_fresh_type_var(interner, |goal, ty| {
+            Binders::with_fresh_type_var(interner, |ty| {
                 GoalData::Implies(
                     vec![
                         DomainGoal::Compatible(()).cast(interner),
                         DomainGoal::DownstreamType(ty).cast(interner),
                     ],
-                    goal,
+                    self.shifted_in(interner, 1),
                 )
                 .intern(interner)
             }),
@@ -1494,7 +1539,7 @@ impl<I: Interner> Substitution<I> {
     /// same index.
     pub fn is_identity_subst(&self, interner: &I) -> bool {
         self.iter(interner).zip(0..).all(|(parameter, index)| {
-            let index_db = BoundVar::new(DebruijnIndex::from_u32(index));
+            let index_db = BoundVar::new(DebruijnIndex::INNERMOST, index);
             match parameter.data(interner) {
                 ParameterKind::Ty(ty) => match ty.data(interner) {
                     TyData::BoundVar(depth) => index_db == *depth,
@@ -1581,10 +1626,10 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
     }
 
     fn fold_free_var_ty(&mut self, bound_var: BoundVar, binders: usize) -> Fallible<Ty<I>> {
-        let interner = self.interner();
-        let ty = self.at(bound_var.index());
-        let ty = ty.assert_ty_ref(interner);
-        Ok(ty.shifted_in(interner, binders))
+        assert_eq!(bound_var.debruijn, DebruijnIndex::INNERMOST);
+        let ty = self.at(bound_var.index);
+        let ty = ty.assert_ty_ref(self.interner());
+        Ok(ty.shifted_in(self.interner(), binders))
     }
 
     fn fold_free_var_lifetime(
@@ -1592,10 +1637,10 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
         bound_var: BoundVar,
         binders: usize,
     ) -> Fallible<Lifetime<I>> {
-        let interner = self.interner();
-        let l = self.at(bound_var.index());
-        let l = l.assert_lifetime_ref(interner);
-        Ok(l.shifted_in(interner, binders))
+        assert_eq!(bound_var.debruijn, DebruijnIndex::INNERMOST);
+        let l = self.at(bound_var.index);
+        let l = l.assert_lifetime_ref(self.interner());
+        Ok(l.shifted_in(self.interner(), binders))
     }
 
     fn interner(&self) -> &'i I {

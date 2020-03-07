@@ -3,8 +3,8 @@ use crate::fold::shift::Shift;
 
 pub struct Subst<'s, 'i, I: Interner> {
     /// Values to substitute. A reference to a free variable with
-    /// index `i` will be mapped to `parameters[i]` -- if `i >
-    /// parameters.len()`, then we will leave the variable untouched.
+    /// index `i` will be mapped to `parameter_lists[i]` -- if `i >
+    /// parameter_lists.len()`, then we will leave the variable untouched.
     parameters: &'s [Parameter<I>],
     interner: &'i I,
 }
@@ -29,16 +29,35 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
     }
 
     fn fold_free_var_ty(&mut self, bound_var: BoundVar, binders: usize) -> Fallible<Ty<I>> {
-        let interner = self.interner();
-        let index = bound_var.index();
-        if index >= self.parameters.len() {
-            let debruijn = DebruijnIndex::from(index - self.parameters.len()).shifted_in(binders);
-            Ok(TyData::<I>::BoundVar(BoundVar::new(debruijn)).intern(interner))
-        } else {
-            match self.parameters[index].data(interner) {
-                ParameterKind::Ty(t) => Ok(t.shifted_in(interner, binders)),
+        // We are eliminating one binder, but binders outside of that get preserved.
+        //
+        // So e.g. consider this:
+        //
+        // ```
+        // for<A, B> { for<C> { [A, C] } }
+        // //          ^ the binder we are substituing with `[u32]`
+        // ```
+        //
+        // Here, `A` would be `^1.0` and `C` would be `^0.0`. We will replace `^0.0` with the
+        // 0th index from the list (`u32`). We will convert `^1.0` (A) to `^0.0` -- i.e., shift
+        // it **out** of one level of binder (the `for<C>` binder we are eliminating).
+        //
+        // This gives us as a result:
+        //
+        // ```
+        // for<A, B> { [A, u32] }
+        //              ^ represented as `^0.0`
+        // ```
+        if let Some(index) = bound_var.index_if_innermost() {
+            match self.parameters[index].data(self.interner()) {
+                ParameterKind::Ty(t) => Ok(t.shifted_in(self.interner(), binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
+        } else {
+            Ok(bound_var
+                .shifted_out(1)
+                .shifted_in(binders)
+                .to_ty(self.interner()))
         }
     }
 
@@ -47,16 +66,18 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
         bound_var: BoundVar,
         binders: usize,
     ) -> Fallible<Lifetime<I>> {
-        let interner = self.interner();
-        let index = bound_var.index();
-        if index >= self.parameters.len() {
-            let debruijn = DebruijnIndex::from(index - self.parameters.len()).shifted_in(binders);
-            Ok(LifetimeData::<I>::BoundVar(BoundVar::new(debruijn)).intern(interner))
-        } else {
-            match self.parameters[index].data(interner) {
-                ParameterKind::Lifetime(l) => Ok(l.shifted_in(interner, binders)),
+        // see comment in `fold_free_var_ty`
+
+        if let Some(index) = bound_var.index_if_innermost() {
+            match self.parameters[index].data(self.interner()) {
+                ParameterKind::Lifetime(l) => Ok(l.shifted_in(self.interner(), binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
+        } else {
+            Ok(bound_var
+                .shifted_out(1)
+                .shifted_in(binders)
+                .to_lifetime(self.interner()))
         }
     }
 

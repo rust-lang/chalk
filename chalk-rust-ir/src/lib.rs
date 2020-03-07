@@ -172,7 +172,7 @@ impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
     type Output = QuantifiedWhereClause<I>;
 
     fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
-        let self_ty = self_ty.shifted_in(interner, self.binders.len());
+        let self_ty = self_ty.shifted_in(interner, 1);
         self.value
             .into_where_clauses(interner, self_ty)
             .into_iter()
@@ -265,13 +265,25 @@ pub trait ToParameter {
     /// the indices, and invoke `to_parameter()` on the `(binder,
     /// index)` pair. The result will be a reference to a bound
     /// variable of appropriate kind at the corresponding index.
-    fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I>;
+    fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I> {
+        self.to_parameter_at_depth(interner, DebruijnIndex::INNERMOST)
+    }
+
+    fn to_parameter_at_depth<I: Interner>(
+        &self,
+        interner: &I,
+        debruijn: DebruijnIndex,
+    ) -> Parameter<I>;
 }
 
 impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
-    fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I> {
+    fn to_parameter_at_depth<I: Interner>(
+        &self,
+        interner: &I,
+        debruijn: DebruijnIndex,
+    ) -> Parameter<I> {
         let &(binder, index) = self;
-        let bound_var = BoundVar::new(DebruijnIndex::from(index));
+        let bound_var = BoundVar::new(debruijn, index);
         match *binder {
             ParameterKind::Lifetime(_) => LifetimeData::BoundVar(bound_var)
                 .intern(interner)

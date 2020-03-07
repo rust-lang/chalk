@@ -143,8 +143,8 @@ impl<I> DownShifter<'_, I> {
     /// this will fail with `Err`. Otherwise, returns the variable at
     /// this new depth (but adjusted to appear within `binders`).
     fn adjust(&self, bound_var: BoundVar, binders: usize) -> Fallible<BoundVar> {
-        match bound_var.debruijn.checked_shifted_out(self.adjustment) {
-            Some(new_depth) => Ok(BoundVar::new(new_depth.shifted_in(binders))),
+        match bound_var.checked_shifted_out(self.adjustment) {
+            Some(bound_var1) => Ok(bound_var1.shifted_in(binders)),
             None => Err(NoSolution),
         }
     }

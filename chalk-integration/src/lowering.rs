@@ -141,12 +141,12 @@ impl<'k> Env<'k> {
         let binders = binders
             .into_iter()
             .enumerate()
-            .map(|(i, k)| (k, BoundVar::new(DebruijnIndex::from(i))));
+            .map(|(i, k)| (k, BoundVar::new(DebruijnIndex::INNERMOST, i)));
         let len = binders.len();
         let parameter_map: ParameterMap = self
             .parameter_map
             .iter()
-            .map(|(&k, &v)| (k, v.shifted_in(len)))
+            .map(|(&k, &v)| (k, v.shifted_in(1)))
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
@@ -398,6 +398,16 @@ trait LowerParameterMap {
             .chain(self.synthetic_parameters()) // (*) see below
             .collect()
          */
+
+        // (*) It is important that the declared parameters come
+        // before the synthetic parameters in the ordering. This is
+        // because of traits, when used as types, only have the first
+        // N parameters in their kind (that is, they do not have Self).
+        //
+        // Note that if `Self` appears in the where-clauses etc, the
+        // trait is not object-safe, and hence not supposed to be used
+        // as an object. Actually the handling of object types is
+        // probably just kind of messed up right now. That's ok.
     }
 
     fn parameter_refs(&self) -> Vec<chalk_ir::Parameter<ChalkIr>> {
@@ -410,18 +420,9 @@ trait LowerParameterMap {
     }
 
     fn parameter_map(&self) -> ParameterMap {
-        // (*) It is important that the declared parameters come
-        // before the subtle parameters in the ordering. This is
-        // because of traits, when used as types, only have the first
-        // N parameters in their kind (that is, they do not have Self).
-        //
-        // Note that if `Self` appears in the where-clauses etc, the
-        // trait is not object-safe, and hence not supposed to be used
-        // as an object. Actually the handling of object types is
-        // probably just kind of messed up right now. That's ok.
         self.all_parameters()
             .into_iter()
-            .zip((0..).map(|i| BoundVar::new(DebruijnIndex::from_u32(i))))
+            .zip((0..).map(|i| BoundVar::new(DebruijnIndex::INNERMOST, i)))
             .collect()
     }
 
@@ -1005,6 +1006,7 @@ impl LowerTy for Ty {
                                     interner,
                                     chalk_ir::TyData::BoundVar(BoundVar::new(
                                         DebruijnIndex::INNERMOST,
+                                        0,
                                     ))
                                     .intern(interner),
                                 )
@@ -1241,12 +1243,16 @@ impl LowerTrait for TraitDefn {
             .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str)].id)
             .collect();
 
-        Ok(rust_ir::TraitDatum {
+        let trait_datum = rust_ir::TraitDatum {
             id: trait_id,
             binders: binders,
             flags: self.flags.lower(),
             associated_ty_ids,
-        })
+        };
+
+        debug!("trait_datum={:?}", trait_datum);
+
+        Ok(trait_datum)
     }
 }
 

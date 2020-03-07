@@ -124,7 +124,10 @@ where
     /// `binders` in scope.
     fn fold_free_var_ty(&mut self, bound_var: BoundVar, binders: usize) -> Fallible<Ty<TI>> {
         if self.forbid_free_vars() {
-            panic!("unexpected free variable with depth `{:?}`", bound_var)
+            panic!(
+                "unexpected free variable with depth `{:?}` in {} binders",
+                bound_var, binders
+            )
         } else {
             let bound_var = bound_var.shifted_in(binders);
             Ok(TyData::<TI>::BoundVar(bound_var).intern(self.target_interner()))
@@ -138,7 +141,10 @@ where
         binders: usize,
     ) -> Fallible<Lifetime<TI>> {
         if self.forbid_free_vars() {
-            panic!("unexpected free variable with depth `{:?}`", bound_var)
+            panic!(
+                "unexpected free variable with depth `{:?}` in {} binders",
+                bound_var, binders
+            )
         } else {
             let bound_var = bound_var.shifted_in(binders);
             Ok(LifetimeData::<TI>::BoundVar(bound_var).intern(self.target_interner()))
@@ -312,17 +318,17 @@ where
         let interner = folder.interner();
         match self.data(interner) {
             TyData::BoundVar(bound_var) => {
-                let BoundVar { debruijn } = *bound_var;
-                if debruijn.within(binders) {
-                    // If `debruijn` refers to one of the binders that
-                    // we folded over, then just return a bound
-                    // variable.
-                    Ok(TyData::<TI>::BoundVar(BoundVar::new(debruijn))
-                        .intern(folder.target_interner()))
+                if let Some(bound_var1) = bound_var.checked_shifted_out(binders) {
+                    // This variable was bound outside of the binders
+                    // that we have traversed during folding;
+                    // therefore, it is free. Let the folder have a
+                    // crack at it.
+                    folder.fold_free_var_ty(bound_var1, binders)
                 } else {
-                    // Otherwise, this variable was bound outside the
-                    // folded term, so invoke `fold_free_var_ty`.
-                    folder.fold_free_var_ty(bound_var.shifted_out(binders), binders)
+                    // This variable was bound within the binders that
+                    // we folded over, so just return a bound
+                    // variable.
+                    Ok(TyData::<TI>::BoundVar(*bound_var).intern(folder.target_interner()))
                 }
             }
             TyData::Dyn(clauses) => {
@@ -380,21 +386,19 @@ where
         TI: 'i,
     {
         let interner = folder.interner();
-        let target_interner = folder.target_interner();
         match self.data(interner) {
             LifetimeData::BoundVar(bound_var) => {
-                let BoundVar { debruijn } = *bound_var;
-                if debruijn.within(binders) {
-                    // If `debruijn` refers to one of the binders that
-                    // we folded over, then just return a bound
-                    // variable.
-                    Ok(LifetimeData::<TI>::BoundVar(BoundVar::new(debruijn))
-                        .intern(target_interner))
+                if let Some(bound_var1) = bound_var.checked_shifted_out(binders) {
+                    // This variable was bound outside of the binders
+                    // that we have traversed during folding;
+                    // therefore, it is free. Let the folder have a
+                    // crack at it.
+                    folder.fold_free_var_lifetime(bound_var1, binders)
                 } else {
-                    // Otherwise, this variable was bound outside the
-                    // folded term, so invoke `fold_free_var_lifetime`.
-                    let bound_var = BoundVar::new(debruijn.shifted_out(binders));
-                    folder.fold_free_var_lifetime(bound_var, binders)
+                    // This variable was bound within the binders that
+                    // we folded over, so just return a bound
+                    // variable.
+                    Ok(LifetimeData::<TI>::BoundVar(*bound_var).intern(folder.target_interner()))
                 }
             }
             LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
