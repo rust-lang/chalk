@@ -1145,20 +1145,28 @@ pub enum ProgramClause<I: Interner> {
     ForAll(Binders<ProgramClauseImplication<I>>),
 }
 
+impl<I: Interner> ProgramClauseImplication<I> {
+    pub fn into_from_env_clause(self, interner: &I) -> ProgramClauseImplication<I> {
+        if self.conditions.is_empty(interner) {
+            ProgramClauseImplication {
+                consequence: self.consequence.into_from_env_goal(interner),
+                conditions: self.conditions.clone(),
+            }
+        } else {
+            self
+        }
+    }
+}
+
 impl<I: Interner> ProgramClause<I> {
     pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
         match self {
             ProgramClause::Implies(implication) => {
-                if implication.conditions.is_empty(interner) {
-                    ProgramClause::Implies(ProgramClauseImplication {
-                        consequence: implication.consequence.into_from_env_goal(interner),
-                        conditions: Goals::new(interner),
-                    })
-                } else {
-                    ProgramClause::Implies(implication)
-                }
+                ProgramClause::Implies(implication.into_from_env_clause(interner))
             }
-            clause => clause,
+            ProgramClause::ForAll(binders_implication) => {
+                ProgramClause::ForAll(binders_implication.map(|i| i.into_from_env_clause(interner)))
+            }
         }
     }
 }
