@@ -1,8 +1,3 @@
-use fallible::*;
-use ir::could_match::CouldMatch;
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use super::*;
 
 mod fulfill;
@@ -12,24 +7,21 @@ mod stack;
 use self::fulfill::Fulfill;
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
+use chalk_engine::fallible::{Fallible, NoSolution};
 
-pub(crate) type UCanonicalGoal = UCanonical<InEnvironment<Goal>>;
+type UCanonicalGoal<I: Interner> = UCanonical<InEnvironment<Goal<I>>>;
 
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
 /// allows for better caching, and simplifies management of the inference
 /// context.
-pub(crate) struct Solver {
-    program: Arc<ProgramEnvironment>,
+pub(crate) struct Solver<I: Interner> {
+    // program: &dyn RustIrDatabase,
     stack: Stack,
-    search_graph: SearchGraph,
+    search_graph: SearchGraph<I>,
 
     caching_enabled: bool,
-
-    /// The cache contains **fully solved** goals, whose results are
-    /// not dependent on the stack in anyway.
-    cache: HashMap<UCanonicalGoal, Fallible<Solution>>,
 }
 
 /// The `minimums` struct is used while solving to track whether we encountered
@@ -59,17 +51,16 @@ impl<T> MergeWith<T> for Fallible<T> {
     }
 }
 
-impl Solver {
-    crate fn new(
-        program: &Arc<ProgramEnvironment>,
+impl<I: Interner> Solver<I> {
+    pub(crate) fn new(
+        // program: &Arc<ProgramEnvironment>,
         overflow_depth: usize,
         caching_enabled: bool,
     ) -> Self {
         Solver {
-            program: program.clone(),
-            stack: Stack::new(program, overflow_depth),
+            // program: program.clone(),
+            stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),
-            cache: HashMap::new(),
             caching_enabled,
         }
     }
@@ -91,8 +82,8 @@ impl Solver {
     /// solution with the substitution `?0 := u8`.
     pub(crate) fn solve_root_goal(
         &mut self,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
-    ) -> Fallible<Solution> {
+        canonical_goal: &UCanonicalGoal<I>,
+    ) -> Fallible<Solution<I>> {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.stack.is_empty());
         let minimums = &mut Minimums::new();
@@ -104,9 +95,9 @@ impl Solver {
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
     fn solve_goal(
         &mut self,
-        goal: UCanonical<InEnvironment<Goal>>,
+        goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution> {
+    ) -> Fallible<Solution<I>> {
         info_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
@@ -185,7 +176,7 @@ impl Solver {
 
     fn solve_new_subgoal(
         &mut self,
-        canonical_goal: UCanonicalGoal,
+        canonical_goal: UCanonicalGoal<I>,
         depth: StackDepth,
         dfn: DepthFirstNumber,
     ) -> Minimums {
@@ -216,8 +207,8 @@ impl Solver {
                     },
             } = canonical_goal.clone();
 
-            let current_answer = match goal {
-                Goal::Leaf(LeafGoal::DomainGoal(domain_goal)) => {
+            let current_answer = match goal.data() {
+                GoalData::DomainGoal(domain_goal) => {
                     let canonical_goal = UCanonical {
                         universes,
                         canonical: Canonical {
@@ -278,10 +269,7 @@ impl Solver {
                         universes,
                         canonical: Canonical {
                             binders,
-                            value: InEnvironment {
-                                environment,
-                                goal: goal,
-                            },
+                            value: InEnvironment { environment, goal },
                         },
                     };
 
@@ -330,9 +318,9 @@ impl Solver {
 
     fn solve_via_simplification(
         &mut self,
-        canonical_goal: &UCanonical<InEnvironment<Goal>>,
+        canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution> {
+    ) -> Fallible<Solution<I>> {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
         let mut fulfill = Fulfill::new(self);
         let (subst, InEnvironment { environment, goal }) = fulfill.initial_subst(canonical_goal);
@@ -345,26 +333,31 @@ impl Solver {
     /// them.
     fn solve_from_clauses<C>(
         &mut self,
-        canonical_goal: &UCanonical<InEnvironment<DomainGoal>>,
+        canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clauses: C,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution>
+    ) -> Fallible<Solution<I>>
     where
-        C: IntoIterator<Item = ProgramClause>,
+        C: IntoIterator<Item = ProgramClause<I>>,
     {
         let mut cur_solution = None;
-        for ProgramClause { implication, .. } in clauses {
-            debug_heading!("clause={:?}", implication);
+        for program_clause in clauses {
+            debug_heading!("clause={:?}", program_clause);
 
-            let res = self.solve_via_implication(canonical_goal, implication, minimums);
-            if let Ok(solution) = res {
-                debug!("ok: solution={:?}", solution);
-                cur_solution = Some(match cur_solution {
-                    None => solution,
-                    Some(cur) => solution.combine(cur),
-                });
-            } else {
-                debug!("error");
+            match program_clause {
+                ProgramClause::Implies(implication) => {
+                    let res = self.solve_via_implication(canonical_goal, implication, minimums);
+                    if let Ok(solution) = res {
+                        debug!("ok: solution={:?}", solution);
+                        cur_solution = Some(match cur_solution {
+                            None => solution,
+                            Some(cur) => solution.combine(cur),
+                        });
+                    } else {
+                        debug!("error");
+                    }
+                }
+                ProgramClause::ForAll(_) => todo!(),
             }
         }
         cur_solution.ok_or(NoSolution)
@@ -373,10 +366,10 @@ impl Solver {
     /// Modus ponens! That is: try to apply an implication by proving its premises.
     fn solve_via_implication(
         &mut self,
-        canonical_goal: &UCanonical<InEnvironment<DomainGoal>>,
-        clause: Binders<ProgramClauseImplication>,
+        canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
+        clause: Binders<ProgramClauseImplication<I>>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution> {
+    ) -> Fallible<Solution<I>> {
         info_heading!(
             "solve_via_implication(\
              \n    canonical_goal={:?},\

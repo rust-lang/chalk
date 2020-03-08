@@ -1,14 +1,12 @@
-use ir::ProgramEnvironment;
+use super::UCanonicalGoal;
+use chalk_ir::interner::Interner;
 use std::mem;
 use std::ops::Index;
 use std::ops::IndexMut;
-use std::sync::Arc;
 use std::usize;
 
-use super::UCanonicalGoal;
-
 pub(crate) struct Stack {
-    program: Arc<ProgramEnvironment>,
+    // program: Arc<ProgramEnvironment>,
     entries: Vec<StackEntry>,
     overflow_depth: usize,
 }
@@ -28,11 +26,14 @@ pub(crate) struct StackEntry {
 }
 
 impl Stack {
-    pub(crate) fn new(program: &Arc<ProgramEnvironment>, overflow_depth: usize) -> Self {
+    pub(crate) fn new(
+        // program: &Arc<ProgramEnvironment>,
+        overflow_depth: usize,
+    ) -> Self {
         Stack {
-            program: program.clone(),
+            // program: program.clone(),
             entries: vec![],
-            overflow_depth: overflow_depth,
+            overflow_depth,
         }
     }
 
@@ -40,7 +41,7 @@ impl Stack {
         self.entries.is_empty()
     }
 
-    pub(crate) fn push(&mut self, goal: &UCanonicalGoal) -> StackDepth {
+    pub(crate) fn push<I: Interner>(&mut self, goal: &UCanonicalGoal<I>) -> StackDepth {
         let depth = StackDepth {
             depth: self.entries.len(),
         };

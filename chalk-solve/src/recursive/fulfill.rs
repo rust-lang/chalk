@@ -1,13 +1,15 @@
 use super::*;
 use cast::Caster;
+use chalk_engine::fallible::NoSolution;
 use fold::Fold;
-use solve::infer::{
+use infer::{
     canonicalize::Canonicalized,
-    instantiate::BindersAndValue,
+    instantiate::IntoBindersAndValue,
     ucanonicalize::{UCanonicalized, UniverseMap},
     unify::UnificationResult,
-    InferenceTable, ParameterInferenceVariable,
+    InferenceTable,
 };
+use interner::HasInterner;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -29,24 +31,24 @@ impl Outcome {
 
 /// A goal that must be resolved
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum Obligation {
+enum Obligation<I: Interner> {
     /// For "positive" goals, we flatten all the way out to leafs within the
     /// current `Fulfill`
-    Prove(InEnvironment<Goal>),
+    Prove(InEnvironment<Goal<I>>),
 
     /// For "negative" goals, we don't flatten in *this* `Fulfill`, which would
     /// require having a logical "or" operator. Instead, we recursively solve in
     /// a fresh `Fulfill`.
-    Refute(InEnvironment<Goal>),
+    Refute(InEnvironment<Goal<I>>),
 }
 
 /// When proving a leaf goal, we record the free variables that appear within it
 /// so that we can update inference state accordingly.
 #[derive(Clone, Debug)]
-struct PositiveSolution {
-    free_vars: Vec<ParameterInferenceVariable>,
+struct PositiveSolution<I: Interner> {
+    free_vars: Vec<InferenceVar>,
     universes: UniverseMap,
-    solution: Solution,
+    solution: Solution<I>,
 }
 
 /// When refuting a goal, there's no impact on inference state.
@@ -66,16 +68,16 @@ enum NegativeSolution {
 /// of type inference in general. But when solving trait constraints, *fresh*
 /// `Fulfill` instances will be created to solve canonicalized, free-standing
 /// goals, and transport what was learned back to the outer context.
-crate struct Fulfill<'s> {
-    solver: &'s mut Solver,
-    infer: InferenceTable,
+pub(crate) struct Fulfill<'s, I: Interner> {
+    solver: &'s mut Solver<I>,
+    infer: InferenceTable<I>,
 
     /// The remaining goals to prove or refute
-    obligations: Vec<Obligation>,
+    obligations: Vec<Obligation<I>>,
 
     /// Lifetime constraints that must be fulfilled for a solution to be fully
     /// validated.
-    constraints: HashSet<InEnvironment<Constraint>>,
+    constraints: HashSet<InEnvironment<Constraint<I>>>,
 
     /// Record that a goal has been processed that can neither be proved nor
     /// refuted. In such a case the solution will be either `CannotProve`, or `Err`
@@ -83,8 +85,8 @@ crate struct Fulfill<'s> {
     cannot_prove: bool,
 }
 
-impl<'s> Fulfill<'s> {
-    pub(crate) fn new(solver: &'s mut Solver) -> Self {
+impl<'s, I: Interner> Fulfill<'s, I> {
+    pub(crate) fn new(solver: &'s mut Solver<I>) -> Self {
         Fulfill {
             solver,
             infer: InferenceTable::new(),
@@ -100,10 +102,10 @@ impl<'s> Fulfill<'s> {
     /// then later be used as the answer to be returned to the user.
     ///
     /// See also `InferenceTable::fresh_subst`.
-    pub(crate) fn initial_subst<T: Fold<Result = T>>(
+    pub(crate) fn initial_subst<T: Fold<I, I, Result = T> + HasInterner>(
         &mut self,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
-    ) -> (Substitution, InEnvironment<T::Result>) {
+    ) -> (Substitution<I>, InEnvironment<T::Result>) {
         let canonical_goal = self.infer.instantiate_universes(ucanonical_goal);
         let subst = self.infer.fresh_subst(&canonical_goal.binders);
         let value = canonical_goal.substitute(&subst);
@@ -114,10 +116,10 @@ impl<'s> Fulfill<'s> {
     #[allow(non_camel_case_types)]
     pub(crate) fn instantiate_binders_existentially<T>(
         &mut self,
-        arg: &impl BindersAndValue<Output = T>,
+        arg: &impl IntoBindersAndValue<Value = T>,
     ) -> T::Result
     where
-        T: Fold,
+        T: Fold<I, I>,
     {
         self.infer.instantiate_binders_existentially(arg)
     }
@@ -126,9 +128,14 @@ impl<'s> Fulfill<'s> {
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    pub(crate) fn unify<T>(&mut self, environment: &Arc<Environment>, a: &T, b: &T) -> Fallible<()>
+    pub(crate) fn unify<T>(
+        &mut self,
+        environment: &Arc<Environment<I>>,
+        a: &T,
+        b: &T,
+    ) -> Fallible<()>
     where
-        T: ?Sized + Zip + Debug,
+        T: ?Sized + Zip<I> + Debug,
     {
         let UnificationResult { goals, constraints } = self.infer.unify(environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
@@ -142,37 +149,41 @@ impl<'s> Fulfill<'s> {
 
     /// Create obligations for the given goal in the given environment. This may
     /// ultimately create any number of obligations.
-    pub(crate) fn push_goal(&mut self, environment: &Arc<Environment>, goal: Goal) -> Fallible<()> {
+    pub(crate) fn push_goal(
+        &mut self,
+        environment: &Arc<Environment<I>>,
+        goal: Goal<I>,
+    ) -> Fallible<()> {
         debug!("push_goal({:?}, {:?})", goal, environment);
-        match goal {
-            Goal::Quantified(QuantifierKind::ForAll, subgoal) => {
+        match goal.data() {
+            GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
                 let subgoal = self.infer.instantiate_binders_universally(&subgoal);
                 self.push_goal(environment, *subgoal)?;
             }
-            Goal::Quantified(QuantifierKind::Exists, subgoal) => {
+            GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
                 let subgoal = self.infer.instantiate_binders_existentially(&subgoal);
                 self.push_goal(environment, *subgoal)?;
             }
-            Goal::Implies(wc, subgoal) => {
+            GoalData::Implies(wc, subgoal) => {
                 let new_environment = &environment.add_clauses(wc);
                 self.push_goal(new_environment, *subgoal)?;
             }
-            Goal::And(subgoal1, subgoal2) => {
+            GoalData::And(subgoal1, subgoal2) => {
                 self.push_goal(environment, *subgoal1)?;
                 self.push_goal(environment, *subgoal2)?;
             }
-            Goal::Not(subgoal) => {
+            GoalData::Not(subgoal) => {
                 let in_env = InEnvironment::new(environment, *subgoal);
                 self.obligations.push(Obligation::Refute(in_env));
             }
-            Goal::Leaf(LeafGoal::DomainGoal(_)) => {
+            GoalData::DomainGoal(_) => {
                 let in_env = InEnvironment::new(environment, goal);
                 self.obligations.push(Obligation::Prove(in_env));
             }
-            Goal::Leaf(LeafGoal::EqGoal(EqGoal { a, b })) => {
+            GoalData::EqGoal(EqGoal { a, b }) => {
                 self.unify(&environment, &a, &b)?;
             }
-            Goal::CannotProve(()) => {
+            GoalData::CannotProve(()) => {
                 self.cannot_prove = true;
             }
         }
@@ -181,9 +192,9 @@ impl<'s> Fulfill<'s> {
 
     fn prove(
         &mut self,
-        wc: &InEnvironment<Goal>,
+        wc: &InEnvironment<Goal<I>>,
         minimums: &mut Minimums,
-    ) -> Fallible<PositiveSolution> {
+    ) -> Fallible<PositiveSolution<I>> {
         let Canonicalized {
             quantified,
             free_vars,
@@ -200,7 +211,7 @@ impl<'s> Fulfill<'s> {
         })
     }
 
-    fn refute(&mut self, goal: &InEnvironment<Goal>) -> Fallible<NegativeSolution> {
+    fn refute(&mut self, goal: &InEnvironment<Goal<I>>) -> Fallible<NegativeSolution> {
         let canonicalized = match self.infer.invert_then_canonicalize(goal) {
             Some(v) => v,
             None => {
@@ -237,9 +248,9 @@ impl<'s> Fulfill<'s> {
     /// be mapped into our variables with `free_vars`.
     fn apply_solution(
         &mut self,
-        free_vars: Vec<ParameterInferenceVariable>,
+        free_vars: Vec<InferenceVar>,
         universes: UniverseMap,
-        subst: Canonical<ConstrainedSubst>,
+        subst: Canonical<ConstrainedSubst<I>>,
     ) {
         let subst = universes.map_from_canonical(&subst);
         let ConstrainedSubst { subst, constraints } = self.infer.instantiate_canonical(&subst);
@@ -341,9 +352,9 @@ impl<'s> Fulfill<'s> {
     /// the outcome of type inference by updating the replacements it provides.
     pub(super) fn solve(
         mut self,
-        subst: Substitution,
+        subst: Substitution<I>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution> {
+    ) -> Fallible<Solution<I>> {
         let outcome = self.fulfill(minimums)?;
 
         if self.cannot_prove {

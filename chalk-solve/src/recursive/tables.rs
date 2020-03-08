@@ -4,6 +4,8 @@ use std::ops::IndexMut;
 
 use super::stack::StackDepth;
 
+// TODO this file doesn't seem used
+
 #[derive(Default)]
 pub(crate) struct Tables {
     indices: HashMap<CanonicalLeafGoal, TableIndex>,
@@ -15,8 +17,8 @@ pub(crate) struct TableIndex {
 }
 
 pub(crate) struct Table {
-    crate solution: Fallible<Solution>,
-    crate stack_depth: Option<StackDepth>,
+    pub(crate) solution: Fallible<Solution>,
+    pub(crate) stack_depth: Option<StackDepth>,
 }
 
 impl Tables {

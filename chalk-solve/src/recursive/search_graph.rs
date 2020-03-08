@@ -1,5 +1,3 @@
-use fallible::*;
-use solve::Solution;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::ops::Index;
@@ -8,10 +6,13 @@ use std::usize;
 
 use super::stack::StackDepth;
 use super::{Minimums, UCanonicalGoal};
+use crate::Solution;
+use chalk_engine::fallible::{Fallible, NoSolution};
+use chalk_ir::interner::Interner;
 
-pub(super) struct SearchGraph {
-    indices: HashMap<UCanonicalGoal, DepthFirstNumber>,
-    nodes: Vec<Node>,
+pub(super) struct SearchGraph<I: Interner> {
+    indices: HashMap<UCanonicalGoal<I>, DepthFirstNumber>,
+    nodes: Vec<Node<I>>,
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
@@ -19,10 +20,10 @@ pub(super) struct DepthFirstNumber {
     index: usize,
 }
 
-pub(super) struct Node {
-    pub(crate) goal: UCanonicalGoal,
+pub(super) struct Node<I: Interner> {
+    pub(crate) goal: UCanonicalGoal<I>,
 
-    pub(crate) solution: Fallible<Solution>,
+    pub(crate) solution: Fallible<Solution<I>>,
 
     /// This is `Some(X)` if we are actively exploring this node, or
     /// `None` otherwise.
@@ -35,7 +36,7 @@ pub(super) struct Node {
     pub(crate) links: Minimums,
 }
 
-impl SearchGraph {
+impl<I: Interner> SearchGraph<I> {
     pub(crate) fn new() -> Self {
         SearchGraph {
             indices: HashMap::new(),
@@ -43,7 +44,7 @@ impl SearchGraph {
         }
     }
 
-    pub(crate) fn lookup(&self, goal: &UCanonicalGoal) -> Option<DepthFirstNumber> {
+    pub(crate) fn lookup(&self, goal: &UCanonicalGoal<I>) -> Option<DepthFirstNumber> {
         self.indices.get(goal).cloned()
     }
 
@@ -55,7 +56,7 @@ impl SearchGraph {
     /// - solution is initially `NoSolution`
     pub(crate) fn insert(
         &mut self,
-        goal: &UCanonicalGoal,
+        goal: &UCanonicalGoal<I>,
         stack_depth: StackDepth,
     ) -> DepthFirstNumber {
         let dfn = DepthFirstNumber {
@@ -85,7 +86,7 @@ impl SearchGraph {
     pub(crate) fn move_to_cache(
         &mut self,
         dfn: DepthFirstNumber,
-        cache: &mut HashMap<UCanonicalGoal, Fallible<Solution>>,
+        cache: &mut HashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
     ) {
         debug!("move_to_cache(dfn={:?})", dfn);
         self.indices.retain(|_key, value| *value < dfn);
@@ -98,16 +99,16 @@ impl SearchGraph {
     }
 }
 
-impl Index<DepthFirstNumber> for SearchGraph {
-    type Output = Node;
+impl<I: Interner> Index<DepthFirstNumber> for SearchGraph<I> {
+    type Output = Node<I>;
 
-    fn index(&self, table_index: DepthFirstNumber) -> &Node {
+    fn index(&self, table_index: DepthFirstNumber) -> &Node<I> {
         &self.nodes[table_index.index]
     }
 }
 
-impl IndexMut<DepthFirstNumber> for SearchGraph {
-    fn index_mut(&mut self, table_index: DepthFirstNumber) -> &mut Node {
+impl<I: Interner> IndexMut<DepthFirstNumber> for SearchGraph<I> {
+    fn index_mut(&mut self, table_index: DepthFirstNumber) -> &mut Node<I> {
         &mut self.nodes[table_index.index]
     }
 }
