@@ -126,7 +126,8 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         T: ?Sized + Zip<I> + Debug,
     {
         let UnificationResult { goals, constraints } =
-            self.infer.unify(self.interner(), environment, a, b)?;
+            self.infer
+                .unify(self.solver.program.interner(), environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
@@ -148,18 +149,18 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
                 let subgoal = self
                     .infer
-                    .instantiate_binders_universally(self.interner(), subgoal);
+                    .instantiate_binders_universally(self.solver.program.interner(), subgoal);
                 self.push_goal(environment, subgoal)?;
             }
             GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
                 let subgoal = self
                     .infer
-                    .instantiate_binders_existentially(self.interner(), subgoal);
+                    .instantiate_binders_existentially(self.solver.program.interner(), subgoal);
                 self.push_goal(environment, subgoal)?;
             }
             GoalData::Implies(wc, subgoal) => {
                 let new_environment = &environment.add_clauses(wc.iter().cloned());
-                self.push_goal(new_environment, *subgoal)?;
+                self.push_goal(new_environment, subgoal.clone())?;
             }
             GoalData::All(goals) => {
                 for subgoal in goals.as_slice() {
@@ -167,7 +168,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                 }
             }
             GoalData::Not(subgoal) => {
-                let in_env = InEnvironment::new(environment, *subgoal);
+                let in_env = InEnvironment::new(environment, subgoal.clone());
                 self.obligations.push(Obligation::Refute(in_env));
             }
             GoalData::DomainGoal(_) => {
@@ -189,15 +190,16 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         wc: &InEnvironment<Goal<I>>,
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution<I>> {
+        let interner = self.solver.program.interner();
         let Canonicalized {
             quantified,
             free_vars,
-            max_universe: _,
-        } = self.infer.canonicalize(self.interner(), wc);
+            ..
+        } = self.infer.canonicalize(interner, wc);
         let UCanonicalized {
             quantified,
             universes,
-        } = self.infer.u_canonicalize(self.interner(), &quantified);
+        } = self.infer.u_canonicalize(interner, &quantified);
         Ok(PositiveSolution {
             free_vars,
             universes,
@@ -206,7 +208,10 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     }
 
     fn refute(&mut self, goal: &InEnvironment<Goal<I>>) -> Fallible<NegativeSolution> {
-        let canonicalized = match self.infer.invert_then_canonicalize(self.interner(), goal) {
+        let canonicalized = match self
+            .infer
+            .invert_then_canonicalize(self.solver.program.interner(), goal)
+        {
             Some(v) => v,
             None => {
                 // Treat non-ground negatives as ambiguous. Note that, as inference
@@ -219,7 +224,9 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         let UCanonicalized {
             quantified,
             universes: _,
-        } = self.infer.u_canonicalize(self.interner(), &canonicalized);
+        } = self
+            .infer
+            .u_canonicalize(self.solver.program.interner(), &canonicalized);
         let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
         if let Ok(solution) = self.solver.solve_goal(quantified, &mut minimums) {
             if solution.is_unique() {
@@ -247,8 +254,9 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         subst: Canonical<ConstrainedSubst<I>>,
     ) {
         let subst = universes.map_from_canonical(self.interner(), &subst);
-        let ConstrainedSubst { subst, constraints } =
-            self.infer.instantiate_canonical(self.interner(), &subst);
+        let ConstrainedSubst { subst, constraints } = self
+            .infer
+            .instantiate_canonical(self.solver.program.interner(), &subst);
 
         debug!(
             "fulfill::apply_solution: adding constraints {:?}",
@@ -361,9 +369,10 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             // and the current inference state is the unique way to solve them.
 
             let constraints = self.constraints.into_iter().collect();
-            let constrained = self
-                .infer
-                .canonicalize(self.interner(), &ConstrainedSubst { subst, constraints });
+            let constrained = self.infer.canonicalize(
+                self.solver.program.interner(),
+                &ConstrainedSubst { subst, constraints },
+            );
             return Ok(Solution::Unique(constrained.quantified));
         }
 
@@ -389,7 +398,9 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                     } = self.prove(&goal, minimums).unwrap();
                     if let Some(constrained_subst) = solution.constrained_subst() {
                         self.apply_solution(free_vars, universes, constrained_subst);
-                        let subst = self.infer.canonicalize(self.interner(), &subst);
+                        let subst = self
+                            .infer
+                            .canonicalize(self.solver.program.interner(), &subst);
                         return Ok(Solution::Ambig(Guidance::Suggested(subst.quantified)));
                     }
                 }
@@ -417,7 +428,9 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             // for sure what `T` must be (it could be either `Foo<Bar>` or
             // `Foo<Baz>`, but we *can* say for sure that it must be of the
             // form `Foo<?0>`.
-            let subst = self.infer.canonicalize(self.interner(), &subst);
+            let subst = self
+                .infer
+                .canonicalize(self.solver.program.interner(), &subst);
             Ok(Solution::Ambig(Guidance::Definite(subst.quantified)))
         }
     }

@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use super::*;
 
 mod fulfill;
@@ -11,7 +13,7 @@ use chalk_engine::fallible::{Fallible, NoSolution};
 use chalk_ir::could_match::CouldMatch;
 use clauses::program_clauses_for_goal;
 
-type UCanonicalGoal<I: Interner> = UCanonical<InEnvironment<Goal<I>>>;
+type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
@@ -296,7 +298,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             }
 
             let current_answer_is_ambig = match &current_answer {
-                Ok(s) => !s.is_unique(),
+                Ok(s) => s.is_ambig(),
                 Err(_) => false,
             };
 
