@@ -1,5 +1,5 @@
 use crate::solve::slg::SlgContext;
-use crate::RustIrDatabase;
+use crate::{recursive::RecursiveContext, RustIrDatabase};
 use chalk_engine::forest::{Forest, SubstitutionResult};
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
@@ -184,6 +184,11 @@ pub enum SolverChoice {
         max_size: usize,
         expected_answers: Option<usize>,
     },
+    /// Run the recursive solver.
+    Recursive {
+        overflow_depth: usize,
+        caching_enabled: bool,
+    },
 }
 
 impl SolverChoice {
@@ -195,15 +200,30 @@ impl SolverChoice {
         }
     }
 
+    /// Returns the default recursive solver setup.
+    pub fn recursive() -> Self {
+        SolverChoice::Recursive {
+            overflow_depth: 100,
+            caching_enabled: true,
+        }
+    }
+
     /// Creates a solver state.
     pub fn into_solver<I: Interner>(self) -> Solver<I> {
         match self {
             SolverChoice::SLG {
                 max_size,
                 expected_answers,
-            } => Solver {
-                forest: Forest::new(SlgContext::new(max_size, expected_answers)),
-            },
+            } => Solver(SolverImpl::Slg {
+                forest: Box::new(Forest::new(SlgContext::new(max_size, expected_answers))),
+            }),
+            SolverChoice::Recursive {
+                overflow_depth,
+                caching_enabled,
+            } => Solver(SolverImpl::Recursive(Box::new(RecursiveContext::new(
+                overflow_depth,
+                caching_enabled,
+            )))),
         }
     }
 }
@@ -218,8 +238,11 @@ impl Default for SolverChoice {
 /// out what sets of types implement which traits. Also, between
 /// queries, this struct stores the cached state from previous solver
 /// attempts, which can then be re-used later.
-pub struct Solver<I: Interner> {
-    forest: Forest<SlgContext<I>>,
+pub struct Solver<I: Interner>(SolverImpl<I>);
+
+enum SolverImpl<I: Interner> {
+    Slg { forest: Box<Forest<SlgContext<I>>> },
+    Recursive(Box<RecursiveContext<I>>),
 }
 
 impl<I: Interner> Solver<I> {
@@ -246,8 +269,13 @@ impl<I: Interner> Solver<I> {
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
     ) -> Option<Solution<I>> {
-        let ops = self.forest.context().ops(program);
-        self.forest.solve(&ops, goal, || true)
+        match &mut self.0 {
+            SolverImpl::Slg { forest } => {
+                let ops = forest.context().ops(program);
+                forest.solve(&ops, goal, || true)
+            }
+            SolverImpl::Recursive(ctx) => ctx.solver(program).solve_root_goal(goal).ok(),
+        }
     }
 
     /// Attempts to solve the given goal, which must be in canonical
@@ -278,8 +306,16 @@ impl<I: Interner> Solver<I> {
         goal: &UCanonical<InEnvironment<Goal<I>>>,
         should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<I>> {
-        let ops = self.forest.context().ops(program);
-        self.forest.solve(&ops, goal, should_continue)
+        match &mut self.0 {
+            SolverImpl::Slg { forest } => {
+                let ops = forest.context().ops(program);
+                forest.solve(&ops, goal, should_continue)
+            }
+            SolverImpl::Recursive(ctx) => {
+                // TODO support should_continue in recursive solver
+                ctx.solver(program).solve_root_goal(goal).ok()
+            }
+        }
     }
 
     /// Attempts to solve the given goal, which must be in canonical
@@ -310,8 +346,13 @@ impl<I: Interner> Solver<I> {
         goal: &UCanonical<InEnvironment<Goal<I>>>,
         f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool {
-        let ops = self.forest.context().ops(program);
-        self.forest.solve_multiple(&ops, goal, f)
+        match &mut self.0 {
+            SolverImpl::Slg { forest } => {
+                let ops = forest.context().ops(program);
+                forest.solve_multiple(&ops, goal, f)
+            }
+            SolverImpl::Recursive(_ctx) => unimplemented!(),
+        }
     }
 }
 

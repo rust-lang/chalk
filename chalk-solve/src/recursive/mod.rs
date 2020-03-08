@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use super::*;
 
 mod fulfill;
@@ -15,6 +13,13 @@ use clauses::program_clauses_for_goal;
 
 type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
+pub(crate) struct RecursiveContext<I: Interner> {
+    stack: Stack,
+    search_graph: SearchGraph<I>,
+
+    caching_enabled: bool,
+}
+
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
@@ -22,10 +27,7 @@ type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 /// context.
 pub(crate) struct Solver<'me, I: Interner> {
     program: &'me dyn RustIrDatabase<I>,
-    stack: Stack,
-    search_graph: SearchGraph<I>,
-
-    caching_enabled: bool,
+    context: &'me mut RecursiveContext<I>,
 }
 
 /// The `minimums` struct is used while solving to track whether we encountered
@@ -55,20 +57,27 @@ impl<T> MergeWith<T> for Fallible<T> {
     }
 }
 
-impl<'me, I: Interner> Solver<'me, I> {
-    pub(crate) fn new(
-        program: &'me dyn RustIrDatabase<I>,
-        overflow_depth: usize,
-        caching_enabled: bool,
-    ) -> Self {
-        Solver {
-            program,
+impl<I: Interner> RecursiveContext<I> {
+    pub(crate) fn new(overflow_depth: usize, caching_enabled: bool) -> Self {
+        RecursiveContext {
             stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),
             caching_enabled,
         }
     }
 
+    pub(crate) fn solver<'me>(
+        &'me mut self,
+        program: &'me dyn RustIrDatabase<I>,
+    ) -> Solver<'me, I> {
+        Solver {
+            program,
+            context: self,
+        }
+    }
+}
+
+impl<'me, I: Interner> Solver<'me, I> {
     /// Solves a canonical goal. The substitution returned in the
     /// solution will be for the fully decomposed goal. For example, given the
     /// program
@@ -89,7 +98,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         canonical_goal: &UCanonicalGoal<I>,
     ) -> Fallible<Solution<I>> {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
-        assert!(self.stack.is_empty());
+        assert!(self.context.stack.is_empty());
         let minimums = &mut Minimums::new();
         self.solve_goal(canonical_goal.clone(), minimums)
     }
@@ -112,15 +121,15 @@ impl<'me, I: Interner> Solver<'me, I> {
         // }
 
         // Next, check if the goal is in the search tree already.
-        if let Some(dfn) = self.search_graph.lookup(&goal) {
+        if let Some(dfn) = self.context.search_graph.lookup(&goal) {
             // Check if this table is still on the stack.
-            if let Some(depth) = self.search_graph[dfn].stack_depth {
+            if let Some(depth) = self.context.search_graph[dfn].stack_depth {
                 // Is this a coinductive goal? If so, that is success,
                 // so we can return normally. Note that this return is
                 // not tabled.
                 //
                 // XXX how does caching with coinduction work?
-                if self.stack.coinductive_cycle_from(depth) {
+                if self.context.stack.coinductive_cycle_from(depth) {
                     let value = ConstrainedSubst {
                         subst: goal.trivial_substitution(self.program.interner()),
                         constraints: vec![],
@@ -132,13 +141,13 @@ impl<'me, I: Interner> Solver<'me, I> {
                     }));
                 }
 
-                self.stack[depth].flag_cycle();
+                self.context.stack[depth].flag_cycle();
             }
 
-            minimums.update_from(self.search_graph[dfn].links);
+            minimums.update_from(self.context.search_graph[dfn].links);
 
             // Return the solution from the table.
-            let previous_solution = self.search_graph[dfn].solution.clone();
+            let previous_solution = self.context.search_graph[dfn].solution.clone();
             debug!(
                 "solve_goal: cycle detected, previous solution {:?}",
                 previous_solution
@@ -147,23 +156,23 @@ impl<'me, I: Interner> Solver<'me, I> {
         } else {
             // Otherwise, push the goal onto the stack and create a table.
             // The initial result for this table is error.
-            let depth = self.stack.push(self.program, &goal);
-            let dfn = self.search_graph.insert(&goal, depth);
+            let depth = self.context.stack.push(self.program, &goal);
+            let dfn = self.context.search_graph.insert(&goal, depth);
             let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
-            self.search_graph[dfn].links = subgoal_minimums;
-            self.search_graph[dfn].stack_depth = None;
-            self.stack.pop(depth);
+            self.context.search_graph[dfn].links = subgoal_minimums;
+            self.context.search_graph[dfn].stack_depth = None;
+            self.context.stack.pop(depth);
             minimums.update_from(subgoal_minimums);
 
             // Read final result from table.
-            let result = self.search_graph[dfn].solution.clone();
+            let result = self.context.search_graph[dfn].solution.clone();
 
             // If processing this subgoal did not involve anything
             // outside of its subtree, then we can promote it to the
             // cache now. This is a sort of hack to alleviate the
             // worst of the repeated work that we do during tabling.
             if subgoal_minimums.positive >= dfn {
-                if self.caching_enabled {
+                if self.context.caching_enabled {
                     // TODO
                     // self.search_graph.move_to_cache(dfn, &mut self.cache);
                     debug!("solve_reduced_goal: SCC head encountered, moving to cache");
@@ -171,7 +180,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     debug!(
                         "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
                     );
-                    self.search_graph.rollback_to(dfn);
+                    self.context.search_graph.rollback_to(dfn);
                 }
             }
 
@@ -283,16 +292,16 @@ impl<'me, I: Interner> Solver<'me, I> {
                 current_answer, minimums
             );
 
-            if !self.stack[depth].read_and_reset_cycle_flag() {
+            if !self.context.stack[depth].read_and_reset_cycle_flag() {
                 // None of our subgoals depended on us directly.
                 // We can return.
-                self.search_graph[dfn].solution = current_answer;
+                self.context.search_graph[dfn].solution = current_answer;
                 return *minimums;
             }
 
             // Some of our subgoals depended on us. We need to re-run
             // with the current answer.
-            if self.search_graph[dfn].solution == current_answer {
+            if self.context.search_graph[dfn].solution == current_answer {
                 // Reached a fixed point.
                 return *minimums;
             }
@@ -302,7 +311,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 Err(_) => false,
             };
 
-            self.search_graph[dfn].solution = current_answer;
+            self.context.search_graph[dfn].solution = current_answer;
 
             // Subtle: if our current answer is ambiguous, we can just
             // stop, and in fact we *must* -- otherwise, wesometimes
@@ -313,7 +322,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             }
 
             // Otherwise: rollback the search tree and try again.
-            self.search_graph.rollback_to(dfn + 1);
+            self.context.search_graph.rollback_to(dfn + 1);
         }
     }
 
