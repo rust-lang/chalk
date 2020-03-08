@@ -206,7 +206,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     }
 
     fn refute(&mut self, goal: &InEnvironment<Goal<I>>) -> Fallible<NegativeSolution> {
-        let canonicalized = match self.infer.invert_then_canonicalize(goal) {
+        let canonicalized = match self.infer.invert_then_canonicalize(self.interner(), goal) {
             Some(v) => v,
             None => {
                 // Treat non-ground negatives as ambiguous. Note that, as inference

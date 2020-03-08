@@ -95,6 +95,23 @@ impl<I: Interner> InferenceTable<I> {
             .unwrap();
         Some(inverted)
     }
+
+    /// As `negated_instantiated`, but canonicalizes before
+    /// returning. Just a convenience function.
+    pub(crate) fn invert_then_canonicalize<T>(
+        &mut self,
+        interner: &I,
+        value: &T,
+    ) -> Option<Canonical<T::Result>>
+    where
+        T: Fold<I, Result = T> + HasInterner<Interner = I>,
+    {
+        let snapshot = self.snapshot();
+        let result = self.invert(interner, value);
+        let result = result.map(|r| self.canonicalize(interner, &r).quantified);
+        self.rollback_to(snapshot);
+        result
+    }
 }
 
 struct Inverter<'q, I: Interner> {
