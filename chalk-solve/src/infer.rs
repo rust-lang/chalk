@@ -199,6 +199,32 @@ impl<I: Interner> InferenceTable<I> {
             InferenceValue::Bound(_) => panic!("var_universe invoked on bound variable"),
         }
     }
+
+    /// Check whether the given substitution is the identity substitution in this
+    /// inference context.
+    pub(crate) fn is_trivial_substitution(&mut self, subst: &Substitution<I>) -> bool {
+        for value in subst.as_parameters() {
+            match value.data() {
+                ParameterKind::Ty(ty) => {
+                    if let Some(var) = ty.inference_var() {
+                        if self.var_is_bound(var) {
+                            return false;
+                        }
+                    }
+                }
+
+                ParameterKind::Lifetime(lifetime) => {
+                    if let Some(var) = lifetime.inference_var() {
+                        if self.var_is_bound(var) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        true
+    }
 }
 
 pub(crate) trait ParameterEnaVariableExt<I: Interner> {

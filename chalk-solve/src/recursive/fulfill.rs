@@ -372,7 +372,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         // need to determine how to package up what we learned about type
         // inference as an ambiguous solution.
 
-        if subst.is_trivial_within(&mut self.infer) {
+        if self.infer.is_trivial_substitution(&subst) {
             // In this case, we didn't learn *anything* definitively. So now, we
             // go one last time through the positive obligations, this time
             // applying even *tentative* inference suggestions, so that we can
