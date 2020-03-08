@@ -12,7 +12,6 @@ use infer::{
 use interner::HasInterner;
 use std::collections::HashSet;
 use std::fmt::Debug;
-use std::sync::Arc;
 use zip::Zip;
 
 enum Outcome {
@@ -68,8 +67,8 @@ enum NegativeSolution {
 /// of type inference in general. But when solving trait constraints, *fresh*
 /// `Fulfill` instances will be created to solve canonicalized, free-standing
 /// goals, and transport what was learned back to the outer context.
-pub(crate) struct Fulfill<'s, I: Interner> {
-    solver: &'s mut Solver<'s, I>,
+pub(crate) struct Fulfill<'s, 'db, I: Interner> {
+    solver: &'s mut Solver<'db, I>,
     infer: InferenceTable<I>,
 
     /// The remaining goals to prove or refute
@@ -85,8 +84,8 @@ pub(crate) struct Fulfill<'s, I: Interner> {
     cannot_prove: bool,
 }
 
-impl<'s, I: Interner> Fulfill<'s, I> {
-    pub(crate) fn new(solver: &'s mut Solver<'s, I>) -> Self {
+impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
+    pub(crate) fn new(solver: &'s mut Solver<'db, I>) -> Self {
         Fulfill {
             solver,
             infer: InferenceTable::new(),
@@ -131,12 +130,7 @@ impl<'s, I: Interner> Fulfill<'s, I> {
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    pub(crate) fn unify<T>(
-        &mut self,
-        environment: &Arc<Environment<I>>,
-        a: &T,
-        b: &T,
-    ) -> Fallible<()>
+    pub(crate) fn unify<T>(&mut self, environment: &Environment<I>, a: &T, b: &T) -> Fallible<()>
     where
         T: ?Sized + Zip<I> + Debug,
     {
@@ -155,7 +149,7 @@ impl<'s, I: Interner> Fulfill<'s, I> {
     /// ultimately create any number of obligations.
     pub(crate) fn push_goal(
         &mut self,
-        environment: &Arc<Environment<I>>,
+        environment: &Environment<I>,
         goal: Goal<I>,
     ) -> Fallible<()> {
         debug!("push_goal({:?}, {:?})", goal, environment);

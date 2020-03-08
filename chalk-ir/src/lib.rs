@@ -1466,6 +1466,25 @@ impl<T> UCanonical<T> {
         );
         subst.is_identity_subst(interner)
     }
+
+    pub fn trivial_substitution<I: Interner>(&self, interner: &I) -> Substitution<I> {
+        let binders = &self.canonical.binders;
+        Substitution::from(
+            binders
+                .iter()
+                .enumerate()
+                .map(|(index, pk)| match pk {
+                    ParameterKind::Ty(_) => {
+                        ParameterKind::Ty(TyData::BoundVar(index).intern(interner)).intern()
+                    }
+                    ParameterKind::Lifetime(_) => {
+                        ParameterKind::Lifetime(LifetimeData::BoundVar(index).intern(interner))
+                            .intern()
+                    }
+                })
+                .collect::<Vec<_>>(),
+        )
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]

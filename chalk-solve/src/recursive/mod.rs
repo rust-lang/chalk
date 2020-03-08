@@ -9,6 +9,7 @@ use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 use chalk_engine::fallible::{Fallible, NoSolution};
 use chalk_ir::could_match::CouldMatch;
+use clauses::program_clauses_for_goal;
 
 type UCanonicalGoal<I: Interner> = UCanonical<InEnvironment<Goal<I>>>;
 
@@ -119,7 +120,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 // XXX how does caching with coinduction work?
                 if self.stack.coinductive_cycle_from(depth) {
                     let value = ConstrainedSubst {
-                        subst: goal.trivial_substitution(),
+                        subst: goal.trivial_substitution(self.program.interner()),
                         constraints: vec![],
                     };
                     debug!("applying coinductive semantics");
@@ -144,7 +145,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         } else {
             // Otherwise, push the goal onto the stack and create a table.
             // The initial result for this table is error.
-            let depth = self.stack.push(&goal);
+            let depth = self.stack.push(self.program, &goal);
             let dfn = self.search_graph.insert(&goal, depth);
             let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
             self.search_graph[dfn].links = subgoal_minimums;
@@ -245,13 +246,9 @@ impl<'me, I: Interner> Solver<'me, I> {
                     let prog_solution = {
                         debug_heading!("prog_clauses");
 
-                        let prog_clauses: Vec<_> = self
-                            .program
-                            .program_clauses
-                            .iter()
-                            .filter(|&clause| clause.could_match(goal))
-                            .cloned()
-                            .collect();
+                        // TODO I think this includes clauses from env
+                        let prog_clauses =
+                            program_clauses_for_goal(self.program, environment, &goal);
                         self.solve_from_clauses(&canonical_goal, prog_clauses, minimums)
                     };
                     debug!("prog_solution={:?}", prog_solution);

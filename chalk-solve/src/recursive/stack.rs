@@ -1,4 +1,5 @@
 use super::UCanonicalGoal;
+use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
 use chalk_ir::interner::Interner;
 use std::mem;
 use std::ops::Index;
@@ -41,7 +42,11 @@ impl Stack {
         self.entries.is_empty()
     }
 
-    pub(crate) fn push<I: Interner>(&mut self, goal: &UCanonicalGoal<I>) -> StackDepth {
+    pub(crate) fn push<I: Interner>(
+        &mut self,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonicalGoal<I>,
+    ) -> StackDepth {
         let depth = StackDepth {
             depth: self.entries.len(),
         };
@@ -53,7 +58,7 @@ impl Stack {
             panic!("overflow depth reached")
         }
 
-        let coinductive_goal = goal.is_coinductive(&self.program);
+        let coinductive_goal = goal.is_coinductive(program);
         self.entries.push(StackEntry {
             coinductive_goal,
             cycle: false,
