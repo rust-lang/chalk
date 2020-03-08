@@ -15,6 +15,7 @@ mod coinductive_goal;
 pub mod ext;
 pub mod goal_builder;
 mod infer;
+pub mod recursive;
 mod solve;
 pub mod split;
 pub mod wf;
