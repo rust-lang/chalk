@@ -8,6 +8,7 @@ use self::fulfill::Fulfill;
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 use chalk_engine::fallible::{Fallible, NoSolution};
+use chalk_ir::could_match::CouldMatch;
 
 type UCanonicalGoal<I: Interner> = UCanonical<InEnvironment<Goal<I>>>;
 
@@ -16,8 +17,8 @@ type UCanonicalGoal<I: Interner> = UCanonical<InEnvironment<Goal<I>>>;
 /// so that each question is answered with effectively a "clean slate"**. This
 /// allows for better caching, and simplifies management of the inference
 /// context.
-pub(crate) struct Solver<I: Interner> {
-    // program: &dyn RustIrDatabase,
+pub(crate) struct Solver<'me, I: Interner> {
+    program: &'me dyn RustIrDatabase<I>,
     stack: Stack,
     search_graph: SearchGraph<I>,
 
@@ -51,14 +52,14 @@ impl<T> MergeWith<T> for Fallible<T> {
     }
 }
 
-impl<I: Interner> Solver<I> {
+impl<'me, I: Interner> Solver<'me, I> {
     pub(crate) fn new(
-        // program: &Arc<ProgramEnvironment>,
+        program: &'me dyn RustIrDatabase<I>,
         overflow_depth: usize,
         caching_enabled: bool,
     ) -> Self {
         Solver {
-            // program: program.clone(),
+            program,
             stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),
             caching_enabled,
@@ -101,10 +102,11 @@ impl<I: Interner> Solver<I> {
         info_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
-        if let Some(value) = self.cache.get(&goal) {
-            debug!("solve_reduced_goal: cache hit, value={:?}", value);
-            return value.clone();
-        }
+        // TODO
+        // if let Some(value) = self.cache.get(&goal) {
+        //     debug!("solve_reduced_goal: cache hit, value={:?}", value);
+        //     return value.clone();
+        // }
 
         // Next, check if the goal is in the search tree already.
         if let Some(dfn) = self.search_graph.lookup(&goal) {
@@ -159,8 +161,9 @@ impl<I: Interner> Solver<I> {
             // worst of the repeated work that we do during tabling.
             if subgoal_minimums.positive >= dfn {
                 if self.caching_enabled {
+                    // TODO
+                    // self.search_graph.move_to_cache(dfn, &mut self.cache);
                     debug!("solve_reduced_goal: SCC head encountered, moving to cache");
-                    self.search_graph.move_to_cache(dfn, &mut self.cache);
                 } else {
                     debug!(
                         "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
@@ -215,7 +218,7 @@ impl<I: Interner> Solver<I> {
                             binders,
                             value: InEnvironment {
                                 environment,
-                                goal: domain_goal,
+                                goal: domain_goal.clone(),
                             },
                         },
                     };
@@ -234,8 +237,7 @@ impl<I: Interner> Solver<I> {
                             .clauses
                             .iter()
                             .filter(|&clause| clause.could_match(goal))
-                            .cloned()
-                            .map(DomainGoal::into_program_clause);
+                            .cloned();
                         self.solve_from_clauses(&canonical_goal, env_clauses, minimums)
                     };
                     debug!("env_solution={:?}", env_solution);
@@ -264,7 +266,7 @@ impl<I: Interner> Solver<I> {
                     env_solution.merge_with(prog_solution, |env, prog| env.favor_over(prog))
                 }
 
-                goal => {
+                _ => {
                     let canonical_goal = UCanonical {
                         universes,
                         canonical: Canonical {
@@ -297,7 +299,7 @@ impl<I: Interner> Solver<I> {
             }
 
             let current_answer_is_ambig = match &current_answer {
-                Ok(s) => s.is_ambig(),
+                Ok(s) => !s.is_unique(),
                 Err(_) => false,
             };
 
@@ -346,6 +348,25 @@ impl<I: Interner> Solver<I> {
 
             match program_clause {
                 ProgramClause::Implies(implication) => {
+                    let res = self.solve_via_implication(
+                        canonical_goal,
+                        Binders {
+                            binders: vec![],
+                            value: implication,
+                        },
+                        minimums,
+                    );
+                    if let Ok(solution) = res {
+                        debug!("ok: solution={:?}", solution);
+                        cur_solution = Some(match cur_solution {
+                            None => solution,
+                            Some(cur) => solution.combine(cur),
+                        });
+                    } else {
+                        debug!("error");
+                    }
+                }
+                ProgramClause::ForAll(implication) => {
                     let res = self.solve_via_implication(canonical_goal, implication, minimums);
                     if let Ok(solution) = res {
                         debug!("ok: solution={:?}", solution);
@@ -357,7 +378,6 @@ impl<I: Interner> Solver<I> {
                         debug!("error");
                     }
                 }
-                ProgramClause::ForAll(_) => todo!(),
             }
         }
         cur_solution.ok_or(NoSolution)
@@ -387,8 +407,8 @@ impl<I: Interner> Solver<I> {
         fulfill.unify(&goal.environment, &goal.goal, &consequence)?;
 
         // if so, toss in all of its premises
-        for condition in conditions {
-            fulfill.push_goal(&goal.environment, condition)?;
+        for condition in conditions.as_slice() {
+            fulfill.push_goal(&goal.environment, condition.clone())?;
         }
 
         // and then try to solve
