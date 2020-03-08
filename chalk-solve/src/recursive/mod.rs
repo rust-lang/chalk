@@ -321,9 +321,8 @@ impl<'me, I: Interner> Solver<'me, I> {
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>> {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
-        let mut fulfill = Fulfill::new(self);
-        let (subst, InEnvironment { environment, goal }) = fulfill.initial_subst(canonical_goal);
-        fulfill.push_goal(&environment, goal)?;
+        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
+        fulfill.push_goal(&goal.environment, goal.goal)?;
         fulfill.solve(subst, minimums)
     }
 
@@ -394,8 +393,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             canonical_goal,
             clause
         );
-        let mut fulfill = Fulfill::new(self);
-        let (subst, goal) = fulfill.initial_subst(canonical_goal);
+        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
         let ProgramClauseImplication {
             consequence,
             conditions,

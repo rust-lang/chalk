@@ -85,32 +85,23 @@ pub(crate) struct Fulfill<'s, 'db, I: Interner> {
 }
 
 impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
-    pub(crate) fn new(solver: &'s mut Solver<'db, I>) -> Self {
-        Fulfill {
+    pub(crate) fn new<T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone>(
+        solver: &'s mut Solver<'db, I>,
+        ucanonical_goal: &UCanonical<InEnvironment<T>>,
+    ) -> (Self, Substitution<I>, InEnvironment<T::Result>) {
+        let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
+            solver.program.interner(),
+            ucanonical_goal.universes,
+            &ucanonical_goal.canonical,
+        );
+        let fulfill = Fulfill {
             solver,
-            infer: InferenceTable::new(),
+            infer,
             obligations: vec![],
             constraints: HashSet::new(),
             cannot_prove: false,
-        }
-    }
-
-    /// Given the canonical, initial goal, returns a substitution
-    /// that, when applied to this goal, will convert all of its bound
-    /// variables into fresh inference variables. The substitution can
-    /// then later be used as the answer to be returned to the user.
-    ///
-    /// See also `InferenceTable::fresh_subst`.
-    pub(crate) fn initial_subst<T: Fold<I, I, Result = T> + HasInterner>(
-        &mut self,
-        ucanonical_goal: &UCanonical<InEnvironment<T>>,
-    ) -> (Substitution<I>, InEnvironment<T::Result>) {
-        let canonical_goal = self.infer.instantiate_universes(ucanonical_goal);
-        let subst = self
-            .infer
-            .fresh_subst(self.solver.program.interner(), &canonical_goal.binders);
-        let value = canonical_goal.substitute(&subst);
-        (subst, value)
+        };
+        (fulfill, subst, canonical_goal)
     }
 
     /// Wraps `InferenceTable::instantiate_in`
