@@ -230,7 +230,8 @@ impl SolverChoice {
 
 impl Default for SolverChoice {
     fn default() -> Self {
-        SolverChoice::slg(10, None)
+        SolverChoice::recursive()
+        // SolverChoice::slg(10, None)
     }
 }
 
