@@ -30,11 +30,14 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
             impl #impl_generics Fold < #arg, #arg > for #type_name #ty_generics #where_clause_ref {
                 type Result = Self;
 
-                fn fold_with(
+                fn fold_with<'i>(
                     &self,
-                    folder: &mut dyn Folder < #arg, #arg >,
+                    folder: &mut dyn Folder < 'i, #arg, #arg >,
                     binders: usize,
-                ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+                ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+                where
+                    #arg: 'i,
+                {
                     #body
                 }
             }
@@ -94,11 +97,15 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
             {
                 type Result = #type_name < _U >;
 
-                fn fold_with(
+                fn fold_with<'i>(
                     &self,
-                    folder: &mut dyn Folder < _I, _TI >,
+                    folder: &mut dyn Folder < 'i, _I, _TI >,
                     binders: usize,
-                ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+                ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+                where
+                    _I: 'i,
+                    _TI: 'i,
+                {
                     #body
                 }
             }
@@ -129,11 +136,15 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
             {
                 type Result = #type_name < _TI >;
 
-                fn fold_with(
+                fn fold_with<'i>(
                     &self,
-                    folder: &mut dyn Folder < #i, _TI >,
+                    folder: &mut dyn Folder < 'i, #i, _TI >,
                     binders: usize,
-                ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+                ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+                where
+                    #i: 'i,
+                    _TI: 'i,
+                {
                     #body
                 }
             }

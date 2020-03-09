@@ -239,8 +239,11 @@ struct UCollector<'q, 'i, I> {
     interner: &'i I,
 }
 
-impl<I: Interner> Folder<I> for UCollector<'_, '_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for UCollector<'_, 'i, I>
+where
+    I: 'i,
+{
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -266,11 +269,11 @@ impl<I: Interner> Folder<I> for UCollector<'_, '_, I> {
         true
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }
@@ -280,8 +283,11 @@ struct UMapToCanonical<'q, I> {
     universes: &'q UniverseMap,
 }
 
-impl<I: Interner> Folder<I> for UMapToCanonical<'_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for UMapToCanonical<'i, I>
+where
+    I: 'i,
+{
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -315,11 +321,11 @@ impl<I: Interner> Folder<I> for UMapToCanonical<'_, I> {
         .to_lifetime(self.interner()))
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }
@@ -329,8 +335,11 @@ struct UMapFromCanonical<'q, I> {
     universes: &'q UniverseMap,
 }
 
-impl<I: Interner> Folder<I> for UMapFromCanonical<'_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for UMapFromCanonical<'i, I>
+where
+    I: 'i,
+{
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -364,11 +373,11 @@ impl<I: Interner> Folder<I> for UMapFromCanonical<'_, I> {
         true
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }

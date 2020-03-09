@@ -96,8 +96,11 @@ impl<'q, I: Interner> Canonicalizer<'q, I> {
     }
 }
 
-impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for Canonicalizer<'i, I>
+where
+    I: 'i,
+{
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -169,11 +172,11 @@ impl<I: Interner> Folder<I> for Canonicalizer<'_, I> {
         }
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }

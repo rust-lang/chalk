@@ -14,10 +14,13 @@ impl<I: Interner> InferenceTable<I> {
         interner: &I,
         binders: &[ParameterKind<UniverseIndex>],
     ) -> Substitution<I> {
-        Substitution::from(interner, binders.iter().map(|kind| {
-            let param_infer_var = kind.map(|ui| self.new_variable(ui));
-            param_infer_var.to_parameter(interner)
-        }))
+        Substitution::from(
+            interner,
+            binders.iter().map(|kind| {
+                let param_infer_var = kind.map(|ui| self.new_variable(ui));
+                param_infer_var.to_parameter(interner)
+            }),
+        )
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.

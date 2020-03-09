@@ -36,8 +36,11 @@ struct DeepNormalizer<'table, 'i, I: Interner> {
     interner: &'i I,
 }
 
-impl<I: Interner> Folder<I> for DeepNormalizer<'_, '_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for DeepNormalizer<'_, 'i, I>
+where
+    I: 'i,
+{
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -65,11 +68,11 @@ impl<I: Interner> Folder<I> for DeepNormalizer<'_, '_, I> {
         true
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }

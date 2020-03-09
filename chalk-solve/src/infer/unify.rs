@@ -385,8 +385,11 @@ impl<'u, 't, I: Interner> OccursCheck<'u, 't, I> {
     }
 }
 
-impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for OccursCheck<'_, 'i, I>
+where
+    I: 'i,
+{
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -511,11 +514,11 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
         true
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.unifier.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }
