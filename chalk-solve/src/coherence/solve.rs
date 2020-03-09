@@ -83,6 +83,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     fn disjoint(&self, lhs: &ImplDatum<I>, rhs: &ImplDatum<I>) -> bool {
         debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
 
+        let interner = self.db.interner();
         let lhs_len = lhs.binders.len();
 
         // Join the two impls' binders together
@@ -93,7 +94,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         let lhs_params = params(lhs).iter().cloned();
         let rhs_params = params(rhs)
             .iter()
-            .map(|param| param.shifted_in(self.db.interner(), lhs_len));
+            .map(|param| param.shifted_in(interner, lhs_len));
 
         // Create an equality goal for every input type the trait, attempting
         // to unify the inputs to both impls with one another
@@ -108,21 +109,21 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .value
             .where_clauses
             .iter()
-            .map(|wc| wc.shifted_in(self.db.interner(), lhs_len));
+            .map(|wc| wc.shifted_in(interner, lhs_len));
 
         // Create a goal for each clause in both where clauses
         let wc_goals = lhs_where_clauses
             .chain(rhs_where_clauses)
-            .map(|wc| wc.cast(self.db.interner()));
+            .map(|wc| wc.cast(interner));
 
         // Join all the goals we've created together with And, then quantify them
         // over the joined binders. This is our query.
-        let goal = Box::new(Goal::all(self.db.interner(), params_goals.chain(wc_goals)))
+        let goal = Box::new(Goal::all(interner, params_goals.chain(wc_goals)))
             .quantify(QuantifierKind::Exists, binders)
-            .compatible(self.db.interner())
+            .compatible(interner)
             .negate();
 
-        let canonical_goal = &goal.into_closed_goal(self.db.interner());
+        let canonical_goal = &goal.into_closed_goal(interner);
         let solution = self
             .solver_choice
             .into_solver()
@@ -163,6 +164,8 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             more_special
         );
 
+        let interner = self.db.interner();
+
         // Negative impls cannot specialize.
         if !less_special.is_positive() || !more_special.is_positive() {
             return false;
@@ -174,7 +177,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         let more_special_params = params(more_special).iter().cloned();
         let less_special_params = params(less_special)
             .iter()
-            .map(|p| p.shifted_in(self.db.interner(), more_len));
+            .map(|p| p.shifted_in(interner, more_len));
         let params_goals = more_special_params
             .zip(less_special_params)
             .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern());
@@ -186,23 +189,22 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .where_clauses
             .iter()
             .cloned()
-            .casted(self.db.interner())
+            .casted(interner)
             .collect();
-        let less_special_wc = less_special.binders.value.where_clauses.iter().map(|wc| {
-            wc.shifted_in(self.db.interner(), more_len)
-                .cast(self.db.interner())
-        });
+        let less_special_wc = less_special
+            .binders
+            .value
+            .where_clauses
+            .iter()
+            .map(|wc| wc.shifted_in(interner, more_len).cast(interner));
 
         // Join all of the goals together.
-        let goal = Box::new(Goal::all(
-            self.db.interner(),
-            params_goals.chain(less_special_wc),
-        ))
-        .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
-        .implied_by(more_special_wc)
-        .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
+        let goal = Box::new(Goal::all(interner, params_goals.chain(less_special_wc)))
+            .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
+            .implied_by(more_special_wc)
+            .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
 
-        let canonical_goal = &goal.into_closed_goal(self.db.interner());
+        let canonical_goal = &goal.into_closed_goal(interner);
         let result = match self
             .solver_choice
             .into_solver()

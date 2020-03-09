@@ -297,13 +297,9 @@ impl<C: Context> Forest<C> {
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
-                if let Ok(ex_clause) = Self::simplify_hh_goal(
-                    context.interner(),
-                    &mut infer,
-                    subst,
-                    environment,
-                    hh_goal,
-                ) {
+                if let Ok(ex_clause) =
+                    Self::simplify_hh_goal(context, &mut infer, subst, environment, hh_goal)
+                {
                     info!(
                         "pushing initial strand with ex-clause: {:#?}",
                         infer.debug_ex_clause(context.interner(), &ex_clause),

@@ -71,9 +71,10 @@ pub fn push_auto_trait_impls<I: Interner>(
     }
 
     let binders = struct_datum.binders.map_ref(|b| &b.fields);
+    let interner = builder.interner();
     builder.push_binders(&binders, |builder, fields| {
         let self_ty: Ty<_> = ApplicationTy {
-            name: struct_id.cast(builder.interner()),
+            name: struct_id.cast(interner),
             substitution: builder.substitution_in_scope(),
         }
         .intern(builder.interner());
@@ -81,7 +82,7 @@ pub fn push_auto_trait_impls<I: Interner>(
         // trait_ref = `MyStruct<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
             trait_id: auto_trait_id,
-            substitution: Substitution::from1(builder.interner(), self_ty),
+            substitution: Substitution::from1(interner, self_ty),
         };
 
         // forall<P0..Pn> { // generic parameters from struct
@@ -94,7 +95,7 @@ pub fn push_auto_trait_impls<I: Interner>(
             auto_trait_ref,
             fields.iter().map(|field_ty| TraitRef {
                 trait_id: auto_trait_id,
-                substitution: Substitution::from1(builder.interner(), field_ty.clone()),
+                substitution: Substitution::from1(interner, field_ty.clone()),
             }),
         );
     });

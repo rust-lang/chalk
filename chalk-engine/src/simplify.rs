@@ -1,4 +1,4 @@
-use crate::context::{Context, InferenceTable};
+use crate::context::{Context, ContextOps, InferenceTable};
 use crate::fallible::Fallible;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
@@ -9,7 +9,7 @@ impl<C: Context> Forest<C> {
     /// and negative HH goals. This operation may fail if the HH goal
     /// includes unifications that cannot be completed.
     pub(super) fn simplify_hh_goal(
-        interner: &C::Interner,
+        context: &impl ContextOps<C>,
         infer: &mut dyn InferenceTable<C>,
         subst: C::Substitution,
         initial_environment: C::Environment,
@@ -31,11 +31,13 @@ impl<C: Context> Forest<C> {
         while let Some((environment, hh_goal)) = pending_goals.pop() {
             match hh_goal {
                 HhGoal::ForAll(subgoal) => {
-                    let subgoal = infer.instantiate_binders_universally(interner, &subgoal);
+                    let subgoal =
+                        infer.instantiate_binders_universally(context.interner(), &subgoal);
                     pending_goals.push((environment, C::into_hh_goal(subgoal)));
                 }
                 HhGoal::Exists(subgoal) => {
-                    let subgoal = infer.instantiate_binders_existentially(interner, &subgoal);
+                    let subgoal =
+                        infer.instantiate_binders_existentially(context.interner(), &subgoal);
                     pending_goals.push((environment, C::into_hh_goal(subgoal)))
                 }
                 HhGoal::Implies(wc, subgoal) => {
@@ -56,7 +58,7 @@ impl<C: Context> Forest<C> {
                         )));
                 }
                 HhGoal::Unify(variance, a, b) => infer.unify_parameters_into_ex_clause(
-                    interner,
+                    context.interner(),
                     &environment,
                     variance,
                     &a,
@@ -68,7 +70,7 @@ impl<C: Context> Forest<C> {
                         .subgoals
                         .push(Literal::Positive(C::goal_in_environment(
                             &environment,
-                            C::into_goal(domain_goal),
+                            context.into_goal(domain_goal),
                         )));
                 }
                 HhGoal::CannotProve => {
