@@ -111,7 +111,7 @@ pub enum TypeName<I: Interner> {
 /// `forall<T> { Goal(T) }` (syntactical representation)
 /// `forall { Goal(?0) }` (used a DeBruijn index)
 /// `Goal(!U1)` (the quantifier was moved to the environment and replaced with a universe index)
-/// See https://rust-lang.github.io/rustc-dev-guide/borrow_check/region_inference.html#placeholders-and-universes for more.
+/// See https://rustc-dev-guide.rust-lang.org/borrow_check/region_inference.html#placeholders-and-universes for more.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UniverseIndex {
     pub counter: usize,
