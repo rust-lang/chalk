@@ -193,7 +193,11 @@ where
         // on the struct definition hold.
         let goal = GoalData::Implies(hypotheses, goal)
             .intern(interner)
-            .quantify(interner, QuantifierKind::ForAll, struct_datum.binders.binders.clone());
+            .quantify(
+                interner,
+                QuantifierKind::ForAll,
+                struct_datum.binders.binders.clone(),
+            );
 
         let is_legal = match self
             .solver_choice
@@ -287,7 +291,11 @@ where
 
         let goal = GoalData::Implies(hypotheses, goal)
             .intern(interner)
-            .quantify(interner, QuantifierKind::ForAll, impl_datum.binders.binders.clone());
+            .quantify(
+                interner,
+                QuantifierKind::ForAll,
+                impl_datum.binders.binders.clone(),
+            );
 
         debug!("WF trait goal: {:?}", goal);
 

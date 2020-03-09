@@ -200,9 +200,17 @@ impl<I: Interner> CoherenceSolver<'_, I> {
 
         // Join all of the goals together.
         let goal = Box::new(Goal::all(interner, params_goals.chain(less_special_wc)))
-            .quantify(interner, QuantifierKind::Exists, less_special.binders.binders.clone())
+            .quantify(
+                interner,
+                QuantifierKind::Exists,
+                less_special.binders.binders.clone(),
+            )
             .implied_by(interner, more_special_wc)
-            .quantify(interner, QuantifierKind::ForAll, more_special.binders.binders.clone());
+            .quantify(
+                interner,
+                QuantifierKind::ForAll,
+                more_special.binders.binders.clone(),
+            );
 
         let canonical_goal = &goal.into_closed_goal(interner);
         let result = match self

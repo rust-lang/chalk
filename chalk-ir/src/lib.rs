@@ -1080,7 +1080,12 @@ impl<I: Interner> Goal<I> {
         I::goal_data(&self.interned)
     }
 
-    pub fn quantify(self, interner: &I, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal<I> {
+    pub fn quantify(
+        self,
+        interner: &I,
+        kind: QuantifierKind,
+        binders: Vec<ParameterKind<()>>,
+    ) -> Goal<I> {
         GoalData::Quantified(
             kind,
             Binders {
