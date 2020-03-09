@@ -84,10 +84,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 
     fn unify_ty_ty<'a>(&mut self, a: &'a Ty<I>, b: &'a Ty<I>) -> Fallible<()> {
+        let interner = self.interner;
         //         ^^                 ^^         ^^ FIXME rustc bug
-        if let Some(n_a) = self.table.normalize_shallow(self.interner, a) {
+        if let Some(n_a) = self.table.normalize_shallow(interner, a) {
             return self.unify_ty_ty(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_shallow(self.interner, b) {
+        } else if let Some(n_b) = self.table.normalize_shallow(interner, b) {
             return self.unify_ty_ty(a, &n_b);
         }
 
@@ -98,7 +99,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             b
         );
 
-        match (a.data(), b.data()) {
+        match (a.data(interner), b.data(interner)) {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
             (&TyData::InferenceVar(var1), &TyData::InferenceVar(var2)) => {
@@ -203,20 +204,21 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // for<'b...> exists<'a...> T == U
 
         debug!("unify_binders({:?}, {:?})", a, b);
+        let interner = self.interner;
 
         {
-            let a_universal = self.table.instantiate_binders_universally(self.interner, a);
+            let a_universal = self.table.instantiate_binders_universally(interner, a);
             let b_existential = self
                 .table
-                .instantiate_binders_existentially(self.interner, b);
+                .instantiate_binders_existentially(interner, b);
             Zip::zip_with(self, &a_universal, &b_existential)?;
         }
 
         {
-            let b_universal = self.table.instantiate_binders_universally(self.interner, b);
+            let b_universal = self.table.instantiate_binders_universally(interner, b);
             let a_existential = self
                 .table
-                .instantiate_binders_existentially(self.interner, a);
+                .instantiate_binders_existentially(interner, a);
             Zip::zip_with(self, &a_existential, &b_universal)
         }
     }
@@ -228,13 +230,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// AliasEq(<T as Trait>::Item = U)
     /// ```
     fn unify_alias_ty(&mut self, alias: &AliasTy<I>, ty: &Ty<I>) -> Fallible<()> {
+        let interner = self.interner;
         Ok(self.goals.push(InEnvironment::new(
             self.environment,
             AliasEq {
                 alias: alias.clone(),
                 ty: ty.clone(),
             }
-            .cast(self.interner),
+            .cast(interner),
         )))
     }
 
@@ -247,6 +250,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn unify_var_ty(&mut self, var: InferenceVar, ty: &Ty<I>) -> Fallible<()> {
         debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
 
+        let interner = self.interner;
         let var = EnaVariable::from(var);
 
         // Determine the universe index associated with this
@@ -260,7 +264,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
         self.table
             .unify
-            .unify_var_value(var, InferenceValue::from_ty(self.interner, ty1.clone()))
+            .unify_var_value(var, InferenceValue::from_ty(interner, ty1.clone()))
             .unwrap();
         debug!("unify_var_ty: var {:?} set to {:?}", var, ty1);
 
@@ -268,6 +272,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 
     fn unify_lifetime_lifetime(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
+        let interner = self.interner;
+
         if let Some(n_a) = self.table.normalize_lifetime(a) {
             return self.unify_lifetime_lifetime(&n_a, b);
         } else if let Some(n_b) = self.table.normalize_lifetime(b) {
@@ -297,10 +303,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
                         "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
                         var, var_ui, idx.ui
                     );
-                    let v = LifetimeData::Placeholder(idx).intern(self.interner);
+                    let v = LifetimeData::Placeholder(idx).intern(interner);
                     self.table
                         .unify
-                        .unify_var_value(var, InferenceValue::from_lifetime(self.interner, v))
+                        .unify_var_value(var, InferenceValue::from_lifetime(interner, v))
                         .unwrap();
                     Ok(())
                 } else {
@@ -398,10 +404,11 @@ where
         universe: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Ty<I>> {
+        let interner = self.interner();
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
-            Ok(universe.to_ty(self.interner())) // no need to shift, not relative to depth
+            Ok(universe.to_ty(interner)) // no need to shift, not relative to depth
         }
     }
 
@@ -410,6 +417,7 @@ where
         ui: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Lifetime<I>> {
+        let interner = self.interner();
         if self.universe_index < ui.ui {
             // Scenario is like:
             //
@@ -426,25 +434,26 @@ where
 
             let tick_x = self.unifier.table.new_variable(self.universe_index);
             self.unifier.push_lifetime_eq_constraint(
-                tick_x.to_lifetime(self.interner()),
-                ui.to_lifetime(self.interner()),
+                tick_x.to_lifetime(interner),
+                ui.to_lifetime(interner),
             );
-            Ok(tick_x.to_lifetime(self.interner()))
+            Ok(tick_x.to_lifetime(interner))
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name
             // this lifetime, no problem.
-            Ok(ui.to_lifetime(self.interner())) // no need to shift, not relative to depth
+            Ok(ui.to_lifetime(interner)) // no need to shift, not relative to depth
         }
     }
 
     fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<I>> {
+        let interner = self.interner();
         let var = EnaVariable::from(var);
         match self.unifier.table.unify.probe_value(var) {
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_ty) => {
                 let normalized_ty = normalized_ty.ty().unwrap();
                 let normalized_ty = normalized_ty.fold_with(self, 0)?;
-                assert!(!normalized_ty.needs_shift(self.interner()));
+                assert!(!normalized_ty.needs_shift(interner));
                 Ok(normalized_ty)
             }
 
@@ -470,7 +479,7 @@ where
                         .unwrap();
                 }
 
-                Ok(var.to_ty(self.interner()))
+                Ok(var.to_ty(interner))
             }
         }
     }
@@ -482,6 +491,7 @@ where
     ) -> Fallible<Lifetime<I>> {
         // a free existentially bound region; find the
         // inference variable it corresponds to
+        let interner = self.interner();
         let var = EnaVariable::from(var);
         match self.unifier.table.unify.probe_value(var) {
             InferenceValue::Unbound(ui) => {
@@ -498,7 +508,7 @@ where
                         .unify_var_value(var, InferenceValue::Unbound(self.universe_index))
                         .unwrap();
                 }
-                Ok(var.to_lifetime(self.interner()))
+                Ok(var.to_lifetime(interner))
             }
 
             InferenceValue::Bound(l) => {

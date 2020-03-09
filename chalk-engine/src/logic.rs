@@ -1409,7 +1409,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
         // must be backed by an impl *eventually*).
         let is_trivial_answer = {
             !answer.ambiguous
-                && C::is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst)
+                && self.context.is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst)
                 && C::empty_constraints(&answer.subst)
         };
 

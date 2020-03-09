@@ -130,7 +130,7 @@ impl<I: Interner> InferenceTable<I> {
     /// the return value will also be shifted accordingly so that it
     /// can appear under that same number of binders.
     pub(crate) fn normalize_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
-        let var = EnaVariable::from(leaf.inference_var()?);
+        let var = EnaVariable::from(leaf.inference_var(interner)?);
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => {

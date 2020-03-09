@@ -7,13 +7,15 @@ pub trait CouldMatch<T: ?Sized> {
     fn could_match(&self, other: &T) -> bool;
 }
 
+#[allow(unreachable_code, unused_variables)]
 impl<T, I> CouldMatch<T> for T
 where
     T: Zip<I> + ?Sized + HasInterner<Interner = I>,
     I: Interner,
 {
     fn could_match(&self, other: &T) -> bool {
-        return Zip::zip_with(&mut MatchZipper, self, other).is_ok();
+        let interner = unimplemented!();
+        return Zip::zip_with(&mut MatchZipper{ interner }, self, other).is_ok();
 
         struct MatchZipper<'i, I> {
             interner: &'i I,

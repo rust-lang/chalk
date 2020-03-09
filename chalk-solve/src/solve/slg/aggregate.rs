@@ -21,6 +21,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
         mut answers: impl context::AnswerStream<SlgContext<I>>,
         should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<I>> {
+        let interner = self.program.interner();
         let CompleteAnswer { subst, ambiguous } = match answers.next_answer(|| should_continue()) {
             AnswerResult::NoMoreSolutions => {
                 // No answers at all
@@ -40,7 +41,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
         let next_answer = answers.peek_answer(|| should_continue());
         if next_answer.is_quantum_exceeded() {
             return Some(Solution::Ambig(Guidance::Suggested(
-                subst.map(self.program.interner(), |cs| cs.subst),
+                subst.map(interner, |cs| cs.subst),
             )));
         }
         if next_answer.is_no_more_solutions() && !ambiguous {
@@ -59,13 +60,13 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
         // cases into an `OR` region constraint at some point, but I
         // leave that for future work. This is basically
         // rust-lang/rust#21974.
-        let mut subst = subst.map(self.program.interner(), |cs| cs.subst);
+        let mut subst = subst.map(interner, |cs| cs.subst);
 
         // Extract answers and merge them into `subst`. Stop once we have
         // a trivial subst (or run out of answers).
         let mut num_answers = 1;
         let guidance = loop {
-            if subst.value.is_empty() || is_trivial(&subst) {
+            if subst.value.is_empty() || is_trivial(interner, &subst) {
                 break Guidance::Unknown;
             }
 
@@ -93,7 +94,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
                 }
             };
             subst = merge_into_guidance(
-                self.program.interner(),
+                interner,
                 SlgContext::canonical(root_goal),
                 subst,
                 &new_subst,
@@ -174,7 +175,7 @@ fn merge_into_guidance<I: Interner>(
     infer.canonicalize(interner, &aggr_subst).quantified
 }
 
-fn is_trivial<I: Interner>(subst: &Canonical<Substitution<I>>) -> bool {
+fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> bool {
     // A subst is trivial if..
     subst
         .value
@@ -184,7 +185,7 @@ fn is_trivial<I: Interner>(subst: &Canonical<Substitution<I>>) -> bool {
             // All types are mapped to distinct variables.  Since this
             // has been canonicalized, those will also be the first N
             // variables.
-            ParameterKind::Ty(t) => match t.bound() {
+            ParameterKind::Ty(t) => match t.bound(interner) {
                 None => false,
                 Some(depth) => depth == index,
             },
@@ -209,7 +210,8 @@ struct AntiUnifier<'infer, 'intern, I: Interner> {
 
 impl<I: Interner> AntiUnifier<'_, '_, I> {
     fn aggregate_tys(&mut self, ty0: &Ty<I>, ty1: &Ty<I>) -> Ty<I> {
-        match (ty0.data(), ty1.data()) {
+        let interner = self.interner;
+        match (ty0.data(interner), ty1.data(interner)) {
             // If we see bound things on either side, just drop in a
             // fresh variable. This means we will sometimes
             // overgeneralize.  So for example if we have two

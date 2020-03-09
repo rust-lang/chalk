@@ -114,13 +114,6 @@ impl<I: Interner> context::Context for SlgContext<I> {
         &u_canon.canonical
     }
 
-    fn is_trivial_substitution(
-        u_canon: &UCanonical<InEnvironment<Goal<I>>>,
-        canonical_subst: &Canonical<AnswerSubst<I>>,
-    ) -> bool {
-        u_canon.is_trivial_substitution(canonical_subst)
-    }
-
     fn has_delayed_subgoals(canonical_subst: &Canonical<AnswerSubst<I>>) -> bool {
         !canonical_subst.value.delayed_subgoals.is_empty()
     }
@@ -208,13 +201,14 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         infer: &mut TruncatingInferenceTable<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
         // Look for floundering goals:
+        let interner = self.interner();
         match goal {
             // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
             DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
                 let trait_datum = self.program.trait_datum(trait_ref.trait_id);
                 if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
                     let self_ty = trait_ref.self_type_parameter();
-                    if let Some(v) = self_ty.inference_var() {
+                    if let Some(v) = self_ty.inference_var(interner) {
                         if !infer.infer.var_is_bound(v) {
                             return Err(Floundered);
                         }
@@ -226,7 +220,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
             | DomainGoal::IsUpstream(ty)
             | DomainGoal::DownstreamType(ty)
             | DomainGoal::IsFullyVisible(ty)
-            | DomainGoal::IsLocal(ty) => match ty.data() {
+            | DomainGoal::IsLocal(ty) => match ty.data(interner) {
                 TyData::InferenceVar(_) => return Err(Floundered),
                 _ => {}
             },
@@ -334,6 +328,16 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
     fn into_goal(&self, domain_goal: DomainGoal<I>) -> Goal<I> {
         domain_goal.cast(self.program.interner())
     }
+
+    fn is_trivial_substitution(
+        &self,
+        u_canon: &UCanonical<InEnvironment<Goal<I>>>,
+        canonical_subst: &Canonical<AnswerSubst<I>>,
+    ) -> bool {
+        let interner = self.interner();
+        u_canon.is_trivial_substitution(interner, canonical_subst)
+    }
+
 }
 
 impl<I: Interner> TruncatingInferenceTable<I> {
@@ -524,8 +528,10 @@ impl MayInvalidate {
     }
 
     // Returns true if the two types could be unequal.
+#[allow(unreachable_code, unused_variables)]
     fn aggregate_tys<I: Interner>(&mut self, new: &Ty<I>, current: &Ty<I>) -> bool {
-        match (new.data(), current.data()) {
+        let interner = unimplemented!();
+        match (new.data(interner), current.data(interner)) {
             (_, TyData::BoundVar(_)) => {
                 // If the aggregate solution already has an inference
                 // variable here, then no matter what type we produce,

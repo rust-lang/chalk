@@ -77,7 +77,7 @@ pub fn push_auto_trait_impls<I: Interner>(
             name: struct_id.cast(interner),
             substitution: builder.substitution_in_scope(),
         }
-        .intern(builder.interner());
+        .intern(interner);
 
         // trait_ref = `MyStruct<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
@@ -138,6 +138,7 @@ fn program_clauses_that_could_match<I: Interner>(
     goal: &DomainGoal<I>,
     clauses: &mut Vec<ProgramClause<I>>,
 ) {
+    let interner = db.interner();
     let builder = &mut ClauseBuilder::new(db, clauses);
 
     match goal {
@@ -158,7 +159,7 @@ fn program_clauses_that_could_match<I: Interner>(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                match trait_ref.self_type_parameter().data() {
+                match trait_ref.self_type_parameter().data(interner) {
                     TyData::Apply(apply) => {
                         if let Some(struct_id) = db.as_struct_id(&apply.name) {
                             push_auto_trait_impls(builder, trait_id, struct_id);
@@ -213,7 +214,7 @@ fn program_clauses_that_could_match<I: Interner>(
             // that goal, because they let us prove other things but
             // not `Clone`.
             let self_ty = trait_ref.self_type_parameter();
-            if let TyData::Dyn(dyn_ty) = self_ty.data() {
+            if let TyData::Dyn(dyn_ty) = self_ty.data(interner) {
                 // In this arm, `self_ty` is the `dyn Fn(&u8)`,
                 // and `bounded_ty` is the `exists<T> { .. }`
                 // clauses shown above.
@@ -226,7 +227,7 @@ fn program_clauses_that_could_match<I: Interner>(
                     // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
                     // ```
                     let qwc = exists_qwc
-                        .substitute(db.interner(), &[self_ty.clone().cast(builder.interner())]);
+                        .substitute(interner, &[self_ty.clone().cast(interner)]);
 
                     builder.push_binders(&qwc, |builder, wc| {
                         builder.push_fact(wc);
@@ -338,7 +339,8 @@ fn match_ty<I: Interner>(
     environment: &Environment<I>,
     ty: &Ty<I>,
 ) {
-    match ty.data() {
+    let interner = builder.interner();
+    match ty.data(interner) {
         TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
         TyData::Placeholder(_) => {}
         TyData::Alias(alias_ty) => builder

@@ -193,12 +193,13 @@ impl RustIrDatabase<ChalkIr> for Program {
         auto_trait_id: TraitId<ChalkIr>,
         struct_id: StructId<ChalkIr>,
     ) -> bool {
+        let interner = self.interner();
         // Look for an impl like `impl Send for Foo` where `Foo` is
         // the struct.  See `push_auto_trait_impls` for more.
         self.impl_data.values().any(|impl_datum| {
             let impl_trait_ref = &impl_datum.binders.value.trait_ref;
             impl_trait_ref.trait_id == auto_trait_id
-                && match impl_trait_ref.self_type_parameter().data() {
+                && match impl_trait_ref.self_type_parameter().data(interner) {
                     TyData::Apply(apply) => match apply.name {
                         TypeName::Struct(id) => id == struct_id,
                         _ => false,
