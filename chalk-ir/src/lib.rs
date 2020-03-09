@@ -1031,7 +1031,7 @@ impl<I: Interner> Goals<I> {
     pub fn from(interner: &I, goals: impl IntoIterator<Item = impl CastTo<Goal<I>>>) -> Self {
         use crate::cast::Caster;
         Goals {
-            goals: I::intern_goals(goals.into_iter().casted(interner)),
+            goals: I::intern_goals(interner, goals.into_iter().casted(interner)),
         }
     }
 
