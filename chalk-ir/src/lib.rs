@@ -1384,8 +1384,8 @@ where
     }
 }
 
-impl<I: Interner> Folder<I> for &SubstFolder<'_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -1401,11 +1401,11 @@ impl<I: Interner> Folder<I> for &SubstFolder<'_, I> {
         Ok(l.shifted_in(self.interner(), binders))
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }

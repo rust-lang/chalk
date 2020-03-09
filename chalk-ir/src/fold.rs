@@ -62,7 +62,7 @@ pub use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
+pub trait Folder<'i, I: Interner, TI: TargetInterner<I> = I> {
     /// Creates a `dyn` value from this folder. Unfortunately, this
     /// must be added manually to each impl of Folder; it permits the
     /// default implements below to create a `&mut dyn Folder` from
@@ -70,13 +70,16 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
     /// method). Effectively, this limits impls of `Folder` to types
     /// for which we are able to create a dyn value (i.e., not `[T]`
     /// types).
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, TI>;
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, TI>;
 
     /// Top-level callback: invoked for each `Ty<I>` that is
     /// encountered when folding. By default, invokes
     /// `super_fold_with`, which will in turn invoke the more
     /// specialized folding methods below, like `fold_free_var_ty`.
-    fn fold_ty(&mut self, ty: &Ty<I>, binders: usize) -> Fallible<Ty<TI>> {
+    fn fold_ty(&mut self, ty: &Ty<I>, binders: usize) -> Fallible<Ty<TI>>
+    where
+        TI: 'i
+    {
         ty.super_fold_with(self.as_dyn(), binders)
     }
 
@@ -118,7 +121,10 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
     ///
     /// This should return a type suitable for a context with
     /// `binders` in scope.
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TI>> {
+    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TI>>
+    where
+        TI: 'i
+    {
         if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
@@ -127,7 +133,10 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
     }
 
     /// As `fold_free_var_ty`, but for lifetimes.
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TI>> {
+    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TI>>
+    where
+        TI: 'i
+    {
         if self.forbid_free_vars() {
             panic!("unexpected free variable with depth `{:?}`", depth)
         } else {
@@ -152,7 +161,10 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Ty<TI>> {
+    ) -> Fallible<Ty<TI>>
+    where
+        TI: 'i
+    {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
@@ -165,7 +177,10 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         &mut self,
         universe: PlaceholderIndex,
         _binders: usize,
-    ) -> Fallible<Lifetime<TI>> {
+    ) -> Fallible<Lifetime<TI>>
+    where
+        TI: 'i
+    {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder lifetime `{:?}`", universe)
         } else {
@@ -187,7 +202,10 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TI>> {
+    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TI>>
+    where
+        TI: 'i
+    {
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
@@ -200,7 +218,10 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         &mut self,
         var: InferenceVar,
         _binders: usize,
-    ) -> Fallible<Lifetime<TI>> {
+    ) -> Fallible<Lifetime<TI>>
+    where
+        TI: 'i
+    {
         if self.forbid_inference_vars() {
             panic!("unexpected inference lifetime `'{:?}`", var)
         } else {
@@ -208,9 +229,9 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         }
     }
 
-    fn interner(&self) -> &I;
+    fn interner(&self) -> &'i I;
 
-    fn target_interner(&self) -> &TI;
+    fn target_interner(&self) -> &'i TI;
 }
 
 /// Applies the given `Folder` to a value, producing a folded result
@@ -241,7 +262,7 @@ pub trait Fold<I: Interner, TI: TargetInterner<I> = I>: Debug {
     /// folder. Typically `binders` starts as 0, but is adjusted when
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result>;
+    fn fold_with(&self, folder: &mut dyn Folder<'_, I, TI>, binders: usize) -> Fallible<Self::Result>;
 }
 
 /// For types where "fold" invokes a callback on the `Folder`, the
@@ -261,18 +282,18 @@ pub trait SuperFold<I: Interner, TI: TargetInterner<I> = I>: Fold<I, TI> {
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Ty<I> {
     type Result = Ty<TI>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with(&self, folder: &mut dyn Folder<'_, I, TI>, binders: usize) -> Fallible<Self::Result> {
         folder.fold_ty(self, binders)
     }
 }
 
 /// "Super fold" for a type invokes te more detailed callbacks on the type
-impl<I, TI> SuperFold<I, TI> for Ty<I>
+impl<'i, I, TI> SuperFold<I, TI> for Ty<I>
 where
     I: Interner,
-    TI: TargetInterner<I>,
+    TI: TargetInterner<I> + 'i,
 {
-    fn super_fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Ty<TI>> {
+    fn super_fold_with(&self, folder: &mut dyn Folder<'_, I, TI>, binders: usize) -> Fallible<Ty<TI>> {
         match self.data() {
             TyData::BoundVar(depth) => {
                 if *depth >= binders {

@@ -78,7 +78,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Parameter<I> {
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Substitution<I> {
     type Result = Substitution<TI>;
     fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
-        let folded: Vec<_> = self.iter().map(|p| p.fold_with(folder, binders)).collect();
+        let folded = self.iter().map(|p| p.fold_with(folder, binders));
         Ok(Substitution::from_fallible(
             folder.target_interner(),
             folded,
@@ -89,7 +89,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Substitution<I> {
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goals<I> {
     type Result = Goals<TI>;
     fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
-        let folded: Vec<_> = self.iter().map(|p| p.fold_with(folder, binders)).collect();
+        let folded = self.iter().map(|p| p.fold_with(folder, binders));
         Ok(Goals::from_fallible(folder.target_interner(), folded)?)
     }
 }
