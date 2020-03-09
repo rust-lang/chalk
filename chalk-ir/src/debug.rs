@@ -87,9 +87,11 @@ impl<I: Interner> Debug for Fn<I> {
     }
 }
 
+#[allow(unreachable_code, unused_variables)]
 impl<I: Interner> Debug for Lifetime<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "{:?}", self.data())
+        let interner = unimplemented!();
+        write!(fmt, "{:?}", self.data(interner))
     }
 }
 

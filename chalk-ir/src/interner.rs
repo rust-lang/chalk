@@ -157,7 +157,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     fn intern_lifetime(&self, lifetime: LifetimeData<Self>) -> Self::InternedLifetime;
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
-    fn lifetime_data(lifetime: &Self::InternedLifetime) -> &LifetimeData<Self>;
+    fn lifetime_data<'a>(&self, lifetime: &'a Self::InternedLifetime) -> &'a LifetimeData<Self>;
 
     /// Create an "interned" parameter from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -298,7 +298,7 @@ mod default {
             lifetime
         }
 
-        fn lifetime_data(lifetime: &LifetimeData<ChalkIr>) -> &LifetimeData<ChalkIr> {
+        fn lifetime_data<'a>(&self, lifetime: &'a LifetimeData<ChalkIr>) -> &'a LifetimeData<ChalkIr> {
             lifetime
         }
 

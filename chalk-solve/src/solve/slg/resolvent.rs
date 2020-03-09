@@ -355,7 +355,8 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
 impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
     fn zip_tys(&mut self, answer: &Ty<I>, pending: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
-        if let Some(pending) = self.table.normalize_shallow(self.interner, pending) {
+
+        if let Some(pending) = self.table.normalize_shallow(interner, pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
@@ -365,7 +366,7 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
         // the value from our "pending subgoal".
         if let TyData::BoundVar(answer_depth) = answer.data(interner) {
             if self.unify_free_answer_var(
-                self.interner,
+                interner,
                 *answer_depth,
                 ParameterKind::Ty(pending),
             )? {
@@ -417,13 +418,14 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
     }
 
     fn zip_lifetimes(&mut self, answer: &Lifetime<I>, pending: &Lifetime<I>) -> Fallible<()> {
-        if let Some(pending) = self.table.normalize_lifetime(pending) {
+        let interner = self.interner;
+        if let Some(pending) = self.table.normalize_lifetime(interner, pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
-        if let LifetimeData::BoundVar(answer_depth) = answer.data() {
+        if let LifetimeData::BoundVar(answer_depth) = answer.data(interner) {
             if self.unify_free_answer_var(
-                self.interner,
+                interner,
                 *answer_depth,
                 ParameterKind::Lifetime(pending),
             )? {
@@ -431,7 +433,7 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
             }
         }
 
-        match (answer.data(), pending.data()) {
+        match (answer.data(interner), pending.data(interner)) {
             (LifetimeData::BoundVar(answer_depth), LifetimeData::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }

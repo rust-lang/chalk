@@ -257,6 +257,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
         apply1: &ApplicationTy<I>,
         apply2: &ApplicationTy<I>,
     ) -> Ty<I> {
+        let interner = self.interner;
         let ApplicationTy {
             name: name1,
             substitution: substitution1,
@@ -268,7 +269,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
 
         self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
             .map(|(&name, substitution)| {
-                TyData::Apply(ApplicationTy { name, substitution }).intern(self.interner)
+                TyData::Apply(ApplicationTy { name, substitution }).intern(interner)
             })
             .unwrap_or_else(|| self.new_variable())
     }
@@ -278,14 +279,16 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
         index1: &PlaceholderIndex,
         index2: &PlaceholderIndex,
     ) -> Ty<I> {
+        let interner = self.interner;
         if index1 != index2 {
             self.new_variable()
         } else {
-            TyData::Placeholder(index1.clone()).intern(self.interner)
+            TyData::Placeholder(index1.clone()).intern(interner)
         }
     }
 
     fn aggregate_alias_tys(&mut self, alias1: &AliasTy<I>, alias2: &AliasTy<I>) -> Ty<I> {
+        let interner = self.interner;
         let AliasTy {
             associated_ty_id: name1,
             substitution: substitution1,
@@ -301,7 +304,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                     associated_ty_id,
                     substitution,
                 })
-                .intern(self.interner)
+                .intern(interner)
             })
             .unwrap_or_else(|| self.new_variable())
     }
@@ -359,7 +362,8 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     }
 
     fn aggregate_lifetimes(&mut self, l1: &Lifetime<I>, l2: &Lifetime<I>) -> Lifetime<I> {
-        match (l1.data(), l2.data()) {
+        let interner = self.interner;
+        match (l1.data(interner), l2.data(interner)) {
             (LifetimeData::InferenceVar(_), _) | (_, LifetimeData::InferenceVar(_)) => {
                 self.new_lifetime_variable()
             }
@@ -381,13 +385,15 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     }
 
     fn new_variable(&mut self) -> Ty<I> {
-        self.infer.new_variable(self.universe).to_ty(self.interner)
+        let interner = self.interner;
+        self.infer.new_variable(self.universe).to_ty(interner)
     }
 
     fn new_lifetime_variable(&mut self) -> Lifetime<I> {
+        let interner = self.interner;
         self.infer
             .new_variable(self.universe)
-            .to_lifetime(self.interner)
+            .to_lifetime(interner)
     }
 }
 
