@@ -179,7 +179,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     fn intern_parameter(&self, data: ParameterData<Self>) -> Self::InternedParameter;
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
-    fn parameter_data(lifetime: &Self::InternedParameter) -> &ParameterData<Self>;
+    fn parameter_data<'a>(&self, lifetime: &'a Self::InternedParameter) -> &'a ParameterData<Self>;
 
     /// Create an "interned" goal from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -330,7 +330,10 @@ mod default {
             parameter
         }
 
-        fn parameter_data(parameter: &ParameterData<ChalkIr>) -> &ParameterData<ChalkIr> {
+        fn parameter_data<'a>(
+            &self,
+            parameter: &'a ParameterData<ChalkIr>,
+        ) -> &'a ParameterData<ChalkIr> {
             parameter
         }
 

@@ -732,7 +732,7 @@ impl LowerTraitRef for TraitRef {
         .lower(env)?;
 
         let self_parameter = self.args[0].lower(env)?;
-        Ok(without_self.as_trait_ref(interner, self_parameter.assert_ty_ref().clone()))
+        Ok(without_self.as_trait_ref(interner, self_parameter.assert_ty_ref(interner).clone()))
     }
 }
 
@@ -1389,8 +1389,10 @@ impl<T, L> Kinded for chalk_ir::ParameterKind<T, L> {
     }
 }
 
+#[allow(unreachable_code, unused_variables)]
 impl Kinded for chalk_ir::Parameter<ChalkIr> {
     fn kind(&self) -> Kind {
-        self.data().kind()
+        let interner = unimplemented!();
+        self.data(interner).kind()
     }
 }

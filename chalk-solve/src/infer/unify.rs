@@ -446,7 +446,7 @@ where
         match self.unifier.table.unify.probe_value(var) {
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_ty) => {
-                let normalized_ty = normalized_ty.ty().unwrap();
+                let normalized_ty = normalized_ty.ty(interner).unwrap();
                 let normalized_ty = normalized_ty.fold_with(self, 0)?;
                 assert!(!normalized_ty.needs_shift(interner));
                 Ok(normalized_ty)
@@ -507,7 +507,7 @@ where
             }
 
             InferenceValue::Bound(l) => {
-                let l = l.lifetime().unwrap();
+                let l = l.lifetime(interner).unwrap();
                 let l = l.fold_with(self, binders)?;
                 assert!(!l.needs_shift(interner));
                 Ok(l.clone())

@@ -416,16 +416,19 @@ impl<I: Interner> ApplicationTy<I> {
         Ty::new(interner, self)
     }
 
-    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<I>> + 'a {
-        self.substitution.iter().filter_map(|p| p.ty()).cloned()
+    pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
+        self.substitution
+            .iter()
+            .filter_map(move |p| p.ty(interner))
+            .cloned()
     }
 
-    pub fn first_type_parameter(&self) -> Option<Ty<I>> {
-        self.type_parameters().next()
+    pub fn first_type_parameter(&self, interner: &I) -> Option<Ty<I>> {
+        self.type_parameters(interner).next()
     }
 
-    pub fn len_type_parameters(&self) -> usize {
-        self.type_parameters().count()
+    pub fn len_type_parameters(&self, interner: &I) -> usize {
+        self.type_parameters(interner).count()
     }
 }
 
@@ -511,41 +514,41 @@ impl<I: Interner> Parameter<I> {
         Parameter(interned)
     }
 
-    pub fn data(&self) -> &ParameterData<I> {
-        I::parameter_data(&self.0)
+    pub fn data(&self, interner: &I) -> &ParameterData<I> {
+        I::parameter_data(interner, &self.0)
     }
 
-    pub fn assert_ty_ref(&self) -> &Ty<I> {
-        self.as_ref().ty().unwrap()
+    pub fn assert_ty_ref(&self, interner: &I) -> &Ty<I> {
+        self.as_ref(interner).ty().unwrap()
     }
 
-    pub fn assert_lifetime_ref(&self) -> &Lifetime<I> {
-        self.as_ref().lifetime().unwrap()
+    pub fn assert_lifetime_ref(&self, interner: &I) -> &Lifetime<I> {
+        self.as_ref(interner).lifetime().unwrap()
     }
 
-    pub fn as_ref(&self) -> ParameterKind<&Ty<I>, &Lifetime<I>> {
-        match self.data() {
+    pub fn as_ref(&self, interner: &I) -> ParameterKind<&Ty<I>, &Lifetime<I>> {
+        match self.data(interner) {
             ParameterKind::Ty(t) => ParameterKind::Ty(t),
             ParameterKind::Lifetime(l) => ParameterKind::Lifetime(l),
         }
     }
 
-    pub fn is_ty(&self) -> bool {
-        match self.data() {
+    pub fn is_ty(&self, interner: &I) -> bool {
+        match self.data(interner) {
             ParameterKind::Ty(_) => true,
             ParameterKind::Lifetime(_) => false,
         }
     }
 
-    pub fn ty(&self) -> Option<&Ty<I>> {
-        match self.data() {
+    pub fn ty(&self, interner: &I) -> Option<&Ty<I>> {
+        match self.data(interner) {
             ParameterKind::Ty(t) => Some(t),
             _ => None,
         }
     }
 
-    pub fn lifetime(&self) -> Option<&Lifetime<I>> {
-        match self.data() {
+    pub fn lifetime(&self, interner: &I) -> Option<&Lifetime<I>> {
+        match self.data(interner) {
             ParameterKind::Lifetime(t) => Some(t),
             _ => None,
         }
@@ -580,12 +583,15 @@ pub struct TraitRef<I: Interner> {
 }
 
 impl<I: Interner> TraitRef<I> {
-    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<I>> + 'a {
-        self.substitution.iter().filter_map(|p| p.ty()).cloned()
+    pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
+        self.substitution
+            .iter()
+            .filter_map(move |p| p.ty(interner))
+            .cloned()
     }
 
-    pub fn self_type_parameter(&self) -> Ty<I> {
-        self.type_parameters().next().unwrap()
+    pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
+        self.type_parameters(interner).next().unwrap()
     }
 
     pub fn from_env(self) -> FromEnv<I> {
@@ -1297,7 +1303,7 @@ impl<I: Interner> Substitution<I> {
     pub fn is_identity_subst(&self, interner: &I) -> bool {
         self.iter()
             .zip(0..)
-            .all(|(parameter, index)| match parameter.data() {
+            .all(|(parameter, index)| match parameter.data(interner) {
                 ParameterKind::Ty(ty) => match ty.data(interner) {
                     TyData::BoundVar(depth) => index == *depth,
                     _ => false,
@@ -1392,15 +1398,17 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
     }
 
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
+        let interner = self.interner();
         let ty = self.at(depth);
-        let ty = ty.assert_ty_ref();
-        Ok(ty.shifted_in(self.interner(), binders))
+        let ty = ty.assert_ty_ref(interner);
+        Ok(ty.shifted_in(interner, binders))
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
+        let interner = self.interner();
         let l = self.at(depth);
-        let l = l.assert_lifetime_ref();
-        Ok(l.shifted_in(self.interner(), binders))
+        let l = l.assert_lifetime_ref(interner);
+        Ok(l.shifted_in(interner, binders))
     }
 
     fn interner(&self) -> &'i I {

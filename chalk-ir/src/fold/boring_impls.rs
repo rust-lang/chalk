@@ -122,8 +122,11 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Parameter<I> {
         I: 'i,
         TI: 'i,
     {
-        let data = self.data().fold_with(folder, binders)?;
-        Ok(Parameter::new(folder.target_interner(), data))
+        let interner = folder.interner();
+        let target_interner = folder.target_interner();
+
+        let data = self.data(interner).fold_with(folder, binders)?;
+        Ok(Parameter::new(target_interner, data))
     }
 }
 

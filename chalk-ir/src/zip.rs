@@ -320,8 +320,10 @@ impl<T: Zip<I>, L: Zip<I>, I: Interner> Zip<I> for ParameterKind<T, L> {
     }
 }
 
+#[allow(unreachable_code, unused_variables)]
 impl<I: Interner> Zip<I> for Parameter<I> {
     fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        Zip::zip_with(zipper, a.data(), b.data())
+        let interner = unimplemented!();
+        Zip::zip_with(zipper, a.data(interner), b.data(interner))
     }
 }

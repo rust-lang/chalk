@@ -386,9 +386,11 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
     }
 }
 
+#[allow(unreachable_code, unused_variables)]
 impl<I: Interner> Debug for Parameter<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        match self.data() {
+        let interner = unimplemented!();
+        match self.data(interner) {
             ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
             ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
         }

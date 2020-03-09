@@ -45,10 +45,11 @@ where
     }
 
     fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<I>> {
+        let interner = self.interner;
         let var = EnaVariable::from(var);
-        match self.table.probe_ty_var(var) {
-            Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(self.interner(), binders)), // FIXME shift
-            None => Ok(var.to_ty(self.interner())),
+        match self.table.probe_ty_var(interner, var) {
+            Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(interner, binders)), // FIXME shift
+            None => Ok(var.to_ty(interner)),
         }
     }
 
@@ -57,10 +58,11 @@ where
         var: InferenceVar,
         binders: usize,
     ) -> Fallible<Lifetime<I>> {
+        let interner = self.interner;
         let var = EnaVariable::from(var);
-        match self.table.probe_lifetime_var(var) {
-            Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(self.interner(), binders)),
-            None => Ok(var.to_lifetime(self.interner())), // FIXME shift
+        match self.table.probe_lifetime_var(interner, var) {
+            Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(interner, binders)),
+            None => Ok(var.to_lifetime(interner)), // FIXME shift
         }
     }
 

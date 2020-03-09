@@ -134,7 +134,7 @@ impl<I: Interner> InferenceTable<I> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => {
-                let ty = val.as_ref().ty().unwrap().clone();
+                let ty = val.as_ref(interner).ty().unwrap().clone();
                 assert!(!ty.needs_shift(interner));
                 Some(ty)
             }
@@ -149,7 +149,7 @@ impl<I: Interner> InferenceTable<I> {
         leaf: &Lifetime<I>,
     ) -> Option<Lifetime<I>> {
         let var = EnaVariable::from(leaf.inference_var(interner)?);
-        let v1 = self.probe_lifetime_var(var)?;
+        let v1 = self.probe_lifetime_var(interner, var)?;
         assert!(!v1.needs_shift(interner));
         Some(v1)
     }
@@ -170,10 +170,10 @@ impl<I: Interner> InferenceTable<I> {
     /// This method is only valid for inference variables of kind
     /// type. If this variable is of a different kind, then the
     /// function may panic.
-    fn probe_ty_var(&mut self, var: EnaVariable<I>) -> Option<Ty<I>> {
+    fn probe_ty_var(&mut self, interner: &I, var: EnaVariable<I>) -> Option<Ty<I>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(ref val) => Some(val.as_ref().ty().unwrap().clone()),
+            InferenceValue::Bound(ref val) => Some(val.as_ref(interner).ty().unwrap().clone()),
         }
     }
 
@@ -184,10 +184,12 @@ impl<I: Interner> InferenceTable<I> {
     ///
     /// This method is only valid for inference variables of kind
     /// lifetime. If this variable is of a different kind, then the function may panic.
-    fn probe_lifetime_var(&mut self, var: EnaVariable<I>) -> Option<Lifetime<I>> {
+    fn probe_lifetime_var(&mut self, interner: &I, var: EnaVariable<I>) -> Option<Lifetime<I>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(ref val) => Some(val.as_ref().lifetime().unwrap().clone()),
+            InferenceValue::Bound(ref val) => {
+                Some(val.as_ref(interner).lifetime().unwrap().clone())
+            }
         }
     }
 
