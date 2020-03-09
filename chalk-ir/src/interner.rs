@@ -303,7 +303,10 @@ mod default {
             goal
         }
 
-        fn intern_goals(&self, data: impl IntoIterator<Item = Goal<ChalkIr>>) -> Vec<Goal<ChalkIr>> {
+        fn intern_goals(
+            &self,
+            data: impl IntoIterator<Item = Goal<ChalkIr>>,
+        ) -> Vec<Goal<ChalkIr>> {
             data.into_iter().collect()
         }
 
