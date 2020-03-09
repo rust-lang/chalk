@@ -100,7 +100,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         // to unify the inputs to both impls with one another
         let params_goals = lhs_params
             .zip(rhs_params)
-            .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern());
+            .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern(interner));
 
         // Upshift the rhs variables in where clauses
         let lhs_where_clauses = lhs.binders.value.where_clauses.iter().cloned();
@@ -119,9 +119,9 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         // Join all the goals we've created together with And, then quantify them
         // over the joined binders. This is our query.
         let goal = Box::new(Goal::all(interner, params_goals.chain(wc_goals)))
-            .quantify(QuantifierKind::Exists, binders)
+            .quantify(interner, QuantifierKind::Exists, binders)
             .compatible(interner)
-            .negate();
+            .negate(interner);
 
         let canonical_goal = &goal.into_closed_goal(interner);
         let solution = self
@@ -180,7 +180,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .map(|p| p.shifted_in(interner, more_len));
         let params_goals = more_special_params
             .zip(less_special_params)
-            .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern());
+            .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern(interner));
 
         // Create the where clause goals.
         let more_special_wc = more_special
@@ -200,9 +200,9 @@ impl<I: Interner> CoherenceSolver<'_, I> {
 
         // Join all of the goals together.
         let goal = Box::new(Goal::all(interner, params_goals.chain(less_special_wc)))
-            .quantify(QuantifierKind::Exists, less_special.binders.binders.clone())
-            .implied_by(more_special_wc)
-            .quantify(QuantifierKind::ForAll, more_special.binders.binders.clone());
+            .quantify(interner, QuantifierKind::Exists, less_special.binders.binders.clone())
+            .implied_by(interner, more_special_wc)
+            .quantify(interner, QuantifierKind::ForAll, more_special.binders.binders.clone());
 
         let canonical_goal = &goal.into_closed_goal(interner);
         let result = match self

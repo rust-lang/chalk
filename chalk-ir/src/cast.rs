@@ -108,7 +108,7 @@ where
     T: CastTo<DomainGoal<I>>,
 {
     fn cast_to(self, interner: &I) -> Goal<I> {
-        GoalData::DomainGoal(self.cast(interner)).intern()
+        GoalData::DomainGoal(self.cast(interner)).intern(interner)
     }
 }
 
@@ -131,8 +131,8 @@ impl<I: Interner> CastTo<DomainGoal<I>> for FromEnv<I> {
 }
 
 impl<I: Interner> CastTo<Goal<I>> for EqGoal<I> {
-    fn cast_to(self, _interner: &I) -> Goal<I> {
-        GoalData::EqGoal(self).intern()
+    fn cast_to(self, interner: &I) -> Goal<I> {
+        GoalData::EqGoal(self).intern(interner)
     }
 }
 
@@ -145,7 +145,7 @@ impl<T: CastTo<Goal<I>>, I: Interner> CastTo<Goal<I>> for Binders<T> {
                 QuantifierKind::ForAll,
                 self.map(|bound| bound.cast(interner)),
             )
-            .intern()
+            .intern(interner)
         }
     }
 }
