@@ -181,6 +181,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `SubstitutionData::intern` (which will ultimately call this
     /// method).
     fn intern_substitution<E>(
+        &self,
         data: impl IntoIterator<Item = Result<Parameter<Self>, E>>,
     ) -> Result<Self::InternedSubstitution, E>;
 
@@ -315,6 +316,7 @@ mod default {
         }
 
         fn intern_substitution<E>(
+            &self,
             data: impl IntoIterator<Item = Result<Parameter<ChalkIr>, E>>,
         ) -> Result<Vec<Parameter<ChalkIr>>, E> {
             data.into_iter().collect()

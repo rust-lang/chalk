@@ -1248,7 +1248,7 @@ impl<I: Interner> Substitution<I> {
     ) -> Result<Self, E> {
         use crate::cast::Caster;
         Ok(Substitution {
-            parameters: I::intern_substitution(parameters.into_iter().casted(interner))?,
+            parameters: I::intern_substitution(interner, parameters.into_iter().casted(interner))?,
         })
     }
 
