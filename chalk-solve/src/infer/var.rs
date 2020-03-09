@@ -92,7 +92,11 @@ pub(crate) enum InferenceValue<I: Interner> {
 }
 
 impl<I: Interner> InferenceValue<I> {
-    fn from(interner: &I, lifetime: Lifetime<I>) -> Self {
+    pub fn from_ty(interner: &I, ty: Ty<I>) -> Self {
+        InferenceValue::Bound(ty.cast(interner))
+    }
+
+    pub fn from_lifetime(interner: &I, lifetime: Lifetime<I>) -> Self {
         InferenceValue::Bound(lifetime.cast(interner))
     }
 }

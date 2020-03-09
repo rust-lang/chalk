@@ -260,7 +260,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
         self.table
             .unify
-            .unify_var_value(var, InferenceValue::from(ty1.clone()))
+            .unify_var_value(var, InferenceValue::from_ty(self.interner, ty1.clone()))
             .unwrap();
         debug!("unify_var_ty: var {:?} set to {:?}", var, ty1);
 
@@ -300,7 +300,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     let v = LifetimeData::Placeholder(idx).intern(self.interner);
                     self.table
                         .unify
-                        .unify_var_value(var, InferenceValue::from(v))
+                        .unify_var_value(var, InferenceValue::from_lifetime(self.interner, v))
                         .unwrap();
                     Ok(())
                 } else {

@@ -172,9 +172,6 @@ pub trait Context: Clone + Debug {
     // Used by: simplify
     fn add_clauses(env: &Self::Environment, clauses: Self::ProgramClauses) -> Self::Environment;
 
-    /// Upcast this domain goal into a more general goal.
-    fn into_goal(domain_goal: Self::DomainGoal) -> Self::Goal;
-
     /// Selects the next appropriate subgoal index for evaluation.
     /// Used by: logic
     fn next_subgoal_index(ex_clause: &ExClause<Self>) -> usize;
@@ -265,6 +262,9 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     ) -> C::CanonicalAnswerSubst;
 
     fn interner(&self) -> &C::Interner;
+
+    /// Upcast this domain goal into a more general goal.
+    fn into_goal(&self, domain_goal: C::DomainGoal) -> C::Goal;
 }
 
 /// Methods for combining solutions to yield an aggregate solution.
