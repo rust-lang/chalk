@@ -208,17 +208,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
         {
             let a_universal = self.table.instantiate_binders_universally(interner, a);
-            let b_existential = self
-                .table
-                .instantiate_binders_existentially(interner, b);
+            let b_existential = self.table.instantiate_binders_existentially(interner, b);
             Zip::zip_with(self, &a_universal, &b_existential)?;
         }
 
         {
             let b_universal = self.table.instantiate_binders_universally(interner, b);
-            let a_existential = self
-                .table
-                .instantiate_binders_existentially(interner, a);
+            let a_existential = self.table.instantiate_binders_existentially(interner, a);
             Zip::zip_with(self, &a_existential, &b_universal)
         }
     }

@@ -70,7 +70,9 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
                 break Guidance::Unknown;
             }
 
-            if !answers.any_future_answer(|ref mut new_subst| new_subst.may_invalidate(interner, &subst)) {
+            if !answers
+                .any_future_answer(|ref mut new_subst| new_subst.may_invalidate(interner, &subst))
+            {
                 break Guidance::Definite(subst);
             }
 

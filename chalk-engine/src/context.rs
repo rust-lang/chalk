@@ -266,7 +266,6 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         u_canon: &C::UCanonicalGoalInEnvironment,
         canonical_subst: &C::CanonicalAnswerSubst,
     ) -> bool;
-
 }
 
 /// Methods for combining solutions to yield an aggregate solution.

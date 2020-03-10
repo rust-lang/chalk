@@ -337,7 +337,6 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         let interner = self.interner();
         u_canon.is_trivial_substitution(interner, canonical_subst)
     }
-
 }
 
 impl<I: Interner> TruncatingInferenceTable<I> {
@@ -502,7 +501,7 @@ impl<I: Interner> SubstitutionExt<I> for Substitution<I> {
     fn may_invalidate(&self, interner: &I, subst: &Canonical<Substitution<I>>) -> bool {
         self.iter()
             .zip(subst.value.iter())
-            .any(|(new, current)| MayInvalidate{ interner }.aggregate_parameters( new, current))
+            .any(|(new, current)| MayInvalidate { interner }.aggregate_parameters(new, current))
     }
 }
 
@@ -512,11 +511,7 @@ struct MayInvalidate<'i, I> {
 }
 
 impl<I: Interner> MayInvalidate<'_, I> {
-    fn aggregate_parameters(
-        &mut self,
-        new: &Parameter<I>,
-        current: &Parameter<I>,
-    ) -> bool {
+    fn aggregate_parameters(&mut self, new: &Parameter<I>, current: &Parameter<I>) -> bool {
         match (new.data(), current.data()) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
@@ -667,6 +662,6 @@ impl<I: Interner> MayInvalidate<'_, I> {
         new_substitution
             .iter()
             .zip(current_substitution)
-            .any(|(new, current)| self.aggregate_parameters( new, current))
+            .any(|(new, current)| self.aggregate_parameters(new, current))
     }
 }

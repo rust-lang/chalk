@@ -14,7 +14,7 @@ where
     I: Interner,
 {
     fn could_match(&self, interner: &I, other: &T) -> bool {
-        return Zip::zip_with(&mut MatchZipper{ interner }, self, other).is_ok();
+        return Zip::zip_with(&mut MatchZipper { interner }, self, other).is_ok();
 
         struct MatchZipper<'i, I> {
             interner: &'i I,
@@ -60,7 +60,9 @@ where
 impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClause<I> {
     fn could_match(&self, interner: &I, other: &DomainGoal<I>) -> bool {
         match self {
-            ProgramClause::Implies(implication) => implication.consequence.could_match(interner, other),
+            ProgramClause::Implies(implication) => {
+                implication.consequence.could_match(interner, other)
+            }
 
             ProgramClause::ForAll(clause) => clause.value.consequence.could_match(interner, other),
         }

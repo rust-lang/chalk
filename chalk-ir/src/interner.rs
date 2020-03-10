@@ -7,8 +7,8 @@ use crate::Parameter;
 use crate::ParameterData;
 use crate::StructId;
 use crate::TraitId;
-use crate::TyData;
 use crate::Ty;
+use crate::TyData;
 use chalk_engine::context::Context;
 use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
@@ -140,10 +140,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
-    fn debug_ty(
-        ty: &Ty<Self>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    fn debug_ty(ty: &Ty<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result>;
 
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyData::intern` (which
@@ -285,10 +282,7 @@ mod default {
             tls::with_current_program(|prog| Some(prog?.debug_alias(alias, fmt)))
         }
 
-        fn debug_ty(
-            alias: &Ty<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
+        fn debug_ty(alias: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
             tls::with_current_program(|prog| Some(prog?.debug_ty(alias, fmt)))
         }
 

@@ -227,8 +227,7 @@ fn program_clauses_that_could_match<I: Interner>(
                     // ```
                     // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
                     // ```
-                    let qwc = exists_qwc
-                        .substitute(interner, &[self_ty.clone().cast(interner)]);
+                    let qwc = exists_qwc.substitute(interner, &[self_ty.clone().cast(interner)]);
 
                     builder.push_binders(&qwc, |builder, wc| {
                         builder.push_fact(wc);

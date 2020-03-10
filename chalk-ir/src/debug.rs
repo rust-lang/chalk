@@ -27,7 +27,6 @@ impl<I: Interner> Debug for Ty<I> {
     }
 }
 
-
 impl Display for UniverseIndex {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "U{}", self.counter)

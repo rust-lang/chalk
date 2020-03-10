@@ -1,5 +1,5 @@
 use crate::interner::ChalkIr;
-use crate::{AliasTy, AssocTypeId, Ty, StructId, TraitId};
+use crate::{AliasTy, AssocTypeId, StructId, TraitId, Ty};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
@@ -33,11 +33,7 @@ pub trait DebugContext {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_ty(
-        &self,
-        ty: &Ty<ChalkIr>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Result<(), fmt::Error>;
+    fn debug_ty(&self, ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error>;
 }
 
 pub fn with_current_program<R>(op: impl FnOnce(Option<&Arc<dyn DebugContext>>) -> R) -> R {

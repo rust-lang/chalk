@@ -4,7 +4,7 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    Ty, AliasTy, AssocTypeId, ImplId, Parameter, ProgramClause, StructId, TraitId, TyData, TypeName,
+    AliasTy, AssocTypeId, ImplId, Parameter, ProgramClause, StructId, TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -121,11 +121,7 @@ impl tls::DebugContext for Program {
         )
     }
 
-    fn debug_ty(
-        &self,
-        ty: &Ty<ChalkIr>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Result<(), fmt::Error> {
+    fn debug_ty(&self, ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let interner = self.interner();
         write!(fmt, "{:?}", ty.data(interner))
     }
