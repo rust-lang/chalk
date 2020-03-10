@@ -484,7 +484,6 @@ where
         var: InferenceVar,
         binders: usize,
     ) -> Fallible<Lifetime<I>> {
-        let interner = self.interner();
         // a free existentially bound region; find the
         // inference variable it corresponds to
         let interner = self.interner();

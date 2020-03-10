@@ -27,6 +27,12 @@ impl<I: Interner> Debug for Ty<I> {
     }
 }
 
+impl<I: Interner> Debug for Lifetime<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_lifetime(self, fmt).unwrap_or_else(|| unimplemented!())
+    }
+}
+
 impl Display for UniverseIndex {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "U{}", self.counter)
@@ -84,14 +90,6 @@ impl<I: Interner> Debug for Fn<I> {
             parameters,
         } = self;
         write!(fmt, "for<{}> {:?}", num_binders, parameters)
-    }
-}
-
-#[allow(unreachable_code, unused_variables)]
-impl<I: Interner> Debug for Lifetime<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        let interner = unimplemented!();
-        write!(fmt, "{:?}", self.data(interner))
     }
 }
 

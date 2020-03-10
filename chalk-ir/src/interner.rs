@@ -2,6 +2,7 @@ use crate::AliasTy;
 use crate::AssocTypeId;
 use crate::Goal;
 use crate::GoalData;
+use crate::Lifetime;
 use crate::LifetimeData;
 use crate::Parameter;
 use crate::ParameterData;
@@ -141,6 +142,18 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     fn debug_ty(ty: &Ty<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result>;
+
+    /// Prints the debug representation of an lifetime. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_lifetime(
+        lifetime: &Lifetime<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
 
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyData::intern` (which
@@ -282,8 +295,15 @@ mod default {
             tls::with_current_program(|prog| Some(prog?.debug_alias(alias, fmt)))
         }
 
-        fn debug_ty(alias: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_ty(alias, fmt)))
+        fn debug_ty(ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_ty(ty, fmt)))
+        }
+
+        fn debug_lifetime(
+            lifetime: &Lifetime<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_lifetime(lifetime, fmt)))
         }
 
         fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
@@ -298,7 +318,10 @@ mod default {
             lifetime
         }
 
-        fn lifetime_data<'a>(&self, lifetime: &'a LifetimeData<ChalkIr>) -> &'a LifetimeData<ChalkIr> {
+        fn lifetime_data<'a>(
+            &self,
+            lifetime: &'a LifetimeData<ChalkIr>,
+        ) -> &'a LifetimeData<ChalkIr> {
             lifetime
         }
 

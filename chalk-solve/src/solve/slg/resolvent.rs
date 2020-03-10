@@ -365,11 +365,7 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
         // resulting answer that the subgoal found and unify it with
         // the value from our "pending subgoal".
         if let TyData::BoundVar(answer_depth) = answer.data(interner) {
-            if self.unify_free_answer_var(
-                interner,
-                *answer_depth,
-                ParameterKind::Ty(pending),
-            )? {
+            if self.unify_free_answer_var(interner, *answer_depth, ParameterKind::Ty(pending))? {
                 return Ok(());
             }
         }

@@ -143,7 +143,11 @@ impl<I: Interner> InferenceTable<I> {
 
     /// If `leaf` represents an inference variable `X`, and `X` is bound,
     /// returns `Some(v)` where `v` is the value to which `X` is bound.
-    pub(crate) fn normalize_lifetime(&mut self, interner: &I, leaf: &Lifetime<I>) -> Option<Lifetime<I>> {
+    pub(crate) fn normalize_lifetime(
+        &mut self,
+        interner: &I,
+        leaf: &Lifetime<I>,
+    ) -> Option<Lifetime<I>> {
         let var = EnaVariable::from(leaf.inference_var(interner)?);
         let v1 = self.probe_lifetime_var(var)?;
         assert!(!v1.needs_shift(interner));
