@@ -5,7 +5,7 @@ use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
     AliasTy, AssocTypeId, ImplId, Lifetime, Parameter, ProgramClause, StructId, TraitId, Ty,
-    TyData, TypeName,
+    TyData, TypeName, ParameterKind,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -134,6 +134,18 @@ impl tls::DebugContext for Program {
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
         write!(fmt, "{:?}", lifetime.data(interner))
+    }
+
+    fn debug_parameter(
+        &self,
+        parameter: &Parameter<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        match parameter.data(interner) {
+            ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
+            ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
+        }
     }
 }
 

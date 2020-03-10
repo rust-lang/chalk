@@ -32,6 +32,9 @@ pub trait Zipper<I: Interner> {
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
         T: Zip<I> + Fold<I, I, Result = T>;
+
+    /// Retreives the interner from the underlying zipper object
+    fn interner(&self) -> &I;
 }
 
 impl<'f, Z, I> Zipper<I> for &'f mut Z
@@ -52,6 +55,10 @@ where
         T: Zip<I> + Fold<I, I, Result = T>,
     {
         (**self).zip_binders(a, b)
+    }
+
+    fn interner(&self) -> &I {
+        Z::interner(*self)
     }
 }
 
@@ -323,7 +330,7 @@ impl<T: Zip<I>, L: Zip<I>, I: Interner> Zip<I> for ParameterKind<T, L> {
 #[allow(unreachable_code, unused_variables)]
 impl<I: Interner> Zip<I> for Parameter<I> {
     fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        let interner = unimplemented!();
+        let interner = zipper.interner();
         Zip::zip_with(zipper, a.data(interner), b.data(interner))
     }
 }

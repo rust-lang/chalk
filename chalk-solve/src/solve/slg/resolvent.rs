@@ -464,4 +464,8 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
         self.pending_binders -= pending.binders.len();
         Ok(())
     }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
 }

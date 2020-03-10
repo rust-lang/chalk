@@ -53,6 +53,10 @@ where
             {
                 Zip::zip_with(self, &a.value, &b.value)
             }
+
+            fn interner(&self) -> &I {
+                self.interner
+            }
         }
     }
 }

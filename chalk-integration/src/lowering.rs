@@ -1392,7 +1392,7 @@ impl<T, L> Kinded for chalk_ir::ParameterKind<T, L> {
 #[allow(unreachable_code, unused_variables)]
 impl Kinded for chalk_ir::Parameter<ChalkIr> {
     fn kind(&self) -> Kind {
-        let interner = unimplemented!();
+        let interner = &ChalkIr;
         self.data(interner).kind()
     }
 }

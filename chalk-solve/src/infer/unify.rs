@@ -364,6 +364,10 @@ impl<I: Interner> Zipper<I> for Unifier<'_, I> {
 
         self.unify_binders(a, b)
     }
+
+    fn interner(&self) -> &I {
+        self.interner
+    }
 }
 
 struct OccursCheck<'u, 't, I: Interner> {
