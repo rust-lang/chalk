@@ -430,7 +430,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                         .chain(iter::once(
                             DomainGoal::DownstreamType(type_parameters[i].clone()).cast(interner),
                         ))
-                        .chain(iter::once(GoalData::CannotProve(()).intern())),
+                        .chain(iter::once(GoalData::CannotProve(()).intern(interner))),
                 );
             }
 
@@ -465,7 +465,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                                 .type_parameters()
                                 .map(|ty| DomainGoal::IsUpstream(ty).cast(interner)),
                         )
-                        .chain(iter::once(GoalData::CannotProve(()).intern())),
+                        .chain(iter::once(GoalData::CannotProve(()).intern(interner))),
                 );
             }
 

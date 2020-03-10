@@ -1296,16 +1296,16 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                     .flat_map(|h| h.lower_clause(env).apply_result())
                     .map(|result| result.map(|h| h.into_from_env_clause(interner)))
                     .collect();
-                Ok(chalk_ir::GoalData::Implies(where_clauses?, g.lower(env)?).intern())
+                Ok(chalk_ir::GoalData::Implies(where_clauses?, g.lower(env)?).intern(interner))
             }
             Goal::And(g1, g2s) => {
                 let goals = chalk_ir::Goals::from_fallible(
                     interner,
                     Some(g1).into_iter().chain(g2s).map(|g| g.lower(env)),
                 )?;
-                Ok(chalk_ir::GoalData::All(goals).intern())
+                Ok(chalk_ir::GoalData::All(goals).intern(interner))
             }
-            Goal::Not(g) => Ok(chalk_ir::GoalData::Not(g.lower(env)?).intern()),
+            Goal::Not(g) => Ok(chalk_ir::GoalData::Not(g.lower(env)?).intern(interner)),
             Goal::Compatible(g) => Ok(g.lower(env)?.compatible(interner)),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
@@ -1331,13 +1331,14 @@ impl LowerQuantifiedGoal for Goal {
         quantifier_kind: chalk_ir::QuantifierKind,
         parameter_kinds: &[ParameterKind],
     ) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+        let interner = env.interner();
         if parameter_kinds.is_empty() {
             return self.lower(env);
         }
 
         let parameter_kinds = parameter_kinds.iter().map(|pk| pk.lower());
         let subgoal = env.in_binders(parameter_kinds, |env| self.lower(env))?;
-        Ok(chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern())
+        Ok(chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern(interner))
     }
 }
 

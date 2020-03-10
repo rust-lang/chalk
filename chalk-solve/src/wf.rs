@@ -192,8 +192,12 @@ where
         // We ask that the above input types are well-formed provided that all the where-clauses
         // on the struct definition hold.
         let goal = GoalData::Implies(hypotheses, goal)
-            .intern()
-            .quantify(QuantifierKind::ForAll, struct_datum.binders.binders.clone());
+            .intern(interner)
+            .quantify(
+                interner,
+                QuantifierKind::ForAll,
+                struct_datum.binders.binders.clone(),
+            );
 
         let is_legal = match self
             .solver_choice
@@ -286,8 +290,12 @@ where
             .collect();
 
         let goal = GoalData::Implies(hypotheses, goal)
-            .intern()
-            .quantify(QuantifierKind::ForAll, impl_datum.binders.binders.clone());
+            .intern(interner)
+            .quantify(
+                interner,
+                QuantifierKind::ForAll,
+                impl_datum.binders.binders.clone(),
+            );
 
         debug!("WF trait goal: {:?}", goal);
 
@@ -425,7 +433,7 @@ where
             .casted(interner)
             .collect();
 
-        let goal = GoalData::Implies(hypotheses, goal).intern();
+        let goal = GoalData::Implies(hypotheses, goal).intern(interner);
 
         // Create a composed goal that is universally quantified over
         // the parameters from the associated type value (e.g.,
@@ -434,6 +442,6 @@ where
             .db
             .split_associated_ty_value_parameters(&assoc_ty.value.binders, assoc_ty);
 
-        Some(goal.quantify(QuantifierKind::ForAll, value_binders.to_vec()))
+        Some(goal.quantify(interner, QuantifierKind::ForAll, value_binders.to_vec()))
     }
 }

@@ -1071,8 +1071,8 @@ pub struct Goal<I: Interner> {
 }
 
 impl<I: Interner> Goal<I> {
-    pub fn new(interned: GoalData<I>) -> Self {
-        let interned = I::intern_goal(interned);
+    pub fn new(interner: &I, interned: GoalData<I>) -> Self {
+        let interned = I::intern_goal(interner, interned);
         Self { interned }
     }
 
@@ -1080,7 +1080,12 @@ impl<I: Interner> Goal<I> {
         I::goal_data(&self.interned)
     }
 
-    pub fn quantify(self, kind: QuantifierKind, binders: Vec<ParameterKind<()>>) -> Goal<I> {
+    pub fn quantify(
+        self,
+        interner: &I,
+        kind: QuantifierKind,
+        binders: Vec<ParameterKind<()>>,
+    ) -> Goal<I> {
         GoalData::Quantified(
             kind,
             Binders {
@@ -1088,12 +1093,12 @@ impl<I: Interner> Goal<I> {
                 binders,
             },
         )
-        .intern()
+        .intern(interner)
     }
 
     /// Takes a goal `G` and turns it into `not { G }`
-    pub fn negate(self) -> Self {
-        GoalData::Not(self).intern()
+    pub fn negate(self, interner: &I) -> Self {
+        GoalData::Not(self).intern(interner)
     }
 
     /// Takes a goal `G` and turns it into `compatible { G }`
@@ -1114,14 +1119,14 @@ impl<I: Interner> Goal<I> {
                     ],
                     goal,
                 )
-                .intern()
+                .intern(interner)
             }),
         )
-        .intern()
+        .intern(interner)
     }
 
-    pub fn implied_by(self, predicates: Vec<ProgramClause<I>>) -> Goal<I> {
-        GoalData::Implies(predicates, self).intern()
+    pub fn implied_by(self, interner: &I, predicates: Vec<ProgramClause<I>>) -> Goal<I> {
+        GoalData::Implies(predicates, self).intern(interner)
     }
 
     /// True if this goal is "trivially true" -- i.e., no work is
@@ -1150,14 +1155,14 @@ where
                     interner,
                     Some(goal0).into_iter().chain(Some(goal1)).chain(iter),
                 );
-                GoalData::All(goals).intern()
+                GoalData::All(goals).intern(interner)
             } else {
                 // One goal to prove
                 goal0
             }
         } else {
             // No goals to prove, always true
-            GoalData::All(Goals::new(interner)).intern()
+            GoalData::All(Goals::new(interner)).intern(interner)
         }
     }
 }
@@ -1192,8 +1197,8 @@ pub enum GoalData<I: Interner> {
 }
 
 impl<I: Interner> GoalData<I> {
-    pub fn intern(self) -> Goal<I> {
-        Goal::new(self)
+    pub fn intern(self, interner: &I) -> Goal<I> {
+        Goal::new(interner, self)
     }
 }
 

@@ -162,7 +162,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `GoalData::intern` (which will ultimately call this
     /// method).
-    fn intern_goal(data: GoalData<Self>) -> Self::InternedGoal;
+    fn intern_goal(&self, data: GoalData<Self>) -> Self::InternedGoal;
 
     /// Lookup the `GoalData` that was interned to create a `InternedGoal`.
     fn goal_data(goal: &Self::InternedGoal) -> &GoalData<Self>;
@@ -295,7 +295,7 @@ mod default {
             parameter
         }
 
-        fn intern_goal(goal: GoalData<ChalkIr>) -> Arc<GoalData<ChalkIr>> {
+        fn intern_goal(&self, goal: GoalData<ChalkIr>) -> Arc<GoalData<ChalkIr>> {
             Arc::new(goal)
         }
 
