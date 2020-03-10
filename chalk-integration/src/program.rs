@@ -4,7 +4,7 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AliasTy, AssocTypeId, ImplId, Parameter, ProgramClause, StructId, TraitId, TyData, TypeName,
+    Ty, AliasTy, AssocTypeId, ImplId, Parameter, ProgramClause, StructId, TraitId, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -120,6 +120,15 @@ impl tls::DebugContext for Program {
             Angle(&other_params)
         )
     }
+
+    fn debug_ty(
+        &self,
+        ty: &Ty<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", ty.data(interner))
+    }
 }
 
 impl RustIrDatabase<ChalkIr> for Program {
@@ -162,6 +171,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         trait_id: TraitId<ChalkIr>,
         parameters: &[Parameter<ChalkIr>],
     ) -> Vec<ImplId<ChalkIr>> {
+        let interner = self.interner();
         self.impl_data
             .iter()
             .filter(|(_, impl_datum)| {
@@ -170,6 +180,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                     assert_eq!(trait_ref.substitution.len(), parameters.len());
                     <[_] as CouldMatch<[_]>>::could_match(
                         &parameters,
+                        interner,
                         &trait_ref.substitution.parameters(),
                     )
                 }

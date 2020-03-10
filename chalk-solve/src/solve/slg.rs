@@ -234,7 +234,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
             environment
                 .clauses
                 .iter()
-                .filter(|&env_clause| env_clause.could_match(goal))
+                .filter(|&env_clause| env_clause.could_match(interner, goal))
                 .cloned(),
         );
 
@@ -495,22 +495,24 @@ fn into_ex_clause<I: Interner>(
 }
 
 trait SubstitutionExt<I: Interner> {
-    fn may_invalidate(&self, subst: &Canonical<Substitution<I>>) -> bool;
+    fn may_invalidate(&self, interner: &I, subst: &Canonical<Substitution<I>>) -> bool;
 }
 
 impl<I: Interner> SubstitutionExt<I> for Substitution<I> {
-    fn may_invalidate(&self, subst: &Canonical<Substitution<I>>) -> bool {
+    fn may_invalidate(&self, interner: &I, subst: &Canonical<Substitution<I>>) -> bool {
         self.iter()
             .zip(subst.value.iter())
-            .any(|(new, current)| MayInvalidate.aggregate_parameters(new, current))
+            .any(|(new, current)| MayInvalidate{ interner }.aggregate_parameters( new, current))
     }
 }
 
 // This is a struct in case we need to add state at any point like in AntiUnifier
-struct MayInvalidate;
+struct MayInvalidate<'i, I> {
+    interner: &'i I,
+}
 
-impl MayInvalidate {
-    fn aggregate_parameters<I: Interner>(
+impl<I: Interner> MayInvalidate<'_, I> {
+    fn aggregate_parameters(
         &mut self,
         new: &Parameter<I>,
         current: &Parameter<I>,
@@ -528,9 +530,8 @@ impl MayInvalidate {
     }
 
     // Returns true if the two types could be unequal.
-#[allow(unreachable_code, unused_variables)]
-    fn aggregate_tys<I: Interner>(&mut self, new: &Ty<I>, current: &Ty<I>) -> bool {
-        let interner = unimplemented!();
+    fn aggregate_tys(&mut self, new: &Ty<I>, current: &Ty<I>) -> bool {
+        let interner = self.interner;
         match (new.data(interner), current.data(interner)) {
             (_, TyData::BoundVar(_)) => {
                 // If the aggregate solution already has an inference
@@ -586,11 +587,11 @@ impl MayInvalidate {
         }
     }
 
-    fn aggregate_lifetimes<I: Interner>(&mut self, _: &Lifetime<I>, _: &Lifetime<I>) -> bool {
+    fn aggregate_lifetimes(&mut self, _: &Lifetime<I>, _: &Lifetime<I>) -> bool {
         true
     }
 
-    fn aggregate_application_tys<I: Interner>(
+    fn aggregate_application_tys(
         &mut self,
         new: &ApplicationTy<I>,
         current: &ApplicationTy<I>,
@@ -620,7 +621,7 @@ impl MayInvalidate {
         new != current
     }
 
-    fn aggregate_alias_tys<I: Interner>(&mut self, new: &AliasTy<I>, current: &AliasTy<I>) -> bool {
+    fn aggregate_alias_tys(&mut self, new: &AliasTy<I>, current: &AliasTy<I>) -> bool {
         let AliasTy {
             associated_ty_id: new_name,
             substitution: new_substitution,
@@ -638,7 +639,7 @@ impl MayInvalidate {
         )
     }
 
-    fn aggregate_name_and_substs<N, I>(
+    fn aggregate_name_and_substs<N>(
         &mut self,
         new_name: N,
         new_substitution: &Substitution<I>,
@@ -647,7 +648,6 @@ impl MayInvalidate {
     ) -> bool
     where
         N: Copy + Eq + Debug,
-        I: Interner,
     {
         if new_name != current_name {
             return true;
@@ -667,6 +667,6 @@ impl MayInvalidate {
         new_substitution
             .iter()
             .zip(current_substitution)
-            .any(|(new, current)| self.aggregate_parameters(new, current))
+            .any(|(new, current)| self.aggregate_parameters( new, current))
     }
 }

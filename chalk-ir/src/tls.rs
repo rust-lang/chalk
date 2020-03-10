@@ -1,5 +1,5 @@
 use crate::interner::ChalkIr;
-use crate::{AliasTy, AssocTypeId, StructId, TraitId};
+use crate::{AliasTy, AssocTypeId, Ty, StructId, TraitId};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
@@ -30,6 +30,12 @@ pub trait DebugContext {
     fn debug_alias(
         &self,
         alias: &AliasTy<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_ty(
+        &self,
+        ty: &Ty<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 }
