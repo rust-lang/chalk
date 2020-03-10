@@ -4,8 +4,8 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AliasTy, AssocTypeId, ImplId, Lifetime, Parameter, ProgramClause, StructId, TraitId, Ty,
-    TyData, TypeName, ParameterKind,
+    AliasTy, AssocTypeId, ImplId, Lifetime, Parameter, ParameterKind, ProgramClause, StructId,
+    TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,

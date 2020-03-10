@@ -1,5 +1,5 @@
 use crate::interner::ChalkIr;
-use crate::{AliasTy, AssocTypeId, Lifetime, StructId, TraitId, Ty, Parameter};
+use crate::{AliasTy, AssocTypeId, Lifetime, Parameter, StructId, TraitId, Ty};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
