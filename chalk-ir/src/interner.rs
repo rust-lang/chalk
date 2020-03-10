@@ -171,7 +171,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `GoalsData::intern` (which will ultimately call this
     /// method).
-    fn intern_goals(data: impl IntoIterator<Item = Goal<Self>>) -> Self::InternedGoals;
+    fn intern_goals(&self, data: impl IntoIterator<Item = Goal<Self>>) -> Self::InternedGoals;
 
     /// Lookup the `GoalsData` that was interned to create a `InternedGoals`.
     fn goals_data(goals: &Self::InternedGoals) -> &[Goal<Self>];
@@ -181,6 +181,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `SubstitutionData::intern` (which will ultimately call this
     /// method).
     fn intern_substitution<E>(
+        &self,
         data: impl IntoIterator<Item = Result<Parameter<Self>, E>>,
     ) -> Result<Self::InternedSubstitution, E>;
 
@@ -303,7 +304,10 @@ mod default {
             goal
         }
 
-        fn intern_goals(data: impl IntoIterator<Item = Goal<ChalkIr>>) -> Vec<Goal<ChalkIr>> {
+        fn intern_goals(
+            &self,
+            data: impl IntoIterator<Item = Goal<ChalkIr>>,
+        ) -> Vec<Goal<ChalkIr>> {
             data.into_iter().collect()
         }
 
@@ -312,6 +316,7 @@ mod default {
         }
 
         fn intern_substitution<E>(
+            &self,
             data: impl IntoIterator<Item = Result<Parameter<ChalkIr>, E>>,
         ) -> Result<Vec<Parameter<ChalkIr>>, E> {
             data.into_iter().collect()
